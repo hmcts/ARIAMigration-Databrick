@@ -3,6 +3,8 @@ parameters:
   pythonVersion: ''
   env: ''
   mainRepositoryName: ''
+  databricksInstance: '' # Example: https://<databricks-instance>.cloud.databricks.com
+  databricksClusterId: '' # Cluster ID to install the wheel
 
 jobs:
 - job: Configure_Spark_Cluster
@@ -22,3 +24,10 @@ jobs:
       pythonVersion: ${{ parameters.pythonVersion }}
       env: ${{ parameters.env }}
       mainRepositoryName: ${{ parameters.mainRepositoryName }}
+  - template: ../steps/configure-cluster.yaml
+    parameters:
+      pythonVersion: ${{ parameters.pythonVersion }}
+      env: ${{ parameters.env }}
+      mainRepositoryName: ${{ parameters.mainRepositoryName }}
+      databricksInstance: ${{ parameters.databricksInstance }}
+      databricksClusterId: ${{ parameters.databricksClusterId }}

@@ -25,3 +25,16 @@
 # MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
+# MAGIC
+
+# COMMAND ----------
+
+# DBTITLE 1,Import Binaries
+from confluent_kafka import Producer
+import json
+# from  itertools import islice
+# import numpy as np
+from pyspark.sql.functions import col, decode, split, element_at
+import logging
+from pyspark.sql.types import StructType, StructField, StringType
+from pyspark import SparkContext

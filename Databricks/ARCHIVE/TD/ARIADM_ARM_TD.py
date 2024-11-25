@@ -35,6 +35,20 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-137">ARIADM-137</a>/NSA/16-OCT-2024</td>
 # MAGIC     <td>TD: Tune Performance, Refactor Code for Reusability, Manage Broadcast Effectively, Implement Repartitioning Strategy</td>
 # MAGIC </tr>
+# MAGIC       <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-145">ARIADM-145</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Compete Landing to Bronze Notebook</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-146">ARIADM-146</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Update Sliver layer logic</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-147">ARIADM-147</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Update/Optmize Gold Outputs</td>
+# MAGIC </tr>
+# MAGIC
+# MAGIC
 # MAGIC    </tbody>
 # MAGIC </table>
 
@@ -47,20 +61,26 @@
 
 pip install azure-storage-blob
 
-
 # COMMAND ----------
+
+# run custom functions
+import sys
+import os
+# Append the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..','..')))
 
 import dlt
 import json
 from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
-# from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
+
 # COMMAND ----------
 
-spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+# MAGIC %md
+# MAGIC ## Functions to Read Latest Landing Files
 
 # COMMAND ----------
 
@@ -84,10 +104,22 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
 
+file_path = '/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv'
+
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Functions to Read Latest Landing Files
+# MAGIC ## Raw DLT Tables Creation
+# MAGIC
+# MAGIC ```
+# MAGIC AppealCase
+# MAGIC CaseAppellant
+# MAGIC Appellant
+# MAGIC FileLocation
+# MAGIC Department
+# MAGIC HearingCentre
+# MAGIC Status
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -189,21 +221,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # df_OtherCentre = read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH")
 # df_AdjudicatorRole = read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH")
 
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Raw DLT Tables Creation
-# MAGIC
-# MAGIC ```
-# MAGIC AppealCase
-# MAGIC CaseAppellant
-# MAGIC Appellant
-# MAGIC FileLocation
-# MAGIC Department
-# MAGIC HearingCentre
-# MAGIC Status
-# MAGIC ```
 
 # COMMAND ----------
 
@@ -383,6 +400,50 @@ def bronze_ac_ca_ant_fl_dt_hc():
             )
     )
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_iris_extract 
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_iris_extract",
+    comment="Delta Live Table extracted from the IRIS Tribunal decision file extract.",
+    path=f"{bronze_mnt}/bronze_iris_extract"
+)
+def bronze_iris_extract():
+    return (
+        spark.read.option("header", "true")
+            .option("inferSchema", "true")
+            .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
+            .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp())
+            .withColumn("AdtclmnModifiedDatetime", current_timestamp())
+            .withColumn("SourceFileName", lit(file_path))
+            .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD'))
+            .select(
+                col('AppCaseNo').alias('CaseNo'),
+                col('Fornames').alias('Forenames'),
+                col('Name'),
+                col('BirthDate').cast("timestamp"),
+                col('DestructionDate').cast("timestamp"),
+                col('HORef'),
+                col('PortReference'),
+                col('File_Location').alias('HearingCentreDescription'),
+                col('Description').alias('DepartmentDescription'),
+                col('Note'),
+                col('AdtclmnFirstCreatedDatetime'),
+                col('AdtclmnModifiedDatetime'),
+                col('SourceFileName'),
+                col('InsertedByProcessName')
+            )
+    )
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_td.bronze_iris_extract
 
 # COMMAND ----------
 
@@ -582,7 +643,13 @@ def bronze_appeal_case_tribunal_decision():
     path=f"{silver_mnt}/silver_tribunaldecision_detail"
 )
 def silver_tribunaldecision_detail():
-    return (dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select("td.*"))
+    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
+    flt_df = dlt.read("stg_td_filtered").alias('flt')
+    iris_df = dlt.read("bronze_iris_extract").alias('iris')
+    
+    joined_df = td_df.join(flt_df, col("td.CaseNo") == col("flt.CaseNo"), "inner").select("td.*")
+    
+    return joined_df.unionByName(iris_df)
 
 # COMMAND ----------
 
@@ -682,22 +749,35 @@ def silver_tribunaldecision_detail():
     path=f"{silver_mnt}/silver_archive_metadata"
 )
 def silver_archive_metadata():
-    return (
-        dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
-            col('td.CaseNo').alias('client_identifier'),
-            date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-            date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-            lit("GBR").alias("region"),
-            lit("ARIA").alias("publisher"),
-            lit("ARIA Tribunal Decision").alias("record_class"),
-            lit('IA_Tribunal').alias("entitlement_tag"),
-            col('td.Forenames').alias('bf_001'),
-            col('td.Name').alias('bf_002'),
-            col('td.BirthDate').alias('bf_003'),
-            col('td.HORef').alias('bf_004'),
-            col('td.PortReference').alias('bf_005')
-        )
+    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
+        col('td.CaseNo').alias('client_identifier'),
+        date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        lit("GBR").alias("region"),
+        lit("ARIA").alias("publisher"),
+        lit("ARIA Tribunal Decision").alias("record_class"),
+        lit('IA_Tribunal').alias("entitlement_tag"),
+        col('td.Forenames').alias('bf_001'),
+        col('td.Name').alias('bf_002'),
+        col('td.BirthDate').alias('bf_003'),
+        col('td.HORef').alias('bf_004'),
+        col('td.PortReference').alias('bf_005')
     )
+    iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
+        col('iris.CaseNo').alias('client_identifier'),
+        date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        lit("GBR").alias("region"),
+        lit("ARIA").alias("publisher"),
+        lit("ARIA Tribunal Decision").alias("record_class"),
+        lit('IA_Tribunal').alias("entitlement_tag"),
+        col('iris.Forenames').alias('bf_001'),
+        col('iris.Name').alias('bf_002'),
+        col('iris.BirthDate').alias('bf_003'),
+        col('iris.HORef').alias('bf_004'),
+        col('iris.PortReference').alias('bf_005')
+    )
+    return td_df.unionByName(iris_df)
 
 # COMMAND ----------
 
@@ -737,6 +817,20 @@ container_client = blob_service_client.get_container_client(container_name)
 # MAGIC
 # MAGIC #### Create gold_td_html_generation_status & Processing TribunalDecision HTML's
 # MAGIC This section is to prallel process the HTML and create atracker table with log information.
+
+# COMMAND ----------
+
+# df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
+# df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
+# display(df_tribunaldecision_detail)
+
+# tribunaldecision_detail_bc = spark.sparkContext.broadcast(df_tribunaldecision_detail.collect())
+
+# generate_html_content('NS/00001/2003', 'Marcia', 'Lenon', tribunaldecision_detail_bc.value)
+
+# COMMAND ----------
+
+# generate_html_content('NS/00001/2003', 'Marcia', 'Lenon', tribunaldecision_detail_bc.value)
 
 # COMMAND ----------
 
@@ -845,7 +939,7 @@ def gold_td_html_generation_status():
         df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
 
     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-    case_list = df_archive_metadata.select(
+    CaseNo_df = df_archive_metadata.select(
         col('client_identifier').alias('CaseNo'), 
         col('bf_001').alias('Forenames'), 
         col('bf_002').alias('Name')
@@ -857,8 +951,12 @@ def gold_td_html_generation_status():
     # Create an empty list to store results for the Delta Live Table
     result_list = []
 
+    # Repartition by CaseNo for optimized parallel processing
+    num_partitions = 64  # Assuming an 8-worker cluster
+    repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
+
      # Apply mapPartitions to process each partition
-    result_rdd = case_list.rdd.mapPartitions(
+    result_rdd = repartitioned_df.rdd.mapPartitions(
         lambda partition: process_partition(partition, tribunaldecision_detail_bc)
     )
 
@@ -1142,7 +1240,7 @@ def gold_td_json_generation_status():
     
     
     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-    case_list = df_archive_metadata.select(
+    CaseNo_df = df_archive_metadata.select(
         col('client_identifier').alias('CaseNo'), 
         col('bf_001').alias('Forenames'), 
         col('bf_002').alias('Name')
@@ -1154,9 +1252,12 @@ def gold_td_json_generation_status():
     # Create an empty list to store results for the Delta Live Table
     result_list = []
 
+    # Repartition by CaseNo for optimized parallel processing
+    num_partitions = 64  # Assuming an 8-worker cluster
+    repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
     
      # Apply mapPartitions to process each partition
-    result_rdd = case_list.rdd.mapPartitions(
+    result_rdd = repartitioned_df.rdd.mapPartitions(
         lambda partition: process_partition_json(partition, tribunaldecision_detail_bc)
     )
 
@@ -1178,7 +1279,6 @@ def gold_td_json_generation_status():
         return spark.createDataFrame([], schema)
     
     return spark.createDataFrame(result_list, schema)
-
 
 # COMMAND ----------
 
@@ -1442,12 +1542,12 @@ def process_partition_a360(partition, metadata_bc,blob_service_client, container
     path=f"{gold_mnt}/gold_td_a360_generation_status"
 )
 def gold_td_a360_generation_status():
-    df_td_filtered = dlt.read("stg_td_filtered")
+    # df_td_filtered = dlt.read("stg_td_filtered")
     df_td_metadata = dlt.read("silver_archive_metadata")
 
     if not initial_Load:
         print("Running non-initial load")
-        df_td_filtered = spark.read.table("hive_metastore.ariadm_arm_td.stg_td_filtered")
+        # df_td_filtered = spark.read.table("hive_metastore.ariadm_arm_iris_td.stg_td_filtered")
         df_td_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
     
     # Fetch the list of CaseNo, Forenames, and Name from the table (as Spark DataFrame)
@@ -1456,7 +1556,7 @@ def gold_td_a360_generation_status():
                                       col('bf_002').alias('Name')).distinct()
 
     # Repartition by CaseNo for optimized parallel processing
-    num_partitions = 32  # Assuming an 8-worker cluster
+    num_partitions = 64  # Assuming an 8-worker cluster
     repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
 
     # Broadcast metadata to all workers (using the Spark DataFrame instead of the collected list)
@@ -1484,6 +1584,6 @@ def gold_td_a360_generation_status():
 
 # COMMAND ----------
 
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
+display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
+display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
+display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())

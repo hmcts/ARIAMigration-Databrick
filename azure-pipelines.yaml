@@ -9,8 +9,9 @@ parameters:
   values:
   - sbox
 - name: databricksClusterId
+  displayName: Databrickers Cluster ID
   type: string
-  default: ''
+  default: ' '
 
 name: ARIA Data Migration CI Pipeline - ${{ parameters.env }}
 trigger:

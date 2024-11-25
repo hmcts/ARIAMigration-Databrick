@@ -34,6 +34,8 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(DATABRICKS_TOKEN)
 
+      cd $(Pipeline.Workspace)/python-wheel
+
       # Upload the wheel file to DBFS
       databricks fs cp ${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
 

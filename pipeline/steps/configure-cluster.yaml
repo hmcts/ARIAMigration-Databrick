@@ -18,6 +18,8 @@ steps:
 - task: AzureCLI@2
   displayName: 'Install Databricks CLI and Upload Wheel'
   condition: succeeded()
+  env:
+    DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
   inputs:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash

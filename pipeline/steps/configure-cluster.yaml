@@ -37,9 +37,9 @@ steps:
 
       # Install the wheel on the Databricks cluster
       databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
   env:
     DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
-  workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 ###
 ## Install Databricks CLI

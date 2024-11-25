@@ -1,5 +1,5 @@
 variables:
-- group: Databricks
+  - group: Databricks
 
 parameters:
   pythonVersion: ''

@@ -32,4 +32,4 @@ stages:
         env: ${{ parameters.env }}
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-        databricksClusterId: '1121-123925-fa7rrd19?o=3635282203417052'
+        databricksClusterId: '1121-123925-fa7rrd19'

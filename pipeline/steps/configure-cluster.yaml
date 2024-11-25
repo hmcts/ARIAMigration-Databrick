@@ -35,7 +35,7 @@ steps:
       export DATABRICKS_TOKEN=$(DATABRICKS_TOKEN)
 
       # Upload the wheel file to DBFS
-      databricks fs cp wheel-cache/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
+      databricks fs cp ${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
 
       # Install the wheel on the Databricks cluster
       databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}

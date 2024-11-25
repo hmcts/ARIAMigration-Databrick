@@ -1,6 +1,3 @@
-variables:
-  - group: Databricks
-
 parameters:
   agentPool: ''
   pythonVersion: ''
@@ -11,6 +8,8 @@ parameters:
 
 jobs:
 - job: Configure_Spark_Cluster
+  variables:
+    - group: Databricks
   pool:
     vmImage: ${{ parameters.agentPool }}
   steps:

@@ -22,7 +22,6 @@ steps:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash
     scriptLocation: inlineScript
-    workingDirectory: '$(Pipeline.Workspace)'
     inlineScript: |
       set -e
       source working_dir/bin/activate
@@ -40,6 +39,7 @@ steps:
       databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
   env:
     DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 ###
 ## Install Databricks CLI

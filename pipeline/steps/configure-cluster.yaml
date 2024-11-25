@@ -5,7 +5,6 @@ parameters:
   databricksInstance: '' # E.g: https://<databricks-instance>.cloud.databricks.com
   databricksClusterId: '' # Target Cluster ID
   wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl' # (e.g., ARIA_FUNCTIONS-0.1.0-py3-none-any.whl)
-  databricksToken: ''
 
 
 steps:
@@ -31,10 +30,7 @@ steps:
 
       # Set Databricks CLI environment variables
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
-      export DATABRICKS_TOKEN=${{ parameters.databricksToken }}
-      
-      echo "DATABRICKS_TOKEN length=${{ parameters.databricksToken }}"
-      echo "DATABRICKS_TOKEN 2 length=${#DATABRICKS_TOKEN}"
+      export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       
       # Upload the wheel file to DBFS
       databricks fs cp $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite

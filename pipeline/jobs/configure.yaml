@@ -8,10 +8,10 @@ parameters:
 
 jobs:
 - job: Configure_Spark_Cluster
-  variables:
-    - group: Databricks
   pool:
     vmImage: ${{ parameters.agentPool }}
+  variables:
+  - group: databricks-variables
   steps:
   - checkout: self
     persistCredentials: false
@@ -33,4 +33,3 @@ jobs:
       mainRepositoryName: ${{ parameters.mainRepositoryName }}
       databricksInstance: ${{ parameters.databricksInstance }}
       databricksClusterId: ${{ parameters.databricksClusterId }}
-      databricksToken: $(AUTH-AccessToken-sbox)

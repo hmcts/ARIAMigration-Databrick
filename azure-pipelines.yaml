@@ -22,15 +22,15 @@ variables:
   agentPool: "ubuntu-latest"
 
 stages:
-  - stage: Configure
-    displayName: ''
-    jobs:
-    - template: pipeline/jobs/configure.yaml
-      condition: eq(parameters.configureCluster, true)
-      parameters:
-        agentPool: $(agentPool)
-        pythonVersion: 3.10
-        env: ${{ parameters.env }}
-        mainRepositoryName: 'ARIAMigration-Databrick'
-        databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-        databricksClusterId: ${{ parameters.databricksClusterId }}
+  - ${{ if eq(parameters.configureCluster, true) }}:
+      - stage: Configure
+        displayName: ''
+        jobs:
+        - template: pipeline/jobs/configure.yaml
+          parameters:
+            agentPool: $(agentPool)
+            pythonVersion: 3.10
+            env: ${{ parameters.env }}
+            mainRepositoryName: 'ARIAMigration-Databrick'
+            databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
+            databricksClusterId: ${{ parameters.databricksClusterId }}

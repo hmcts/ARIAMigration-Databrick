@@ -35,6 +35,6 @@ steps:
                  ]
                }' \
            ${{ parameters.databricksInstance }}/api/2.0/libraries/install
-    env:
-      DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
+  env:
+    DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
+  workingDirectory: '$(System.DefaultWorkingDirectory)'

@@ -9,7 +9,7 @@ parameters:
   values:
   - sbox
 - name: databricksClusterId
-  displayName: Databrickers Cluster ID
+  displayName: Databricks Cluster ID
   type: string
   default: 'default_id'
 

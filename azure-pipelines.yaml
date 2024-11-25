@@ -1,5 +1,5 @@
 parameters:
-- name: runTests
+- name: configureCluster
   type: boolean
   default: false
 - name: env
@@ -8,6 +8,10 @@ parameters:
   default: 'sbox'
   values:
   - sbox
+- name: clusterID
+  type: string
+  default: ''
+  condition: eq(parameters.configureCluster, true)
 
 name: ARIA Data Migration CI Pipeline - ${{ parameters.env }}
 trigger:
@@ -16,10 +20,6 @@ trigger:
 variables:
   resourceGroupName: ingest00-main-${{ parameters.env }}
   agentPool: "ubuntu-latest"
-  ${{ if eq(parameters.env, 'prod') }}:
-      runTests: false
-  ${{ else }}:
-      runTests: true
 
 stages:
   - stage: Configure
@@ -32,4 +32,4 @@ stages:
         env: ${{ parameters.env }}
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-        databricksClusterId: '1121-123925-fa7rrd19'
+        databricksClusterId: ${{ parameters.clusterID }}

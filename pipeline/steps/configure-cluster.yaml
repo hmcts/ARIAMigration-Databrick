@@ -6,35 +6,70 @@ parameters:
   databricksClusterId: '' # Target Cluster ID
   wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl' # (e.g., ARIA_FUNCTIONS-0.1.0-py3-none-any.whl)
 
-##
-# Install Databricks CLI
-##
+
 steps:
+- task: DownloadPipelineArtifact@2
+  displayName: 'Download wheel artifact'
+  inputs:
+    buildType: 'current'
+    artifactName: 'python-wheel'
+    targetPath: '$(Pipeline.Workspace)/wheel-cache'
+
 - task: AzureCLI@2
-  displayName: 'Install Databricks CLI'
+  displayName: 'Install Databricks CLI and Upload Wheel'
   condition: succeeded()
   inputs:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash
     scriptLocation: inlineScript
+    workingDirectory: '$(Pipeline.Workspace)'
     inlineScript: |
-      set -x
+      set -e
       source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
       pip install databricks-cli
-      databricks configure --token --host ${{ parameters.databricksInstance }}
-      databricks fs cp $(Pipeline.Workspace)/wheel-cache/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
-      curl -X POST -H "Authorization: Bearer $(DATABRICKS_TOKEN)" \
-           -H "Content-Type: application/json" \
-           -d '{
-                 "cluster_id": "${{ parameters.databricksClusterId }}",
-                 "libraries": [
-                   {
-                     "whl": "dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}"
-                   }
-                 ]
-               }' \
-           ${{ parameters.databricksInstance }}/api/2.0/libraries/install
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+      # Set Databricks CLI environment variables
+      export DATABRICKS_HOST=${{ parameters.databricksInstance }}
+      export DATABRICKS_TOKEN=$(DATABRICKS_TOKEN)
+
+      # Upload the wheel file to DBFS
+      databricks fs cp wheel-cache/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
+
+      # Install the wheel on the Databricks cluster
+      databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
   env:
     DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
+
+###
+## Install Databricks CLI
+###
+#steps:
+#- task: AzureCLI@2
+#  displayName: 'Install Libraries on DB Cluster'
+#  condition: succeeded()
+#  inputs:
+#    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+#    scriptType: bash
+#    scriptLocation: inlineScript
+#    inlineScript: |
+#      set -x
+#      source working_dir/bin/activate
+#      export PYTHONPATH="${PYTHONPATH}:/./"
+#      pip install databricks-cli
+#      databricks configure --token --host ${{ parameters.databricksInstance }}
+#      databricks fs cp $(Pipeline.Workspace)/wheel-cache/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
+#      curl -X POST -H "Authorization: Bearer $(DATABRICKS_TOKEN)" \
+#           -H "Content-Type: application/json" \
+#           -d '{
+#                 "cluster_id": "${{ parameters.databricksClusterId }}",
+#                 "libraries": [
+#                   {
+#                     "whl": "dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}"
+#                   }
+#                 ]
+#               }' \
+#           ${{ parameters.databricksInstance }}/api/2.0/libraries/install
+#    workingDirectory: '$(System.DefaultWorkingDirectory)'
+#  env:
+#    DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)

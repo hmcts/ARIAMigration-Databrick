@@ -8,7 +8,7 @@ parameters:
   default: 'sbox'
   values:
   - sbox
-- name: clusterID
+- name: databricksClusterId
   type: string
   default: ''
   condition: eq(parameters.configureCluster, true)
@@ -32,4 +32,4 @@ stages:
         env: ${{ parameters.env }}
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-        databricksClusterId: ${{ parameters.clusterID }}
+        databricksClusterId: ${{ parameters.databricksClusterId }}

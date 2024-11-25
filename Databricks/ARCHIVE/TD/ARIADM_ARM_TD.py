@@ -35,6 +35,20 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-137">ARIADM-137</a>/NSA/16-OCT-2024</td>
 # MAGIC     <td>TD: Tune Performance, Refactor Code for Reusability, Manage Broadcast Effectively, Implement Repartitioning Strategy</td>
 # MAGIC </tr>
+# MAGIC       <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-145">ARIADM-145</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Compete Landing to Bronze Notebook</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-146">ARIADM-146</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Update Sliver layer logic</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-147">ARIADM-147</a>/NSA/28-OCT-2024</td>
+# MAGIC     <td>Tribunal Decision IRIS : Update/Optmize Gold Outputs</td>
+# MAGIC </tr>
+# MAGIC
+# MAGIC
 # MAGIC    </tbody>
 # MAGIC </table>
 
@@ -45,18 +59,19 @@
 
 # COMMAND ----------
 
-pip install azure-storage-blob
-
-
-# COMMAND ----------
+# run custom functions
+import sys
+import os
+# Append the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..','..')))
 
 import dlt
 import json
 from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
-# from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+
 
 # COMMAND ----------
 
@@ -83,6 +98,8 @@ landing_mnt = "/mnt/ingest00landingsboxlanding/"
 bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
+
+file_path = '/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv'
 
 # COMMAND ----------
 
@@ -203,7 +220,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # MAGIC Department
 # MAGIC HearingCentre
 # MAGIC Status
-# MAGIC ```
 
 # COMMAND ----------
 

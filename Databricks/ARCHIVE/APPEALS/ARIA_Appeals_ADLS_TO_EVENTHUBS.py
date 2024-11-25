@@ -42,6 +42,11 @@ from pyspark import SparkContext
 
 # COMMAND ----------
 
+# DBTITLE 1,Get EventHub  NamespaceKey
+secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-eventhubns-sharedaccesskey-sbox")
+
+# COMMAND ----------
+
 # DBTITLE 1,Efficient Data Ingestion with Spark and Event Hubs
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, split, element_at
@@ -69,7 +74,7 @@ conf = {
     'security.protocol': 'SASL_SSL',
     'sasl.mechanism': 'PLAIN',
     'sasl.username': '$ConnectionString',
-    'sasl.password': '',
+    'sasl.password': f'Endpoint=sb://sbox-dlrm-eventhub-ns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey={secret}',
     'retries': 5,                     # Increased retries
     'enable.idempotence': True,        # Enable idempotent producer
 }

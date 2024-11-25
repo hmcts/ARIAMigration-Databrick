@@ -2,9 +2,8 @@ parameters:
   pythonVersion: ''
   env: ''
   mainRepositoryName: ''
-##
-# Install Python
-##
+
+
 steps:
 - task: AzureCLI@2
   displayName: 'Install python ${{ parameters.pythonVersion }}'
@@ -21,6 +20,4 @@ steps:
       source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
       python${{ parameters.pythonVersion }} -m pip install -U pip
-#      python${{ parameters.pythonVersion }} -m pip install -r $(System.DefaultWorkingDirectory)/${{ parameters.mainRepositoryName }}/requirements.txt
-#      python $(System.DefaultWorkingDirectory)/${{ parameters.mainRepositoryName }}/pipeline/scripts/populate_env_file.py --env ${{ parameters.env }}
     workingDirectory: '$(System.DefaultWorkingDirectory)'

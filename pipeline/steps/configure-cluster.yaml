@@ -2,9 +2,9 @@ parameters:
   pythonVersion: ''
   env: ''
   mainRepositoryName: ''
-  databricksInstance: '' # E.g: https://<databricks-instance>.cloud.databricks.com
-  databricksClusterId: '' # Target Cluster ID
-  wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl' # (e.g., ARIA_FUNCTIONS-0.1.0-py3-none-any.whl)
+  databricksInstance: ''
+  databricksClusterId: ''
+  wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl'
 
 
 steps:

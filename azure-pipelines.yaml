@@ -11,7 +11,7 @@ parameters:
 - name: databricksClusterId
   displayName: Databrickers Cluster ID
   type: string
-  default: ''
+  default: 'default'
 
 name: ARIA Data Migration CI Pipeline - ${{ parameters.env }}
 trigger:
@@ -26,6 +26,7 @@ stages:
     displayName: ''
     jobs:
     - template: pipeline/jobs/configure.yaml
+      condition: eq(parameters.configureCluster, true)
       parameters:
         agentPool: $(agentPool)
         pythonVersion: 3.10

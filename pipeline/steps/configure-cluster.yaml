@@ -18,8 +18,6 @@ steps:
 - task: AzureCLI@2
   displayName: 'Install Databricks CLI and Upload Wheel'
   condition: succeeded()
-  env:
-    DATABRICKS_TOKEN: $(AUTH-AccessToken-sbox)
   inputs:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash
@@ -33,11 +31,11 @@ steps:
       # Set Databricks CLI environment variables
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(DATABRICKS_TOKEN)
-
-      cd $(Pipeline.Workspace)/python-wheel
+      
+      echo "DATABRICKS_TOKEN=${DATABRICKS_TOKEN:0:4}****"
 
       # Upload the wheel file to DBFS
-      databricks fs cp ${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
+      databricks fs cp $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
 
       # Install the wheel on the Databricks cluster
       databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}

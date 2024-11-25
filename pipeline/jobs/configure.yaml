@@ -33,4 +33,4 @@ jobs:
       mainRepositoryName: ${{ parameters.mainRepositoryName }}
       databricksInstance: ${{ parameters.databricksInstance }}
       databricksClusterId: ${{ parameters.databricksClusterId }}
-      databricksToken: $(DATABRICKS_TOKEN)
+      databricksToken: $(AUTH-AccessToken-sbox)

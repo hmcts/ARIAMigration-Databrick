@@ -1,7 +1,7 @@
 parameters:
 - name: configureCluster
   type: boolean
-  default: false
+  default: true
 - name: env
   displayName: Environment
   type: string
@@ -11,7 +11,7 @@ parameters:
 - name: databricksClusterId
   displayName: Databricks Cluster ID
   type: string
-  default: 'default_id'
+  default: '1121-123925-fa7rrd19'
 
 name: ARIA Data Migration CI Pipeline - ${{ parameters.env }}
 trigger:

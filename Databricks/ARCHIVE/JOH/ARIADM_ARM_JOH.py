@@ -48,6 +48,7 @@
 # COMMAND ----------
 
 pip install azure-storage-blob
+# Installing cool stuff
 
 # COMMAND ----------
 

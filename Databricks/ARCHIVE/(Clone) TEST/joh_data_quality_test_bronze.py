@@ -21,6 +21,19 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test/"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
 
+# Mapping abbreviations to human-readable text
+abbreviation_map = {
+    'adjudicator_et_hc_dnur': "'Adjudicator Employment Term, Hearing Centre, Do Not Use Reason'",
+    'johistory_users': "'Judicial Officer History, Users'",
+    'othercentre_hearingcentre': "'Other Centre Hearing Centre'",
+    'adjudicator_role': "'Adjudicator Role'",
+    'AdjudicatorId': "'Adjudicator ID'",
+    'missing_columns': 'Missing Columns',
+    'data_type_mismatch_count': 'Data Type Mismatch Count',
+    'exists': 'Exists',
+    'null_count': 'Null Count'
+}
+
 def perform_adjudicator_schema_checks():
     """
     Performs key columns and schema consistency checks, designed for the Adjudicator DataFrame.
@@ -82,7 +95,7 @@ def perform_adjudicator_schema_checks():
     'Notes'
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
-    schema_results[f"{table_name}_missing_columns"] = missing_columns
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
 
     # Check for data type consistency
     adjudicator_schema = StructType(
@@ -146,7 +159,7 @@ def perform_adjudicator_schema_checks():
     mismatch_count = 0
     for column in data_type_mismatch_count:
         mismatch_count += data_type_mismatch_count[column]
-    schema_results[f"{table_name}_data_type_mismatch_count"] = mismatch_count
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
 
     return schema_results
 
@@ -178,7 +191,7 @@ def perform_johistory_users_schema_checks():
     "InsertedByProcessName"
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
-    schema_results[f"{table_name}_missing_columns"] = missing_columns
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
 
     # Check for data type consistency
     johistory_schema = StructType(
@@ -207,7 +220,7 @@ def perform_johistory_users_schema_checks():
     mismatch_count = 0
     for column in data_type_mismatch_count:
         mismatch_count += data_type_mismatch_count[column]
-    schema_results[f"{table_name}_data_type_mismatch_count"] = mismatch_count
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
 
     return schema_results
 
@@ -236,7 +249,7 @@ def perform_othercentre_hearingcentre_schema_checks():
     "InsertedByProcessName"
     ]   
     missing_columns = [col for col in required_columns if col not in df.columns]
-    schema_results[f"{table_name}_missing_columns"] = missing_columns
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
 
     # Check for data type consistency
     othercentre_hearingcentre_schema = StructType(
@@ -262,7 +275,7 @@ def perform_othercentre_hearingcentre_schema_checks():
     mismatch_count = 0
     for column in data_type_mismatch_count:
         mismatch_count += data_type_mismatch_count[column]
-    schema_results[f"{table_name}_data_type_mismatch_count"] = mismatch_count
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
 
     return schema_results
 
@@ -293,7 +306,7 @@ def perform_adjudicator_role_schema_checks():
     "InsertedByProcessName"
 ]
     missing_columns = [col for col in required_columns if col not in df.columns]
-    schema_results[f"{table_name}_missing_columns"] = missing_columns
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
 
     # Check for data type consistency
     adjudicator_role_schema = StructType(
@@ -321,7 +334,7 @@ def perform_adjudicator_role_schema_checks():
     mismatch_count = 0
     for column in data_type_mismatch_count:
         mismatch_count += data_type_mismatch_count[column]
-    schema_results[f"{table_name}_data_type_mismatch_count"] = mismatch_count
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
 
     return schema_results
 
@@ -339,16 +352,37 @@ def perform_data_quality_checks(df, table_name, key_column):
     validation_results = {}
 
     # Check if the table exists and has data
-    validation_results[f"{table_name}_exists"] = df.count() > 0
+    validation_results[f"{table_name}_table_exists"] = df.count() > 0
 
     # Check for null values in key columns
     key_columns = key_column
     for column in key_columns:
         if column in df.columns:
             null_count = df.filter(col(column).isNull()).count()
-            validation_results[f"{table_name}_{column}_null_count"] = null_count
+            validation_results[f"{table_name}_{column}_table_null_count"] = null_count
 
     return validation_results
+
+def rename_dict_keys(input_dict):
+    """
+    Replaces known abbreviations with their full form readable format. 
+
+    Args:
+        input_dict (dict): The input dictionary with keys to be transformed.
+
+    Returns:
+        dict: A new dictionary with the transformed keys, preserving the original values.
+    """
+    renamed_dict = {}
+    for key, value in input_dict.items():
+        readable_key = key
+        for abbr, readable in abbreviation_map.items():
+            readable_key = readable_key.replace(abbr, readable)
+        readable_key = readable_key.replace('_', ' ').capitalize()
+        if readable_key.lower().startswith("bronze "):  # Remove "Bronze" if it exists
+            readable_key = readable_key[7:]  # Skip the first 7 characters ("Bronze ")
+        renamed_dict[readable_key] = value
+    return renamed_dict
 
 
 # Arranging the Bronze tables for data quality checks
@@ -382,49 +416,57 @@ validation_results.update(perform_data_quality_checks(spark.read.format("delta")
 validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_johistory_users"), "bronze_johistory_users", ["AdjudicatorId"]))
 validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_othercentre_hearingcentre"), "bronze_othercentre_hearingcentre", ["AdjudicatorId"]))
 validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_role"), "bronze_adjudicator_role", ["AdjudicatorId"]))
-print('Validation results:', validation_results, '\n')
+
+print('Validation checks results: \n')
+for key,value in validation_results.items():
+    print(f'{key}: {value} \n')
 print('<><><><><><><><><><><><><><><><><><><><><><>')
 
 schema_results = {}
-# schema_results.update(perform_adjudicator_schema_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"), "bronze_adjudicator_et_hc_dnur"))
 schema_results.update(perform_adjudicator_schema_checks())
 schema_results.update(perform_johistory_users_schema_checks())
 schema_results.update(perform_othercentre_hearingcentre_schema_checks())
 schema_results.update(perform_adjudicator_role_schema_checks())
-print('Schema results:', schema_results, '\n')
+
+print('Schema checks results: \n')
+for key,value in schema_results.items():
+    print(f'{key}: {value} \n')
 print('<><><><><><><><><><><><><><><><><><><><><><>')
 
-
+# Finalise results dictionary for output
 overall_results = schema_results | validation_results
-print('Overall results:', overall_results, '\n')
+overall_results = rename_dict_keys(overall_results)
 
-# TODO: tidy up table generation
+# Print the updated dictionary
+print('Overall results: \n')
+for key, value in overall_results.items():
+    print(f'{key}: {value} \n')
+print('<><><><><><><><><><><><><><><><><><><><><><>')
 
 # Create a new Word document
 document = Document()
 
 # Add a title to the document
-document.add_heading('Bronze Data Quality Validation Report', level=1)
+document.add_heading('Bronze Data Quality Validation Report', level=2)
 
 # Add a table to the document
-table = document.add_table(rows=1, cols=3)
+table = document.add_table(rows=1, cols=2)
 table.style = 'Table Grid'
 hdr_cells = table.rows[0].cells
 hdr_cells[0].text = 'Metric'
 hdr_cells[1].text = 'Value'
-hdr_cells[2].text = 'Data Lineage'
+# hdr_cells[2].text = 'Data Lineage'
 
 # Add rows to the table
 for metric, value in overall_results.items():
     table_name = metric.split("_")[0]
     column_name = "_".join(metric.split("_")[1:-1])
-    lineage_info = f"{table_name}.{column_name}"
+    # lineage_info = f"{table_name}.{column_name}"
     row_cells = table.add_row().cells
     row_cells[0].text = metric
     row_cells[1].text = str(value)
-    row_cells[2].text = lineage_info
+    # row_cells[2].text = lineage_info
 
 # Save the document
-# document.save(f"{bronze_mnt}/reports/bronze_data_quality_validation_report.docx")
 document.save("bronze_data_quality_validation_report.docx")
 

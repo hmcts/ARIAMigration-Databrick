@@ -44,8 +44,6 @@ def perform_adjudicator_schema_checks():
 
     Returns:
         dict: A dictionary containing the results of the schema checks. The dictionary's keys are the table name and the value is a list of missing columns or a count of data type results.
-
-    perform_adjudicator_schema_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"), "bronze_adjudicator_et_hc_dnur")
     """
     schema_results = {}
     df = spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur")

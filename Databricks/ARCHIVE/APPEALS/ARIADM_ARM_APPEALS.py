@@ -27,7 +27,10 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-139">ARIADM-139</a>/NSA/OCT-2024</td>
 # MAGIC          <td>Appeals : Compete Bronze to silver Notebook</td>
 # MAGIC       </tr>
-# MAGIC       
+# MAGIC        <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-140">ARIADM-140</a>/NSA/OCT-2024</td>
+# MAGIC          <td>Appeals : First Iteration: Appeals: Create Gold Output files - HTML, JSON,A360</td>
+# MAGIC       </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -86,7 +89,7 @@ pip install azure-storage-blob
 # COMMAND ----------
 
 
-initial_Load = False
+initial_Load = True
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS"
@@ -95,7 +98,7 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS"
 
-# file_path = '/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv'
+
 
 # COMMAND ----------
 
@@ -1238,13 +1241,29 @@ def bronze_appealcase_link_linkdetail():
                 col("l.LinkNo") == col("ld.LinkNo"),
                 "left_outer"
             )
+            .join(
+                dlt.read("raw_caseappellant").alias("ca"),
+                col("l.LinkNo") == col("ca.CaseNo"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_appellant").alias("a"),
+                col("ca.AppellantId") == col("a.AppellantId"),
+                "left_outer"
+            )
+            .filter(col("ca.AppellantId").isNull())
             .select(
                 # Link fields
                 trim(col("l.CaseNo")).alias('CaseNo'),
                 col("l.LinkNo"),
                 
                 # LinkDetail fields
-                col("ld.Comment").alias("LinkDetailComment")
+                col("ld.Comment").alias("LinkDetailComment"),
+
+                #Appellant fields
+                col("Name").alias("LinkName"),
+                col("ForeNames").alias("LinkForeNames"),
+                col("Title").alias("LinkTitle")
                 
             )
     )
@@ -1298,7 +1317,6 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("s.DateReceived"),
                 col("s.Allegation"),
                 col("s.KeyDate"),
-                #col("s.AdjudicatorId"),
                 col("s.MiscDate1"),
                 col("s.Notes1"),
                 col("s.Party"),
@@ -1458,7 +1476,6 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
         .join(appeal_type, col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
         .select(
             trim(col("ac.CaseNo")).alias('CaseNo'),
-           # col("ac.FeeSatisfactionId"),
             col("cfs.CaseFeeSummaryId"),
             col("cfs.DatePosting1stTier"),
             col("cfs.DatePostingUpperTier"),
@@ -1850,23 +1867,78 @@ def bronze_review_specific_direction():
 )
 def bronze_cost_award():
     return (
-        dlt.read("raw_costaward")
-            .select(
-                col("CostAwardId"),
-                col("CaseNo"),
-                col("DateOfApplication"),
-                col("TypeOfCostAward"),
-                col("ApplyingParty"),
-                col("PayingParty"),
-                col("MindedToAward"),
-                col("ObjectionToMindedToAward"),
-                col("CostsAwardDecision"),
-                col("DateOfDecision"),
-                col("CostsAmount"),
-                col("OutcomeOfAppeal"),
-                col("AppealStage")
+        dlt.read("raw_costaward").alias("ca")
+            .join(
+                dlt.read("raw_link").alias("1"),
+                col("ca.CaseNo") == col("1.CaseNo"),
+                "left_outer" 
             )
-    )
+            .join(
+                dlt.read("raw_caseappellant").alias("cap"),
+                col("ca.CaseNo") == col("cap.CaseNo"),
+                "left_outer"  
+            )    
+            .join(
+                dlt.read("raw_appellant").alias("a"),
+                col("cap.AppellantId") == col("a.AppellantId"),
+                "left_outer"  
+            ) 
+            .select(
+                # Case Appellant columns
+                col("ca.CostAwardId"),
+                col("ca.CaseNo"),
+
+                # Link columns
+                col("1.LinkNo"),
+                
+                # Appellant columns
+                col("a.Name"),
+                col("a.Forenames"), 
+                col("a.Title"),
+                col("ca.DateOfApplication"),
+                col("ca.TypeOfCostAward"),
+                col("ca.ApplyingParty"),
+                col("ca.PayingParty"),
+                col("ca.MindedToAward"),
+                col("ca.ObjectionToMindedToAward"),
+                col("ca.CostsAwardDecision"),
+                col("ca.DateOfDecision"),
+                col("ca.CostsAmount"),
+                col("ca.OutcomeOfAppeal"),
+                col("ca.AppealStage")
+            )
+    )   
+
+
+
+# COMMAND ----------
+
+# @dlt.table(
+#     name="bronze_cost_award",
+#     comment="Delta Live Table for retrieving details from the CostAward table.",
+#     path=f"{bronze_mnt}/bronze_cost_award"
+# )
+# def bronze_cost_award():
+#     return (
+#         dlt.read("raw_costaward")
+#             .select(
+#                 col("CostAwardId"),
+#                 col("CaseNo"),
+#                 col("DateOfApplication"),
+#                 col("TypeOfCostAward"),
+#                 col("ApplyingParty"),
+#                 col("PayingParty"),
+#                 col("MindedToAward"),
+#                 col("ObjectionToMindedToAward"),
+#                 col("CostsAwardDecision"),
+#                 col("DateOfDecision"),
+#                 col("CostsAmount"),
+#                 col("OutcomeOfAppeal"),
+#                 col("AppealStage")
+#             )
+#     )
+
+
 
 
 # COMMAND ----------
@@ -1896,8 +1968,8 @@ def bronze_costorder():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_appeals.raw_hearingpointschangereason
+# %sql
+# select * from hive_metastore.ariadm_arm_appeals.raw_hearingpointschangereason
 
 # COMMAND ----------
 
@@ -2537,8 +2609,8 @@ def silver_caseapplicant_detail():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
+# %sql
+# select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
 
 # COMMAND ----------
 
@@ -3324,331 +3396,616 @@ Dependentsdetailstemplate = """
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_appeals.silver_history_detail where CaseNo like 'EA/00007/2023'
+# DBTITLE 1,new payment template
+PaymentDetailstemplate = """
+<!-- Payment Details copy 01-->
+                         <div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+                            <input type="radio" id="nested-tab-{{nested_table_number}}" name="nested-tab-group-18" checked>
+                            <label for="nested-tab-{{nested_table_number}}">Payment Details{{payment_number}}</label>
+                            <div class="nested-content">
+                                
+                                                               <div id="paymentDetails">
+                                    <br>
+                                    <br>
+                                    <table id="table13">
+                                        <tbody>
+                                        <tr>
+                                            <th style="vertical-align: top; text-align: left; padding-left: 5px;">Payment Details</th>
+                                        </tr>
+                                        <tr>
+                                        <!-- left side -->
+                                        <td style="vertical-align: top;">
+                                            <table id="table12" style="padding-left: 100px;">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="eventDate">Event Date : </label></td>
+                                                    <td><input type="date" id="eventDate" name="eventDate" value="{{TransactionDate}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="eventType">Event Type : </label></td>
+                                                    <td><select id="eventType" disabled style="width:150px;">
+                                                        <option></option>
+                                                    </select></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventStatus">Event Status : </label></td>
+                                                    <td><select id="eventStatus" disabled style="width:150px;">
+                                                        <option></option>
+                                                    </select></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventNotifiedDate">Event Notified Date : </label></td>
+                                                    <td><input type="date" id="eventNotifiedDate" value="{{LiberataNotifiedDate}}" readonly></td>    
+                                                </tr>
+                                            </tbody></table>
+                                            <table id="table12" style="padding-left: 45px;">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="barclayTransId">Barclaycard Transaction ID : </label></td>
+                                                    <td><input type="text" id="barclayTransId" value="{{TransactionId}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="paymentRef">Payment Reference : </label></td>
+                                                    <td><input type="text" id="paymentRef" value="{{PaymentReference}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="originalPayRef">Original Payment Reference : </label></td>
+                                                    <td><input type="text" id="originalPayRef" value="{{OriginalPaymentReference}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="aggPaymentUrn">Aggregated Payment URN : </label></td>
+                                                    <td><input type="text" id="aggPaymentUrn" value="{{AggregatedPaymentURN}}" readonly></td>   
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td style="vertical-align: top;">
+                                            <table id="table12" style="padding-right: 75px">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="expectedPaymentDate">Expected Payment Date : </label></td>
+                                                    <td><input type="date" id="expectedPaymentDate" value="{{ExpectedDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="clearedDate">Cleared Date : </label></td>
+                                                    <td><input type="date" id="clearedDate" value="{{clearedDate}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventAmount">Event Amount(£) : </label></td>
+                                                    <td><input type="text" id="eventAmount" value="{{Amount}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventMethod">Event Method : </label></td>
+                                                    <td><select id="eventMethod" disabled style="width:148px;">
+                                                        <option></option>
+                                                    </select></td>                                  
+                                            </tbody></table>
+                                            <table id="table12" style="padding-right: 180px">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="lastCardDigit">Last 4 Digits from Card : </label></td>
+                                                    <td><input type="text" id="lastCardDigit" size="6" value="{{Last4DigitsCard}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="createUserId">Create User ID : </label></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels" style="padding-bottom: 30px;"><label for="editUserId">Last Edit User ID : </label></td>
+                                                </tr>                              
+                                            </tbody></table>
+                                        </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="vertical-align: top;">
+                                                <label for="payerSurname">Payer Surname :</label>
+                                                <input type="text" id="payerSurname" style="width:300px" value="{{payerSurname}}" readonly>
+                                            </td>
+                                            <td style="vertical-align: top;">
+                                                <label for="payerForename">Payer Forenames :</label>
+                                                <input type="text" id="payerForename" style="width:300px" value="{{payerForename}}" readonly>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="vertical-align: top;">
+                                                <label for="notes" style="display: block;">Notes:</label>
+                                                <textarea id="notes" rows="7" style="width:850px;">{{TransactionNotes}}</textarea>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                
+
+
+
+
+                            </div>
+                         </div>
+                         <!-- Payment Details copy 02-->
+                         """
+
+# displayHTML(PaymentDetailstemplate)
+
+# COMMAND ----------
+
+# DBTITLE 1,payments_details_Code
+# payments_details_Code = ''
+# if transaction_details:   
+#     for index, row in enumerate(transaction_details, start=1):
+#         line = PaymentDetailstemplate.replace("{{TransactionDate}}", format_date_iso(row['TransactionDate'])) \
+#                                      .replace("{{LiberataNotifiedDate}}", format_date_iso(row['LiberataNotifiedDate'])) \
+#                                      .replace("{{TransactionId}}", str(row['TransactionId'])) \
+#                                      .replace("{{PaymentReference}}", str(row['PaymentReference'] or '')) \
+#                                      .replace("{{OriginalPaymentReference}}", str(row['OriginalPaymentReference'] or '')) \
+#                                      .replace("{{AggregatedPaymentURN}}", str(row['AggregatedPaymentURN'] or '')) \
+#                                      .replace("{{payerSurname}}", str(row['PayerSurname'] or '')) \
+#                                      .replace("{{TransactionNotes}}", str(row['TransactionNotes'] or '')) \
+#                                      .replace("{{ExpectedDate}}", format_date_iso(row['ExpectedDate'])) \
+#                                      .replace("{{clearedDate}}", format_date_iso(row['ClearedDate'])) \
+#                                      .replace("{{Amount}}", str(row['Amount'] or '')) \
+#                                      .replace("{{Last4DigitsCard}}", str(row['Last4DigitsCard'] or '')) \
+#                                      .replace("{{payerForename}}", str(row['PayerForename'] or ''))
+#         payments_details_Code += line + '\n'
+# else:
+#     payments_details_Code = PaymentDetailstemplate.replace("{{TransactionDate}}", "") \
+#                                                   .replace("{{LiberataNotifiedDate}}", "") \
+#                                                   .replace("{{TransactionId}}", "") \
+#                                                   .replace("{{PaymentReference}}", "") \
+#                                                   .replace("{{OriginalPaymentReference}}", "") \
+#                                                   .replace("{{AggregatedPaymentURN}}", "") \
+#                                                   .replace("{{payerSurname}}", "") \
+#                                                   .replace("{{TransactionNotes}}", "") \
+#                                                   .replace("{{ExpectedDate}}", "") \
+#                                                   .replace("{{clearedDate}}", "") \
+#                                                   .replace("{{Amount}}", "") \
+#                                                   .replace("{{Last4DigitsCard}}", "") \
+#                                                   .replace("{{payerForename}}", "")
+
+# displayHTML(payments_details_Code)
 
 # COMMAND ----------
 
 # %sql
-# select * from hive_metastore.ariadm_arm_appeals.silver_history_detail
-# join hive_metastore.ariadm_arm_appeals.stg_appeals_filtered on silver_history_detail.CaseNo = stg_appeals_filtered.CaseNo
+# with cte as (
+# select * from tv_transaction_details where transactionTypeid = 1
+# )
+# select CaseNo, count(*) from cte
+# group by CaseNo 
+# having count(*) > 1
+
+
+# max(tansactionid)
+
 
 # COMMAND ----------
 
-# HistoryComment = [row['HistoryComment'] for row in history if row['HistType'] == 16]
-# HistoryComment
+# from pyspark.sql.functions import col, max
 
-# fileLocationNote = [row['HistoryComment'] for row in history if row['HistType'] == 6]
-# fileLocationNote
-
-# COMMAND ----------
-
-# DBTITLE 1,latest hist
-# from pyspark.sql.functions import row_number
-# from pyspark.sql.window import Window
-
-# # # df_Latest_history = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_history_detail")
+# # Payment Events Summary -with linear data from silver_transaction_detail
+# df_transaction_details_filtered = df_transaction_details.filter(col("transactionTypeid") == 1)
+# max_transaction_id = df_transaction_details_filtered.groupBy("CaseNo").agg(max("transactionid").alias("max_transactionid"))
+# df_transaction_details_final = df_transaction_details_filtered.alias("a").join(max_transaction_id.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.transactionid") == col("b.max_transactionid"))).select('a.*')
 
 
-# windowSpec = Window.partitionBy("HistType", "CaseNo").orderBy(df_history_details["HistDate"].desc())
-# df_Latest_history = df_history_details.withColumn("row_number", row_number().over(windowSpec)).filter("row_number = 1").drop("row_number")
-
-# df_Latest_history = df_Latest_history.select("HistType", "HistoryComment", "HistDate", "CaseNo")
-# display(df_Latest_history)
 
 # COMMAND ----------
 
-# df_case_detail.createOrReplaceTempView("case_detail")
+# MAGIC
+# MAGIC %sql
+# MAGIC select CaseNo,LinkNo from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail
+# MAGIC group by CaseNo,LinkNo
+# MAGIC having count(*) > 1
+# MAGIC
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- select caseNo, PaymentRemissionReasonDescription from case_detail
+# MAGIC select LinkNo, CaseNo, count(*) from hive_metastore.ariadm_arm_appeals.silver_costaward_detail
+# MAGIC group by CaseNo,LinkNo
+# MAGIC having count(*) > 1
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.silver_costaward_detail
+# MAGIC where CaseNo = 'AA/00036/2014'
+# MAGIC
+
+# COMMAND ----------
+
+# %sql
+# drop schema if exists hive_metastore.ariadm_arm_appeals cascade
 
 # COMMAND ----------
 
 # DBTITLE 1,test function code
-# df_appealcase_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcase_detail")
-# df_appellant_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_caseapplicant_detail").filter(col("CaseAppellantRelationship").isNull())
-# df_dependent_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_caseapplicant_detail").filter(col("CaseAppellantRelationship").isNotNull())
-# df_bfdiary_details = spark.read.table("hive_metastore.ariadm_arm_appeals.bronze_appealcase_bfdiary_bftype")
-# df_history_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_history_detail")
-# df_link_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_link_detail")
-# df_status_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
-# df_appealcategory_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcategory_detail")
-# df_case_detail = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_case_detail")
-# df_sponsor = df_case_detail.select("CaseNo","CaseSponsorName","CaseSponsorForenames","CaseSponsorTitle","CaseSponsorAddress1","CaseSponsorAddress2","CaseSponsorAddress3","CaseSponsorAddress4","CaseSponsorAddress5","CaseSponsorPostcode","CaseSponsorTelephone","CaseSponsorEmail").distinct()
-# df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
-# df_humanright_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_humanright_detail")
-# df_newmatter_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_newmatter_detail")
-# df_documents_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_documents_detail")
-# df_reviewstandarddirection_details = spark.read.table("hive_metastore.ariadm_arm_appeals.sliver_direction_detail")
-# df_reviewspecificdirection_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_reviewspecificdirection_detail")
-# df_costaward_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costaward_detail")
-# df_costorder_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costorder_detail")
-# # df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearingpointschange_detail")
-# # df_hearing_points_history_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearing_points_history_detail")
-# # df_appealtypecategory_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealtypecategory_detail")
+df_appealcase_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcase_detail")
+# reads data from the silver_caseapplicant_detail table in the Hive metastore, filtering rows where the CaseAppellantRelationship column is null, and stores the result in the df_appellant_details DataFrame
+df_appellant_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_caseapplicant_detail").filter(col("CaseAppellantRelationship").isNull())
+#reads data from the silver_caseapplicant_detail table in the Hive metastore, filtering rows where the CaseAppellantRelationship column is not null, and stores the result in the df_dependent_details DataFrame.
+df_dependent_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_caseapplicant_detail").filter(col("CaseAppellantRelationship").isNotNull())
+df_bfdiary_details = spark.read.table("hive_metastore.ariadm_arm_appeals.bronze_appealcase_bfdiary_bftype")
+df_history_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_history_detail")
+df_link_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_link_detail")
+df_status_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
+
+#groups the df_status_details DataFrame by the CaseNo column, calculates the maximum value of the StatusId column for each group, renames it to StatusId, and stores the result in the max_statusid DataFrame.
+max_statusid = df_status_details.groupBy("CaseNo").agg(max("StatusId").alias("StatusId"))
+
+#joins the df_status_details DataFrame (aliased as a) with the max_statusid DataFrame (aliased as b) on matching CaseNo and StatusId values. It then selects and renames the CaseStatus column from a as CurrentStatus and includes the CaseNo column, storing the result in the df_currentstatus DataFrame
+df_currentstatus = df_status_details.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
+    .select(col("a.CaseStatus").alias("CurrentStatus"), col("a.CaseNo"))
+                    
+df_appealcategory_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcategory_detail")
+df_case_detail = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_case_detail")
+df_sponsor = df_case_detail.select("CaseNo","CaseSponsorName","CaseSponsorForenames","CaseSponsorTitle","CaseSponsorAddress1","CaseSponsorAddress2","CaseSponsorAddress3","CaseSponsorAddress4","CaseSponsorAddress5","CaseSponsorPostcode","CaseSponsorTelephone","CaseSponsorEmail","LSCReference").distinct()
+df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
+
+# Payment Events Summary -with linear data from silver_transaction_detail
+df_transaction_details_filtered = df_transaction_details.filter(col("transactionTypeid") == 1)
+max_transaction_id = df_transaction_details_filtered.groupBy("CaseNo").agg(max("transactionid").alias("max_transactionid"))
+#joins the df_transaction_details_filtered DataFrame (aliased as a) with the max_transaction_id DataFrame (aliased as b) on matching CaseNo and transactionid values, where the transactionid in a equals the max_transactionid in b. It selects all columns from a and stores the result in the df_transaction_details_derived DataFrame
+df_transaction_details_derived = df_transaction_details_filtered.alias("a").join(max_transaction_id.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.transactionid") == col("b.max_transactionid"))).select('a.*')
+
+df_humanright_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_humanright_detail")
+df_newmatter_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_newmatter_detail")
+df_documents_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_documents_detail")
+df_reviewstandarddirection_details = spark.read.table("hive_metastore.ariadm_arm_appeals.sliver_direction_detail")
+df_reviewspecificdirection_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_reviewspecificdirection_detail")
+df_costaward_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costaward_detail")
+df_costorder_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costorder_detail")
+# df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearingpointschange_detail")
+# df_hearing_points_history_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearing_points_history_detail")
+# df_appealtypecategory_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealtypecategory_detail")
 
 
-# appealcase_details_bc = spark.sparkContext.broadcast(df_appealcase_details.collect())
-# appellant_details_bc = spark.sparkContext.broadcast(df_appellant_details.collect())
-# dependent_details_bc = spark.sparkContext.broadcast(df_dependent_details.collect())
-# df_bfdiary_details_bc = spark.sparkContext.broadcast(df_bfdiary_details.collect())
-# history_bc = spark.sparkContext.broadcast(df_history_details.collect())
-# link_bc = spark.sparkContext.broadcast(df_link_details.collect())
-# status_details_bc = spark.sparkContext.broadcast(df_status_details.collect())
-# appealcategory_detail_bc = spark.sparkContext.broadcast(df_appealcategory_details.collect())
-# case_detail_bc = spark.sparkContext.broadcast(df_case_detail.collect())
-# sponsor_bc = spark.sparkContext.broadcast(df_sponsor.collect())
-# transaction_detail_bc = spark.sparkContext.broadcast(df_transaction_details.collect())
-# humanright_detail_bc = spark.sparkContext.broadcast(df_humanright_details.collect())
-# newmatter_detail_bc = spark.sparkContext.broadcast(df_newmatter_details.collect())
+appealcase_details_bc = spark.sparkContext.broadcast(df_appealcase_details.collect())
+appellant_details_bc = spark.sparkContext.broadcast(df_appellant_details.collect())
+dependent_details_bc = spark.sparkContext.broadcast(df_dependent_details.collect())
+df_bfdiary_details_bc = spark.sparkContext.broadcast(df_bfdiary_details.collect())
+history_bc = spark.sparkContext.broadcast(df_history_details.collect())
+link_bc = spark.sparkContext.broadcast(df_link_details.collect())
+status_details_bc = spark.sparkContext.broadcast(df_status_details.collect())
+appealcategory_detail_bc = spark.sparkContext.broadcast(df_appealcategory_details.collect())
+case_detail_bc = spark.sparkContext.broadcast(df_case_detail.collect())
+sponsor_bc = spark.sparkContext.broadcast(df_sponsor.collect())
+transaction_detail_bc = spark.sparkContext.broadcast(df_transaction_details.collect())
+transaction_details_derived_bc = spark.sparkContext.broadcast(df_transaction_details_derived.collect())
 
-# documents_detail_bc = spark.sparkContext.broadcast(df_documents_details.collect())
-# reviewstandarddirection_detail_bc = spark.sparkContext.broadcast(df_reviewstandarddirection_details.collect())
-# reviewspecificdirection_detail_bc = spark.sparkContext.broadcast(df_reviewspecificdirection_details.collect())
-# costaward_detail_bc = spark.sparkContext.broadcast(df_costaward_details.collect())
-# costorder_detail_bc = spark.sparkContext.broadcast(df_costorder_details.collect())
+humanright_detail_bc = spark.sparkContext.broadcast(df_humanright_details.collect())
+newmatter_detail_bc = spark.sparkContext.broadcast(df_newmatter_details.collect())
 
-# # hearingpointschange_detail_bc = spark.sparkContext.broadcast(df_hearingpointschange_details.collect())
-# # hearing_points_history_detail_bc = spark.sparkContext.broadcast(df_hearing_points_history_details.collect())
-# # appealtypecategory_detail_bc = spark.sparkContext.broadcast(df_appealtypecategory_details.collect())
+documents_detail_bc = spark.sparkContext.broadcast(df_documents_details.collect())
+reviewstandarddirection_detail_bc = spark.sparkContext.broadcast(df_reviewstandarddirection_details.collect())
+reviewspecificdirection_detail_bc = spark.sparkContext.broadcast(df_reviewspecificdirection_details.collect())
+costaward_detail_bc = spark.sparkContext.broadcast(df_costaward_details.collect())
+costorder_detail_bc = spark.sparkContext.broadcast(df_costorder_details.collect())
 
-# # case_no = 'IA/00001/2011'
-# # case_no = 'EA/00007/2023'
-# case_no = 'IA/00001/2005' 
-# # case_no = 'IA/00050/2014' #human rights
-# # case_no = 'IA/00175/2014' # new matter
-# # case_no = 'IA/00001/2007' # document
-# # case_no = 'IA/00001/2015'
-# # case_no = 'IA/00006/2005' # reviewstandard
-# # case_no = 'IA/00001/2006' # costorder
-# # case_no = 'IA/00189/2014'
-# # case_no = 'IA/00014/2011' # payment Event Summary
-# # case_no = 'IA/00002/2015' # linked files
-
-# appealcase_details_list = appealcase_details_bc.value
-# appellant_details_list = [row for row in appellant_details_bc.value if row['CaseNo'] == case_no]
-# dependent_details_list = dependent_details_bc.value
-# bfdiary_details_list = df_bfdiary_details_bc.value
-# history_list = history_bc.value
-# link_list = link_bc.value
-# status_details_list = status_details_bc.value
-# appealcategory_details_list = appealcategory_detail_bc.value
-# case_detail_list = case_detail_bc.value
-# sponsor_list = sponsor_bc.value
-# transaction_detail_list = transaction_detail_bc.value
-# humanright_detail_list = humanright_detail_bc.value
-# newmatter_detail_list = newmatter_detail_bc.value
-# documents_detail_list = documents_detail_bc.value
-# reviewstandarddirection_detail_list  = reviewstandarddirection_detail_bc.value
-# reviewspecificdirection_detail_list  = reviewspecificdirection_detail_bc.value
-# costaward_detail_list  = costaward_detail_bc.value
-# costorder_detail_list  = costorder_detail_bc.value
-# # hearingpointschange_detail_list  = hearingpointschange_detail_bc.value
-# # hearing_points_history_detail_list  = hearing_points_history_detail_bc.value
-# # appealtypecategory_detail_list  = appealtypecategory_detail_bc.value
+# hearingpointschange_detail_bc = spark.sparkContext.broadcast(df_hearingpointschange_details.collect())
+# hearing_points_history_detail_bc = spark.sparkContext.broadcast(df_hearing_points_history_details.collect())
+# appealtypecategory_detail_bc = spark.sparkContext.broadcast(df_appealtypecategory_details.collect())
 
 
-# appealcase_details = [row for row in appealcase_details_list if row['CaseNo'] == case_no]
-# appellant_details = [row for row in appellant_details_list if row['CaseNo'] == case_no]
-# dependent_details = [row for row in dependent_details_list if row['CaseNo'] == case_no]
-# bfdiary_details = [row for row in bfdiary_details_list if row['CaseNo'] == case_no]
-# history = [row for row in history_list if row['CaseNo'] == case_no]
-# link_details = [row for row in link_list if row['CaseNo'] == case_no]
-# status_details = [row for row in status_details_list if row['CaseNo'] == case_no]
-# appealcategory_details = [row for row in appealcategory_details_list if row['CaseNo'] == case_no]
-# case_detail_details = [row for row in case_detail_list if row['CaseNo'] == case_no]
-# sponsor_list_details = [row for row in sponsor_list if row['CaseNo'] == case_no]
-# transaction_details = [row for row in transaction_detail_list if row['CaseNo'] == case_no]
-# humanright_details = [row for row in humanright_detail_list if row['CaseNo'] == case_no]
-# newmatter_details = [row for row in newmatter_detail_list if row['CaseNo'] == case_no]
-# documents_details = [row for row in documents_detail_list if row['CaseNo'] == case_no]
-# reviewstandarddirection_details = [row for row in reviewstandarddirection_detail_list if row['CaseNo'] == case_no]
-# reviewspecificdirection_details = [row for row in reviewspecificdirection_detail_list if row['CaseNo'] == case_no]
-# costaward_details = [row for row in costaward_detail_list if row['CaseNo'] == case_no]
-# costorder_details = [row for row in costorder_detail_list if row['CaseNo'] == case_no]
 
-# if not appealcase_details:
-#     print(f"No details found for CaseNo: {case_no}")
-#     # return None, "No details found"
+# case_no = 'AA/00001/2011' 
+# case_no = 'AA/00001/2014' 
+# case_no = 'AA/00001/2023' # HistoryComment
+# case_no = 'AA/00007/2014' # fileLocationNote
+case_no = 'AA/00001/2012' # payment details
+# case_no = 'AA/00002/2013' # dependents
+# case_no = 'TH/00137/2003' ## StatusDetailFirstTierHearingTemplate
 
-# # https://ingest00landingsbox.blob.core.windows.net/html-template/appeals-no-js-v4-template.html
-# # html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals-no-js-v2-template.html"
-# html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals-no-js-v4-template.html"
-# with open(html_template_path, "r") as f:
-#     html_template = "".join([l for l in f])
+# case_no = 'IA/00001/2011'
+# case_no = 'EA/00007/2023'
 
-# row_dict = appealcase_details[0].asDict()
-# appellant_dict = appellant_details[0].asDict()
-# sponsor_dist = sponsor_list_details[0].asDict()
+# case_no = 'IA/00050/2014' #human rights
+# case_no = 'IA/00175/2014' # new matter
+# case_no = 'IA/00001/2007' # document
+# case_no = 'IA/00001/2015'
+# case_no = 'IA/00006/2005' # reviewstandard
+# case_no = 'IA/00001/2006' # costorder
+# case_no = 'IA/00189/2014'
+# case_no = 'IA/00014/2011' # payment Event Summary
+# case_no = 'IA/00002/2015' # linked files
 
-# if link_details:
-#     connectedFiles = 'Connected Files exist'
-# else:
-#     connectedFiles = ''
+appealcase_details_list = appealcase_details_bc.value
+appellant_details_list = [row for row in appellant_details_bc.value if row['CaseNo'] == case_no]
+dependent_details_list = dependent_details_bc.value
+bfdiary_details_list = df_bfdiary_details_bc.value
+history_list = history_bc.value
+link_list = link_bc.value
+status_details_list = status_details_bc.value
+appealcategory_details_list = appealcategory_detail_bc.value
+case_detail_list = case_detail_bc.value
+sponsor_list = sponsor_bc.value
+transaction_detail_list = transaction_detail_bc.value
+transaction_details_derived_list = transaction_details_derived_bc.value
+humanright_detail_list = humanright_detail_bc.value
+newmatter_detail_list = newmatter_detail_bc.value
+documents_detail_list = documents_detail_bc.value
+reviewstandarddirection_detail_list  = reviewstandarddirection_detail_bc.value
+reviewspecificdirection_detail_list  = reviewspecificdirection_detail_bc.value
+costaward_detail_list  = costaward_detail_bc.value
+costorder_detail_list  = costorder_detail_bc.value
+# hearingpointschange_detail_list  = hearingpointschange_detail_bc.value
+# hearing_points_history_detail_list  = hearing_points_history_detail_bc.value
+# appealtypecategory_detail_list  = appealtypecategory_detail_bc.value
 
-# # Replace placeholders with data from the tables
-# replacements = {
-# "{{CaseNo}}": str(row_dict.get('CaseNo', '') or ''),
-# "{{hoRef}}": str(row_dict.get('hoRef', '') or ''),
-# "{{CCDAppealNum}}": str(row_dict.get('CCDAppealNum', '') or ''),
-# "{{CaseRepDXNo1}}": str(row_dict.get('CaseRepDXNo1', '') or ''),
-# "{{CaseRepDXNo2}}": str(row_dict.get('CaseRepDXNo2', '') or ''),
-# "{{AppealTypeId}}": str(row_dict.get('AppealTypeId', '') or ''),
-# "{{DateApplicationLodged}}": format_date_iso(row_dict.get('DateApplicationLodged')),
-# "{{DateOfApplicationDecision}}": format_date_iso(row_dict.get('DateOfApplicationDecision')),
-# "{{DateLodged}}": format_date_iso(row_dict.get('DateLodged')),
-# "{{DateReceived}}": format_date_iso(row_dict.get('DateReceived')),
-# "{{AdditionalGrounds}}": str(row_dict.get('AdditionalGrounds', '') or ''),
-# "{{AppealCategories}}": str(row_dict.get('AppealCategories', '') or ''),
-# "{{MREmbassy}}": str(row_dict.get('MREmbassy', '') or ''),
-# "{{NationalityId}}": str(row_dict.get('NationalityId', '') or ''),
-# "{{CountryId}}": str(row_dict.get('CountryId', '') or ''),
-# "{{PortId}}": str(row_dict.get('PortId', '') or ''),
-# "{{HumanRights}}": str(row_dict.get('HumanRights', '') or ''),
-# "{{DateOfIssue}}": format_date_iso(row_dict.get('DateOfIssue')),
+
+appealcase_details = [row for row in appealcase_details_list if row['CaseNo'] == case_no]
+appellant_details = [row for row in appellant_details_list if row['CaseNo'] == case_no]
+dependent_details = [row for row in dependent_details_list if row['CaseNo'] == case_no]
+bfdiary_details = [row for row in bfdiary_details_list if row['CaseNo'] == case_no]
+history = [row for row in history_list if row['CaseNo'] == case_no]
+link_details = [row for row in link_list if row['CaseNo'] == case_no]
+status_details = [row for row in status_details_list if row['CaseNo'] == case_no]
+appealcategory_details = [row for row in appealcategory_details_list if row['CaseNo'] == case_no]
+case_detail_details = [row for row in case_detail_list if row['CaseNo'] == case_no]
+sponsor_list_details = [row for row in sponsor_list if row['CaseNo'] == case_no]
+transaction_details = [row for row in transaction_detail_list if row['CaseNo'] == case_no]
+transaction_details_derived = [row for row in transaction_details_derived_list if row['CaseNo'] == case_no]
+humanright_details = [row for row in humanright_detail_list if row['CaseNo'] == case_no]
+newmatter_details = [row for row in newmatter_detail_list if row['CaseNo'] == case_no]
+documents_details = [row for row in documents_detail_list if row['CaseNo'] == case_no]
+reviewstandarddirection_details = [row for row in reviewstandarddirection_detail_list if row['CaseNo'] == case_no]
+reviewspecificdirection_details = [row for row in reviewspecificdirection_detail_list if row['CaseNo'] == case_no]
+costaward_details = [row for row in costaward_detail_list if row['CaseNo'] == case_no]
+costorder_details = [row for row in costorder_detail_list if row['CaseNo'] == case_no]
+
+if not appealcase_details:
+    print(f"No details found for CaseNo: {case_no}")
+    # return None, "No details found"
+
+# https://ingest00landingsbox.blob.core.windows.net/html-template/appeals-no-js-v4-template.html
+# html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals-no-js-v2-template.html"
+html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals-no-js-v4-template.html"
+#dependentdetails
+Dependentsdetailstemplate_path ="/dbfs/mnt/ingest00landingsboxhtml-template/appeals/dependentsdetails/Dependentsdetailstemplate.html"
+#paymentdetails
+PaymentDetailstemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/paymentdetails/PaymentDetailstemplate.html"
+#statusdetails
+StatusDetailAppellateCourtTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailAppellateCourtTemplate.html"
+StatusDetailCaseClosedFeeOutstandingTemplate_path= "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html"
+StatusDetailCaseManagementReviewTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailCaseManagementReviewTemplate.html"
+StatusDetailClosedFeeNotPaidTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html"
+StatusDetailFirstTierHearingTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierHearingTemplate.html"
+StatusDetailFirstTierPaperTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierPaperTemplate.html"
+StatusDetailFirstTierPermissionApplicationTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierPermissionApplicationTemplate.html"
+StatusDetailHighCourtReviewFilter_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailHighCourtReviewFilter.html"
+StatusDetailHighCourtReviewTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailHighCourtReviewTemplate.html"
+StatusDetailImmigrationJudge_path ="/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailImmigrationJudge.html"
+StatusDetailJudicialReviewHearingTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"
+StatusDetailJudicialReviewPermissionApplicationTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailJudicialReviewPermissionApplicationTemplate.html"
+StatusDetailOnHoldChargebackTakenTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"
+StatusDetailPanelHeaingTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPanelHeaingTemplate.html"
+StatusDetailPermissiontoAppealTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPermissiontoAppealTemplate.html"
+StatusDetailPreliminaryIssueTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPreliminaryIssueTemplate.html"
+StatusDetailPTADirecttoAppellateCourtTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPTADirecttoAppellateCourtTemplate.html"
+StatusDetailReviewOfCostOrderTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailReviewOfCostOrderTemplate.html"
+StatusDetailSetAsideApplicationTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailSetAsideApplicationTemplate.html"
+StatusDetailUpperTribunalHearingContinuanceTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalHearingContinuanceTemplate.html"
+StatusDetailUpperTribunalHearingTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalHearingTemplate.html"
+StatusDetailUpperTribunalOralPermissionApplicationTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html"
+StatusDetailUpperTribunalOralPermissionHearingTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionHearingTemplate.html"
+StatusDetailUpperTribunalPermissionApplicationTemplate_path = "/dbfs/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalPermissionApplicationTemplate.html"
+
+
+with open(html_template_path, "r") as f:
+    html_template = "".join([l for l in f])
+
+with open(StatusDetailFirstTierHearingTemplate_path, "r") as f:
+    StatusDetailFirstTierHearingTemplate = "".join([l for l in f])
+
+
+
+row_dict = appealcase_details[0].asDict()
+appellant_dict = appellant_details[0].asDict()
+sponsor_dist = sponsor_list_details[0].asDict()
+transaction_details_derived_dist = transaction_details_derived[0].asDict() if transaction_details_derived else {}
+
+# if link_details is not empty or evaluates to True. If it does, it sets the connectedFiles variable to 'Connected Files exist'; otherwise, it sets connectedFiles to an empty string.
+if link_details:
+    connectedFiles = 'Connected Files exist'
+else:
+    connectedFiles = ''
+
+# filters the df_currentstatus DataFrame to find rows where CaseNo matches the given case_no. It then selects the CurrentStatus column, collects the result as a list of rows, and assigns it to the currentstatus variable
+currentstatus = df_currentstatus.filter(col("CaseNo") == lit(case_no)).select("CurrentStatus").collect()
+
+# retrieves the first value of the CurrentStatus column from the currentstatus list if it is not empty. If the list is empty, it assigns an empty string ('') to the currentstatus variable
+currentstatus = currentstatus[0][0] if currentstatus else ''
+
+HistoryComment = df_history_details.filter(
+    (col("HistType") == 16) & (col("CaseNo") == case_no)
+).select("HistoryComment").orderBy(col('HistDate').desc()).collect()
+HistoryComment = HistoryComment[0][0] if HistoryComment else ''
+
+fileLocationNote = df_history_details.filter(
+    (col("HistType") == 6) & (col("CaseNo") == case_no)
+).select("HistoryComment").orderBy(col('HistDate').desc()).collect()
+fileLocationNote = fileLocationNote[0][0] if fileLocationNote else ''
+
+
+# Replace placeholders with data from the tables
+replacements = {
+"{{CaseNo}}": str(row_dict.get('CaseNo', '') or ''),
+"{{hoRef}}": str(row_dict.get('hoRef', '') or ''),
+"{{CCDAppealNum}}": str(row_dict.get('CCDAppealNum', '') or ''),
+"{{CaseRepDXNo1}}": str(row_dict.get('CaseRepDXNo1', '') or ''),
+"{{CaseRepDXNo2}}": str(row_dict.get('CaseRepDXNo2', '') or ''),
+"{{AppealTypeId}}": str(row_dict.get('AppealTypeId', '') or ''),
+"{{DateApplicationLodged}}": format_date_iso(row_dict.get('DateApplicationLodged')),
+"{{DateOfApplicationDecision}}": format_date_iso(row_dict.get('DateOfApplicationDecision')),
+"{{DateLodged}}": format_date_iso(row_dict.get('DateLodged')),
+"{{DateReceived}}": format_date_iso(row_dict.get('DateReceived')),
+"{{AdditionalGrounds}}": str(row_dict.get('AdditionalGrounds', '') or ''),
+"{{AppealCategories}}": str(row_dict.get('AppealCategories', '') or ''),
+"{{MREmbassy}}": str(row_dict.get('MREmbassy', '') or ''),
+"{{NationalityId}}": str(row_dict.get('NationalityId', '') or ''),
+"{{CountryId}}": str(row_dict.get('CountryId', '') or ''),
+"{{PortId}}": str(row_dict.get('PortId', '') or ''),
+"{{HumanRights}}": str(row_dict.get('HumanRights', '') or ''),
+"{{DateOfIssue}}": format_date_iso(row_dict.get('DateOfIssue')),
 # "{{fileLocationNote}}": str(row_dict.get('fileLocationNote', '') or ''),
-# "{{DocumentsReceived}}": str(row_dict.get('DocumentsReceived', '') or ''),
-# "{{TransferOutDate}}": format_date_iso(row_dict.get('TransferOutDate')),
-# "{{RemovalDate}}": format_date_iso(row_dict.get('RemovalDate')),
-# "{{DeportationDate}}":  format_date_iso(row_dict.get('DeportationDate')),
-# "{{ProvisionalDestructionDate}}": format_date_iso(row_dict.get('ProvisionalDestructionDate')),
-# "{{NoticeSentDate}}": format_date_iso(row_dict.get('NoticeSentDate')),
-# "{{AppealReceivedBy}}": str(row_dict.get('AppealReceivedBy', '') or ''),
-# "{{CRRespondent}}": str(row_dict.get('CRRespondent', '') or ''),
-# "{{RepresentativeRef}}": str(row_dict.get('RepresentativeRef', '') or ''),
-# "{{Language}}": str(row_dict.get('Language', '') or ''),
-# "{{HOInterpreter}}": str(row_dict.get('HOInterpreter', '') or ''),
-# "{{CourtPreference}}": str(row_dict.get('CourtPreference', '') or ''),
-# "{{CertifiedDate}}": format_date_iso(row_dict.get('CertifiedDate')),
-# "{{CertifiedRecordedDate}}": format_date_iso(row_dict.get('CertifiedRecordedDate')),
-# "{{ReferredToJudgeDate}}": format_date_iso(row_dict.get('ReferredToJudgeDate')),
-# "{{RespondentName}}": str(row_dict.get('RespondentName', '') or ''),
-# "{{MRPOU}}": str(row_dict.get('MRPOU', '') or ''),
-# "{{RespondentAddress1}}": str(row_dict.get('RespondentAddress1', '') or ''),
-# "{{RespondentAddress2}}": str(row_dict.get('RespondentAddress2', '') or ''),
-# "{{RespondentAddress3}}": str(row_dict.get('RespondentAddress3', '') or ''),
-# "{{RespondentAddress4}}": str(row_dict.get('RespondentAddress4', '') or ''),
-# "{{RespondentAddress5}}": str(row_dict.get('RespondentAddress5', '') or ''),
-# "{{RespondentPostcode}}": str(row_dict.get('RespondentPostcode', '') or ''),
-# "{{RespondentTelephone}}": str(row_dict.get('RespondentTelephone', '') or ''),
-# "{{RespondentFax}}": str(row_dict.get('RespondentFax', '') or ''),
-# "{{RespondentEmail}}": str(row_dict.get('RespondentEmail', '') or ''),
-# "{{CRReference}}": str(row_dict.get('CRReference', '') or ''),
-# "{{CRContact}}": str(row_dict.get('CRContact', '') or ''),
-# "{{CaseRepName}}": str(row_dict.get('CaseRepName', '') or ''),
-# "{{CaseRepPostcode}}": str(row_dict.get('CaseRepPostcode', '') or ''),
-# "{{CaseRepTelephone}}": str(row_dict.get('CaseRepTelephone', '') or ''),
-# "{{CaseRepFax}}": str(row_dict.get('CaseRepFax', '') or ''),
-# "{{CaseRepEmail}}": str(row_dict.get('CaseRepEmail', '') or ''),
-# "{{LSCCommission}}": str(row_dict.get('LSCCommission', '') or ''),
-# "{{RepTelephone}}": str(row_dict.get('RepTelephone', '') or ''),
-# "{{StatutoryClosureDate}}": format_date_iso(row_dict.get('StatutoryClosureDate')),
-# "{{ThirdCountryId}}": str(row_dict.get('ThirdCountryId', '') or ''),
-# "{{SubmissionURN}}": str(row_dict.get('SubmissionURN', '') or ''),
-# "{{DateReinstated}}": format_date_iso(row_dict.get('DateReinstated')),
-# "{{CaseOutcomeId}}": str(row_dict.get('CaseOutcomeId', '') or ''),
-# "{{AppealCaseNote}}": str(row_dict.get('AppealCaseNote', '') or ''),
-# "{{Interpreter}}": str(row_dict.get('Interpreter', '') or ''),
-# "{{LanguageId}}": str(row_dict.get('LanguageId', '') or ''),
-# "{{CertOfFeeSatisfaction}}": str(row_dict.get('CertOfFeeSatisfaction', '') or ''),
+"{{DocumentsReceived}}": str(row_dict.get('DocumentsReceived', '') or ''),
+"{{TransferOutDate}}": format_date_iso(row_dict.get('TransferOutDate')),
+"{{RemovalDate}}": format_date_iso(row_dict.get('RemovalDate')),
+"{{DeportationDate}}":  format_date_iso(row_dict.get('DeportationDate')),
+"{{ProvisionalDestructionDate}}": format_date_iso(row_dict.get('ProvisionalDestructionDate')),
+"{{NoticeSentDate}}": format_date_iso(row_dict.get('NoticeSentDate')),
+"{{AppealReceivedBy}}": str(row_dict.get('AppealReceivedBy', '') or ''),
+"{{CRRespondent}}": str(row_dict.get('CRRespondent', '') or ''),
+"{{RepresentativeRef}}": str(row_dict.get('RepresentativeRef', '') or ''),
+"{{Language}}": str(row_dict.get('Language', '') or ''),
+"{{HOInterpreter}}": str(row_dict.get('HOInterpreter', '') or ''),
+"{{CourtPreference}}": str(row_dict.get('CourtPreference', '') or ''),
+"{{CertifiedDate}}": format_date_iso(row_dict.get('CertifiedDate')),
+"{{CertifiedRecordedDate}}": format_date_iso(row_dict.get('CertifiedRecordedDate')),
+"{{ReferredToJudgeDate}}": format_date_iso(row_dict.get('ReferredToJudgeDate')),
+"{{RespondentName}}": str(row_dict.get('RespondentName', '') or ''),
+"{{MRPOU}}": str(row_dict.get('MRPOU', '') or ''),
+"{{RespondentAddress1}}": str(row_dict.get('RespondentAddress1', '') or ''),
+"{{RespondentAddress2}}": str(row_dict.get('RespondentAddress2', '') or ''),
+"{{RespondentAddress3}}": str(row_dict.get('RespondentAddress3', '') or ''),
+"{{RespondentAddress4}}": str(row_dict.get('RespondentAddress4', '') or ''),
+"{{RespondentAddress5}}": str(row_dict.get('RespondentAddress5', '') or ''),
+"{{RespondentPostcode}}": str(row_dict.get('RespondentPostcode', '') or ''),
+"{{RespondentTelephone}}": str(row_dict.get('RespondentTelephone', '') or ''),
+"{{RespondentFax}}": str(row_dict.get('RespondentFax', '') or ''),
+"{{RespondentEmail}}": str(row_dict.get('RespondentEmail', '') or ''),
+"{{CRReference}}": str(row_dict.get('CRReference', '') or ''),
+"{{CRContact}}": str(row_dict.get('CRContact', '') or ''),
+"{{CaseRepName}}": str(row_dict.get('CaseRepName', '') or ''),
+"{{CaseRepPostcode}}": str(row_dict.get('CaseRepPostcode', '') or ''),
+"{{CaseRepTelephone}}": str(row_dict.get('CaseRepTelephone', '') or ''),
+"{{CaseRepFax}}": str(row_dict.get('CaseRepFax', '') or ''),
+"{{CaseRepEmail}}": str(row_dict.get('CaseRepEmail', '') or ''),
+"{{LSCCommission}}": str(row_dict.get('LSCCommission', '') or ''),
+"{{RepTelephone}}": str(row_dict.get('RepTelephone', '') or ''),
+"{{StatutoryClosureDate}}": format_date_iso(row_dict.get('StatutoryClosureDate')),
+"{{ThirdCountryId}}": str(row_dict.get('ThirdCountryId', '') or ''),
+"{{SubmissionURN}}": str(row_dict.get('SubmissionURN', '') or ''),
+"{{DateReinstated}}": format_date_iso(row_dict.get('DateReinstated')),
+"{{CaseOutcomeId}}": str(row_dict.get('CaseOutcomeId', '') or ''),
+"{{AppealCaseNote}}": str(row_dict.get('AppealCaseNote', '') or ''),
+"{{Interpreter}}": str(row_dict.get('Interpreter', '') or ''),
+# "{{LanguageId}}": str(row_dict.get('LanguageId', '') or ''), ##review
+"{{CertOfFeeSatisfaction}}": str(row_dict.get('CertOfFeeSatisfaction', '') or ''),
+"{{VisitVisaType}}": str(row_dict.get('VisitVisaType', '') or ''), # Appeal proccess
+
+# Appellant rows
+"{{AppellantName}}": str(appellant_dict.get('AppellantName', '') or ''),
+"{{AppellantForenames}}": str(appellant_dict.get('AppellantForenames', '') or ''),
+"{{AppellantTitle}}": str(appellant_dict.get('AppellantTitle', '') or ''),
+"{{AppellantBirthDate}}": format_date_iso(appellant_dict.get('AppellantBirthDate')),
+"{{Detained}}" : str(appellant_dict.get('Detained', '') or ''),
+"{{DetentionCentre}}": str(appellant_dict.get('DetentionCentre', '') or ''),
+"{{AppellantAddress1}}": str(appellant_dict.get('AppellantAddress1', '') or ''),
+"{{AppellantAddress2}}": str(appellant_dict.get('AppellantAddress2', '') or ''),
+"{{AppellantAddress3}}": str(appellant_dict.get('AppellantAddress3', '') or ''),
+"{{AppellantAddress4}}": str(appellant_dict.get('AppellantAddress4', '') or ''),
+"{{AppellantAddress5}}": str(appellant_dict.get('AppellantAddress5', '') or ''),
+"{{Country}}": str(appellant_dict.get('Country', '') or ''),
+"{{DCPostcode}}": str(appellant_dict.get('DCPostcode', '') or ''),
+"{{AppellantTelephone}}": str(appellant_dict.get('AppellantTelephone', '') or ''),
+"{{AppellantEmail}}": str(appellant_dict.get('AppellantEmail', '') or ''),
+"{{PrisonRef}}": str(appellant_dict.get('PrisonRef', '') or ''),
+"{{FCONumber}}": str(appellant_dict.get('FCONumber', '') or ''),
+"{{PortReference}}": str(appellant_dict.get('PortReference', '') or ''),
+# "{{AppellantId}}": str(appellant_dict.get('AppellantId', '') or ''),
+# Add more placeholders and replace them as necessary
+
+#linked details
+"{{connectedFiles}}": str(connectedFiles),
+
+# sponsor details
+"{{CaseSponsorName}}": str(sponsor_dist.get('CaseSponsorName', '') or ''),
+"{{CaseSponsorForenames}}": str(sponsor_dist.get('CaseSponsorForenames', '') or ''),
+"{{CaseSponsorTitle}}": str(sponsor_dist.get('CaseSponsorTitle', '') or ''),
+"{{CaseSponsorAddress1}}": str(sponsor_dist.get('CaseSponsorAddress1', '') or ''),
+"{{CaseSponsorAddress2}}": str(sponsor_dist.get('CaseSponsorAddress2', '') or ''),
+"{{CaseSponsorAddress3}}": str(sponsor_dist.get('CaseSponsorAddress3', '') or ''),
+"{{CaseSponsorAddress4}}": str(sponsor_dist.get('CaseSponsorAddress4', '') or ''),
+"{{CaseSponsorAddress5}}": str(sponsor_dist.get('CaseSponsorAddress5', '') or ''),
+"{{CaseSponsorPostcode}}": str(sponsor_dist.get('CaseSponsorPostcode', '') or ''),
+"{{CaseSponsorTelephone}}": str(sponsor_dist.get('CaseSponsorTelephone', '') or ''),
+"{{CaseSponsorEmail}}": str(sponsor_dist.get('CaseSponsorEmail', '') or ''),
+"{{LSCReference}}": str(sponsor_dist.get('LSCReference', '') or ''),
+
+# CaseStatus ### review if can be null
+"{{currentstatus}}": str(currentstatus),
+"{{HistoryComment}}": str(HistoryComment),
+"{{fileLocationNote}}": str(fileLocationNote),
+
+# transaction details derived details
+"{{TransactionTypeId}}": str(transaction_details_derived_dist.get('TransactionTypeId', '') or ''),
+"{{SumFeeAdjustment}}": str(transaction_details_derived_dist.get('SumFeeAdjustment', '') or ''),
+"{{SumTotalFee}}": str(transaction_details_derived_dist.get('SumTotalFee', '') or ''),
+"{{SumPayAdjustment}}": str(transaction_details_derived_dist.get('SumPayAdjustment', '') or ''),
+"{{SumBalance}}": str(transaction_details_derived_dist.get('SumBalance', '') or ''),
+# "{{dateCorrectFeeReceived}}": format_date_iso(transaction_details_derived_dist.get('dateCorrectFeeReceived')), # review M10
+# "{{DateCorrectFeeDeemedReceived}}": format_date_iso(transaction_details_derived_dist.get('DateCorrectFeeDeemedReceived')), # review M10
+# "{{DateOfApplicationDecision}}": format_date_iso(transaction_details_derived_dist.get('DateOfApplicationDecision', '') or ''), # Review M1
+# "{{PaymentRemissionReasonNote}}": str(transaction_details_derived_dist.get('PaymentRemissionReasonNote', '') or ''), #review M10 
+# "{{ASFReferenceNo}}": str(transaction_details_derived_dist.get('ASFReferenceNo', '') or ''), #review M10
+# "{{s17Reference}}": str(transaction_details_derived_dist.get('s17Reference', '') or ''),  #review M10
+# "{{S20Reference}}": str(transaction_details_derived_dist.get('S20Reference', '') or ''), #review M10
+
+}
+
+for key, value in replacements.items():
+    html_template = html_template.replace(key, value)
+
+# AdditionalGrounds detail -- PaymentRemissionReasonDescription need to be Description
+AdditionalGrounds_Code = ''
+for index, row in enumerate(case_detail_details, start=1):
+    line = f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{row['PaymentRemissionReasonDescription']}</td></tr>"
+    AdditionalGrounds_Code += line + '\n'
+html_template = html_template.replace(f"{{{{AdditionalGroundsPlaceHolder}}}}", AdditionalGrounds_Code)
 
 
-# # Appellant rows
-# "{{AppellantName}}": str(appellant_dict.get('AppellantName', '') or ''),
-# "{{AppellantForenames}}": str(appellant_dict.get('AppellantForenames', '') or ''),
-# "{{AppellantTitle}}": str(appellant_dict.get('AppellantTitle', '') or ''),
-# "{{AppellantBirthDate}}": format_date_iso(appellant_dict.get('AppellantBirthDate')),
-# "{{Detained}}" : str(appellant_dict.get('Detained', '') or ''),
-# "{{DetentionCentre}}": str(appellant_dict.get('DetentionCentre', '') or ''),
-# "{{AppellantAddress1}}": str(appellant_dict.get('AppellantAddress1', '') or ''),
-# "{{AppellantAddress2}}": str(appellant_dict.get('AppellantAddress2', '') or ''),
-# "{{AppellantAddress3}}": str(appellant_dict.get('AppellantAddress3', '') or ''),
-# "{{AppellantAddress4}}": str(appellant_dict.get('AppellantAddress4', '') or ''),
-# "{{AppellantAddress5}}": str(appellant_dict.get('AppellantAddress5', '') or ''),
-# "{{Country}}": str(appellant_dict.get('Country', '') or ''),
-# "{{DCPostcode}}": str(appellant_dict.get('DCPostcode', '') or ''),
-# "{{AppellantTelephone}}": str(appellant_dict.get('AppellantTelephone', '') or ''),
-# "{{AppellantEmail}}": str(appellant_dict.get('AppellantEmail', '') or ''),
-# "{{PrisonRef}}": str(appellant_dict.get('PrisonRef', '') or ''),
-# "{{FCONumber}}": str(appellant_dict.get('FCONumber', '') or ''),
-# "{{PortReference}}": str(appellant_dict.get('PortReference', '') or ''),
-# # "{{AppellantId}}": str(appellant_dict.get('AppellantId', '') or ''),
-# # Add more placeholders and replace them as necessary
+# linkfiles_details -- Appellant Name??
+linkfiles_Code = ''
+for index, row in enumerate(link_details, start=1):
+    line = f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{row['LinkNo']}</td><td id=\"midpadding\"></td><td id=\"midpadding\">{row['LinkDetailComment']}</td></tr>"
+    linkfiles_Code += line + '\n'
+html_template = html_template.replace(f"{{{{LinkedFilesPlaceHolder}}}}", linkfiles_Code)
 
-# #linked details
-# "{{connectedFiles}}": str(connectedFiles),
+# costorder_details Details
+PaymentEventsSummary_Code = ''
+for index, row in enumerate(transaction_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{format_date(row['TransactionDate'])}</td><td id=\"midpadding\">{row['TransactionTypeId']}</td><td id=\"midpadding\">{row['TransactionStatusId']}</td><td id=\"midpadding\">{row['Amount']}</td><td id=\"midpadding\">{row['SumTotalPay']}</td><td id=\"midpadding\">{format_date(row['ClearedDate'])}</td><td id=\"midpadding\">{row['PaymentReference']}</td><td id=\"midpadding\">{row['AggregatedPaymentURN']}</td></tr>"
+    PaymentEventsSummary_Code += line + '\n'
+html_template = html_template.replace(f"{{{{PaymentEventsSummaryPlaceHolder}}}}", PaymentEventsSummary_Code)
 
-# # sponsor details
-# "{{CaseSponsorName}}": str(sponsor_dist.get('CaseSponsorName', '') or ''),
-# "{{CaseSponsorForenames}}": str(sponsor_dist.get('CaseSponsorForenames', '') or ''),
-# "{{CaseSponsorTitle}}": str(sponsor_dist.get('CaseSponsorTitle', '') or ''),
-# "{{CaseSponsorAddress1}}": str(sponsor_dist.get('CaseSponsorAddress1', '') or ''),
-# "{{CaseSponsorAddress2}}": str(sponsor_dist.get('CaseSponsorAddress2', '') or ''),
-# "{{CaseSponsorAddress3}}": str(sponsor_dist.get('CaseSponsorAddress3', '') or ''),
-# "{{CaseSponsorAddress4}}": str(sponsor_dist.get('CaseSponsorAddress4', '') or ''),
-# "{{CaseSponsorAddress5}}": str(sponsor_dist.get('CaseSponsorAddress5', '') or ''),
-# "{{CaseSponsorPostcode}}": str(sponsor_dist.get('CaseSponsorPostcode', '') or ''),
-# "{{CaseSponsorTelephone}}": str(sponsor_dist.get('CaseSponsorTelephone', '') or ''),
-# "{{CaseSponsorEmail}}": str(sponsor_dist.get('CaseSponsorEmail', '') or ''),
+# costorder_details Details
+costorder_Code = ''
+for index, row in enumerate(costorder_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['AppealStageWhenApplicationMade']}</td><td id=\"midpadding\">{format_date(row['DateOfApplication'])}</td><td id=\"midpadding\">{row['AppealStageWhenDecisionMade']}</td><td id=\"midpadding\">{row['OutcomeOfAppealWhereDecisionMade']}</td><td id=\"midpadding\">{format_date(row['DateOfDecision'])}</td><td id=\"midpadding\">{row['CostOrderDecision']}</td><td id=\"midpadding\">{row['ApplyingRepresentativeId']}</td></tr>"
+    costorder_Code += line + '\n'
+html_template = html_template.replace(f"{{{{CostorderdetailsPlaceHolder}}}}", costorder_Code)
 
-# }
+# reviewSpecificdirections Details
+Specificdirections_Code = ''
+for index, row in enumerate(reviewspecificdirection_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['ReviewSpecificDirectionId']}</td><td id=\"midpadding\">{format_date(row['DateRequiredIND'])}</td><td id=\"midpadding\">{format_date(row['DateRequiredAppellantRep'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedIND'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedAppellantRep'])}</td></tr>"
+    Specificdirections_Code += line + '\n'
+html_template = html_template.replace(f"{{{{SpecificdirectionsPlaceHolder}}}}", Specificdirections_Code)
 
-# for key, value in replacements.items():
-#     html_template = html_template.replace(key, value)
+# reviewstandarddirection Details
+reviewstandarddirection_Code = ''
+for index, row in enumerate(reviewstandarddirection_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['ReviewStandardDirectionId']}</td><td id=\"midpadding\">{format_date(row['DateRequiredIND'])}</td><td id=\"midpadding\">{format_date(row['DateRequiredAppellantRep'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedIND'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedAppellantRep'])}</td></tr>"
+    reviewstandarddirection_Code += line + '\n'
+html_template = html_template.replace(f"{{{{StandarddirectionsPlacHolder}}}}", reviewstandarddirection_Code)
 
-# # AdditionalGrounds detail -- PaymentRemissionReasonDescription need to be Description
-# AdditionalGrounds_Code = ''
-# for index, row in enumerate(case_detail_details, start=1):
-#     line = f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{row['PaymentRemissionReasonDescription']}</td></tr>"
-#     AdditionalGrounds_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{AdditionalGroundsPlaceHolder}}}}", AdditionalGrounds_Code)
-
-
-
-
-# # linkfiles_details -- Appellant Name??
-# linkfiles_Code = ''
-# for index, row in enumerate(link_details, start=1):
-#     line = f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{row['LinkNo']}</td><td id=\"midpadding\"></td><td id=\"midpadding\">{row['LinkDetailComment']}</td></tr>"
-#     linkfiles_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{LinkedFilesPlaceHolder}}}}", linkfiles_Code)
-
-
-
-
-# # costorder_details Details
-# PaymentEventsSummary_Code = ''
-# for index, row in enumerate(transaction_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{format_date(row['TransactionDate'])}</td><td id=\"midpadding\">{row['TransactionTypeId']}</td><td id=\"midpadding\">{row['TransactionStatusId']}</td><td id=\"midpadding\">{row['Amount']}</td><td id=\"midpadding\">{row['SumTotalPay']}</td><td id=\"midpadding\">{format_date(row['ClearedDate'])}</td><td id=\"midpadding\">{row['PaymentReference']}</td><td id=\"midpadding\">{row['AggregatedPaymentURN']}</td></tr>"
-#     PaymentEventsSummary_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{PaymentEventsSummaryPlaceHolder}}}}", PaymentEventsSummary_Code)
-
-
-
-# # costorder_details Details
-# costorder_Code = ''
-# for index, row in enumerate(costorder_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['AppealStageWhenApplicationMade']}</td><td id=\"midpadding\">{format_date(row['DateOfApplication'])}</td><td id=\"midpadding\">{row['AppealStageWhenDecisionMade']}</td><td id=\"midpadding\">{row['OutcomeOfAppealWhereDecisionMade']}</td><td id=\"midpadding\">{format_date(row['DateOfDecision'])}</td><td id=\"midpadding\">{row['CostOrderDecision']}</td><td id=\"midpadding\">{row['ApplyingRepresentativeId']}</td></tr>"
-#     costorder_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{CostorderdetailsPlaceHolder}}}}", costorder_Code)
-
-# # reviewSpecificdirections Details
-# Specificdirections_Code = ''
-# for index, row in enumerate(reviewspecificdirection_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['ReviewSpecificDirectionId']}</td><td id=\"midpadding\">{format_date(row['DateRequiredIND'])}</td><td id=\"midpadding\">{format_date(row['DateRequiredAppellantRep'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedIND'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedAppellantRep'])}</td></tr>"
-#     Specificdirections_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{SpecificdirectionsPlaceHolder}}}}", Specificdirections_Code)
-
-
-# # reviewstandarddirection Details
-# reviewstandarddirection_Code = ''
-# for index, row in enumerate(reviewstandarddirection_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['ReviewStandardDirectionId']}</td><td id=\"midpadding\">{format_date(row['DateRequiredIND'])}</td><td id=\"midpadding\">{format_date(row['DateRequiredAppellantRep'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedIND'])}</td><td id=\"midpadding\">{format_date(row['DateReceivedAppellantRep'])}</td></tr>"
-#     reviewstandarddirection_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{StandarddirectionsPlacHolder}}}}", reviewstandarddirection_Code)
+# MaintainCostAwards Details
+MaintainCostAwards_Code = ''
+for index, row in enumerate(costaward_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['CaseNo']}</td><td id=\"midpadding\">{str(appellant_dict.get('AppellantId', '') or '')}</td><td id=\"midpadding\">{row['AppealStage']}</td><td id=\"midpadding\">{format_date(row['DateOfApplication'])}</td><td id=\"midpadding\">{row['TypeOfCostAward']}</td><td id=\"midpadding\">{row['ApplyingParty']}</td><td id=\"midpadding\">{row['PayingParty']}</td><td id=\"midpadding\">{row['MindedToAward']}</td><td id=\"midpadding\">{row['ObjectionToMindedToAward']}</td><td id=\"midpadding\">{row['CostsAwardDecision']}</td><td id=\"midpadding\">{format_date(row['DateOfDecision'])}</td><td id=\"midpadding\">{row['CostsAmount']}</td></tr>"
+    MaintainCostAwards_Code += line + '\n'
+html_template = html_template.replace(f"{{{{MaintainCostAwardsPlaceHolder}}}}", MaintainCostAwards_Code)
 
 
 # # MaintainCostAwards Details
@@ -3656,106 +4013,251 @@ Dependentsdetailstemplate = """
 # for index, row in enumerate(costaward_details, start=1):
 #     line = f"<tr><td id=\"midpadding\">{row['CaseNo']}</td><td id=\"midpadding\">{str(appellant_dict.get('AppellantId', '') or '')}</td><td id=\"midpadding\">{row['AppealStage']}</td><td id=\"midpadding\">{format_date(row['DateOfApplication'])}</td><td id=\"midpadding\">{row['TypeOfCostAward']}</td><td id=\"midpadding\">{row['ApplyingParty']}</td><td id=\"midpadding\">{row['PayingParty']}</td><td id=\"midpadding\">{row['MindedToAward']}</td><td id=\"midpadding\">{row['ObjectionToMindedToAward']}</td><td id=\"midpadding\">{row['CostsAwardDecision']}</td><td id=\"midpadding\">{format_date(row['DateOfDecision'])}</td><td id=\"midpadding\">{row['CostsAmount']}</td></tr>"
 #     MaintainCostAwards_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{MaintainCostAwardsPlaceHolder}}}}", MaintainCostAwards_Code)
-
-# # DocumentTracking Details
-# DocumentTracking_Code = ''
-# for index, row in enumerate(documents_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['ReceivedDocumentId']}</td><td id=\"midpadding\">{format_date(row['DateRequested'])}</td><td id=\"midpadding\">{format_date(row['DateRequired'])}</td><td id=\"midpadding\">{format_date(row['DateReceived'])}</td><td id=\"midpadding\">{format_date(row['RepresentativeDate'])}</td><td id=\"midpadding\">{format_date(row['POUDate'])}</td><td id=\"midpadding\">{row['NoLongerRequired']}</td></tr>"
-#     DocumentTracking_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{DocumentTrackingPlaceHolder}}}}", DocumentTracking_Code)
+# html_template = html_template.replace(f"{{{{LinkedCasesviewonlyPlaceHolder}}}}", MaintainCostAwards_Code)
 
 
-# # newmatter Details
-# newmatter_Code = ''
-# for index, row in enumerate(newmatter_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['NewMatterDescription']}</td><td id=\"midpadding\">{row['AppealNewMatterNotes']}</td><td id=\"midpadding\">{row['DateReceived']}</td><td id=\"midpadding\">{row['DateReferredToHO']}</td><td id=\"midpadding\">{row['HODecision']}</td><td id=\"midpadding\">{row['DateHODecision']}</td></tr>"
-#     newmatter_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{NewMattersPlaceHolder}}}}", newmatter_Code)
+# DocumentTracking Details
+DocumentTracking_Code = ''
+for index, row in enumerate(documents_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['ReceivedDocumentId']}</td><td id=\"midpadding\">{format_date(row['DateRequested'])}</td><td id=\"midpadding\">{format_date(row['DateRequired'])}</td><td id=\"midpadding\">{format_date(row['DateReceived'])}</td><td id=\"midpadding\">{format_date(row['RepresentativeDate'])}</td><td id=\"midpadding\">{format_date(row['POUDate'])}</td><td id=\"midpadding\">{row['NoLongerRequired']}</td></tr>"
+    DocumentTracking_Code += line + '\n'
+html_template = html_template.replace(f"{{{{DocumentTrackingPlaceHolder}}}}", DocumentTracking_Code)
 
 
-
-# # human right Details
-# humanrigh_Code = ''
-# for index, row in enumerate(humanright_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['HumanRightDescription']}</td><td id=\"midpadding\">""</td></tr>"
-#     humanrigh_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{HumanRightsPlaceHolder}}}}", humanrigh_Code)
-
-
-# # Appeal Categories Details
-# AppealCategories_Code = ''
-# for index, row in enumerate(appealcategory_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['CategoryDescription']}</td><td id=\"midpadding\">{row['Flag']}</td><td id=\"midpadding\">""</td></tr>"
-#     AppealCategories_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{AppealCategoriesPlaceHolder}}}}", AppealCategories_Code)
+# newmatter Details
+newmatter_Code = ''
+for index, row in enumerate(newmatter_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['NewMatterDescription']}</td><td id=\"midpadding\">{row['AppealNewMatterNotes']}</td><td id=\"midpadding\">{row['DateReceived']}</td><td id=\"midpadding\">{row['DateReferredToHO']}</td><td id=\"midpadding\">{row['HODecision']}</td><td id=\"midpadding\">{row['DateHODecision']}</td></tr>"
+    newmatter_Code += line + '\n'
+html_template = html_template.replace(f"{{{{NewMattersPlaceHolder}}}}", newmatter_Code)
 
 
-# # Status Details
-# Status_Code = ''
-# for index, row in enumerate(status_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['CaseStatus']}</td><td id=\"midpadding\">{format_date(row['KeyDate'])}</td><td id=\"midpadding\">{row['InterpreterRequired']}</td><td id=\"midpadding\">{format_date(row['DecisionDate'])}</td><td id=\"midpadding\">{row['Outcome']}</td><td id=\"midpadding\">{format_date(row['Promulgated'])}</td></tr>"
-#     Status_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{StatusPlaceHolder}}}}", Status_Code)
+# human right Details
+humanrigh_Code = ''
+for index, row in enumerate(humanright_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['HumanRightDescription']}</td><td id=\"midpadding\">""</td></tr>"
+    humanrigh_Code += line + '\n'
+html_template = html_template.replace(f"{{{{HumanRightsPlaceHolder}}}}", humanrigh_Code)
+
+# Appeal Categories Details
+AppealCategories_Code = ''
+for index, row in enumerate(appealcategory_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['CategoryDescription']}</td><td id=\"midpadding\">{row['Flag']}</td><td id=\"midpadding\">""</td></tr>"
+    AppealCategories_Code += line + '\n'
+html_template = html_template.replace(f"{{{{AppealCategoriesPlaceHolder}}}}", AppealCategories_Code)
+
+# Status Details
+Status_Code = ''
+for index, row in enumerate(status_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['CaseStatus']}</td><td id=\"midpadding\">{format_date(row['KeyDate'])}</td><td id=\"midpadding\">{row['InterpreterRequired']}</td><td id=\"midpadding\">{format_date(row['DecisionDate'])}</td><td id=\"midpadding\">{row['Outcome']}</td><td id=\"midpadding\">{format_date(row['Promulgated'])}</td></tr>"
+    Status_Code += line + '\n'
+html_template = html_template.replace(f"{{{{StatusPlaceHolder}}}}", Status_Code)
+
+# History Details
+History_Code = ''
+for index, row in enumerate(history, start=1):
+    line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['HistoryComment']}</td></tr>"
+    History_Code += line + '\n'
+html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
+
+# bfdiary Details
+bfdiary_Code = ''
+for index, row in enumerate(bfdiary_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{format_date(row['EntryDate'])}</td><td id=\"midpadding\">{row['BFTypeDescription']}</td><td id=\"midpadding\">{row['Entry']}</td><td id=\"midpadding\">{format_date(row['DateCompleted'])}</td></tr>"
+    bfdiary_Code += line + '\n'
+html_template = html_template.replace(f"{{{{bfdiaryPlaceHolder}}}}", bfdiary_Code)
+
+#dependents_detail
+dependents_detail_Code = ''
+for index, row in enumerate(dependent_details, start=1):
+    line = f"<tr><td id=\"midpadding\">{row['AppellantName']}</td><td id=\"midpadding\">{row['CaseAppellantRelationship']}</td></tr>"
+    dependents_detail_Code += line + '\n'
+html_template = html_template.replace(f"{{{{DependentsPlaceHolder}}}}", dependents_detail_Code)
+
+#dependent details
+dependent_details_Code = ''
+if dependent_details:
+    for index, row in enumerate(dependent_details, start=1):
+        line = Dependentsdetailstemplate.replace("{{AppellantName}}", str(row['AppellantName'])) \
+                                        .replace("{{AppellantForenames}}", str(row['AppellantForenames'])) \
+                                        .replace("{{AppellantTitle}}", str(row['AppellantTitle'])) \
+                                        .replace("{{CaseAppellantRelationship}}", str(row['CaseAppellantRelationship'])) \
+                                        .replace("{{AppellantAddress1}}", str(row['AppellantAddress1'])) \
+                                        .replace("{{AppellantAddress2}}", str(row['AppellantAddress2'])) \
+                                        .replace("{{AppellantAddress3}}", str(row['AppellantAddress3'])) \
+                                        .replace("{{AppellantAddress4}}", str(row['AppellantAddress4'])) \
+                                        .replace("{{AppellantAddress5}}", str(row['AppellantAddress5'])) \
+                                        .replace("{{AppellantPostcode}}", str(row['AppellantPostcode'])) \
+                                        .replace("{{AppellantTelephone}}", str(row['AppellantTelephone']))
+        dependent_details_Code += line + '\n'
+        html_template = html_template.replace(f"{{{{Dependents}}}}", "Dependent Details Exists")
+else:
+    dependent_details_Code = Dependentsdetailstemplate.replace("{{AppellantName}}", "") \
+                                                      .replace("{{AppellantForenames}}", "") \
+                                                      .replace("{{AppellantTitle}}", "") \
+                                                      .replace("{{CaseAppellantRelationship}}", "") \
+                                                      .replace("{{AppellantAddress1}}", "") \
+                                                      .replace("{{AppellantAddress2}}", "") \
+                                                      .replace("{{AppellantAddress3}}", "") \
+                                                      .replace("{{AppellantAddress4}}", "") \
+                                                      .replace("{{AppellantAddress5}}", "") \
+                                                      .replace("{{AppellantPostcode}}", "") \
+                                                      .replace("{{AppellantTelephone}}", "")
+    html_template = html_template.replace(f"{{{{Dependents}}}}", "")
+html_template = html_template.replace(f"{{{{DependentsdetailsPlaceHolder}}}}", dependent_details_Code)
+
+#payment details
+payments_details_Code = ''
+nested_table_number = 99
+payment_number = 0
+if transaction_details:   
+    for index, row in enumerate(transaction_details, start=1):
+        nested_table_number += 1
+        payment_number += 1
+        line = PaymentDetailstemplate.replace("{{TransactionDate}}", format_date_iso(row['TransactionDate'])) \
+                                     .replace("{{LiberataNotifiedDate}}", format_date_iso(row['LiberataNotifiedDate'])) \
+                                     .replace("{{TransactionId}}", str(row['TransactionId'])) \
+                                     .replace("{{PaymentReference}}", str(row['PaymentReference'] or '')) \
+                                     .replace("{{OriginalPaymentReference}}", str(row['OriginalPaymentReference'] or '')) \
+                                     .replace("{{AggregatedPaymentURN}}", str(row['AggregatedPaymentURN'] or '')) \
+                                     .replace("{{payerSurname}}", str(row['PayerSurname'] or '')) \
+                                     .replace("{{TransactionNotes}}", str(row['TransactionNotes'] or '')) \
+                                     .replace("{{ExpectedDate}}", format_date_iso(row['ExpectedDate'])) \
+                                     .replace("{{clearedDate}}", format_date_iso(row['ClearedDate'])) \
+                                     .replace("{{Amount}}", str(row['Amount'] or '')) \
+                                     .replace("{{Last4DigitsCard}}", str(row['Last4DigitsCard'] or '')) \
+                                     .replace("{{payerForename}}", str(row['PayerForename'] or '')) \
+                                     .replace("{{nested_table_number}}", str(nested_table_number)) \
+                                     .replace("{{payment_number}}", str(payment_number))
+
+                                     
+        payments_details_Code += line + '\n'
+else:
+    nested_table_number += 1
+    payment_number += 1
+    payments_details_Code = PaymentDetailstemplate.replace("{{TransactionDate}}", "") \
+                                                  .replace("{{LiberataNotifiedDate}}", "") \
+                                                  .replace("{{TransactionId}}", "") \
+                                                  .replace("{{PaymentReference}}", "") \
+                                                  .replace("{{OriginalPaymentReference}}", "") \
+                                                  .replace("{{AggregatedPaymentURN}}", "") \
+                                                  .replace("{{payerSurname}}", "") \
+                                                  .replace("{{TransactionNotes}}", "") \
+                                                  .replace("{{ExpectedDate}}", "") \
+                                                  .replace("{{clearedDate}}", "") \
+                                                  .replace("{{Amount}}", "") \
+                                                  .replace("{{Last4DigitsCard}}", "") \
+                                                  .replace("{{payerForename}}", "") \
+                                                  .replace("{{nested_table_number}}", str(nested_table_number)) \
+                                                  .replace("{{payment_number}}", str(payment_number))
+html_template = html_template.replace(f"{{{{paymentdetailsPlaceHolder}}}}", payments_details_Code)
+
+#CaseStatus Details
+
+html_template = html_template.replace(f"{{{{StatusDetailsPlaceHolder}}}}",StatusDetailFirstTierHearingTemplate)
+
+displayHTML(html_template)
+
+# COMMAND ----------
 
 
-# # History Details
-# History_Code = ''
-# for index, row in enumerate(history, start=1):
-#     line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['HistoryComment']}</td></tr>"
-#     History_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-# # bfdiary Details
-# bfdiary_Code = ''
-# for index, row in enumerate(bfdiary_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{format_date(row['EntryDate'])}</td><td id=\"midpadding\">{row['BFTypeDescription']}</td><td id=\"midpadding\">{row['Entry']}</td><td id=\"midpadding\">{format_date(row['DateCompleted'])}</td></tr>"
-#     bfdiary_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{bfdiaryPlaceHolder}}}}", bfdiary_Code)
-
-# #dependents_detail
-# dependents_detail_Code = ''
-# for index, row in enumerate(dependent_details, start=1):
-#     line = f"<tr><td id=\"midpadding\">{row['AppellantName']}</td><td id=\"midpadding\">{row['CaseAppellantRelationship']}</td></tr>"
-#     dependents_detail_Code += line + '\n'
-# html_template = html_template.replace(f"{{{{DependentsPlaceHolder}}}}", dependents_detail_Code)
-
-# dependent_details_Code = ''
-# if dependent_details:
-    
-    
-#     for index, row in enumerate(dependent_details, start=1):
-#         line = Dependentsdetailstemplate.replace("{{AppellantName}}", row['AppellantName']) \
-#                                         .replace("{{AppellantForenames}}", row['AppellantForenames']) \
-#                                         .replace("{{AppellantTitle}}", row['AppellantTitle']) \
-#                                         .replace("{{CaseAppellantRelationship}}", row['CaseAppellantRelationship']) \
-#                                         .replace("{{AppellantAddress1}}", row['AppellantAddress1']) \
-#                                         .replace("{{AppellantAddress2}}", row['AppellantAddress2']) \
-#                                         .replace("{{AppellantAddress3}}", row['AppellantAddress3']) \
-#                                         .replace("{{AppellantAddress4}}", row['AppellantAddress4']) \
-#                                         .replace("{{AppellantAddress5}}", row['AppellantAddress5']) \
-#                                         .replace("{{AppellantPostcode}}", row['AppellantPostcode']) \
-#                                         .replace("{{AppellantTelephone}}", row['AppellantTelephone'])
-#         dependent_details_Code += line + '\n'
-#         html_template = html_template.replace(f"{{{{Dependents}}}}", "Dependent Details Exists")
-# else:
-#     dependent_details_Code = Dependentsdetailstemplate.replace("{{AppellantName}}", "") \
-#                                                       .replace("{{AppellantForenames}}", "") \
-#                                                       .replace("{{AppellantTitle}}", "") \
-#                                                       .replace("{{CaseAppellantRelationship}}", "") \
-#                                                       .replace("{{AppellantAddress1}}", "") \
-#                                                       .replace("{{AppellantAddress2}}", "") \
-#                                                       .replace("{{AppellantAddress3}}", "") \
-#                                                       .replace("{{AppellantAddress4}}", "") \
-#                                                       .replace("{{AppellantAddress5}}", "") \
-#                                                       .replace("{{AppellantPostcode}}", "") \
-#                                                       .replace("{{AppellantTelephone}}", "")
-#     html_template = html_template.replace(f"{{{{Dependents}}}}", "")
-# html_template = html_template.replace(f"{{{{DependentsdetailsPlaceHolder}}}}", dependent_details_Code)
-
+#CaseStatus Details
+status_details_Code = ''
+nested_table_number = 30
+if status_details:   
+    for index, row in enumerate(status_details, start=1):
+        nested_table_number += 1
+        print(type(row['CaseStatus']))
+        if row['CaseStatus'] == '37':
+            print('inloop')
+            line = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", str(row['CaseStatus'] or '')) \
+                                        .replace("{{KeyDate}}", format_date_iso(row['KeyDate'])) \
+                                        .replace("{{InterpreterRequired}}", str(row['InterpreterRequired'])) \
+                                        .replace("{{MiscDate1}}", format_date_iso(row['MiscDate2'] or '')) \
+                                        .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
+                                        .replace("{{InitialHearingPoints}}", str(row['InitialHearingPoints'] or '')) \
+                                        .replace("{{FinalHearingPoints}}", str(row['FinalHearingPoints'] or '')) \
+                                        .replace("{{HearingPointsChangeReasonId}}", str(row['HearingPointsChangeReasonId'] or '')) \
+                                        .replace("{{DecisionDate}}", format_date_iso(row['DecisionDate'] or '')) \
+                                        .replace("{{DecisionByTCW}}", str(row['DecisionByTCW'] or '')) \
+                                        .replace("{{MethodOfTyping}}", str(row['MethodOfTyping'] or '')) \
+                                        .replace("{{Outcome}}", str(row['Outcome'] or '')) \
+                                        .replace("{{Promulgated}}", format_date_iso(row['Promulgated'] or '')) \
+                                        .replace("{{UKAITNo}}", str(row['UKAITNo'] or '')) \
+                                        .replace("{{Extempore}}", str(row['Extempore'] or '')) \
+                                        .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(row['WrittenReasonsRequestedDate'] or '')) \
+                                        .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
+                                        .replace("{{ExtemporeMethodOfTyping}}", str(row['ExtemporeMethodOfTyping'] or '')) \
+                                        .replace("{{WrittenReasonsSentDate}}", format_date_iso(row['WrittenReasonsSentDate'] or ''))   \
+                                        .replace("{{nested_table_number}}", str(nested_table_number))                        
+            status_details_Code += line + '\n'
+else:
+    nested_table_number += 1
+    status_details_Code = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", "") \
+                                                  .replace("{{KeyDate}}", "") \
+                                                  .replace("{{InterpreterRequired}}", "") \
+                                                  .replace("{{MiscDate2}}", "") \
+                                                  .replace("{{TypistSentDate}}", "") \
+                                                  .replace("{{InitialHearingPoints}}", "") \
+                                                  .replace("{{FinalHearingPoints}}", "") \
+                                                  .replace("{{HearingPointsChangeReasonId}}", "") \
+                                                  .replace("{{DecisionDate}}", "") \
+                                                  .replace("{{DecisionByTCW}}", "") \
+                                                  .replace("{{MethodOfTyping}}", "") \
+                                                  .replace("{{Outcome}}", "") \
+                                                  .replace("{{Promulgated}}", "") \
+                                                  .replace("{{UKAITNo}}", "") \
+                                                  .replace("{{Extempore}}", "") \
+                                                  .replace("{{WrittenReasonsRequestedDate}}", "") \
+                                                  .replace("{{TypistSentDate}}", "") \
+                                                  .replace("{{ExtemporeMethodOfTyping}}", "") \
+                                                  .replace("{{WrittenReasonsSentDate}}", "") \
+                                                  .replace("{{nested_table_number}}", str(nested_table_number))    
 
 
-# displayHTML(html_template)
+displayHTML(status_details_Code)
+
+# COMMAND ----------
+
+CaseStatus, KeyDate, InterpreterRequired, 
+-- AdjudicatorId,
+ MiscDate2, TypistSentDate,
+InitialHearingPoints,
+FinalHearingPoints,
+HearingPointsChangeReasonId,
+DecisionDate,
+DecisionByTCW,
+MethodOfTyping,
+Outcome,
+Promulgated,
+UKAITNo,
+Extempore,
+WrittenReasonsRequestedDate,
+TypistSentDate,
+ExtemporeMethodOfTyping,
+WrittenReasonsRequestedDate,
+WrittenReasonsSentDate
+
+# COMMAND ----------
+
+status_details_Code = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", "") \
+                                                .replace("{{LiberataNotifiedDate}}", "") \
+                                                .replace("{{TransactionId}}", "") \
+                                                .replace("{{PaymentReference}}", "") \
+                                                .replace("{{OriginalPaymentReference}}", "") \
+                                                .replace("{{AggregatedPaymentURN}}", "") \
+                                                .replace("{{payerSurname}}", "") \
+                                                .replace("{{TransactionNotes}}", "") \
+                                                .replace("{{ExpectedDate}}", "") \
+                                                .replace("{{clearedDate}}", "") \
+                                                .replace("{{Amount}}", "") \
+                                                .replace("{{Last4DigitsCard}}", "") \
+                                                .replace("{{payerForename}}", "") \
+                                                .replace("{{nested_table_number}}", str(nested_table_number)) \
+                                                .replace("{{payment_number}}", str(payment_number))
+
+
+displayHTML(status_details_Code)
 
 # COMMAND ----------
 

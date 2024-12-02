@@ -3,7 +3,7 @@
 # MAGIC %sql
 # MAGIC -- done check for AdditionalGrounds multiple recods 
 # MAGIC with cte as (
-# MAGIC select CaseNo, hoRef,CCDAppealNum,CaseRepDXNo1,CaseRepDXNo2,AppealTypeId,DateApplicationLodged,DateOfApplicationDecision,DateLodged,AdditionalGrounds,AppealCategories,MREmbassy,NationalityId,CountryId,PortId,HumanRights,DateOfIssue,fileLocationNote,DocumentsReceived,TransferOutDate,RemovalDate,DeportationDate,ProvisionalDestructionDate,AppealReceivedBy,CRRespondent,RepresentativeRef,Language,HOInterpreter,CourtPreference,CertifiedDate,CertifiedRecordedDate,NoticeSentDate,DateReceived,ReferredToJudgeDate,RespondentName,MRPOU,RespondentName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,RespondentPostcode,RespondentTelephone,RespondentFax,RespondentEmail,CRReference,CRContact,CaseRepName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,CaseRepPostcode,CaseRepTelephone,CaseRepFax,CaseRepEmail,LSCCommission,CRReference,CRContact,RepTelephone,RespondentFax,RespondentEmail,StatutoryClosureDate,ThirdCountryId,SubmissionURN, DateReinstated,CaseOutcomeId,COAReferenceNumber,Notes2,
+# MAGIC select CaseNo, hoRef,CCDAppealNum,CaseRepDXNo1,CaseRepDXNo2,AppealTypeId,DateApplicationLodged,DateOfApplicationDecision,DateLodged,AdditionalGrounds,AppealCategories,MREmbassy,NationalityId,CountryId,PortId,HumanRights,DateOfIssue,fileLocationNote,DocumentsReceived,TransferOutDate,RemovalDate,DeportationDate,ProvisionalDestructionDate,AppealReceivedBy,CRRespondent,RepresentativeRef,Language,HOInterpreter,CourtPreference,CertifiedDate,CertifiedRecordedDate,NoticeSentDate,DateReceived,ReferredToJudgeDate,RespondentName,MRPOU,RespondentName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,RespondentPostcode,RespondentTelephone,RespondentFax,RespondentEmail,CRReference,CRContact,CaseRepName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,CaseRepPostcode,CaseRepTelephone,CaseRepFax,CaseRepEmail,LSCCommission,CRReference,CRContact,RepTelephone,RespondentFax,RespondentEmail,StatutoryClosureDate,ThirdCountryId,SubmissionURN, DateReinstated,CaseOutcomeId
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang
 # MAGIC )
 # MAGIC select CaseNo, count(*) from cte
@@ -34,7 +34,7 @@
 # MAGIC %sql
 # MAGIC -- multiple values to handel in hearing details(under status)
 # MAGIC with cte as (
-# MAGIC select CourtName,ListName,ListType,HearingTypeDesc,ListStartTime,HearingTypeEst,Outcome,AdjudicatorNote,CaseNo   
+# MAGIC select CourtName,ListName,ListType,HearingTypeDesc,ListStartTime,HearingTypeEst,Outcome,ListAdjudicatorNote,CaseNo   
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
 # MAGIC )
 # MAGIC select CaseNo, count(*) from cte
@@ -73,6 +73,48 @@
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC select count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail
+
+# COMMAND ----------
+
+# DBTITLE 1,M6: linked Cost Award
+# MAGIC %sql 
+# MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where CostAwardId in (
+# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where linkno = '43' and CaseNo != 'IA/00009/2014'
+# MAGIC group by CaseNo)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where CaseNo = 'HR/00040/2008'
+
+# COMMAND ----------
+
+# DBTITLE 1,likned cost award refined
+# MAGIC %sql 
+# MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where CostAwardId in (
+# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where  CaseNo != 'HR/00040/2008' and linkno in (select linkno from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail where CaseNo = 'HR/00040/2008')
+# MAGIC group by CaseNo)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail
+# MAGIC  where CaseNO = 'IA/00009/2014'
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail a join hive_metastore.ariadm_arm_appeals.bronze_cost_award b on a.CaseNo = b.CaseNo 
+
+# COMMAND ----------
+
 # DBTITLE 1,m6 values
 # MAGIC %sql
 # MAGIC -- need confirmation Linked Files missing- copy(disabled), filenumber
@@ -105,11 +147,12 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,m7First Tier - Hearing
 # MAGIC %sql
-# MAGIC with cte as (
 # MAGIC select 
-# MAGIC CaseStatus, KeyDate, InterpreterRequired, AdjudicatorId, MiscDate2, TypistSentDate,
+# MAGIC CaseNo,
+# MAGIC CaseStatus, KeyDate, InterpreterRequired, 
+# MAGIC -- AdjudicatorId,
+# MAGIC  MiscDate2, TypistSentDate,
 # MAGIC InitialHearingPoints,
 # MAGIC FinalHearingPoints,
 # MAGIC HearingPointsChangeReasonId,
@@ -124,10 +167,56 @@
 # MAGIC TypistSentDate,
 # MAGIC ExtemporeMethodOfTyping,
 # MAGIC WrittenReasonsRequestedDate,
-# MAGIC WrittenReasonsSentDate,
-# MAGIC AdjudicatorSurname,
-# MAGIC AdjudicatorForenames,
-# MAGIC AdjudicatorTitle
+# MAGIC WrittenReasonsSentDate
+# MAGIC -- AdjudicatorSurname,
+# MAGIC -- AdjudicatorForenames,
+# MAGIC -- AdjudicatorTitle
+# MAGIC from hive_metastore.ariadm_arm_appeals.silver_status_detail
+# MAGIC where --CaseStatus = 37 
+# MAGIC --and 
+# MAGIC CaseNO = 'TH/00137/2003'
+# MAGIC
+# MAGIC
+# MAGIC -- %sql
+# MAGIC -- select 
+# MAGIC -- CaseNo,
+# MAGIC -- CaseStatus,
+# MAGIC -- AdjudicatorId,
+# MAGIC -- AdjudicatorSurname,
+# MAGIC -- AdjudicatorForenames,
+# MAGIC -- AdjudicatorTitle
+# MAGIC -- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj -- M3
+# MAGIC -- where --CaseStatus = 37 --and 
+# MAGIC -- CaseNO = 'HX/00050/2003'
+
+# COMMAND ----------
+
+# DBTITLE 1,m7First Tier - Hearing
+# MAGIC %sql
+# MAGIC with cte as (
+# MAGIC select 
+# MAGIC CaseNo,
+# MAGIC CaseStatus, KeyDate, InterpreterRequired, 
+# MAGIC -- AdjudicatorId,
+# MAGIC  MiscDate2, TypistSentDate,
+# MAGIC InitialHearingPoints,
+# MAGIC FinalHearingPoints,
+# MAGIC HearingPointsChangeReasonId,
+# MAGIC DecisionDate,
+# MAGIC DecisionByTCW,
+# MAGIC MethodOfTyping,
+# MAGIC Outcome,
+# MAGIC Promulgated,
+# MAGIC UKAITNo,
+# MAGIC Extempore,
+# MAGIC WrittenReasonsRequestedDate,
+# MAGIC TypistSentDate,
+# MAGIC ExtemporeMethodOfTyping,
+# MAGIC WrittenReasonsRequestedDate,
+# MAGIC WrittenReasonsSentDate
+# MAGIC -- AdjudicatorSurname,
+# MAGIC -- AdjudicatorForenames,
+# MAGIC -- AdjudicatorTitle
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
 # MAGIC )
 # MAGIC select CaseNo, count(*) from cte
@@ -588,6 +677,18 @@
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC with cte as (
+# MAGIC   SELECT 
+# MAGIC max(StatusId) as StatusId, CaseNo
+# MAGIC FROM hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
+# MAGIC group by caseNo)
+# MAGIC select a.CaseStatus as CurrentStatus, a.CaseNo from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs a
+# MAGIC join cte b on a.CaseNo = b.CaseNo and a.StatusId = b.StatusId
+# MAGIC where a.CaseNo = 'AA/00001/2014'
+
+# COMMAND ----------
+
 # DBTITLE 1,M7 PTA Direct to Appellate Court
 # MAGIC %sql
 # MAGIC with cte as (
@@ -724,34 +825,248 @@ having count(*) > 1
 
 # COMMAND ----------
 
-# DBTITLE 1,-M10 values
+# DBTITLE 1,M10-payment summary
+appeal_case = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealcase").alias("ac")
+case_fee_summary = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_casefeesummary").alias("cfs")
+fee_satisfaction = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_feesatisfaction").alias("fs")
+payment_remission_reason = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_paymentremissionreason").alias("prr")
+port = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_port").alias("p")
+embassy = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_embassy").alias("e")
+hearing_centre = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_hearingcentre").alias("hc")
+case_sponsor = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_casesponsor").alias("cs")
+appeal_grounds = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealgrounds").alias("ag")
+appeal_type = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealtype").alias("at")
+
+# max(CaseFeeSummaryId)
+
+# COMMAND ----------
+
+appeal_case.select('CaseNo').distinct().count()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+appeal_case.alias("ac")\
+.join(case_fee_summary.alias("cfs"), (col("ac.CaseNo") == col("cfs.CaseNo")), "left_outer")\
+.join(fee_satisfaction.alias("fs"), col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")\
+.join(payment_remission_reason.alias("prr"), col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")\
+.join(port.alias("p"), col("ac.PortId") == col("p.PortId"), "left_outer")\
+.join(embassy.alias("e"), col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")\
+.join(hearing_centre.alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")\
+.join(case_sponsor.alias("cs"), col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")\
+.join(appeal_grounds.alias("ag"), col("ac.CaseNo") == col("ag.CaseNo"), "left_outer")\
+.join(appeal_type.alias("at"), col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
+.select(col('ac.CaseNo')).count()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+appeal_case.alias("ac")\
+.join(case_fee_summary.alias("cfs"), (col("ac.CaseNo") == col("cfs.CaseNo")), "left_outer")\
+.join(fee_satisfaction.alias("fs"), col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")\
+.join(payment_remission_reason.alias("prr"), col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")\
+.join(port.alias("p"), col("ac.PortId") == col("p.PortId"), "left_outer")\
+.join(embassy.alias("e"), col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")\
+.join(hearing_centre.alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")\
+.join(case_sponsor.alias("cs"), col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")\
+.select(col('ac.CaseNo')).count()
+
+# COMMAND ----------
+
+appeal_case
+        .join(case_fee_summary, col("ac.CaseNo") == col("cfs.CaseNo"), "left_outer")
+        .join(fee_satisfaction, col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")
+        .join(payment_remission_reason, col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")
+        .join(port, col("ac.PortId") == col("p.PortId"), "left_outer")
+        .join(embassy, col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")
+        .join(hearing_centre, col("ac.CentreId") == col("hc.CentreId"), "left_outer")
+        .join(case_sponsor, col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")
+        .join(appeal_grounds, col("ac.CaseNo") == col("ag.CaseNo"), "left_outer")
+        .join(appeal_type, col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
+        .select(
+            trim(col("ac.CaseNo")).alias('CaseNo'),
+            col("cfs.CaseFeeSummaryId"),
+            col("cfs.DatePosting1stTier"),
+            col("cfs.DatePostingUpperTier"),
+            col("cfs.DateCorrectFeeReceived"),
+            col("cfs.DateCorrectFeeDeemedReceived"),
+            col("cfs.PaymentRemissionrequested"),
+            col("cfs.PaymentRemissionGranted"),
+            col("cfs.PaymentRemissionReason"),
+            col("cfs.PaymentRemissionReasonNote"),
+            col("cfs.ASFReferenceNo"),
+            col("cfs.ASFReferenceNoStatus"),
+            col("cfs.LSCReference"),
+            col("cfs.LSCStatus"),
+            col("cfs.LCPRequested"),
+            col("cfs.LCPOutcome"),
+            col("cfs.S17Reference"),
+            col("cfs.S17ReferenceStatus"),
+            col("cfs.SubmissionURNCopied"),
+            col("cfs.S20Reference"),
+            col("cfs.S20ReferenceStatus"),
+            col("cfs.HomeOfficeWaiverStatus"),
+            col("prr.Description").alias("PaymentRemissionReasonDescription"),
+            col("prr.DoNotUse").alias("PaymentRemissionReasonDoNotUse"),
+            col("p.PortName").alias("POUPortName"),
+            col("p.Address1").alias("PortAddress1"),
+            col("p.Address2").alias("PortAddress2"),
+            col("p.Address3").alias("PortAddress3"),
+            col("p.Address4").alias("PortAddress4"),
+            col("p.Address5").alias("PortAddress5"),
+            col("p.Postcode").alias("PortPostcode"),
+            col("p.Telephone").alias("PortTelephone"),
+            col("p.Sdx").alias("PortSdx"),
+            col("e.Location").alias("EmbassyLocation"),
+            col("e.Embassy"),
+            col("e.Surname").alias("Surname"),
+            col("e.Forename").alias("Forename"),
+            col("e.Title"),
+            col("e.OfficialTitle"),
+            col("e.Address1").alias("EmbassyAddress1"),
+            col("e.Address2").alias("EmbassyAddress2"),
+            col("e.Address3").alias("EmbassyAddress3"),
+            col("e.Address4").alias("EmbassyAddress4"),
+            col("e.Address5").alias("EmbassyAddress5"),
+            col("e.Postcode").alias("EmbassyPostcode"),
+            col("e.Telephone").alias("EmbassyTelephone"),
+            col("e.Fax").alias("EmbassyFax"),
+            col("e.Email").alias("EmbassyEmail"),
+            col("e.DoNotUse").alias("DoNotUseEmbassy"),
+            col("hc.Description"),
+            col("hc.Prefix"),
+            col("hc.CourtType"),
+            col("hc.Address1").alias("HearingCentreAddress1"),
+            col("hc.Address2").alias("HearingCentreAddress2"),
+            col("hc.Address3").alias("HearingCentreAddress3"),
+            col("hc.Address4").alias("HearingCentreAddress4"),
+            col("hc.Address5").alias("HearingCentreAddress5"),
+            col("hc.Postcode").alias("HearingCentrePostcode"),
+            col("hc.Telephone").alias("HearingCentreTelephone"),
+            col("hc.Fax").alias("HearingCentreFax"),
+            col("hc.Email").alias("HearingCentreEmail"),
+            col("hc.Sdx").alias("HearingCentreSdx"),
+            col("hc.STLReportPath"),
+            col("hc.STLHelpPath"),
+            col("hc.LocalPath"),
+            col("hc.GlobalPath"),
+            col("hc.PouId"),
+            col("hc.MainLondonCentre"),
+            col("hc.DoNotUse"),
+            col("hc.CentreLocation"),
+            col("hc.OrganisationId"),
+            col("cs.Name").alias("CaseSponsorName"),
+            col("cs.Forenames").alias("CaseSponsorForenames"),
+            col("cs.Title").alias("CaseSponsorTitle"),
+            col("cs.Address1").alias("CaseSponsorAddress1"),
+            col("cs.Address2").alias("CaseSponsorAddress2"),
+            col("cs.Address3").alias("CaseSponsorAddress3"),
+            col("cs.Address4").alias("CaseSponsorAddress4"),
+            col("cs.Address5").alias("CaseSponsorAddress5"),
+            col("cs.Postcode").alias("CaseSponsorPostcode"),
+            col("cs.Telephone").alias("CaseSponsorTelephone"),
+            col("cs.Email").alias("CaseSponsorEmail"),
+            col("cs.Authorised"),
+            col("ag.AppealTypeId"),
+            #this hads been alias as there had been multiple appeal columns
+            col("at.Description").alias("AppealTypeDescription"),
+            col("at.Prefix").alias("AppealTypePrefix"),
+            col("at.Number").alias("AppealTypeNumber"),
+            col("at.FullName").alias("AppealTypeFullName"),
+            col("at.Category").alias("AppealTypeCategory"),
+            col("at.AppealType"),
+            col("at.DoNotUse").alias("AppealTypeDoNotUse"),
+            col("at.DateStart").alias("AppealTypeDateStart"),
+            col("at.DateEnd").alias("AppealTypeDateEnd")
+        )
+
+# COMMAND ----------
+
+appeal_case.createOrReplaceTempView("tv_appeal_case")
+
+
+# COMMAND ----------
+
 # MAGIC %sql
-# MAGIC --Sponcer (need to handel multiple values)
-# MAGIC
+# MAGIC select * from tv_appeal_case
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC     select a.* 
+# MAGIC     from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at as a 
+# MAGIC  where CaseNo = 'CC/00022/2003'
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC with cte as (
-# MAGIC select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,FeeSatisfactionId,Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
-# MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
-# MAGIC )
-# MAGIC select CaseNo, count(*) from cte
-# MAGIC group by CaseNo
-# MAGIC having count(*) > 1
+# MAGIC select a.* 
+# MAGIC     from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at as a 
+# MAGIC     join tv_appeal_case  b 
+# MAGIC     on a.CaseNo = b.CaseNo)
+# MAGIC     select   CaseNo, count(*)
+# MAGIC  from cte
+# MAGIC  group by all
+# MAGIC  having count(*) > 1
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC
-# MAGIC
-# MAGIC -- %sql
-# MAGIC -- select CaseSponsorName, caseNo, count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
-# MAGIC --  group by CaseSponsorName, caseNo 
-# MAGIC --  having count(*) > 1
-# MAGIC --  order by caseNo
-# MAGIC
-# MAGIC -- %sql
 # MAGIC -- with cte as (
-# MAGIC -- select LSCReference,CaseNo
-# MAGIC -- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at AS table_name
-# MAGIC -- group by LSCReference,CaseNo
+# MAGIC -- select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,
+# MAGIC -- --FeeSatisfactionId,
+# MAGIC -- Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
+# MAGIC -- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+# MAGIC
 # MAGIC -- )
-# MAGIC -- select LSCReference, CaseNo,count(*) from cte
-# MAGIC -- group by LSCReference, CaseNo
+# MAGIC -- select CaseNo, count(*) from cte
+# MAGIC -- group by CaseNo
 # MAGIC -- having count(*) > 1
+# MAGIC
+# MAGIC
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+# MAGIC
+# MAGIC where CaseNo = 'CC/00022/2003'
+# MAGIC
+
+# COMMAND ----------
+
+# DBTITLE 1,-M10 values
+ # CasePaymentdetails
+%sql
+# --Sponcer (need to handel multiple values)
+
+with cte as (
+select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,
+--FeeSatisfactionId,
+Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
+from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+
+)
+select CaseNo, count(*) from cte
+group by CaseNo
+having count(*) > 1
+
+
+-- %sql
+-- select CaseSponsorName, caseNo, count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+--  group by CaseSponsorName, caseNo 
+--  having count(*) > 1
+--  order by caseNo
+
+-- %sql
+-- with cte as (
+-- select LSCReference,CaseNo
+-- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at AS table_name
+-- group by LSCReference,CaseNo
+-- )
+-- select LSCReference, CaseNo,count(*) from cte
+-- group by LSCReference, CaseNo
+-- having count(*) > 1
 
 # COMMAND ----------
 
@@ -848,3 +1163,2980 @@ having count(*) > 1
 
 # MAGIC %sql
 # MAGIC select AppealStageWhenApplicationMade,DateOfApplication,AppealStageWhenDecisionMade,OutcomeOfAppealWhereDecisionMade,DateOfDecision,CostOrderDecision,ApplyingRepresentativeId, a.caseNo from ariadm_arm_appeals.bronze_cost_order a join ariadm_arm_appeals.stg_appeals_filtered b on a.caseNo = b.CaseNo
+
+# COMMAND ----------
+
+PaymentDetailstemplate = """
+<!--payment copy01 start-->
+                                <div id="paymentDetails">
+                                    <br>
+                                    <br>
+                                    <table id="table13">
+                                        <tbody>
+                                        <tr>
+                                            <th style="vertical-align: top; text-align: left; padding-left: 5px;">Payment Details</th>
+                                        </tr>
+                                        <tr>
+                                        <!-- left side -->
+                                        <td style="vertical-align: top;">
+                                            <table id="table12" style="padding-left: 100px;">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="eventDate">Event Date : </label></td>
+                                                    <td><input type="date" id="eventDate" name="eventDate" value="{{TransactionDate}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="eventType">Event Type : </label></td>
+                                                    <td><select id="eventType" disabled style="width:150px;">
+                                                        <option></option>
+                                                    </select></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventStatus">Event Status : </label></td>
+                                                    <td><select id="eventStatus" disabled style="width:150px;">
+                                                        <option></option>
+                                                    </select></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventNotifiedDate">Event Notified Date : </label></td>
+                                                    <td><input type="date" id="eventNotifiedDate" value="{{LiberataNotifiedDate}}" readonly></td>    
+                                                </tr>
+                                            </tbody></table>
+                                            <table id="table12" style="padding-left: 45px;">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="barclayTransId">Barclaycard Transaction ID : </label></td>
+                                                    <td><input type="text" id="barclayTransId" value="{{TransactionId}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="paymentRef">Payment Reference : </label></td>
+                                                    <td><input type="text" id="paymentRef" value="{{PaymentReference}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="originalPayRef">Original Payment Reference : </label></td>
+                                                    <td><input type="text" id="originalPayRef" value="{{OriginalPaymentReference}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="aggPaymentUrn">Aggregated Payment URN : </label></td>
+                                                    <td><input type="text" id="aggPaymentUrn" value="{{AggregatedPaymentURN}}" readonly></td>   
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td style="vertical-align: top;">
+                                            <table id="table12" style="padding-right: 75px">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="expectedPaymentDate">Expected Payment Date : </label></td>
+                                                    <td><input type="date" id="expectedPaymentDate" value="{{ExpectedDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="clearedDate">Cleared Date : </label></td>
+                                                    <td><input type="date" id="clearedDate" value="{{clearedDate}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventAmount">Event Amount(£) : </label></td>
+                                                    <td><input type="text" id="eventAmount" value="{{Amount}}" readonly></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels"><label for="eventMethod">Event Method : </label></td>
+                                                    <td><select id="eventMethod" disabled style="width:148px;">
+                                                        <option></option>
+                                                    </select></td>                                  
+                                            </tbody></table>
+                                            <table id="table12" style="padding-right: 180px">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="lastCardDigit">Last 4 Digits from Card : </label></td>
+                                                    <td><input type="text" id="lastCardDigit" size="6" value="{{Last4DigitsCard}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="createUserId">Create User ID : </label></td>
+                                                </tr> 
+                                                <tr>
+                                                    <td id="labels" style="padding-bottom: 30px;"><label for="editUserId">Last Edit User ID : </label></td>
+                                                </tr>                              
+                                            </tbody></table>
+                                        </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="vertical-align: top;">
+                                                <label for="payerSurname">Payer Surname :</label>
+                                                <input type="text" id="payerSurname" style="width:300px" value="{{payerSurname}}" readonly>
+                                            </td>
+                                            <td style="vertical-align: top;">
+                                                <label for="payerForename">Payer Forenames :</label>
+                                                <input type="text" id="payerForename" style="width:300px" value="{{payerForename}}" readonly>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="vertical-align: top;">
+                                                <label for="notes" style="display: block;">Notes:</label>
+                                                <textarea id="notes" rows="7" style="width:850px;">{{TransactionNotes}}</textarea>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- payment copy-01 end-->
+
+"""
+displayHTML(PaymentDetailstemplate)
+
+# COMMAND ----------
+
+# DBTITLE 1,FirstTier_Hearing template
+FirstTier_Hearing = """                      
+                            <!-- This tab is to be used for the following status(es):
+                            1. First Tier - Hearing
+                            -->
+                            <div id="firstTierHearing" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}" size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="remittalOutcome">Remittal Outcome : </label></td>
+                                                    <td colspan="2"><select id="remittalOutcome" name="remittalOutcome">
+                                                        <option value="" selected="">{{RemittalOutcome}}</option>
+                                                        <option value="yes">Yes</option>
+                                                        <option value="no">No</option>
+                                                    </select></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="UTAppellant">Upper tribunal appellant : </label></td>
+                                                    <td colspan="2"><select id="UTAppellant" name="UTAppellant">
+                                                        <option value="" selected="">{{UpperTribunalAppellant}}</option>
+                                                        <option value="appellant">Appellant</option>
+                                                        <option value="respondent">Respondent</option>
+                                                    </select></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><select id="decisionToHO" name="decisionToHO">
+                                                        <option value="" selected=""></option>
+                                                        <option value="yes">Yes</option>
+                                                        <option value="no">No</option>
+                                                    </select></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value ="{{TypistSentDate}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="initalHearingPoints">Initial hearing points : </label></td>
+                                                    <td colspan="2"><input type="text" id="initalHearingPoints" name="initalHearingPoints" value ="{{InitialHearingPoints}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="finalHearingPoints">Final Hearing Points : </label></td>
+                                                    <td colspan="2"><input type="text" id="finalHearingPoints" name="finalHearingPoints" value ="{{FinalHearingPoints}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="reasonPointsChange">Reason for points change : </label></td>
+                                                    <td colspan="2"><input type="text" id="reasonPointsChange" name="reasonPointsChange" value ="{{HearingPointsChangeReasonId}}"></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" value ="{{Extempore}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}" readonly></td>
+                                                            </tr>                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(FirstTier_Hearing)
+
+# COMMAND ----------
+
+# DBTITLE 1,firstTierPaper template
+FirstTier_Paper = """
+                            <!-- This tab is to be used for the following status(es):
+                                1. First Tier - Paper
+                            -->
+                            <div id="firstTierPaper" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" value= "{{CaseStatus}} "name="statusOfCase"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing"  value= "{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value="{{InterpreterRequired}}" size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="remittalOutcome">Remittal Outcome : </label></td>
+                                                    <td colspan="2"><select id="remittalOutcome" name="remittalOutcome">
+                                                        <option value="{{RemittalOutcome}}" selected=""></option>
+                                                        <option value="yes">Yes</option>
+                                                        <option value="no">No</option>
+                                                    </select></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="UTAppellant">Upper tribunal appellant : </label></td>
+                                                    <td colspan="2"><input id="UTAppellant" name="UTAppellant" type="text" value="{{UpperTribunalAppellant}}"readonly>
+                                                        </td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text"readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{TypistSentDate}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="initalHearingPoints">Initial hearing points : </label></td>
+                                                    <td colspan="2"><input type="text" id="initalHearingPoints" name="initalHearingPoints" value="{{InitialHearingPoints}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="finalHearingPoints">Final Hearing Points : </label></td>
+                                                    <td colspan="2"><input type="text" id="finalHearingPoints" name="finalHearingPoints" value="{{FinalHearingPoints}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="reasonPointsChange">Reason for points change : </label></td>
+                                                    <td colspan="2"><input type="text" id="reasonPointsChange" name="reasonPointsChange" value="{{HearingPointsChangeReasonId}}" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy"  value="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>      
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(FirstTier_Paper)                          
+
+# COMMAND ----------
+
+# DBTITLE 1,First Tier Permission Application Template
+FirstTierPermission_Application = """
+                            <div id="ftpa" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApplication">  Date of application : </label></td>
+                                                    <td><input type="date" id="dateOfApplication" name="dateOfApplication" value="{{DateReceived}}" readonly></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time: </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJudge">Date to judicial officer : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateToJudge" name="dateToJudge" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr>
+                                                    <td style="padding: 10px;"></td>
+                                                    <td colspan="2"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px;"></td>
+                                                    <td colspan="2"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px;"></td>
+                                                    <td colspan="2"></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" value ="{{DecisionSentToHO}}"type="text" readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="initalHearingPoints">Initial hearing points : </label></td>
+                                                    <td colspan="2"><input type="text" id="initalHearingPoints" name="initalHearingPoints" value="{{InitialHearingPoints}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="finalHearingPoints">Final Hearing Points : </label></td>
+                                                    <td colspan="2"><input type="text" id="finalHearingPoints" name="finalHearingPoints" value="{{FinalHearingPoints}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="reasonPointsChange">Reason for points change : </label></td>
+                                                    <td colspan="2"><input type="text" id="reasonPointsChange" name="reasonPointsChange" value="{{HearingPointsChangeReasonId}}" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping"  value="{{ExtemporeMethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+ """
+displayHTML(FirstTierPermission_Application)
+
+# COMMAND ----------
+
+# DBTITLE 1,Preliminary Issue template
+Preliminary_Issue = """
+                            <div id="preliminaryIssue" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc" readonly> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}" size="3" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="natureOfAllegation">Nature of allegation : </label></td>
+                                                    <td colspan="2"><input type="text" id="natureOfAllegation" name="natureOfAllegation" value="{{Allegation}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJO">Date to judicial officer : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateToJO" name="dateToJO" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="nameOfJO">Name of judicial officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="nameOfJO" name="nameOfJO" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decidingCentre">Deciding centre: </label></td>
+                                                    <td colspan="2"><input type="text" id="decidingCentre" name="decidingCentre" value="{{DecidingCentre}}" readonly></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" value="{{DecisionSentToHODate}}"type="text"readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore"  readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}" readonly></td>
+                                                            </tr>                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(Preliminary_Issue)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Case Management Review template
+CaseManagement_Review = """                          
+                            <div id="cmr" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="process">Process : </label></td>
+                                                    <td colspan="2"><input type="text" id="process" name="process" value="{{process}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="tier">Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="tier" name="tier" value="{{Tier}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc" readonly> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value="{{InterpreterRequired}}" size="3" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="cmrOrders">CMR orders : </label></td>
+                                                    <td colspan="2"><input type="text" id="cmrOrders" name="cmrOrders" value="{{}}" readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink" readonly></td>
+                                                </tr>
+                                                
+
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}" readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore"  readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived"  value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(CaseManagement_Review)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Set Aside Application Template
+SetAsideApplication = """
+                            <div id="setAside" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="process">Process : </label></td>
+                                                    <td colspan="2"><input type="text" id="process" name="process" value="{{process}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApplication">Date of application : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateOfApplication" name="dateOfApplication"  value="{{DateReceived}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJO">Date to judicial officer : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateToJO" name="dateToJO" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="nameOfJO">Judicial officer name : </label></td>
+                                                    <td colspan="2"><input type="text" id="nameOfJO" name="nameOfJO" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService"  value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                                    
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(SetAsideApplication)
+
+# COMMAND ----------
+
+# DBTITLE 1,Closed - Fee Not Paid Template
+Closed_FeeNotPaid = """
+                            <div id="closedFeeNotPaid" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="noCertAwarded">No Certificate awarded - sent to filing : </label></td>
+                                                    <td colspan="2"><input type="date" id="noCertAwarded" name="noCertAwarded" value="{{NoCertAwardDate}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfWriteOff">Cert revoked/appeal struck out- date of write off : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateOfWriteOff" name="dateOfWriteOff" value="{{CertRevokedDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="writtenOffSentFiling">Written off - sent for filing : </label></td>
+                                                    <td colspan="2"><input type="date" id="writtenOffSentFiling" name="writtenOffSentFiling" value="{{WrittenOffFileDate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                            
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(Closed_FeeNotPaid)
+
+# COMMAND ----------
+
+# DBTITLE 1,Review of Cost Order Template
+ReviewofCostOrder = """
+                            <div id="reviewOfCostOrder" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="process">Process : </label></td>
+                                                    <td colspan="2"><input type="text" id="process" name="process" value="{{process}}"></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc" readonly> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" size="3" value ="{{InterpreterRequired}}" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                            
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome"  value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService"  value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"   value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(ReviewofCostOrder)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Case Closed Fee Outstanding Template
+CaseClosedFeeOutstanding = """
+                            <div id="caseClosedFeeOutstanding" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="referredForEnforcement">Referred for Enforcement Action : </label></td>
+                                                    <td colspan="2"><input type="date" id="referredForEnforcement" name="referredForEnforcement" value="{{ReferredEnforceDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="letter1">Letter 1 : </label></td>
+                                                    <td colspan="2"><input type="date" id="letter1" name="letter1" value="{{Letter1Date}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="letter2">Letter 2 : </label></td>
+                                                    <td colspan="2"><input type="date" id="letter2" name="letter2" value="{{Letter2Date}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="letter3">Letter 3 : </label></td>
+                                                    <td colspan="2"><input type="date" id="letter3" name="letter3" value="{{Letter3Date}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="refToFinance">Referred to Finance : </label></td>
+                                                    <td colspan="2"><input type="date" id="refToFinance" name="refToFinance" value="{{ReferredFinanceDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="writtenOff">Written Off : </label></td>
+                                                    <td colspan="2"><input type="date" id="writtenOff" name="writtenOff" value="{{WrittenOffDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="courtActionAuth">Court action authorised : </label></td>
+                                                    <td colspan="2"><input type="date" id="courtActionAuth" name="courtActionAuth" value="{{CourtActionAuthDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="balancePaid">Balance paid : </label></td>
+                                                    <td colspan="2"><input type="date" id="balancePaid" name="balancePaid" value="{{BalancePaidDate}}"readonly></td>
+                                                </tr>
+                                                
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService"  value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"   value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(CaseClosedFeeOutstanding)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,On Hold - Chargeback Taken, Upper Trib Case on Hold - Fee Not Paid
+ OnHold_ChargebackTaken = """
+                            <div id="onHoldChargeback" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                            
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome"  value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr><td style="padding:10px"></td></tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                        
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(OnHold_ChargebackTaken)
+
+# COMMAND ----------
+
+# DBTITLE 1,Immigration Judge - Hearing, Immigration Judge - Paper
+ImmigrationJudge = """   
+                            <div id="immigrationJudge" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"  readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}" size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Reconsideration Hearing : <input type="checkbox" id="reconsiderationHearing" name="reconsiderationHearing" readonly> Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy"  value ="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome"   value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"   value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>      
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(ImmigrationJudge)
+
+# COMMAND ----------
+
+# DBTITLE 1,Panel Heaing (Legal, Panel Heaing (Legal / Non Legal)
+Panel_Heaing = """
+                            <div id="panelHearingLegal" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}" size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialOfficer">Judicial Officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly></td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Reconsideration Hearing : <input type="checkbox" id="reconsiderationHearing" name="reconsiderationHearing" readonly> Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>      
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(Panel_Heaing)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Upper Tribunal Hearing
+ UpperTribunalHearing = """
+                            <div id="upperTribunalHearing" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}"size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingAppeal">Party making appeal : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingAppeal" name="partyMakingAppeal" value="{{Party}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"  readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(UpperTribunalHearing)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Upper Tribunal Hearing - Continuance template
+UpperTribunalHearing_Continuance = """
+                            <div id="upperTribunalHearingCont" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" value ="{{InterpreterRequired}}"size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingAppeal">Party making appeal : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingAppeal" name="partyMakingAppeal" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="utHearingDirection">Upper tribunal hearing direction : </label></td>
+                                                    <td colspan="2"><input type="text" id="utHearingDirection" name="utHearingDirection" value="{{UpperTribunalHearingDirectionId}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}" readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(UpperTribunalHearing_Continuance)                            
+
+# COMMAND ----------
+
+# DBTITLE 1,Upper Tribunal Permission Application
+UpperTribunalPermissionApplication = """  
+                            <div id="utpa" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApplication">  Date of application : </label></td>
+                                                    <td><input type="date" id="dateOfApplication" name="dateOfApplication" value="{{DateReceived}}"></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time: </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJudge">Date to judicial officer : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateToJudge" name="dateToJudge" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for Personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="listReqType">List requirement type : </label></td>
+                                                                <td colspan="2"><input type="text" id="listReqType" name="listReqType" value="{{ListRequirementTypeId}}"></td>
+                                                            </tr>
+                                                                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(UpperTribunalPermissionApplication)
+
+# COMMAND ----------
+
+# DBTITLE 1,Upper Tribunal Oral Permission Application
+UpperTribunalOralPermissionApplication = """
+                            <div id="utopa"  style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApplication">  Date of application : </label></td>
+                                                    <td><input type="date" id="dateOfApplication" name="dateOfApplication" value="{{DateReceived}}"readonly></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time: </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJudge">Date to judicial officer : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateToJudge" name="dateToJudge" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="listReqType">List requirement type : </label></td>
+                                                                <td colspan="2"><input type="text" id="listReqType" name="listReqType" value="{{ListRequirementTypeId}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived"value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(UpperTribunalOralPermissionApplication)
+
+# COMMAND ----------
+
+# DBTITLE 1,Upper Tribunal Oral Permission Hearing
+UpperTribunalOralPermissionHearing = """
+                            <div id="upperTribunalOralPermissionHearing" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc"> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq"value ="{{InterpreterRequired}}"  size="3"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT"value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingAppeal" name="partyMakingApp" value="{{Party}}"readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value ="{{WrittenReasonsRequestedDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(UpperTribunalOralPermissionHearing)
+
+# COMMAND ----------
+
+# DBTITLE 1,Appellate Court template
+AppellateCourt = """
+                            <div id="appellateCourt" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="courtSelection">Court selection : </label></td>
+                                                    <td colspan="2"><input type="text" id="courtSelection" name="courtSelection" value="{{CourtSelection}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfAppeal">  Date of appeal : </label></td>
+                                                    <td><input type="text" id="dateOfAppeal" name="dateOfAppeal" value="{{DateReceived}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateAppRecd">  Date Application received : </label></td>
+                                                    <td><input type="text" id="dateAppRecd" name="dateAppRecd" value="{{}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyBringingAppeal">Party bringing appeal : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyBringingAppeal" name="partyBringingAppeal" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="coaRef">COA reference number : </label></td>
+                                                    <td colspan="2"><input type="text" id="coaRef" name="coaRef" value="{{COAReferenceNumber}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;" id="labels"><label for="notes">Notes :{{Notes2}}</label></td>
+                                                    <td colspan="2"><textarea id="outcome" cols="30" ></textarea></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                                
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(AppellateCourt)
+
+# COMMAND ----------
+
+# DBTITLE 1,PTA Direct to Appellate Court
+PTADirecttoAppellateCourt = """
+                            <div id="ptaDirectToAppellateCourt" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="courtSelection">Court selection : </label></td>
+                                                    <td colspan="2"><input type="text" id="courtSelection" name="courtSelection" value="{{CourtSelection}}" readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="dateAppRecd">  Date Application received : </label></td>
+                                                    <td><input type="date" id="dateAppRecd" name="dateAppRecd" value="{{}}"readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyBringingAppeal" name="partyBringingAppeal" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="oot">Out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="coaRef" name="coaRef" readonly></td>
+                                                </tr>
+                                                
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" readonly></td>
+                                                </tr>
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                                
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(PTADirecttoAppellateCourt)
+
+# COMMAND ----------
+
+# DBTITLE 1,Permission to Appeal
+PermissiontoAppeal = """
+                            <div id="permissionToAppeal" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="courtSelection">Court selection : </label></td>
+                                                    <td colspan="2"><input type="text" id="courtSelection" name="courtSelection" value="{{CourtSelection}}" readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="dateAppRecd">  Date Application received : </label></td>
+                                                    <td><input type="date" id="dateAppRecd" name="dateAppRecd" readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyBringingAppeal" name="partyBringingAppeal" value="{{Party}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="oot">Out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="coaRef" name="coaRef"  readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJO">  Date to judicial officer : </label></td>
+                                                    <td><input type="date" id="dateToJO" name="dateToJO" value="{{MiscDate1}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="joReceivingApp">JO receiving application : </label></td>
+                                                    <td colspan="2"><input type="text" id="joReceivingApp" name="joReceivingApp" value="{{AdjudicatorId}}" readonly></td>
+                                                </tr>
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}" readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo" value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                                
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(PermissiontoAppeal)
+
+# COMMAND ----------
+
+# DBTITLE 1,High Court Review template
+HighCourtReview = """
+                            <div id="highCourtReview" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApp">  Date of application : </label></td>
+                                                    <td><input type="date" id="dateOfApp" name="dateOfApp" value="{{DateReceived}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="highCourtRef">High court reference : </label></td>
+                                                    <td colspan="2"><input type="text" id="highCourtRef" name="highCourtRef" value="{{HighCourtReference}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="adminCourtRef">Admin court reference : </label></td>
+                                                    <td colspan="2"><input type="text" id="adminCourtRef" name="adminCourtRef" value="{{AdminCourtReference}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyBringingAppeal" name="partyBringingAppeal" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                                                
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+
+"""
+displayHTML(HighCourtReview)
+
+# COMMAND ----------
+
+# DBTITLE 1,High Court Review (Filter) template
+HighCourtReviewFilter = """
+                            <div id="highCourtReviewFilter" style="display: block;">
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody>
+                                                <tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApp">  Date of application : </label></td>
+                                                    <td><input type="date" id="dateOfApp" name="dateOfApp" value="{{DateReceived}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="highCourtRef">High court reference : </label></td>
+                                                    <td colspan="2"><input type="text" id="highCourtRef" name="highCourtRef" value="{{HighCourtReference}}"readonly></td>
+                                                </tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyBringingAppeal" name="partyBringingAppeal" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialOfficer">Judicial Officer : </label></td>
+                                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateToJO">  Date to judicial officer : </label></td>
+                                                    <td><input type="date" id="dateToJO" name="dateToJO" value="{{MiscDate1}}"readonly></td>
+                                                </tr>
+                                                
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                                                
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(HighCourtReviewFilter)
+
+# COMMAND ----------
+
+# DBTITLE 1,Judicial Review Hearing, Judicial Review Oral Permission Hearing
+JudicialReviewHearing = """
+                            <div id="judicialReviewHearing" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="hearingCourt">Hearing Court : </label></td>
+                                                    <td colspan="2"><input type="text" id="hearingCourt" name="hearingCourt" value="{{HearingCourt}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfHearing">  Date of hearing : </label></td>
+                                                    <td><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}" readonly></td>
+                                                    <td><input type="checkbox" id="fc" name="fc" readonly> F.C. </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="interpreterReq">Interpreter(s) required : </label></td>
+                                                    <td colspan="2"><input type="text" id="interpreterReq" name="interpreterReq" size="3" value ="{{InterpreterRequired}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingAppeal">Party making appeal : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingAppeal" name="partyMakingAppeal" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judgeFT">Judge First-Tier : </label></td>
+                                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT" value ="{{AdjudicatorSurname}},{{AdjudicatorForenames}} {{AdjudicatorTitle}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateReserved">Date Reserved : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateReserved" name="dateReserved" value ="{{MiscDate2}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="videoLink">Video link : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="videoLink" name="videoLink" readonly></td>
+                                                </tr>
+                                                
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}"readonly></td>
+                                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DecisionByTCW}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value ="{{MethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome"  value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore"  readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping" value ="{{ExtemporeMethodOfTyping}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived"  value ="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                                            </tr>                            
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+"""
+displayHTML(JudicialReviewHearing)
+
+# COMMAND ----------
+
+# DBTITLE 1,Judicial Review Permission Application template
+JudicialReviewPermissionApplication = """
+                            <div id="jrpa" style="display: block;" >
+                                <br>
+                                <br>
+                                <table id="table10">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- left side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatus}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="applicationType">Application type : </label></td>
+                                                    <td colspan="2"><input type="text" id="applicationType" name="applicationType" value="{{ApplicationType}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfApp">Date of application : </label></td>
+                                                    <td colspan="2"><input type="date" id="dateOfApp" name="dateOfApp" value="{{DateReceived}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                                    <td colspan="2"><input type="text" id="partyMakingAppeal" name="partyMakingApp" value="{{Party}}"readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="appOOT">Application out of time : </label></td>
+                                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" readonly></td>
+                                                </tr>
+                                                
+                                            
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                                <tr>
+                                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                                    <td><input id="decisionToHO" name="decisionToHO" type="text" value="{{DecisionSentToHODate}}"readonly>
+                                                        </td>
+                                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value="{{DecisionSentToHODate}}"readonly></td>
+                                                </tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                <tr><td style="padding:10px"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                        <!-- right side -->
+                                        <td>
+                                            <table id="table3">
+                                                <tbody><tr>
+                                                    <td style="padding:10px"> </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value ="{{Outcome}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}"readonly></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value ="{{UKAITNo}}"readonly></td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>               
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </div>
+
+                        </div>
+                    </div>
+"""
+displayHTML(JudicialReviewPermissionApplication)
+
+# COMMAND ----------
+
+dbutils.secrets.listScopes()
+

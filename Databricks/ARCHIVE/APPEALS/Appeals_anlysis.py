@@ -3,7 +3,7 @@
 # MAGIC %sql
 # MAGIC -- done check for AdditionalGrounds multiple recods 
 # MAGIC with cte as (
-# MAGIC select CaseNo, hoRef,CCDAppealNum,CaseRepDXNo1,CaseRepDXNo2,AppealTypeId,DateApplicationLodged,DateOfApplicationDecision,DateLodged,AdditionalGrounds,AppealCategories,MREmbassy,NationalityId,CountryId,PortId,HumanRights,DateOfIssue,fileLocationNote,DocumentsReceived,TransferOutDate,RemovalDate,DeportationDate,ProvisionalDestructionDate,AppealReceivedBy,CRRespondent,RepresentativeRef,Language,HOInterpreter,CourtPreference,CertifiedDate,CertifiedRecordedDate,NoticeSentDate,DateReceived,ReferredToJudgeDate,RespondentName,MRPOU,RespondentName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,RespondentPostcode,RespondentTelephone,RespondentFax,RespondentEmail,CRReference,CRContact,CaseRepName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,CaseRepPostcode,CaseRepTelephone,CaseRepFax,CaseRepEmail,LSCCommission,CRReference,CRContact,RepTelephone,RespondentFax,RespondentEmail,StatutoryClosureDate,ThirdCountryId,SubmissionURN, DateReinstated,CaseOutcomeId,COAReferenceNumber,Notes2,
+# MAGIC select CaseNo, hoRef,CCDAppealNum,CaseRepDXNo1,CaseRepDXNo2,AppealTypeId,DateApplicationLodged,DateOfApplicationDecision,DateLodged,AdditionalGrounds,AppealCategories,MREmbassy,NationalityId,CountryId,PortId,HumanRights,DateOfIssue,fileLocationNote,DocumentsReceived,TransferOutDate,RemovalDate,DeportationDate,ProvisionalDestructionDate,AppealReceivedBy,CRRespondent,RepresentativeRef,Language,HOInterpreter,CourtPreference,CertifiedDate,CertifiedRecordedDate,NoticeSentDate,DateReceived,ReferredToJudgeDate,RespondentName,MRPOU,RespondentName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,RespondentPostcode,RespondentTelephone,RespondentFax,RespondentEmail,CRReference,CRContact,CaseRepName,RespondentAddress1,RespondentAddress2,RespondentAddress3,RespondentAddress4,RespondentAddress5,CaseRepPostcode,CaseRepTelephone,CaseRepFax,CaseRepEmail,LSCCommission,CRReference,CRContact,RepTelephone,RespondentFax,RespondentEmail,StatutoryClosureDate,ThirdCountryId,SubmissionURN, DateReinstated,CaseOutcomeId
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang
 # MAGIC )
 # MAGIC select CaseNo, count(*) from cte
@@ -34,7 +34,7 @@
 # MAGIC %sql
 # MAGIC -- multiple values to handel in hearing details(under status)
 # MAGIC with cte as (
-# MAGIC select CourtName,ListName,ListType,HearingTypeDesc,ListStartTime,HearingTypeEst,Outcome,AdjudicatorNote,CaseNo   
+# MAGIC select CourtName,ListName,ListType,HearingTypeDesc,ListStartTime,HearingTypeEst,Outcome,ListAdjudicatorNote,CaseNo   
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
 # MAGIC )
 # MAGIC select CaseNo, count(*) from cte
@@ -78,11 +78,28 @@
 
 # COMMAND ----------
 
+# DBTITLE 1,M6: linked Cost Award
 # MAGIC %sql 
 # MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
 # MAGIC where CostAwardId in (
-# MAGIC select max(CostAwardId)from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
 # MAGIC where linkno = '43' and CaseNo != 'IA/00009/2014'
+# MAGIC group by CaseNo)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where CaseNo = 'HR/00040/2008'
+
+# COMMAND ----------
+
+# DBTITLE 1,likned cost award refined
+# MAGIC %sql 
+# MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where CostAwardId in (
+# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
+# MAGIC where  CaseNo != 'HR/00040/2008' and linkno in (select linkno from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail where CaseNo = 'HR/00040/2008')
 # MAGIC group by CaseNo)
 
 # COMMAND ----------
@@ -808,34 +825,248 @@ having count(*) > 1
 
 # COMMAND ----------
 
-# DBTITLE 1,-M10 values
+# DBTITLE 1,M10-payment summary
+appeal_case = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealcase").alias("ac")
+case_fee_summary = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_casefeesummary").alias("cfs")
+fee_satisfaction = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_feesatisfaction").alias("fs")
+payment_remission_reason = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_paymentremissionreason").alias("prr")
+port = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_port").alias("p")
+embassy = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_embassy").alias("e")
+hearing_centre = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_hearingcentre").alias("hc")
+case_sponsor = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_casesponsor").alias("cs")
+appeal_grounds = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealgrounds").alias("ag")
+appeal_type = spark.read.table("hive_metastore.ariadm_arm_appeals.raw_appealtype").alias("at")
+
+# max(CaseFeeSummaryId)
+
+# COMMAND ----------
+
+appeal_case.select('CaseNo').distinct().count()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+appeal_case.alias("ac")\
+.join(case_fee_summary.alias("cfs"), (col("ac.CaseNo") == col("cfs.CaseNo")), "left_outer")\
+.join(fee_satisfaction.alias("fs"), col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")\
+.join(payment_remission_reason.alias("prr"), col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")\
+.join(port.alias("p"), col("ac.PortId") == col("p.PortId"), "left_outer")\
+.join(embassy.alias("e"), col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")\
+.join(hearing_centre.alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")\
+.join(case_sponsor.alias("cs"), col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")\
+.join(appeal_grounds.alias("ag"), col("ac.CaseNo") == col("ag.CaseNo"), "left_outer")\
+.join(appeal_type.alias("at"), col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
+.select(col('ac.CaseNo')).count()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+appeal_case.alias("ac")\
+.join(case_fee_summary.alias("cfs"), (col("ac.CaseNo") == col("cfs.CaseNo")), "left_outer")\
+.join(fee_satisfaction.alias("fs"), col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")\
+.join(payment_remission_reason.alias("prr"), col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")\
+.join(port.alias("p"), col("ac.PortId") == col("p.PortId"), "left_outer")\
+.join(embassy.alias("e"), col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")\
+.join(hearing_centre.alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")\
+.join(case_sponsor.alias("cs"), col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")\
+.select(col('ac.CaseNo')).count()
+
+# COMMAND ----------
+
+appeal_case
+        .join(case_fee_summary, col("ac.CaseNo") == col("cfs.CaseNo"), "left_outer")
+        .join(fee_satisfaction, col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")
+        .join(payment_remission_reason, col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")
+        .join(port, col("ac.PortId") == col("p.PortId"), "left_outer")
+        .join(embassy, col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")
+        .join(hearing_centre, col("ac.CentreId") == col("hc.CentreId"), "left_outer")
+        .join(case_sponsor, col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")
+        .join(appeal_grounds, col("ac.CaseNo") == col("ag.CaseNo"), "left_outer")
+        .join(appeal_type, col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
+        .select(
+            trim(col("ac.CaseNo")).alias('CaseNo'),
+            col("cfs.CaseFeeSummaryId"),
+            col("cfs.DatePosting1stTier"),
+            col("cfs.DatePostingUpperTier"),
+            col("cfs.DateCorrectFeeReceived"),
+            col("cfs.DateCorrectFeeDeemedReceived"),
+            col("cfs.PaymentRemissionrequested"),
+            col("cfs.PaymentRemissionGranted"),
+            col("cfs.PaymentRemissionReason"),
+            col("cfs.PaymentRemissionReasonNote"),
+            col("cfs.ASFReferenceNo"),
+            col("cfs.ASFReferenceNoStatus"),
+            col("cfs.LSCReference"),
+            col("cfs.LSCStatus"),
+            col("cfs.LCPRequested"),
+            col("cfs.LCPOutcome"),
+            col("cfs.S17Reference"),
+            col("cfs.S17ReferenceStatus"),
+            col("cfs.SubmissionURNCopied"),
+            col("cfs.S20Reference"),
+            col("cfs.S20ReferenceStatus"),
+            col("cfs.HomeOfficeWaiverStatus"),
+            col("prr.Description").alias("PaymentRemissionReasonDescription"),
+            col("prr.DoNotUse").alias("PaymentRemissionReasonDoNotUse"),
+            col("p.PortName").alias("POUPortName"),
+            col("p.Address1").alias("PortAddress1"),
+            col("p.Address2").alias("PortAddress2"),
+            col("p.Address3").alias("PortAddress3"),
+            col("p.Address4").alias("PortAddress4"),
+            col("p.Address5").alias("PortAddress5"),
+            col("p.Postcode").alias("PortPostcode"),
+            col("p.Telephone").alias("PortTelephone"),
+            col("p.Sdx").alias("PortSdx"),
+            col("e.Location").alias("EmbassyLocation"),
+            col("e.Embassy"),
+            col("e.Surname").alias("Surname"),
+            col("e.Forename").alias("Forename"),
+            col("e.Title"),
+            col("e.OfficialTitle"),
+            col("e.Address1").alias("EmbassyAddress1"),
+            col("e.Address2").alias("EmbassyAddress2"),
+            col("e.Address3").alias("EmbassyAddress3"),
+            col("e.Address4").alias("EmbassyAddress4"),
+            col("e.Address5").alias("EmbassyAddress5"),
+            col("e.Postcode").alias("EmbassyPostcode"),
+            col("e.Telephone").alias("EmbassyTelephone"),
+            col("e.Fax").alias("EmbassyFax"),
+            col("e.Email").alias("EmbassyEmail"),
+            col("e.DoNotUse").alias("DoNotUseEmbassy"),
+            col("hc.Description"),
+            col("hc.Prefix"),
+            col("hc.CourtType"),
+            col("hc.Address1").alias("HearingCentreAddress1"),
+            col("hc.Address2").alias("HearingCentreAddress2"),
+            col("hc.Address3").alias("HearingCentreAddress3"),
+            col("hc.Address4").alias("HearingCentreAddress4"),
+            col("hc.Address5").alias("HearingCentreAddress5"),
+            col("hc.Postcode").alias("HearingCentrePostcode"),
+            col("hc.Telephone").alias("HearingCentreTelephone"),
+            col("hc.Fax").alias("HearingCentreFax"),
+            col("hc.Email").alias("HearingCentreEmail"),
+            col("hc.Sdx").alias("HearingCentreSdx"),
+            col("hc.STLReportPath"),
+            col("hc.STLHelpPath"),
+            col("hc.LocalPath"),
+            col("hc.GlobalPath"),
+            col("hc.PouId"),
+            col("hc.MainLondonCentre"),
+            col("hc.DoNotUse"),
+            col("hc.CentreLocation"),
+            col("hc.OrganisationId"),
+            col("cs.Name").alias("CaseSponsorName"),
+            col("cs.Forenames").alias("CaseSponsorForenames"),
+            col("cs.Title").alias("CaseSponsorTitle"),
+            col("cs.Address1").alias("CaseSponsorAddress1"),
+            col("cs.Address2").alias("CaseSponsorAddress2"),
+            col("cs.Address3").alias("CaseSponsorAddress3"),
+            col("cs.Address4").alias("CaseSponsorAddress4"),
+            col("cs.Address5").alias("CaseSponsorAddress5"),
+            col("cs.Postcode").alias("CaseSponsorPostcode"),
+            col("cs.Telephone").alias("CaseSponsorTelephone"),
+            col("cs.Email").alias("CaseSponsorEmail"),
+            col("cs.Authorised"),
+            col("ag.AppealTypeId"),
+            #this hads been alias as there had been multiple appeal columns
+            col("at.Description").alias("AppealTypeDescription"),
+            col("at.Prefix").alias("AppealTypePrefix"),
+            col("at.Number").alias("AppealTypeNumber"),
+            col("at.FullName").alias("AppealTypeFullName"),
+            col("at.Category").alias("AppealTypeCategory"),
+            col("at.AppealType"),
+            col("at.DoNotUse").alias("AppealTypeDoNotUse"),
+            col("at.DateStart").alias("AppealTypeDateStart"),
+            col("at.DateEnd").alias("AppealTypeDateEnd")
+        )
+
+# COMMAND ----------
+
+appeal_case.createOrReplaceTempView("tv_appeal_case")
+
+
+# COMMAND ----------
+
 # MAGIC %sql
-# MAGIC --Sponcer (need to handel multiple values)
-# MAGIC
+# MAGIC select * from tv_appeal_case
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC     select a.* 
+# MAGIC     from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at as a 
+# MAGIC  where CaseNo = 'CC/00022/2003'
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC with cte as (
-# MAGIC select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,FeeSatisfactionId,Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
-# MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
-# MAGIC )
-# MAGIC select CaseNo, count(*) from cte
-# MAGIC group by CaseNo
-# MAGIC having count(*) > 1
+# MAGIC select a.* 
+# MAGIC     from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at as a 
+# MAGIC     join tv_appeal_case  b 
+# MAGIC     on a.CaseNo = b.CaseNo)
+# MAGIC     select   CaseNo, count(*)
+# MAGIC  from cte
+# MAGIC  group by all
+# MAGIC  having count(*) > 1
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC
-# MAGIC
-# MAGIC -- %sql
-# MAGIC -- select CaseSponsorName, caseNo, count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
-# MAGIC --  group by CaseSponsorName, caseNo 
-# MAGIC --  having count(*) > 1
-# MAGIC --  order by caseNo
-# MAGIC
-# MAGIC -- %sql
 # MAGIC -- with cte as (
-# MAGIC -- select LSCReference,CaseNo
-# MAGIC -- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at AS table_name
-# MAGIC -- group by LSCReference,CaseNo
+# MAGIC -- select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,
+# MAGIC -- --FeeSatisfactionId,
+# MAGIC -- Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
+# MAGIC -- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+# MAGIC
 # MAGIC -- )
-# MAGIC -- select LSCReference, CaseNo,count(*) from cte
-# MAGIC -- group by LSCReference, CaseNo
+# MAGIC -- select CaseNo, count(*) from cte
+# MAGIC -- group by CaseNo
 # MAGIC -- having count(*) > 1
+# MAGIC
+# MAGIC
+# MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+# MAGIC
+# MAGIC where CaseNo = 'CC/00022/2003'
+# MAGIC
+
+# COMMAND ----------
+
+# DBTITLE 1,-M10 values
+ # CasePaymentdetails
+%sql
+# --Sponcer (need to handel multiple values)
+
+with cte as (
+select CaseSponsorName,CaseSponsorForenames,CaseSponsorTitle,CaseSponsorAddress1,CaseSponsorAddress2,CaseSponsorAddress3,CaseSponsorAddress4,CaseSponsorAddress5,CaseSponsorPostcode,CaseSponsorTelephone,CaseSponsorEmail,PaymentRemissionReason,s17Reference,
+--FeeSatisfactionId,
+Forename,Surname,S20Reference,LSCReference,PaymentRemissionReasonNote,DateCorrectFeeReceived,DateCorrectFeeDeemedReceived,PaymentRemissionRequested,ASFReferenceNo,PaymentRemissionGranted,ASFReferenceNoStatus,CaseNo
+from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+
+)
+select CaseNo, count(*) from cte
+group by CaseNo
+having count(*) > 1
+
+
+-- %sql
+-- select CaseSponsorName, caseNo, count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
+--  group by CaseSponsorName, caseNo 
+--  having count(*) > 1
+--  order by caseNo
+
+-- %sql
+-- with cte as (
+-- select LSCReference,CaseNo
+-- from hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at AS table_name
+-- group by LSCReference,CaseNo
+-- )
+-- select LSCReference, CaseNo,count(*) from cte
+-- group by LSCReference, CaseNo
+-- having count(*) > 1
 
 # COMMAND ----------
 

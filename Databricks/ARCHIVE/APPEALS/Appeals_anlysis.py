@@ -4138,4 +4138,5 @@ displayHTML(JudicialReviewPermissionApplication)
 
 # COMMAND ----------
 
+dbutils.secrets.listScopes()
 

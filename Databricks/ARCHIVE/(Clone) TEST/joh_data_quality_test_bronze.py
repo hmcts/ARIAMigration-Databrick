@@ -1,3 +1,6 @@
+# TODO:
+# - Return the datetime for when results were extracted at the end
+
 # %pip install azure-storage-blob pandas faker python-docx
 
 from pyspark.sql.functions import col, count, when, sum, isnan, isnull
@@ -14,6 +17,8 @@ from pyspark.sql.types import (
 
 from docx import Document
 
+# from datetime import Datetime
+
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
 landing_mnt = "/mnt/ingest00landingsboxlanding/test"
@@ -23,14 +28,15 @@ gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
 
 # Mapping abbreviations to human-readable text
 abbreviation_map = {
-    'adjudicator_et_hc_dnur': "'Adjudicator Employment Term, Hearing Centre, Do Not Use Reason'",
-    'johistory_users': "'Judicial Officer History, Users'",
-    'othercentre_hearingcentre': "'Other Centre Hearing Centre'",
-    'adjudicator_role': "'Adjudicator Role'",
-    'AdjudicatorId': "'Adjudicator ID'",
+    'adjudicator_et_hc_dnur': 'Adjudicator Employment Term, Hearing Centre, Do Not Use Reason',
+    'johistory_users': 'Judicial Officer History, Users',
+    'othercentre_hearingcentre': 'Other Centre Hearing Centre',
+    'adjudicator_role': 'Adjudicator Role',
+    'AdjudicatorId': 'Adjudicator ID',
     'missing_columns': 'Missing Columns',
     'data_type_mismatch_count': 'Data Type Mismatch Count',
     'exists': 'Exists',
+    'count': 'Count',
     'null_count': 'Null Count'
 }
 
@@ -352,6 +358,9 @@ def perform_data_quality_checks(df, table_name, key_column):
     # Check if the table exists and has data
     validation_results[f"{table_name}_table_exists"] = df.count() > 0
 
+    # Check table count
+    validation_results[f"{table_name}_row_count"] = df.count()
+
     # Check for null values in key columns
     key_columns = key_column
     for column in key_columns:
@@ -415,10 +424,10 @@ validation_results.update(perform_data_quality_checks(spark.read.format("delta")
 validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_othercentre_hearingcentre"), "bronze_othercentre_hearingcentre", ["AdjudicatorId"]))
 validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_role"), "bronze_adjudicator_role", ["AdjudicatorId"]))
 
-print('Validation checks results: \n')
-for key,value in validation_results.items():
-    print(f'{key}: {value} \n')
-print('<><><><><><><><><><><><><><><><><><><><><><>')
+# print('Validation checks results: \n')
+# for key,value in validation_results.items():
+#     print(f'{key}: {value} \n')
+# print('<><><><><><><><><><><><><><><><><><><><><><>')
 
 schema_results = {}
 schema_results.update(perform_adjudicator_schema_checks())
@@ -426,45 +435,67 @@ schema_results.update(perform_johistory_users_schema_checks())
 schema_results.update(perform_othercentre_hearingcentre_schema_checks())
 schema_results.update(perform_adjudicator_role_schema_checks())
 
-print('Schema checks results: \n')
-for key,value in schema_results.items():
-    print(f'{key}: {value} \n')
-print('<><><><><><><><><><><><><><><><><><><><><><>')
+# print('Schema checks results: \n')
+# for key,value in schema_results.items():
+#     print(f'{key}: {value} \n')
+# print('<><><><><><><><><><><><><><><><><><><><><><>')
 
 # Finalise results dictionary for output
 overall_results = schema_results | validation_results
 overall_results = rename_dict_keys(overall_results)
 
 # Print the updated dictionary
-print('Overall results: \n')
-for key, value in overall_results.items():
-    print(f'{key}: {value} \n')
-print('<><><><><><><><><><><><><><><><><><><><><><>')
+# print('Overall results: \n')
+# for key, value in overall_results.items():
+#     print(f'{key}: {value} \n')
+# print(overall_results)
+# print('<><><><><><><><><><><><><><><><><><><><><><> \n')
+
+# Group metrics by section
+grouped_results = {
+    "Adjudicator Employment Term, Hearing Centre, Do Not Use Reason": [],
+    "Judicial Officer History": [],
+    "Other Centre Hearing Centre": [],
+    "Adjudicator Role": []
+}
+
+# Categorize metrics into their respective groups
+for metric, value in overall_results.items():
+    if metric.lower().startswith("adjudicator employment term, hearing centre, do not use reason"):
+        grouped_results["Adjudicator Employment Term, Hearing Centre, Do Not Use Reason"].append((metric, value))
+    elif metric.lower().startswith("judicial officer history"):
+        grouped_results["Judicial Officer History"].append((metric, value))
+    elif metric.lower().startswith("other centre hearing centre"):
+        grouped_results["Other Centre Hearing Centre"].append((metric, value))
+    elif metric.lower().startswith("adjudicator role"):
+        grouped_results["Adjudicator Role"].append((metric, value))
+
+for key, value in grouped_results.items():
+    print(f'{key}: {value} \n') 
 
 # Create a new Word document
 document = Document()
 
 # Add a title to the document
-document.add_heading('Bronze Data Quality Validation Report', level=2)
+document.add_heading('Bronze Data Quality Validation Report', level=1)
 
-# Add a table to the document
-table = document.add_table(rows=1, cols=2)
-table.style = 'Table Grid'
-hdr_cells = table.rows[0].cells
-hdr_cells[0].text = 'Metric'
-hdr_cells[1].text = 'Value'
-# hdr_cells[2].text = 'Data Lineage'
-
-# Add rows to the table
-for metric, value in overall_results.items():
-    table_name = metric.split("_")[0]
-    column_name = "_".join(metric.split("_")[1:-1])
-    # lineage_info = f"{table_name}.{column_name}"
-    row_cells = table.add_row().cells
-    row_cells[0].text = metric
-    row_cells[1].text = str(value)
-    # row_cells[2].text = lineage_info
+# Write grouped results into sections
+for section, results in grouped_results.items():
+    document.add_heading(f'{section} Test Results:', level=2)
+    
+    table = document.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Metric'
+    hdr_cells[1].text = 'Value'
+    
+    for metric, value in results:
+        row_cells = table.add_row().cells
+        row_cells[0].text = metric
+        row_cells[1].text = str(value)
 
 # Save the document
 document.save("bronze_data_quality_validation_report.docx")
+
+
 

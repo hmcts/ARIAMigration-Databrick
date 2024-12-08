@@ -131,8 +131,8 @@
 # MAGIC %sql
 # MAGIC -- Status table done and dynamic pages need to be sorted 
 # MAGIC with cte as (
-# MAGIC select AdjudicatorId,ApplicationType,DateReceived,CaseStatus,KeyDate,MiscDate1,InterpreterRequired,RemittalOutcome,MiscDate2,UpperTribunalAppellant,TypistSentDate,InitialHearingPoints,FinalHearingPoints,HearingPointsChangeReasonId,Tier,
-# MAGIC DecisionDate,InTime,Party,Notes1,Letter1Date,DecisionByTCW,MethodOfTyping,Outcome,Promulgated,UKAITNo,WrittenReasonsRequestedDate,process,TypistSentDate,ExtemporeMethodOfTyping,WrittenReasonsSentDate,CaseNo,DecisionSentToHO,Allegation,DecidingCentre,DecisionSentToHODate,Extempore,OutOfTime,NoCertAwardDate,CertRevokedDate,WrittenOffFileDate,ReferredEnforceDate,Letter1Date,Letter2Date,Letter3Date,ReferredFinanceDate,CourtActionAuthDate,ListRequirementTypeId
+# MAGIC select ApplicationType,DateReceived,CaseStatus,KeyDate,MiscDate1,InterpreterRequired,RemittalOutcome,MiscDate2,UpperTribunalAppellant,TypistSentDate,InitialHearingPoints,FinalHearingPoints,HearingPointsChangeReasonId,Tier,
+# MAGIC DecisionDate,InTime,Party,Notes1,Letter1Date,DecisionByTCW,MethodOfTyping,Outcome,Promulgated,UKAITNo,WrittenReasonsRequestedDate,process,TypistSentDate,ExtemporeMethodOfTyping,WrittenReasonsSentDate,CaseNo,DecisionSentToHO,Allegation,DecidingCentre,DecisionSentToHODate,Extempore,OutOfTime,NoCertAwardDate,CertRevokedDate,WrittenOffFileDate,ReferredEnforceDate,Letter1Date,Letter2Date,Letter3Date,ReferredFinanceDate,CourtActionAuthDate,ListRequirementTypeId,judicialOfficer,
 # MAGIC UpperTribunalHearingDirectionId,CourtSelection,HighCourtReference
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
 # MAGIC )

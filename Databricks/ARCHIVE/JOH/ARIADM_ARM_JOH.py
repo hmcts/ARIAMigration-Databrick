@@ -62,6 +62,7 @@ from datetime import datetime
 # COMMAND ----------
 
 spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
 
 # COMMAND ----------
 
@@ -75,15 +76,33 @@ spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
 
 # COMMAND ----------
 
+dbutils.widgets.text("initial_Load", "True")
+dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH")
+dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding/")
+dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH")
+dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH")
+dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH")
+dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH/")  # Path for gold output files in gold container
 
-initial_Load = False
+initial_Load = dbutils.widgets.get("initial_Load") 
+raw_mnt = dbutils.widgets.get("raw_mnt")
+landing_mnt = dbutils.widgets.get("landing_mnt")
+bronze_mnt = dbutils.widgets.get("bronze_mnt")
+silver_mnt = dbutils.widgets.get("silver_mnt")
+gold_mnt = dbutils.widgets.get("gold_mnt")
+gold_outputs = dbutils.widgets.get("gold_outputs")
 
-# Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
+# COMMAND ----------
+
+
+# initial_Load = False
+
+# # Setting variables for use in subsequent cells
+# raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
+# landing_mnt = "/mnt/ingest00landingsboxlanding/"
+# bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH"
+# silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
+# gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
 
 # COMMAND ----------
 
@@ -92,7 +111,6 @@ gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
 
 # COMMAND ----------
 
-# from pyspark.sql.functions import current_timestamp, lit
 
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
@@ -102,7 +120,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
     output = set()  # Using a set to avoid duplicates
     if depth > max_depth:
-        return output
+        return list(output)
 
     try:
         children = dbutils.fs.ls(path)
@@ -111,24 +129,12 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
                 output.add(child.path.strip())  # Add only .parquet files to the set
 
             if child.isDir:
-                # Recursively explore directories
                 output.update(deep_ls(child.path, depth=depth + 1, max_depth=max_depth))
 
     except Exception as e:
         print(f"Error accessing {path}: {e}")
 
-    return list(output)  # Convert the set back to a list before returning
-
-# Function to extract timestamp from the file path
-def extract_timestamp(file_path):
-    """
-    Extracts timestamp from the parquet file name based on an assumed naming convention.
-    """
-    # Split the path and get the filename part
-    filename = file_path.split('/')[-1]
-    # Extract the timestamp part from the filename
-    timestamp_str = filename.split('_')[-1].replace('.parquet', '')
-    return timestamp_str
+    return list(output)
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
 def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
@@ -150,13 +156,23 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # List all .parquet files in the folder
     all_files = deep_ls(folder_path)
     
-    # Ensure that files were found
+    # Check if files were found
     if not all_files:
         print(f"No .parquet files found in {folder_path}")
         return None
+
+    # Create a DataFrame from the file paths
+    file_df = spark.createDataFrame([(f,) for f in all_files], ["file_path"])
     
-    # Find the latest .parquet file
-    latest_file = max(all_files, key=extract_timestamp)
+    # Extract timestamp from the file name using a regex pattern (assuming it's the last underscore-separated part before ".parquet")
+    file_df = file_df.withColumn("timestamp", regexp_extract("file_path", r"_(\d+)\.parquet$", 1).cast("long"))
+    
+    # Find the maximum timestamp
+    max_timestamp = file_df.agg(max("timestamp")).collect()[0][0]
+    
+    # Filter to get the file with the maximum timestamp
+    latest_file_df = file_df.filter(col("timestamp") == max_timestamp)
+    latest_file = latest_file_df.first()["file_path"]
     
     # Print the latest file being loaded for logging purposes
     print(f"Reading latest file: {latest_file}")
@@ -177,18 +193,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     
     # Return the DataFrame
     return df
-
-
-
-# # read the data from different folders, with audit columns and process name
-# df_Adjudicator = read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_JOH")
-# df_HearingCentre = read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
-# df_DoNotUseReason = read_latest_parquet("ARIADoNotUseReason", "tv_DoNotUseReason", "ARIA_ARM_JOH")
-# df_EmploymentTerm = read_latest_parquet("EmploymentTerm", "tv_EmploymentTerms", "ARIA_ARM_JOH")
-# df_JoHistory = read_latest_parquet("JoHistory", "tv_JoHistory", "ARIA_ARM_JOH")
-# df_Users = read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH")
-# df_OtherCentre = read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH")
-# df_AdjudicatorRole = read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH")
 
 
 # COMMAND ----------
@@ -1095,7 +1099,7 @@ def process_partition(partition, judicial_officer_details_bc, other_centres_bc, 
         #     continue
         
         # Define the target path for each Adjudicator's HTML file
-        target_path = f"ARIADM/ARM/JOH/HTML/judicial_officer_{adjudicator_id}.html"
+        target_path = f"{gold_outputs}/HTML/judicial_officer_{adjudicator_id}.html"
         
         # Upload the HTML content to Azure Blob Storage
         blob_client = container_client.get_blob_client(target_path)
@@ -1297,7 +1301,7 @@ def process_partition(partition, judicial_officer_details_bc, other_centres_bc, 
             continue
         
         # Define the target path for each Adjudicator's JSON file
-        target_path = f"ARIADM/ARM/JOH/JSON/judicial_officer_{adjudicator_id}.json"
+        target_path = f"{gold_outputs}/JSON/judicial_officer_{adjudicator_id}.json"
         
         # Upload the JSON content to Azure Blob Storage
         blob_client = container_client.get_blob_client(target_path)
@@ -1442,7 +1446,7 @@ def generate_a360_file_for_adjudicator(adjudicator_id, joh_metadata_list, contai
         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
 
         # Define the target path for each Adjudicator's A360 file
-        target_path = f"ARIADM/ARM/JOH/A360/judicial_officer_{adjudicator_id}.a360"
+        target_path = f"{gold_outputs}/A360/judicial_officer_{adjudicator_id}.a360"
         
         # Upload the A360 content to Azure Blob Storage
         # Not standard content so, write the text here
@@ -1545,3 +1549,8 @@ def gold_joh_a360_generation_status():
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
+
+# COMMAND ----------
+
+# %sql
+# drop schema hive_metastore.ariadm_arm_joh cascade

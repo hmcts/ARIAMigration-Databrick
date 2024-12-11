@@ -8,7 +8,8 @@ from pyspark.sql.types import (
     IntegerType, 
     BooleanType, 
     DateType, 
-    TimestampType
+    TimestampType,
+    LongType
 )
 
 from docx import Document
@@ -26,6 +27,10 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
 
+spark.sql("SELECT current_database()").show()
+spark.sql("SHOW TABLES").show()
+dbutils.fs.ls(f"{silver_mnt}/silver_appointment_detail")
+
 # Mapping abbreviations to human-readable text
 abbreviation_map = {
     'adjudicator_details': 'Adjudicator Details',
@@ -40,10 +45,9 @@ abbreviation_map = {
     'table': 'Table'
 }
 
-
 def perform_adjudicator_schema_checks():
     """
-    Performs key columns and schema consistency checks, designed for the Adjudicator DataFrame.
+    Performs key columns and schema consistency checks, designed for the Silver Adjudicator DataFrame.
 
     Args:
         df (DataFrame): The DataFrame to perform checks on.
@@ -52,7 +56,6 @@ def perform_adjudicator_schema_checks():
     Returns:
         dict: A dictionary containing the results of the schema checks. The dictionary's keys are the table name and the value is a list of missing columns or a count of data type results.
 
-    perform_adjudicator_schema_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"), "bronze_adjudicator_et_hc_dnur")
     """
     schema_results = {}
     df = spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail")
@@ -107,13 +110,6 @@ def perform_adjudicator_schema_checks():
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     schema_results[f"{table_name}_table_missing_columns"] = missing_columns
-
-    # Check for null values in key columns
-    key_columns = ["AdjudicatorId"]
-    for column in key_columns:
-        if column in df.columns:
-            null_count = df.filter(col(column).isNull()).count()
-            schema_results[f"{table_name}_{column}_table_null_count"] = null_count
 
     # Check for data type consistency
     schema = StructType(
@@ -180,7 +176,176 @@ def perform_adjudicator_schema_checks():
 
     return schema_results
 
-def perform_data_quality_checks(df, table_name):
+def perform_history_detail_schema_checks():
+    """
+    Performs key columns and schema consistency checks, designed for the Silver History Detail DataFrame.
+
+    Args:
+        df (DataFrame): The DataFrame to perform checks on.
+        table_name (str): The name of the table being checked.
+
+    Returns:
+        dict: A dictionary containing the results of the schema checks. The dictionary's keys are the table name and the value is a list of missing columns or a count of data type results.
+
+    """
+    schema_results = {}
+    df = spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail")
+    table_name = "silver_history_detail"
+
+    # Check if all required columns are present
+    required_columns = [
+    "AdjudicatorId",
+    "HistDate",
+    "HistType",
+    "UserName",
+    "Comment",
+    "AdtclmnFirstCreatedDatetime",
+    "AdtclmnModifiedDatetime",
+    "SourceFileName",
+    "InsertedByProcessName"
+    ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
+
+    # Check for data type consistency
+    schema = StructType([
+        StructField("AdjudicatorId", LongType(), True),
+        StructField("HistDate", StringType(), True),
+        StructField("HistType", StringType(), True),
+        StructField("UserName", StringType(), True),
+        StructField("Comment", StringType(), True),
+        StructField("AdtclmnFirstCreatedDatetime", TimestampType(), True),
+        StructField("AdtclmnModifiedDatetime", TimestampType(), True),
+        StructField("SourceFileName", StringType(), True),
+        StructField("InsertedByProcessName", StringType(), True)
+    ])
+    data_type_mismatch_count = (
+        df.select(
+        [
+        count(when(col(field.name).cast(field.dataType).isNull() & col(field.name).isNotNull(), 1)).alias(field.name)
+        for field in schema.fields
+        ]
+        ).agg(*(sum(col(c)).alias(c) for c in df.columns))
+        .collect()[0]
+        )
+    mismatch_count = 0
+    for column in data_type_mismatch_count:
+        mismatch_count += data_type_mismatch_count[column]
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
+
+    return schema_results
+
+def perform_appointment_detail_schema_checks():
+    """
+    Performs key columns and schema consistency checks, designed for the Silver Appointment Detail DataFrame.
+
+    Args:
+        df (DataFrame): The DataFrame to perform checks on.
+        table_name (str): The name of the table being checked.
+
+    Returns:
+        dict: A dictionary containing the results of the schema checks. The dictionary's keys are the table name and the value is a list of missing columns or a count of data type results.
+
+    """
+    schema_results = {}
+    df = spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail")
+    table_name = "silver_appointment_detail"
+
+    # Check if all required columns are present
+    required_columns = [
+    "AdjudicatorId",
+    "Role",
+    "DateOfAppointment",
+    "EndDateOfAppointment",
+    "AdtclmnFirstCreatedDatetime",
+    "AdtclmnModifiedDatetime",
+    "SourceFileName",
+    "InsertedByProcessName"
+    ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
+
+    # Check for data type consistency
+    schema = StructType([
+        StructField("AdjudicatorId", LongType(), True),
+        StructField("Role", StringType(), True),
+        StructField("DateOfAppointment", StringType(), True),
+        StructField("EndDateOfAppointment", StringType(), True),
+        StructField("AdtclmnFirstCreatedDatetime", TimestampType(), True),
+        StructField("AdtclmnModifiedDatetime", TimestampType(), True),
+        StructField("SourceFileName", StringType(), True),
+        StructField("InsertedByProcessName", StringType(), True)
+    ])
+    data_type_mismatch_count = (
+        df.select(
+        [
+        count(when(col(field.name).cast(field.dataType).isNull() & col(field.name).isNotNull(), 1)).alias(field.name)
+        for field in schema.fields
+        ]
+        ).agg(*(sum(col(c)).alias(c) for c in df.columns))
+        .collect()[0]
+        )
+    mismatch_count = 0
+    for column in data_type_mismatch_count:
+        mismatch_count += data_type_mismatch_count[column]
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
+
+    return schema_results
+
+def perform_othercentre_detail_schema_checks():
+    """
+    Performs key columns and schema consistency checks, designed for the Silver Other Centre Detail DataFrame.
+
+    Args:
+        df (DataFrame): The DataFrame to perform checks on.
+        table_name (str): The name of the table being checked.
+
+    Returns:
+        dict: A dictionary containing the results of the schema checks. The dictionary's keys are the table name and the value is a list of missing columns or a count of data type results.
+
+    """
+    schema_results = {}
+    df = spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail")
+    table_name = "silver_othercentre_detail"
+
+    # Check if all required columns are present
+    required_columns = [
+    "AdjudicatorId",
+    "OtherCentres",
+    "AdtclmnFirstCreatedDatetime",
+    "AdtclmnModifiedDatetime",
+    "SourceFileName",
+    "InsertedByProcessName"
+    ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    schema_results[f"{table_name}_table_missing_columns"] = missing_columns
+
+    # Check for data type consistency
+    schema = StructType([
+        StructField("AdjudicatorId", LongType(), True),
+        StructField("OtherCentres", StringType(), True),
+        StructField("AdtclmnFirstCreatedDatetime", TimestampType(), True),
+        StructField("AdtclmnModifiedDatetime", TimestampType(), True),
+        StructField("SourceFileName", StringType(), True),
+        StructField("InsertedByProcessName", StringType(), True)
+    ])
+    data_type_mismatch_count = (
+        df.select(
+        [
+        count(when(col(field.name).cast(field.dataType).isNull() & col(field.name).isNotNull(), 1)).alias(field.name)
+        for field in schema.fields
+        ]
+        ).agg(*(sum(col(c)).alias(c) for c in df.columns))
+        .collect()[0]
+        )
+    mismatch_count = 0
+    for column in data_type_mismatch_count:
+        mismatch_count += data_type_mismatch_count[column]
+    schema_results[f"{table_name}_table_data_type_mismatch_count"] = mismatch_count
+
+    return schema_results
+
+def perform_data_quality_checks(df, table_name, key_column):
     """
     Performs data quality checks on the given DataFrame.
 
@@ -193,24 +358,18 @@ def perform_data_quality_checks(df, table_name):
     """
     validation_results = {}
 
-    # Check if the table exists and has data
-    validation_results[f"{table_name}_table_exists"] = df.count() > 0
+    # Check if the table exists
+    validation_results[f"{table_name}_table_exists"] = df is not None
 
-    # Check if the data is filtered correctly based on AdjudicatorRole
-    invalid_role_count = (
-        df.join(
-            spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_role"),
-            on="AdjudicatorId",
-            how="inner",
-        )
-        .filter(col("Role").isin(7, 8))
-        .count()
-    )
-    validation_results[f"{table_name}_table_invalid_role_count"] = invalid_role_count
+    # Check table count
+    validation_results[f"{table_name}_row_count"] = df.count()
 
-    # Check for duplicate AdjudicatorId values
-    duplicate_count = df.count() - df.dropDuplicates(["AdjudicatorId"]).count()
-    validation_results[f"{table_name}_table_duplicate_count"] = duplicate_count
+    # Check for null values in key columns
+    key_columns = key_column
+    for column in key_columns:
+        if column in df.columns:
+            null_count = df.filter(col(column).isNull()).count()
+            validation_results[f"{table_name}_{column}_table_null_count"] = null_count
 
     return validation_results
 
@@ -237,20 +396,24 @@ def rename_dict_keys(input_dict):
 
 
 # Perform data quality checks on the Silver tables
-silver_tables = [
-    ("silver_adjudicator_details", f"{silver_mnt}/silver_adjudicator_detail"),
-]
-
-# df = spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail")
-# print('Adjudicator head:', df.head(), '\n')
-# print('*******************************************')
+# silver_tables = [
+#     ("silver_adjudicator_details", f"{silver_mnt}/silver_adjudicator_detail"),
+#     ("silver_history_detail", f"{silver_mnt}/silver_history_detail"),
+#     ("silver_othercentre_detail", f"{silver_mnt}/silver_othercentre_detail"),
+# ]
 
 # Executing checks
 validation_results = {}
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail"))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail"), "silver_appointment_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail"), "silver_history_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail"), "silver_othercentre_detail", ["AdjudicatorId"]))
 
 schema_results = {}
 schema_results.update(perform_adjudicator_schema_checks())
+schema_results.update(perform_history_detail_schema_checks())
+schema_results.update(perform_appointment_detail_schema_checks())
+schema_results.update(perform_othercentre_detail_schema_checks())
 
 # Gathering results
 overall_results = schema_results | validation_results

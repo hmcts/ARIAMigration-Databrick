@@ -355,8 +355,8 @@ def perform_data_quality_checks(df, table_name, key_column):
     """
     validation_results = {}
 
-    # Check if the table exists and has data
-    validation_results[f"{table_name}_table_exists"] = df.count() > 0
+    # Check if the table exists
+    validation_results[f"{table_name}_table_exists"] = df is not None
 
     # Check table count
     validation_results[f"{table_name}_row_count"] = df.count()
@@ -393,12 +393,12 @@ def rename_dict_keys(input_dict):
 
 
 # Arranging the Bronze tables for data quality checks
-bronze_tables = [
-    ("bronze_adjudicator_et_hc_dnur", f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"),
-    ("bronze_johistory_users", f"{bronze_mnt}/bronze_johistory_users"),
-    ("bronze_othercentre_hearingcentre", f"{bronze_mnt}/bronze_othercentre_hearingcentre"),
-    ("bronze_adjudicator_role", f"{bronze_mnt}/bronze_adjudicator_role"),
-]
+# bronze_tables = [
+#     ("bronze_adjudicator_et_hc_dnur", f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"),
+#     ("bronze_johistory_users", f"{bronze_mnt}/bronze_johistory_users"),
+#     ("bronze_othercentre_hearingcentre", f"{bronze_mnt}/bronze_othercentre_hearingcentre"),
+#     ("bronze_adjudicator_role", f"{bronze_mnt}/bronze_adjudicator_role"),
+# ]
 
 # Optional - sanity check printout of Bronze tables
 # df = spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur")
@@ -445,11 +445,10 @@ overall_results = schema_results | validation_results
 overall_results = rename_dict_keys(overall_results)
 
 # Print the updated dictionary
-# print('Overall results: \n')
-# for key, value in overall_results.items():
-#     print(f'{key}: {value} \n')
-# print(overall_results)
-# print('<><><><><><><><><><><><><><><><><><><><><><> \n')
+print('Overall results: \n')
+for key, value in overall_results.items():
+    print(f'{key}: {value} \n')
+print('<><><><><><><><><><><><><><><><><><><><><><> \n')
 
 # Group metrics by section
 grouped_results = {

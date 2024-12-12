@@ -38,6 +38,13 @@
 # MAGIC         Jira Ticket ARIADM-128</td>
 # MAGIC         </td>
 # MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC       <td>Create Silver tables
+# MAGIC       <td> Ticket no
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC       <td>Create Gold Output
+# MAGIC       <td> Ticket No
 # MAGIC     
 # MAGIC    </tbody>
 # MAGIC </table>
@@ -179,10 +186,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # from datetime import datetime
 
 # from SharedFunctionsLib.custom_functions import *
-
-
-# COMMAND ----------
-
 
 
 # COMMAND ----------
@@ -356,7 +359,7 @@ def bail_case_surety():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang
+# MAGIC ## M1: bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang
 # MAGIC
 # MAGIC SELECT 
 # MAGIC -- AppealCase Fields  
@@ -592,6 +595,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
             col("ca.ObjectionToMindedToAward"),
             col("ca.CostsAwardDecision"),
             col("ca.CostsAmount"),
+            col("Ca.DateOfDecision")
             col("ca.OutcomeOfAppeal"),
             col("ca.AppealStage")
         )
@@ -602,7 +606,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_bail_ac_ca_apt_country_detc
+# MAGIC ## M2: bronze_bail_ac_ca_apt_country_detc
 # MAGIC
 # MAGIC SELECT
 # MAGIC -- CaseAppellant Fields
@@ -707,7 +711,7 @@ def bronze_bail_ac_ca_apt_country_detc():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_ bail_ac _cl_ht_list_lt_hc_c_ls_adj
+# MAGIC ## M3: bronze_ bail_ac _cl_ht_list_lt_hc_c_ls_adj
 # MAGIC
 # MAGIC -- Data Mapping
 # MAGIC
@@ -840,7 +844,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_bail_ac_bfdiary_bftype
+# MAGIC ## M4: bronze_bail_ac_bfdiary_bftype
 # MAGIC
 # MAGIC SELECT
 # MAGIC     bfd.CaseNo,
@@ -884,7 +888,7 @@ def bronze_bail_ac_bfdiary_bftype():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_ bail_ac _history_users
+# MAGIC ## M5: bronze_ bail_ac _history_users
 
 # COMMAND ----------
 
@@ -938,7 +942,7 @@ def bronze_bail_ac_history_users():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_ bail_ac _link_linkdetail
+# MAGIC ## M6: bronze_ bail_ac _link_linkdetail
 
 # COMMAND ----------
 
@@ -976,7 +980,7 @@ def bronze_bail_ac_link_linkdetail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_bail_status_sc_ra_cs
+# MAGIC ## M7: bronze_bail_status_sc_ra_cs
 
 # COMMAND ----------
 
@@ -1062,7 +1066,7 @@ def bronze_bail_status_sc_ra_cs():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## bronze_ bail_ac _appealcatagory_catagory
+# MAGIC ## M8: bronze_ bail_ac _appealcatagory_catagory
 
 # COMMAND ----------
 
@@ -1135,7 +1139,7 @@ def bronze_case_surety_query():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # Creating Silver tables
+# MAGIC # Segmentation tables
 
 # COMMAND ----------
 
@@ -1336,6 +1340,24 @@ def silver_legal_hold_normal_bail():
 # COMMAND ----------
 
 # import from csv
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Silver tables
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## M1: Silver_Appeal_case_details
+
+# COMMAND ----------
+
+bronze_m1 = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang")
+
+silver_appeal_case_details = bronze_m1.select(
+    F.col()
+)
 
 # COMMAND ----------
 
@@ -1575,7 +1597,6 @@ for row in m1_m2.collect():
         # "{{CurrentStatus}}":"", Comes from M7 table
         "{{ConnectedFiles}}":"",
         "{{DateOfIssue}}":format_date(row["DateOfIssue"]),
-        "{{FileLocation}}":"FileLocationNote",
         "{{NextHearingDate}}":row["DateOfNextListedHearing"],
         # "{{lastDocument}}": LastDocument Field is populated by the latest Comment from the History table where HistType = 16
         "{{BFEntry}}":"",
@@ -1748,6 +1769,7 @@ m4 = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_bfdiary_bftype")
 m5 = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_history_users").filter(F.col("CaseNo").isin(test_case_no))
 m6 = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_link_linkdetail").filter(F.col("CaseNo").isin(test_case_no))
 m7 = spark.read.table("hive_metastore.aria_bails.bronze_bail_status_sc_ra_cs").filter(F.col("CaseNo").isin(test_case_no))
+m8 = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_appealcategory_category").filter(F.col("CaseNo").isin(test_case_no))
 
 # Case status Mapping
 case_status_mappings = {
@@ -1762,7 +1784,16 @@ case_status_mappings = {
         "{{ScottishPaymentLiabilityDateChequesIssued}}": "MiscDate2",
         "{{ScottishPaymentLiabilityVideoLink}}": "VideoLink",
         "{{ScottishPaymentLiabilityDateOfDecision}}": "DecisionDate",
-        "{{ScottishPaymentLiabilityOutcome}}": "OutcomeStatus"
+        "{{ScottishPaymentLiabilityOutcome}}": "OutcomeStatus",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
+
+
     },
     4: {  # Bail Application
         "{{BailApplicationStatusOfBail}}": "CaseStatus",
@@ -1783,7 +1814,14 @@ case_status_mappings = {
         "{{BailApplicationBailedDateOfHearing}}": "BaileddateHearing",
         "{{BailApplicationDateOfDecision}}": "DecisionDate",
         "{{BailApplicationOutcome}}": "OutcomeStatus",
-        "{{BailApplicationHOConsentDate}}": "DecisionSentToHODate"
+        "{{BailApplicationHOConsentDate}}": "DecisionSentToHODate",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
     },
     6: {  # Payment Liability
         "{{PaymentLiabilityStatusOfBail}}": "CaseStatus",
@@ -1806,13 +1844,27 @@ case_status_mappings = {
         "{{PaymentLiabilityPostcode}}": "SCPostcode",
         "{{PaymentLiabilityNotes}}": "Notes2",
         "{{PaymentLiabilityDateOfDecision}}": "DecisionDate",
-        "{{PaymentLiabilityOutcome}}": "OutcomeStatus"
+        "{{PaymentLiabilityOutcome}}": "OutcomeStatus",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
     },
     8: {  # Lodgement
         "{{LodgementStatusOfBail}}": "CaseStatus",
         "{{LodgementDateCautionLodged}}": "DateReceived",
         "{{LodgementAmountOfLodged}}": "TotalAmountOfFinancialCondition",
-        "{{LodgementWhomToBeRepaid}}": "StatusNotes1"
+        "{{LodgementWhomToBeRepaid}}": "StatusNotes1",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
     },
     18: {  # Bail Renewal
         "{{BailRenewalStatusOfBail}}": "CaseStatus",
@@ -1827,7 +1879,14 @@ case_status_mappings = {
         "{{BailRenewalVideoLink}}": "VideoLink",
         "{{BailRenewalDateOfDecision}}": "DecisionDate",
         "{{BailRenewalOutcome}}": "OutcomeStatus",
-        "{{BailRenewalHOConsentDate}}": "DecisionSentToHODate"
+        "{{BailRenewalHOConsentDate}}": "DecisionSentToHODate",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
     },
     19: {  # Bail Variation
         "{{BailVariationStatusOfBail}}": "CaseStatus",
@@ -1842,7 +1901,14 @@ case_status_mappings = {
         "{{BailVariationDateDischarged}}": "MiscDate2",
         "{{BailVariationVideoLink}}": "VideoLink",
         "{{BailVariationDateOfDecision}}": "DecisionDate",
-        "{{BailVariationOutcome}}": "OutcomeStatus"
+        "{{BailVariationOutcome}}": "OutcomeStatus",
+        "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
+        "{{appearBefore}}":"AppearBefore",
+        "{{reportTo}}": "ReportTo",
+        "{{tagging}}":"StatusBailConditionTagging",
+        "{{workAndStudyRestriction}}": "WorkAndStudyRestriction",
+        "{{other}}": "OtherCondition",
+        "{{outcomeReasons}}": "OutcomeReasons",
     }
 }
 
@@ -1852,7 +1918,8 @@ date_fields = {
     "DateChequesIssued", "DateCautionLodged", "HOConsentDate"
 }
 
-display(m7)
+
+display(m1_m2)
 
 
 # COMMAND ----------
@@ -1862,25 +1929,14 @@ display(m7)
 
 # COMMAND ----------
 
-    for row in m1_m2.collect():
-        case_number = row["CaseNo"]
-    # status
-        bail_entry = m7.filter(F.col("CaseNo") == case_number).collect()
-        html = html_template
+from pyspark.sql.functions import desc
+file_loc = m5_filtered.filter(F.col("HistType")==6).orderBy(desc("HistDate")).limit(1).select("HistoryComment").first()
 
-        for entry in bail_entry:
-            case_status = int(entry['CaseStatus'])
-            if case_status in case_status_mappings:
-                status_mappings = case_status_mappings[case_status]
-
-                for place_holder, field in status_mappings.items():
-                    if field in date_fields:
-                        value = format_date(entry[field]) if field in entry else ""
-                    else:
-                        value = str(entry[field]) if field in entry else ""
-                    html = html.replace(place_holder, value)
-                    print(f"placeholder: {place_holder}, field: {field}, value: {value}")
-        displayHTML(html)
+if file_loc is None:
+    file_location = None
+else:
+    file_location = file_loc["HistoryComment"]
+print(file_location)
 
 # COMMAND ----------
 
@@ -1894,6 +1950,11 @@ display(m7)
 # display(m1_m2)
 for row in m1_m2.collect():
     case_number = row["CaseNo"]
+    
+    # maintain cost award tab
+    main_cost_award_code = f"<tr><td id='midpadding'>{row['CaseNo']}</td><td id='midpadding'>{row['AppellantName']}</td><td id='midpadding'>{row['AppealStage']}</td><td id='midpadding'>{row['DateOfApplication']}</td><td id='midpadding'>{row['TypeOfCostAward']}</td><td id='midpadding'>{row['ApplyingParty']}</td><td id='midpadding'>{row['PayingParty']}</td><td id='midpadding'>{row['MindedToAward']}</td><td id='midpadding'>{row['ObjectionToMindedToAward']}</td><td id='midpadding'>{row['CostsAwardDecision']}</td><td id='midpadding'></td><td id='midpadding'>{row['CostsAmount']}</td></tr>"
+
+
     m1_replacement = {
         "{{ bailCaseNo }}":row["CaseNo"] ,
         "{{ hoRef }}": row["HORef"] ,
@@ -1901,6 +1962,7 @@ for row in m1_m2.collect():
         "{{ firstName }}" : row["AppellantForenames"],
         "{{ birthDate }}": format_date(row["AppellantBirthDate"]),
         "{{ portRef }}": row["PortReference"],
+        "{{AppellantTitle}}": row["AppellantTitle"],
         ## Main section
         "{{BailType}}": row["BailType"],
         "{{AppealCategoriesField}}": row["AppealCategories"],
@@ -1910,22 +1972,38 @@ for row in m1_m2.collect():
         "{{DateOfReceipt}}":format_date(row["DateReceived"]),
         "{{DedicatedHearingCentre}}":row["DedicatedHearingCentre"],
         "{{DateNoticeServed}}":format_date(row["DateServed"]) ,
+        "{{NextHearingDate}}": row["DateOfNextListedHearing"],
         # "{{CurrentStatus}}":"", Comes from M7 table
         "{{ConnectedFiles}}":"",
         "{{DateOfIssue}}":format_date(row["DateOfIssue"]),
-        "{{FileLocation}}":"FileLocationNote",
         "{{NextHearingDate}}":row["DateOfNextListedHearing"],
         # "{{lastDocument}}": LastDocument Field is populated by the latest Comment from the History table where HistType = 16
         "{{BFEntry}}":"",
         "{{ProvisionalDestructionDate}}":format_date(row["ProvisionalDestructionDate"]),
 
-        # Parties Tab - Respondent Section
+        # Parties Tab - Applicant Section
+        "{{Centre}}": row["DetentionCentre"],
+        "{{AddressLine1}}": row["DetentionCentreAddress1"],
+        "{{AddressLine2}}": row["DetentionCentreAddress2"],
+        "{{AddressLine3}}": row["DetentionCentreAddress3"],
+        "{{AddressLine4}}": row["DetentionCentreAddress4"],
+        "{{AddressLine5}}": row["DetentionCentreAddress5"],
+        "{{Postcode}}": row["DetentionCentrePostcode"],
+        "{{Country}}": row["Country"],
+        "{{phone}}": row["AppellantTelephone"],
+        # "{{email}}": row[""],
+        "{{PrisonRef}}": row["AppellantPrisonRef"],
+        
+        
+        # Respondent Section
+        "{{Detained}}":row["AppellantDetained"],
         "{{RespondentName}}":row["CaseRespondent"],
         "{{repName}}":row["CaseRepName"],
         "{{InterpreterRequirementsLanguage}}" : row["InterpreterRequirementsLanguage"],
         "{{HOInterpreter}}" : row["HOInterpreter"],
         "{{CourtPreference}}" : row["CourtPreference"],
-        "{{language}}": row["InterpreterRequirementsLanguage"],
+        "{{language}}": row["Language"],
+        "{{required}}": 1 if row["InterpreterRequirementsLanguage"] is not None else 0,
 
         # Misc Tab
         "{{Notes}}" : row["AppealCaseNote"],
@@ -1981,14 +2059,7 @@ for row in m1_m2.collect():
 
         # status - Hearing details tab
         # need logic to filter which hearing details to use using latest date
-        "{{Centre}}": row["DetentionCentre"],
-        "{{AddressLine1}}": row["DetentionCentreAddress1"],
-        "{{AddressLine2}}": row["DetentionCentreAddress2"],
-        "{{AddressLine3}}": row["DetentionCentreAddress3"],
-        "{{AddressLine4}}": row["DetentionCentreAddress4"],
-        "{{AddressLine5}}": row["DetentionCentreAddress5"],
-        "{{Postcode}}": row["DetentionCentrePostcode"],
-        "{{PrisonRef}}": row["AppellantPrisonRef"],
+
         
         } 
     # BF diary 
@@ -1999,27 +2070,65 @@ for row in m1_m2.collect():
         bf_diary_code += bf_line + "\n"
     # History 
     m5_filtered = m5.filter(F.col("CaseNo") == case_number)
+    # Last Document filters on Hist type 16
+    last_doc = m5_filtered.filter(F.col("HistType")==16).orderBy(desc("HistDate")).limit(1).select("HistoryComment").first()
+    if last_doc is None:
+        last_document = None
+    else:
+        last_document = last_doc["HistoryComment"]
+
+    # File Location Code filters on Hist Type 6
+    file_loc = m5_filtered.filter(F.col("HistType")==6).orderBy(desc("HistDate")).limit(1).select("HistoryComment").first()
+
+    if file_loc is None:
+        file_location = None
+    else:
+        file_location = file_loc["HistoryComment"]
+    
     history_code = ''
     for index, row in enumerate(m5_filtered.collect(),start=1):
         history_line = f"<tr><td id='midpadding'>{row['HistDate']}</td><td id='midpadding'>{row['HistType']}</td><td id='midpadding'>{row['UserName']}</td><td id='midpadding'>{row['HistoryComment']}</td></tr>"
         history_code += history_line + "\n"
 
     # # Linked Files
-    # m6_filtered = m6.filter(F.col("CaseNo") == case_number)
-    # linked_files_code = ''
-    # for index, row in enumerate(m6_filtered.collect(),start=1):
-    #     linked_files_line = f"<tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>"
+    m6_filtered = m6.filter(F.col("CaseNo") == case_number)
+    linked_files_code = ''
+    for index, row in enumerate(m6_filtered.collect(),start=1):
+        linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'></td><td id='midpadding'></td><td id='midpadding'>{row['LinkDetailComment']}</td></tr>"
+        linked_files_code += linked_files_line + "\n"
+
+    # main typing - has no mapping
+
+    # Appeal Category
+    m8_filtered = m8.filter(F.col("CaseNo") == case_number)
+    appeal_category_code = ""
+    for index, row in enumerate(m8_filtered.collect(),start=1):
+        appeal_line = f"<tr><td id='midpadding'>{row['CategoryDescription']}</td><td id='midpadding'>{row['Flag']}</td><td id='midpadding'></td></tr>"
+        appeal_category_code += appeal_line + "\n"
+
 
     # status
-    bail_entry = m7.filter(F.col("CaseNo") == case_number).collect()
+    m7_filtered = m7.filter(F.col("CaseNo") == case_number)
+    max_status = m7_filtered.agg(F.max("StatusId").alias("MaxStatusId")).collect()[0][0]
+    max_case_status = m7_filtered.filter(F.col("StatusId") == max_status ).select(F.col("CaseStatus")).collect()[0][0]
 
-   # inirilise html template
+
+    bail_entry = m7_filtered.collect()
+
+    
+
+   # initialise html template
     html = html_template
     for entry in bail_entry:
+        # Get the case status
         case_status = int(entry['CaseStatus'])
+
+        # Check if the status has a defined mapping
         if case_status in case_status_mappings:
+            # Get the specific mappings for the case status
             status_mappings = case_status_mappings[case_status]
 
+            # Replace placeholders in the current mapping
             for place_holder, field in status_mappings.items():
                 if field in date_fields:
                     value = format_date(entry[field]) if field in entry else ""
@@ -2027,12 +2136,66 @@ for row in m1_m2.collect():
                     value = str(entry[field]) if field in entry else ""
                 html = html.replace(place_holder, value)
 
+            # Replace all other placeholders with empty strings
+    all_placeholders = [key for mappings in case_status_mappings.values() for key in mappings]
+    for place_holder in all_placeholders:
+        if place_holder not in status_mappings:
+            html = html.replace(place_holder, "")
+    
+    case_surety_replacement = {
+    "{{SponsorName}}":"CaseSuretyName",
+    "{{SponsorForename}}":"CaseSuretyForenames",
+    "{{SponsorTitle}}":"CaseSuretyTitle",
+    "{{SponsorAddress1}}":"CaseSuretyAddress1",
+    "{{SponsorAddress2}}":"CaseSuretyAddress2",
+    "{{SponsorAddress3}}":"CaseSuretyAddress3",
+    "{{SponsorAddress4}}":"CaseSuretyAddress4",
+    "{{SponsorAddress5}}":"CaseSuretyAddress5",
+    "{{SponsorPostcode}}":"CaseSuretyPostcode",
+    "{{SponsorPhone}}":"CaseSuretyTelephone",
+    "{{SponsorEmail}}":"CaseSuretyEmail",
+    "{{AmountOfFinancialCondition}}":"AmountOfFinancialCondition",
+    "{{SponsorSolicitor}}":"Solicitor",
+    "{{SponserDateLodged}}":"CaseSuretyDateLodged",
+    "{{SponsorLocation}}":"Location",
+    "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
     
 
+}
+
+    financial_condition = case_surety.filter(F.col("CaseNo") == case_number)
+    sponsor_name = "Financial Condiiton Suportor details entered" if financial_condition.select("CaseSuretyName").count() >0 else None
+    financial_condition_code = ""
+
+    for index,row in enumerate(financial_condition.collect(),start=3):
+        current_code = template
+        current_code = current_code.replace("{{Index}}",str(index))
+        for key,col_name in case_surety_replacement.items():
+            value = row[col_name]
+            current_code = current_code.replace(key, str(value) if value is not None else "")
+        financial_condition_code += current_code + "\n"
+
+
+    html = html.replace('{{financial_condition_code}}',financial_condition_code)
+
+    # is there a financial condition suporter
+    html = html.replace("{{sponsorName}}",str(sponsor_name))
+    # add file locaiton
+    html = html.replace("{{FileLocation}}",str(file_location))
+    # add last document
+    html = html.replace("{{LastDocument}}",str(last_document))
+    # add latest case status
+    html = html.replace("{{CurrentStatus}}",max_case_status)
     # add multiple lines of code for bf diary
     html = html.replace("{{bfdiaryPlaceholder}}",bf_diary_code)
     # add multiple lines of code for history
     html = html.replace("{{HistoryPlaceholder}}",history_code)
+    # add multiple lines of code for linked details
+    html = html.replace("{{LinkedFilesPlaceholder}}",linked_files_code)
+    # add multiple lines of maintain cost awards
+    html = html.replace("{{MaintainCostAward}}",main_cost_award_code)
+    # add multiple line for appeal
+    html = html.replace("{{AppealPlaceholder}}",appeal_category_code)
     for key, value in m1_replacement.items():
         html = html.replace(str(key), str(value))
     displayHTML(html)
@@ -2050,7 +2213,7 @@ for row in m1_m2.collect():
 
 financial_condition_code = ""
 
-template = template = """                
+template = """                
 <div class="content{{Index}}">
     <div id="sponsor{{Index}}">
         <br>
@@ -2127,11 +2290,7 @@ template = template = """
 
 # COMMAND ----------
 
-display(case_surety)
 
-# COMMAND ----------
-
-html = html_template
 
 case_surety_replacement = {
     "{{SponsorName}}":"CaseSuretyName",
@@ -2143,30 +2302,39 @@ case_surety_replacement = {
     "{{SponsorAddress4}}":"CaseSuretyAddress4",
     "{{SponsorAddress5}}":"CaseSuretyAddress5",
     "{{SponsorPostcode}}":"CaseSuretyPostcode",
-    "{{SponserPhone}}":"CaseSuretyTelephone",
-    "{{SponserEmail}}":"CaseSuretyEmail",
+    "{{SponsorPhone}}":"CaseSuretyTelephone",
+    "{{SponsorEmail}}":"CaseSuretyEmail",
     "{{AmountOfFinancialCondition}}":"AmountOfFinancialCondition",
-    "{{SponserSolicitor}}":"Solicitor",
+    "{{SponsorSolicitor}}":"Solicitor",
     "{{SponserDateLodged}}":"CaseSuretyDateLodged",
-    "{{SponserLocation}}":"Location"
+    "{{SponsorLocation}}":"Location",
+    "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
+    
 
 }
 
 for row in m1_m2.collect():
     case_number = row["CaseNo"]
+    html = html_template
 
 
     financial_condition = case_surety.filter(F.col("CaseNo") == case_number)
+    display(financial_condition)
+    financial_condition_code = ""
 
-    for index,row in enumerate(financial_condition.collect(),start=1):
-        current_code = template.replace("{{Index}}",str(index))
+    for index,row in enumerate(financial_condition.collect(),start=3):
+        current_code = template
+        current_code = current_code.replace("{{Index}}",str(index))
         for key,col_name in case_surety_replacement.items():
             value = row[col_name]
             current_code = current_code.replace(key, str(value) if value is not None else "")
         financial_condition_code += current_code + "\n"
-        
-    html = html.replace("{{financial_condition_code}}",financial_condition_code)
+
+
+    html = html.replace('{{financial_condition_code}}',financial_condition_code)
+
     displayHTML(html)
+
 
 
 

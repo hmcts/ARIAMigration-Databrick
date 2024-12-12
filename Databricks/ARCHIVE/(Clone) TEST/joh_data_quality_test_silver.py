@@ -13,12 +13,7 @@ from pyspark.sql.types import (
 )
 
 from docx import Document
-
-
-# Create a SparkSession
-# spark = SparkSession.builder \
-#     .appName("DataQualityTests") \
-#     .getOrCreate()
+from datetime import datetime
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
@@ -26,10 +21,6 @@ landing_mnt = "/mnt/ingest00landingsboxlanding/test"
 bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
-
-spark.sql("SELECT current_database()").show()
-spark.sql("SHOW TABLES").show()
-dbutils.fs.ls(f"{silver_mnt}/silver_appointment_detail")
 
 # Mapping abbreviations to human-readable text
 abbreviation_map = {
@@ -394,26 +385,18 @@ def rename_dict_keys(input_dict):
         renamed_dict[readable_key] = value
     return renamed_dict
 
-
-# Perform data quality checks on the Silver tables
-# silver_tables = [
-#     ("silver_adjudicator_details", f"{silver_mnt}/silver_adjudicator_detail"),
-#     ("silver_history_detail", f"{silver_mnt}/silver_history_detail"),
-#     ("silver_othercentre_detail", f"{silver_mnt}/silver_othercentre_detail"),
-# ]
-
 # Executing checks
-validation_results = {}
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail"), "silver_appointment_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail"), "silver_history_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail"), "silver_othercentre_detail", ["AdjudicatorId"]))
-
 schema_results = {}
 schema_results.update(perform_adjudicator_schema_checks())
 schema_results.update(perform_history_detail_schema_checks())
 schema_results.update(perform_appointment_detail_schema_checks())
 schema_results.update(perform_othercentre_detail_schema_checks())
+
+validation_results = {}
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail"), "silver_appointment_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail"), "silver_history_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail"), "silver_othercentre_detail", ["AdjudicatorId"]))
 
 # Gathering results
 overall_results = schema_results | validation_results
@@ -425,29 +408,52 @@ for key, value in overall_results.items():
     print(f'{key}: {value} \n')
 print('<><><><><><><><><><><><><><><><><><><><><><>')
 
+# Group metrics by section
+grouped_results = {
+    "Adjudicator Detail": [],
+    "History Detail": [],
+    "Appointment Detail": [],
+    "Other Centre Detail": []
+}
+
+# Categorize metrics into their respective groups
+for metric, value in overall_results.items():
+    if metric.lower().startswith("adjudicator detail"):
+        grouped_results["Adjudicator Detail"].append((metric, value))
+    elif metric.lower().startswith("history detail"):
+        grouped_results["History Detail"].append((metric, value))
+    elif metric.lower().startswith("appointment detail"):
+        grouped_results["Appointment Detail"].append((metric, value))
+    elif metric.lower().startswith("othercentre detail"):
+        grouped_results["Other Centre Detail"].append((metric, value))
+
+for key, value in grouped_results.items():
+    print(f'{key}: {value} \n') 
+
 # Create a new Word document
 document = Document()
 
 # Add a title to the document
 document.add_heading("Silver Data Quality Validation Report", level=1)
 
-# Add a table to the document
-table = document.add_table(rows=1, cols=2)
-table.style = "Table Grid"
-hdr_cells = table.rows[0].cells
-hdr_cells[0].text = "Metric"
-hdr_cells[1].text = "Value"
-# hdr_cells[2].text = "Data Lineage"
+# Write grouped results into sections
+for section, results in grouped_results.items():
+    document.add_heading(f'{section} Test Results:', level=2)
+    
+    table = document.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Metric'
+    hdr_cells[1].text = 'Value'
+    
+    for metric, value in results:
+        row_cells = table.add_row().cells
+        row_cells[0].text = metric
+        row_cells[1].text = str(value)
 
-# Add rows to the table
-for metric, value in overall_results.items():
-    table_name = metric.split("_")[0]
-    column_name = "_".join(metric.split("_")[1:-1])
-    lineage_info = f"{table_name}.{column_name}"
-    row_cells = table.add_row().cells
-    row_cells[0].text = metric
-    row_cells[1].text = str(value)
-    # row_cells[2].text = lineage_info
+# Add datetime stamp
+document.add_paragraph('')
+document.add_paragraph(f'Generated on {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
 # Save the document
 document.save("silver_data_quality_validation_report.docx")

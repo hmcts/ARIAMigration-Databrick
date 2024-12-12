@@ -1,6 +1,3 @@
-# TODO:
-# - Return the datetime for when results were extracted at the end
-
 # %pip install azure-storage-blob pandas faker python-docx
 
 from pyspark.sql.functions import col, count, when, sum, isnan, isnull
@@ -16,8 +13,7 @@ from pyspark.sql.types import (
 )
 
 from docx import Document
-
-# from datetime import Datetime
+from datetime import datetime
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
@@ -492,6 +488,10 @@ for section, results in grouped_results.items():
         row_cells = table.add_row().cells
         row_cells[0].text = metric
         row_cells[1].text = str(value)
+
+# Add datetime stamp
+document.add_paragraph('')
+document.add_paragraph(f'Generated on {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
 # Save the document
 document.save("bronze_data_quality_validation_report.docx")

@@ -27,6 +27,9 @@ abbreviation_map = {
     'adjudicator_details': 'Adjudicator Details',
     'adjudicator': 'Adjudicator',
     'role': 'Role',
+    'AdjudicatorId': 'Adjudicator ID',
+    'SourceFileName': 'Source File Name',
+    'JudicialStatus': 'Judicial Status',
     'missing_columns': 'Missing Columns',
     'data_type_mismatch_count': 'Data Type Mismatch Count',
     'exists': 'Exists',
@@ -393,10 +396,10 @@ schema_results.update(perform_appointment_detail_schema_checks())
 schema_results.update(perform_othercentre_detail_schema_checks())
 
 validation_results = {}
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail"), "silver_appointment_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail"), "silver_history_detail", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail"), "silver_othercentre_detail", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_adjudicator_detail"), "silver_adjudicator_detail", ["AdjudicatorId", "JudicialStatus"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_appointment_detail"), "silver_appointment_detail", ["AdjudicatorId", "SourceFileName"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_history_detail"), "silver_history_detail", ["AdjudicatorId", "SourceFileName"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{silver_mnt}/silver_othercentre_detail"), "silver_othercentre_detail", ["AdjudicatorId", "SourceFileName"]))
 
 # Gathering results
 overall_results = schema_results | validation_results

@@ -29,6 +29,8 @@ abbreviation_map = {
     'othercentre_hearingcentre': 'Other Centre Hearing Centre',
     'adjudicator_role': 'Adjudicator Role',
     'AdjudicatorId': 'Adjudicator ID',
+    'SourceFileName': 'Source File Name',
+    'JudicialStatus': 'Judicial Status',
     'missing_columns': 'Missing Columns',
     'data_type_mismatch_count': 'Data Type Mismatch Count',
     'exists': 'Exists',
@@ -415,10 +417,10 @@ print('<><><><><><><><><><><><><><><><><><><><><><>')
 
 # Performing columns, schema and quality checks on data
 validation_results = {}
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"), "bronze_adjudicator_et_hc_dnur", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_johistory_users"), "bronze_johistory_users", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_othercentre_hearingcentre"), "bronze_othercentre_hearingcentre", ["AdjudicatorId"]))
-validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_role"), "bronze_adjudicator_role", ["AdjudicatorId"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"), "bronze_adjudicator_et_hc_dnur", ["AdjudicatorId", "JudicialStatus"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_johistory_users"), "bronze_johistory_users", ["AdjudicatorId", "SourceFileName"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_othercentre_hearingcentre"), "bronze_othercentre_hearingcentre", ["AdjudicatorId", "SourceFileName"]))
+validation_results.update(perform_data_quality_checks(spark.read.format("delta").load(f"{bronze_mnt}/bronze_adjudicator_role"), "bronze_adjudicator_role", ["AdjudicatorId", "SourceFileName"]))
 
 # print('Validation checks results: \n')
 # for key,value in validation_results.items():

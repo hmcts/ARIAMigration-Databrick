@@ -10,6 +10,7 @@ parameters:
 steps:
 - task: DownloadPipelineArtifact@2
   displayName: 'Download wheel artifact'
+#  condition: succeeded()
   inputs:
     buildType: 'current'
     artifactName: 'python-wheel'
@@ -17,7 +18,7 @@ steps:
 
 - task: AzureCLI@2
   displayName: 'Install Databricks CLI and Upload Wheel'
-  condition: succeeded()
+#  condition: succeeded()
   inputs:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash

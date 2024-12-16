@@ -1,0 +1,23 @@
+parameters:
+  env: ''
+  pythonVersion: ''
+  mainRepositoryName: ''
+  databricksInstance: ''
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Install python ${{ parameters.pythonVersion }}'
+  inputs:
+    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -e
+      source working_dir/bin/activate
+      export PYTHONPATH="${PYTHONPATH}:/./"
+      pip install databricks-cli
+      export DATABRICKS_HOST=${{ parameters.databricksInstance }}
+      export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
+      databricks bundles deploy --bundle ARIAMigration-Databrick/databricks.yaml --environment ${{ parameters.env }}
+              databricks jobs run-now --job-id <job-id>
+    workingDirectory: '$(System.DefaultWorkingDirectory)'

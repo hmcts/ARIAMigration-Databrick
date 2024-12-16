@@ -8,6 +8,8 @@ parameters:
   default: 'sbox'
   values:
   - sbox
+  - test
+  - staging
 - name: databricksClusterId
   displayName: Databricks Cluster ID
   type: string
@@ -22,8 +24,8 @@ variables:
   agentPool: "ubuntu-latest"
 
 stages:
-  - stage: Configure
-    displayName: ''
+  - stage: DeploySbox
+    displayName: Deploy to Sandbox
     jobs:
     - template: pipeline/jobs/configure.yaml
       parameters:
@@ -33,3 +35,10 @@ stages:
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
         databricksClusterId: ${{ parameters.databricksClusterId }}
+    - template: pipeline/jobs/deploy.yaml
+      parameters:
+        agentPool: $(agentPool)
+        pythonVersion: 3.10
+        env: ${{ parameters.env }}
+        mainRepositoryName: 'ARIAMigration-Databrick'
+        databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'

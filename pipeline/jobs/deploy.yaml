@@ -1,0 +1,23 @@
+parameters:
+  agentPool: ''
+  pythonVersion: ''
+  env: ''
+  mainRepositoryName: ''
+  databricksInstance: ''
+
+jobs:
+- job: Deploy_Databricks_Notebooks
+  pool:
+    vmImage: ${{ parameters.agentPool }}
+  variables:
+  - group: databricks-variables
+  steps:
+  - checkout: self
+    persistCredentials: false
+    clean: false
+  - template: ../steps/deploy-notebooks.yaml
+    parameters:
+      pythonVersion: ${{ parameters.pythonVersion }}
+      env: ${{ parameters.env }}
+      mainRepositoryName: ${{ parameters.mainRepositoryName }}
+      databricksInstance: ${{ parameters.databricksInstance }}

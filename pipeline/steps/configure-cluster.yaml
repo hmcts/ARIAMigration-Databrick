@@ -27,7 +27,7 @@ steps:
       set -e
       source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
-#      pip install --upgrade databricks-cli
+#     pip install --upgrade databricks-cli
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks fs cp $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite

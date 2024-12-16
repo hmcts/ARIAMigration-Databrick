@@ -14,7 +14,7 @@ steps:
     inlineScript: |
       set -e
       export PYTHONPATH="${PYTHONPATH}:/./"
-      pip install --upgrade databricks-cli
+#      pip install --upgrade databricks-cli
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks bundle deploy --files databricks.yml --environment ${{ parameters.env }}

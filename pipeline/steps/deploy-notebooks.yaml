@@ -6,14 +6,13 @@ parameters:
 
 steps:
 - task: AzureCLI@2
-  displayName: 'Install python ${{ parameters.pythonVersion }}'
+  displayName: 'Deploy Notebook'
   inputs:
     azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |
       set -e
-      source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
       pip install databricks-cli
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}

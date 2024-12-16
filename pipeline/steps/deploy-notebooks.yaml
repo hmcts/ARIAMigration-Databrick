@@ -14,9 +14,11 @@ steps:
     inlineScript: |
       set -e
       export PYTHONPATH="${PYTHONPATH}:/./"
-      pip install databricks-cli
+      pip install --upgrade databricks-cli
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
-      databricks bundles deploy --bundle ARIAMigration-Databrick/databricks.yaml --environment ${{ parameters.env }}
-              databricks jobs run-now --job-id <job-id>
+      databricks workflow deploy --files databricks.yml --environment ${{ parameters.env }}
+
+#      # Run the Databricks job
+#      databricks jobs run-now --job-id <job-id>
     workingDirectory: '$(System.DefaultWorkingDirectory)'

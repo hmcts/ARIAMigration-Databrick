@@ -8,4 +8,4 @@ environments:
           notebook_task:
             notebook_path: ARIAMigration-Databrick/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH.py
         cluster:
-          existing_cluster_id: '1121-123925-fa7rrd19'
+          existing_cluster_id: '1126-125237-rpprpbud'

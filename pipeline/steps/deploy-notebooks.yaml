@@ -17,7 +17,7 @@ steps:
       pip install --upgrade databricks-cli
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
-      databricks workflow deploy --files databricks.yml --environment ${{ parameters.env }}
+      databricks bundle deploy --files databricks.yml --environment ${{ parameters.env }}
 
 #      # Run the Databricks job
 #      databricks jobs run-now --job-id <job-id>

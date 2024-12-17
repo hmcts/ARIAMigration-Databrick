@@ -20,7 +20,6 @@ steps:
       source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
       python${{ parameters.pythonVersion }} -m pip install -U pip
-      brew tap databricks/tap
-      brew install databricks 
+      pip install --upgrade --force-reinstall --no-cache-dir databricks-cli
       databricks --version
     workingDirectory: '$(System.DefaultWorkingDirectory)'

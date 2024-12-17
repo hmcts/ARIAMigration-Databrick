@@ -21,7 +21,5 @@ steps:
       export PYTHONPATH="${PYTHONPATH}:/./"
       python${{ parameters.pythonVersion }} -m pip install -U pip
       curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-#      chmod +x databricks
-#      sudo mv databricks /usr/local/bin/
       databricks version
     workingDirectory: '$(System.DefaultWorkingDirectory)'

@@ -20,8 +20,8 @@ steps:
       source working_dir/bin/activate
       export PYTHONPATH="${PYTHONPATH}:/./"
       python${{ parameters.pythonVersion }} -m pip install -U pip
-      curl -L -o databricks https://github.com/databricks/databricks-cli/releases/latest/download/databricks-linux-amd64
-      chmod +x databricks
-      sudo mv databricks /usr/local/bin/
-      databricks --version
+      curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+#      chmod +x databricks
+#      sudo mv databricks /usr/local/bin/
+      databricks version
     workingDirectory: '$(System.DefaultWorkingDirectory)'

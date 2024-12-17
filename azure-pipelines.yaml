@@ -24,8 +24,8 @@ variables:
   agentPool: "ubuntu-latest"
 
 stages:
-  - stage: Deploy to ${{ parameters.env }}
-    displayName: Deploy
+  - stage: Deploy
+    displayName: Deploy to ${{ parameters.env }}
     jobs:
     - template: pipeline/jobs/deploy.yaml
       parameters:

@@ -33,9 +33,9 @@ jobs:
 #      mainRepositoryName: ${{ parameters.mainRepositoryName }}
 #      databricksInstance: ${{ parameters.databricksInstance }}
 #      databricksClusterId: ${{ parameters.databricksClusterId }}
-  - template: ../steps/deploy-notebooks.yaml
-    parameters:
-      pythonVersion: ${{ parameters.pythonVersion }}
-      env: ${{ parameters.env }}
-      mainRepositoryName: ${{ parameters.mainRepositoryName }}
-      databricksInstance: ${{ parameters.databricksInstance }}
+#  - template: ../steps/deploy-notebooks.yaml
+#    parameters:
+#      pythonVersion: ${{ parameters.pythonVersion }}
+#      env: ${{ parameters.env }}
+#      mainRepositoryName: ${{ parameters.mainRepositoryName }}
+#      databricksInstance: ${{ parameters.databricksInstance }}

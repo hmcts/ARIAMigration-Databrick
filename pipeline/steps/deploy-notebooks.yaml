@@ -19,5 +19,5 @@ steps:
       databricks bundle deploy --target ${{ parameters.env }}
       job_id=$(databricks jobs list | grep "run-notebooks" | awk '{print $1}')
       echo "Job ID: $job_id"
-      databricks jobs run-now --job-id $job_id
+      databricks jobs run-now $job_id
     workingDirectory: '$(System.DefaultWorkingDirectory)'

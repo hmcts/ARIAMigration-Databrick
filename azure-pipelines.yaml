@@ -25,7 +25,7 @@ variables:
 
 stages:
   - stage: Deploy to ${{ parameters.env }}
-    displayName: Deploy Notebooks
+    displayName: Deploy
     jobs:
     - template: pipeline/jobs/deploy.yaml
       parameters:

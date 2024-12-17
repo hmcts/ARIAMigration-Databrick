@@ -24,19 +24,8 @@ variables:
   agentPool: "ubuntu-latest"
 
 stages:
-  - stage: Configure
-    displayName: Configure Cluster
-    jobs:
-    - template: pipeline/jobs/configure.yaml
-      parameters:
-        agentPool: $(agentPool)
-        pythonVersion: 3.10
-        env: ${{ parameters.env }}
-        mainRepositoryName: 'ARIAMigration-Databrick'
-        databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-        databricksClusterId: ${{ parameters.databricksClusterId }}
-  - stage: Deploy
-    displayName: Deploy Notebook
+  - stage: Deploy to ${{ parameters.env }}
+    displayName: Deploy Notebooks
     jobs:
     - template: pipeline/jobs/deploy.yaml
       parameters:
@@ -45,3 +34,4 @@ stages:
         env: ${{ parameters.env }}
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
+        databricksClusterId: ${{ parameters.databricksClusterId }}

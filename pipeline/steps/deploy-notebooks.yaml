@@ -16,6 +16,8 @@ steps:
       export PYTHONPATH="${PYTHONPATH}:/./"
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
-      databricks bundle deploy --target ${{ parameters.env }} --output json > deploy_output.json
-      echo deploy_output.json
+      databricks bundle deploy --target ${{ parameters.env }}
+      job_id=$(databricks jobs list | grep "run-notebooks" | awk '{print $1}')
+      echo "Job ID: $job_id"
+      databricks jobs run-now --job-id $job_id
     workingDirectory: '$(System.DefaultWorkingDirectory)'

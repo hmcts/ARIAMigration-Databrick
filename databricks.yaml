@@ -1,10 +1,17 @@
-name: databricks-notebook-bundle
+bundle:
+  name: databricks-notebook-bundle
 
-environments:
+targets:
   sbox:
-    jobs:
-      - name: run-notebooks
-        task:
+    workspace:
+      root_path: /Workspace/Shared/databricks-notebook-bundle
+
+resources:
+  jobs:
+    run-notebooks:
+      name: run-notebooks
+      tasks:
+        - task_key: run-notebook-task
           notebook_task:
-            notebook_path: ARIAMigration-Databrick/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH.py
+            notebook_path: /ARIAMigration-Databrick/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH.py
           existing_cluster_id: '1126-125237-rpprpbud'

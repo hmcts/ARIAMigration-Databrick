@@ -16,5 +16,5 @@ steps:
       export PYTHONPATH="${PYTHONPATH}:/./"
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
-      databricks bundle deploy --files databricks.yml --environment ${{ parameters.env }}
+      databricks bundle deploy --environment ${{ parameters.env }}
     workingDirectory: '$(System.DefaultWorkingDirectory)'

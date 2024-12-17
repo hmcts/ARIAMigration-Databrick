@@ -1,13 +1,13 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date, coalesce, greatest, lit
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, ArrayType
 from docx import Document
 from docx.shared import Inches
 
 # Create a SparkSession
-# spark = SparkSession.builder \
-#     .appName("GoldOutputTesting") \
-#     .getOrCreate()
+spark = SparkSession.builder \
+    .appName("GoldOutputTesting") \
+    .getOrCreate()
 
 # mount point for the gold files
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
@@ -68,7 +68,8 @@ json_schema = StructType([
     ), True)
 ])
 
-df_json = spark.read.json(f"{gold_mnt}/judicial_officer_*.json", schema=json_schema)
+# df_json = spark.read.json(f"{gold_mnt}/judicial_officer_*.json", schema=json_schema)
+df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/JSON/judicial_officer_*.json", schema=json_schema)
 
 # Read the A360 file
 a360_schema = StructType([
@@ -94,10 +95,12 @@ a360_schema = StructType([
     ]), True)
 ])
 
-df_a360 = spark.read.json(f"{gold_mnt}/judicial_officer_*.a360", schema=a360_schema)
+# df_a360 = spark.read.json(f"{gold_mnt}/judicial_officer_*.a360", schema=a360_schema)
+df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/A360/judicial_officer_*.a360", schema=a360_schema)
 
 # Read the HTML file
-df_html = spark.read.text(f"{gold_mnt}/judicial_officer_*.html")
+# df_html = spark.read.text(f"{gold_mnt}/judicial_officer_*.html")
+df_html = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/HTML/judicial_officer_*.html")
 
 # Test if the output is present and in the correct format
 assert df_json.count() > 0, "No records found in the JSON file"

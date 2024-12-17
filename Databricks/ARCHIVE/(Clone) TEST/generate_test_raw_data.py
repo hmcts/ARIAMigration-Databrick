@@ -15,6 +15,9 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
 
+# Variable to control the percentage of adjudicator IDs present in all tables
+adjudicator_id_presence_percentage = 80
+
 
 def generate_adjudicator_data(num_records: int) -> pd.DataFrame:
     """
@@ -29,8 +32,10 @@ def generate_adjudicator_data(num_records: int) -> pd.DataFrame:
     fake = Faker("en_GB")
 
     data = []
+    adjudicator_ids = set()
     for _ in range(num_records):
-        adjudicator_id = fake.random_number(digits=4)
+        adjudicator_id = fake.unique.random_number(digits=4)
+        adjudicator_ids.add(adjudicator_id)
         surname = fake.last_name()
         forenames = fake.first_name()
         title = random.choice(["Mr", "Mrs", "Miss", "Ms", "Dr"])
@@ -179,15 +184,16 @@ def generate_adjudicator_data(num_records: int) -> pd.DataFrame:
     ]
 
     df = pd.DataFrame(data, columns=columns)
-    return df
+    return df, adjudicator_ids
 
 
-def generate_adjudicator_role_data(num_records: int) -> pd.DataFrame:
+def generate_adjudicator_role_data(num_records: int, adjudicator_ids: set) -> pd.DataFrame:
     """
     Generate sample data for the AdjudicatorRole table.
 
     Args:
         num_records (int): The number of records to generate.
+        adjudicator_ids (set): Set of adjudicator IDs from the Adjudicator table.
 
     Returns:
         pd.DataFrame: The generated sample data as a DataFrame.
@@ -196,7 +202,10 @@ def generate_adjudicator_role_data(num_records: int) -> pd.DataFrame:
 
     data = []
     for _ in range(num_records):
-        adjudicator_id = fake.random_number(digits=4)
+        if random.random() < adjudicator_id_presence_percentage / 100:
+            adjudicator_id = random.choice(list(adjudicator_ids))
+        else:
+            adjudicator_id = fake.random_number(digits=4)
         role = fake.random_number(digits=1)
         date_of_appointment = fake.date_between(
             start_date="-10y", end_date="today"
@@ -228,8 +237,10 @@ def generate_employment_term_data(num_records: int) -> pd.DataFrame:
     fake = Faker("en_GB")
 
     data = []
+    employment_term_ids = set()
     for _ in range(num_records):
-        employment_term_id = fake.random_number(digits=3)
+        employment_term_id = fake.unique.random_number(digits=3)
+        employment_term_ids.add(employment_term_id)
         description = fake.sentence(nb_words=3)
         do_not_use = random.choice([True, False])
 
@@ -238,7 +249,7 @@ def generate_employment_term_data(num_records: int) -> pd.DataFrame:
     columns = ["EmploymentTermId", "Description", "DoNotUse"]
 
     df = pd.DataFrame(data, columns=columns)
-    return df
+    return df, employment_term_ids
 
 
 def generate_do_not_use_reason_data(num_records: int) -> pd.DataFrame:
@@ -254,8 +265,10 @@ def generate_do_not_use_reason_data(num_records: int) -> pd.DataFrame:
     fake = Faker("en_GB")
 
     data = []
+    do_not_use_reason_ids = set()
     for _ in range(num_records):
-        do_not_use_reason_id: int = fake.random_number(digits=3)
+        do_not_use_reason_id: int = fake.unique.random_number(digits=3)
+        do_not_use_reason_ids.add(do_not_use_reason_id)
         description: str = fake.sentence(nb_words=3)
         do_not_use: bool = random.choice([True, False])
 
@@ -264,15 +277,17 @@ def generate_do_not_use_reason_data(num_records: int) -> pd.DataFrame:
     columns = ["DoNotUseReasonId", "Description", "DoNotUse"]
 
     df = pd.DataFrame(data, columns=columns)
-    return df
+    return df, do_not_use_reason_ids
 
 
-def generate_jo_history_data(num_records: int) -> pd.DataFrame:
+def generate_jo_history_data(num_records: int, adjudicator_ids: set, user_ids: set) -> pd.DataFrame:
     """
     Generate sample data for the JoHistory table.
 
     Args:
         num_records (int): The number of records to generate.
+        adjudicator_ids (set): Set of adjudicator IDs from the Adjudicator table.
+        user_ids (set): Set of user IDs from the Users table.
 
     Returns:
         pd.DataFrame: The generated sample data as a DataFrame.
@@ -282,12 +297,18 @@ def generate_jo_history_data(num_records: int) -> pd.DataFrame:
     data = []
     for _ in range(num_records):
         jo_history_id: int = fake.random_number(digits=4)
-        adjudicator_id: int = fake.random_number(digits=4)
+        if random.random() < adjudicator_id_presence_percentage / 100:
+            adjudicator_id: int = random.choice(list(adjudicator_ids))
+        else:
+            adjudicator_id: int = fake.random_number(digits=4)
         hist_date: str = fake.date_between(start_date="-1y", end_date="today").strftime(
             "%Y-%m-%d"
         )
         hist_type: int = fake.random_number(digits=2)
-        user_id: int = fake.random_number(digits=3)
+        if random.random() < adjudicator_id_presence_percentage / 100:
+            user_id: int = random.choice(list(user_ids))
+        else:
+            user_id: int = fake.random_number(digits=3)
         comment: str = fake.paragraph(nb_sentences=1)
         deleted_by: int = fake.random_number(digits=1)
 
@@ -330,8 +351,10 @@ def generate_users_data(num_records: int) -> pd.DataFrame:
     fake = Faker("en_GB")
 
     data = []
+    user_ids = set()
     for _ in range(num_records):
-        user_id: int = fake.random_number(digits=3)
+        user_id: int = fake.unique.random_number(digits=3)
+        user_ids.add(user_id)
         name: str = fake.user_name()
         user_type: str = random.choice(["U", "G"])
         full_name: str = fake.name()
@@ -369,7 +392,7 @@ def generate_users_data(num_records: int) -> pd.DataFrame:
     ]
 
     df = pd.DataFrame(data, columns=columns)
-    return df
+    return df, user_ids
 
 
 def generate_hearing_centre_data(num_records: int) -> pd.DataFrame:
@@ -385,8 +408,10 @@ def generate_hearing_centre_data(num_records: int) -> pd.DataFrame:
     fake = Faker("en_GB")
 
     data = []
+    centre_ids = set()
     for _ in range(num_records):
-        centre_id: int = fake.random_number(digits=3)
+        centre_id: int = fake.unique.random_number(digits=3)
+        centre_ids.add(centre_id)
         description: str = fake.company()
         prefix: str = fake.lexify(text="??")
         bail_number: int = fake.random_number(digits=4)
@@ -476,15 +501,17 @@ def generate_hearing_centre_data(num_records: int) -> pd.DataFrame:
     ]
 
     df = pd.DataFrame(data, columns=columns)
-    return df
+    return df, centre_ids
 
 
-def generate_other_centre_data(num_records: int) -> pd.DataFrame:
+def generate_other_centre_data(num_records: int, adjudicator_ids: set, centre_ids: set) -> pd.DataFrame:
     """
     Generate sample data for the OtherCentre table.
 
     Args:
         num_records (int): The number of records to generate.
+        adjudicator_ids (set): Set of adjudicator IDs from the Adjudicator table.
+        centre_ids (set): Set of centre IDs from the HearingCentre table.
 
     Returns:
         pd.DataFrame: The generated sample data as a DataFrame.
@@ -494,8 +521,14 @@ def generate_other_centre_data(num_records: int) -> pd.DataFrame:
     data = []
     for _ in range(num_records):
         other_centre_id: int = fake.random_number(digits=3)
-        adjudicator_id: int = fake.random_number(digits=4)
-        centre_id: int = fake.random_number(digits=3)
+        if random.random() < adjudicator_id_presence_percentage / 100:
+            adjudicator_id: int = random.choice(list(adjudicator_ids))
+        else:
+            adjudicator_id: int = fake.random_number(digits=4)
+        if random.random() < adjudicator_id_presence_percentage / 100:
+            centre_id: int = random.choice(list(centre_ids))
+        else:
+            centre_id: int = fake.random_number(digits=3)
 
         data.append([other_centre_id, adjudicator_id, centre_id])
 
@@ -515,22 +548,19 @@ num_users_records: int = 50
 num_hearing_centre_records: int = 30
 num_other_centre_records: int = 100
 
-adjudicator_data: pd.DataFrame = generate_adjudicator_data(num_adjudicator_records)
-adjudicator_role_data: pd.DataFrame = generate_adjudicator_role_data(
-    num_adjudicator_role_records
-)
-employment_term_data: pd.DataFrame = generate_employment_term_data(
-    num_employment_term_records
-)
-do_not_use_reason_data: pd.DataFrame = generate_do_not_use_reason_data(
-    num_do_not_use_reason_records
-)
-jo_history_data: pd.DataFrame = generate_jo_history_data(num_jo_history_records)
-users_data: pd.DataFrame = generate_users_data(num_users_records)
-hearing_centre_data: pd.DataFrame = generate_hearing_centre_data(
-    num_hearing_centre_records
-)
-other_centre_data: pd.DataFrame = generate_other_centre_data(num_other_centre_records)
+adjudicator_data, adjudicator_ids = generate_adjudicator_data(num_adjudicator_records)
+adjudicator_role_data = generate_adjudicator_role_data(num_adjudicator_role_records, adjudicator_ids)
+employment_term_data, employment_term_ids = generate_employment_term_data(num_employment_term_records)
+do_not_use_reason_data, do_not_use_reason_ids = generate_do_not_use_reason_data(num_do_not_use_reason_records)
+users_data, user_ids = generate_users_data(num_users_records)
+jo_history_data = generate_jo_history_data(num_jo_history_records, adjudicator_ids, user_ids)
+hearing_centre_data, centre_ids = generate_hearing_centre_data(num_hearing_centre_records)
+other_centre_data = generate_other_centre_data(num_other_centre_records, adjudicator_ids, centre_ids)
+
+# Update Adjudicator table with referential integrity
+adjudicator_data["EmploymentTerms"] = adjudicator_data["EmploymentTerms"].apply(lambda x: random.choice(list(employment_term_ids)))
+adjudicator_data["DoNotUseReason"] = adjudicator_data["DoNotUseReason"].apply(lambda x: random.choice(list(do_not_use_reason_ids)))
+adjudicator_data["CentreId"] = adjudicator_data["CentreId"].apply(lambda x: random.choice(list(centre_ids)))
 
 # Save the generated data as Parquet files for local test
 adjudicator_data.to_parquet("Adjudicator.parquet", index=False)
@@ -671,5 +701,3 @@ for output_path in output_paths.values():
     df = spark.read.format("parquet").load(output_path)
     df.printSchema()
     display(df)
-
-

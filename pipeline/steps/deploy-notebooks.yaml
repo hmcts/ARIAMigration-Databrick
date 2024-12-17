@@ -17,7 +17,5 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks bundle deploy --target ${{ parameters.env }} --output json > deploy_output.json
-      job_id=$(jq -r '.resources.jobs.run-notebooks.id' deploy_output.json)
-      echo "Job ID: $job_id"
-      databricks jobs run-now --job-id $job_id
+      echo deploy_output.json
     workingDirectory: '$(System.DefaultWorkingDirectory)'

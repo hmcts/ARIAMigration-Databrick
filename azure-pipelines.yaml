@@ -31,7 +31,7 @@ stages:
   - template: pipeline/jobs/deploy.yaml
     parameters:
       environment: 'sbox'
-      env: parameters.env
+      env:  ${{ parameters.env }}
       agentPool: $(agentPool)
       azureSubscriptionName: 'DTS-DATAINGEST-SBOX'
       runDeploy: eq('${{ parameters.env }}', 'sbox')

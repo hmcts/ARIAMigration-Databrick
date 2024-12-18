@@ -2,7 +2,7 @@ parameters:
 - name: env
   displayName: Environment
   type: string
-  default: 'sbox'
+  default: sbox
   values:
   - sbox
   - test

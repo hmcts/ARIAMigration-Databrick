@@ -4,12 +4,13 @@ parameters:
   mainRepositoryName: ''
   databricksInstance: ''
   runJob: ''
+  subscriptionEndpoint: ''
 
 steps:
 - task: AzureCLI@2
   displayName: 'Deploy Notebook'
   inputs:
-    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |

@@ -7,6 +7,7 @@ parameters:
   databricksClusterId: '' # Cluster ID to install the wheel
   configureDBCluster: ''
   runJob: ''
+  azureSubscriptionName: ''
 
 stages:
 - stage: 'Deploy_${{ parameters.environment }}'
@@ -27,12 +28,14 @@ stages:
         pythonVersion: ${{ parameters.pythonVersion }}
         env: ${{ parameters.env }}
         mainRepositoryName: ${{ parameters.mainRepositoryName }}
+        subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
     - ${{ if eq(parameters.configureDBCluster, 'true') }}:
       - template: ../steps/build-wheel.yaml
         parameters:
           pythonVersion: ${{ parameters.pythonVersion }}
           env: ${{ parameters.env }}
           mainRepositoryName: ${{ parameters.mainRepositoryName }}
+          subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
       - template: ../steps/configure-cluster.yaml
         parameters:
           pythonVersion: ${{ parameters.pythonVersion }}
@@ -40,6 +43,7 @@ stages:
           mainRepositoryName: ${{ parameters.mainRepositoryName }}
           databricksInstance: ${{ parameters.databricksInstance }}
           databricksClusterId: ${{ parameters.databricksClusterId }}
+          subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
     - template: ../steps/deploy-notebooks.yaml
       parameters:
         pythonVersion: ${{ parameters.pythonVersion }}
@@ -47,3 +51,4 @@ stages:
         mainRepositoryName: ${{ parameters.mainRepositoryName }}
         databricksInstance: ${{ parameters.databricksInstance }}
         runJobs: ${{ parameters.runJob }}
+        subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}

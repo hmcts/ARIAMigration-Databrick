@@ -2,6 +2,7 @@ parameters:
   pythonVersion: ''
   env: ''
   mainRepositoryName: ''
+  subscriptionEndpoint: ''
 
 steps:
 - checkout: self
@@ -11,7 +12,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Check for Shared Func Update'
   inputs:
-    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |
@@ -37,7 +38,7 @@ steps:
   displayName: 'Build wheel'
   condition: eq(variables.shouldBuildWheel, 'true')
   inputs:
-    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |

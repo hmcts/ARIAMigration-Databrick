@@ -8,7 +8,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Install python ${{ parameters.pythonVersion }}'
   inputs:
-    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |

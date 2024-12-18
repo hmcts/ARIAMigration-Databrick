@@ -5,6 +5,7 @@ parameters:
   databricksInstance: ''
   databricksClusterId: ''
   wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl'
+  subscriptionEndpoint: ''
 
 
 steps:
@@ -20,7 +21,7 @@ steps:
   displayName: 'Upload Wheel to Workspace'
 #  condition: succeeded()
   inputs:
-    azureSubscription: 'DTS-DATAINGEST-${{ upper(parameters.env) }}'
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash
     scriptLocation: inlineScript
     inlineScript: |

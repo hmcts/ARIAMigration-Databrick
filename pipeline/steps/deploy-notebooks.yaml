@@ -15,6 +15,7 @@ steps:
     scriptLocation: inlineScript
     inlineScript: |
       set -e
+      echo "databricks instance is: ${{ parameters.databricksInstance }}"
       export PYTHONPATH="${PYTHONPATH}:/./"
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)

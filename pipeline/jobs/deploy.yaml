@@ -11,6 +11,7 @@ parameters:
 stages:
 - stage: Deploy_to_${{ parameters.env }}
   displayName: Deploy to ${{ parameters.env }}
+  condition: eq('${{ parameters.runDeploy }}', 'true')
   jobs:
   - job: Deploy_to_Databricks
     pool:

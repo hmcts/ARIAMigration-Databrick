@@ -9,6 +9,7 @@ parameters:
   runJob: ''
 
 jobs:
+- job: Deploy_to_Databricks
   pool:
     vmImage: ${{ parameters.agentPool }}
   variables:

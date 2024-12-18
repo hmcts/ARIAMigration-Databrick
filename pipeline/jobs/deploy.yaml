@@ -9,7 +9,6 @@ parameters:
   runJob: ''
 
 jobs:
-- job: Configure_Spark_Cluster
   pool:
     vmImage: ${{ parameters.agentPool }}
   variables:

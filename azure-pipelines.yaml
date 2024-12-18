@@ -29,6 +29,7 @@ variables:
 
 stages:
   - template: pipeline/jobs/deploy.yaml
+    displayName: Deploy to sbox
     parameters:
       environment: 'sbox'
       env: parameters.env
@@ -42,6 +43,7 @@ stages:
       runJobs: ${{ parameters.runJob }}
 
   - template: pipeline/jobs/deploy.yaml
+    displayName: Deploy to test
     parameters:
       environment: 'test'
       env: parameters.env

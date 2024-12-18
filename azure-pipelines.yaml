@@ -33,7 +33,7 @@ stages:
       environment: 'sbox'
       env: parameters.env
       agentPool: $(agentPool)
-      runDeploy: eq(${{ parameters.env }}, 'sbox')
+      runDeploy: eq('${{ parameters.env }}', 'sbox')
       pythonVersion: 3.10
       mainRepositoryName: 'ARIAMigration-Databrick'
       databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -46,7 +46,7 @@ stages:
       environment: 'test'
       env: parameters.env
       agentPool: $(agentPool)
-      runDeploy: eq(${{ parameters.env }}, 'test')
+      runDeploy: eq('${{ parameters.env }}', 'test')
       pythonVersion: 3.10
       mainRepositoryName: 'ARIAMigration-Databrick'
       databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'

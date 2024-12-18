@@ -29,7 +29,6 @@ variables:
 
 stages:
   - template: pipeline/jobs/deploy.yaml
-    displayName: Deploy to sbox
     parameters:
       environment: 'sbox'
       env: parameters.env
@@ -42,16 +41,15 @@ stages:
       configureDBCluster: ${{ parameters.configureDBCluster }}
       runJobs: ${{ parameters.runJob }}
 
-  - template: pipeline/jobs/deploy.yaml
-    displayName: Deploy to test
-    parameters:
-      environment: 'test'
-      env: parameters.env
-      agentPool: $(agentPool)
-      runDeploy: eq('${{ parameters.env }}', 'test')
-      pythonVersion: 3.10
-      mainRepositoryName: 'ARIAMigration-Databrick'
-      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-      databricksClusterId: ${{ parameters.databricksClusterId }}
-      configureDBCluster: ${{ parameters.configureDBCluster }}
-      runJobs: ${{ parameters.runJob }}
+#  - template: pipeline/jobs/deploy.yaml
+#    parameters:
+#      environment: 'test'
+#      env: parameters.env
+#      agentPool: $(agentPool)
+#      runDeploy: eq('${{ parameters.env }}', 'test')
+#      pythonVersion: 3.10
+#      mainRepositoryName: 'ARIAMigration-Databrick'
+#      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
+#      databricksClusterId: ${{ parameters.databricksClusterId }}
+#      configureDBCluster: ${{ parameters.configureDBCluster }}
+#      runJobs: ${{ parameters.runJob }}

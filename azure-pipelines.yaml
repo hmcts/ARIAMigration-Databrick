@@ -6,7 +6,6 @@ parameters:
   values:
   - 'sbox'
   - 'test'
-  - 'staging'
 - name: runJob
   displayName: Run Deployed Job
   type: boolean

@@ -5,6 +5,8 @@ parameters:
   mainRepositoryName: ''
   databricksInstance: '' # Example: https://<databricks-instance>.cloud.databricks.com
   databricksClusterId: '' # Cluster ID to install the wheel
+  configureDBCluster: ''
+  runJob: ''
 
 jobs:
 - job: Configure_Spark_Cluster
@@ -21,21 +23,23 @@ jobs:
       pythonVersion: ${{ parameters.pythonVersion }}
       env: ${{ parameters.env }}
       mainRepositoryName: ${{ parameters.mainRepositoryName }}
-#  - template: ../steps/build-wheel.yaml
-#    parameters:
-#      pythonVersion: ${{ parameters.pythonVersion }}
-#      env: ${{ parameters.env }}
-#      mainRepositoryName: ${{ parameters.mainRepositoryName }}
-#  - template: ../steps/configure-cluster.yaml
-#    parameters:
-#      pythonVersion: ${{ parameters.pythonVersion }}
-#      env: ${{ parameters.env }}
-#      mainRepositoryName: ${{ parameters.mainRepositoryName }}
-#      databricksInstance: ${{ parameters.databricksInstance }}
-#      databricksClusterId: ${{ parameters.databricksClusterId }}
+  - ${{ if eq(parameters.configureDBCluster, 'true') }}:
+    - template: ../steps/build-wheel.yaml
+      parameters:
+        pythonVersion: ${{ parameters.pythonVersion }}
+        env: ${{ parameters.env }}
+        mainRepositoryName: ${{ parameters.mainRepositoryName }}
+    - template: ../steps/configure-cluster.yaml
+      parameters:
+        pythonVersion: ${{ parameters.pythonVersion }}
+        env: ${{ parameters.env }}
+        mainRepositoryName: ${{ parameters.mainRepositoryName }}
+        databricksInstance: ${{ parameters.databricksInstance }}
+        databricksClusterId: ${{ parameters.databricksClusterId }}
   - template: ../steps/deploy-notebooks.yaml
     parameters:
       pythonVersion: ${{ parameters.pythonVersion }}
       env: ${{ parameters.env }}
       mainRepositoryName: ${{ parameters.mainRepositoryName }}
       databricksInstance: ${{ parameters.databricksInstance }}
+      runJobs: ${{ parameters.runJob }}

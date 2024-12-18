@@ -1,5 +1,10 @@
 parameters:
-- name: configureCluster
+- name: configureDBCluster
+  displayName: Update Shared Functions
+  type: boolean
+  default: false
+- name: runJob
+  displayName: Run Deployed Job
   type: boolean
   default: true
 - name: env
@@ -35,3 +40,5 @@ stages:
         mainRepositoryName: 'ARIAMigration-Databrick'
         databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
         databricksClusterId: ${{ parameters.databricksClusterId }}
+        configureDBCluster: ${{ parameters.configureDBCluster }}
+        runJobs: ${{ parameters.runJob }}

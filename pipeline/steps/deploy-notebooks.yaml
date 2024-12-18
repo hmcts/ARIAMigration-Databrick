@@ -3,6 +3,7 @@ parameters:
   pythonVersion: ''
   mainRepositoryName: ''
   databricksInstance: ''
+  runJob: ''
 
 steps:
 - task: AzureCLI@2
@@ -17,7 +18,7 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks bundle deploy --target ${{ parameters.env }}
-      job_id=$(databricks jobs list | grep "run-notebooks" | awk '{print $1}')
+      job_id=$(databricks jobs list | grep -w "run-notebooks" | awk '{print $1}' | head -n 1)
       echo "Job ID: $job_id"
       databricks jobs run-now $job_id
     workingDirectory: '$(System.DefaultWorkingDirectory)'

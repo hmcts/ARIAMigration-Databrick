@@ -18,7 +18,11 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks bundle deploy --target ${{ parameters.env }}
-      job_id=$(databricks jobs list | grep -w "run-notebooks" | awk '{print $1}' | head -n 1)
-      echo "Job ID: $job_id"
-      databricks jobs run-now $job_id
+      if [ "${{ parameters.runJob }}" == "true" ]; then
+        job_id=$(databricks jobs list | grep -w "run-notebooks" | awk '{print $1}' | head -n 1)
+        echo "Job ID: $job_id"
+        databricks jobs run-now $job_id
+      else
+        echo "Deployment successful. Skipping job execution."
+      fi
     workingDirectory: '$(System.DefaultWorkingDirectory)'

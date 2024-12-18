@@ -9,7 +9,7 @@ parameters:
   runJob: ''
 
 stages:
-- stage: Deploy_to_${{ parameters.env }}
+- stage: 'Deploy_${{ parameters.environment }}'
   displayName: Deploy to ${{ parameters.env }}
   condition: eq(${{ parameters.runDeploy }}, true)
   jobs:

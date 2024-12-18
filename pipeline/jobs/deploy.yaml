@@ -8,38 +8,41 @@ parameters:
   configureDBCluster: ''
   runJob: ''
 
-jobs:
-- job: Deploy_to_Databricks
-  pool:
-    vmImage: ${{ parameters.agentPool }}
-  variables:
-  - group: databricks-variables
-  steps:
-  - checkout: self
-    persistCredentials: false
-    clean: false
-  - template: ../steps/initialise-python.yaml
-    parameters:
-      pythonVersion: ${{ parameters.pythonVersion }}
-      env: ${{ parameters.env }}
-      mainRepositoryName: ${{ parameters.mainRepositoryName }}
-  - ${{ if eq(parameters.configureDBCluster, 'true') }}:
-    - template: ../steps/build-wheel.yaml
+stages:
+- stage: Deploy_to_${{ parameters.env }}
+  displayName: Deploy to ${{ parameters.env }}
+  jobs:
+  - job: Deploy_to_Databricks
+    pool:
+      vmImage: ${{ parameters.agentPool }}
+    variables:
+    - group: databricks-variables
+    steps:
+    - checkout: self
+      persistCredentials: false
+      clean: false
+    - template: ../steps/initialise-python.yaml
       parameters:
         pythonVersion: ${{ parameters.pythonVersion }}
         env: ${{ parameters.env }}
         mainRepositoryName: ${{ parameters.mainRepositoryName }}
-    - template: ../steps/configure-cluster.yaml
+    - ${{ if eq(parameters.configureDBCluster, 'true') }}:
+      - template: ../steps/build-wheel.yaml
+        parameters:
+          pythonVersion: ${{ parameters.pythonVersion }}
+          env: ${{ parameters.env }}
+          mainRepositoryName: ${{ parameters.mainRepositoryName }}
+      - template: ../steps/configure-cluster.yaml
+        parameters:
+          pythonVersion: ${{ parameters.pythonVersion }}
+          env: ${{ parameters.env }}
+          mainRepositoryName: ${{ parameters.mainRepositoryName }}
+          databricksInstance: ${{ parameters.databricksInstance }}
+          databricksClusterId: ${{ parameters.databricksClusterId }}
+    - template: ../steps/deploy-notebooks.yaml
       parameters:
         pythonVersion: ${{ parameters.pythonVersion }}
         env: ${{ parameters.env }}
         mainRepositoryName: ${{ parameters.mainRepositoryName }}
         databricksInstance: ${{ parameters.databricksInstance }}
-        databricksClusterId: ${{ parameters.databricksClusterId }}
-  - template: ../steps/deploy-notebooks.yaml
-    parameters:
-      pythonVersion: ${{ parameters.pythonVersion }}
-      env: ${{ parameters.env }}
-      mainRepositoryName: ${{ parameters.mainRepositoryName }}
-      databricksInstance: ${{ parameters.databricksInstance }}
-      runJobs: ${{ parameters.runJob }}
+        runJobs: ${{ parameters.runJob }}

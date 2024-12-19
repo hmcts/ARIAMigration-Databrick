@@ -20,6 +20,7 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       echo "Parameter.env is: ${{ parameters.env }}"
+      echo "parameter.runJob is: ${{ parameters.runJob }}"
       databricks bundle deploy --target ${{ parameters.env }}
       if [ "${{ parameters.runJob }}" == true ]; then
         job_id=$(databricks jobs list | grep -w "run-notebooks" | awk '{print $1}' | head -n 1)

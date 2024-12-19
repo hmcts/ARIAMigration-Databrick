@@ -50,5 +50,5 @@ stages:
         env: ${{ parameters.env }}
         mainRepositoryName: ${{ parameters.mainRepositoryName }}
         databricksInstance: ${{ parameters.databricksInstance }}
-        runJobs: ${{ parameters.runJob }}
+        runJob: ${{ parameters.runJob }}
         subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}

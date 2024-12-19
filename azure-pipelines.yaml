@@ -5,7 +5,7 @@ parameters:
   default: 'sbox'
   values:
   - 'sbox'
-  - 'test'
+  - 'stg'
 - name: runJob
   displayName: Run Deployed Job
   type: boolean
@@ -15,7 +15,7 @@ parameters:
   type: string
   default: '1121-123925-fa7rrd19'
 - name: configureDBCluster
-  displayName: Update Shared Functions
+  displayName: Check for Shared Functions Update
   type: boolean
   default: false
 
@@ -30,7 +30,7 @@ variables:
 stages:
   - template: pipeline/jobs/deploy.yaml
     parameters:
-      environment: 'sbox'
+      environment: sbox
       env:  ${{ parameters.env }}
       agentPool: $(agentPool)
       azureSubscriptionName: 'DTS-DATAINGEST-SBOX'
@@ -42,16 +42,16 @@ stages:
       configureDBCluster: ${{ parameters.configureDBCluster }}
       runJob: ${{ parameters.runJob }}
 
-#  - template: pipeline/jobs/deploy.yaml
-#    parameters:
-#      environment: 'test'
-#      env: parameters.env
-#      agentPool: $(agentPool)
-#      azureSubscriptionName: "DTS-DATAINGEST-TEST"
-#      runDeploy: eq('${{ parameters.env }}', 'test')
-#      pythonVersion: 3.10
-#      mainRepositoryName: 'ARIAMigration-Databrick'
-#      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-#      databricksClusterId: ${{ parameters.databricksClusterId }}
-#      configureDBCluster: ${{ parameters.configureDBCluster }}
-#      runJobs: ${{ parameters.runJob }}
+  - template: pipeline/jobs/deploy.yaml
+    parameters:
+      environment: stg
+      env: parameters.env
+      agentPool: $(agentPool)
+      azureSubscriptionName: "DTS-DATAINGEST-STG"
+      runDeploy: eq('${{ parameters.env }}', 'stg')
+      pythonVersion: 3.10
+      mainRepositoryName: 'ARIAMigration-Databrick'
+      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
+      databricksClusterId: ${{ parameters.databricksClusterId }}
+      configureDBCluster: ${{ parameters.configureDBCluster }}
+      runJobs: ${{ parameters.runJob }}

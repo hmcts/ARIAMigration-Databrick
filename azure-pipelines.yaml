@@ -42,16 +42,16 @@ stages:
       configureDBCluster: ${{ parameters.configureDBCluster }}
       runJob: ${{ parameters.runJob }}
 
-  - template: pipeline/jobs/deploy.yaml
-    parameters:
-      environment: stg
-      env: parameters.env
-      agentPool: $(agentPool)
-      azureSubscriptionName: "DTS-DATAINGEST-STG"
-      runDeploy: eq('${{ parameters.env }}', 'stg')
-      pythonVersion: 3.10
-      mainRepositoryName: 'ARIAMigration-Databrick'
-      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
-      databricksClusterId: ${{ parameters.databricksClusterId }}
-      configureDBCluster: ${{ parameters.configureDBCluster }}
-      runJobs: ${{ parameters.runJob }}
+#  - template: pipeline/jobs/deploy.yaml
+#    parameters:
+#      environment: stg
+#      env: parameters.env
+#      agentPool: $(agentPool)
+#      azureSubscriptionName: "DTS-DATAINGEST-STG"
+#      runDeploy: eq('${{ parameters.env }}', 'stg')
+#      pythonVersion: 3.10
+#      mainRepositoryName: 'ARIAMigration-Databrick'
+#      databricksInstance: 'https://adb-3635282203417052.12.azuredatabricks.net'
+#      databricksClusterId: ${{ parameters.databricksClusterId }}
+#      configureDBCluster: ${{ parameters.configureDBCluster }}
+#      runJobs: ${{ parameters.runJob }}

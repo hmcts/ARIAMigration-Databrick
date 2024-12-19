@@ -22,7 +22,7 @@ steps:
       echo "Parameter.env is: ${{ parameters.env }}"
       echo "parameter.runJob is: ${{ parameters.runJob }}"
       databricks bundle deploy --target ${{ parameters.env }}
-      if [ "${{ parameters.runJob }}" == true ]; then
+      if [ "${{ parameters.runJob }}" == True ]; then
         job_id=$(databricks jobs list | grep -w "run-notebooks" | awk '{print $1}' | head -n 1)
         echo "Job ID: $job_id"
         databricks jobs run-now $job_id

@@ -70,13 +70,13 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 initial_Load = True
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
-landing_mnt = "/mnt/ingest00landingsboxlanding/test"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
-gold_outputs = "ARIADM/ARM/JOH/test"
-hive_schema = "ariadm_arm_joh_test"
+raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
+landing_mnt = "/mnt/ingest00landingsboxlanding"
+bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH"
+silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
+gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
+gold_outputs = "ARIADM/ARM/JOH"
+hive_schema = "ariadm_arm_joh"
 
 # COMMAND ----------
 
@@ -91,13 +91,13 @@ hive_schema = "ariadm_arm_joh_test"
 # COMMAND ----------
 
 dbutils.widgets.text("initial_Load", "True")
-dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test")
-dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding/test")
-dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test")
-dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test")
-dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test")
-dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH/test")  # Path for gold output files in gold container
-dbutils.widgets.text("hive_schema", "ariadm_arm_joh_test")  # SchemaName
+dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH")
+dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding")
+dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH")
+dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH")
+dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH")
+dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH")  # Path for gold output files in gold container
+dbutils.widgets.text("hive_schema", "ariadm_arm_joh")  # SchemaName
 
 initial_Load = dbutils.widgets.get("initial_Load") 
 raw_mnt = dbutils.widgets.get("raw_mnt")

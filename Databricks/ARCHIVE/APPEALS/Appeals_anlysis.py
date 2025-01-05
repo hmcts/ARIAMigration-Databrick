@@ -94,16 +94,6 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,likned cost award refined
-# MAGIC %sql 
-# MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
-# MAGIC where CostAwardId in (
-# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
-# MAGIC where  CaseNo != 'HR/00040/2008' and linkno in (select linkno from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail where CaseNo = 'HR/00040/2008')
-# MAGIC group by CaseNo)
-
-# COMMAND ----------
-
 # MAGIC %sql
 # MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail
 # MAGIC  where CaseNO = 'IA/00009/2014'

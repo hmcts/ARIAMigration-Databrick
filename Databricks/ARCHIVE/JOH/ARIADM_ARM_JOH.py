@@ -77,7 +77,7 @@ spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
 # COMMAND ----------
 
 
-initial_Load = False
+initial_Load = True
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"

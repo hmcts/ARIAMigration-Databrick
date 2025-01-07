@@ -63,4 +63,30 @@ print(name.capitalize())
 
 # COMMAND ----------
 
+silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
 
+# COMMAND ----------
+
+display(dbutils.fs.ls(silver_mnt))
+
+# COMMAND ----------
+
+display(spark.read.format("delta").load(F"dbfs:/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test/silver_adjudicator_detail/"))
+
+# COMMAND ----------
+
+display(spark.read.format("delta").load(F"{silver_mnt}/silver_adjudicator_detail/"))
+
+# COMMAND ----------
+
+# mount point for the gold files
+gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
+
+df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/A360/judicial_officer_*.json", schema=a360_schema)
+
+
+# COMMAND ----------
+
+bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
+
+display(spark.read.format("delta").load(F"{bronze_mnt}/bronze_adjudicator_et_hc_dnur/"))

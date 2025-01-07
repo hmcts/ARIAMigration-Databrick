@@ -90,3 +90,13 @@ df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/A360/judi
 bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
 
 display(spark.read.format("delta").load(F"{bronze_mnt}/bronze_adjudicator_et_hc_dnur/"))
+
+# COMMAND ----------
+
+from faker import Faker
+fake = Faker()
+date_of_birth = fake.date_time_between(start_date="-80y", end_date="-30y")
+
+# COMMAND ----------
+
+type(date_of_birth)

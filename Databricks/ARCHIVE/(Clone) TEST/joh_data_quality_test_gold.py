@@ -1,3 +1,6 @@
+# TODO: lld reference for expected columns, a360/html/json count should be all the same, in depth testing gold outputs
+# TODO: double check the gold output counts - are they from the test folder or the output folder? fix and rerun the pipeline, and rerun this file and see if all three outputs are the same
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date, coalesce, greatest, lit, explode
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, ArrayType
@@ -161,7 +164,7 @@ silver_table_diff = ""
 
 # Test the transformation steps
 # M1 - bronze_adjudicator_et_hc_dnur
-expected_m1_columns = ["AdjudicatorId", "Surname", "Forenames", "Title", "DateOfBirth", "CorrespondenceAddress", "ContactTelephone", "ContactDetails", "AvailableAtShortNotice", "DesignatedCentre", "EmploymentTerm", "FullTime", "IdentityNumber", "DateOfRetirement", "ContractEndDate", "ContractRenewalDate", "DoNotUseReason", "JudicialStatus", "Address1", "Address2", "Address3", "Address4", "Address5", "Postcode", "Telephone", "Mobile", "Email", "BusinessAddress1", "BusinessAddress2", "BusinessAddress3", "BusinessAddress4", "BusinessAddress5", "BusinessPostcode", "BusinessTelephone", "BusinessFax", "BusinessEmail", "JudicialInstructions", "JudicialInstructionsDate", "Notes"]
+expected_m1_columns = ['AdjudicatorId', 'Surname', 'Forenames', 'Title', 'DateOfBirth', 'CorrespondenceAddress', 'ContactTelephone', 'ContactDetails', 'AvailableAtShortNotice', 'DesignatedCentre', 'EmploymentTerms', 'FullTime', 'IdentityNumber', 'DateOfRetirement', 'ContractEndDate', 'ContractRenewalDate', 'DoNotUse', 'DoNotUseReason', 'JudicialStatus', 'Address1', 'Address2', 'Address3', 'Address4', 'Address5', 'Postcode', 'Telephone', 'Mobile', 'Email', 'BusinessAddress1', 'BusinessAddress2', 'BusinessAddress3', 'BusinessAddress4', 'BusinessAddress5', 'BusinessPostcode', 'BusinessTelephone', 'BusinessFax', 'BusinessEmail', 'JudicialInstructions', 'JudicialInstructionsDate']
 actual_m1_columns = df_json.columns
 try:
     assert set(actual_m1_columns) == set(expected_m1_columns), "M1 transformation step failed"
@@ -171,7 +174,7 @@ except AssertionError as e:
     m1_diff = f"Columns in expected but not in actual: {[col for col in expected_m1_columns if col not in actual_m1_columns]}"
 
 # M2 - bronze_johistory_users
-expected_m2_columns = ["AdjudicatorId", "HistDate", "HistType", "UserName", "Comment"]
+expected_m2_columns = ['AdjudicatorId', 'HistDate', 'HistType', 'UserName', 'Comment']
 df_history = df_json.select(explode("History").alias("History")).select("History.*")
 actual_m2_columns = [column.name for column in df_history.schema]
 try:

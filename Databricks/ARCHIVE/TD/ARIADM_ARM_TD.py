@@ -90,27 +90,21 @@ from datetime import datetime
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
+# MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
-dbutils.widgets.text("initial_Load", "False", "Initial Load")
-dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD", "Raw Mount")
-dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding/", "Landing Mount")
-dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD", "Bronze Mount")
-dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD", "Silver Mount")
-dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD", "Gold Mount")
-dbutils.widgets.text("file_path", "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv", "File Path")
-dbutils.widgets.text("gold_outputs", "ARIADM/ARM/TD/")  # Path for gold output files in gold container
+read_hive = True
 
-initial_Load = dbutils.widgets.get("initial_Load") == "True"
-raw_mnt = dbutils.widgets.get("raw_mnt")
-landing_mnt = dbutils.widgets.get("landing_mnt")
-bronze_mnt = dbutils.widgets.get("bronze_mnt")
-silver_mnt = dbutils.widgets.get("silver_mnt")
-gold_mnt = dbutils.widgets.get("gold_mnt")
-file_path = dbutils.widgets.get("file_path")
-gold_outputs = dbutils.widgets.get("gold_outputs")
+raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
+landing_mnt = "/mnt/ingest00landingsboxlanding/"
+bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD"
+silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
+gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
+file_path = "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
+gold_outputs = "ARIADM/ARM/TD/"
+hive_schema = "ariadm_arm_joh_test"
+
 
 # COMMAND ----------
 
@@ -433,8 +427,8 @@ def bronze_iris_extract():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_td.bronze_iris_extract
+# %sql
+# select * from hive_metastore.ariadm_arm_td.bronze_iris_extract
 
 # COMMAND ----------
 
@@ -926,8 +920,8 @@ def gold_td_html_generation_status():
 
     if not initial_Load:
         print("Running non-initial load")
-        df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
-        df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
+        df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+        df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
 
     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
     CaseNo_df = df_archive_metadata.select(
@@ -1082,8 +1076,8 @@ def gold_td_html_generation_status():
 
 #     if not initial_Load:
 #         print("Running non-initial load")
-#         df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
-#         df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
+#         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+#         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
 
 #     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
 #     CaseNo_list = df_archive_metadata.select(
@@ -1226,8 +1220,8 @@ def gold_td_json_generation_status():
 
     if not initial_Load:
         print("Running non-initial load")
-        df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
-        df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
+        df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+        df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
     
     
     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
@@ -1353,8 +1347,8 @@ def gold_td_json_generation_status():
 
 #     if not initial_Load:
 #         print("Running non-initial load")
-#         df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
-#         df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
+#         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+#         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
 
 #     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
 #     CaseNo_list = df_archive_metadata.select(
@@ -1539,7 +1533,7 @@ def gold_td_a360_generation_status():
     if not initial_Load:
         print("Running non-initial load")
         # df_td_filtered = spark.read.table("hive_metastore.ariadm_arm_iris_td.stg_td_filtered")
-        df_td_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
+        df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
     
     # Fetch the list of CaseNo, Forenames, and Name from the table (as Spark DataFrame)
     CaseNo_df = df_td_metadata.select(col('client_identifier').alias('CaseNo'), 

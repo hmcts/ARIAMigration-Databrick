@@ -66,8 +66,17 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Set Variables
 
-initial_Load = True
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
+
+# COMMAND ----------
+
+read_hive = True
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
@@ -80,33 +89,23 @@ hive_schema = "ariadm_arm_joh"
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Set Variables
+# dbutils.widgets.text("initial_Load", "True")
+# dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH")
+# dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding")
+# dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH")
+# dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH")
+# dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH")
+# dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH")  # Path for gold output files in gold container
+# dbutils.widgets.text("hive_schema", "ariadm_arm_joh")  # SchemaName
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
-
-# COMMAND ----------
-
-dbutils.widgets.text("initial_Load", "True")
-dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH")
-dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding")
-dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH")
-dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH")
-dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH")
-dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH")  # Path for gold output files in gold container
-dbutils.widgets.text("hive_schema", "ariadm_arm_joh")  # SchemaName
-
-initial_Load = dbutils.widgets.get("initial_Load") 
-raw_mnt = dbutils.widgets.get("raw_mnt")
-landing_mnt = dbutils.widgets.get("landing_mnt")
-bronze_mnt = dbutils.widgets.get("bronze_mnt")
-silver_mnt = dbutils.widgets.get("silver_mnt")
-gold_mnt = dbutils.widgets.get("gold_mnt")
-gold_outputs = dbutils.widgets.get("gold_outputs")
-hive_schema = dbutils.widgets.get("hive_schema")
+# initial_Load = dbutils.widgets.get("initial_Load") 
+# raw_mnt = dbutils.widgets.get("raw_mnt")
+# landing_mnt = dbutils.widgets.get("landing_mnt")
+# bronze_mnt = dbutils.widgets.get("bronze_mnt")
+# silver_mnt = dbutils.widgets.get("silver_mnt")
+# gold_mnt = dbutils.widgets.get("gold_mnt")
+# gold_outputs = dbutils.widgets.get("gold_outputs")
+# hive_schema = dbutils.widgets.get("hive_schema")
 
 
 # COMMAND ----------
@@ -1312,7 +1311,7 @@ def gold_joh_html_generation_status():
     df_history = dlt.read("silver_history_detail")
 
     # Load the necessary dataframes from Hive metastore if not initial load
-    if not initial_Load:
+    if read_hive == True:
         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
         df_judicial_officer_details = spark.read.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
         df_other_centres = spark.read.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
@@ -1505,7 +1504,7 @@ def gold_joh_json_generation_status():
     df_history = dlt.read("silver_history_detail")
 
     # Load the necessary dataframes from Hive metastore if not initial load
-    if not initial_Load:
+    if read_hive == True:
         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
         df_judicial_officer_details = spark.read.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
         df_other_centres = spark.read.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
@@ -1663,7 +1662,7 @@ def gold_joh_a360_generation_status():
     df_joh_metadata = dlt.read("silver_archive_metadata")
 
     # Load necessary data from Hive tables if not initial load
-    if not initial_Load:
+    if read_hive == True:
         print("Running non initial load")
         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
         df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")

@@ -42,18 +42,18 @@ def generate_adjudicator_data(num_records: int) -> pd.DataFrame:
         full_time = random.choice([1, 2])
         centre_id = fake.random_number(digits=3)
         do_not_list = random.choice([True, False])
-        date_of_birth = fake.date_time_between(start_date="-80y", end_date="-30y")
+        date_of_birth = fake.date_between(start_date="-80y", end_date="-30y")
         correspondence_address = random.choice([1, 2])
         contact_telephone = fake.random_number(digits=10)
         contact_details = fake.phone_number()
         available_at_short_notice = random.choice([True, False])
         employment_terms = fake.random_number(digits=2)
         identity_number = fake.random_number(digits=9)
-        date_of_retirement = fake.date_time_between(
+        date_of_retirement = fake.date_between(
             start_date="+5y", end_date="+30y")
-        contract_end_date = fake.date_time_between(
+        contract_end_date = fake.date_between(
             start_date="+1y", end_date="+5y")
-        contract_renewal_date = fake.date_time_between(
+        contract_renewal_date = fake.date_between(
             start_date="+1y", end_date="+5y")
         do_not_use_reason = fake.random_number(digits=1)
         address_1 = fake.street_address()
@@ -75,7 +75,7 @@ def generate_adjudicator_data(num_records: int) -> pd.DataFrame:
         business_fax = fake.phone_number()
         business_email = fake.email()
         judicial_instructions = fake.paragraph(nb_sentences=2)
-        judicial_instructions_date = fake.date_time_between(
+        judicial_instructions_date = fake.date_between(
             start_date="-1y", end_date="-1m"
         )
         notes = fake.paragraph(nb_sentences=1)
@@ -202,10 +202,10 @@ def generate_adjudicator_role_data(num_records: int, adjudicator_ids: set) -> pd
         else:
             adjudicator_id = fake.random_number(digits=4)
         role = fake.random_number(digits=1)
-        date_of_appointment = fake.date_time_between(
+        date_of_appointment = fake.date_between(
             start_date="-10y", end_date="-1m"
         )
-        end_date_of_appointment = fake.date_time_between(
+        end_date_of_appointment = fake.date_between(
             start_date="+1m", end_date="+10y"
         )
 
@@ -296,7 +296,7 @@ def generate_jo_history_data(num_records: int, adjudicator_ids: set, user_ids: s
             adjudicator_id: int = random.choice(list(adjudicator_ids))
         else:
             adjudicator_id: int = fake.random_number(digits=4)
-        hist_date: str = fake.date_time_between(start_date="-1y", end_date="-1m")
+        hist_date: str = fake.date_between(start_date="-1y", end_date="-1m")
         hist_type: int = fake.random_number(digits=2)
         if random.random() < adjudicator_id_presence_percentage / 100:
             user_id: int = random.choice(list(user_ids))

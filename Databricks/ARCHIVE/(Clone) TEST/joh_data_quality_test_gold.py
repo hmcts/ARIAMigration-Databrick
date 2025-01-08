@@ -71,7 +71,7 @@ json_schema = StructType([
     ), True)
 ])
 
-df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/JSON/judicial_officer_*.json", schema=json_schema)
+df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test/JSON/judicial_officer_*.json", schema=json_schema)
 
 # Read the A360 file
 a360_schema = StructType([
@@ -97,10 +97,10 @@ a360_schema = StructType([
     ]), True)
 ])
 
-df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/A360/judicial_officer_*.a360", schema=a360_schema)
+df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test/A360/judicial_officer_*.a360", schema=a360_schema)
 
 # Read the HTML file
-df_html = spark.read.text("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/HTML/judicial_officer_*.html")
+df_html = spark.read.text("/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test/HTML/judicial_officer_*.html")
 
 # Initialize variables to capture test results
 json_record_count_test = True
@@ -116,19 +116,19 @@ a360_schema_diff = ""
 
 # Test if the output is present and in the correct format
 try:
-    json_record_count = df_json.count()
+    json_record_count = spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count()
     assert json_record_count > 0, "No records found in the JSON file"
 except AssertionError as e:
     json_record_count_test = False
 
 try:
-    a360_record_count = df_a360.count()
+    a360_record_count = spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count()
     assert a360_record_count > 0, "No records found in the A360 file"
 except AssertionError as e:
     a360_record_count_test = False
 
 try:
-    html_record_count = df_html.count()
+    html_record_count = spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count()
     assert html_record_count > 0, "No records found in the HTML file"
 except AssertionError as e:
     html_record_count_test = False

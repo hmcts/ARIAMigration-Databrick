@@ -3070,7 +3070,8 @@ def stg_appeals_filtered():
 # COMMAND ----------
 
 # %sql
-# select distinct CRRespondent from hive_metastore.ariadm_arm_appeals.silver_appealcase_detail
+# select distinct DateOfNextListedHearing, CaseNo from hive_metastore.ariadm_arm_appeals.silver_appealcase_detail
+# where DateOfNextListedHearing is not null
 
 # COMMAND ----------
 
@@ -3757,44 +3758,11 @@ def silver_appealcategory_detail():
 # COMMAND ----------
 
 # %sql
-# select  distinct Authorised 
-# -- , CaseNo 
+# select  distinct S20ReferenceStatus , CaseNo 
 # from hive_metastore.ariadm_arm_appeals.silver_case_detail
+# where S20ReferenceStatus != ''
 # -- where LCPOutcome = 'TESTING IN TC BIRMINGH'
 
-# -- Authorised
-# -- true - checked 
-# -- false and null - disabled
-
-
-# -- PaymentRemissionRequested
-# -- Int 1. Indicates if payment remission
-# -- has been requested. 1= Yes, 2 =
-# -- No
-# -- PaymentRemissionGranted
-# -- Int Indicates if payment remission
-# -- has been granted. 1= Yes, 2 = No
-# -- LCPRequested Int Determines if Lord Chancellors
-# -- Power has been requested. 1=
-# -- Yes, 2 = No
-# -- 0 and null needs conformation
-
-
-# -- ASFReferenceNoStatus
-# -- Int Asylum Support Reference
-# -- Number status. 1 = Unverified, 2
-# -- = Verified, 3 = Invalid
-
-
-# --  s17ReferenceStatus Int s17 Childrens Act Status. 1 =
-# -- Unverified, 2 = Verified, 3 =
-# -- Invalid
-# -- 0 and null needs conformation
-
-
-# --  s20ReferenceStatus -- 0 and null needs conformation
-
-# ---HomeOfficeWaiverStatus: 1 = Unverified, 2 = Verified, 3 = Invalid, 0/NULL = Blank
 
 # COMMAND ----------
 
@@ -4088,13 +4056,6 @@ def silver_humanright_detail():
 
 # COMMAND ----------
 
-# HODecision 
-# 0 - ""
-# 1 - Granted
-# 2 - Refused
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_newmatter_detail",
     comment="Delta Live silver Table for new matter detail.",
@@ -4104,9 +4065,20 @@ def silver_newmatter_detail():
     newmatter_df = dlt.read("bronze_appealcase_anm_nm").alias("nm")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
-    joined_df = newmatter_df.join(flt_df, col("nm.CaseNo") == col("flt.CaseNo"), "inner").select("nm.*")
+    joined_df = newmatter_df.join(flt_df, col("nm.CaseNo") == col("flt.CaseNo"), "inner").select(
+        "nm.AppealNewMatterId",
+        "nm.CaseNo",
+        "nm.NewMatterId",
+        "nm.AppealNewMatterNotes",
+        "nm.DateReceived",
+        "nm.DateReferredToHO",
+        when(col("nm.HODecision") == 0, "").when(col("nm.HODecision") == 1, "Granted").when(col("nm.HODecision") == 2, "Refused").alias("HODecision"),
+        "nm.DateHODecision",
+        "nm.NewMatterDescription",
+        "nm.NotesRequired",
+        "nm.DoNotUse"
+    )
     return joined_df
-
 
 # COMMAND ----------
 
@@ -4751,6 +4723,7 @@ def find_data_in_list(data_list, case_no):
 # case_no = 'HR/00040/2008' # cost award
 # case_no = 'AS/00006/2009' # documents
 # case_no = 'AA/00047/2011' # payments
+# case_no = 'VA/00043/2014'
 # case_no = 'OA/00002/2012' # payments
 # case_no = 'HR/00010/2008' # respondant
 # case_no = 'NS/00003/2008' # Incamera
@@ -4761,11 +4734,11 @@ def find_data_in_list(data_list, case_no):
 # case_no = 'NS/00003/2008' # Incamera, Publically funded ,Out of time issue
 # case_no = 'RD/00011/2007' # Secure Court Req, Publically funded, 
 # case_no = 'AA/00001/2011' # parties
-# case_no = 'AA/00003/2014' #Additional Grounds # Representative Details #history
+case_no = 'AA/00003/2014' #Additional Grounds # Representative Details #history
 # case_no = 'TH/00010/2003' # Non-suspensive Certification
 # case_no = 'HR/00040/2008'
 # case_no = 'AA/00006/2012' # CaseStatus(multiple) 37
-case_no = 'TH/00137/2003' # CaseStatus 37
+# case_no = 'TH/00137/2003' # CaseStatus 37
 
 # COMMAND ----------
 
@@ -4775,6 +4748,10 @@ case_no = 'TH/00137/2003' # CaseStatus 37
 # COMMAND ----------
 
 # display(df_status_details.filter(  (col("CaseNo").isin("AA/00006/2012"))))
+
+# COMMAND ----------
+
+df_history_details.select('HistTypeDescription')
 
 # COMMAND ----------
 
@@ -5126,6 +5103,7 @@ replacements = {
 "{{CaseSponsorTelephone}}": str(case_detail_dict.get('CaseSponsorTelephone', '') or ''),
 "{{CaseSponsorEmail}}": str(case_detail_dict.get('CaseSponsorEmail', '') or ''),
 "{{LSCReference}}": str(case_detail_dict.get('LSCReference', '') or ''),
+"{{Authorised}}": str(case_detail_dict.get('Authorised', '') or ''),
 
 # CaseStatus ### review if can be null
 "{{currentstatus}}": str(currentstatus),
@@ -5546,7 +5524,48 @@ data = [
 
 columns = ["id", "description", "HTMLName", "path"]
 lookup_df = spark.createDataFrame(data, columns)
+lookup_list = lookup_df.collect()
 display(lookup_df)
+
+# COMMAND ----------
+
+# DBTITLE 1,Case status dynamic
+df_list_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_list_detail")
+df_status_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail") 
+
+status_joined_df = df_list_details.alias("list").join(df_status_details.alias('status'), 
+                                                      (col("list.CaseNo") == col("status.CaseNo")) & 
+                                                      (col("list.Statusid") == col("status.Statusid")), "inner")
+status_refined_df = status_joined_df.select("list.*", "status.*").drop("list.CaseNo", "list.Statusid")
+# display(status_refined_df)
+
+# CCS Updates
+statuscount = 1
+status_details_code = ''
+nested_table_number = 30
+nested_tab_group_number = 1
+tabs_min_height = 200 + (statuscount * 600) if statuscount > 1 else 200
+print(tabs_min_height)
+content_height = 1000 + (statuscount * 440) if statuscount > 1 else 1170
+print(content_height)
+nested_tabs_size = 10
+
+
+html_template = html_template.replace(f"{{{{tabs-min-height}}}}", str(tabs_min_height))
+html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
+
+nested_table_number = 999
+nested_tab_group_number = 999
+for count in range(statuscount):
+    nested_table_number += 1
+    nested_tab_group_number += 1
+    nested_tabs_size  = 10 if count == 0 else 320
+    line = StatusDetailFirstTierHearingTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
+                                                         .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
+                                                         .replace("{{nested_tabs_size}}", str(nested_tabs_size))  
+    status_details_code += line + '\n'
+
+displayHTML(status_details_code)
 
 # COMMAND ----------
 
@@ -5570,224 +5589,122 @@ display(lookup_df)
 # COMMAND ----------
 
 # DBTITLE 1,CaseStatus
-#CaseStatus Details
-status_details_Code = ''
-nested_table_number = 30
-# nested-tab-group_number = 1
-if status_details:   
-    for index, row in enumerate(status_details, start=1):
-        for inner_index, inner_row in enumerate(list_details, start=1):
-            
-            filtered_lookup = [r for r in lookup_list if r['id'] == int(row['CaseStatus'])]
-            if filtered_lookup:
-                casestatusTemplate_list = spark.read.text(filtered_lookup[0]['path']).collect()
-                casestatusTemplate = "".join([r.value for r in casestatusTemplate_list])
-
-            print('inloop')
-            print(type(int(row['CaseStatus'])))
-
-            
-            
-            print(inner_row['CaseStatus'])
-            nested_table_number += 1
-            if row['CaseStatus'] == '37' and inner_row['CaseStatus'] == '37' :
-                print("innerloop")
-                print(row['CaseStatus'])
-                adjudicator_surname = str(row['StatusDetailAdjudicatorSurname'] or '') if row['KeyDate'] is None else str(inner_row['listAdjudicatorSurname'] or '')
-                print(f"adjudicator_surname : '{adjudicator_surname}'")
-                adjudicator_Forenames = str(row['StatusDetailAdjudicatorForenames'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorForenames'] or '')
-                adjudicator_title = str(row['StatusDetailAdjudicatorTitle'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorTitle'] or '')
-                adjudicator_id = str(row['StatusDetailAdjudicatorId'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorId'] or '')
-                adjudicator_note = str(row['StatusDetailAdjudicatorNote'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorNote'] or '')
-                print(row['CaseStatus'])
-                line = casestatusTemplate.replace("{{CaseStatusDescription}}", str(row['CaseStatusDescription'] or '')) \
-                                            .replace("{{KeyDate}}", format_date_iso(row['KeyDate'])) \
-                                            .replace("{{InterpreterRequired}}", str(row['InterpreterRequired'])) \
-                                            .replace("{{MiscDate1}}", format_date_iso(row['MiscDate1'] or '')) \
-                                            .replace("{{MiscDate2}}", format_date_iso(row['MiscDate2'] or '')) \
-                                            .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
-                                            .replace("{{InitialHearingPoints}}", str(row['InitialHearingPoints'] or '')) \
-                                            .replace("{{FinalHearingPoints}}", str(row['FinalHearingPoints'] or '')) \
-                                            .replace("{{HearingPointsChangeReasonId}}", str(row['HearingPointsChangeReasonId'] or '')) \
-                                            .replace("{{DecisionDate}}", format_date_iso(row['DecisionDate'] or '')) \
-                                            .replace("{{DecisionByTCW}}", str(row['DecisionByTCW'] or '')) \
-                                            .replace("{{MethodOfTyping}}", str(row['MethodOfTyping'] or '')) \
-                                            .replace("{{Outcome}}", str(row['Outcome'] or '')) \
-                                            .replace("{{Promulgated}}", format_date_iso(row['Promulgated'] or '')) \
-                                            .replace("{{UKAITNo}}", str(row['UKAITNo'] or '')) \
-                                            .replace("{{Extempore}}", str(row['Extempore'] or '')) \
-                                            .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(row['WrittenReasonsRequestedDate'] or '')) \
-                                            .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
-                                            .replace("{{ExtemporeMethodOfTyping}}", str(row['ExtemporeMethodOfTyping'] or '')) \
-                                            .replace("{{WrittenReasonsSentDate}}", format_date_iso(row['WrittenReasonsSentDate'] or ''))   \
-                                            .replace("{{UpperTribunalAppellant}}", str(row['UpperTribunalAppellant'] or ''))   \
-                                            .replace("{{RemittalOutcome}}", str(row['RemittalOutcome'] or ''))   \
-                                            .replace("{{DecisionSentToHO}}", str(row['DecisionSentToHO'] or ''))   \
-                                            .replace("{{DecisionSentToHODate}}", format_date_iso(row['DecisionSentToHODate'] or '')) \
-                                            .replace("{{ApplicationType}}", str(row['ApplicationType'] or '')) \
-                                            .replace("{{DateReceived}}", format_date_iso(row['DateReceived'] or '')) \
-                                            .replace("{{AdjudicatorSurname}}", str(adjudicator_surname or ''))   \
-                                            .replace("{{AdjudicatorForenames}}", str(adjudicator_Forenames or ''))  \
-                                            .replace("{{AdjudicatorTitle}}", str(adjudicator_title or '')) \
-                                            .replace("{{AdjudicatorId}}", str(adjudicator_id or '')) \
-                                            .replace("{{AdjudicatorNote}}", str(adjudicator_note or '')) \
-                                            .replace("{{KeyDate}}", format_date_iso(row['KeyDate'] or '')) \
-                                            .replace("{{Party}}", str(row['Party'] or '')) \
-                                            .replace("{{InTime}}", str(row['InTime'] or '')) \
-                                            .replace("{{Letter1Date}}", format_date_iso(row['Letter1Date'] or '')) \
-                                            .replace("{{Letter2Date}}", format_date_iso(row['Letter2Date'] or '')) \
-                                            .replace("{{Notes1}}", str(row['Notes1'] or '')) \
-                                            .replace("{{SCCourtName}}", str(row['SCCourtName'] or '')) \
-                                            .replace("{{ListName}}", str(inner_row['ListName'] or '')) \
-                                            .replace("{{ListType}}", str(inner_row['ListType'] or '')) \
-                                            .replace("{{HearingTypeDesc}}", str(inner_row['HearingTypeDesc'] or '')) \
-                                            .replace("{{ListStartTime}}", format_date_iso(inner_row['ListStartTime'] or '')) \
-                                            .replace("{{AdditionalLanguageId}}", str(row['AdditionalLanguageId'] or '')) \
-                                            .replace("{{nested_table_number}}", str(nested_table_number))  
-
-                                        # .replace("{{FC}}", str(FC))    
-                            # {{AdjudicatorForenames}} {{AdjudicatorTitle}}
-                                            # .replace("{{AdjudicatorForenames}}", str(adjudicator_Forenames)   \
-                                            # .replace("{{AdjudicatorTitle}}", str(adjudicator_title)   \
-                                            # .replace("{{AdjudicatorId}}", str(adjudicator_id)   \
-                                            #  .replace("{{AdjudicatorNote}}", str(adjudicator_note)   \
-                                                # .replace("{{judicialOfficer}}", str(row['judicialOfficer'] or '')) \
-                                            # .replace("{{CentreId}}", str(row['CentreId'] or '')) \  
-                                            # LanguageId      
-                                            
-                                                                
-                status_details_Code += line + '\n'
-            else:
-                nested_table_number += 1
-                status_details_Code = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", "") \
-                                                            .replace("{{KeyDate}}", "") \
-                                                            .replace("{{InterpreterRequired}}", "") \
-                                                            .replace("{{MiscDate2}}", "") \
-                                                            .replace("{{TypistSentDate}}", "") \
-                                                            .replace("{{InitialHearingPoints}}", "") \
-                                                            .replace("{{FinalHearingPoints}}", "") \
-                                                            .replace("{{HearingPointsChangeReasonId}}", "") \
-                                                            .replace("{{DecisionDate}}", "") \
-                                                            .replace("{{DecisionByTCW}}", "") \
-                                                            .replace("{{MethodOfTyping}}", "") \
-                                                            .replace("{{Outcome}}", "") \
-                                                            .replace("{{Promulgated}}", "") \
-                                                            .replace("{{UKAITNo}}", "") \
-                                                            .replace("{{Extempore}}", "") \
-                                                            .replace("{{WrittenReasonsRequestedDate}}", "") \
-                                                            .replace("{{TypistSentDate}}", "") \
-                                                            .replace("{{ExtemporeMethodOfTyping}}", "") \
-                                                            .replace("{{WrittenReasonsSentDate}}", "") \
-                                                            .replace("{{UpperTribunalAppellant}}", "") \
-                                                            .replace("{{RemittalOutcome}}", "") \
-                                                            .replace("{{DecisionSentToHO}}", "") \
-                                                            .replace("{{DecisionSentToHODate}}", "") \
-                                                            # .replace("{{AdjudicatorSurname}}", "") \
-                                                            # .replace("{{nested_table_number}}", str(nested_table_number))    
-
-displayHTML(status_details_Code)
-
-
-
-# COMMAND ----------
-
 # #CaseStatus Details
 # status_details_Code = ''
 # nested_table_number = 30
-# for index, row in enumerate(status_details, start=1):
-#     print('inloop')
-#     # print(row['CaseStatus'])
-#     nested_table_number += 1
-#     if row['CaseStatus'] == '37':
-#         print(row['CaseStatus'])
-#         line = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", str(row['CaseStatus'] or '')) \
-#                                     .replace("{{KeyDate}}", format_date_iso(row['KeyDate'])) \
-#                                     .replace("{{InterpreterRequired}}", str(row['InterpreterRequired'])) \
-#                                     .replace("{{MiscDate1}}", format_date_iso(row['MiscDate1'] or '')) \
-#                                     .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
-#                                     .replace("{{InitialHearingPoints}}", str(row['InitialHearingPoints'] or '')) \
-#                                     .replace("{{FinalHearingPoints}}", str(row['FinalHearingPoints'] or '')) \
-#                                     .replace("{{HearingPointsChangeReasonId}}", str(row['HearingPointsChangeReasonId'] or '')) \
-#                                     .replace("{{DecisionDate}}", format_date_iso(row['DecisionDate'] or '')) \
-#                                     .replace("{{DecisionByTCW}}", str(row['DecisionByTCW'] or '')) \
-#                                     .replace("{{MethodOfTyping}}", str(row['MethodOfTyping'] or '')) \
-#                                     .replace("{{Outcome}}", str(row['Outcome'] or '')) \
-#                                     .replace("{{Promulgated}}", format_date_iso(row['Promulgated'] or '')) \
-#                                     .replace("{{UKAITNo}}", str(row['UKAITNo'] or '')) \
-#                                     .replace("{{Extempore}}", str(row['Extempore'] or '')) \
-#                                     .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(row['WrittenReasonsRequestedDate'] or '')) \
-#                                     .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
-#                                     .replace("{{ExtemporeMethodOfTyping}}", str(row['ExtemporeMethodOfTyping'] or '')) \
-#                                     .replace("{{WrittenReasonsSentDate}}", format_date_iso(row['WrittenReasonsSentDate'] or ''))   \
-#                                     .replace("{{UpperTribunalAppellant}}", str(row['UpperTribunalAppellant'] or ''))   \
-#                                     .replace("{{RemittalOutcome}}", str(row['RemittalOutcome'] or ''))   \
-#                                     .replace("{{DecisionSentToHO}}", str(row['DecisionSentToHO'] or ''))   \
-#                                     .replace("{{DecisionSentToHODate}}", format_date_iso(row['DecisionSentToHODate'] or '')) \
-#                                     .replace("{{ApplicationType}}", str(row['ApplicationType'] or '')) \
-#                                     .replace("{{DateReceived}}", format_date_iso(row['DateReceived'] or '')) \
-#                                     .replace("{{nested_table_number}}", str(nested_table_number))                                                                               
-#         status_details_Code += line + '\n'
-#     else:
+# # nested-tab-group_number = 1
+# if status_details:   
+#     for index, row in enumerate(status_details, start=1):
+#         for inner_index, inner_row in enumerate(list_details, start=1):
+            
+#             filtered_lookup = [r for r in lookup_list if r['id'] == int(row['CaseStatus'])]
+#             if filtered_lookup:
+#                 casestatusTemplate_list = spark.read.text(filtered_lookup[0]['path']).collect()
+#                 casestatusTemplate = "".join([r.value for r in casestatusTemplate_list])
+
+#             print('inloop')
+#             print(type(int(row['CaseStatus'])))
+
+#             print(inner_row['CaseStatus'])
 #             nested_table_number += 1
-#             status_details_Code = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", "") \
-#                                                         .replace("{{KeyDate}}", "") \
-#                                                         .replace("{{InterpreterRequired}}", "") \
-#                                                         .replace("{{MiscDate2}}", "") \
-#                                                         .replace("{{TypistSentDate}}", "") \
-#                                                         .replace("{{InitialHearingPoints}}", "") \
-#                                                         .replace("{{FinalHearingPoints}}", "") \
-#                                                         .replace("{{HearingPointsChangeReasonId}}", "") \
-#                                                         .replace("{{DecisionDate}}", "") \
-#                                                         .replace("{{DecisionByTCW}}", "") \
-#                                                         .replace("{{MethodOfTyping}}", "") \
-#                                                         .replace("{{Outcome}}", "") \
-#                                                         .replace("{{Promulgated}}", "") \
-#                                                         .replace("{{UKAITNo}}", "") \
-#                                                         .replace("{{Extempore}}", "") \
-#                                                         .replace("{{WrittenReasonsRequestedDate}}", "") \
-#                                                         .replace("{{TypistSentDate}}", "") \
-#                                                         .replace("{{ExtemporeMethodOfTyping}}", "") \
-#                                                         .replace("{{WrittenReasonsSentDate}}", "") \
-#                                                         .replace("{{UpperTribunalAppellant}}", "") \
-#                                                         .replace("{{RemittalOutcome}}", "") \
-#                                                         .replace("{{DecisionSentToHO}}", "") \
-#                                                         .replace("{{DecisionSentToHODate}}", "") \
-#                                                         .replace("{{AdjudicatorSurname}}", "") \
-#                                                         .replace("{{nested_table_number}}", str(nested_table_number))    
+#             if row['CaseStatus'] == '37' and inner_row['CaseStatus'] == '37' :
+#                 print("innerloop")
+#                 print(row['CaseStatus'])
+#                 adjudicator_surname = str(row['StatusDetailAdjudicatorSurname'] or '') if row['KeyDate'] is None else str(inner_row['listAdjudicatorSurname'] or '')
+#                 print(f"adjudicator_surname : '{adjudicator_surname}'")
+#                 adjudicator_Forenames = str(row['StatusDetailAdjudicatorForenames'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorForenames'] or '')
+#                 adjudicator_title = str(row['StatusDetailAdjudicatorTitle'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorTitle'] or '')
+#                 adjudicator_id = str(row['StatusDetailAdjudicatorId'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorId'] or '')
+#                 adjudicator_note = str(row['StatusDetailAdjudicatorNote'] or '') if row['KeyDate'] is None else str(inner_row['ListAdjudicatorNote'] or '')
+#                 print(row['CaseStatus'])
+#                 line = casestatusTemplate.replace("{{CaseStatusDescription}}", str(row['CaseStatusDescription'] or '')) \
+#                                             .replace("{{KeyDate}}", format_date_iso(row['KeyDate'])) \
+#                                             .replace("{{InterpreterRequired}}", str(row['InterpreterRequired'])) \
+#                                             .replace("{{MiscDate1}}", format_date_iso(row['MiscDate1'] or '')) \
+#                                             .replace("{{MiscDate2}}", format_date_iso(row['MiscDate2'] or '')) \
+#                                             .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
+#                                             .replace("{{InitialHearingPoints}}", str(row['InitialHearingPoints'] or '')) \
+#                                             .replace("{{FinalHearingPoints}}", str(row['FinalHearingPoints'] or '')) \
+#                                             .replace("{{HearingPointsChangeReasonId}}", str(row['HearingPointsChangeReasonId'] or '')) \
+#                                             .replace("{{DecisionDate}}", format_date_iso(row['DecisionDate'] or '')) \
+#                                             .replace("{{DecisionByTCW}}", str(row['DecisionByTCW'] or '')) \
+#                                             .replace("{{MethodOfTyping}}", str(row['MethodOfTyping'] or '')) \
+#                                             .replace("{{Outcome}}", str(row['Outcome'] or '')) \
+#                                             .replace("{{Promulgated}}", format_date_iso(row['Promulgated'] or '')) \
+#                                             .replace("{{UKAITNo}}", str(row['UKAITNo'] or '')) \
+#                                             .replace("{{Extempore}}", str(row['Extempore'] or '')) \
+#                                             .replace("{{WrittenReasonsRequestedDate}}", format_date_iso(row['WrittenReasonsRequestedDate'] or '')) \
+#                                             .replace("{{TypistSentDate}}", format_date_iso(row['TypistSentDate'] or '')) \
+#                                             .replace("{{ExtemporeMethodOfTyping}}", str(row['ExtemporeMethodOfTyping'] or '')) \
+#                                             .replace("{{WrittenReasonsSentDate}}", format_date_iso(row['WrittenReasonsSentDate'] or ''))   \
+#                                             .replace("{{UpperTribunalAppellant}}", str(row['UpperTribunalAppellant'] or ''))   \
+#                                             .replace("{{RemittalOutcome}}", str(row['RemittalOutcome'] or ''))   \
+#                                             .replace("{{DecisionSentToHO}}", str(row['DecisionSentToHO'] or ''))   \
+#                                             .replace("{{DecisionSentToHODate}}", format_date_iso(row['DecisionSentToHODate'] or '')) \
+#                                             .replace("{{ApplicationType}}", str(row['ApplicationType'] or '')) \
+#                                             .replace("{{DateReceived}}", format_date_iso(row['DateReceived'] or '')) \
+#                                             .replace("{{AdjudicatorSurname}}", str(adjudicator_surname or ''))   \
+#                                             .replace("{{AdjudicatorForenames}}", str(adjudicator_Forenames or ''))  \
+#                                             .replace("{{AdjudicatorTitle}}", str(adjudicator_title or '')) \
+#                                             .replace("{{AdjudicatorId}}", str(adjudicator_id or '')) \
+#                                             .replace("{{AdjudicatorNote}}", str(adjudicator_note or '')) \
+#                                             .replace("{{KeyDate}}", format_date_iso(row['KeyDate'] or '')) \
+#                                             .replace("{{Party}}", str(row['Party'] or '')) \
+#                                             .replace("{{InTime}}", str(row['InTime'] or '')) \
+#                                             .replace("{{Letter1Date}}", format_date_iso(row['Letter1Date'] or '')) \
+#                                             .replace("{{Letter2Date}}", format_date_iso(row['Letter2Date'] or '')) \
+#                                             .replace("{{Notes1}}", str(row['Notes1'] or '')) \
+#                                             .replace("{{SCCourtName}}", str(row['SCCourtName'] or '')) \
+#                                             .replace("{{ListName}}", str(inner_row['ListName'] or '')) \
+#                                             .replace("{{ListType}}", str(inner_row['ListType'] or '')) \
+#                                             .replace("{{HearingTypeDesc}}", str(inner_row['HearingTypeDesc'] or '')) \
+#                                             .replace("{{ListStartTime}}", format_date_iso(inner_row['ListStartTime'] or '')) \
+#                                             .replace("{{AdditionalLanguageId}}", str(row['AdditionalLanguageId'] or '')) \
+#                                             .replace("{{nested_table_number}}", str(nested_table_number))  
+
+#                                         # .replace("{{FC}}", str(FC))    
+#                             # {{AdjudicatorForenames}} {{AdjudicatorTitle}}
+#                                             # .replace("{{AdjudicatorForenames}}", str(adjudicator_Forenames)   \
+#                                             # .replace("{{AdjudicatorTitle}}", str(adjudicator_title)   \
+#                                             # .replace("{{AdjudicatorId}}", str(adjudicator_id)   \
+#                                             #  .replace("{{AdjudicatorNote}}", str(adjudicator_note)   \
+#                                                 # .replace("{{judicialOfficer}}", str(row['judicialOfficer'] or '')) \
+#                                             # .replace("{{CentreId}}", str(row['CentreId'] or '')) \  
+#                                             # LanguageId      
+                                            
+                                                                
+#                 status_details_Code += line + '\n'
+#             else:
+#                 nested_table_number += 1
+#                 status_details_Code = StatusDetailFirstTierHearingTemplate.replace("{{CaseStatus}}", "") \
+#                                                             .replace("{{KeyDate}}", "") \
+#                                                             .replace("{{InterpreterRequired}}", "") \
+#                                                             .replace("{{MiscDate2}}", "") \
+#                                                             .replace("{{TypistSentDate}}", "") \
+#                                                             .replace("{{InitialHearingPoints}}", "") \
+#                                                             .replace("{{FinalHearingPoints}}", "") \
+#                                                             .replace("{{HearingPointsChangeReasonId}}", "") \
+#                                                             .replace("{{DecisionDate}}", "") \
+#                                                             .replace("{{DecisionByTCW}}", "") \
+#                                                             .replace("{{MethodOfTyping}}", "") \
+#                                                             .replace("{{Outcome}}", "") \
+#                                                             .replace("{{Promulgated}}", "") \
+#                                                             .replace("{{UKAITNo}}", "") \
+#                                                             .replace("{{Extempore}}", "") \
+#                                                             .replace("{{WrittenReasonsRequestedDate}}", "") \
+#                                                             .replace("{{TypistSentDate}}", "") \
+#                                                             .replace("{{ExtemporeMethodOfTyping}}", "") \
+#                                                             .replace("{{WrittenReasonsSentDate}}", "") \
+#                                                             .replace("{{UpperTribunalAppellant}}", "") \
+#                                                             .replace("{{RemittalOutcome}}", "") \
+#                                                             .replace("{{DecisionSentToHO}}", "") \
+#                                                             .replace("{{DecisionSentToHODate}}", "") \
+#                                                             # .replace("{{AdjudicatorSurname}}", "") \
+#                                                             # .replace("{{nested_table_number}}", str(nested_table_number))    
 
 # displayHTML(status_details_Code)
 
-# COMMAND ----------
 
-# %sql
-# drop schema hive_metastore.ariadm_arm_appeals cascade;
-
-# COMMAND ----------
-
-# df_history = spark.read.table("hive_metastore.ariadm_arm_appeals.bronze_appealcase_history_users")
-# df_appealcase_details = spark.read.table("hive_metastore.ariadm_arm_appeals.bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang")
-# df_appellant_details = spark.read.table("hive_metastore.ariadm_arm_appeals.bronze_appealcase_ca_apt_country_detc")
-
-# # ARIADM/ARM/APPEALS/HTML/appeal_case_IA_00006_2015_Jessop.html
-# # display(df_history.filter(col('CaseNo').like('%AH/0000%')))
-
-# #  html_content, status = generate_html_content(
-# #             'BZ/00001',
-# #             appellant_name,
-# #             appealcase_details_bc.value,
-# #             history_bc.value
-# #         )
-
-# # BZ/00001 
-
-# # 'BZ/00000'    '
-
-# display(df_appellant_details.filter(col('CaseNo').like('BZ%')))
-
-# COMMAND ----------
-
-# common_case_nos = df_appealcase_details.select("CaseNo").join(df_history.select("CaseNo"), "CaseNo")
-# display(common_case_nos.distinct())
 
 # COMMAND ----------
 
@@ -6165,37 +6082,6 @@ def find_data_in_list(data_list, case_no):
 
 
 # -- # BZ/00001     
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col
-
-# files_df = dbutils.fs.ls("/mnt/ingest00landingsboxlanding")
-# filtered_files_df = spark.createDataFrame(files_df).filter(col("path").contains("Review"))
-# display(filtered_files_df)
-
-# COMMAND ----------
-
-# %sql
-
-# select * from 
-# hive_metastore.ariadm_arm_appeals.bronze_appealcase_ca_apt_country_detc
-# where CaseNo in ('IM/00023/2003')
-
-# COMMAND ----------
-
-# %sql
-# select CaseNo,  count(*) from hive_metastore.ariadm_arm_appeals.bronze_appealcase_ca_apt_country_detc 
-# where CaseAppellantRelationship is null
-# group by  CaseNo
-# having count(*) >1
-
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_ca_apt_country_detc 
-
 
 # COMMAND ----------
 

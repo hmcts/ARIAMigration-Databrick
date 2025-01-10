@@ -3,8 +3,8 @@ parameters:
   pythonVersion: ''
   env: ''
   mainRepositoryName: ''
-  databricksInstance: '' # Example: https://<databricks-instance>.cloud.databricks.com
-  databricksClusterId: '' # Cluster ID to install the wheel
+  databricksInstance: '' # https://<databricks-instance>.cloud.databricks.com
+  databricksClusterId: ''
   configureDBCluster: ''
   runJob: ''
   azureSubscriptionName: ''

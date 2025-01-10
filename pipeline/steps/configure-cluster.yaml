@@ -41,5 +41,12 @@ steps:
       echo "Databricks Token: $DATABRICKS_TOKEN"
 
       databricks fs cp $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
-      databricks libraries install --cluster-id "${{ parameters.databricksClusterId }}" --whl "dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}"
+      databricks libraries install --json '{
+        "cluster_id": "0110-125559-6bz2jhlo",
+        "libraries": [
+          {
+            "whl": "dbfs:/FileStore/shared_wheels/my_package-0.1-py3-none-any.whl"
+          }
+        ]
+      }'
     workingDirectory: '$(System.DefaultWorkingDirectory)'

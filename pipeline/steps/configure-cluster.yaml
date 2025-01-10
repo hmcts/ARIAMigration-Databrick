@@ -31,5 +31,5 @@ steps:
       export DATABRICKS_HOST=${{ parameters.databricksInstance }}
       export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
       databricks fs cp $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }} --overwrite
-      databricks clusters library install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
+      databricks libraries install --cluster-id ${{ parameters.databricksClusterId }} --whl dbfs:/FileStore/shared_wheels/${{ parameters.wheelName }}
     workingDirectory: '$(System.DefaultWorkingDirectory)'

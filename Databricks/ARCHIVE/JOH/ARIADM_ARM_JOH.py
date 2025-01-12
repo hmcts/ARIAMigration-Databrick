@@ -1144,18 +1144,46 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 
 # COMMAND ----------
 
-# DBTITLE 1,Generating Judicial Officer Profiles in HMTL Outputs
+from datetime import datetime
 
 # Date formatting helper
 def format_date_iso(date_value):
     if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
+        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
     return ""
 
 def format_date(date_value):
     if date_value:
+        return datetime.strftime(date_value, "%d/%m/%Y %H:%M:%S")
+    return ""
+    if date_value:
         return datetime.strftime(date_value, "%d/%m/%Y")
     return ""
+
+
+
+
+# Test the functions
+# test_date = datetime(2025, 1, 8)
+test_date = datetime(2025, 1, 8).date()
+print(test_date)
+print(format_date_iso(test_date))  # Expected output: "2025-01-08"
+print(format_date(test_date))      # Expected output: "08/01/2025"
+
+# COMMAND ----------
+
+# DBTITLE 1,Generating Judicial Officer Profiles in HMTL Outputs
+
+# Date formatting helper
+# def format_date_iso(date_value):
+#     if date_value:
+#         return datetime.strftime(date_value, "%Y-%m-%d")
+#     return ""
+
+# def format_date(date_value):
+#     if date_value:
+#         return datetime.strftime(date_value, "%d/%m/%Y")
+#     return ""
 
 # Helper function to find data from a list by AdjudicatorId
 def find_data_in_list(data_list, adjudicator_id):
@@ -1509,7 +1537,7 @@ def gold_joh_json_generation_status():
         df_judicial_officer_details = spark.read.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
         df_other_centres = spark.read.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
         df_roles = spark.read.table(f"hive_metastore.{hive_schema}.silver_appointment_detail")
-        df_history = spark.read.table(f"hive_metastore.{hive_schema}..silver_history_detail")
+        df_history = spark.read.table(f"hive_metastore.{hive_schema}.silver_history_detail")
 
     # Broadcast the dataframes to all workers
     judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())

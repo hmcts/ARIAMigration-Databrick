@@ -71,7 +71,8 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..','..')))
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
+# from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
+from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -103,7 +104,7 @@ silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
 file_path = "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
 gold_outputs = "ARIADM/ARM/TD/"
-hive_schema = "ariadm_arm_joh_test"
+hive_schema = "ariadm_arm_td"
 
 
 # COMMAND ----------
@@ -819,17 +820,33 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
-# DBTITLE 1,Generating Tribunal decision Profiles in HMTL Outputs
-# Helper function to format dates
+# Date formatting helper
 def format_date_iso(date_value):
     if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
+        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
     return ""
 
 def format_date(date_value):
     if date_value:
+        return datetime.strftime(date_value, "%d/%m/%Y %H:%M:%S")
+    return ""
+    if date_value:
         return datetime.strftime(date_value, "%d/%m/%Y")
     return ""
+
+# COMMAND ----------
+
+# DBTITLE 1,Generating Tribunal decision Profiles in HMTL Outputs
+# # Helper function to format dates
+# def format_date_iso(date_value):
+#     if date_value:
+#         return datetime.strftime(date_value, "%Y-%m-%d")
+#     return ""
+
+# def format_date(date_value):
+#     if date_value:
+#         return datetime.strftime(date_value, "%d/%m/%Y")
+#     return ""
 
 # Define the function to find data in a list by CaseNo, Forenames, and Name
 def find_data_in_list(data_list, CaseNo, Forenames, Name):
@@ -918,7 +935,7 @@ def gold_td_html_generation_status():
     df_archive_metadata = dlt.read("silver_archive_metadata")
     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
 
-    if not initial_Load:
+    if read_hive == True:
         print("Running non-initial load")
         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
@@ -1074,7 +1091,7 @@ def gold_td_html_generation_status():
 #     df_archive_metadata = dlt.read("silver_archive_metadata")
 #     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
 
-#     if not initial_Load:
+#     if read_hive == True:
 #         print("Running non-initial load")
 #         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 #         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
@@ -1218,7 +1235,7 @@ def gold_td_json_generation_status():
     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
 
 
-    if not initial_Load:
+    if read_hive == True:
         print("Running non-initial load")
         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
@@ -1345,7 +1362,7 @@ def gold_td_json_generation_status():
 #     df_archive_metadata = dlt.read("silver_archive_metadata")
 #     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
 
-#     if not initial_Load:
+#     if read_hive == True:
 #         print("Running non-initial load")
 #         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 #         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
@@ -1530,7 +1547,7 @@ def gold_td_a360_generation_status():
     # df_td_filtered = dlt.read("stg_td_filtered")
     df_td_metadata = dlt.read("silver_archive_metadata")
 
-    if not initial_Load:
+    if read_hive == True:
         print("Running non-initial load")
         # df_td_filtered = spark.read.table("hive_metastore.ariadm_arm_iris_td.stg_td_filtered")
         df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")

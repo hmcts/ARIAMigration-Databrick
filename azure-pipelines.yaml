@@ -33,7 +33,7 @@ stages:
       environment: sbox
       env:  ${{ parameters.env }}
       agentPool: $(agentPool)
-      azureSubscriptionName: 'DTS-DATAINGEST-SBOX'
+      azureSubscriptionName: 'DTS-DATAINGEST-STG'
       runDeploy: eq('${{ parameters.env }}', 'sbox')
       pythonVersion: 3.10
       mainRepositoryName: 'ARIAMigration-Databrick'

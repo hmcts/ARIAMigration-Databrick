@@ -94,16 +94,6 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,likned cost award refined
-# MAGIC %sql 
-# MAGIC select * from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
-# MAGIC where CostAwardId in (
-# MAGIC select max(CostAwardId) from  hive_metastore.ariadm_arm_appeals.bronze_cost_award
-# MAGIC where  CaseNo != 'HR/00040/2008' and linkno in (select linkno from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail where CaseNo = 'HR/00040/2008')
-# MAGIC group by CaseNo)
-
-# COMMAND ----------
-
 # MAGIC %sql
 # MAGIC select * from hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail
 # MAGIC  where CaseNO = 'IA/00009/2014'
@@ -131,8 +121,8 @@
 # MAGIC %sql
 # MAGIC -- Status table done and dynamic pages need to be sorted 
 # MAGIC with cte as (
-# MAGIC select AdjudicatorId,ApplicationType,DateReceived,CaseStatus,KeyDate,MiscDate1,InterpreterRequired,RemittalOutcome,MiscDate2,UpperTribunalAppellant,TypistSentDate,InitialHearingPoints,FinalHearingPoints,HearingPointsChangeReasonId,Tier,
-# MAGIC DecisionDate,InTime,Party,Notes1,Letter1Date,DecisionByTCW,MethodOfTyping,Outcome,Promulgated,UKAITNo,WrittenReasonsRequestedDate,process,TypistSentDate,ExtemporeMethodOfTyping,WrittenReasonsSentDate,CaseNo,DecisionSentToHO,Allegation,DecidingCentre,DecisionSentToHODate,Extempore,OutOfTime,NoCertAwardDate,CertRevokedDate,WrittenOffFileDate,ReferredEnforceDate,Letter1Date,Letter2Date,Letter3Date,ReferredFinanceDate,CourtActionAuthDate,ListRequirementTypeId
+# MAGIC select ApplicationType,DateReceived,CaseStatus,KeyDate,MiscDate1,InterpreterRequired,RemittalOutcome,MiscDate2,UpperTribunalAppellant,TypistSentDate,InitialHearingPoints,FinalHearingPoints,HearingPointsChangeReasonId,Tier,
+# MAGIC DecisionDate,InTime,Party,Notes1,Letter1Date,DecisionByTCW,MethodOfTyping,Outcome,Promulgated,UKAITNo,WrittenReasonsRequestedDate,process,TypistSentDate,ExtemporeMethodOfTyping,WrittenReasonsSentDate,CaseNo,DecisionSentToHO,Allegation,DecidingCentre,DecisionSentToHODate,Extempore,OutOfTime,NoCertAwardDate,CertRevokedDate,WrittenOffFileDate,ReferredEnforceDate,Letter1Date,Letter2Date,Letter3Date,ReferredFinanceDate,CourtActionAuthDate,ListRequirementTypeId,judicialOfficer,
 # MAGIC UpperTribunalHearingDirectionId,CourtSelection,HighCourtReference
 # MAGIC from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
 # MAGIC )

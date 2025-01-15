@@ -5,6 +5,9 @@ targets:
   sbox:
     workspace:
       root_path: /Workspace/Shared/sbox
+  test:
+    workspace:
+      root_path: /Workspace/Shared/test
 
 resources:
   jobs:

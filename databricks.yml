@@ -15,3 +15,8 @@ resources:
           notebook_task:
             notebook_path: /Workspace/Shared/sbox/files/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH
           existing_cluster_id: '1126-125237-rpprpbud'
+        - task_key: run-dlt-task
+          depends_on:
+            - task_key: run-notebook-task
+          pipeline_task:
+            pipeline_id: "78f0ad9a-3046-4c9b-ae3c-757d9bb513a7"

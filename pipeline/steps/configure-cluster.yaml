@@ -41,7 +41,7 @@ steps:
       echo "Databricks Token: $DATABRICKS_TOKEN"
 
       databricks libraries workspace-upload \
-        --file $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} \
+        $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} \
         --workspace-path /Workspace/Shared/${{ parameters.wheelName }}
 
       databricks libraries install --json '{

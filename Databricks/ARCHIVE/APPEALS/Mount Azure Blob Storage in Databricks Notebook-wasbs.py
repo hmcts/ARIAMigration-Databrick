@@ -7,7 +7,7 @@ dbutils.fs.unmount('/mnt/dropzone')
 storage_account_name = "a360c2x2555dz"
 container_name = "dropzone"
 folder_name = "ARIAJR"
-sas_token = "sp=racwl&st=2024-12-06T12:41:42Z&se=2024-12-13T18:00:00Z&spr=https&sv=2022-11-02&sr=d&sig=HslwpWZJRl%2FQYEZ2gsuWS6ApXFSQL55fFGjbT5RLNBw%3D&sdd=1"
+sas_token = "xxxxx"
 
 # Define the Azure Blob Storage URL
 source_url = f"wasbs://{container_name}@{storage_account_name}.blob.core.windows.net"

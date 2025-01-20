@@ -52,3 +52,4 @@ stages:
         databricksInstance: ${{ parameters.databricksInstance }}
         runJob: ${{ parameters.runJob }}
         subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
+        connection_string: ${{ parameters.azureSubscriptionName }}

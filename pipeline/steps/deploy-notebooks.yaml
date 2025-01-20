@@ -5,10 +5,11 @@ parameters:
   databricksInstance: ''
   runJob: ''
   subscriptionEndpoint: ''
+  connection_string: ''
 
 steps:
 - task: AzureCLI@2
-  displayName: 'Deploy Notebook'
+  displayName: 'Deploy Bundle'
   inputs:
     azureSubscription: ${{ parameters.subscriptionEndpoint }}
     scriptType: bash

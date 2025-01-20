@@ -38,7 +38,7 @@ targets:
 resources:
   jobs:
     run-notebooks-and-dlt:
-      name: run-notebooks-and-dlt
+      name: run-notebooks-and-dlt-sbox
       tasks:
         - task_key: run-notebook-task
           notebook_task:

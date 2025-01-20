@@ -19,10 +19,13 @@ variables:
     default: "78f0ad9a-3046-4c9b-ae3c-757d9bb513a7"
 
 targets:
-  # Default environment: sbox
   sbox:
     default: true
-    # sbox uses all the `default` values above.
+    variables:
+      endpoint: "https://ingest00curatedsbox.blob.core.windows.net/"
+      keyvault: "ingest00-keyvault-sbox"
+      secret_name: "ingest00-adls-ingest00curatedsbox-connection-string-sbox"
+      dlt_pipeline_id: "78f0ad9a-3046-4c9b-ae3c-757d9bb513a7"
 
   test:
     default: false
@@ -41,13 +44,14 @@ resources:
           notebook_task:
             notebook_path: "/Workspace/Shared/${bundle.target}/files/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH"
             base_parameters:
-              endpoint: ${vars.endpoint}
-              keyvault: ${vars.keyvault}
-              secret_name: ${vars.secret_name}
+              endpoint: ${var.endpoint}
+              keyvault: ${var.keyvault}
+              secret_name: ${var.secret_name}
           existing_cluster_id: "1126-125237-rpprpbud"
 
         - task_key: run-dlt-task
           depends_on:
             - task_key: run-notebook-task
           pipeline_task:
-            pipeline_id: ${vars.dlt_pipeline_id}
+            pipeline_id: ${var.dlt_pipeline_id}
+

@@ -952,11 +952,10 @@ keyvault = dbutils.widgets.get("keyvault")
 secret_name = dbutils.widgets.get("secret_name")
 
 # Fetch the secret dynamically based on the environment
-secret = dbutils.secrets.get(scope=keyvault, key=secret_name)
+secret = dbutils.secrets.get(keyvault, secret_name)
 connection_string = f"{secret}"
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
-# Specify the container name
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 container_name = "gold"
 container_client = blob_service_client.get_container_client(container_name)
 

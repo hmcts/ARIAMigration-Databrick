@@ -47,6 +47,10 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-147">ARIADM-147</a>/NSA/28-OCT-2024</td>
 # MAGIC     <td>Tribunal Decision IRIS : Update/Optmize Gold Outputs</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-368">ARIADM-368</a>/NSA/20-JAN-2025</td>
+# MAGIC     <td>Update Datetype for Gold OutPuts</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -820,33 +824,31 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
-# Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y %H:%M:%S")
-    return ""
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# COMMAND ----------
-
 # DBTITLE 1,Generating Tribunal decision Profiles in HMTL Outputs
-# # Helper function to format dates
+# Helper to format dates in ISO format (YYYY-MM-DD)
 # def format_date_iso(date_value):
-#     if date_value:
-#         return datetime.strftime(date_value, "%Y-%m-%d")
-#     return ""
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%Y-%m-%d")
+#     except Exception as e:
+#         return ""
+    
+def format_date_dd_mm_yyyy(date_value):
+    """
+    Formats a date into dd/MM/yyyy format.
+    Args:
+        date_value: A datetime object or string in 'yyyy-MM-dd' format.
+    Returns:
+        A string formatted as 'dd/MM/yyyy'.
+    """
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%d/%m/%Y")
+    except Exception as e:
+        raise ValueError(f"Invalid date input: {date_value}. Error: {e}")
 
-# def format_date(date_value):
-#     if date_value:
-#         return datetime.strftime(date_value, "%d/%m/%Y")
-#     return ""
 
 # Define the function to find data in a list by CaseNo, Forenames, and Name
 def find_data_in_list(data_list, CaseNo, Forenames, Name):
@@ -874,12 +876,12 @@ def generate_html_content(CaseNo, Forenames, Name, tribunaldecision_detail_list)
 
         # Step 4: Create a dictionary with the replacements
         replacements = {
-            "{{Archivedate}}":  format_date(row_dict.get('AdtclmnFirstCreatedDatetime')),
+            "{{Archivedate}}":  format_date_dd_mm_yyyy(row_dict.get('AdtclmnFirstCreatedDatetime')),
             "{{CaseNo}}": str(row_dict.get('CaseNo', '') or ''),
             "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
             "{{Name}}": str(row_dict.get('Name', '') or ''),
-            "{{BirthDate}}": format_date(row_dict.get('BirthDate')),
-            "{{DestructionDate}}": format_date(row_dict.get('DestructionDate', '') or ''),
+            "{{BirthDate}}": format_date_dd_mm_yyyy(row_dict.get('BirthDate')),
+            "{{DestructionDate}}": format_date_dd_mm_yyyy(row_dict.get('DestructionDate', '') or ''),
             "{{HORef}}": str(row_dict.get('HORef', '') or ''),
             "{{PortReference}}": str(row_dict.get('PortReference', '') or ''),
             "{{HearingCentreDescription}}": str(row_dict.get('HearingCentreDescription', '') or ''),
@@ -1172,12 +1174,12 @@ def generate_json_for_tribunaldecision(CaseNo, Forenames, Name, tribunaldecision
 
         # Create a dictionary for the tribunal decision details
         tribunal_decision_data = {
-            "Archivedate": format_date(row_dict.get('AdtclmnFirstCreatedDatetime', '')),
+            "Archivedate": str(row_dict.get('AdtclmnFirstCreatedDatetime', '')),
             "CaseNo": row_dict.get('CaseNo', ''),
             "Forenames": row_dict.get('Forenames', ''),
             "Name": row_dict.get('Name', ''),
-            "BirthDate": format_date(row_dict.get('BirthDate', '')),
-            "DestructionDate": format_date(row_dict.get('DestructionDate', '')),
+            "BirthDate": str(row_dict.get('BirthDate', '')),
+            "DestructionDate": str(row_dict.get('DestructionDate', '')),
             "HORef": row_dict.get('HORef', ''),
             "PortReference": row_dict.get('PortReference', ''),
             "HearingCentreDescription": row_dict.get('HearingCentreDescription', ''),

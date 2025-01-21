@@ -48,9 +48,3 @@ resources:
               keyvault: ${var.keyvault}
               secret_name: ${var.secret_name}
           existing_cluster_id: "1126-125237-rpprpbud"
-
-        # - task_key: run-dlt-task
-        #   depends_on:
-        #     - task_key: run-notebook-task
-        #   pipeline_task:
-        #     pipeline_id: ${var.dlt_pipeline_id}

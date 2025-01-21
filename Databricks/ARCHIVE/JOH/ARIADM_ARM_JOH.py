@@ -35,6 +35,10 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-130">ARIADM-130</a>/NSA/-07-OCT-2024</td>
 # MAGIC     <td>JOH: Tune Performance, Refactor Code for Reusability, Manage Broadcast Effectively, Implement Repartitioning Strategy</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-368">ARIADM-368</a>/NSA/20-JAN-2025</td>
+# MAGIC     <td>Update Datetype for Gold OutPuts</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC     
 # MAGIC    </tbody>
@@ -952,6 +956,310 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC #### In Dev
+# MAGIC
+# MAGIC <!-- This section is currently in development and may not be ready for production use. -->
+
+# COMMAND ----------
+
+# DBTITLE 1,Aggregating DataFrames
+# from pyspark.sql.functions import collect_list, struct, lit, col
+
+# df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_joh_filtered")
+# df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
+# df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+# df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+# df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
+
+# # Aggregate Other Centres
+# grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+#     collect_list("OtherCentres").alias("OtherCentres")
+# )
+
+# # Aggregate Roles
+# grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+#     collect_list(
+#         struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+#     ).alias("Roles")
+# )
+
+# # Aggregate History
+# grouped_history = df_history.groupBy("AdjudicatorId").agg(
+#     collect_list(
+#         struct("HistDate", "HistType", "UserName", "Comment")
+#     ).alias("History")
+# )
+
+# # Join all aggregated data with JudicialOfficerDetails
+# df_combined = (
+#     df_judicial_officer_details
+#     .join(grouped_centres, "AdjudicatorId", "left")
+#     .join(grouped_roles, "AdjudicatorId", "left")
+#     .join(grouped_history, "AdjudicatorId", "left")
+# )
+
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate HTML in Parallel
+# from pyspark.sql import functions
+# from pyspark.sql.types import StringType
+# from datetime import datetime
+
+# # Helper to format dates in ISO format (YYYY-MM-DD)
+# def format_date_iso(date_value):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%Y-%m-%d")
+#     except Exception as e:
+#         return ""
+
+# # Helper to format dates in dd/MM/YYYY format
+# def format_date(date_value):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%d/%m/%Y")
+#     except Exception as e:
+#         return ""
+
+# # Modify the UDF to accept a row object
+# def generate_html(row):
+#     try:
+#         # Load template
+#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+#         with open(html_template_path, "r") as f:
+#             html_template = f.read()
+
+#         # Replace placeholders in the template with row data
+#         replacements = {
+#             "{{AdjudicatorId}}": str(row.AdjudicatorId),
+#             "{{Surname}}": row.Surname or "",
+#             "{{Forenames}}": row.Forenames or "",
+#             "{{Title}}": row.Title or "",
+#             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
+#             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
+#             "{{Telephone}}": row.ContactTelephone or "",
+#             "{{ContactDetails}}": row.ContactDetails or "",
+#             "{{DesignatedCentre}}": row.DesignatedCentre or "",
+#             "{{EmploymentTerm}}": row.EmploymentTerm or "",
+#             "{{FullTime}}": row.FullTime or "",
+#             "{{IdentityNumber}}": row.IdentityNumber or "",
+#             "{{DateOfRetirement}}": format_date_iso(row.DateOfRetirement),
+#             "{{ContractEndDate}}": format_date_iso(row.ContractEndDate),
+#             "{{ContractRenewalDate}}": format_date_iso(row.ContractRenewalDate),
+#             "{{DoNotUseReason}}": row.DoNotUseReason or "",
+#             "{{JudicialStatus}}": row.JudicialStatus or "",
+#             "{{Address1}}": row.Address1 or "",
+#             "{{Address2}}": row.Address2 or "",
+#             "{{Address3}}": row.Address3 or "",
+#             "{{Address4}}": row.Address4 or "",
+#             "{{Address5}}": row.Address5 or "",
+#             "{{Postcode}}": row.Postcode or "",
+#             "{{Mobile}}": row.Mobile or "",
+#             "{{Email}}": row.Email or "",
+#             "{{BusinessAddress1}}": row.BusinessAddress1 or "",
+#             "{{BusinessAddress2}}": row.BusinessAddress2 or "",
+#             "{{BusinessAddress3}}": row.BusinessAddress3 or "",
+#             "{{BusinessAddress4}}": row.BusinessAddress4 or "",
+#             "{{BusinessAddress5}}": row.BusinessAddress5 or "",
+#             "{{BusinessPostcode}}": row.BusinessPostcode or "",
+#             "{{BusinessTelephone}}": row.BusinessTelephone or "",
+#             "{{BusinessFax}}": row.BusinessFax or "",
+#             "{{BusinessEmail}}": row.BusinessEmail or "",
+#             "{{JudicialInstructions}}": row.JudicialInstructions or "",
+#             "{{JudicialInstructionsDate}}": format_date_iso(row.JudicialInstructionsDate),
+#             "{{Notes}}": row.Notes or "",
+#             "{{OtherCentre}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{centre}</td></tr>"
+#                 for i, centre in enumerate(row.OtherCentres or [])
+#             ),
+#             "{{AppointmentPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{role.Role}</td><td id=\"midpadding\">{format_date(role.DateOfAppointment)}</td><td id=\"midpadding\">{format_date(role.EndDateOfAppointment)}</td></tr>"
+#                 for i, role in enumerate(row.Roles or [])
+#             ),
+#             "{{HistoryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(hist.HistDate)}</td><td id=\"midpadding\">{hist.HistType}</td><td id=\"midpadding\">{hist.UserName}</td><td id=\"midpadding\">{hist.Comment}</td></tr>"
+#                 for hist in (row.History or [])
+#             ),
+#         }
+
+    
+        
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+        
+#         return html_template
+#     except Exception as e:
+#         return f"Error generating HTML for AdjudicatorId {row.AdjudicatorId}: {e}"
+
+# # Register UDF
+# generate_html_udf = udf(generate_html, StringType())
+
+# # Apply the UDF to the combined DataFrame
+# df_with_html = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns)))
+
+# display(df_with_html)
+
+# COMMAND ----------
+
+# DBTITLE 1,display HTML Content
+# html_content = df_with_html.select("HTMLContent").first()["HTMLContent"]
+# displayHTML(html_content)
+
+# COMMAND ----------
+
+# DBTITLE 1,Write HTML
+
+# def upload_html(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/judicial_officer_{row['AdjudicatorId']}.html")
+#         blob_client.upload_blob(row['HTMLContent'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading HTML for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+# df_with_html.select("AdjudicatorId", "HTMLContent").foreach(upload_html)
+
+# COMMAND ----------
+
+# df_with_html.count()
+
+# COMMAND ----------
+
+# DBTITLE 1,Write Json
+# output_path = "{gold_outputs}/JSON/"  # Replace with your desired path
+
+# # Repartition to optimize for JSON generation
+# df_combined = df_combined.repartition("AdjudicatorId")
+
+# # Write JSON files partitioned by AdjudicatorId
+# df_combined.write.partitionBy("AdjudicatorId").json(output_path + "judicial_officer_{AdjudicatorId}.json", mode="overwrite")
+
+# COMMAND ----------
+
+# def generate_a360(row):
+#     try:
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": "ARIA",
+#                 "record_class": "ARIA Judicial Records",
+#                 "region": "GBR",
+#                 "recordDate": format_date_zulu(row.AdtclmnFirstCreatedDatetime),
+#                 "event_date": format_date_zulu(coalesce(row.DateOfRetirement, row.ContractEndDate, row.AdtclmnFirstCreatedDatetime)),
+#                 "client_identifier": row.client_identifier,
+#                 "bf_001": row.Title or "",
+#                 "bf_002": row.Forenames or "",
+#                 "bf_003": row.Surname or "",
+#                 "bf_004": format_date_zulu(row.DateOfBirth),
+#                 "bf_005": row.DesignatedCentre or ""
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for AdjudicatorId {row.AdjudicatorId}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
+
+# # Apply the UDF to the combined DataFrame
+# df_with_a360 = df_joh_metadata.withColumn("A360Content", generate_a360_udf(struct(*df_joh_metadata.columns)))
+
+# display(df_with_a360)
+
+
+# # # Apply the UDF to the combined DataFrame
+# # df_with_html = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns)))
+
+# # display(df_with_html)
+
+# COMMAND ----------
+
+#  # Create metadata, HTML, and JSON strings
+# metadata_data = {
+#     "operation": "create_record",
+#     "relation_id": joh_metadata.client_identifier,
+#     "record_metadata": {
+#         "publisher": joh_metadata.publisher,
+#         "record_class": joh_metadata.record_class,
+#         "region": joh_metadata.region,
+#         "recordDate": format_date_zulu(joh_metadata.recordDate),
+#         "event_date": format_date_zulu(joh_metadata.event_date),
+#         "client_identifier": joh_metadata.client_identifier,
+#         "bf_001": joh_metadata.bf_001,
+#         "bf_002": joh_metadata.bf_002,
+#         "bf_003": joh_metadata.bf_003,
+#         "bf_004": format_date_zulu(joh_metadata.bf_004),
+#         "bf_005": joh_metadata.bf_005
+#     }
+# }
+
+# html_data = {
+#     "operation": "upload_new_file",
+#     "relation_id": joh_metadata.client_identifier,
+#     "file_metadata": {
+#         "publisher": joh_metadata.publisher,
+#         "dz_file_name": f"judicial_officer_{adjudicator_id}.html",
+#         "file_tag": "html"
+#     }
+# }
+
+# json_data = {
+#     "operation": "upload_new_file",
+#     "relation_id": joh_metadata.client_identifier,
+#     "file_metadata": {
+#         "publisher": joh_metadata.publisher,
+#         "dz_file_name": f"judicial_officer_{adjudicator_id}.json",
+#         "file_tag": "json"
+#     }
+# }
+
+# # Convert dictionaries to JSON strings
+# metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+# html_data_str = json.dumps(html_data, separators=(',', ':'))
+# json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+# # Combine the data
+# all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+# # df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
+# # df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Generate HTML
 
 # COMMAND ----------
@@ -964,7 +1272,7 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 
 # DBTITLE 1,Adhoc debug code- Generating HTML Content with Date Formatting
 
-# from datetime import datetime
+# # from datetime import datetime
 
 # # # Helper to format dates in ISO format (YYYY-MM-DD)
 # def format_date_iso(date_value):
@@ -1036,7 +1344,7 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 #         # Step 6: Convert the Spark Row object to a dictionary
 #         row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
 
-#         print(type(row_dict.get('DateOfBirth'))) # <class 'datetime.datetime'>
+#         # print(type(row_dict.get('DateOfBirth'))) # <class 'datetime.datetime'>
 
 #         # Create a dictionary with the replacements, ensuring all values are strings
 #         replacements = {
@@ -1100,7 +1408,7 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 #         # History Details
 #         History_Code = ''
 #         for index, row in enumerate(history, start=1):
-#             print(type(row['HistDate']))
+#             # print(type(row['HistDate']))
 #             line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
 #             History_Code += line + '\n'
 #         html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
@@ -1112,19 +1420,19 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 #         print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
 #         return None, f"Error writing file: {str(e)}"
 
-# adjudicator_id = 9664
-# df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.stg_joh_filtered")
-# df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_adjudicator_detail")
-# df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_othercentre_detail")
-# df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_appointment_detail")
-# df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_history_detail")
+# # adjudicator_id = 5210
+# # df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.stg_joh_filtered")
+# # df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_adjudicator_detail")
+# # df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_othercentre_detail")
+# # df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_appointment_detail")
+# # df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_history_detail")
 
-# # adjudicator_id = 1660
-# # df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-# # df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-# # df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-# # df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-# # df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
+# adjudicator_id = 1660
+# df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_joh_filtered")
+# df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
+# df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+# df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+# df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
 
 # # Broadcast the dataframes to all workers
 # judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
@@ -1144,34 +1452,6 @@ spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-
 
 # COMMAND ----------
 
-from datetime import datetime
-
-# Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y %H:%M:%S")
-    return ""
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-
-
-
-# Test the functions
-# test_date = datetime(2025, 1, 8)
-test_date = datetime(2025, 1, 8).date()
-print(test_date)
-print(format_date_iso(test_date))  # Expected output: "2025-01-08"
-print(format_date(test_date))      # Expected output: "08/01/2025"
-
-# COMMAND ----------
-
 # DBTITLE 1,Generating Judicial Officer Profiles in HMTL Outputs
 
 # Date formatting helper
@@ -1184,6 +1464,15 @@ print(format_date(test_date))      # Expected output: "08/01/2025"
 #     if date_value:
 #         return datetime.strftime(date_value, "%d/%m/%Y")
 #     return ""
+
+# Helper to format dates in ISO format (YYYY-MM-DD)
+def format_date_iso(date_value):
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%Y-%m-%d")
+    except Exception as e:
+        return ""
 
 # Helper function to find data from a list by AdjudicatorId
 def find_data_in_list(data_list, adjudicator_id):
@@ -1272,7 +1561,7 @@ def generate_html_content(adjudicator_id, judicial_officer_details_list, other_c
         # Handle roles
         roles_code = ""
         for i, role in enumerate(roles, start=1):
-            line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
+            line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date_iso(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date_iso(role['EndDateOfAppointment'])}</td></tr>"
             roles_code += line + '\n'
             
         html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
@@ -1280,7 +1569,7 @@ def generate_html_content(adjudicator_id, judicial_officer_details_list, other_c
         # History Details
         History_Code = ''
         for index, row in enumerate(history, start=1):
-            line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
+            line = f"<tr><td id=\"midpadding\">{format_date_iso(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
             History_Code += line + '\n'
         html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
 
@@ -1411,6 +1700,12 @@ def gold_joh_html_generation_status():
 #             return row
 #     return None
 
+# Date formatting helper
+def format_date_iso(date_value):
+    if date_value:
+        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
+    return ""
+
 # Define the function to generate JSON content for a given adjudicator
 def generate_json_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
     try:
@@ -1437,7 +1732,7 @@ def generate_json_content(adjudicator_id, judicial_officer_details_list, other_c
             "Surname": row_dict.get('Surname', ''),
             "Title": row_dict.get('Title', ''),
             "Forenames": row_dict.get('Forenames', ''),
-            "DateOfBirth": format_date_iso(row_dict.get('DateOfBirth')),
+            "DateOfBirth": str(row_dict.get('DateOfBirth')),
             "CorrespondenceAddress": row_dict.get('CorrespondenceAddress', ''),
             "Telephone": row_dict.get('ContactTelephone', ''),
             "ContactDetails": row_dict.get('ContactDetails', ''),
@@ -1445,9 +1740,9 @@ def generate_json_content(adjudicator_id, judicial_officer_details_list, other_c
             "EmploymentTerm": row_dict.get('EmploymentTerm', ''),
             "FullTime": row_dict.get('FullTime', ''),
             "IdentityNumber": row_dict.get('IdentityNumber', ''),
-            "DateOfRetirement": format_date_iso(row_dict.get('DateOfRetirement')),
-            "ContractEndDate": format_date_iso(row_dict.get('ContractEndDate')),
-            "ContractRenewalDate": format_date_iso(row_dict.get('ContractRenewalDate')),
+            "DateOfRetirement": str(row_dict.get('DateOfRetirement')),
+            "ContractEndDate": str(row_dict.get('ContractEndDate')),
+            "ContractRenewalDate": str(row_dict.get('ContractRenewalDate')),
             "DoNotUseReason": row_dict.get('DoNotUseReason', ''),
             "JudicialStatus": row_dict.get('JudicialStatus', ''),
             "Address1": row_dict.get('Address1', ''),
@@ -1468,11 +1763,11 @@ def generate_json_content(adjudicator_id, judicial_officer_details_list, other_c
             "BusinessFax": row_dict.get('BusinessFax', ''),
             "BusinessEmail": row_dict.get('BusinessEmail', ''),
             "JudicialInstructions": row_dict.get('JudicialInstructions', ''),
-            "JudicialInstructionsDate": format_date_iso(row_dict.get('JudicialInstructionsDate')),
+            "JudicialInstructionsDate": str(row_dict.get('JudicialInstructionsDate')),
             "Notes": row_dict.get('Notes', ''),
             "OtherCentres": [centre['OtherCentres'] for centre in other_centres],
-            "Roles": [{"Role": role['Role'], "DateOfAppointment": format_date(role['DateOfAppointment']), "EndDateOfAppointment": format_date(role['EndDateOfAppointment'])} for role in roles],
-            "History": [{"HistDate": format_date(hist['HistDate']), "HistType": hist['HistType'], "UserName": hist['UserName'], "Comment": hist['Comment']} for hist in history]
+            "Roles": [{"Role": role['Role'], "DateOfAppointment": str(role['DateOfAppointment']), "EndDateOfAppointment": str(role['EndDateOfAppointment'])} for role in roles],
+            "History": [{"HistDate": str(hist['HistDate']), "HistType": hist['HistType'], "UserName": hist['UserName'], "Comment": hist['Comment']} for hist in history]
         }
 
         # Convert the dictionary to a JSON string

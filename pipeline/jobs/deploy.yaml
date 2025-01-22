@@ -1,0 +1,55 @@
+parameters:
+  agentPool: ''
+  pythonVersion: ''
+  env: ''
+  mainRepositoryName: ''
+  databricksInstance: '' # https://<databricks-instance>.cloud.databricks.com
+  databricksClusterId: ''
+  configureDBCluster: ''
+  runJob: ''
+  azureSubscriptionName: ''
+
+stages:
+- stage: 'Deploy_${{ parameters.environment }}'
+  displayName: Deploy to ${{ parameters.env }}
+  condition: eq(${{ parameters.runDeploy }}, true)
+  jobs:
+  - job: Deploy_to_Databricks
+    pool:
+      vmImage: ${{ parameters.agentPool }}
+    variables:
+    - group: databricks-variables
+    steps:
+    - checkout: self
+      persistCredentials: false
+      clean: false
+    - template: ../steps/initialise-python.yaml
+      parameters:
+        pythonVersion: ${{ parameters.pythonVersion }}
+        env: ${{ parameters.env }}
+        mainRepositoryName: ${{ parameters.mainRepositoryName }}
+        subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
+    - ${{ if eq(parameters.configureDBCluster, 'true') }}:
+      - template: ../steps/build-wheel.yaml
+        parameters:
+          pythonVersion: ${{ parameters.pythonVersion }}
+          env: ${{ parameters.env }}
+          mainRepositoryName: ${{ parameters.mainRepositoryName }}
+          subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
+      - template: ../steps/configure-cluster.yaml
+        parameters:
+          pythonVersion: ${{ parameters.pythonVersion }}
+          env: ${{ parameters.env }}
+          mainRepositoryName: ${{ parameters.mainRepositoryName }}
+          databricksInstance: ${{ parameters.databricksInstance }}
+          databricksClusterId: ${{ parameters.databricksClusterId }}
+          subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
+    - template: ../steps/deploy-notebooks.yaml
+      parameters:
+        pythonVersion: ${{ parameters.pythonVersion }}
+        env: ${{ parameters.env }}
+        mainRepositoryName: ${{ parameters.mainRepositoryName }}
+        databricksInstance: ${{ parameters.databricksInstance }}
+        runJob: ${{ parameters.runJob }}
+        subscriptionEndpoint: ${{ parameters.azureSubscriptionName }}
+        connection_string: ${{ parameters.azureSubscriptionName }}

@@ -1,0 +1,50 @@
+bundle:
+  name: databricks-notebook-dlt-bundle
+
+workspace:
+  root_path: /Workspace/Shared/${bundle.target}
+
+variables:
+  endpoint:
+    description: "The endpoint for the environment"
+    default: "https://ingest00curatedsbox.blob.core.windows.net/"
+  keyvault:
+    description: "The Key Vault for secrets"
+    default: "ingest00-keyvault-sbox"
+  secret_name:
+    description: "The secret name for ADLS connection strings"
+    default: "ingest00-adls-ingest00curatedsbox-connection-string-sbox"
+  dlt_pipeline_id:
+    description: "The DLT pipeline ID"
+    default: "78f0ad9a-3046-4c9b-ae3c-757d9bb513a7"
+
+targets:
+  sbox:
+    default: true
+    variables:
+      endpoint: "https://ingest00curatedsbox.blob.core.windows.net/"
+      keyvault: "ingest00-keyvault-sbox"
+      secret_name: "ingest00-adls-ingest00curatedsbox-connection-string-sbox"
+      dlt_pipeline_id: "78f0ad9a-3046-4c9b-ae3c-757d9bb513a7"
+
+  test:
+    default: false
+    variables:
+      endpoint: "https://ingest01curatedtest.blob.core.windows.net/"
+      keyvault: "ingest01-keyvault-test"
+      secret_name: "ingest01-adls-ingest01curatedtest-connection-string-test"
+      dlt_pipeline_id: "90a1be2a-405b-4d1c-b0c8-868b1bf914a8"
+
+resources:
+  jobs:
+    run-notebooks-and-dlt:
+      name: run-notebooks-and-dlt
+      tasks:
+        - task_key: run-notebook-task
+          notebook_task:
+            notebook_path: "/Workspace/Shared/${bundle.target}/files/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH"
+            base_parameters:
+              endpoint: ${var.endpoint}
+              keyvault: ${var.keyvault}
+              secret_name: ${var.secret_name}
+          existing_cluster_id: "1126-125237-rpprpbud"

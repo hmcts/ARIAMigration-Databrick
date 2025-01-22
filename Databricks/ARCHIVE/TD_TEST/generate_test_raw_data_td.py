@@ -1,6 +1,7 @@
 import random
 import re
 from datetime import datetime, timedelta
+import os
 
 import pandas as pd
 from faker import Faker
@@ -348,13 +349,15 @@ def generate_csv_file(appeal_case_data, appellant_data, hearing_centre_data, dep
         "HORef", "PortReference", "File_Location", "Description", "Note"
     ]
 
-    datesnap = datetime.today().strftime('%d-%m-%y_%H:%M')
+    csv_file_path = "/mnt/landing/SQL_Server/Sales/IRIS/csv/Example_IRIS_tribunal_decisions_data_file.csv"
 
-    csv_file_path = f"IRIS_data_{datesnap}.csv"
-    with open(csv_file_path, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(column_names)
-        writer.writerows(csv_data)
+    dbutils.fs.mkdirs("/mnt/landing/SQL_Server/Sales/IRIS/csv/")
+
+    local_temp_file = "/tmp/temp_example.csv"
+    df = pd.DataFrame(csv_data, columns=column_names)
+    df.to_csv(local_temp_file, index=False)
+
+    dbutils.fs.cp(f"file://{local_temp_file}", csv_file_path)
 
 # Generate sample data for each table
 num_appeal_case_records = 100
@@ -396,68 +399,68 @@ spark_hearing_centre_data = spark.createDataFrame(hearing_centre_data)
 datesnap = spark.sql("select date_format(current_timestamp(), 'yyyyMMddHHmmss')").collect()[0][0]
 
 # Appeal Case
-appeal_case_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/AppealCase/temp_{datesnap}"  
+appeal_case_temp_output_path = f"/mnt/landing/test/AppealCase/temp_{datesnap}"  
 spark_appeal_case_data.coalesce(1).write.format("parquet").mode("overwrite").save(appeal_case_temp_output_path)
 
 appeal_case_files = dbutils.fs.ls(appeal_case_temp_output_path)
 appeal_case_parquet_file = [file.path for file in appeal_case_files if file.path.endswith(".parquet")][0]
 
-appeal_case_final_output_path = f"/mnt/ingest01landingsboxlanding/test/AppealCase/full/SQLServer_TD_dbo_appeal_case_{datesnap}.parquet"
+appeal_case_final_output_path = f"/mnt/landing/test/AppealCase/full/SQLServer_TD_dbo_appeal_case_{datesnap}.parquet"
 dbutils.fs.mv(appeal_case_parquet_file, appeal_case_final_output_path)
 dbutils.fs.rm(appeal_case_temp_output_path, True)
 
 # File Location  
-file_location_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/FileLocation/temp_{datesnap}"
+file_location_temp_output_path = f"/mnt/landing/test/FileLocation/temp_{datesnap}"
 spark_file_location_data.coalesce(1).write.format("parquet").mode("overwrite").save(file_location_temp_output_path)
 
 file_location_files = dbutils.fs.ls(file_location_temp_output_path)  
 file_location_parquet_file = [file.path for file in file_location_files if file.path.endswith(".parquet")][0]
 
-file_location_final_output_path = f"/mnt/ingest01landingsboxlanding/test/FileLocation/full/SQLServer_TD_dbo_file_location_{datesnap}.parquet" 
+file_location_final_output_path = f"/mnt/landing/test/FileLocation/full/SQLServer_TD_dbo_file_location_{datesnap}.parquet" 
 dbutils.fs.mv(file_location_parquet_file, file_location_final_output_path)
 dbutils.fs.rm(file_location_temp_output_path, True)
 
 # Case Appellant
-case_appellant_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/CaseAppellant/temp_{datesnap}"
+case_appellant_temp_output_path = f"/mnt/landing/test/CaseAppellant/temp_{datesnap}"
 spark_case_appellant_data.coalesce(1).write.format("parquet").mode("overwrite").save(case_appellant_temp_output_path)
 
 case_appellant_files = dbutils.fs.ls(case_appellant_temp_output_path)
 case_appellant_parquet_file = [file.path for file in case_appellant_files if file.path.endswith(".parquet")][0]
 
-case_appellant_final_output_path = f"/mnt/ingest01landingsboxlanding/test/CaseAppellant/full/SQLServer_TD_dbo_case_appellant_{datesnap}.parquet"
+case_appellant_final_output_path = f"/mnt/landing/test/CaseAppellant/full/SQLServer_TD_dbo_case_appellant_{datesnap}.parquet"
 dbutils.fs.mv(case_appellant_parquet_file, case_appellant_final_output_path) 
 dbutils.fs.rm(case_appellant_temp_output_path, True)
 
 # Appellant
-appellant_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/Appellant/temp_{datesnap}"
+appellant_temp_output_path = f"/mnt/landing/test/Appellant/temp_{datesnap}"
 spark_appellant_data.coalesce(1).write.format("parquet").mode("overwrite").save(appellant_temp_output_path)
 
 appellant_files = dbutils.fs.ls(appellant_temp_output_path)
 appellant_parquet_file = [file.path for file in appellant_files if file.path.endswith(".parquet")][0]
 
-appellant_final_output_path = f"/mnt/ingest01landingsboxlanding/test/Appellant/full/SQLServer_TD_dbo_appellant_{datesnap}.parquet"
+appellant_final_output_path = f"/mnt/landing/test/Appellant/full/SQLServer_TD_dbo_appellant_{datesnap}.parquet"
 dbutils.fs.mv(appellant_parquet_file, appellant_final_output_path)
 dbutils.fs.rm(appellant_temp_output_path, True)
 
 # Department  
-department_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/Department/temp_{datesnap}"
+department_temp_output_path = f"/mnt/landing/test/Department/temp_{datesnap}"
 spark_department_data.coalesce(1).write.format("parquet").mode("overwrite").save(department_temp_output_path)
 
 department_files = dbutils.fs.ls(department_temp_output_path)
 department_parquet_file = [file.path for file in department_files if file.path.endswith(".parquet")][0]  
 
-department_final_output_path = f"/mnt/ingest01landingsboxlanding/test/Department/full/SQLServer_TD_dbo_department_{datesnap}.parquet"
+department_final_output_path = f"/mnt/landing/test/Department/full/SQLServer_TD_dbo_department_{datesnap}.parquet"
 dbutils.fs.mv(department_parquet_file, department_final_output_path)
 dbutils.fs.rm(department_temp_output_path, True)
 
 # Hearing Centre
-hearing_centre_temp_output_path = f"/mnt/ingest01landingsboxlanding/test/HearingCentre/temp_{datesnap}"  
+hearing_centre_temp_output_path = f"/mnt/landing/test/HearingCentre/temp_{datesnap}"  
 spark_hearing_centre_data.coalesce(1).write.format("parquet").mode("overwrite").save(hearing_centre_temp_output_path)
 
 hearing_centre_files = dbutils.fs.ls(hearing_centre_temp_output_path)
 hearing_centre_parquet_file = [file.path for file in hearing_centre_files if file.path.endswith(".parquet")][0]
 
-hearing_centre_final_output_path = f"/mnt/ingest01landingsboxlanding/test/HearingCentre/full/SQLServer_TD_dbo_hearing_centre_{datesnap}.parquet"
+hearing_centre_final_output_path = f"/mnt/landing/test/HearingCentre/full/SQLServer_TD_dbo_hearing_centre_{datesnap}.parquet"
 dbutils.fs.mv(hearing_centre_parquet_file, hearing_centre_final_output_path)  
 dbutils.fs.rm(hearing_centre_temp_output_path, True)
  

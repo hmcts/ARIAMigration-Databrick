@@ -8,11 +8,16 @@ from faker import Faker
 import csv
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest01rawsboxraw/ARIADM/ARM/TD/test"
-landing_mnt = "/mnt/ingest01landingsboxlanding/test/"
-bronze_mnt = "/mnt/ingest01curatedsboxbronze/ARIADM/ARM/TD/test"
-silver_mnt = "/mnt/ingest01curatedsboxsilver/ARIADM/ARM/TD/test"
-gold_mnt = "/mnt/ingest01curatedsboxgold/ARIADM/ARM/TD/test"
+# raw_mnt = "/mnt/ingest01rawsboxraw/ARIADM/ARM/TD/test"
+# landing_mnt = "/mnt/ingest01landingsboxlanding/test/"
+# bronze_mnt = "/mnt/ingest01curatedsboxbronze/ARIADM/ARM/TD/test"
+# silver_mnt = "/mnt/ingest01curatedsboxsilver/ARIADM/ARM/TD/test"
+# gold_mnt = "/mnt/ingest01curatedsboxgold/ARIADM/ARM/TD/test"
+raw_mnt = "/mnt/raw/"
+landing_mnt = "/mnt/landing/"
+bronze_mnt = "/mnt/bronze/"
+silver_mnt = "/mnt/silver/"
+gold_mnt = "/mnt/gold/"
 
 # Variable to control the percentage of CaseNo present in all tables
 case_no_presence_percentage = 80
@@ -345,7 +350,7 @@ def generate_csv_file(appeal_case_data, appellant_data, hearing_centre_data, dep
 
     datesnap = datetime.today().strftime('%d-%m-%y_%H:%M')
 
-    csv_file_path = f"/mnt/ingest01landingsboxlanding/test/IRIS_data_{datesnap}.csv"
+    csv_file_path = f"IRIS_data_{datesnap}.csv"
     with open(csv_file_path, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(column_names)

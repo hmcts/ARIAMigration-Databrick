@@ -11,6 +11,7 @@ spark = SparkSession.builder \
 
 # mount point for the gold files
 # gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test"
+gold_mnt = "/mnt/gold/ARIADM/ARM/TD/test"
 
 # Read the JSON file
 json_schema = StructType([

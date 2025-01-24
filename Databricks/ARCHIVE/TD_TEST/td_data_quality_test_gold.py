@@ -27,6 +27,7 @@ json_schema = StructType([
     StructField("Note", StringType(), True)
 ])
 
+# df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/JSON/tribunal_decision_*.json", schema=json_schema)
 df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/JSON/tribunal_decision_*.json", schema=json_schema)
 
 # Read the A360 file

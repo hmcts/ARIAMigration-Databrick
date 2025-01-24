@@ -95,12 +95,13 @@ from datetime import datetime
 # COMMAND ----------
 
 dbutils.widgets.text("initial_Load", "False", "Initial Load")
-dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD", "Raw Mount")
-dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding/", "Landing Mount")
-dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD", "Bronze Mount")
-dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD", "Silver Mount")
-dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD", "Gold Mount")
-dbutils.widgets.text("file_path", "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv", "File Path")
+# dbutils.widgets.text("raw_mnt", "/mnt/ARIADM/ARM/TD", "Raw Mount")
+dbutils.widgets.text("raw_mnt", "/mnt/raw/", "Raw Mount")
+dbutils.widgets.text("landing_mnt", "/mnt/landing/", "Landing Mount")
+dbutils.widgets.text("bronze_mnt", "/mnt/bronze/ARIADM/ARM/TD", "Bronze Mount")
+dbutils.widgets.text("silver_mnt", "/mnt/silver/ARIADM/ARM/TD", "Silver Mount")
+dbutils.widgets.text("gold_mnt", "/mnt/gold/ARIADM/ARM/TD", "Gold Mount")
+dbutils.widgets.text("file_path", "/mnt/landing/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv", "File Path")
 dbutils.widgets.text("gold_outputs", "ARIADM/ARM/TD/")  # Path for gold output files in gold container
 
 initial_Load = dbutils.widgets.get("initial_Load") == "True"

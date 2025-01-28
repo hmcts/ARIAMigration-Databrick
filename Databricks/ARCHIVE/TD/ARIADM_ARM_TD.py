@@ -102,7 +102,7 @@ from datetime import datetime
 read_hive = False
 
 raw_mnt = "/mnt/raw/ARIADM/ARM/TD"
-landing_mnt = "/mnt/landing/"
+landing_mnt = "/mnt/landing/test/"
 bronze_mnt = "/mnt/bronze/ARIADM/ARM/TD"
 silver_mnt = "/mnt/silver/ARIADM/ARM/TD"
 gold_mnt = "/mnt/gold/ARIADM/ARM/TD"
@@ -154,7 +154,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     return list(output)
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
-def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
+def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = landing_mnt) -> "DataFrame":
     """
     Reads the latest .parquet file from a specified folder, adds audit columns, creates a temporary Spark view, and returns the DataFrame.
     
@@ -269,6 +269,10 @@ def Raw_HearingCentre():
 )
 def Raw_Status():
     return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
+
+# COMMAND ----------
+
+dbutils.fs.ls("/mnt/landing")
 
 # COMMAND ----------
 
@@ -407,7 +411,8 @@ def bronze_iris_extract():
     return (
         spark.read.option("header", "true")
             .option("inferSchema", "true")
-            .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
+            # .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
+            .csv("/mnt/landing/SQL_Server/Sales/IRIS/csv/Example_IRIS_tribunal_decisions_data_file.csv")
             .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp())
             .withColumn("AdtclmnModifiedDatetime", current_timestamp())
             .withColumn("SourceFileName", lit(file_path))

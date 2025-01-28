@@ -39,6 +39,10 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-368">ARIADM-368</a>/NSA/20-JAN-2025</td>
 # MAGIC     <td>Update Datetype for Gold OutPuts</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-294">ARIADM-294</a>/NSA/28-JAN-2025</td>
+# MAGIC     <td>Optimize Spark Workflows</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC     
 # MAGIC    </tbody>

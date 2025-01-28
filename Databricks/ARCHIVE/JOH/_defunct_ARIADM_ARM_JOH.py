@@ -31,6 +31,15 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-123">ARIADM-123</a>/NSA/SEP-2024</td>
 # MAGIC          <td>JOH: Create Gold outputs- Json and A360</td>
 # MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-130">ARIADM-130</a>/NSA/-07-OCT-2024</td>
+# MAGIC     <td>JOH: Tune Performance, Refactor Code for Reusability, Manage Broadcast Effectively, Implement Repartitioning Strategy</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-368">ARIADM-368</a>/NSA/20-JAN-2025</td>
+# MAGIC     <td>Update Datetype for Gold OutPuts</td>
+# MAGIC </tr>
+# MAGIC
 # MAGIC     
 # MAGIC    </tbody>
 # MAGIC </table>
@@ -42,10 +51,14 @@
 
 # COMMAND ----------
 
+pip install azure-storage-blob
+
+# COMMAND ----------
+
 import dlt
 import json
 from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
-# from pyspark.sql.functions import *
+from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -53,6 +66,7 @@ from datetime import datetime
 # COMMAND ----------
 
 spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
 
 # COMMAND ----------
 
@@ -62,19 +76,41 @@ spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
+# MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
-
-initial_Load = False
+read_hive = False
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
+landing_mnt = "/mnt/ingest00landingsboxlanding"
 bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
+gold_outputs = "ARIADM/ARM/JOH"
+hive_schema = "ariadm_arm_joh"
+
+# COMMAND ----------
+
+# dbutils.widgets.text("initial_Load", "True")
+# dbutils.widgets.text("raw_mnt", "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH")
+# dbutils.widgets.text("landing_mnt", "/mnt/ingest00landingsboxlanding")
+# dbutils.widgets.text("bronze_mnt", "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH")
+# dbutils.widgets.text("silver_mnt", "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH")
+# dbutils.widgets.text("gold_mnt", "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH")
+# dbutils.widgets.text("gold_outputs", "ARIADM/ARM/JOH")  # Path for gold output files in gold container
+# dbutils.widgets.text("hive_schema", "ariadm_arm_joh")  # SchemaName
+
+# initial_Load = dbutils.widgets.get("initial_Load") 
+# raw_mnt = dbutils.widgets.get("raw_mnt")
+# landing_mnt = dbutils.widgets.get("landing_mnt")
+# bronze_mnt = dbutils.widgets.get("bronze_mnt")
+# silver_mnt = dbutils.widgets.get("silver_mnt")
+# gold_mnt = dbutils.widgets.get("gold_mnt")
+# gold_outputs = dbutils.widgets.get("gold_outputs")
+# hive_schema = dbutils.widgets.get("hive_schema")
+
 
 # COMMAND ----------
 
@@ -83,7 +119,6 @@ gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
 
 # COMMAND ----------
 
-# from pyspark.sql.functions import current_timestamp, lit
 
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
@@ -93,7 +128,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
     output = set()  # Using a set to avoid duplicates
     if depth > max_depth:
-        return output
+        return list(output)
 
     try:
         children = dbutils.fs.ls(path)
@@ -102,27 +137,15 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
                 output.add(child.path.strip())  # Add only .parquet files to the set
 
             if child.isDir:
-                # Recursively explore directories
                 output.update(deep_ls(child.path, depth=depth + 1, max_depth=max_depth))
 
     except Exception as e:
         print(f"Error accessing {path}: {e}")
 
-    return list(output)  # Convert the set back to a list before returning
-
-# Function to extract timestamp from the file path
-def extract_timestamp(file_path):
-    """
-    Extracts timestamp from the parquet file name based on an assumed naming convention.
-    """
-    # Split the path and get the filename part
-    filename = file_path.split('/')[-1]
-    # Extract the timestamp part from the filename
-    timestamp_str = filename.split('_')[-1].replace('.parquet', '')
-    return timestamp_str
+    return list(output)
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
-def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
+def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = f"{landing_mnt}/") -> "DataFrame":
     """
     Reads the latest .parquet file from a specified folder, adds audit columns, creates a temporary Spark view, and returns the DataFrame.
     
@@ -141,13 +164,23 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # List all .parquet files in the folder
     all_files = deep_ls(folder_path)
     
-    # Ensure that files were found
+    # Check if files were found
     if not all_files:
         print(f"No .parquet files found in {folder_path}")
         return None
+
+    # Create a DataFrame from the file paths
+    file_df = spark.createDataFrame([(f,) for f in all_files], ["file_path"])
     
-    # Find the latest .parquet file
-    latest_file = max(all_files, key=extract_timestamp)
+    # Extract timestamp from the file name using a regex pattern (assuming it's the last underscore-separated part before ".parquet")
+    file_df = file_df.withColumn("timestamp", regexp_extract("file_path", r"_(\d+)\.parquet$", 1).cast("long"))
+    
+    # Find the maximum timestamp
+    max_timestamp = file_df.agg(max("timestamp")).collect()[0][0]
+    
+    # Filter to get the file with the maximum timestamp
+    latest_file_df = file_df.filter(col("timestamp") == max_timestamp)
+    latest_file = latest_file_df.first()["file_path"]
     
     # Print the latest file being loaded for logging purposes
     print(f"Reading latest file: {latest_file}")
@@ -170,27 +203,10 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     return df
 
 
-
-# # read the data from different folders, with audit columns and process name
-# df_Adjudicator = read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_JOH")
-# df_HearingCentre = read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
-# df_DoNotUseReason = read_latest_parquet("ARIADoNotUseReason", "tv_DoNotUseReason", "ARIA_ARM_JOH")
-# df_EmploymentTerm = read_latest_parquet("EmploymentTerm", "tv_EmploymentTerms", "ARIA_ARM_JOH")
-# df_JoHistory = read_latest_parquet("JoHistory", "tv_JoHistory", "ARIA_ARM_JOH")
-# df_Users = read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH")
-# df_OtherCentre = read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH")
-# df_AdjudicatorRole = read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH")
-
-
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Raw DLT Tables Creation
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
 
 # COMMAND ----------
 
@@ -563,7 +579,7 @@ def stg_joh_filtered():
             col("a.AdjudicatorId") == col("jr.AdjudicatorId"), 
             "left"
         )
-        .filter(~col("jr.Role").isin(7, 8))
+        .filter((~col("jr.Role").isin(7, 8)) | (col("jr.Role").isNull()))
         .groupBy(col("a.AdjudicatorId"))
         .count()
         .select(col("a.AdjudicatorId"))
@@ -913,376 +929,1451 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
+secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
+
+# COMMAND ----------
+
+# DBTITLE 1,Azure Blob Storage Connection Setup in Python
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+import os
+
+# Set up the BlobServiceClient with your connection string
+connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+
+# Specify the container name
+container_name = "gold"
+container_client = blob_service_client.get_container_client(container_name)
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Spark SQL Shuffle Partitions
+spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-worker cluster
+
+
+# COMMAND ----------
+
+# Modify the UDF to accept a row object
+def generate_html(row):
+    try:
+        # Load template
+        html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+        with open(html_template_path, "r") as f:
+            html_template = f.read()
+
+        # Replace placeholders in the template with row data
+        replacements = {
+            "{{AdjudicatorId}}": str(row.AdjudicatorId),
+            "{{Surname}}": row.Surname or "",
+            "{{Forenames}}": row.Forenames or "",
+            "{{Title}}": row.Title or "",
+            "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
+            "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
+            "{{Telephone}}": row.ContactTelephone or "",
+            "{{ContactDetails}}": row.ContactDetails or "",
+            "{{DesignatedCentre}}": row.DesignatedCentre or "",
+            "{{EmploymentTerm}}": row.EmploymentTerm or "",
+            "{{FullTime}}": row.FullTime or "",
+            "{{IdentityNumber}}": row.IdentityNumber or "",
+            "{{DateOfRetirement}}": format_date_iso(row.DateOfRetirement),
+            "{{ContractEndDate}}": format_date_iso(row.ContractEndDate),
+            "{{ContractRenewalDate}}": format_date_iso(row.ContractRenewalDate),
+            "{{DoNotUseReason}}": row.DoNotUseReason or "",
+            "{{JudicialStatus}}": row.JudicialStatus or "",
+            "{{Address1}}": row.Address1 or "",
+            "{{Address2}}": row.Address2 or "",
+            "{{Address3}}": row.Address3 or "",
+            "{{Address4}}": row.Address4 or "",
+            "{{Address5}}": row.Address5 or "",
+            "{{Postcode}}": row.Postcode or "",
+            "{{Mobile}}": row.Mobile or "",
+            "{{Email}}": row.Email or "",
+            "{{BusinessAddress1}}": row.BusinessAddress1 or "",
+            "{{BusinessAddress2}}": row.BusinessAddress2 or "",
+            "{{BusinessAddress3}}": row.BusinessAddress3 or "",
+            "{{BusinessAddress4}}": row.BusinessAddress4 or "",
+            "{{BusinessAddress5}}": row.BusinessAddress5 or "",
+            "{{BusinessPostcode}}": row.BusinessPostcode or "",
+            "{{BusinessTelephone}}": row.BusinessTelephone or "",
+            "{{BusinessFax}}": row.BusinessFax or "",
+            "{{BusinessEmail}}": row.BusinessEmail or "",
+            "{{JudicialInstructions}}": row.JudicialInstructions or "",
+            "{{JudicialInstructionsDate}}": format_date_iso(row.JudicialInstructionsDate),
+            "{{Notes}}": row.Notes or "",
+            "{{OtherCentre}}": "\n".join(
+                f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{centre}</td></tr>"
+                for i, centre in enumerate(row.OtherCentres or [])
+            ),
+            "{{AppointmentPlaceHolder}}": "\n".join(
+                f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{role.Role}</td><td id=\"midpadding\">{format_date(role.DateOfAppointment)}</td><td id=\"midpadding\">{format_date(role.EndDateOfAppointment)}</td></tr>"
+                for i, role in enumerate(row.Roles or [])
+            ),
+            "{{HistoryPlaceHolder}}": "\n".join(
+                f"<tr><td id=\"midpadding\">{format_date(hist.HistDate)}</td><td id=\"midpadding\">{hist.HistType}</td><td id=\"midpadding\">{hist.UserName}</td><td id=\"midpadding\">{hist.Comment}</td></tr>"
+                for hist in (row.History or [])
+            ),
+        }
+
+    
+        
+        for key, value in replacements.items():
+            html_template = html_template.replace(key, value)
+        
+        return html_template
+    except Exception as e:
+        return f"Error generating HTML for AdjudicatorId {row.AdjudicatorId}: {e}"
+
+# Register UDF
+generate_html_udf = udf(generate_html, StringType())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### In Dev
+# MAGIC
+# MAGIC <!-- This section is currently in development and may not be ready for production use. -->
+
+# COMMAND ----------
+
+# display(spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_judicial_officer_unified"))
+
+# COMMAND ----------
+
+@dlt.table(
+    name="stg_judicial_officer_unified",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_judicial_officer_unified"
+)
+def stg_judicial_officer_unified():
+
+    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
+    df_other_centres = dlt.read("silver_othercentre_detail")
+    df_roles = dlt.read("silver_appointment_detail")
+    df_history = dlt.read("silver_history_detail")
+
+    # Aggregate Other Centres
+    grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+        collect_list("OtherCentres").alias("OtherCentres")
+    )
+
+    # Aggregate Roles
+    grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+        collect_list(
+            struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+        ).alias("Roles")
+    )
+
+    # Aggregate History
+    grouped_history = df_history.groupBy("AdjudicatorId").agg(
+        collect_list(
+            struct("HistDate", "HistType", "UserName", "Comment")
+        ).alias("History")
+    )
+
+    # Join all aggregated data with JudicialOfficerDetails
+    df_combined = (
+        df_judicial_officer_details
+        .join(grouped_centres, "AdjudicatorId", "left")
+        .join(grouped_roles, "AdjudicatorId", "left")
+        .join(grouped_history, "AdjudicatorId", "left")
+    )
+
+    df_unified = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
+                            .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
+                            .withColumn("HTMLFileName", concat(lit("judicial_officer_"), col("AdjudicatorId"), lit(".html"))) \
+                            .withColumn("JSONFileName", concat(lit("judicial_officer_"), col("AdjudicatorId"), lit(".json")))
+
+    return df_unified
+
+# COMMAND ----------
+
+ if read_hive:
+     print("Loading data from Hive")
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate HTML in Parallel
+# Helper to format dates in ISO format (YYYY-MM-DD)
+def format_date_iso(date_value):
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%Y-%m-%d")
+    except Exception as e:
+        return ""
+
+# Helper to format dates in dd/MM/YYYY format
+def format_date(date_value):
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%d/%m/%Y")
+    except Exception as e:
+        return ""
+    
+
+
+# Upload HTML to Blob Storage
+def upload_html_partition(partition):
+    for row in partition:
+        try:
+            blob_client = container_client.get_blob_client(
+                f"{gold_outputs}/HTML/{row['HTMLFileName']}"
+            )
+            blob_client.upload_blob(row["HTMLContent"], overwrite=True)
+        except Exception as e:
+            print(f"Error uploading HTML for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+@dlt.table(
+    name="gold_judicial_officer_with_html",
+    comment="Delta Live Gold Table for with HTML content.",
+    path=f"{gold_mnt}/gold_judicial_officer_with_html"
+)
+def gold_judicial_officer_with_html():
+    # Load source data
+    df_combined = dlt.read("stg_judicial_officer_unified")
+
+    # Optional: Load from Hive if not an initial load
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+
+    # Generate HTML content
+    # df_with_html = df_combined.withColumn(
+    #     "HTMLContent", generate_html_udf(struct(*df_combined.columns))
+    # )
+
+    # Upload HTML files to Azure Blob Storage
+    df_combined.select("AdjudicatorId", "HTMLContent","HTMLFileName").foreachPartition(upload_html_partition)
+
+    # Return the DataFrame for DLT table creation
+    return df_combined.select("AdjudicatorId", "HTMLContent","HTMLFileName")
+
+# COMMAND ----------
+
+# DBTITLE 1,temp
+# # import dlt
+# # from pyspark.sql.functions import col, collect_list, struct, lit, udf
+# # from pyspark.sql.types import StringType
+# # from datetime import datetime
+
+#  # Helper to format dates
+# def format_date(date_value, output_format="%Y-%m-%d"):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime(output_format)
+#     except Exception:
+#         return ""
+    
+
+# # Modify the UDF to accept a row object
+# def generate_html(row):
+#     try:
+#         # Load template
+#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+#         with open(html_template_path, "r") as f:
+#             html_template = f.read()
+
+#         # Replace placeholders in the template with row data
+#         replacements = {
+#             "{{AdjudicatorId}}": str(row.AdjudicatorId),
+#             "{{Surname}}": row.Surname or "",
+#             "{{Forenames}}": row.Forenames or "",
+#             "{{Title}}": row.Title or "",
+#             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
+#             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
+#             "{{Telephone}}": row.ContactTelephone or "",
+#             "{{ContactDetails}}": row.ContactDetails or "",
+#             "{{DesignatedCentre}}": row.DesignatedCentre or "",
+#             "{{EmploymentTerm}}": row.EmploymentTerm or "",
+#             "{{FullTime}}": row.FullTime or "",
+#             "{{IdentityNumber}}": row.IdentityNumber or "",
+#             "{{DateOfRetirement}}": format_date_iso(row.DateOfRetirement),
+#             "{{ContractEndDate}}": format_date_iso(row.ContractEndDate),
+#             "{{ContractRenewalDate}}": format_date_iso(row.ContractRenewalDate),
+#             "{{DoNotUseReason}}": row.DoNotUseReason or "",
+#             "{{JudicialStatus}}": row.JudicialStatus or "",
+#             "{{Address1}}": row.Address1 or "",
+#             "{{Address2}}": row.Address2 or "",
+#             "{{Address3}}": row.Address3 or "",
+#             "{{Address4}}": row.Address4 or "",
+#             "{{Address5}}": row.Address5 or "",
+#             "{{Postcode}}": row.Postcode or "",
+#             "{{Mobile}}": row.Mobile or "",
+#             "{{Email}}": row.Email or "",
+#             "{{BusinessAddress1}}": row.BusinessAddress1 or "",
+#             "{{BusinessAddress2}}": row.BusinessAddress2 or "",
+#             "{{BusinessAddress3}}": row.BusinessAddress3 or "",
+#             "{{BusinessAddress4}}": row.BusinessAddress4 or "",
+#             "{{BusinessAddress5}}": row.BusinessAddress5 or "",
+#             "{{BusinessPostcode}}": row.BusinessPostcode or "",
+#             "{{BusinessTelephone}}": row.BusinessTelephone or "",
+#             "{{BusinessFax}}": row.BusinessFax or "",
+#             "{{BusinessEmail}}": row.BusinessEmail or "",
+#             "{{JudicialInstructions}}": row.JudicialInstructions or "",
+#             "{{JudicialInstructionsDate}}": format_date_iso(row.JudicialInstructionsDate),
+#             "{{Notes}}": row.Notes or "",
+#             "{{OtherCentre}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{centre}</td></tr>"
+#                 for i, centre in enumerate(row.OtherCentres or [])
+#             ),
+#             "{{AppointmentPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{role.Role}</td><td id=\"midpadding\">{format_date(role.DateOfAppointment)}</td><td id=\"midpadding\">{format_date(role.EndDateOfAppointment)}</td></tr>"
+#                 for i, role in enumerate(row.Roles or [])
+#             ),
+#             "{{HistoryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(hist.HistDate)}</td><td id=\"midpadding\">{hist.HistType}</td><td id=\"midpadding\">{hist.UserName}</td><td id=\"midpadding\">{hist.Comment}</td></tr>"
+#                 for hist in (row.History or [])
+#             ),
+#         }
+
+    
+        
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+        
+#         return html_template
+#     except Exception as e:
+#         return f"Error generating HTML for AdjudicatorId {row.AdjudicatorId}: {e}"
+
+# # Register UDF
+# generate_html_udf = udf(generate_html, StringType())
+
+
+# def upload_html(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/judicial_officer_{row['AdjudicatorId']}.html")
+#         blob_client.upload_blob(row['HTMLContent'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading HTML for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+
+# @dlt.table(
+#     name="gold_judicial_officer_with_html",
+#     comment="Delta Live Gold Table for with HTML content.",
+#     path=f"{gold_mnt}/gold_judicial_officer_with_html"
+# )
+# def gold_judicial_officer_with_html():
+
+#     df_combined = dlt.read("stg_judicial_officer_unified")
+
+#     # Load the necessary dataframes from Hive metastore if not initial load
+#     if read_hive == True:
+#         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+
+
+#     # Apply the UDF to the combined DataFrame
+#     # Add HTMLContent column
+#     df_with_html = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns)))
+#     df_with_html.select("AdjudicatorId", "HTMLContent").foreach(upload_html)
+
+#     return df_with_html
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate JSON in Parallel
+# from pyspark.sql.functions import to_json, struct
+
+def upload_json_partition(partition):
+    """
+    Upload JSON files for each row in a partition to Azure Blob Storage.
+    """
+    for row in partition:
+        try:
+            blob_client = container_client.get_blob_client(
+                f"{gold_outputs}/JSON/{row['JSONFileName']}"
+            )
+            blob_client.upload_blob(row['JSONcollection'], overwrite=True)
+        except Exception as e:
+            print(f"Error uploading JSON for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+@dlt.table(
+    name="gold_judicial_officer_with_json",
+    comment="Delta Live Gold Table with JSON content.",
+    path=f"{gold_mnt}/gold_judicial_officer_with_json"
+)
+def gold_judicial_officer_with_json():
+    """
+    Delta Live Table for creating and uploading JSON content for judicial officers.
+    """
+    # Load source data
+    df_combined = dlt.read("stg_judicial_officer_unified")
+
+    # Optionally load data from Hive if needed
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+
+    # Generate JSON content from all columns in the DataFrame
+    # df_with_json = df_combined.withColumn(
+    #     "JSONcollection", to_json(struct(*df_combined.columns))
+    # )
+
+    # Upload JSON files to Azure Blob Storage
+    df_combined.select("AdjudicatorId", "JSONcollection","JSONFileName").foreachPartition(upload_json_partition)
+
+    # Return the DataFrame for DLT table creation
+    return df_combined.select("AdjudicatorId", "JSONcollection","JSONFileName")
+
+
+# COMMAND ----------
+
+# DBTITLE 1,temp
+# def upload_json(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/JSON/judicial_officer_{row['AdjudicatorId']}.json")
+#         blob_client.upload_blob(row['JSONcollection'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading JSON for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+
+# @dlt.table(
+#     name="gold_judicial_officer_with_json",
+#     comment="Delta Live Gold Table for with HTML content.",
+#     path=f"{gold_mnt}/gold_judicial_officer_with_json"
+# )
+# def gold_judicial_officer_with_json():
+
+#     df_combined = dlt.read("stg_judicial_officer_unified")
+
+#     # Load the necessary dataframes from Hive metastore if not initial load
+#     if read_hive == True:
+#         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+
+#     # # Aggregate Other Centres
+#     # grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+#     #     collect_list("OtherCentres").alias("OtherCentres")
+#     # )
+
+#     # # Aggregate Roles
+#     # grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+#     #     collect_list(
+#     #         struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+#     #     ).alias("Roles")
+#     # )
+
+#     # # Aggregate History
+#     # grouped_history = df_history.groupBy("AdjudicatorId").agg(
+#     #     collect_list(
+#     #         struct("HistDate", "HistType", "UserName", "Comment")
+#     #     ).alias("History")
+#     # )
+
+#     # # Join all aggregated data with JudicialOfficerDetails
+#     # df_combined = (
+#     #     df_judicial_officer_details
+#     #     .join(grouped_centres, "AdjudicatorId", "left")
+#     #     .join(grouped_roles, "AdjudicatorId", "left")
+#     #     .join(grouped_history, "AdjudicatorId", "left")
+#     # )
+
+
+#     df_with_json = df_combined.withColumn("JSONcollection", to_json(struct(*df_combined.columns)))
+#     df_with_json.select("AdjudicatorId", "JSONcollection").foreach(upload_json)
+
+#     return df_with_json
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate A360 in Parallel
+def upload_a360_partition(partition):
+    for row in partition:
+        try:
+            blob_client = container_client.get_blob_client(
+                f"{gold_outputs}/A360/{row['A360FileName']}"
+            )
+            blob_client.upload_blob(row['A360Content'], overwrite=True)
+        except Exception as e:
+            print(f"Error uploading A360 for client_identifier {row['client_identifier']}: {str(e)}")
+
+def generate_a360(row):
+    try:
+        metadata_data = {
+            "operation": "create_record",
+            "relation_id": row.client_identifier,
+            "record_metadata": {
+                "publisher": "ARIA",
+                "record_class": "ARIA Judicial Records",
+                "region": "GBR",
+                "recordDate": str(row.recordDate),
+                "event_date": str(row.event_date),
+                "client_identifier": row.client_identifier,
+                "bf_001": row.bf_001 or "",
+                "bf_002": row.bf_002 or "",
+                "bf_003": row.bf_003 or "",
+                "bf_004": str(row.bf_004) or "",
+                "bf_005": row.bf_005 or ""
+            }
+        }
+
+        html_data = {
+            "operation": "upload_new_file",
+            "relation_id": row.client_identifier,
+            "file_metadata": {
+                "publisher": "ARIA",
+                "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
+                "file_tag": "html"
+            }
+        }
+
+        json_data = {
+            "operation": "upload_new_file",
+            "relation_id": row.client_identifier,
+            "file_metadata": {
+                "publisher": "ARIA",
+                "dz_file_name": f"judicial_officer_{row.client_identifier}.json",
+                "file_tag": "json"
+            }
+        }
+
+        # Convert dictionaries to JSON strings
+        metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+        html_data_str = json.dumps(html_data, separators=(',', ':'))
+        json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+        # Combine the data
+        all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+        return all_data_str
+    except Exception as e:
+        return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# Register UDF
+generate_a360_udf = udf(generate_a360, StringType())
+
+@dlt.table(
+    name="gold_judicial_officer_with_a360",
+    comment="Delta Live Gold Table with A360 content.",
+    path=f"{gold_mnt}/gold_judicial_officer_with_a360"
+)
+def gold_judicial_officer_with_a360():
+    df_joh_metadata = dlt.read("silver_archive_metadata")
+    # df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+    # Optionally load data from Hive
+    if read_hive:
+        df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+    # Generate A360 content
+    df_with_a360 = df_joh_metadata.withColumn(
+        "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+    ).withColumn("A360FileName", concat(lit("judicial_officer_"), col("client_identifier"), lit(".a360")))
+
+    # Upload A360 files
+    df_with_a360.select("client_identifier", "A360Content","A360FileName").foreachPartition(upload_a360_partition)
+
+    return df_with_a360.select("client_identifier", "A360Content","A360FileName")
+
+
+# COMMAND ----------
+
+# DBTITLE 1,temp
+# def upload_a360(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/A360/judicial_officer_{row['client_identifier']}.a360")
+#         blob_client.upload_blob(row['A360Content'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading A360 for Adjudicator ID {row['client_identifier']}: {str(e)}")
+
+# # Function to format dates
+# def format_date_zulu(date_value):
+#     if isinstance(date_value, str):  # If the date is already a string, return as is
+#         return date_value
+#     elif isinstance(date_value, (datetime,)):
+#         return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+#     return None  # Return None if the date is invalid or not provided
+
+# def generate_a360(row):
+#     try:
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": "ARIA",
+#                 "record_class": "ARIA Judicial Records",
+#                 "region": "GBR",
+#                 "recordDate": str(row.recordDate),
+#                 "event_date": str(row.event_date),
+#                 "client_identifier": row.client_identifier,
+#                 "bf_001": row.bf_001 or "",
+#                 "bf_002": row.bf_002 or "",
+#                 "bf_003": row.bf_003 or "",
+#                 "bf_004": str(row.bf_004) or "",
+#                 "bf_005": row.bf_005 or ""
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
+
+
+# @dlt.table(
+#     name="gold_judicial_officer_with_a360",
+#     comment="Delta Live Gold Table for with HTML content.",
+#     path=f"{gold_mnt}/gold_judicial_officer_with_a360"
+# )
+# def gold_judicial_officer_with_a360():
+
+#     df_joh_metadata = dlt.read("silver_archive_metadata")
+
+#     # Load the necessary dataframes from Hive metastore if not initial load
+#     if read_hive == True:
+#        df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+#     # Apply the UDF to the combined DataFrame
+#     df_with_a360 = df_joh_metadata.withColumn("A360Content", generate_a360_udf(struct(*df_joh_metadata.columns)))
+
+#     df_with_a360.select("client_identifier", "A360Content").foreach(upload_a360)
+
+#     return df_with_a360
+
+# COMMAND ----------
+
+# df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+# # Function to format dates
+# def format_date_zulu(date_value):
+#     if isinstance(date_value, str):  # If the date is already a string, return as is
+#         return date_value
+#     elif isinstance(date_value, (datetime,)):
+#         return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+#     return None  # Return None if the date is invalid or not provided
+
+# def generate_a360(row):
+#     try:
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": "ARIA",
+#                 "record_class": "ARIA Judicial Records",
+#                 "region": "GBR",
+#                 "recordDate": str(row.recordDate),
+#                 "event_date": str(row.event_date),
+#                 "client_identifier": row.client_identifier,
+#                 "bf_001": row.bf_001 or "",
+#                 "bf_002": row.bf_002 or "",
+#                 "bf_003": row.bf_003 or "",
+#                 "bf_004": str(row.bf_004) or "",
+#                 "bf_005": row.bf_005 or ""
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
+
+# # Apply the UDF to the combined DataFrame
+# df_with_a360 = df_joh_metadata.withColumn("A360Content", generate_a360_udf(struct(*df_joh_metadata.columns)))
+
+# display(df_with_a360)
+
+# COMMAND ----------
+
+# def upload_json(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/judicial_officer_{row['AdjudicatorId']}.json")
+#         blob_client.upload_blob(row['HTMLContent'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading HTML for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+# @dlt.table(
+#     name="judicial_officer_with_jsom",
+#     comment="Delta Live Gold Table for with HTML content.",
+#     path=f"{gold_mnt}/judicial_officer_with_jsom"
+# )
+# def judicial_officer_with_jsom():
+
+#     df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
+#     df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+#     df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+#     df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
+
+#     # Aggregate Other Centres
+#     grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+#         collect_list("OtherCentres").alias("OtherCentres")
+#     )
+
+#     # Aggregate Roles
+#     grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+#         collect_list(
+#             struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+#         ).alias("Roles")
+#     )
+
+#     # Aggregate History
+#     grouped_history = df_history.groupBy("AdjudicatorId").agg(
+#         collect_list(
+#             struct("HistDate", "HistType", "UserName", "Comment")
+#         ).alias("History")
+#     )
+
+#     # Join all aggregated data with JudicialOfficerDetails
+#     df_combined = (
+#         df_judicial_officer_details
+#         .join(grouped_centres, "AdjudicatorId", "left")
+#         .join(grouped_roles, "AdjudicatorId", "left")
+#         .join(grouped_history, "AdjudicatorId", "left")
+#     )
+
+#     # output_path = "{gold_outputs}/JSON/"  
+#     output_path = f"{gold_mnt}/JSON/" 
+
+#     # Repartition to optimize for JSON generation
+#     df_combined = df_combined.repartition("AdjudicatorId")
+
+#     # Write JSON files partitioned by AdjudicatorId
+#     df_combined.write.partitionBy("AdjudicatorId").json(output_path + f"judicial_officer_{AdjudicatorId}.json", mode="overwrite")
+
+#     df_with_json = df_combined.withColumn("jsoncollection", to_json(struct([df_combined[x] for x in df_combined.columns])))
+   
+#     return  df_with_json
+
+# COMMAND ----------
+
+# DBTITLE 1,Aggregating DataFrames
+# from pyspark.sql.functions import collect_list, struct, lit, col
+
+# df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_joh_filtered")
+# df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_details")
+# df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+# df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+# df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
+
+# # Aggregate Other Centres
+# grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+#     collect_list("OtherCentres").alias("OtherCentres")
+# )
+
+# # Aggregate Roles
+# grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+#     collect_list(
+#         struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+#     ).alias("Roles")
+# )
+
+# # Aggregate History
+# grouped_history = df_history.groupBy("AdjudicatorId").agg(
+#     collect_list(
+#         struct("HistDate", "HistType", "UserName", "Comment")
+#     ).alias("History")
+# )
+
+# # Join all aggregated data with JudicialOfficerDetails
+# df_combined = (
+#     df_judicial_officer_details
+#     .join(grouped_centres, "AdjudicatorId", "left")
+#     .join(grouped_roles, "AdjudicatorId", "left")
+#     .join(grouped_history, "AdjudicatorId", "left")
+# )
+
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate HTML in Parallel
+# from pyspark.sql import functions
+# from pyspark.sql.types import StringType
+# from datetime import datetime
+
+# # Helper to format dates in ISO format (YYYY-MM-DD)
+# def format_date_iso(date_value):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%Y-%m-%d")
+#     except Exception as e:
+#         return ""
+
+# # Helper to format dates in dd/MM/YYYY format
+# def format_date(date_value):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%d/%m/%Y")
+#     except Exception as e:
+#         return ""
+
+# # Modify the UDF to accept a row object
+# def generate_html(row):
+#     try:
+#         # Load template
+#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+#         with open(html_template_path, "r") as f:
+#             html_template = f.read()
+
+#         # Replace placeholders in the template with row data
+#         replacements = {
+#             "{{AdjudicatorId}}": str(row.AdjudicatorId),
+#             "{{Surname}}": row.Surname or "",
+#             "{{Forenames}}": row.Forenames or "",
+#             "{{Title}}": row.Title or "",
+#             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
+#             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
+#             "{{Telephone}}": row.ContactTelephone or "",
+#             "{{ContactDetails}}": row.ContactDetails or "",
+#             "{{DesignatedCentre}}": row.DesignatedCentre or "",
+#             "{{EmploymentTerm}}": row.EmploymentTerm or "",
+#             "{{FullTime}}": row.FullTime or "",
+#             "{{IdentityNumber}}": row.IdentityNumber or "",
+#             "{{DateOfRetirement}}": format_date_iso(row.DateOfRetirement),
+#             "{{ContractEndDate}}": format_date_iso(row.ContractEndDate),
+#             "{{ContractRenewalDate}}": format_date_iso(row.ContractRenewalDate),
+#             "{{DoNotUseReason}}": row.DoNotUseReason or "",
+#             "{{JudicialStatus}}": row.JudicialStatus or "",
+#             "{{Address1}}": row.Address1 or "",
+#             "{{Address2}}": row.Address2 or "",
+#             "{{Address3}}": row.Address3 or "",
+#             "{{Address4}}": row.Address4 or "",
+#             "{{Address5}}": row.Address5 or "",
+#             "{{Postcode}}": row.Postcode or "",
+#             "{{Mobile}}": row.Mobile or "",
+#             "{{Email}}": row.Email or "",
+#             "{{BusinessAddress1}}": row.BusinessAddress1 or "",
+#             "{{BusinessAddress2}}": row.BusinessAddress2 or "",
+#             "{{BusinessAddress3}}": row.BusinessAddress3 or "",
+#             "{{BusinessAddress4}}": row.BusinessAddress4 or "",
+#             "{{BusinessAddress5}}": row.BusinessAddress5 or "",
+#             "{{BusinessPostcode}}": row.BusinessPostcode or "",
+#             "{{BusinessTelephone}}": row.BusinessTelephone or "",
+#             "{{BusinessFax}}": row.BusinessFax or "",
+#             "{{BusinessEmail}}": row.BusinessEmail or "",
+#             "{{JudicialInstructions}}": row.JudicialInstructions or "",
+#             "{{JudicialInstructionsDate}}": format_date_iso(row.JudicialInstructionsDate),
+#             "{{Notes}}": row.Notes or "",
+#             "{{OtherCentre}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{centre}</td></tr>"
+#                 for i, centre in enumerate(row.OtherCentres or [])
+#             ),
+#             "{{AppointmentPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{i+1}</td><td id=\"midpadding\">{role.Role}</td><td id=\"midpadding\">{format_date(role.DateOfAppointment)}</td><td id=\"midpadding\">{format_date(role.EndDateOfAppointment)}</td></tr>"
+#                 for i, role in enumerate(row.Roles or [])
+#             ),
+#             "{{HistoryPlaceHolder}}": "\n".join(
+#                 f"<tr><td id=\"midpadding\">{format_date(hist.HistDate)}</td><td id=\"midpadding\">{hist.HistType}</td><td id=\"midpadding\">{hist.UserName}</td><td id=\"midpadding\">{hist.Comment}</td></tr>"
+#                 for hist in (row.History or [])
+#             ),
+#         }
+
+    
+        
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+        
+#         return html_template
+#     except Exception as e:
+#         return f"Error generating HTML for AdjudicatorId {row.AdjudicatorId}: {e}"
+
+# # Register UDF
+# generate_html_udf = udf(generate_html, StringType())
+
+# # Apply the UDF to the combined DataFrame
+# df_with_html = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns)))
+
+# display(df_with_html)
+
+# COMMAND ----------
+
+# DBTITLE 1,display HTML Content
+# html_content = df_with_html.select("HTMLContent").first()["HTMLContent"]
+# displayHTML(html_content)
+
+# COMMAND ----------
+
+# DBTITLE 1,Write HTML
+# def upload_html(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/judicial_officer_{row['AdjudicatorId']}.html")
+#         blob_client.upload_blob(row['HTMLContent'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading HTML for Adjudicator ID {row['AdjudicatorId']}: {str(e)}")
+
+# df_with_html.select("AdjudicatorId", "HTMLContent").foreach(upload_html)
+
+# COMMAND ----------
+
+# DBTITLE 1,Write Json
+# output_path = "{gold_outputs}/JSON/"  # Replace with your desired path
+
+# # Repartition to optimize for JSON generation
+# df_combined = df_combined.repartition("AdjudicatorId")
+
+# # Write JSON files partitioned by AdjudicatorId
+# df_combined.write.partitionBy("AdjudicatorId").json(output_path + "judicial_officer_{AdjudicatorId}.json", mode="overwrite")
+
+# COMMAND ----------
+
+# type(json_object)
+
+# COMMAND ----------
+
+# import json
+# from pyspark.sql.functions import to_json
+
+# df_with_json = df_combined.withColumn("jsoncollection", to_json(struct(*df_combined.columns)))
+# json_content = df_with_json.select("jsoncollection").first()["jsoncollection"]
+# json_object = json.loads(json_content)
+# display(json_object)
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate A360 in Parallel
+# df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+# # Function to format dates
+# def format_date_zulu(date_value):
+#     if isinstance(date_value, str):  # If the date is already a string, return as is
+#         return date_value
+#     elif isinstance(date_value, (datetime,)):
+#         return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+#     return None  # Return None if the date is invalid or not provided
+
+# def generate_a360(row):
+#     try:
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": "ARIA",
+#                 "record_class": "ARIA Judicial Records",
+#                 "region": "GBR",
+#                 "recordDate": str(row.recordDate),
+#                 "event_date": str(row.event_date),
+#                 "client_identifier": row.client_identifier,
+#                 "bf_001": row.bf_001 or "",
+#                 "bf_002": row.bf_002 or "",
+#                 "bf_003": row.bf_003 or "",
+#                 "bf_004": str(row.bf_004) or "",
+#                 "bf_005": row.bf_005 or ""
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": "ARIA",
+#                 "dz_file_name": f"judicial_officer_{row.client_identifier}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
+
+# # Apply the UDF to the combined DataFrame
+# df_with_a360 = df_joh_metadata.withColumn("A360Content", generate_a360_udf(struct(*df_joh_metadata.columns)))
+
+# display(df_with_a360)
+
+# COMMAND ----------
+
+# DBTITLE 1,display A360 Content
+# A360_content = df_with_a360.select("A360Content").first()["A360Content"]
+# print(A360_content)
+
+# COMMAND ----------
+
+# DBTITLE 1,Write A360
+# def upload_A360(row):
+#     try:
+#         blob_client = container_client.get_blob_client(f"{gold_outputs}/A360/judicial_officer_{row['client_identifier']}.A360")
+#         blob_client.upload_blob(row['A360Content'], overwrite=True)
+#     except Exception as e:
+#         print(f"Error uploading HTML for Adjudicator ID {row['client_identifier']}: {str(e)}")
+
+# df_with_a360.select("client_identifier", "A360Content").foreach(upload_A360)
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Generate HTML
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Function Overview
-# MAGIC This section details the function for generating HTML files and includes a sample execution.
-
-# COMMAND ----------
-
-# DBTITLE 1,TEST
-import json
-from pyspark.sql.functions import col
-from datetime import datetime
-from pyspark.sql.types import StructType, StructField, LongType, StringType
-
-# Step 5: Date formatting helper (Reuse from HTML generation)
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return "yyyy-MM-dd"
-
-# Function to generate JSON for each partition
-def generate_json_for_partition(partition_data):
-    results = []
-    
-    for row in partition_data:
-        adjudicator_id = row['AdjudicatorId']
-        
-        try:
-            # Query the judicial officer details
-            judicial_officer_details = row.asDict()
-
-            # Get related records from other dataframes (broadcasted for efficiency)
-            other_centres = other_centres_broadcast.value.filter(col('AdjudicatorId') == adjudicator_id).select('OtherCentres').collect()
-            roles = roles_broadcast.value.filter(col('AdjudicatorId') == adjudicator_id).select('Role', 'DateOfAppointment', 'EndDateOfAppointment').collect()
-            history = history_broadcast.value.filter(col('AdjudicatorId') == adjudicator_id).select('HistDate', col('HistType').alias('HistType'), 'UserName', 'Comment').collect()
-
-            # Step 6: Create a dictionary for the adjudicator details
-            adjudicator_data = {
-                "Surname": judicial_officer_details.get('Surname', ''),
-                "Forenames": judicial_officer_details.get('Forenames', ''),
-                "Title": judicial_officer_details.get('Title', ''),
-                "DateOfBirth": format_date(judicial_officer_details.get('DateOfBirth')),
-                "CorrespondenceAddress": judicial_officer_details.get('CorrespondenceAddress', ''),
-                "Telephone": judicial_officer_details.get('ContactTelephone', ''),
-                "DesignatedCentre": judicial_officer_details.get('DesignatedCentre', ''),
-                "OtherCentres": [centre['OtherCentres'] for centre in other_centres],
-                "EmploymentTerm": judicial_officer_details.get('EmploymentTerm', ''),
-                "FullTime": "Yes" if judicial_officer_details.get('FullTime', False) else "No",
-                "IdentityNumber": judicial_officer_details.get('IdentityNumber', ''),
-                "DateOfRetirement": format_date(judicial_officer_details.get('DateOfRetirement')),
-                "ContractEndDate": format_date(judicial_officer_details.get('ContractEndDate')),
-                "Roles": [
-                    {
-                        "Role": role['Role'],
-                        "DateOfAppointment": format_date(role['DateOfAppointment']),
-                        "EndDateOfAppointment": format_date(role['EndDateOfAppointment'])
-                    }
-                    for role in roles
-                ],
-                "History": [
-                    {
-                        "HistDate": format_date(hist['HistDate']),
-                        "HistType": hist['HistType'],
-                        "UserName": hist['UserName'],
-                        "Comment": hist['Comment']
-                    }
-                    for hist in history
-                ]
-            }
-
-            # Step 9: Write the JSON to DBFS
-            file_name = f"{gold_mnt}/JSON/judicial_officer_{adjudicator_id}.json"
-            json_content = json.dumps(adjudicator_data, indent=4)
-            dbutils.fs.put(file_name, json_content, overwrite=True)
-
-            # Step 10: Append success result
-            results.append((adjudicator_id, file_name, "Success"))
-
-        except Exception as e:
-            print(f"Error generating JSON for Adjudicator ID {adjudicator_id}: {str(e)}")
-            results.append((adjudicator_id, None, f"Error: {str(e)}"))
-
-    return iter(results)
-
-# Main function to process JSON generation
-@dlt.table(
-    name="gold_joh_json_generation_status",
-    comment="Delta Live Table for JSON Generation Status",
-    path=f"{gold_mnt}/gold_joh_json_generation_status"
-)
-def gold_joh_json_generation_status():
-    # Load dataframes
-    if not initial_Load:
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-    else:
-        df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-        df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-        df_other_centres = dlt.read("silver_othercentre_detail")
-        df_roles = dlt.read("silver_appointment_detail")
-        df_history = dlt.read("silver_history_detail")
-
-    # Broadcast related dataframes for efficiency
-    global other_centres_broadcast, roles_broadcast, history_broadcast
-    other_centres_broadcast = spark.sparkContext.broadcast(df_other_centres)
-    roles_broadcast = spark.sparkContext.broadcast(df_roles)
-    history_broadcast = spark.sparkContext.broadcast(df_history)
-
-    # Repartition by AdjudicatorId for parallel processing
-    df_judicial_officer_details_repart = df_judicial_officer_details.repartition(col('AdjudicatorId'))
-
-    # Use mapPartitions for parallel processing
-    result_rdd = df_judicial_officer_details_repart.rdd.mapPartitions(generate_json_for_partition)
-
-    # Convert the results back to a DataFrame
-    result_schema = StructType([
-        StructField("AdjudicatorId", LongType(), True),
-        StructField("GeneratedFilePath", StringType(), True),
-        StructField("Status", StringType(), True)
-    ])
-    
-    result_df = spark.createDataFrame(result_rdd, result_schema)
-
-    return result_df
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from datetime import datetime
-
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-    # return "dd-MM-yyyy"
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Define the function to generate HTML for a given adjudicator
-def generate_html_for_adjudicator(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles,df_history):
-    # Step 1: Query the judicial officer details
-    try:
-        judicial_officer_details = df_judicial_officer_details.filter(col('AdjudicatorId') == adjudicator_id).collect()[0]
-    except IndexError:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return
-
-    # Step 2: Query the other centre details
-    other_centres = df_other_centres.select('OtherCentres').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 3: Query the role details
-    roles = df_roles.select('Role','DateOfAppointment','EndDateOfAppointment').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 4: Query the history details -- HistTypeDescription
-    history = df_history.select('HistDate',col('HistType').alias('HistType'),'UserName','Comment').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-    # Print dict
-    # print(replacements)
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-
-    # History Details
-    History_Code = ''
-    for index,row in enumerate(history,start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}",History_Code)
-
-    # Step 9: Write transformed HTML to lake 
-    file_name = f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html"
-    dbutils.fs.put(file_name, html_template, overwrite=True)
-
-    print(f"HTML file created for Adjudicator with ID: {adjudicator_id} at {file_name}")
-
-    # # Display the generated HTML
-    # if adjudicator_id == 1660:
-    #     displayHTML(html_template)
-
-    # Step 10: Return the transformed HTML
-    return file_name, "Success"
-
-# @dlt.table
-# def generate_html_files():
-#     # Example usage
-#     adjudicator_id = 1660
-#     df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_et_hc_dnur")
-#     df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_hearingcentre")
-#     df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_role")
-#     df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_johistory_users")
-
-#     html_output = generate_html_for_adjudicator(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles,df_history)
-
-#     # Return an empty DataFrame with the specified schema
-#     return dlt.read("silver_adjudicator_et_hc_dnur")
-
-# Example usage
-# adjudicator_id = 1660
-# # Load the necessary dataframes from Hive metastore
-# df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-# df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-# df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-# df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-# df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-# generate_html_for_adjudicator(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles,df_history)
-
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
 # MAGIC #### Create gold_adjudicator_html_generation_status & Processing Adjudicator HTML's
 # MAGIC This section is to prallel process the HTML and create atracker table with log information.
 
 # COMMAND ----------
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pyspark.sql.types import LongType
+# DBTITLE 1,Adhoc debug code- Generating HTML Content with Date Formatting
 
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Silver Table for Silver Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
+# # from datetime import datetime
+
+# # # Helper to format dates in ISO format (YYYY-MM-DD)
+# def format_date_iso(date_value):
+#     try:
+#         # Attempt to parse as datetime if it's a string
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%Y-%m-%d")
     
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details =dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history =dlt.read("silver_history_detail")
+#     except (ValueError, TypeError):  # If parsing fails, attempt with other formats
+#         try:
+#             # Try parsing the string as dd/MM/YYYY format
+#             if isinstance(date_value, str):
+#                 date_value = datetime.strptime(date_value, "%d/%m/%Y")
+#             return date_value.strftime("%Y-%m-%d")
+#         except (ValueError, TypeError):  # If both parsing attempts fail
+#             return ""  # Return empty string if parsing fails
 
-    # Load the necessary dataframes from Hive metastore
-    if initial_Load == False:
-        print("Running non initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-   
+# # Helper to format dates in dd/MM/YYYY format
+# def format_date(date_value):
+#     try:
+#         # Attempt to parse as datetime if it's a string
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%d/%m/%Y")
+    
+#     except (ValueError, TypeError):  # If parsing fails, attempt with other formats
+#         try:
+#             # Try parsing the string as dd/MM/YYYY format
+#             if isinstance(date_value, str):
+#                 date_value = datetime.strptime(date_value, "%d/%m/%Y")
+#             return date_value.strftime("%d/%m/%Y")
+#         except (ValueError, TypeError):  # If both parsing attempts fail
+#             return ""  # Return empty string if parsing fails
 
-    # Fetch the list of Adjudicator IDs from the table
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-    # adjudicator_ids_list = df_judicial_officer_details.select('AdjudicatorId').filter(col('AdjudicatorId') == 1660).distinct().rdd.flatMap(lambda x: x).collect()
 
-    # Create an empty list to store results for the Delta Live Table
-    result_list = []
 
-    # Use ThreadPoolExecutor for parallel processing
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {
-            executor.submit(generate_html_for_adjudicator, adjudicator_id, 
-                             df_judicial_officer_details, df_other_centres, df_roles, df_history): adjudicator_id
-            for adjudicator_id in adjudicator_ids_list
-        }
-        
-        for future in as_completed(futures):
-            adjudicator_id = futures[future]
-            try:
-                # Call the function to generate the HTML and file name, along with the status
-                file_name, status = future.result()
-                
-                # Append the result (with status) to the list
-                result_list.append((adjudicator_id, file_name, status))
-            except Exception as e:
-                print(f"Error generating HTML for Adjudicator ID {adjudicator_id}: {str(e)}")
-                result_list.append((adjudicator_id, None, f"Error: {str(e)}"))
 
-    # Check if results were generated
-    if not result_list:
-        print("No results generated. Returning an empty DataFrame.")
-        # Return an empty DataFrame with the defined schema
-        empty_schema = StructType([
-            StructField("AdjudicatorId", LongType(), True),
-            StructField("GeneratedFilePath", StringType(), True),
-            StructField("Status", StringType(), True)
-        ])
-        return spark.createDataFrame([], empty_schema)
+# # Helper function to find data from a list by AdjudicatorId
+# def find_data_in_list(data_list, adjudicator_id):
+#     for row in data_list:
+#         if row['AdjudicatorId'] == adjudicator_id:
+#             return row
+#     return None
 
-    # Convert the results list to a DataFrame and return as a Delta Live Table
-    result_df = spark.createDataFrame(result_list, ["AdjudicatorId", "GeneratedFilePath", "Status"])
+# # Define the function to generate HTML content for a given adjudicator
+# def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
+#     try:
+#         # Step 1: Find judicial officer details
+#         judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
+#         if not judicial_officer_details:
+#             print(f"No details found for Adjudicator ID: {adjudicator_id}")
+#             return None, "No details found"
 
-    return result_df
+#         # Step 2: Find other centres
+#         other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 3: Find roles
+#         roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 4: Find history
+#         history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 4: Read the HTML template
+#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+#         with open(html_template_path, "r") as f:
+#             html_template = "".join([l for l in f])
+
+#         # Step 6: Convert the Spark Row object to a dictionary
+#         row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
+
+#         # print(type(row_dict.get('DateOfBirth'))) # <class 'datetime.datetime'>
+
+#         # Create a dictionary with the replacements, ensuring all values are strings
+#         replacements = {
+#             "{{Surname}}": str(row_dict.get('Surname', '') or ''),
+#             "{{Title}}": str(row_dict.get('Title', '') or ''),
+#             "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
+#             "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
+#             "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
+#             "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
+#             "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
+#             "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
+#             "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
+#             "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
+#             "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
+#             "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
+#             "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
+#             "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
+#             "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
+#             "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
+#             "{{Address1}}": str(row_dict.get('Address1', '') or ''),
+#             "{{Address2}}": str(row_dict.get('Address2', '') or ''),
+#             "{{Address3}}": str(row_dict.get('Address3', '') or ''),
+#             "{{Address4}}": str(row_dict.get('Address4', '') or ''),
+#             "{{Address5}}": str(row_dict.get('Address5', '') or ''),
+#             "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
+#             "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
+#             "{{Email}}": str(row_dict.get('Email', '') or ''),
+#             "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
+#             "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
+#             "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
+#             "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
+#             "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
+#             "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
+#             "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
+#             "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
+#             "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
+#             "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
+#             "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
+#             "{{Notes}}": str(row_dict.get('Notes', '') or ''),
+#         }
+
+#         # Step 7: Replace placeholders using the replacements dictionary
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+
+#         # Step 8: Handle multiple rows for Other Centres
+#         other_centres_code = ""
+#         for i, centre in enumerate(other_centres, start=1):
+#             line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
+#             other_centres_code += line + '\n'
+#         html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
+
+#         # Handle roles
+#         roles_code = ""
+#         for i, role in enumerate(roles, start=1):
+#             line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
+#             roles_code += line + '\n'
+            
+#         html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
+
+#         # History Details
+#         History_Code = ''
+#         for index, row in enumerate(history, start=1):
+#             # print(type(row['HistDate']))
+#             line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
+#             History_Code += line + '\n'
+#         html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
+
+#         # Step 9: Return the transformed HTML content
+#         return html_template, "Success"
+
+#     except Exception as e:
+#         print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
+#         return None, f"Error writing file: {str(e)}"
+
+# # adjudicator_id = 5210
+# # df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.stg_joh_filtered")
+# # df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_adjudicator_detail")
+# # df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_othercentre_detail")
+# # df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_appointment_detail")
+# # df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh_test.silver_history_detail")
+
+# adjudicator_id = 1660
+# df_stg_joh_filtered = spark.read.table(f"hive_metastore.ariadm_arm_joh.stg_joh_filtered")
+# df_judicial_officer_details = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
+# df_other_centres = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+# df_roles = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+# df_history = spark.read.table(f"hive_metastore.ariadm_arm_joh.silver_history_detail")
+
+# # Broadcast the dataframes to all workers
+# judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
+# other_centres_bc = spark.sparkContext.broadcast(df_other_centres.collect())
+# roles_bc = spark.sparkContext.broadcast(df_roles.collect())
+# history_bc = spark.sparkContext.broadcast(df_history.collect())
+
+# html_content, status = generate_html_content(
+#             adjudicator_id,
+#             judicial_officer_details_bc.value,
+#             other_centres_bc.value,
+#             roles_bc.value,
+#             history_bc.value
+#         )
+
+# displayHTML(html_content)
 
 # COMMAND ----------
 
-# %sql
-# SELECT * from hive_metastore.ariadm_arm_joh.gold_joh_html_generation_status
-# -- where Status != 'Success'
+# DBTITLE 1,Generating Judicial Officer Profiles in HMTL Outputs
 
+# # Date formatting helper
+# # def format_date_iso(date_value):
+# #     if date_value:
+# #         return datetime.strftime(date_value, "%Y-%m-%d")
+# #     return ""
+
+# # def format_date(date_value):
+# #     if date_value:
+# #         return datetime.strftime(date_value, "%d/%m/%Y")
+# #     return ""
+
+# # Helper to format dates in ISO format (YYYY-MM-DD)
+# def format_date_iso(date_value):
+#     try:
+#         if isinstance(date_value, str):
+#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
+#         return date_value.strftime("%Y-%m-%d")
+#     except Exception as e:
+#         return ""
+
+# # Helper function to find data from a list by AdjudicatorId
+# def find_data_in_list(data_list, adjudicator_id):
+#     for row in data_list:
+#         if row['AdjudicatorId'] == adjudicator_id:
+#             return row
+#     return None
+
+# # Define the function to generate HTML content for a given adjudicator
+# def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
+#     try:
+#         # Step 1: Find judicial officer details
+#         judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
+#         if not judicial_officer_details:
+#             print(f"No details found for Adjudicator ID: {adjudicator_id}")
+#             return None, "No details found"
+
+#         # Step 2: Find other centres
+#         other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 3: Find roles
+#         roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 4: Find history
+#         history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 4: Read the HTML template
+#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+#         with open(html_template_path, "r") as f:
+#             html_template = "".join([l for l in f])
+
+#         # Step 6: Convert the Spark Row object to a dictionary
+#         row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
+
+#         # Create a dictionary with the replacements, ensuring all values are strings
+#         replacements = {
+#             "{{Surname}}": str(row_dict.get('Surname', '') or ''),
+#             "{{Title}}": str(row_dict.get('Title', '') or ''),
+#             "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
+#             "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
+#             "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
+#             "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
+#             "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
+#             "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
+#             "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
+#             "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
+#             "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
+#             "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
+#             "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
+#             "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
+#             "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
+#             "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
+#             "{{Address1}}": str(row_dict.get('Address1', '') or ''),
+#             "{{Address2}}": str(row_dict.get('Address2', '') or ''),
+#             "{{Address3}}": str(row_dict.get('Address3', '') or ''),
+#             "{{Address4}}": str(row_dict.get('Address4', '') or ''),
+#             "{{Address5}}": str(row_dict.get('Address5', '') or ''),
+#             "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
+#             "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
+#             "{{Email}}": str(row_dict.get('Email', '') or ''),
+#             "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
+#             "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
+#             "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
+#             "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
+#             "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
+#             "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
+#             "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
+#             "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
+#             "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
+#             "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
+#             "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
+#             "{{Notes}}": str(row_dict.get('Notes', '') or ''),
+#         }
+
+#         # Step 7: Replace placeholders using the replacements dictionary
+#         for key, value in replacements.items():
+#             html_template = html_template.replace(key, value)
+
+#         # Step 8: Handle multiple rows for Other Centres
+#         other_centres_code = ""
+#         for i, centre in enumerate(other_centres, start=1):
+#             line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
+#             other_centres_code += line + '\n'
+#         html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
+
+#         # Handle roles
+#         roles_code = ""
+#         for i, role in enumerate(roles, start=1):
+#             line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date_iso(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date_iso(role['EndDateOfAppointment'])}</td></tr>"
+#             roles_code += line + '\n'
+            
+#         html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
+
+#         # History Details
+#         History_Code = ''
+#         for index, row in enumerate(history, start=1):
+#             line = f"<tr><td id=\"midpadding\">{format_date_iso(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
+#             History_Code += line + '\n'
+#         html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
+
+#         # Step 9: Return the transformed HTML content
+#         return html_template, "Success"
+
+#     except Exception as e:
+#         print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
+#         return None, f"Error writing file: {str(e)}"
+
+# # Define a function to run the HTML generation for each partition
+# def process_html_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
+#     results = []
+#     for row in partition:
+#         adjudicator_id = row['AdjudicatorId']
+#         html_content, status = generate_html_content(
+#             adjudicator_id,
+#             judicial_officer_details_bc.value,
+#             other_centres_bc.value,
+#             roles_bc.value,
+#             history_bc.value
+#         )
+        
+#         # if html_content is None:
+#         #     continue
+        
+#         # Define the target path for each Adjudicator's HTML file
+#         target_path = f"{gold_outputs}/HTML/judicial_officer_{adjudicator_id}.html"
+        
+#         # Upload the HTML content to Azure Blob Storage
+#         blob_client = container_client.get_blob_client(target_path)
+#         # blob_client.upload_blob(html_content, overwrite=True)
+#         if status == "Success":
+#             try:
+#                 blob_client.upload_blob(html_content, overwrite=True)
+#             except Exception as e:
+#                 print(f"Error uploading HTML for Adjudicator ID {adjudicator_id}: {str(e)}")
+#                 continue  # Skip to the next Adjudicator
+
+#         # Append the result
+#         results.append((adjudicator_id, target_path, status))
+#     return results
+
+
+
+# @dlt.table(
+#     name="gold_joh_html_generation_status",
+#     comment="Delta Live Table for Adjudicator HTML Generation Status.",
+#     path=f"{gold_mnt}/gold_joh_html_generation_status"
+# )
+# def gold_joh_html_generation_status():
+#     df_stg_joh_filtered = dlt.read("stg_joh_filtered")
+#     df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
+#     df_other_centres = dlt.read("silver_othercentre_detail")
+#     df_roles = dlt.read("silver_appointment_detail")
+#     df_history = dlt.read("silver_history_detail")
+
+#     # Load the necessary dataframes from Hive metastore if not initial load
+#     if read_hive == True:
+#         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
+#         df_judicial_officer_details = spark.read.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
+#         df_other_centres = spark.read.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
+#         df_roles = spark.read.table(f"hive_metastore.{hive_schema}.silver_appointment_detail")
+#         df_history = spark.read.table(f"hive_metastore.{hive_schema}.silver_history_detail")
+
+#     # Broadcast the dataframes to all workers
+#     judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
+#     other_centres_bc = spark.sparkContext.broadcast(df_other_centres.collect())
+#     roles_bc = spark.sparkContext.broadcast(df_roles.collect())
+#     history_bc = spark.sparkContext.broadcast(df_history.collect())
+
+#     # Repartition the DataFrame by AdjudicatorId to optimize parallel processing
+#     num_partitions = 32  # Setting this to optimize for your 8-worker cluster
+#     repartitioned_df = df_stg_joh_filtered.repartition(num_partitions, "AdjudicatorId")
+
+#     # Run the HTML generation on each partition
+#     result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_html_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc))
+
+#     # Collect results
+#     results = result_rdd.collect()
+
+#     # Create DataFrame for output
+#     schema = StructType([
+#         StructField("AdjudicatorId", LongType(), True),
+#         StructField("HTML_Path", StringType(), True),
+#         StructField("Status", StringType(), True)
+#     ])
+#     html_result_df = spark.createDataFrame(results, schema=schema)
+
+#     # Log the HTML paths in the Delta Live Table
+#     return html_result_df.select("AdjudicatorId", "HTML_Path", "Status")
 
 
 # COMMAND ----------
@@ -1293,218 +2384,197 @@ def gold_joh_html_generation_status():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Function Overview
-# MAGIC This section details the function for generating Json files and includes a sample execution.
-
-# COMMAND ----------
-
-# DBTITLE 1,HMTL Output Processing
-import json
-from pyspark.sql.functions import col
-from datetime import datetime
-
-# Step 5: Date formatting helper
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return "yyyy-MM-dd"
-
-# Define the function to generate JSON for a given adjudicator
-def generate_json_for_adjudicator(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles, df_history):
-    # Step 1: Query the judicial officer details
-    try:
-        judicial_officer_details = df_judicial_officer_details.filter(col('AdjudicatorId') == adjudicator_id).collect()[0]
-    except IndexError:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return
-
-    # Step 2: Query the other centre details
-    other_centres = df_other_centres.filter(col('AdjudicatorId') == adjudicator_id).select('OtherCentres').collect()
-
-    # Step 3: Query the role details
-    roles = df_roles.filter(col('AdjudicatorId') == adjudicator_id).select('Role', 'DateOfAppointment', 'EndDateOfAppointment').collect()
-
-    # Step 4: Query the history details
-    history = df_history.filter(col('AdjudicatorId') == adjudicator_id).select('HistDate', col('HistType').alias('HistType'), 'UserName', 'Comment').collect()
-
-   
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary for the adjudicator details
-    # Create a dictionary for the adjudicator details
-    adjudicator_data = {
-        "Surname": row_dict.get('Surname', ''),
-        "Forenames": row_dict.get('Forenames', ''),
-        "Title": row_dict.get('Title', ''),
-
-
-        "DateOfBirth": format_date(row_dict.get('DateOfBirth')),
-        "CorrespondenceAddress": row_dict.get('CorrespondenceAddress', ''),
-        "Telephone": row_dict.get('ContactTelephone', ''),
-        "ContactDetails": row_dict.get('ContactDetails', ''),
-        "DesignatedCentre": row_dict.get('DesignatedCentre', ''),
-
-        "OtherCentres": [centre['OtherCentres'] for centre in other_centres],
-
-
-        "EmploymentTerm": row_dict.get('EmploymentTerm', ''),
-        "FullTime": "Yes" if row_dict.get('FullTime', False) else "No",
-        "IdentityNumber": row_dict.get('IdentityNumber', ''),
-        "DateOfRetirement": format_date(row_dict.get('DateOfRetirement')),
-        "ContractEndDate": format_date(row_dict.get('ContractEndDate')),
-        "ContractRenewalDate": format_date(row_dict.get('ContractRenewalDate')),
-        "DoNotUseReason": row_dict.get('DoNotUseReason', ''),
-        "JudicialStatus": row_dict.get('JudicialStatus', ''),
-
-        "Roles": [
-            {
-                "Role": role['Role'],
-                "DateOfAppointment": format_date(role['DateOfAppointment']),
-                "EndDateOfAppointment": format_date(role['EndDateOfAppointment'])
-            }
-            for role in roles
-        ],
-
-
-        "Address1": row_dict.get('Address1', ''),
-        "Address2": row_dict.get('Address2', ''),
-        "Address3": row_dict.get('Address3', ''),
-        "Address4": row_dict.get('Address4', ''),
-        "Address5": row_dict.get('Address5', ''),
-        "Postcode": row_dict.get('Postcode', ''),
-        "Mobile": row_dict.get('Mobile', ''),
-        "Email": row_dict.get('Email', ''),
-        "BusinessAddress1": row_dict.get('BusinessAddress1', ''),
-        "BusinessAddress2": row_dict.get('BusinessAddress2', ''),
-        "BusinessAddress3": row_dict.get('BusinessAddress3', ''),
-        "BusinessAddress4": row_dict.get('BusinessAddress4', ''),
-        "BusinessAddress5": row_dict.get('BusinessAddress5', ''),
-        "BusinessPostcode": row_dict.get('BusinessPostcode', ''),
-        "BusinessTelephone": row_dict.get('BusinessTelephone', ''),
-        "BusinessFax": row_dict.get('BusinessFax', ''),
-        "BusinessEmail": row_dict.get('BusinessEmail', ''),
-        
-        "JudicialInstructions": row_dict.get('JudicialInstructions', ''),
-        "JudicialInstructionsDate": format_date(row_dict.get('JudicialInstructionsDate')),
-        "Notes": row_dict.get('Notes', ''),
-        
-        
-        "History": [
-            {
-                "HistDate": format_date(row['HistDate']),
-                "HistType": row['HistType'],
-                "UserName": row['UserName'],
-                "Comment": row['Comment']
-            }
-            for row in history
-        ]
-    }
-
-    # Step 9: Write transformed JSON to lake 
-    # json_dir = "{gold_mnt}/ARIADM/ARM/JSON"
-    file_name = f"{gold_mnt}/JSON/judicial_officer_{adjudicator_id}.json"
-    
-    # Convert the dictionary to a JSON string
-    json_content = json.dumps(adjudicator_data, indent=4)
-    
-    # Use dbutils.fs.put to write the JSON to DBFS
-    dbutils.fs.put(file_name, json_content, overwrite=True)
-
-    print(f"JSON file created for Adjudicator with ID: {adjudicator_id} at {file_name}")
-
-    # Step 10: Return the transformed JSON file path
-    return file_name, "Success"
-
-# Example usage
-# adjudicator_id = 1660
-# # Load the necessary dataframes from Hive metastore
-# df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-# df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-# df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-# df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-# generate_json_for_adjudicator(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles, df_history)
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
 # MAGIC #### Create gold_adjudicator_Json_generation_status & Processing Adjudicator Json's
 # MAGIC This section is to prallel process the json and create atracker table with log information.
 
 # COMMAND ----------
 
-# from concurrent.futures import ThreadPoolExecutor, as_completed
-# from pyspark.sql.types import LongType
+# DBTITLE 1,Generating Judicial Officer Profiles in JSON Outputs
+# # from pyspark.sql.functions import col
+# # from pyspark.sql.types import LongType, StringType, StructType, StructField
+# # from datetime import datetime
+# # import json
 
-@dlt.table(
-    name="gold_joh_json_generation_status",
-    comment="Delta Live Silver Table for Silver Adjudicator json Generation Status.",
-    path=f"{gold_mnt}/gold_joh_json_generation_status"
-)
-def gold_joh_json_generation_status():
-    
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details =dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history =dlt.read("silver_history_detail")
+# # # Step 5: Date formatting helper
+# # def format_date_iso(date_value):
+# #     if date_value:
+# #         return datetime.strftime(date_value, "%Y-%m-%d")
+# #     return ""
 
-    # Load the necessary dataframes from Hive metastore
-    if initial_Load == False:
-        print("Running non initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-   
+# # def format_date(date_value):
+# #     if date_value:
+# #         return datetime.strftime(date_value, "%d/%m/%Y")
+# #     return ""
 
-    # Fetch the list of Adjudicator IDs from the table
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-    # adjudicator_ids_list = df_judicial_officer_details.select('AdjudicatorId').filter(col('AdjudicatorId') == 1660).distinct().rdd.flatMap(lambda x: x).collect()
+# # # Helper function to find data from a list by AdjudicatorId
+# # def find_data_in_list(data_list, adjudicator_id):
+# #     for row in data_list:
+# #         if row['AdjudicatorId'] == adjudicator_id:
+# #             return row
+# #     return None
 
-    # Create an empty list to store results for the Delta Live Table
-    result_list = []
+# # Date formatting helper
+# def format_date_iso(date_value):
+#     if date_value:
+#         return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%S")
+#     return ""
 
-    # Use ThreadPoolExecutor for parallel processing
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {
-            executor.submit(generate_json_for_adjudicator, adjudicator_id, 
-                             df_judicial_officer_details, df_other_centres, df_roles, df_history): adjudicator_id
-            for adjudicator_id in adjudicator_ids_list
-        }
+# # Define the function to generate JSON content for a given adjudicator
+# def generate_json_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
+#     try:
+#         # Step 1: Find judicial officer details
+#         judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
+#         if not judicial_officer_details:
+#             print(f"No details found for Adjudicator ID: {adjudicator_id}")
+#             return None, "No details found"
+
+#         # Step 2: Find other centres
+#         other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 3: Find roles
+#         roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 4: Find history
+#         history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
+
+#         # Step 6: Convert the Spark Row object to a dictionary
+#         row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
+
+#         # Create a dictionary with the data
+#         json_data = {
+#             "Surname": row_dict.get('Surname', ''),
+#             "Title": row_dict.get('Title', ''),
+#             "Forenames": row_dict.get('Forenames', ''),
+#             "DateOfBirth": str(row_dict.get('DateOfBirth')),
+#             "CorrespondenceAddress": row_dict.get('CorrespondenceAddress', ''),
+#             "Telephone": row_dict.get('ContactTelephone', ''),
+#             "ContactDetails": row_dict.get('ContactDetails', ''),
+#             "DesignatedCentre": row_dict.get('DesignatedCentre', ''),
+#             "EmploymentTerm": row_dict.get('EmploymentTerm', ''),
+#             "FullTime": row_dict.get('FullTime', ''),
+#             "IdentityNumber": row_dict.get('IdentityNumber', ''),
+#             "DateOfRetirement": str(row_dict.get('DateOfRetirement')),
+#             "ContractEndDate": str(row_dict.get('ContractEndDate')),
+#             "ContractRenewalDate": str(row_dict.get('ContractRenewalDate')),
+#             "DoNotUseReason": row_dict.get('DoNotUseReason', ''),
+#             "JudicialStatus": row_dict.get('JudicialStatus', ''),
+#             "Address1": row_dict.get('Address1', ''),
+#             "Address2": row_dict.get('Address2', ''),
+#             "Address3": row_dict.get('Address3', ''),
+#             "Address4": row_dict.get('Address4', ''),
+#             "Address5": row_dict.get('Address5', ''),
+#             "Postcode": row_dict.get('Postcode', ''),
+#             "Mobile": row_dict.get('Mobile', ''),
+#             "Email": row_dict.get('Email', ''),
+#             "BusinessAddress1": row_dict.get('BusinessAddress1', ''),
+#             "BusinessAddress2": row_dict.get('BusinessAddress2', ''),
+#             "BusinessAddress3": row_dict.get('BusinessAddress3', ''),
+#             "BusinessAddress4": row_dict.get('BusinessAddress4', ''),
+#             "BusinessAddress5": row_dict.get('BusinessAddress5', ''),
+#             "BusinessPostcode": row_dict.get('BusinessPostcode', ''),
+#             "BusinessTelephone": row_dict.get('BusinessTelephone', ''),
+#             "BusinessFax": row_dict.get('BusinessFax', ''),
+#             "BusinessEmail": row_dict.get('BusinessEmail', ''),
+#             "JudicialInstructions": row_dict.get('JudicialInstructions', ''),
+#             "JudicialInstructionsDate": str(row_dict.get('JudicialInstructionsDate')),
+#             "Notes": row_dict.get('Notes', ''),
+#             "OtherCentres": [centre['OtherCentres'] for centre in other_centres],
+#             "Roles": [{"Role": role['Role'], "DateOfAppointment": str(role['DateOfAppointment']), "EndDateOfAppointment": str(role['EndDateOfAppointment'])} for role in roles],
+#             "History": [{"HistDate": str(hist['HistDate']), "HistType": hist['HistType'], "UserName": hist['UserName'], "Comment": hist['Comment']} for hist in history]
+#         }
+
+#         # Convert the dictionary to a JSON string
+#         json_content = json.dumps(json_data, indent=4)
+
+#         # Step 9: Return the transformed JSON content
+#         return json_content, "Success"
+
+#     except Exception as e:
+#         print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
+#         return None, f"Error writing file: {str(e)}"
+
+# # Define a function to run the JSON generation for each partition
+# def process_json_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
+#     results = []
+#     for row in partition:
+#         adjudicator_id = row['AdjudicatorId']
+#         json_content, status = generate_json_content(
+#             adjudicator_id,
+#             judicial_officer_details_bc.value,
+#             other_centres_bc.value,
+#             roles_bc.value,
+#             history_bc.value
+#         )
         
-        for future in as_completed(futures):
-            adjudicator_id = futures[future]
-            try:
-                # Call the function to generate the json and file name, along with the status
-                file_name, status = future.result()
-                
-                # Append the result (with status) to the list
-                result_list.append((adjudicator_id, file_name, status))
-            except Exception as e:
-                print(f"Error generating json for Adjudicator ID {adjudicator_id}: {str(e)}")
-                result_list.append((adjudicator_id, None, f"Error: {str(e)}"))
+#         if json_content is None:
+#             continue
+        
+#         # Define the target path for each Adjudicator's JSON file
+#         target_path = f"{gold_outputs}/JSON/judicial_officer_{adjudicator_id}.json"
+        
+#         # Upload the JSON content to Azure Blob Storage
+#         blob_client = container_client.get_blob_client(target_path)
+#         # blob_client.upload_blob(json_content, overwrite=True)
 
-    # Check if results were generated
-    if not result_list:
-        print("No results generated. Returning an empty DataFrame.")
-        # Return an empty DataFrame with the defined schema
-        empty_schema = StructType([
-            StructField("AdjudicatorId", LongType(), True),
-            StructField("GeneratedFilePath", StringType(), True),
-            StructField("Status", StringType(), True)
-        ])
-        return spark.createDataFrame([], empty_schema)
+#         try:
+#             blob_client.upload_blob(json_content, overwrite=True)
+#         except Exception as e:
+#             print(f"Error uploading HTML for Adjudicator ID {adjudicator_id}: {str(e)}")
+#             continue  # Skip to the next Adjudicator
 
-    # Convert the results list to a DataFrame and return as a Delta Live Table
-    result_df = spark.createDataFrame(result_list, ["AdjudicatorId", "GeneratedFilePath", "Status"])
+        
+#         # Append the result
+#         results.append((adjudicator_id, target_path, status))
+#     return results
 
-    return result_df
+# @dlt.table(
+#     name="gold_joh_json_generation_status",
+#     comment="Delta Live Table for Adjudicator JSON Generation Status.",
+#     path=f"{gold_mnt}/gold_joh_json_generation_status"
+# )
+# def gold_joh_json_generation_status():
+#     df_stg_joh_filtered = dlt.read("stg_joh_filtered")
+#     df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
+#     df_other_centres = dlt.read("silver_othercentre_detail")
+#     df_roles = dlt.read("silver_appointment_detail")
+#     df_history = dlt.read("silver_history_detail")
+
+#     # Load the necessary dataframes from Hive metastore if not initial load
+#     if read_hive == True:
+#         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
+#         df_judicial_officer_details = spark.read.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
+#         df_other_centres = spark.read.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
+#         df_roles = spark.read.table(f"hive_metastore.{hive_schema}.silver_appointment_detail")
+#         df_history = spark.read.table(f"hive_metastore.{hive_schema}.silver_history_detail")
+
+#     # Broadcast the dataframes to all workers
+#     judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
+#     other_centres_bc = spark.sparkContext.broadcast(df_other_centres.collect())
+#     roles_bc = spark.sparkContext.broadcast(df_roles.collect())
+#     history_bc = spark.sparkContext.broadcast(df_history.collect())
+
+#     # Repartition the DataFrame by AdjudicatorId to optimize parallel processing
+#     num_partitions = 32  # Setting this to optimize for your 8-worker cluster
+#     repartitioned_df = df_stg_joh_filtered.repartition(32, "AdjudicatorId")
+
+#     # Run the JSON generation on each partition
+#     result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_json_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc))
+
+#     # Collect results
+#     results = result_rdd.collect()
+
+#     # Create DataFrame for output
+#     schema = StructType([
+#         StructField("AdjudicatorId", LongType(), True),
+#         StructField("JSON_Path", StringType(), True),
+#         StructField("Status", StringType(), True)
+#     ])
+#     json_result_df = spark.createDataFrame(results, schema=schema)
+
+#     # Log the JSON paths in the Delta Live Table
+#     return json_result_df.select("AdjudicatorId", "JSON_Path", "Status")
+
+
 
 # COMMAND ----------
 
@@ -1514,11 +2584,161 @@ def gold_joh_json_generation_status():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Function Overview
-# MAGIC This section details the function for generating A360 files and includes a sample execution.
+# MAGIC #### Create gold_adjudicator_a360_generation_status & Processing Adjudicator a360's
+# MAGIC This section is to prallel process the a360 and create atracker table with log information.
 
 # COMMAND ----------
 
+# DBTITLE 1,Generating metadata in A360 Outputs
+# # Function to format dates
+# def format_date_zulu(date_value):
+#     if isinstance(date_value, str):  # If the date is already a string, return as is
+#         return date_value
+#     elif isinstance(date_value, (datetime,)):
+#         return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+#     return None  # Return None if the date is invalid or not provided
+
+# # Function to generate an .a360 file for a given adjudicator
+# def generate_a360_file_for_adjudicator(adjudicator_id, joh_metadata_list, container_client):
+#     try:
+#         # Find judicial officer metadata
+#         joh_metadata = next((row for row in joh_metadata_list if row['client_identifier'] == adjudicator_id), None)
+#         if not joh_metadata:
+#             print(f"No details found for Adjudicator ID: {adjudicator_id}")
+#             return None, f"No details for Adjudicator ID: {adjudicator_id}"
+
+#         # Create metadata, HTML, and JSON strings
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": joh_metadata.client_identifier,
+#             "record_metadata": {
+#                 "publisher": joh_metadata.publisher,
+#                 "record_class": joh_metadata.record_class,
+#                 "region": joh_metadata.region,
+#                 "recordDate": format_date_zulu(joh_metadata.recordDate),
+#                 "event_date": format_date_zulu(joh_metadata.event_date),
+#                 "client_identifier": joh_metadata.client_identifier,
+#                 "bf_001": joh_metadata.bf_001,
+#                 "bf_002": joh_metadata.bf_002,
+#                 "bf_003": joh_metadata.bf_003,
+#                 "bf_004": format_date_zulu(joh_metadata.bf_004),
+#                 "bf_005": joh_metadata.bf_005
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": joh_metadata.client_identifier,
+#             "file_metadata": {
+#                 "publisher": joh_metadata.publisher,
+#                 "dz_file_name": f"judicial_officer_{adjudicator_id}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": joh_metadata.client_identifier,
+#             "file_metadata": {
+#                 "publisher": joh_metadata.publisher,
+#                 "dz_file_name": f"judicial_officer_{adjudicator_id}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         # Define the target path for each Adjudicator's A360 file
+#         target_path = f"{gold_outputs}/A360/judicial_officer_{adjudicator_id}.a360"
+        
+#         # Upload the A360 content to Azure Blob Storage
+#         # Not standard content so, write the text here
+#         blob_client = container_client.get_blob_client(target_path)
+#         blob_client.upload_blob(all_data_str, overwrite=True)
+
+
+#         # print(f"A360 file created for Adjudicator with ID: {adjudicator_id} at {target_path}")
+#         return target_path, "Success"
+#     except Exception as e:
+#         print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
+#         return None, f"Error writing file: {str(e)}"
+
+# # Define a function to run the A360 file generation for each partition
+# def process_partition_a360(partition, joh_metadata_bc, container_client):
+#     results = []
+#     for row in partition:
+#         adjudicator_id = row['AdjudicatorId']
+#         file_name, status = generate_a360_file_for_adjudicator(
+#             adjudicator_id,
+#             joh_metadata_bc.value,
+#             container_client
+#         )
+        
+#         if file_name is None:
+#             results.append((adjudicator_id, "", status))
+#         else:
+#             results.append((adjudicator_id, file_name, status))
+#     return results
+
+
+# @dlt.table(
+#     name="gold_joh_a360_generation_status",
+#     comment="Delta Live Table for Silver Adjudicator .a360 File Generation Status.",
+#     path=f"{gold_mnt}/gold_joh_a360_generation_status"
+# )
+# def gold_joh_a360_generation_status():
+
+#     df_stg_joh_filtered = dlt.read("stg_joh_filtered")
+#     df_joh_metadata = dlt.read("silver_archive_metadata")
+
+#     # Load necessary data from Hive tables if not initial load
+#     if read_hive == True:
+#         print("Running non initial load")
+#         df_stg_joh_filtered = spark.read.table(f"hive_metastore.{hive_schema}.stg_joh_filtered")
+#         df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+
+#     # Broadcast the dataframes to all workers
+#     joh_metadata_bc = spark.sparkContext.broadcast(df_joh_metadata.collect())
+
+#     # Repartition the DataFrame by AdjudicatorId to optimize parallel processing
+#     num_partitions = 32  # Setting this to optimize for your 8-worker cluster
+#     repartitioned_df = df_stg_joh_filtered.repartition(num_partitions, "AdjudicatorId")
+
+#     # # Define the container client for Azure Blob Storage
+#     # container_client = BlobServiceClient.from_connection_string("your_connection_string").get_container_client("your_container_name")
+
+#     # Run the A360 file generation on each partition
+#     result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition_a360(partition, joh_metadata_bc, container_client))
+
+#     # Collect results
+#     results = result_rdd.collect()
+
+#     # Create DataFrame for output
+#     schema = StructType([
+#         StructField("AdjudicatorId", LongType(), True),
+#         StructField("GeneratedFilePath", StringType(), True),
+#         StructField("Status", StringType(), True)
+#     ])
+#     a360_result_df = spark.createDataFrame(results, schema=schema)
+
+#     # Log the A360 paths in the Delta Live Table
+#     return a360_result_df.select("AdjudicatorId", "GeneratedFilePath", "Status")
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Appendix
+
+# COMMAND ----------
+
+# DBTITLE 1,Sample A360
 #Sample frin td
 # {"operation": "create_record","relation_id":"152820","record_metadata":{"publisher":"IADEMO","record_class":"IADEMO","region":"GBR","recordDate":"2023-04-12T00:00:00Z","event_date":"2023-04-12T00:00:00Z","client_identifier":"HU/02287/2021","bf_001":"Orgest","bf_002":"Hoxha","bf_003":"A1234567/001","bf_004":"1990-06-09T00:00:00Z","bf_005":"ABC/12345","bf_010":"2024-01-01T00:00:00Z"}}
 
@@ -1529,1550 +2749,16 @@ def gold_joh_json_generation_status():
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col
-from datetime import datetime
-import json
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-
-# # Function to format dates
-def format_date(date_value):
-    if isinstance(date_value, str):  # If the date is already a string, return as is
-        return date_value
-    elif isinstance(date_value, (datetime,)):
-        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
-    return None  # Return None if the date is invalid or not provided
-
-# Function to generate an .a360 file for a given adjudicator
-def generate_a360_file_for_adjudicator(adjudicator_id, df_joh_metadata):
-    try:
-        # Query the judicial officer details
-        df_metadata  = df_joh_metadata.filter(col('client_identifier') == adjudicator_id).collect()
-    except Exception as e:
-        print(f"Error querying Adjudicator ID: {adjudicator_id}, Error: {str(e)}")
-        return None, f"Error querying Adjudicator ID: {adjudicator_id}: {str(e)}"
-
-    if not df_metadata:  # Check if any rows are returned
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, f"No details for Adjudicator ID: {adjudicator_id}"
-
-    # Convert the first Spark Row object to a dictionary
-    row_dict = df_metadata[0].asDict()
-
-    # Create metadata, HTML, and JSON strings
-    metadata_data = {
-        "operation": "create_record",
-        "relation_id": row_dict.get('client_identifier', ''),
-        "record_metadata": {
-            "publisher": row_dict.get('publisher', ''),
-            "record_class": row_dict.get('record_class', ''),
-            "region": row_dict.get('region', ''),
-            "recordDate": format_date(row_dict.get('recordDate')),
-            "event_date": format_date(row_dict.get('event_date')),
-            "client_identifier": row_dict.get('client_identifier', ''),
-            "bf_001": row_dict.get('bf_001', ''),
-            "bf_002": row_dict.get('bf_002', ''),
-            "bf_003": row_dict.get('bf_003', ''),
-            "bf_004": format_date(row_dict.get('bf_004')),
-            "bf_005": row_dict.get('bf_005', '')
-        }
-    }
-
-    html_data = {
-        "operation": "upload_new_file",
-        "relation_id": row_dict.get('client_identifier', ''),
-        "file_metadata": {
-            "publisher": row_dict.get('publisher', ''),
-            "dz_file_name": f"judicial_officer_{adjudicator_id}.html",
-            "file_tag": "html"
-        }
-    }
-
-    json_data = {
-        "operation": "upload_new_file",
-        "relation_id": row_dict.get('client_identifier', ''),
-        "file_metadata": {
-            "publisher": row_dict.get('publisher', ''),
-            "dz_file_name": f"judicial_officer_{adjudicator_id}.json",
-            "file_tag": "json"
-        }
-    }
-
-    # Convert dictionaries to JSON strings
-    metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
-    html_data_str = json.dumps(html_data, separators=(',', ':'))
-    json_data_str = json.dumps(json_data, separators=(',', ':'))
-
-    # Combine the data
-    all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
-
-    # # Now you have all three lines stored in `all_data_str`
-    # print(all_data_str)  # Or use `all_data_str` as needed
-
-    # Write to A360 file
-    file_name = f"{gold_mnt}/A360/judicial_officer_{adjudicator_id}.a360"
-    try:
-        dbutils.fs.put(file_name, all_data_str, overwrite=True)
-        print(f"A360 file created for Adjudicator with ID: {adjudicator_id} at {file_name}")
-        return file_name, "Success"
-    except Exception as e:
-        print(f"Error writing file for Adjudicator ID: {adjudicator_id}: {str(e)}")
-        return None, f"Error writing file: {str(e)}"
-    
-# Example usage
-# adjudicator_id = 1660
-
-# # Load necessary data from Hive tables
-# df_joh_metadata = spark.read.table("hive_metastore.ariadm_arm_joh.silver_archive_metadata")
-
-# generate_a360_file_for_adjudicator(adjudicator_id, df_joh_metadata)
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC #### Create gold_adjudicator_Json_generation_status & Processing Adjudicator A360's
-# MAGIC This section is to prallel process the json and create atracker table with log information.
-
-# COMMAND ----------
-
-# Delta Live Table
-@dlt.table(
-    name="gold_joh_a360_generation_status",
-    comment="Delta Live Table for Silver Adjudicator .a360 File Generation Status.",
-    path=f"{gold_mnt}/gold_joh_a360_generation_status"
-)
-def gold_joh_a360_generation_status():
-
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_joh_metadata = dlt.read("silver_archive_metadata")
-
-    
-    # Load necessary data from Hive tables
-    if initial_Load == False:
-        print("Running non initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_joh_metadata = spark.read.table("hive_metastore.ariadm_arm_joh.silver_archive_metadata")
-
-    # Fetch the list of Adjudicator IDs
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-
-    result_list = []
-
-    # Use ThreadPoolExecutor for parallel processing
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {
-            executor.submit(generate_a360_file_for_adjudicator, adjudicator_id, df_joh_metadata): adjudicator_id
-            for adjudicator_id in adjudicator_ids_list
-        }
-
-        for future in as_completed(futures):
-            adjudicator_id = futures[future]
-            try:
-                file_name, status = future.result()
-                result_list.append((int(adjudicator_id), str(file_name), str(status)))
-            except Exception as e:
-                print(f"Error generating .a360 for Adjudicator ID {adjudicator_id}: {str(e)}")
-                result_list.append((int(adjudicator_id), None, f"Error: {str(e)}"))
-
-    if result_list:
-        result_df = spark.createDataFrame(result_list, ["AdjudicatorId", "GeneratedFilePath", "Status"])
-    else:
-        empty_schema = StructType([
-            StructField("AdjudicatorId", LongType(), True),
-            StructField("GeneratedFilePath", StringType(), True),
-            StructField("Status", StringType(), True)
-        ])
-        result_df = spark.createDataFrame([], empty_schema)
-
-    return result_df
-
+# %sql
+# select * from hive_metastore.ariadm_arm_joh_test.gold_joh_html_generation_status
 
 # COMMAND ----------
 
 # %sql
-# drop schema hive_metastore.ariadm_arm_joh cascade;
+# drop schema ariadm_arm_joh cascade
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Appendix
-
-# COMMAND ----------
-
-df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-# Collect the necessary data to the driver
-judicial_officer_details_list = df_judicial_officer_details.collect()
-other_centres_list = df_other_centres.collect()
-roles_list = df_roles.collect()
-history_list = df_history.collect()
-
-# COMMAND ----------
-
- # Step 4: Query the history details
-history = df_history.select('HistDate', col('HistType').alias('HistType'), 'UserName', 'Comment').filter(col('AdjudicatorId') == 1406).collect()
-print(history)
-
-# COMMAND ----------
-
-filtered_history_list = [row for row in history_list if row['AdjudicatorId'] == 1406]
-print(filtered_history_list)
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Helper function to find data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-# Define the function to generate HTML content for a given adjudicator
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    # Step 1: Find judicial officer details
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Find other centres
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-
-    # Step 3: Find roles
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Find history
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Delta Live Table for HTML generation status
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if initial_Load == False:
-        print("Running non-initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Collect the necessary data to the driver
-    judicial_officer_details_list = df_judicial_officer_details.collect()
-    other_centres_list = df_other_centres.collect()
-    roles_list = df_roles.collect()
-    history_list = df_history.collect()
-
-    # Broadcast the collected data
-    judicial_officer_details_bc = spark.sparkContext.broadcast(judicial_officer_details_list)
-    other_centres_bc = spark.sparkContext.broadcast(other_centres_list)
-    roles_bc = spark.sparkContext.broadcast(roles_list)
-    history_bc = spark.sparkContext.broadcast(history_list)
-
-        # Fetch the list of Adjudicator IDs from the table, partitioned by AdjudicatorId
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-
-    # Repartition the list into 4 parts for parallel processing
-    adjudicator_ids_rdd = spark.sparkContext.parallelize(adjudicator_ids_list, 8 )
-
-    # Process each partition (subset of Adjudicator IDs) in parallel using mapPartitions
-    def process_partition(partition):
-        result_list = []
-        for adjudicator_id in partition:
-            html_content, status = generate_html_content(
-                adjudicator_id, 
-                judicial_officer_details_bc.value, 
-                other_centres_bc.value, 
-                roles_bc.value, 
-                history_bc.value
-            )
-            result_list.append((adjudicator_id, html_content, status))
-        return result_list
-
-    # Use mapPartitions for parallel processing
-    result_rdd = adjudicator_ids_rdd.mapPartitions(process_partition)
-
-    # Collect the results from all partitions
-    result_list = result_rdd.collect()
-
-    # Unpersist the broadcast variables after processing is complete
-    judicial_officer_details_bc.unpersist()
-    other_centres_bc.unpersist()
-    roles_bc.unpersist()
-    history_bc.unpersist()
-
-    # Write the HTML files outside of the Spark job
-    for adjudicator_id, html_content, status in result_list:
-        if status == "Success":
-            file_name = f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html"
-            dbutils.fs.put(file_name, html_content, overwrite=True)
-            print(f"HTML file created for Adjudicator with ID: {adjudicator_id} at {file_name}")
-
-    # Convert the results list to a DataFrame
-    result_df = spark.createDataFrame([(adjudicator_id, f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html", status) for adjudicator_id, _, status in result_list], schema=["AdjudicatorId", "FileName", "Status"])
-
-    return result_df
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, df_judicial_officer_details, df_other_centres, df_roles, df_history):
-    # Step 1: Query the judicial officer details
-    try:
-        judicial_officer_details = df_judicial_officer_details.filter(col('AdjudicatorId') == adjudicator_id).collect()[0]
-    except IndexError:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Query the other centre details
-    other_centres = df_other_centres.select('OtherCentres').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 3: Query the role details
-    roles = df_roles.select('Role', 'DateOfAppointment', 'EndDateOfAppointment').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 4: Query the history details
-    history = df_history.select('HistDate', col('HistType').alias('HistType'), 'UserName', 'Comment').filter(col('AdjudicatorId') == adjudicator_id).collect()
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Delta Live Table for HTML generation status
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if initial_Load == False:
-        print("Running non-initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Collect the necessary data to the driver
-    judicial_officer_details_list = df_judicial_officer_details.collect()
-    other_centres_list = df_other_centres.collect()
-    roles_list = df_roles.collect()
-    history_list = df_history.collect()
-
-    # Broadcast the collected data
-    judicial_officer_details_bc = spark.sparkContext.broadcast(judicial_officer_details_list)
-    other_centres_bc = spark.sparkContext.broadcast(other_centres_list)
-    roles_bc = spark.sparkContext.broadcast(roles_list)
-    history_bc = spark.sparkContext.broadcast(history_list)
-
-       # Fetch the list of Adjudicator IDs from the table, partitioned by AdjudicatorId
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-
-    # Repartition the list into 4 parts for parallel processing
-    adjudicator_ids_rdd = spark.sparkContext.parallelize(adjudicator_ids_list, 4)
-
-    # Process each partition (subset of Adjudicator IDs) in parallel using mapPartitions
-    def process_partition(partition):
-        result_list = []
-        for adjudicator_id in partition:
-            html_content, status = generate_html_content(
-                adjudicator_id, 
-                judicial_officer_details_bc.value, 
-                other_centres_bc.value, 
-                roles_bc.value, 
-                history_bc.value
-            )
-            result_list.append((adjudicator_id, html_content, status))
-        return result_list
-
-    # Use mapPartitions for parallel processing
-    result_rdd = adjudicator_ids_rdd.mapPartitions(process_partition)
-
-    # Collect the results from all partitions
-    result_list = result_rdd.collect()
-
-    # Unpersist the broadcast variables after processing is complete
-    judicial_officer_details_bc.unpersist()
-    other_centres_bc.unpersist()
-    roles_bc.unpersist()
-    history_bc.unpersist()
-
-    # Create a DataFrame from the results list
-    result_df = spark.createDataFrame(result_list, schema=["AdjudicatorId", "HTMLContent", "Status"])
-
-    # Write the HTML content to the data lake using Spark's DataFrame write method
-    for row in result_df.collect():
-        if row["Status"] == "Success":
-            file_name = f"{gold_mnt}/HTML/judicial_officer_{row['AdjudicatorId']}.html"
-            html_df = spark.createDataFrame([(row["HTMLContent"],)], ["HTMLContent"])
-            html_df.write.mode("overwrite").text(file_name)
-            print(f"HTML file created for Adjudicator with ID: {row['AdjudicatorId']} at {file_name}")
-
-    # Return the result DataFrame
-    return result_df.select("AdjudicatorId", "Status")
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Helper function to find data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    # Step 1: Find judicial officer details
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Find other centres
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-
-    # Step 3: Find roles
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Find history
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Read the HTML template
-    html_template_path = f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Delta Live Table for HTML generation status
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if initial_Load == False:
-        print("Running non-initial load")
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Collect the necessary data to the driver
-    judicial_officer_details_list = df_judicial_officer_details.collect()
-    other_centres_list = df_other_centres.collect()
-    roles_list = df_roles.collect()
-    history_list = df_history.collect()
-
-    # Broadcast the collected data
-    judicial_officer_details_bc = spark.sparkContext.broadcast(judicial_officer_details_list)
-    other_centres_bc = spark.sparkContext.broadcast(other_centres_list)
-    roles_bc = spark.sparkContext.broadcast(roles_list)
-    history_bc = spark.sparkContext.broadcast(history_list)
-
-    # Fetch the list of Adjudicator IDs from the table, partitioned by AdjudicatorId
-    adjudicator_ids_list = df_stg_joh_filtered.select('AdjudicatorId').distinct().rdd.flatMap(lambda x: x).collect()
-
-    # Repartition by AdjudicatorId to optimize parallel processing
-    repartitioned_df = df_stg_joh_filtered.repartition(4, "AdjudicatorId")
-
-    # Define a function to run the HTML generation on each partition
-    def process_partition(partition):
-        html_results = []
-        for row in partition:
-            adjudicator_id = row['AdjudicatorId']
-            html_content, status = generate_html_content(
-                adjudicator_id,
-                judicial_officer_details_bc.value,
-                other_centres_bc.value,
-                roles_bc.value,
-                history_bc.value
-            )
-            html_results.append((adjudicator_id, html_content, status))
-        return html_results
-
-    # Parallelize the HTML generation using mapPartitions
-    result_rdd = repartitioned_df.rdd.mapPartitions(process_partition)
-
-    # # Collect results
-    # results = result_rdd.collect()
-
-    #  # Write results to Azure Data Lake
-    # for adjudicator_id, html_content, status in results:
-    #     # Define the target path for each Adjudicator's HTML file
-    #     target_path = f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html"
-    #     dbutils.fs.put(target_path, html_content, overwrite=True)
-
-
-    # Convert the RDD back to a DataFrame
-    schema = StructType([
-        StructField("AdjudicatorId", LongType(), True),
-        StructField("HTML_Content", StringType(), True),
-        StructField("Status", StringType(), True)
-    ])
-    html_result_df = spark.createDataFrame(result_rdd, schema=schema)
-
-    return html_result_df
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Helper function to find data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    # Step 1: Find judicial officer details
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Find other centres
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-
-    # Step 3: Find roles
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Find history
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Define a function to run the HTML generation for each partition
-def process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
-    results = []
-    for row in partition:
-        adjudicator_id = row['AdjudicatorId']
-        html_content, status = generate_html_content(
-            adjudicator_id,
-            judicial_officer_details_bc.value,
-            other_centres_bc.value,
-            roles_bc.value,
-            history_bc.value
-        )
-        
-        if html_content is None:
-            continue
-        
-        # Instead of writing here, append the result
-        results.append((adjudicator_id, html_content, status))
-    return results
-
-# Delta Live Table for HTML generation status
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if not initial_Load:
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Broadcast the dataframes to all workers
-    judicial_officer_details_bc = sc.broadcast(df_judicial_officer_details.collect())
-    other_centres_bc = sc.broadcast(df_other_centres.collect())
-    roles_bc = sc.broadcast(df_roles.collect())
-    history_bc = sc.broadcast(df_history.collect())
-
-    # Repartition the DataFrame by AdjudicatorId to optimize parallel processing
-    repartitioned_df = df_stg_joh_filtered.repartition(4, "AdjudicatorId")
-
-    # Run the HTML generation on each partition
-    result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc))
-
-    # Collect results
-    results = result_rdd.collect()
-
-    # Write results to Azure Data Lake
-    for adjudicator_id, html_content, status in results:
-        # Define the target path for each Adjudicator's HTML file
-        target_path = f"{gold_mnt}/HTML/judicial_officer_{adjudicator_id}.html"
-        dbutils.fs.put(target_path, html_content, overwrite=True)
-
-    # Create DataFrame for output
-    schema = StructType([
-        StructField("AdjudicatorId", LongType(), True),
-        StructField("HTML_Path", StringType(), True),
-        StructField("Status", StringType(), True)
-    ])
-    html_result_df = spark.createDataFrame(results, schema=schema)
-
-    return html_result_df
-
-# COMMAND ----------
-
-# DBTITLE 1,Installing Azure Blob Storage Python Package
-pip install azure-storage-blob
-
-
-# COMMAND ----------
-
-# from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-# import os
-
-# # Set up the BlobServiceClient with your connection string
-# connection_string = "your_connection_string"
-# blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-
-# # Specify the container name
-# container_name = "your_container_name"
-# container_client = blob_service_client.get_container_client(container_name)
-
-
-# COMMAND ----------
-
-# DBTITLE 1,Setting Up Azure Blob Storage in Python
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-import os
-
-# Set up the BlobServiceClient with your connection string
-connection_string = "BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupyx&se=2025-04-01T07:29:30Z&st=2024-10-01T23:29:30Z&spr=https&sig=Mm2wSFM7obaVtMuY5LomoJbrvlgrrdxgAT1nBQemkds%3D"
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-
-# Specify the container name
-container_name = "gold"
-container_client = blob_service_client.get_container_client(container_name)
-
-
-# COMMAND ----------
-
-# DBTITLE 1,Optimized- Generating Judicial Officer Profiles with Python
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Helper function to find data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    # Step 1: Find judicial officer details
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Find other centres
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-
-    # Step 3: Find roles
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Find history
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Define a function to run the HTML generation for each partition
-def process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
-    results = []
-    for row in partition:
-        adjudicator_id = row['AdjudicatorId']
-        html_content, status = generate_html_content(
-            adjudicator_id,
-            judicial_officer_details_bc.value,
-            other_centres_bc.value,
-            roles_bc.value,
-            history_bc.value
-        )
-        
-        if html_content is None:
-            continue
-        
-        # Define the target path for each Adjudicator's HTML file
-        target_path = f"ARIADM/ARM/JOH/HTML/judicial_officer_{adjudicator_id}.html"
-        
-        # Upload the HTML content to Azure Blob Storage
-        blob_client = container_client.get_blob_client(target_path)
-        blob_client.upload_blob(html_content, overwrite=True)
-        
-        # Append the result
-        results.append((adjudicator_id, target_path, status))
-    return results
-
-
-
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if not initial_Load:
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Broadcast the dataframes to all workers
-    judicial_officer_details_bc = sc.broadcast(df_judicial_officer_details.collect())
-    other_centres_bc = sc.broadcast(df_other_centres.collect())
-    roles_bc = sc.broadcast(df_roles.collect())
-    history_bc = sc.broadcast(df_history.collect())
-
-    # Repartition the DataFrame by AdjudicatorId to optimize parallel processing
-    repartitioned_df = df_stg_joh_filtered.repartition(31, "AdjudicatorId")
-
-    # Run the HTML generation on each partition
-    result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc))
-
-    # Collect results
-    results = result_rdd.collect()
-
-    # Create DataFrame for output
-    schema = StructType([
-        StructField("AdjudicatorId", LongType(), True),
-        StructField("HTML_Path", StringType(), True),
-        StructField("Status", StringType(), True)
-    ])
-    html_result_df = spark.createDataFrame(results, schema=schema)
-
-    # Log the HTML paths in the Delta Live Table
-    return html_result_df.select("AdjudicatorId", "HTML_Path", "Status")
-
-
-# COMMAND ----------
-
-spark.conf.set("spark.sql.shuffle.partitions", 32)  # Set this to 32 for your 8-worker cluster
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import LongType, StringType, StructType, StructField
-from datetime import datetime
-
-# Step 5: Date formatting helper
-def format_date_iso(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""
-
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%d/%m/%Y")
-    return ""
-
-# Helper function to find data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-# Define the function to generate HTML content for a given adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    # Step 1: Find judicial officer details
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    # Step 2: Find other centres
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-
-    # Step 3: Find roles
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Find history
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Step 4: Read the HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Step 6: Convert the Spark Row object to a dictionary
-    row_dict = judicial_officer_details.asDict()  # Convert Spark Row object to a dictionary
-
-    # Create a dictionary with the replacements, ensuring all values are strings
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        "{{CorrespondenceAddress}}": str(row_dict.get('CorrespondenceAddress', '') or ''),
-        "{{Telephone}}": str(row_dict.get('ContactTelephone', '') or ''),
-        "{{ContactDetails}}": str(row_dict.get('ContactDetails', '') or ''),
-        "{{DesignatedCentre}}": str(row_dict.get('DesignatedCentre', '') or ''),
-        "{{EmploymentTerm}}": str(row_dict.get('EmploymentTerm', '') or ''),
-        "{{FullTime}}": str(row_dict.get('FullTime', '') or ''),
-        "{{IdentityNumber}}": str(row_dict.get('IdentityNumber', '') or ''),
-        "{{DateOfRetirement}}": format_date_iso(row_dict.get('DateOfRetirement')),
-        "{{ContractEndDate}}": format_date_iso(row_dict.get('ContractEndDate')),
-        "{{ContractRenewalDate}}": format_date_iso(row_dict.get('ContractRenewalDate')),
-        "{{DoNotUseReason}}": str(row_dict.get('DoNotUseReason', '') or ''),
-        "{{JudicialStatus}}": str(row_dict.get('JudicialStatus', '') or ''),
-        "{{Address1}}": str(row_dict.get('Address1', '') or ''),
-        "{{Address2}}": str(row_dict.get('Address2', '') or ''),
-        "{{Address3}}": str(row_dict.get('Address3', '') or ''),
-        "{{Address4}}": str(row_dict.get('Address4', '') or ''),
-        "{{Address5}}": str(row_dict.get('Address5', '') or ''),
-        "{{Postcode}}": str(row_dict.get('Postcode', '') or ''),
-        "{{Mobile}}": str(row_dict.get('Mobile', '') or ''),
-        "{{Email}}": str(row_dict.get('Email', '') or ''),
-        "{{BusinessAddress1}}": str(row_dict.get('BusinessAddress1', '') or ''),
-        "{{BusinessAddress2}}": str(row_dict.get('BusinessAddress2', '') or ''),
-        "{{BusinessAddress3}}": str(row_dict.get('BusinessAddress3', '') or ''),
-        "{{BusinessAddress4}}": str(row_dict.get('BusinessAddress4', '') or ''),
-        "{{BusinessAddress5}}": str(row_dict.get('BusinessAddress5', '') or ''),
-        "{{BusinessPostcode}}": str(row_dict.get('BusinessPostcode', '') or ''),
-        "{{BusinessTelephone}}": str(row_dict.get('BusinessTelephone', '') or ''),
-        "{{BusinessFax}}": str(row_dict.get('BusinessFax', '') or ''),
-        "{{BusinessEmail}}": str(row_dict.get('BusinessEmail', '') or ''),
-        "{{JudicialInstructions}}": str(row_dict.get('JudicialInstructions', '') or ''),
-        "{{JudicialInstructionsDate}}": format_date_iso(row_dict.get('JudicialInstructionsDate')),
-        "{{Notes}}": str(row_dict.get('Notes', '') or ''),
-    }
-
-    # Step 7: Replace placeholders using the replacements dictionary
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Step 8: Handle multiple rows for Other Centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{centre['OtherCentres']}</td></tr>"
-        other_centres_code += line + '\n'
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Handle roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        line = f"<tr><td id=\"midpadding\">{i}</td><td id=\"midpadding\">{role['Role']}</td><td id=\"midpadding\">{format_date(role['DateOfAppointment'])}</td><td id=\"midpadding\">{format_date(role['EndDateOfAppointment'])}</td></tr>"
-        roles_code += line + '\n'
-        
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # History Details
-    History_Code = ''
-    for index, row in enumerate(history, start=1):
-        line = f"<tr><td id=\"midpadding\">{format_date(row['HistDate'])}</td><td id=\"midpadding\">{row['HistType']}</td><td id=\"midpadding\">{row['UserName']}</td><td id=\"midpadding\">{row['Comment']}</td></tr>"
-        History_Code += line + '\n'
-    html_template = html_template.replace(f"{{{{HistoryPlaceHolder}}}}", History_Code)
-
-    # Step 9: Return the transformed HTML content
-    return html_template, "Success"
-
-# Define a function to run the HTML generation for each partition
-def process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
-    results = []
-    for row in partition:
-        adjudicator_id = row['AdjudicatorId']
-        html_content, status = generate_html_content(
-            adjudicator_id,
-            judicial_officer_details_bc.value,
-            other_centres_bc.value,
-            roles_bc.value,
-            history_bc.value
-        )
-        
-        if html_content is None:
-            continue
-        
-        # Define the target path for each Adjudicator's HTML file 
-        # Containers specfied in azure-storage-blob connection configuration
-        target_path = f"ARIADM/ARM/JOH/HTML/judicial_officer_{adjudicator_id}.html"
-        
-        # Upload the HTML content to Azure Blob Storage
-        blob_client = container_client.get_blob_client(target_path)
-        blob_client.upload_blob(html_content, overwrite=True)
-        
-        # Append the result
-        results.append((adjudicator_id, target_path, status))
-    return results
-
-@dlt.table(
-    name="gold_joh_html_generation_status",
-    comment="Delta Live Table for Adjudicator HTML Generation Status.",
-    path=f"{gold_mnt}/gold_joh_html_generation_status"
-)
-def gold_joh_html_generation_status():
-    df_stg_joh_filtered = dlt.read("stg_joh_filtered")
-    df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
-    df_other_centres = dlt.read("silver_othercentre_detail")
-    df_roles = dlt.read("silver_appointment_detail")
-    df_history = dlt.read("silver_history_detail")
-
-    # Load the necessary dataframes from Hive metastore if not initial load
-    if not initial_Load:
-        df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-        df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-        df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-        df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-        df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Step 1: Broadcast necessary lookup DataFrames to optimize performance
-    judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
-    other_centres_bc = spark.sparkContext.broadcast(df_other_centres.collect())
-    roles_bc = spark.sparkContext.broadcast(df_roles.collect())
-    history_bc = spark.sparkContext.broadcast(df_history.collect())
-
-    # Step 2: Repartition the primary DataFrame based on AdjudicatorId
-    num_partitions = 32  # Setting this to optimize for your 8-worker cluster
-    repartitioned_df = df_stg_joh_filtered.repartition(num_partitions, "AdjudicatorId")
-
-    # Step 3: Use mapPartitions for parallel HTML generation
-    result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition(
-        partition,
-        judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc
-    ))
-
-    # Step 4: Convert the RDD results into a DataFrame and return
-    result_df = result_rdd.toDF(["AdjudicatorId", "TargetPath", "Status"])
-
-    return result_df
-
-
-# COMMAND ----------
-
-gold_mnt
-
-# COMMAND ----------
-
-display(dbutils.fs.ls('/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/HTML'))
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col
-from pyspark.sql.types import StructType, StructField, StringType
-from datetime import datetime
-
-# Date formatting helpers
-def format_date_iso(date_value):
-    return datetime.strftime(date_value, "%Y-%m-%d") if date_value else ""
-
-def format_date(date_value):
-    return datetime.strftime(date_value, "%d/%m/%Y") if date_value else ""
-
-# Function to get data from a list by AdjudicatorId
-def find_data_in_list(data_list, adjudicator_id):
-    for row in data_list:
-        if row['AdjudicatorId'] == adjudicator_id:
-            return row
-    return None
-
-# Function to generate HTML content for an adjudicator
-def generate_html_content(adjudicator_id, judicial_officer_details_list, other_centres_list, roles_list, history_list):
-    judicial_officer_details = find_data_in_list(judicial_officer_details_list, adjudicator_id)
-    if not judicial_officer_details:
-        print(f"No details found for Adjudicator ID: {adjudicator_id}")
-        return None, "No details found"
-
-    other_centres = [centre for centre in other_centres_list if centre['AdjudicatorId'] == adjudicator_id]
-    roles = [role for role in roles_list if role['AdjudicatorId'] == adjudicator_id]
-    history = [hist for hist in history_list if hist['AdjudicatorId'] == adjudicator_id]
-
-    # Reading HTML template
-    html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-    with open(html_template_path, "r") as f:
-        html_template = "".join([l for l in f])
-
-    # Setting up replacements based on the data
-    row_dict = judicial_officer_details.asDict()
-    replacements = {
-        "{{Surname}}": str(row_dict.get('Surname', '') or ''),
-        "{{Title}}": str(row_dict.get('Title', '') or ''),
-        "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-        "{{DateOfBirth}}": format_date_iso(row_dict.get('DateOfBirth')),
-        # Add more replacements as needed
-    }
-
-    # Replacing placeholders in HTML template with actual data
-    for key, value in replacements.items():
-        html_template = html_template.replace(key, value)
-
-    # Processing other centres
-    other_centres_code = ""
-    for i, centre in enumerate(other_centres, start=1):
-        other_centres_code += f"<tr><td>{i}</td><td>{centre['OtherCentres']}</td></tr>\n"
-    html_template = html_template.replace("{{OtherCentre}}", other_centres_code)
-
-    # Processing roles
-    roles_code = ""
-    for i, role in enumerate(roles, start=1):
-        roles_code += f"<tr><td>{i}</td><td>{role['Role']}</td></tr>\n"
-    html_template = html_template.replace("{{AppointmentPlaceHolder}}", roles_code)
-
-    # Processing history
-    history_code = ""
-    for index, row in enumerate(history, start=1):
-        history_code += f"<tr><td>{format_date(row['HistDate'])}</td><td>{row['HistType']}</td></tr>\n"
-    html_template = html_template.replace("{{HistoryPlaceHolder}}", history_code)
-
-    return html_template, "Success"
-
-# Function to process a partition
-def process_partition(partition, judicial_officer_details_bc, other_centres_bc, roles_bc, history_bc):
-    results = []
-    partition_data = list(partition)
-
-    # Check if partition is empty
-    if not partition_data:
-        print("Empty partition found")
-        return []
-
-    print(f"Processing partition with {len(partition_data)} records")
-
-    for row in partition_data:
-        adjudicator_id = row['AdjudicatorId']
-        html_content, status = generate_html_content(
-            adjudicator_id,
-            judicial_officer_details_bc.value,
-            other_centres_bc.value,
-            roles_bc.value,
-            history_bc.value
-        )
-
-        if html_content:
-            target_path = f"ARIADM/ARM/JOH/HTML/judicial_officer_{adjudicator_id}.html"
-            blob_client = container_client.get_blob_client(target_path)
-            blob_client.upload_blob(html_content, overwrite=True)
-            results.append((adjudicator_id, target_path, status))
-
-    # Return results or placeholder if partition is empty
-    return results if results else [(None, None, "No data processed")]
-
-# Function to handle the HTML generation process
-def process_html_generation():
-    df_stg_joh_filtered = spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered")
-    df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
-    df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
-    df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
-    df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
-
-    # Broadcasting datasets to all workers
-    judicial_officer_details_bc = spark.sparkContext.broadcast(df_judicial_officer_details.collect())
-    other_centres_bc = spark.sparkContext.broadcast(df_other_centres.collect())
-    roles_bc = spark.sparkContext.broadcast(df_roles.collect())
-    history_bc = spark.sparkContext.broadcast(df_history.collect())
-
-    # Adjusting partitioning to optimize processing
-    num_partitions = 64  # Increase partitions to distribute the workload better
-    repartitioned_df = df_stg_joh_filtered.repartition(num_partitions, "AdjudicatorId")
-
-    print(f"Number of partitions after repartitioning: {repartitioned_df.rdd.getNumPartitions()}")
-
-    # Mapping partitions and processing in parallel
-    result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition(
-        partition,
-        judicial_officer_details_bc,
-        other_centres_bc,
-        roles_bc,
-        history_bc
-    ))
-
-    # Convert the resulting RDD back to a DataFrame
-    result_df = result_rdd.toDF(["AdjudicatorId", "TargetPath", "Status"])
-    return result_df
-
-# Call the function to start the process
-df_result = process_html_generation()
-# df_result.count()
-
-
-# COMMAND ----------
-
-display(df_result)
+# display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
+# display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
+# display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())

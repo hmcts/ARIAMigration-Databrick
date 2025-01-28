@@ -51,6 +51,10 @@
 # MAGIC     <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-368">ARIADM-368</a>/NSA/20-JAN-2025</td>
 # MAGIC     <td>Update Datetype for Gold OutPuts</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-294">ARIADM-294</a>/NSA/28-JAN-2025</td>
+# MAGIC     <td>Optimize Spark Workflows</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -99,7 +103,8 @@ from datetime import datetime
 
 # COMMAND ----------
 
-read_hive = True
+read_hive = False
+# True
 
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
 landing_mnt = "/mnt/ingest00landingsboxlanding/"
@@ -107,7 +112,7 @@ bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD"
 silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
 file_path = "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
-gold_outputs = "ARIADM/ARM/TD/"
+gold_outputs = "ARIADM/ARM/TD"
 hive_schema = "ariadm_arm_td"
 
 
@@ -154,7 +159,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     return list(output)
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
-def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
+def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = landing_mnt) -> "DataFrame":
     """
     Reads the latest .parquet file from a specified folder, adds audit columns, creates a temporary Spark view, and returns the DataFrame.
     
@@ -280,35 +285,6 @@ def Raw_Status():
 
 # MAGIC %md
 # MAGIC ### Transformation bronze_ac_ca_ant_fl_dt_hc 
-
-# COMMAND ----------
-
-df_raw_appealcase = spark.read.table("hive_metastore.ariadm_arm_td.raw_appealcase")
-df_raw_appealcase.createOrReplaceTempView("tv_raw_appealcase")
-
-
-df_raw_status = spark.read.table("hive_metastore.ariadm_arm_td.raw_status")
-df_raw_status.createOrReplaceTempView("tv_raw_status")
-
-df_raw_filelocation = spark.read.table("hive_metastore.ariadm_arm_td.raw_filelocation")
-df_raw_filelocation.createOrReplaceTempView("tv_raw_filelocation")
-
-df_raw_appealcase = spark.read.table("hive_metastore.ariadm_arm_td.raw_appealcase")
-df_raw_appealcase.createOrReplaceTempView("tv_raw_appealcase")
-
-df_raw_caseappellant = spark.read.table("hive_metastore.ariadm_arm_td.raw_caseappellant")
-df_raw_caseappellant.createOrReplaceTempView("tv_raw_caseappellant")
-
-df_raw_appelant = spark.read.table("hive_metastore.ariadm_arm_td.raw_appellant")
-df_raw_appelant.createOrReplaceTempView("tv_raw_appelant")
-
-df_raw_department = spark.read.table("hive_metastore.ariadm_arm_td.raw_department")
-df_raw_department.createOrReplaceTempView("tv_raw_department")
-
-
-df_raw_hearingcentre = spark.read.table("hive_metastore.ariadm_arm_td.raw_hearingcentre")
-df_raw_hearingcentre.createOrReplaceTempView("tv_raw_hearingcentre")
-
 
 # COMMAND ----------
 
@@ -797,43 +773,7 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Generate HTML
-# MAGIC
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC #### Create gold_td_html_generation_status & Processing TribunalDecision HTML's
-# MAGIC This section is to prallel process the HTML and create atracker table with log information.
-
-# COMMAND ----------
-
-# df_archive_metadata = spark.read.table("hive_metastore.ariadm_arm_td.silver_archive_metadata")
-# df_tribunaldecision_detail = spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail")
-# display(df_tribunaldecision_detail)
-
-# tribunaldecision_detail_bc = spark.sparkContext.broadcast(df_tribunaldecision_detail.collect())
-
-# generate_html_content('NS/00001/2003', 'Marcia', 'Lenon', tribunaldecision_detail_bc.value)
-
-# COMMAND ----------
-
-# generate_html_content('NS/00001/2003', 'Marcia', 'Lenon', tribunaldecision_detail_bc.value)
-
-# COMMAND ----------
-
-# DBTITLE 1,Generating Tribunal decision Profiles in HMTL Outputs
 # Helper to format dates in ISO format (YYYY-MM-DD)
-# def format_date_iso(date_value):
-#     try:
-#         if isinstance(date_value, str):
-#             date_value = datetime.strptime(date_value, "%Y-%m-%d")
-#         return date_value.strftime("%Y-%m-%d")
-#     except Exception as e:
-#         return ""
-    
 def format_date_dd_mm_yyyy(date_value):
     """
     Formats a date into dd/MM/yyyy format.
@@ -843,664 +783,193 @@ def format_date_dd_mm_yyyy(date_value):
         A string formatted as 'dd/MM/yyyy'.
     """
     try:
+        if date_value is None:
+            return ''
         if isinstance(date_value, str):
             date_value = datetime.strptime(date_value, "%Y-%m-%d")
         return date_value.strftime("%d/%m/%Y")
     except Exception as e:
         raise ValueError(f"Invalid date input: {date_value}. Error: {e}")
 
-
-# Define the function to find data in a list by CaseNo, Forenames, and Name
-def find_data_in_list(data_list, CaseNo, Forenames, Name):
-    for row in data_list:
-        if row['CaseNo'] == CaseNo and row['Forenames'] == Forenames and row['Name'] == Name:
-            return row
-    return None
-
-# Define the function to generate HTML content for a given Tribunal Decision
-def generate_html_content(CaseNo, Forenames, Name, tribunaldecision_detail_list):
+# Modify the UDF to accept a row object
+def generate_html(row):
     try:
-        # Step 1: Find tribunal decision details
-        tribunaldecision_detail = find_data_in_list(tribunaldecision_detail_list, CaseNo, Forenames, Name)
-        if not tribunaldecision_detail:
-            print(f"No details found for CaseNo: {CaseNo}")
-            return None, "No details found"
-
-        # Step 2: Read the HTML template
+        # Load template
         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html"
         with open(html_template_path, "r") as f:
             html_template = "".join([l for l in f])
 
-        # Step 3: Convert the Spark Row object to a dictionary
-        row_dict = tribunaldecision_detail.asDict()
-
-        # Step 4: Create a dictionary with the replacements
+        # Replace placeholders in the template with row data
         replacements = {
-            "{{Archivedate}}":  format_date_dd_mm_yyyy(row_dict.get('AdtclmnFirstCreatedDatetime')),
-            "{{CaseNo}}": str(row_dict.get('CaseNo', '') or ''),
-            "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-            "{{Name}}": str(row_dict.get('Name', '') or ''),
-            "{{BirthDate}}": format_date_dd_mm_yyyy(row_dict.get('BirthDate')),
-            "{{DestructionDate}}": format_date_dd_mm_yyyy(row_dict.get('DestructionDate', '') or ''),
-            "{{HORef}}": str(row_dict.get('HORef', '') or ''),
-            "{{PortReference}}": str(row_dict.get('PortReference', '') or ''),
-            "{{HearingCentreDescription}}": str(row_dict.get('HearingCentreDescription', '') or ''),
-            "{{DepartmentDescription}}": str(row_dict.get('DepartmentDescription', '') or ''),
-            "{{Note}}": str(row_dict.get('Note', '') or '')
+            "{{Archivedate}}":  format_date_dd_mm_yyyy(row['AdtclmnFirstCreatedDatetime']),
+            "{{CaseNo}}": str(row['CaseNo'] or ''),
+            "{{Forenames}}": str(row['Forenames'] or ''),
+            "{{Name}}": str(row['Name'] or ''),
+            "{{BirthDate}}": format_date_dd_mm_yyyy(row['BirthDate']),
+            "{{DestructionDate}}": format_date_dd_mm_yyyy(row['DestructionDate']),
+            "{{HORef}}": str(row['HORef'] or ''),
+            "{{PortReference}}": str(row['PortReference'] or ''),
+            "{{HearingCentreDescription}}": str(row['HearingCentreDescription'] or ''),
+            "{{DepartmentDescription}}": str(row['DepartmentDescription'] or ''),
+            "{{Note}}": str(row['Note'] or '')
         }
 
-        # Step 5: Replace placeholders using the replacements dictionary
         for key, value in replacements.items():
             html_template = html_template.replace(key, value)
-
-        # Step 6: Return the transformed HTML content
-        return html_template, "Success"
-
+        
+        return html_template
     except Exception as e:
-        print(f"Error writing file for CaseNo: {CaseNo}: {str(e)}")
-        return None, f"Error writing file: {str(e)}"
+        return f"Error generating HTML for tribunal_decision_{row['CaseNo'].replace('/', '_')}_{row['Forenames']}_{row['Name']}.html: {e}"
 
-# Function to process each partition
-def process_partition(partition, tribunaldecision_detail_bc):
-    results = []
-    for row in partition:
-        CaseNo = row['CaseNo']
-        Forenames = row['Forenames']
-        Name = row['Name']
-        html_content, status = generate_html_content(
-            CaseNo,
-            Forenames,
-            Name,
-            tribunaldecision_detail_bc.value
-        )
-        # Generate file path
-        if html_content:
-            file_name = f"{gold_outputs}/HTML/tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.html"
-            # upload_to_blob(file_name, html_content)
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-            blob_client.upload_blob(html_content, overwrite=True)
-            results.append((CaseNo, Forenames, Name, file_name, status))
-        else:
-            results.append((CaseNo, Forenames, Name, "", status))
-            
-    return results
+# Register UDF
+generate_html_udf = udf(generate_html, StringType())
 
-# Define the DLT function
+# Upload HTML to Azure Blob Storage
+def upload_to_blob(file_name, file_content):
+    try:
+        # blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/{file_name}")
+        blob_client = container_client.get_blob_client(f"{file_name}")
+        blob_client.upload_blob(file_content, overwrite=True)
+        return "success"
+    except Exception as e:
+        return f"error: {str(e)}"
+
+# Register the upload function as a UDF
+upload_udf = udf(upload_to_blob)
+
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_td_iris_unified
 @dlt.table(
-    name="gold_td_html_generation_status",
-    comment="Delta Live Table for Gold Tribunal Decision HTML Generation Status.",
-    path=f"{gold_mnt}/gold_td_html_generation_status"
+    name="stg_td_iris_unified",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_td_iris_unified"
 )
-def gold_td_html_generation_status():
-    
-    # Load necessary dataframes from DLT or Hive metastore
-    df_archive_metadata = dlt.read("silver_archive_metadata")
+def stg_td_iris_unified():
+
     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
+    
+    df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
 
-    if read_hive == True:
-        print("Running non-initial load")
-        df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
-        df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
+    # Apply the UDF to the combined DataFrame
+    df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                            .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
 
-    # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-    CaseNo_df = df_archive_metadata.select(
-        col('client_identifier').alias('CaseNo'), 
-        col('bf_001').alias('Forenames'), 
-        col('bf_002').alias('Name')
-    ).distinct()
+    return df_with_html
 
-    # Broadcast the tribunal decision detail DataFrame for performance
-    tribunaldecision_detail_bc = spark.sparkContext.broadcast(df_tribunaldecision_detail.collect())
+# COMMAND ----------
 
-    # Create an empty list to store results for the Delta Live Table
-    result_list = []
+# DBTITLE 1,Transformation gold_td_iris_with_html
+@dlt.table(
+    name="gold_td_iris_with_html",
+    comment="Delta Live Gold Table with HTML content.",
+    path=f"{gold_mnt}/gold_td_iris_with_html"
+)
+def gold_td_iris_with_html():
+    # Load source data
+    df_combined = dlt.read("stg_td_iris_unified")
 
-    # Repartition by CaseNo for optimized parallel processing
-    num_partitions = 64  # Assuming an 8-worker cluster
-    repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
+    # Optional: Load from Hive if not an initial load
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
-     # Apply mapPartitions to process each partition
-    result_rdd = repartitioned_df.rdd.mapPartitions(
-        lambda partition: process_partition(partition, tribunaldecision_detail_bc)
+    # Repartition to optimize parallelism
+    repartitioned_df = df_combined.repartition(64, col("CaseNo"))
+
+    # # Upload HTML files to Azure Blob Storage
+    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
+
+    df_with_upload_status = repartitioned_df.withColumn(
+        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
+    )
+    
+    # # Upload HTML files to Azure Blob Storage
+    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreach(upload_html)
+
+    # Optionally load data from Hive
+    if read_hive:
+        display(df_with_upload_status)
+
+    # Return the DataFrame for DLT table creation
+    return df_with_upload_status.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName","UploadStatus")
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation gold_td_iris_with_json
+@dlt.table(
+    name="gold_td_iris_with_json",
+    comment="Delta Live Gold Table with JSON content.",
+    path=f"{gold_mnt}/gold_td_iris_with_json"
+)
+def gold_td_iris_with_json():
+    """
+    Delta Live Table for creating and uploading JSON content for judicial officers.
+    """
+    # Load source data
+    df_combined = dlt.read("stg_td_iris_unified")
+
+    # Optionally load data from Hive if needed
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
+
+    # Repartition to optimize parallelism
+    repartitioned_df = df_combined.repartition(64, col("CaseNo"))
+
+    df_with_upload_status = repartitioned_df.withColumn(
+        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcollection"))
     )
 
-     # Collect the results
-    result_list = result_rdd.collect()
+    # Optionally load data from Hive
+    if read_hive:
+        display(df_with_upload_status)
 
-    schema = StructType([
-            StructField("CaseNo", StringType(), True),
-            StructField("Forenames", StringType(), True),
-            StructField("Name", StringType(), True),
-            StructField("GeneratedFilePath", StringType(), True),
-            StructField("Status", StringType(), True)
-        ])
-
-    
-     # If no results, return an empty DataFrame
-    if not result_list:
-        print("No results generated. Returning an empty DataFrame.")
-        return spark.createDataFrame([], schema)
-    
-    return spark.createDataFrame(result_list, schema)
-
-   
+    # Return the DataFrame for DLT table creation
+    return df_with_upload_status.select("CaseNo","Forenames","Name","JSONcollection","JSONFileName","UploadStatus")
 
 
 # COMMAND ----------
 
-# DBTITLE 1,Testing with Thread Pools: HTML Outputs for Future Scope
-# # Helper function to format dates
-# def format_date_iso(date_value):
-#     if date_value:
-#         return datetime.strftime(date_value, "%Y-%m-%d")
-#     return ""
-
-# def format_date(date_value):
-#     if date_value:
-#         return datetime.strftime(date_value, "%d/%m/%Y")
-#     return ""
-
-# # Define the function to find data in a list by CaseNo, Forenames, and Name
-# def find_data_in_list(data_list, CaseNo, Forenames, Name):
-#     for row in data_list:
-#         if row['CaseNo'] == CaseNo and row['Forenames'] == Forenames and row['Name'] == Name:
-#             return row
-#     return None
-
-# # Define the function to generate HTML content for a given Tribunal Decision
-# def generate_html_content(CaseNo, Forenames, Name, tribunaldecision_detail_list):
-#     try:
-#         # Step 1: Find tribunal decision details
-#         tribunaldecision_detail = find_data_in_list(tribunaldecision_detail_list, CaseNo, Forenames, Name)
-#         if not tribunaldecision_detail:
-#             print(f"No details found for CaseNo: {CaseNo}")
-#             return None, "No details found"
-
-#         # Step 2: Read the HTML template
-#         html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html"
-#         with open(html_template_path, "r") as f:
-#             html_template = "".join([l for l in f])
-
-#         # Step 3: Convert the Spark Row object to a dictionary
-#         row_dict = tribunaldecision_detail.asDict()
-
-#         # Step 4: Create a dictionary with the replacements
-#         replacements = {
-#             "{{Archivedate}}":  format_date(row_dict.get('AdtclmnFirstCreatedDatetime')),
-#             "{{CaseNo}}": str(row_dict.get('CaseNo', '') or ''),
-#             "{{Forenames}}": str(row_dict.get('Forenames', '') or ''),
-#             "{{Name}}": str(row_dict.get('Name', '') or ''),
-#             "{{BirthDate}}": format_date(row_dict.get('BirthDate')),
-#             "{{DestructionDate}}": format_date(row_dict.get('DestructionDate', '') or ''),
-#             "{{HORef}}": str(row_dict.get('HORef', '') or ''),
-#             "{{PortReference}}": str(row_dict.get('PortReference', '') or ''),
-#             "{{HearingCentreDescription}}": str(row_dict.get('HearingCentreDescription', '') or ''),
-#             "{{DepartmentDescription}}": str(row_dict.get('DepartmentDescription', '') or ''),
-#             "{{Note}}": str(row_dict.get('Note', '') or '')
-#         }
-
-#         # Step 5: Replace placeholders using the replacements dictionary
-#         for key, value in replacements.items():
-#             html_template = html_template.replace(key, value)
-
-#         # Step 6: Return the transformed HTML content
-#         return html_template, "Success"
-
-#     except Exception as e:
-#         print(f"Error writing file for CaseNo: {CaseNo}: {str(e)}")
-#         return None, f"Error writing file: {str(e)}"
-
-# # Function to upload HTML content to Azure Blob Storage
-# # def upload_to_blob(file_name, content):
-# #     try:
-# #         blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-# #         blob_client.upload_blob(content, overwrite=True)
-# #         # print(f"File uploaded successfully: {file_name}")
-# #     except Exception as e:
-# #         print(f"Error uploading file to blob storage: {str(e)}")
-
-# # Function to process each partition
-# def process_partition(partition, tribunaldecision_detail_bc):
-#     results = []
-#     for row in partition:
-#         CaseNo = row['CaseNo']
-#         Forenames = row['Forenames']
-#         Name = row['Name']
-#         html_content, status = generate_html_content(
-#             CaseNo,
-#             Forenames,
-#             Name,
-#             tribunaldecision_detail_bc.value
-#         )
-#         # Generate file path
-#         if html_content:
-#             file_name = f"ARIADM/ARM/TD/HTML/tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.html"
-#             # upload_to_blob(file_name, html_content)
-#             blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-#             blob_client.upload_blob(html_content, overwrite=True)
-#             results.append((CaseNo, Forenames, Name, file_name, status))
-#     return results
-
-# # Define the DLT function
-# @dlt.table(
-#     name="gold_td_html_generation_status",
-#     comment="Delta Live Table for Gold Tribunal Decision HTML Generation Status.",
-#     path=f"{gold_mnt}/gold_td_html_generation_status"
-# )
-# def gold_td_html_generation_status(initial_Load=False):
-    
-#     # Load necessary dataframes from DLT or Hive metastore
-#     df_archive_metadata = dlt.read("silver_archive_metadata")
-#     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-
-#     if read_hive == True:
-#         print("Running non-initial load")
-#         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
-#         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
-
-#     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-#     CaseNo_list = df_archive_metadata.select(
-#         col('client_identifier').alias('CaseNo'), 
-#         col('bf_001').alias('Forenames'), 
-#         col('bf_002').alias('Name')
-#     ).distinct().collect()
-
-#     # Broadcast the tribunal decision detail DataFrame for performance
-#     tribunaldecision_detail_bc = spark.sparkContext.broadcast(df_tribunaldecision_detail.collect())
-
-#     # Create an empty list to store results for the Delta Live Table
-#     result_list = []
-
-#     # Use ThreadPoolExecutor for parallel processing
-#     with ThreadPoolExecutor(max_workers=10) as executor:
-#         futures = [
-#             executor.submit(process_partition, [row], tribunaldecision_detail_bc)
-#             for row in CaseNo_list
-#         ]
-        
-#         for future in as_completed(futures):
-#             try:
-#                 # Retrieve the result from the future
-#                 result = future.result()
-#                 if result:
-#                     result_list.extend(result)
-#             except Exception as e:
-#                 print(f"Error processing future: {str(e)}")
-
-#     # Check if results were generated
-#     if not result_list:
-#         print("No results generated. Returning an empty DataFrame.")
-#         empty_schema = StructType([
-#             StructField("CaseNo", StringType(), True),
-#             StructField("Forenames", StringType(), True),
-#             StructField("Name", StringType(), True),
-#             StructField("GeneratedFilePath", StringType(), True),
-#             StructField("Status", StringType(), True)
-#         ])
-#         return spark.createDataFrame([], empty_schema)
-
-#     # Convert the result list to a DataFrame and return as Delta Live Table
-#     result_df = spark.createDataFrame(result_list, ["CaseNo", "Forenames", "Name", "GeneratedFilePath", "Status"])
-
-#     return result_df
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Generate JSON
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC #### Create gold_td_Json_generation_status & Processing TribunalDecision Json's
-# MAGIC This section is to prallel process the json and create atracker table with log information.
-
-# COMMAND ----------
-
-# DBTITLE 1,Generating Tribunal decision Profiles in JSON Outputs
-# Function to generate JSON content for a given tribunal decision
-def generate_json_for_tribunaldecision(CaseNo, Forenames, Name, tribunaldecision_detail_list):
+# DBTITLE 1,Transformation gold_td_iris_with_a360
+def generate_a360(row):
     try:
-        # Find tribunal decision details
-        tribunaldecision_detail = find_data_in_list(tribunaldecision_detail_list, CaseNo, Forenames, Name)
-        if not tribunaldecision_detail:
-            print(f"No details found for CaseNo: {CaseNo}")
-            return None, "No details found"
-        
-        # Convert the Spark Row object to a dictionary
-        row_dict = tribunaldecision_detail.asDict()  # Convert Spark Row object to a dictionary
-
-        # Create a dictionary for the tribunal decision details
-        tribunal_decision_data = {
-            "Archivedate": str(row_dict.get('AdtclmnFirstCreatedDatetime', '')),
-            "CaseNo": row_dict.get('CaseNo', ''),
-            "Forenames": row_dict.get('Forenames', ''),
-            "Name": row_dict.get('Name', ''),
-            "BirthDate": str(row_dict.get('BirthDate', '')),
-            "DestructionDate": str(row_dict.get('DestructionDate', '')),
-            "HORef": row_dict.get('HORef', ''),
-            "PortReference": row_dict.get('PortReference', ''),
-            "HearingCentreDescription": row_dict.get('HearingCentreDescription', ''),
-            "DepartmentDescription": row_dict.get('DepartmentDescription', ''),
-            "Note": row_dict.get('Note', '')
-        }
-
-        # Convert the dictionary to a JSON string
-        json_content = json.dumps(tribunal_decision_data, indent=4)
-
-        return json_content, "Success"
-
-    except Exception as e:
-        print(f"Error writing file for CaseNo: {CaseNo}: {str(e)}")
-        return None, f"Error writing file: {str(e)}"
-
-# Function to process each partition of data
-def process_partition_json(partition, tribunaldecision_detail_bc):
-    results = []
-
-    for row in partition:
-        CaseNo = row['CaseNo']
-        Forenames = row['Forenames']
-        Name = row['Name']
-
-        json_content, status = generate_json_for_tribunaldecision(
-            CaseNo,
-            Forenames,
-            Name,
-            tribunaldecision_detail_bc.value
-        )
-
-        # Generate file path
-        if json_content:
-            file_name = f"{gold_outputs}/JSON/tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.json"
-            # upload_to_blob(file_name, html_content)
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-            blob_client.upload_blob(json_content, overwrite=True)
-            results.append((CaseNo, Forenames, Name, file_name, status))
-        else:
-            results.append((CaseNo, Forenames, Name, "", status))
-
-    return results
-
-# Define the DLT function
-@dlt.table(
-    name="gold_td_json_generation_status",
-    comment="Delta Live Table for Gold Tribunal Decision JSON Generation Status.",
-    path=f"{gold_mnt}/gold_td_json_generation_status"
-)
-def gold_td_json_generation_status():
-    
-    # Load the necessary dataframes from DLT or Hive metastore
-    df_archive_metadata = dlt.read("silver_archive_metadata")
-    df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-
-
-    if read_hive == True:
-        print("Running non-initial load")
-        df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
-        df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
-    
-    
-    # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-    CaseNo_df = df_archive_metadata.select(
-        col('client_identifier').alias('CaseNo'), 
-        col('bf_001').alias('Forenames'), 
-        col('bf_002').alias('Name')
-    ).distinct()
-
-     # Broadcast the tribunal decision detail DataFrame for performance
-    tribunaldecision_detail_bc = spark.sparkContext.broadcast(df_tribunaldecision_detail.collect())
-
-    # Create an empty list to store results for the Delta Live Table
-    result_list = []
-
-    # Repartition by CaseNo for optimized parallel processing
-    num_partitions = 64  # Assuming an 8-worker cluster
-    repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
-    
-     # Apply mapPartitions to process each partition
-    result_rdd = repartitioned_df.rdd.mapPartitions(
-        lambda partition: process_partition_json(partition, tribunaldecision_detail_bc)
-    )
-
-     # Collect the results
-    result_list = result_rdd.collect()
-
-    schema = StructType([
-            StructField("CaseNo", StringType(), True),
-            StructField("Forenames", StringType(), True),
-            StructField("Name", StringType(), True),
-            StructField("GeneratedFilePath", StringType(), True),
-            StructField("Status", StringType(), True)
-        ])
-
-    
-     # If no results, return an empty DataFrame
-    if not result_list:
-        print("No results generated. Returning an empty DataFrame.")
-        return spark.createDataFrame([], schema)
-    
-    return spark.createDataFrame(result_list, schema)
-
-# COMMAND ----------
-
-# DBTITLE 1,Testing with Thread Pools: JSON Outputs for Future Scope
-
-
-# # Helper function to format dates
-# def format_date(date_value):
-#     if date_value:
-#         return datetime.strftime(date_value, "%d/%m/%Y")
-#     return ""  # Return empty string if date_value is None
-
-# # Function to find data in a list based on CaseNo, Forenames, and Name
-# def find_data_in_list(data_list, CaseNo, Forenames, Name):
-#     for item in data_list:
-#         if item['CaseNo'] == CaseNo and item['Forenames'] == Forenames and item['Name'] == Name:
-#             return item
-#     return None  # Return None if no match is found
-
-# # Define the function to generate JSON content for a given tribunal decision
-# def generate_json_for_tribunaldecision(CaseNo, Forenames, Name, tribunaldecision_detail_list):
-#     # Step 1: Find tribunal decision details
-#     tribunaldecision_detail = find_data_in_list(tribunaldecision_detail_list, CaseNo, Forenames, Name)
-    
-#     if not tribunaldecision_detail:
-#         print(f"No details found for CaseNo: {CaseNo}")
-#         return None, "No details found"
-
-#     # Create a dictionary for the tribunal decision details
-#     tribunal_decision_data = {
-#         "Archivedate": format_date(tribunaldecision_detail.get('AdtclmnFirstCreatedDatetime', '')),
-#         "CaseNo": tribunaldecision_detail.get('CaseNo', ''),
-#         "Forenames": tribunaldecision_detail.get('Forenames', ''),
-#         "Name": tribunaldecision_detail.get('Name', ''),
-#         "BirthDate": format_date(tribunaldecision_detail.get('BirthDate', '')),
-#         "DestructionDate": format_date(tribunaldecision_detail.get('DestructionDate', '')),
-#         "HORef": tribunaldecision_detail.get('HORef', ''),
-#         "PortReference": tribunaldecision_detail.get('PortReference', ''),
-#         "HearingCentreDescription": tribunaldecision_detail.get('HearingCentreDescription', ''),
-#         "DepartmentDescription": tribunaldecision_detail.get('DepartmentDescription', ''),
-#         "Note": tribunaldecision_detail.get('Note', '')
-#     }
-
-#     # Convert the dictionary to a JSON string
-#     json_content = json.dumps(tribunal_decision_data, indent=4)
-
-#     # Generate the file name
-#     file_name = f"ARIADM/ARM/TD/JSON/tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.json"
-
-#     # Upload JSON content to Azure Blob Storage
-#     # upload_to_blob(file_name, json_content)
-
-#     blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-#     blob_client.upload_blob(json_content, overwrite=True)
-
-#     # print(f"JSON file created for Adjudicator with ID: {CaseNo} at {file_name}")
-
-#     # Return the transformed JSON file path
-#     return file_name, "Success"
-
-# # # Function to upload JSON content to Azure Blob Storage
-# # def upload_to_blob(file_name, content):
-# #     try:
-# #         blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-# #         blob_client.upload_blob(content, overwrite=True)
-# #         # print(f"File uploaded successfully: {file_name}")
-# #     except Exception as e:
-# #         print(f"Error uploading file to blob storage: {str(e)}")
-
-# # Define the DLT function
-# @dlt.table(
-#     name="gold_td_json_generation_status",
-#     comment="Delta Live Table for Gold Tribunal Decision JSON Generation Status.",
-#     path=f"{gold_mnt}/gold_td_json_generation_status"
-# )
-# def gold_td_json_generation_status(initial_Load=False):
-    
-#     # Load the necessary dataframes from DLT or Hive metastore
-#     df_archive_metadata = dlt.read("silver_archive_metadata")
-#     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-
-#     if read_hive == True:
-#         print("Running non-initial load")
-#         df_archive_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
-#         df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
-
-#     # Fetch the list of CaseNo, Forenames, and Name from the archive metadata table
-#     CaseNo_list = df_archive_metadata.select(
-#         col('client_identifier').alias('CaseNo'), 
-#         col('bf_001').alias('Forenames'), 
-#         col('bf_002').alias('Name')
-#     ).distinct().collect()
-
-#     # Convert tribunal decision details DataFrame to a list of dictionaries
-#     tribunaldecision_detail_list = [
-#         row.asDict() for row in df_tribunaldecision_detail.collect()
-#     ]
-
-#     # Create an empty list to store results for the Delta Live Table
-#     result_list = []
-
-#     # Use ThreadPoolExecutor for parallel processing
-#     with ThreadPoolExecutor(max_workers=10) as executor:
-#         futures = [
-#             executor.submit(generate_json_for_tribunaldecision, row.CaseNo, row.Forenames, row.Name, tribunaldecision_detail_list)
-#             for row in CaseNo_list
-#         ]
-        
-#         for future, row in zip(as_completed(futures), CaseNo_list):
-#             try:
-#                 # Retrieve the result from the future
-#                 result = future.result()
-#                 # Ensure the result contains 2 fields (GeneratedFilePath, Status)
-#                 if result and len(result) == 2:
-#                     # Append the CaseNo, Forenames, Name from CaseNo_list and the result from generate_json_for_tribunaldecision
-#                     result_list.append((row.CaseNo, row.Forenames, row.Name, result[0], result[1]))
-#                 else:
-#                     print(f"Skipping result with incorrect structure: {result}")
-#             except Exception as e:
-#                 print(f"Error processing future: {str(e)}")
-
-#     # Check if results were generated
-#     if not result_list:
-#         print("No results generated. Returning an empty DataFrame.")
-#         # Return an empty DataFrame with the defined schema
-#         empty_schema = StructType([
-#             StructField("CaseNo", StringType(), True),
-#             StructField("Forenames", StringType(), True),
-#             StructField("Name", StringType(), True),
-#             StructField("GeneratedFilePath", StringType(), True),
-#             StructField("Status", StringType(), True)
-#         ])
-#         return spark.createDataFrame([], empty_schema)
-
-#     # Convert the results list to a DataFrame and return as a Delta Live Table
-#     result_df = spark.createDataFrame(result_list, ["CaseNo", "Forenames", "Name", "GeneratedFilePath", "Status"])
-
-#     return result_df
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Generate a360 files
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC #### Create gold_a360_generation_status & Processing TribunalDecision A360's
-# MAGIC This section is to prallel process the json and create atracker table with log information.
-
-# COMMAND ----------
-
-# DBTITLE 1,Sample for  reference
-#Sample
-# {"operation": "create_record","relation_id":"152820","record_metadata":{"publisher":"IADEMO","record_class":"IADEMO","region":"GBR","recordDate":"2023-04-12T00:00:00Z","event_date":"2023-04-12T00:00:00Z","client_identifier":"HU/02287/2021","bf_001":"Orgest","bf_002":"Hoxha","bf_003":"A1234567/001","bf_004":"1990-06-09T00:00:00Z","bf_005":"ABC/12345","bf_010":"2024-01-01T00:00:00Z"}}
-
-# {"operation": "upload_new_file","relation_id":"152820","file_metadata":{"publisher":"IADEMO","dz_file_name":"HU_02287_2021.json","file_tag":"json"}}
-
-# {"operation": "upload_new_file","relation_id":"152820","file_metadata":{"publisher":"IADEMO","dz_file_name":"HU022872021.pdf","file_tag":"pdf"}}
- 
-
-# COMMAND ----------
-
-# DBTITLE 1,Generating Tribunal decision Profiles in A360 Outputs
-# Function to format dates
-def format_date_zulu(date_value):
-    if isinstance(date_value, str):  # If the date is already a string, return as is
-        return date_value
-    elif isinstance(date_value, (datetime,)):
-        return datetime.strftime(date_value, "%Y-%m-%dT%H:%M:%SZ")
-    return None  # Return None if the date is invalid or not provided
-
-# Function to generate .a360 file for tribunal decisions
-def generate_a360_file_for_tribunaldecision(CaseNo, Forenames, Name, metadata_list):
-    try:
-        # Find the metadata for the case
-        row_dict = next((row for row in metadata_list if row['client_identifier'] == CaseNo and row['bf_001'] == Forenames and row['bf_002'] == Name), None)
-        if not row_dict:
-            print(f"No details found for Case No: {CaseNo}")
-            return None, f"No details for Case No: {CaseNo}"
-
-        # Create metadata, HTML, and JSON strings
         metadata_data = {
             "operation": "create_record",
-            "relation_id": row_dict['client_identifier'],
+            "relation_id": row.client_identifier,
             "record_metadata": {
-                "publisher": row_dict['publisher'],
-                "record_class": row_dict['record_class'],
-                "region": row_dict['region'],
-                "recordDate": format_date_zulu(row_dict['recordDate']),
-                "event_date": format_date_zulu(row_dict['event_date']),
-                "client_identifier": row_dict['client_identifier'],
-                "bf_001": row_dict['bf_001'],
-                "bf_002": row_dict['bf_002'],
-                "bf_003": format_date_zulu(row_dict['bf_003']),
-                "bf_004": format_date_zulu(row_dict['bf_004']),
-                "bf_005": row_dict['bf_005']
+                "publisher": row.publisher,
+                "record_class": row.record_class ,
+                "region": row.region,
+                "recordDate": str(row.recordDate),
+                "event_date": str(row.event_date),
+                "client_identifier": row.client_identifier,
+                "bf_001": row.bf_001 or "",
+                "bf_002": row.bf_002 or "",
+                "bf_003": str(row.bf_003) or "",
+                "bf_004": str(row.bf_004) or "",
+                "bf_005": row.bf_005 or ""
             }
         }
 
         html_data = {
             "operation": "upload_new_file",
-            "relation_id": row_dict['client_identifier'],
+            "relation_id": row.client_identifier,
             "file_metadata": {
-                "publisher": row_dict['publisher'],
-                "dz_file_name": f"tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.html",
+                "publisher": row.publisher,
+                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}_{row.bf_001}_{row.bf_002}.html",
                 "file_tag": "html"
             }
         }
 
         json_data = {
             "operation": "upload_new_file",
-            "relation_id": row_dict['client_identifier'],
+            "relation_id": row.client_identifier,
             "file_metadata": {
-                "publisher": row_dict['publisher'],
-                "dz_file_name": f"tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.json",
+                "publisher": row.publisher,
+                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}_{row.bf_001}_{row.bf_002}.json",
                 "file_tag": "json"
             }
         }
@@ -1513,81 +982,95 @@ def generate_a360_file_for_tribunaldecision(CaseNo, Forenames, Name, metadata_li
         # Combine the data
         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
 
-        # Define the file path for each tribunal decision
-        target_path = f"{gold_outputs}/A360/tribunal_decision_{CaseNo.replace('/', '_')}_{Forenames}_{Name}.a360"
-        
-        # Upload the content to Azure Blob Storage
-        blob_client = container_client.get_blob_client(target_path)
-        blob_client.upload_blob(all_data_str, overwrite=True)
-
-        return target_path, "Success"
+        return all_data_str
     except Exception as e:
-        print(f"Error writing file for Case No: {CaseNo}: {str(e)}")
-        return None, f"Error writing file: {str(e)}"
+        return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
 
-# Define a function to run the A360 file generation for each partition
-def process_partition_a360(partition, metadata_bc,blob_service_client, container_name):
-    results = []
-    for row in partition:
-        CaseNo, Forenames, Name = row['CaseNo'], row['Forenames'], row['Name']
+# Register UDF
+generate_a360_udf = udf(generate_a360, StringType())
 
-        file_name, status = generate_a360_file_for_tribunaldecision(CaseNo, Forenames, Name, metadata_bc.value)
-        
-        if file_name is None:
-            results.append((CaseNo, Forenames, Name, "", status))
-        else:
-            results.append((CaseNo, Forenames, Name, file_name, status))
-    return results
-
-# Delta Live Table
 @dlt.table(
-    name="gold_td_a360_generation_status",
-    comment="Delta Live Table for Gold Tribunal Decision .a360 File Generation Status.",
-    path=f"{gold_mnt}/gold_td_a360_generation_status"
+    name="gold_td_iris_with_a360",
+    comment="Delta Live Gold Table with A360 content.",
+    path=f"{gold_mnt}/gold_td_iris_with_a360"
 )
-def gold_td_a360_generation_status():
-    # df_td_filtered = dlt.read("stg_td_filtered")
-    df_td_metadata = dlt.read("silver_archive_metadata")
-
-    if read_hive == True:
-        print("Running non-initial load")
-        # df_td_filtered = spark.read.table("hive_metastore.ariadm_arm_iris_td.stg_td_filtered")
-        df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+def gold_td_iris_with_a360():
     
-    # Fetch the list of CaseNo, Forenames, and Name from the table (as Spark DataFrame)
-    CaseNo_df = df_td_metadata.select(col('client_identifier').alias('CaseNo'), 
-                                      col('bf_001').alias('Forenames'), 
-                                      col('bf_002').alias('Name')).distinct()
+    df_joh_metadata = dlt.read("silver_archive_metadata")
 
-    # Repartition by CaseNo for optimized parallel processing
-    num_partitions = 64  # Assuming an 8-worker cluster
-    repartitioned_df = CaseNo_df.repartition(num_partitions, "CaseNo")
+    # Optionally load data from Hive
+    if read_hive:
+        df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 
-    # Broadcast metadata to all workers (using the Spark DataFrame instead of the collected list)
-    metadata_bc = spark.sparkContext.broadcast(df_td_metadata.collect())
 
-    # Run the A360 file generation on each partition
-    result_rdd = repartitioned_df.rdd.mapPartitions(lambda partition: process_partition_a360(partition, metadata_bc,blob_service_client, container_name))
+    # Repartition to optimize parallelism
+    repartitioned_df = df_joh_metadata.repartition(64)
 
-    # Collect results
-    results = result_rdd.collect()
+    # Generate A360 content
+    df_with_a360 = repartitioned_df.withColumn(
+        "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+    ).withColumn(
+        "A360FileName", concat(
+            lit(f"{gold_outputs}/A360/tribunal_decision_"), 
+            regexp_replace(col("client_identifier"), "/", "_"), 
+            lit("_"), col("bf_001"), 
+            lit("_"), col("bf_002"), 
+            lit(".a360")
+        )
+    ).withColumn(
+        "UploadStatus", upload_udf(col("A360FileName"), col("A360Content"))
+    ).select(
+        col("client_identifier").alias("CaseNo"),
+        col("bf_001").alias("Forenames"),
+        col("bf_002").alias("Name"),
+        "A360Content",
+        "A360FileName",
+        "UploadStatus"
+    ).repartition(64, col("CaseNo"))
+      
+    # Optionally load data from Hive
+    if read_hive:
+        display(df_with_a360)
 
-    # Create DataFrame for output
-    schema = StructType([
-        StructField("CaseNo", StringType(), True),
-        StructField("Forenames", StringType(), True),
-        StructField("Name", StringType(), True),
-        StructField("GeneratedFilePath", StringType(), True),
-        StructField("Status", StringType(), True)
-    ])
-    a360_result_df = spark.createDataFrame(results, schema=schema)
 
-    # Log the A360 paths in the Delta Live Table
-    return a360_result_df.select("CaseNo", "Forenames", "Name", "GeneratedFilePath", "Status")
+    return df_with_a360.select("CaseNo","Forenames","Name", "A360Content","A360FileName","UploadStatus")
 
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Appendix
+
+# COMMAND ----------
+
+# DBTITLE 1,Count of Files in HTML, JSON, and A360 Directories
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
+
+# COMMAND ----------
+
+# dbutils.secrets.listScopes()
+
+# COMMAND ----------
+
+# DBTITLE 1,HTML Failed Upload Status
+# %sql
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html where UploadStatus != 'success' and HTMLContent like '%ERROR%'
+
+# COMMAND ----------
+
+# DBTITLE 1,JSON Failed Upload Status
+# %sql
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_json where UploadStatus != 'success'  and JSONCollection like '%ERROR%'
+
+# COMMAND ----------
+
+# DBTITLE 1,A360 Failed Upload Status
+# %sql
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360 where UploadStatus != 'success'  and A360Content like '%ERROR%'
+
+# COMMAND ----------
+
+# %sql
+# drop schema hive_metastore.ariadm_arm_td cascade

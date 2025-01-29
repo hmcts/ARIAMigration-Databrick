@@ -272,6 +272,18 @@ def Raw_Status():
 
 # COMMAND ----------
 
+# @dlt.table(
+#     name="raw_appealcase",
+#     comment="Delta Live Table ARIA AppealCase.",
+#     path=f"{raw_mnt}/Raw_AppealCase"
+# )
+# def Raw_AppealCase():
+#     return read_latest_parquet("AppealCase", "tv_AppealCase", "ARIA_ARM_TD")
+
+# needs 'Destruction date', 'HOANRef' as per cell 17 and 23
+
+# COMMAND ----------
+
 dbutils.fs.ls("/mnt/landing")
 
 # COMMAND ----------

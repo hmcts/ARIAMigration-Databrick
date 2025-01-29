@@ -68,6 +68,38 @@ def generate_appeal_case_data(num_records: int) -> pd.DataFrame:
         oakington_case = fake.boolean()
         ho_interpreter = fake.name()
         additional_grounds = random.randint(0, 1)
+        appeal_categories = random.randint(0, 1)
+        
+        statutory_closure = fake.boolean()
+        statutory_closure_date = fake.date_between(start_date="-5y", end_date="today") if statutory_closure else None
+        non_standard_sc_period = fake.boolean()
+        publicly_funded = fake.boolean()
+        court_preference = random.randint(1, 2)
+        provisional_destruction_date = fake.date_between(start_date="+1y", end_date="+5y")
+        destruction_date = fake.date_between(start_date="+1y", end_date="+5y")
+        file_in_statutory_closure = fake.boolean()
+        date_of_next_listed_hearing = fake.boolean()
+        documents_received = random.randint(1, 2)
+        out_of_time_issues = fake.boolean()
+        validity_issues = fake.boolean()
+        received_from_respondent = fake.boolean()
+        ind_date_appeal_received = fake.date_between(start_date="-5y", end_date="today") if received_from_respondent else None
+        removal_date = fake.date_between(start_date="-5y", end_date="today")
+        appeal_received_by = random.randint(1, 4)
+        in_camera = fake.boolean()
+        date_of_application_decision = fake.date_between(start_date="-5y", end_date="today")
+        user_id = fake.random_number(digits=3)
+        date_reinstated = fake.date_between(start_date="-5y", end_date="today")
+        deportation_date = fake.date_between(start_date="-5y", end_date="today")
+        secure_court_required = fake.boolean()
+        hoan_ref = fake.bothify(text='??##-######')
+        human_rights = fake.random_element(elements=(0, 1))
+        transfer_out_date = fake.date_between(start_date="-5y", end_date="today")
+        certified_date = fake.date_between(start_date="-5y", end_date="today")
+        certified_recorded_date = fake.date_between(start_date="-5y", end_date="today")
+        notice_sent_date = fake.date_between(start_date="-5y", end_date="today")
+        address_recorded_date = fake.date_between(start_date="-5y", end_date="today")
+        referred_to_judge_date = fake.date_between(start_date="-5y", end_date="today")
         
         data.append([
             case_no, case_prefix, case_serial, case_year, case_type, appeal_type_id,
@@ -75,7 +107,14 @@ def generate_appeal_case_data(num_records: int) -> pd.DataFrame:
             port_id, ho_ref, vv_embassy_id, date_served, centre_id, language_id, 
             notes, nationality_id, interpreter, country_id, third_country_id,
             date_of_issue, family_case, oakington_case, ho_interpreter,
-            additional_grounds
+            additional_grounds, appeal_categories, statutory_closure, statutory_closure_date,
+            non_standard_sc_period, publicly_funded, court_preference, provisional_destruction_date,
+            destruction_date, file_in_statutory_closure, date_of_next_listed_hearing, documents_received,
+            out_of_time_issues, validity_issues, received_from_respondent, ind_date_appeal_received,
+            removal_date, appeal_received_by, in_camera, date_of_application_decision, user_id,
+            date_reinstated, deportation_date, secure_court_required, hoan_ref, human_rights,
+            transfer_out_date, certified_date, certified_recorded_date, notice_sent_date,
+            address_recorded_date, referred_to_judge_date
         ])
         
     columns = [
@@ -84,7 +123,14 @@ def generate_appeal_case_data(num_records: int) -> pd.DataFrame:
         "PortId", "HoRef", "VVEmbassyId", "DateServed", "CentreId", "LanguageId",
         "Notes", "NationalityId", "Interpreter", "CountryId", "ThirdCountryId",
         "DateOfIssue", "FamilyCase", "OakingtonCase", "HoInterpreter", 
-        "AdditionalGrounds"
+        "AdditionalGrounds", "AppealCategories", "StatutoryClosure", "StatutoryClosureDate",
+        "NonStandardSCPeriod", "PubliclyFunded", "CourtPreference", "ProvisionalDestructionDate",
+        "DestructionDate", "FileInStatutoryClosure", "DateOfNextListedHearing", "DocumentsReceived",
+        "OutOfTimeIssues", "ValidityIssues", "ReceivedFromRespondent", "IndDateAppealReceived",
+        "RemovalDate", "AppealReceivedBy", "InCamera", "DateOfApplicationDecision", "UserId",
+        "DateReinstated", "DeportationDate", "SecureCourtRequired", "HOANRef", "HumanRights",
+        "TransferOutDate", "CertifiedDate", "CertifiedRecordedDate", "NoticeSentDate",
+        "AddressRecordedDate", "ReferredToJudgeDate"
     ]
     
     df = pd.DataFrame(data, columns=columns)

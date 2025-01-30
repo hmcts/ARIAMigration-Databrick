@@ -11,7 +11,7 @@ spark = SparkSession.builder \
 
 # mount point for the gold files
 # gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test"
-gold_mnt = "/mnt/gold/ARIADM/ARM/TD/test"
+gold_mnt = "/mnt/gold/ARIADM/ARM/TD"
 
 # Read the JSON file
 json_schema = StructType([
@@ -28,7 +28,7 @@ json_schema = StructType([
 ])
 
 # df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/JSON/tribunal_decision_*.json", schema=json_schema)
-df_json = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/JSON/tribunal_decision_*.json", schema=json_schema)
+df_json = spark.read.json("/mnt/gold/ARIADM/ARM/TD/JSON/tribunal_decision_*.json", schema=json_schema)
 
 # Read the A360 file
 a360_schema = StructType([
@@ -58,10 +58,12 @@ a360_schema = StructType([
     ]), True)
 ])
 
-df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/A360/tribunal_decision_*.a360", schema=a360_schema)
+# df_a360 = spark.read.json("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/A360/tribunal_decision_*.a360", schema=a360_schema)
+df_a360 = spark.read.json("/mnt/gold/ARIADM/ARM/TD/A360/tribunal_decision_*.a360", schema=a360_schema)
 
 # Read the HTML file
-df_html = spark.read.text("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/HTML/tribunal_decision_*.html")
+# df_html = spark.read.text("/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/test/HTML/tribunal_decision_*.html")
+df_html = spark.read.text("/mnt/gold/ARIADM/ARM/TD/HTML/tribunal_decision_*.html")
 
 # Initialize variables to capture test results
 json_record_count_test = True

@@ -912,22 +912,47 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
+# secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
 
 # COMMAND ----------
 
 # DBTITLE 1,Azure Blob Storage Connection Setup in Python
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-import os
+# from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+# import os
 
 # Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+# connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
 
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+# blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
 # Specify the container name
-container_name = "gold"
-container_client = blob_service_client.get_container_client(container_name)
+# container_name = "gold"
+# container_client = blob_service_client.get_container_client(container_name)
+
+from azure.storage.blob import BlobServiceClient
+
+# Fetch dynamic variables from Databricks widgets
+dbutils.widgets.text("endpoint", "")
+dbutils.widgets.text("keyvault", "")
+dbutils.widgets.text("secret_name", "")
+
+endpoint = dbutils.widgets.get("endpoint")  # e.g., "https://ingest00curatedsbox.blob.core.windows.net/"
+keyvault = dbutils.widgets.get("keyvault")  # e.g., "ingest00-keyvault-sbox"
+secret_name = dbutils.widgets.get("secret_name")  # e.g., "ingest00-adls-ingest00curatedsbox-connection-string-sbox"
+
+# Fetch the secret dynamically from Key Vault
+secret = dbutils.secrets.get(scope=keyvault, key=secret_name)
+
+# Construct the connection string
+connection_string = (
+    f"BlobEndpoint={endpoint};"
+    f"QueueEndpoint={endpoint.replace('blob', 'queue')};"
+    f"FileEndpoint={endpoint.replace('blob', 'file')};"
+    f"TableEndpoint={endpoint.replace('blob', 'table')};"
+    f"SharedAccessSignature={secret}"
+)
+
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
 
 # COMMAND ----------

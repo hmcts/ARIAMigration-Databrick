@@ -1,0 +1,55 @@
+parameters:
+  pythonVersion: ''
+  env: ''
+  mainRepositoryName: ''
+  databricksInstance: ''
+  databricksClusterId: ''
+  wheelName: 'ARIAFUNCITONS-0.0.1-py3-none-any.whl'
+  subscriptionEndpoint: ''
+
+
+steps:
+- task: DownloadPipelineArtifact@2
+  displayName: 'Download Wheel Artifact'
+#  condition: succeeded()
+  inputs:
+    buildType: 'current'
+    artifactName: 'python-wheel'
+    targetPath: '$(Pipeline.Workspace)/python-wheel'
+
+- task: AzureCLI@2
+  displayName: 'Upload Wheel to Workspace'
+#  condition: succeeded()
+  inputs:
+    azureSubscription: ${{ parameters.subscriptionEndpoint }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -e
+      source working_dir/bin/activate
+      export PYTHONPATH="${PYTHONPATH}:/./"
+      export DATABRICKS_HOST=${{ parameters.databricksInstance }}
+      export DATABRICKS_TOKEN=$(AUTH-AccessToken-sbox)
+      which databricks
+      databricks libraries install --help
+      
+      # Debugging
+      databricks version
+      echo "Cluster ID: ${{ parameters.databricksClusterId }}"
+      echo "Wheel Name: ${{ parameters.wheelName }}"
+      echo "Databricks Host: $DATABRICKS_HOST"
+      echo "Databricks Token: $DATABRICKS_TOKEN"
+
+      databricks libraries workspace-upload \
+        $(Pipeline.Workspace)/python-wheel/${{ parameters.wheelName }} \
+        --workspace-path /Workspace/Shared/${{ parameters.wheelName }}
+
+      databricks libraries install --json '{
+        "cluster_id": "0110-125559-6bz2jhlo",
+        "libraries": [
+          {
+            "whl": "dbfs:/FileStore/shared_wheels/my_package-0.1-py3-none-any.whl"
+          }
+        ]
+      }'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'

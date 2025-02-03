@@ -55,6 +55,10 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-294">ARIADM-294</a>/NSA/28-JAN-2025</td>
 # MAGIC     <td>Optimize Spark Workflows</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
+# MAGIC     <td>BugFix</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -114,6 +118,7 @@ gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
 file_path = "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
 gold_outputs = "ARIADM/ARM/TD"
 hive_schema = "ariadm_arm_td"
+key_vault = "ingest00-keyvault-sbox"
 
 
 # COMMAND ----------
@@ -383,7 +388,8 @@ def bronze_iris_extract():
     return (
         spark.read.option("header", "true")
             .option("inferSchema", "true")
-            .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
+            # .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
+            .csv(file_path)
             .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp())
             .withColumn("AdtclmnModifiedDatetime", current_timestamp())
             .withColumn("SourceFileName", lit(file_path))
@@ -753,7 +759,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
 
 # COMMAND ----------
 
@@ -762,7 +768,7 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 
 # Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+connection_string = secret
 
 blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
@@ -791,13 +797,17 @@ def format_date_dd_mm_yyyy(date_value):
     except Exception as e:
         raise ValueError(f"Invalid date input: {date_value}. Error: {e}")
 
+# Load template
+html_template_list = spark.read.text("/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html").collect()
+html_template = "".join([row.value for row in html_template_list])
+
 # Modify the UDF to accept a row object
-def generate_html(row):
+def generate_html(row, html_template=html_template):
     try:
         # Load template
-        html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html"
-        with open(html_template_path, "r") as f:
-            html_template = "".join([l for l in f])
+        # html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html"
+        # with open(html_template_path, "r") as f:
+        #     html_template = "".join([l for l in f])
 
         # Replace placeholders in the template with row data
         replacements = {
@@ -841,6 +851,19 @@ upload_udf = udf(upload_to_blob)
 
 # COMMAND ----------
 
+df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
+    
+
+
+# Apply the UDF to the combined DataFrame
+df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(row = struct(*df_tribunaldecision_detail.columns))   ) \
+                                        .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                        .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                        .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+display(df_with_html)
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation: stg_td_iris_unified
 @dlt.table(
     name="stg_td_iris_unified",
@@ -851,7 +874,7 @@ def stg_td_iris_unified():
 
     df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
     
-    df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
+    # df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
 
     # Apply the UDF to the combined DataFrame
     df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
@@ -1035,6 +1058,11 @@ def gold_td_iris_with_a360():
 
     return df_with_a360.select("CaseNo","Forenames","Name", "A360Content","A360FileName","UploadStatus")
 
+
+# COMMAND ----------
+
+# DBTITLE 1,Exit Notebook with Success Message
+dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 

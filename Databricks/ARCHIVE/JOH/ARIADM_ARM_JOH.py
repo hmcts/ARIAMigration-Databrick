@@ -43,6 +43,10 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-294">ARIADM-294</a>/NSA/28-JAN-2025</td>
 # MAGIC     <td>Optimize Spark Workflows</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
+# MAGIC     <td>BugFix</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC     
 # MAGIC    </tbody>
@@ -84,7 +88,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 # COMMAND ----------
 
-read_hive = False
+read_hive = True
 
 # Setting variables for use in subsequent cells
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
@@ -94,6 +98,7 @@ silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
 gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
 gold_outputs = "ARIADM/ARM/JOH"
 hive_schema = "ariadm_arm_joh"
+key_vault = "ingest00-keyvault-sbox"
 
 # COMMAND ----------
 
@@ -912,7 +917,7 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
 
 # COMMAND ----------
 
@@ -921,14 +926,13 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 
 # Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+connection_string = secret
 
 blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
 # Specify the container name
 container_name = "gold"
 container_client = blob_service_client.get_container_client(container_name)
-
 
 # COMMAND ----------
 
@@ -968,13 +972,17 @@ def upload_to_blob(file_name, file_content):
 # Register the upload function as a UDF
 upload_udf = udf(upload_to_blob)
 
+# Load template
+html_template_list = spark.read.text("/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html").collect()
+html_template = "".join([row.value for row in html_template_list])
+
 # Modify the UDF to accept a row object
-def generate_html(row):
+def generate_html(row, html_template=html_template):
     try:
         # Load template
-        html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-        with open(html_template_path, "r") as f:
-            html_template = f.read()
+        # html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
+        # with open(html_template_path, "r") as f:
+        #     html_template = f.read()
 
         # Replace placeholders in the template with row data
         replacements = {
@@ -1253,6 +1261,7 @@ def gold_judicial_officer_with_a360():
 
 # COMMAND ----------
 
+# DBTITLE 1,Exit Notebook with Success Message
 dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
@@ -1275,8 +1284,8 @@ dbutils.notebook.exit("Notebook completed successfully")
 # COMMAND ----------
 
 # DBTITLE 1,HTML Failed Upload Status
-# MAGIC %sql
-# MAGIC -- select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_html  where UploadStatus != 'success' and HTMLContent not like '<!DOC>%'
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_html  --where UploadStatus != 'success' and HTMLContent not like '%ERROR%'
 
 # COMMAND ----------
 

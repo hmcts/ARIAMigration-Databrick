@@ -1,4 +1,266 @@
 # Databricks notebook source
+tables = [
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_ca_apt_country_detc",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_bfdiary_bftype",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_history_users",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_link_linkdetail",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_appealcatagory_catagory",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at",
+    "hive_metastore.ariadm_arm_appeals.bronze_status_decisiontype",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_t_tt_ts_tm",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_ahr_hr",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_anm_nm",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_dr_rd",
+    "hive_metastore.ariadm_arm_appeals.bronze_appealcase_rsd_sd",
+    "hive_metastore.ariadm_arm_appeals.bronze_review_specific_direction",
+    "hive_metastore.ariadm_arm_appeals.bronze_cost_award",
+    "hive_metastore.ariadm_arm_appeals.bronze_cost_award_linked",
+    "hive_metastore.ariadm_arm_appeals.bronze_costorder",
+    "hive_metastore.ariadm_arm_appeals.bronze_hearing_points_change_reason",
+    "hive_metastore.ariadm_arm_appeals.bronze_hearing_points_history",
+    "hive_metastore.ariadm_arm_appeals.bronze_appeal_type_category",
+    "hive_metastore.ariadm_arm_appeals.bronze_appeal_grounds",
+    "hive_metastore.ariadm_arm_appeals.bronze_required_incompatible_adjudicator",
+    "hive_metastore.ariadm_arm_appeals.bronze_case_adjudicator"
+]
+
+for table in tables:
+    df = spark.read.table(table)
+    duplicate_cases = df.groupBy("CaseNo").count().filter("count > 1")
+    if duplicate_cases.count() > 0:
+        print(f"Table {table} has duplicate CaseNo")
+
+# COMMAND ----------
+
+tables = spark.catalog.listTables("hive_metastore.ariadm_arm_appeals")
+for table in tables:
+    # if table.name.startswith("bronze_") or table.name.startswith("silver_"):
+    if table.name.startswith("silver_"):
+         table_name = f"hive_metastore.ariadm_arm_appeals.{table.name}"
+         print(table_name)
+
+
+# COMMAND ----------
+
+tables = spark.catalog.listTables("hive_metastore.ariadm_arm_appeals")
+for table in tables:
+    # if table.name.startswith("bronze_") or table.name.startswith("silver_"):
+    if table.name.startswith("silver_"):
+        table_name = f"hive_metastore.ariadm_arm_appeals.{table.name}"
+        df = spark.read.table(table_name)
+        if "CaseNo" in df.columns:
+            duplicate_cases = df.groupBy("CaseNo").count().filter("count > 1")
+            if duplicate_cases.count() > 0:
+                print(f"Table {table_name} has duplicate CaseNo")
+            else:
+                print(f"Table {table_name} has unique CaseNo")
+
+# COMMAND ----------
+
+spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealgrounds_detail").columns
+
+# COMMAND ----------
+
+
+
+
+
+
+
+# df_statusdecisiontype = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_statusdecisiontype_detail")
+# print("Columns in hive_metastore.ariadm_arm_appeals.silver_statusdecisiontype_detail:", df_statusdecisiontype.columns)
+
+df_transaction = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
+print("Columns in hive_metastore.ariadm_arm_appeals.silver_transaction_detail:", df_transaction.columns)
+
+# COMMAND ----------
+
+# df_statusdecisiontype = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_statusdecisiontype_detail").groupBy("CaseNo").agg(
+#     collect_list(struct('DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent')).alias("StatusDecisionTypes")
+# )
+
+# df_transaction = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail").groupBy("CaseNo").agg(
+#     collect_list(struct('TransactionId', 'TransactionTypeId', 'TransactionMethodId', 'TransactionDate', 'Amount', 'ClearedDate', 'TransactionStatusId', 'OriginalPaymentReference', 'PaymentReference', 'AggregatedPaymentURN', 'PayerForename', 'PayerSurname', 'LiberataNotifiedDate', 'LiberataNotifiedAggregatedPaymentDate', 'BarclaycardTransactionId', 'Last4DigitsCard', 'TransactionNotes', 'ExpectedDate', 'ReferringTransactionId', 'CreateUserId', 'LastEditUserId', 'TransactionDescription', 'InterfaceDescription', 'AllowIfNew', 'DoNotUse', 'SumFeeAdjustment', 'SumPayAdjustment', 'SumTotalFee', 'SumTotalPay', 'SumBalance', 'GridFeeColumn', 'GridPayColumn', 'IsReversal', 'TransactionStatusDesc', 'TransactionStatusIntDesc', 'DoNotUseTransactionStatus', 'TransactionMethodDesc', 'TransactionMethodIntDesc', 'DoNotUseTransactionMethod', 'AmountDue', 'AmountPaid', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')).alias("Transactions")
+# )
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select CaseNo, count(*) from hive_metastore.ariadm_arm_td.bronze_ac_ca_ant_fl_dt_hc 
+# MAGIC group by all
+# MAGIC having count(*) > 1
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select CaseNo,Forenames,Name, count(*) from hive_metastore.ariadm_arm_td.bronze_ac_ca_ant_fl_dt_hc 
+# MAGIC group by all
+# MAGIC having count(*) > 1
+
+# COMMAND ----------
+
+from pyspark.sql.functions import collect_list, struct
+
+# Read unique CaseNo tables
+df_appealcase = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcase_detail")
+df_applicant = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_applicant_detail")
+df_case_detail = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_case_detail")
+df_costorder = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costorder_detail")
+df_dfdairy = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_dfdairy_detail")
+df_hearingpointschange = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearingpointschange_detail")
+df_newmatter = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_newmatter_detail")
+df_reviewspecificdirection = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_reviewspecificdirection_detail")
+
+# Read duplicate CaseNo tables and aggregate them
+df_appealcategory = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealcategory_detail").groupBy("CaseNo").agg(
+     collect_list(
+        struct( 'CategoryDescription', 'Flag')
+    ).alias("AppealCategory")
+)
+
+df_appealgrounds = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealgrounds_detail").groupBy("CaseNo").agg(
+    collect_list(struct( 'AppealTypeId', 'AppealTypeDescription')).alias("AppealGrounds")
+)
+
+df_appealtypecategory = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_appealtypecategory_detail").groupBy("CaseNo").agg(
+    collect_list(struct('AppealTypeCategoryId', 'AppealTypeId', 'CategoryId', 'FeeExempt')).alias("AppealTypeCategories")
+)
+
+df_case_adjudicator = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_case_adjudicator").groupBy("CaseNo").agg(
+    collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicators")
+)
+
+df_costaward = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_costaward_detail").groupBy("CaseNo").agg(
+    collect_list(struct('CostAwardId', 'Name', 'Forenames', 'Title', 'DateOfApplication', 'TypeOfCostAward', 'ApplyingParty', 'PayingParty', 'MindedToAward', 'ObjectionToMindedToAward', 'CostsAwardDecision', 'DateOfDecision', 'CostsAmount', 'OutcomeOfAppeal', 'AppealStage', 'AppealStageDescription')).alias("CostAwards")
+)
+
+df_dependent = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_dependent_detail").groupBy("CaseNo").agg(
+    collect_list(struct('AppellantId', 'CaseAppellantRelationship', 'PortReference', 'AppellantName', 'AppellantForenames', 'AppellantTitle', 'AppellantBirthDate', 'AppellantAddress1', 'AppellantAddress2', 'AppellantAddress3', 'AppellantAddress4', 'AppellantAddress5', 'AppellantPostcode', 'AppellantTelephone', 'AppellantFax', 'Detained', 'AppellantEmail', 'FCONumber', 'PrisonRef', 'DetentionCentre', 'CentreTitle', 'DetentionCentreType', 'DCAddress1', 'DCAddress2', 'DCAddress3', 'DCAddress4', 'DCAddress5', 'DCPostcode', 'DCFax', 'DCSdx', 'Country', 'Nationality', 'Code', 'DoNotUseCountry', 'CountrySdx', 'DoNotUseNationality')).alias("Dependents")
+)
+
+df_documents = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_documents_detail").groupBy("CaseNo").agg(
+    collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'DoNotUse', 'Auditable')).alias("Documents")
+)
+
+df_hearingpointshistory = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearingpointshistory_detail").groupBy("CaseNo").agg(
+    collect_list(struct('CaseNo', 'StatusId', 'HearingPointsHistoryId', 'HistDate', 'HistType', 'UserId', 'DefaultPoints', 'InitialPoints', 'FinalPoints')).alias("HearingPointHistory")
+)
+
+df_history = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_history_detail").groupBy("CaseNo").agg(
+    collect_list(struct('HistoryId', 'CaseNo', 'HistDate', 'fileLocation', 'lastDocument', 'HistType', 'HistoryComment', 'StatusId', 'UserName', 'UserType', 'Fullname', 'Extension', 'DoNotUse', 'HistTypeDescription')).alias("History")
+)
+
+df_humanright = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_humanright_detail").groupBy("CaseNo").agg(
+    collect_list(struct('HumanRightId', 'HumanRightDescription', 'DoNotShow', 'Priority')).alias("HumanRights")
+)
+
+df_link = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_link_detail").groupBy("CaseNo").agg(
+    collect_list(struct( 'LinkNo', 'LinkDetailComment', 'LinkName', 'LinkForeNames', 'LinkTitle')).alias("LinkedCases")
+)
+
+df_linkedcostaward = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_linkedcostaward_detail").groupBy("CaseNo").agg(
+    collect_list(struct('CostAwardId', 'CaseNo', 'LinkNo', 'Name', 'Forenames', 'Title', 'DateOfApplication', 'TypeOfCostAward', 'ApplyingParty', 'PayingParty', 'MindedToAward', 'ObjectionToMindedToAward', 'CostsAwardDecision', 'DateOfDecision', 'CostsAmount', 'OutcomeOfAppeal', 'AppealStage', 'AppealStageDescription')).alias("LinkedCostAwards")
+)
+
+df_list_detail = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_list_detail").groupBy("CaseNo").agg(
+    collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc')).alias("Lists")
+)
+
+df_required_incompatible_adjudicator = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(
+    collect_list(struct('Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("RequiredIncompatibleAdjudicators")
+)
+
+df_status = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail").groupBy("CaseNo").agg(
+    collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'UpperTribunalHearingDirectionId', 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("Statuses")
+)
+
+df_statusdecisiontype = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_statusdecisiontype_detail").groupBy("CaseNo").agg(
+    collect_list(struct('DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent')).alias("StatusDecisionTypes")
+)
+
+df_transaction = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail").groupBy("CaseNo").agg(
+    collect_list(struct('TransactionId', 'TransactionTypeId', 'TransactionMethodId', 'TransactionDate', 'Amount', 'ClearedDate', 'TransactionStatusId', 'OriginalPaymentReference', 'PaymentReference', 'AggregatedPaymentURN', 'PayerForename', 'PayerSurname', 'LiberataNotifiedDate', 'LiberataNotifiedAggregatedPaymentDate', 'BarclaycardTransactionId', 'Last4DigitsCard', 'TransactionNotes', 'ExpectedDate', 'ReferringTransactionId', 'CreateUserId', 'LastEditUserId', 'TransactionDescription', 'InterfaceDescription', 'AllowIfNew', 'DoNotUse', 'SumFeeAdjustment', 'SumPayAdjustment', 'SumTotalFee', 'SumTotalPay', 'SumBalance', 'GridFeeColumn', 'GridPayColumn', 'IsReversal', 'TransactionStatusDesc', 'TransactionStatusIntDesc', 'DoNotUseTransactionStatus', 'TransactionMethodDesc', 'TransactionMethodIntDesc', 'DoNotUseTransactionMethod', 'AmountDue', 'AmountPaid', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')).alias("Transactions")
+)
+
+# Join all tables
+df_combined = (
+    df_appealcase
+    .join(df_applicant, "CaseNo", "left")
+    .join(df_case_detail, "CaseNo", "left")
+    .join(df_costorder, "CaseNo", "left")
+    .join(df_dfdairy, "CaseNo", "left")
+    .join(df_hearingpointschange, "CaseNo", "left")
+    .join(df_newmatter, "CaseNo", "left")
+    .join(df_reviewspecificdirection, "CaseNo", "left")
+    .join(df_appealcategory, "CaseNo", "left")
+    .join(df_appealgrounds, "CaseNo", "left")
+    .join(df_appealtypecategory, "CaseNo", "left")
+    .join(df_case_adjudicator, "CaseNo", "left")
+    .join(df_costaward, "CaseNo", "left")
+    .join(df_dependent, "CaseNo", "left")
+    .join(df_documents, "CaseNo", "left")
+    .join(df_hearingpointshistory, "CaseNo", "left")
+    .join(df_history, "CaseNo", "left")
+    .join(df_humanright, "CaseNo", "left")
+    .join(df_link, "CaseNo", "left")
+    .join(df_linkedcostaward, "CaseNo", "left")
+    .join(df_list_detail, "CaseNo", "left")
+    .join(df_required_incompatible_adjudicator, "CaseNo", "left")
+    .join(df_status, "CaseNo", "left")
+    .join(df_statusdecisiontype, "CaseNo", "left")
+    .join(df_transaction, "CaseNo", "left")
+)
+
+display(df_combined)
+
+
+# COMMAND ----------
+
+df_appealcase.count()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import collect_list, struct
+
+df_judicial_officer_details = spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail")
+df_other_centres = spark.read.table("hive_metastore.ariadm_arm_joh.silver_othercentre_detail")
+df_roles = spark.read.table("hive_metastore.ariadm_arm_joh.silver_appointment_detail")
+df_history = spark.read.table("hive_metastore.ariadm_arm_joh.silver_history_detail")
+
+# Aggregate Other Centres
+grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
+    collect_list("OtherCentres").alias("OtherCentres")
+)
+
+# Aggregate Roles
+grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
+    collect_list(
+        struct("Role", "DateOfAppointment", "EndDateOfAppointment")
+    ).alias("Roles")
+).cache()
+
+# Aggregate History
+grouped_history = df_history.groupBy("AdjudicatorId").agg(
+    collect_list(
+        struct("HistDate", "HistType", "UserName", "Comment")
+    ).alias("History")
+)
+
+# Join all aggregated data with JudicialOfficerDetails
+df_combined = (
+    df_judicial_officer_details
+    .join(grouped_centres, "AdjudicatorId", "left")
+    .join(grouped_roles, "AdjudicatorId", "left")
+    .join(grouped_history, "AdjudicatorId", "left")
+)
+
+display(df_combined)
+
+# COMMAND ----------
+
 # DBTITLE 1,M1 values- AppealCaseDetail
 # MAGIC %sql
 # MAGIC -- done check for AdditionalGrounds multiple recods 

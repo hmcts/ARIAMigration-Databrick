@@ -55,6 +55,10 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-294">ARIADM-294</a>/NSA/28-JAN-2025</td>
 # MAGIC     <td>Optimize Spark Workflows</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
+# MAGIC     <td>BugFix</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -123,7 +127,7 @@ gold_mnt = "/mnt/gold/ARIADM/ARM/TD"
 file_path = "/mnt/landing/SQL_Server/Sales/IRIS/csv/Example_IRIS_tribunal_decisions_data_file.csv"
 gold_outputs = "ARIADM/ARM/TD"
 hive_schema = "ariadm_arm_td_test"
-
+key_vault = "ingest01-meta002-sbox"
 
 # COMMAND ----------
 
@@ -393,7 +397,7 @@ def bronze_iris_extract():
         spark.read.option("header", "true")
             .option("inferSchema", "true")
             # .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
-            .csv("/mnt/landing/SQL_Server/Sales/IRIS/csv/Example_IRIS_tribunal_decisions_data_file.csv")
+            .csv(file_path)
             .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp())
             .withColumn("AdtclmnModifiedDatetime", current_timestamp())
             .withColumn("SourceFileName", lit(file_path))
@@ -763,9 +767,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-# secret = dbutils.secrets.get("ingest00-keyvault-sbox", "ingest00-adls-ingest00curatedsbox-connection-string-sbox")
-
-secret = dbutils.secrets.get("ingest01-meta002-sbox", "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
 
 # COMMAND ----------
 
@@ -774,7 +776,7 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 
 # Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest01curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest01curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest01curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest01curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+connection_string = secret
 
 blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
@@ -782,16 +784,6 @@ blob_service_client = BlobServiceClient.from_connection_string(connection_string
 container_name = "gold"
 container_client = blob_service_client.get_container_client(container_name)
 
-
-# COMMAND ----------
-
-# dbutils.fs.ls("/mnt/html-template/TD-Details-no-js-v1.html")
-
-# COMMAND ----------
-
-# html_template_list = spark.read.text("/mnt/html-template/TD-Details-no-js-v1.html").collect()
-# html_template = "".join([row.value for row in html_template_list])
-# displayHTML(html_template)
 
 # COMMAND ----------
 
@@ -814,6 +806,7 @@ def format_date_dd_mm_yyyy(date_value):
         raise ValueError(f"Invalid date input: {date_value}. Error: {e}")
 
 # Load template
+# html_template_list = spark.read.text("/mnt/ingest00landingsboxhtml-template/TD-Details-no-js-v1.html").collect()
 html_template_list = spark.read.text("/mnt/html-template/TD-Details-no-js-v1.html").collect()
 html_template = "".join([row.value for row in html_template_list])
 
@@ -867,6 +860,19 @@ upload_udf = udf(upload_to_blob)
 
 # COMMAND ----------
 
+df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
+    
+
+
+# Apply the UDF to the combined DataFrame
+df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(row = struct(*df_tribunaldecision_detail.columns))   ) \
+                                        .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                        .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                        .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+display(df_with_html)
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation: stg_td_iris_unified
 @dlt.table(
     name="stg_td_iris_unified",
@@ -880,27 +886,12 @@ def stg_td_iris_unified():
     # df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
 
     # Apply the UDF to the combined DataFrame
-    # Apply the UDF to the combined DataFrame
     df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-                                        .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                        .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
-                                        .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+                                            .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                            .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
 
     return df_with_html
-
-# COMMAND ----------
-
-
-# df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
-
-# df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
-
-# # Apply the UDF to the combined DataFrame
-# df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-#                                         .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
-#                                         .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
-#                                         .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
-# display(df_with_html)
 
 # COMMAND ----------
 
@@ -1079,12 +1070,13 @@ def gold_td_iris_with_a360():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Appendix
+# DBTITLE 1,Exit Notebook with Success Message
+dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
-# gold_mnt
+# MAGIC %md
+# MAGIC ### Appendix
 
 # COMMAND ----------
 
@@ -1101,12 +1093,7 @@ def gold_td_iris_with_a360():
 
 # DBTITLE 1,HTML Failed Upload Status
 # %sql
-# with cte (
-# select CaseNo,Forenames,Name, count(*) from hive_metastore.ariadm_arm_td_test.gold_td_iris_with_HTML where HTMLFileName IS NOT NULL
-# group by all
-# )
-# select count(*) from cte
-# -- having count(*) > 1
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html where UploadStatus != 'success' and HTMLContent like '%ERROR%'
 
 # COMMAND ----------
 
@@ -1123,4 +1110,4 @@ def gold_td_iris_with_a360():
 # COMMAND ----------
 
 # %sql
-# drop schema hive_metastore.ariadm_arm_td_test cascade
+# drop schema hive_metastore.ariadm_arm_td cascade

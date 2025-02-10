@@ -420,8 +420,9 @@ def generate_appellant_data(num_records: int) -> pd.DataFrame:
         appellant_ids.add(appellant_id)
         
         port_reference = fake.ean(length=13)
-        name = fake.last_name()
-        forenames = fake.first_name()
+        name = fake.unique.last_name()
+        forenames = fake.unique.first_name()
+        
         title = fake.prefix()
         birth_date = fake.date_of_birth(minimum_age=18, maximum_age=100)
         address1 = fake.street_address()
@@ -622,7 +623,7 @@ file_location_data.to_parquet("FileLocation.parquet", index=False)
 case_appellant_data.to_parquet("CaseAppellant.parquet", index=False)
 appellant_data.to_parquet("Appellant.parquet", index=False)
 department_data.to_parquet("Department.parquet", index=False)
-hearing_centre_data.to_parquet("HearingCentre.parquet", index=False)
+hearing_centre_data.to_parquet("ARIAHearingCentre.parquet", index=False)
 
 spark_appeal_case_data = spark.createDataFrame(appeal_case_data)
 spark_status_data = spark.createDataFrame(status_data)
@@ -702,13 +703,13 @@ dbutils.fs.mv(department_parquet_file, department_final_output_path)
 dbutils.fs.rm(department_temp_output_path, True)
 
 # Hearing Centre
-hearing_centre_temp_output_path = f"/mnt/landing/test/HearingCentre/temp_{datesnap}"  
+hearing_centre_temp_output_path = f"/mnt/landing/test/ARIAHearingCentre/temp_{datesnap}"  
 spark_hearing_centre_data.coalesce(1).write.format("parquet").mode("overwrite").save(hearing_centre_temp_output_path)
 
 hearing_centre_files = dbutils.fs.ls(hearing_centre_temp_output_path)
 hearing_centre_parquet_file = [file.path for file in hearing_centre_files if file.path.endswith(".parquet")][0]
 
-hearing_centre_final_output_path = f"/mnt/landing/test/HearingCentre/full/SQLServer_TD_dbo_hearing_centre_{datesnap}.parquet"
+hearing_centre_final_output_path = f"/mnt/landing/test/ARIAHearingCentre/full/SQLServer_TD_dbo_hearing_centre_{datesnap}.parquet"
 dbutils.fs.mv(hearing_centre_parquet_file, hearing_centre_final_output_path)  
 dbutils.fs.rm(hearing_centre_temp_output_path, True)
  
@@ -720,7 +721,7 @@ output_paths = {
     "CaseAppellant": case_appellant_final_output_path,
     "Appellant": appellant_final_output_path,  
     "Department": department_final_output_path,
-    "HearingCentre": hearing_centre_final_output_path
+    "ARIAHearingCentre": hearing_centre_final_output_path
 }
 
 for output_path in output_paths.values():

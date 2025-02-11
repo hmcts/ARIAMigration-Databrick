@@ -8,12 +8,11 @@ from faker import Faker
 
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
-# landing_mnt = "/mnt/ingest00landingsboxlanding/test"
-landing_mnt = "/mnt/ingest00landingsboxlanding/test/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
+raw_mnt = "/mnt/raw/ARIADM/ARM/JOH"
+landing_mnt = "/mnt/landing/test/"
+bronze_mnt = "/mnt/bronze/ARIADM/ARM/JOH"
+silver_mnt = "/mnt/silver/ARIADM/ARM/JOH"
+gold_mnt = "/mnt/gold/ARIADM/ARM/JOH"
 
 # Variable to control the percentage of adjudicator IDs present in all tables
 adjudicator_id_presence_percentage = 80
@@ -591,90 +590,90 @@ datesnap = spark.sql("select date_format(current_timestamp(), 'yyyyMMddHHmmss')"
 datesnap = spark.sql("select date_format(current_timestamp(), 'yyyyMMddHHmmss')").collect()[0][0]
 
 # Adjudicator
-adjudicator_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/Adjudicator/temp_{datesnap}"
+adjudicator_temp_output_path = f"/mnt/landing/test/Adjudicator/temp_{datesnap}"
 spark_adjudicator_data.coalesce(1).write.format("parquet").mode("overwrite").save(adjudicator_temp_output_path)
 
 adjudicator_files = dbutils.fs.ls(adjudicator_temp_output_path)
 adjudicator_parquet_file = [file.path for file in adjudicator_files if re.match(r".*\.parquet$", file.path)][0]
 
-adjudicator_final_output_path = f"/mnt/ingest00landingsboxlanding/test/Adjudicator/full/SQLServer_Sales_IRIS_dbo_adjudicator_{datesnap}.parquet"
+adjudicator_final_output_path = f"/mnt/landing/test/Adjudicator/full/SQLServer_Sales_IRIS_dbo_adjudicator_{datesnap}.parquet"
 dbutils.fs.mv(adjudicator_parquet_file, adjudicator_final_output_path)
 dbutils.fs.rm(adjudicator_temp_output_path, True)
 
 # AdjudicatorRole
-adjudicator_role_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/AdjudicatorRole/temp_{datesnap}"
+adjudicator_role_temp_output_path = f"/mnt/landing/test/AdjudicatorRole/temp_{datesnap}"
 spark_adjudicator_role_data.coalesce(1).write.format("parquet").mode("overwrite").save(adjudicator_role_temp_output_path)
 
 adjudicator_role_files = dbutils.fs.ls(adjudicator_role_temp_output_path)
 adjudicator_role_parquet_file = [file.path for file in adjudicator_role_files if re.match(r".*\.parquet$", file.path)][0]
 
-adjudicator_role_final_output_path = f"/mnt/ingest00landingsboxlanding/test/AdjudicatorRole/full/SQLServer_Sales_IRIS_dbo_adjudicator_role_{datesnap}.parquet"
+adjudicator_role_final_output_path = f"/mnt/landing/test/AdjudicatorRole/full/SQLServer_Sales_IRIS_dbo_adjudicator_role_{datesnap}.parquet"
 dbutils.fs.mv(adjudicator_role_parquet_file, adjudicator_role_final_output_path)
 dbutils.fs.rm(adjudicator_role_temp_output_path, True)
 
 # ARIAEmploymentTerm
-employment_term_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/ARIAEmploymentTerm/temp_{datesnap}"
+employment_term_temp_output_path = f"/mnt/landing/test/ARIAEmploymentTerm/temp_{datesnap}"
 spark_employment_term_data.coalesce(1).write.format("parquet").mode("overwrite").save(employment_term_temp_output_path)
 
 employment_term_files = dbutils.fs.ls(employment_term_temp_output_path)
 employment_term_parquet_file = [file.path for file in employment_term_files if re.match(r".*\.parquet$", file.path)][0]
 
-employment_term_final_output_path = f"/mnt/ingest00landingsboxlanding/test/ARIAEmploymentTerm/full/SQLServer_Sales_IRIS_dbo_employment_term_{datesnap}.parquet"
+employment_term_final_output_path = f"/mnt/landing/test/ARIAEmploymentTerm/full/SQLServer_Sales_IRIS_dbo_employment_term_{datesnap}.parquet"
 dbutils.fs.mv(employment_term_parquet_file, employment_term_final_output_path)
 dbutils.fs.rm(employment_term_temp_output_path, True)
 
 # DoNotUseReason
-do_not_use_reason_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/DoNotUseReason/temp_{datesnap}"
+do_not_use_reason_temp_output_path = f"/mnt/landing/test/DoNotUseReason/temp_{datesnap}"
 spark_do_not_use_reason_data.coalesce(1).write.format("parquet").mode("overwrite").save(do_not_use_reason_temp_output_path)
 
 do_not_use_reason_files = dbutils.fs.ls(do_not_use_reason_temp_output_path)
 do_not_use_reason_parquet_file = [file.path for file in do_not_use_reason_files if re.match(r".*\.parquet$", file.path)][0]
 
-do_not_use_reason_final_output_path = f"/mnt/ingest00landingsboxlanding/test/DoNotUseReason/full/SQLServer_Sales_IRIS_dbo_do_not_use_reason_{datesnap}.parquet"
+do_not_use_reason_final_output_path = f"/mnt/landing/test/DoNotUseReason/full/SQLServer_Sales_IRIS_dbo_do_not_use_reason_{datesnap}.parquet"
 dbutils.fs.mv(do_not_use_reason_parquet_file, do_not_use_reason_final_output_path)
 dbutils.fs.rm(do_not_use_reason_temp_output_path, True)
 
 # JoHistory
-jo_history_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/JoHistory/temp_{datesnap}"
+jo_history_temp_output_path = f"/mnt/landing/test/JoHistory/temp_{datesnap}"
 spark_jo_history_data.coalesce(1).write.format("parquet").mode("overwrite").save(jo_history_temp_output_path)
 
 jo_history_files = dbutils.fs.ls(jo_history_temp_output_path)
 jo_history_parquet_file = [file.path for file in jo_history_files if re.match(r".*\.parquet$", file.path)][0]
 
-jo_history_final_output_path = f"/mnt/ingest00landingsboxlanding/test/JoHistory/full/SQLServer_Sales_IRIS_dbo_jo_history_{datesnap}.parquet"
+jo_history_final_output_path = f"/mnt/landing/test/JoHistory/full/SQLServer_Sales_IRIS_dbo_jo_history_{datesnap}.parquet"
 dbutils.fs.mv(jo_history_parquet_file, jo_history_final_output_path)
 dbutils.fs.rm(jo_history_temp_output_path, True)
 
 # Users
-users_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/Users/temp_{datesnap}"
+users_temp_output_path = f"/mnt/landing/test/Users/temp_{datesnap}"
 spark_users_data.coalesce(1).write.format("parquet").mode("overwrite").save(users_temp_output_path)
 
 users_files = dbutils.fs.ls(users_temp_output_path)
 users_parquet_file = [file.path for file in users_files if re.match(r".*\.parquet$", file.path)][0]
 
-users_final_output_path = f"/mnt/ingest00landingsboxlanding/test/Users/full/SQLServer_Sales_IRIS_dbo_users_{datesnap}.parquet"
+users_final_output_path = f"/mnt/landing/test/Users/full/SQLServer_Sales_IRIS_dbo_users_{datesnap}.parquet"
 dbutils.fs.mv(users_parquet_file, users_final_output_path)
 dbutils.fs.rm(users_temp_output_path, True)
 
 # ARIAHearingCentre
-hearing_centre_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/ARIAHearingCentre/temp_{datesnap}"
+hearing_centre_temp_output_path = f"/mnt/landing/test/ARIAHearingCentre/temp_{datesnap}"
 spark_hearing_centre_data.coalesce(1).write.format("parquet").mode("overwrite").save(hearing_centre_temp_output_path)
 
 hearing_centre_files = dbutils.fs.ls(hearing_centre_temp_output_path)
 hearing_centre_parquet_file = [file.path for file in hearing_centre_files if re.match(r".*\.parquet$", file.path)][0]
 
-hearing_centre_final_output_path = f"/mnt/ingest00landingsboxlanding/test/ARIAHearingCentre/full/SQLServer_Sales_IRIS_dbo_hearing_centre_{datesnap}.parquet"
+hearing_centre_final_output_path = f"/mnt/landing/test/ARIAHearingCentre/full/SQLServer_Sales_IRIS_dbo_hearing_centre_{datesnap}.parquet"
 dbutils.fs.mv(hearing_centre_parquet_file, hearing_centre_final_output_path)
 dbutils.fs.rm(hearing_centre_temp_output_path, True)
 
 # OtherCentre
-other_centre_temp_output_path = f"/mnt/ingest00landingsboxlanding/test/OtherCentre/temp_{datesnap}"
+other_centre_temp_output_path = f"/mnt/landing/test/OtherCentre/temp_{datesnap}"
 spark_other_centre_data.coalesce(1).write.format("parquet").mode("overwrite").save(other_centre_temp_output_path)
 
 other_centre_files = dbutils.fs.ls(other_centre_temp_output_path)
 other_centre_parquet_file = [file.path for file in other_centre_files if re.match(r".*\.parquet$", file.path)][0]
 
-other_centre_final_output_path = f"/mnt/ingest00landingsboxlanding/test/OtherCentre/full/SQLServer_Sales_IRIS_dbo_other_centre_{datesnap}.parquet"
+other_centre_final_output_path = f"/mnt/landing/test/OtherCentre/full/SQLServer_Sales_IRIS_dbo_other_centre_{datesnap}.parquet"
 dbutils.fs.mv(other_centre_parquet_file, other_centre_final_output_path)
 dbutils.fs.rm(other_centre_temp_output_path, True)
  

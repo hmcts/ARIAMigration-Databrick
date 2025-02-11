@@ -16,11 +16,11 @@ from docx import Document
 from datetime import datetime
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH/test"
-landing_mnt = "/mnt/ingest00landingsboxlanding/test"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH/test/"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH/test"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH/test"
+raw_mnt = "/mnt/raw/ARIADM/ARM/JOH"
+landing_mnt = "/mnt/landing/test/"
+bronze_mnt = "/mnt/bronze/ARIADM/ARM/JOH"
+silver_mnt = "/mnt/silver/ARIADM/ARM/JOH"
+gold_mnt = "/mnt/gold/ARIADM/ARM/JOH"
 
 # Mapping abbreviations to human-readable text
 abbreviation_map = {

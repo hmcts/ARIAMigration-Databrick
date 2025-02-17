@@ -51,6 +51,14 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-362">ARIADM-362</a>/NSA/04-Feb-2024</td>
 # MAGIC          <td>Update HTML Status Details Implementation</td>
 # MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-263">ARIADM-263</a>/NSA/17-Feb-2024</td>
+# MAGIC          <td>Create Function for Gold Output Files</td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-365">ARIADM-365</a>/NSA/17-Feb-2024</td>
+# MAGIC          <td>Optimisation for the curation and generation of Gold output</td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 

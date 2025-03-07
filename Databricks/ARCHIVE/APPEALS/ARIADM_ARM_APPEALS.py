@@ -59,6 +59,10 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-365">ARIADM-365</a>/NSA/17-Feb-2024</td>
 # MAGIC          <td>Optimisation for the curation and generation of Gold output</td>
 # MAGIC       </tr>
+# MAGIC        <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
+# MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 

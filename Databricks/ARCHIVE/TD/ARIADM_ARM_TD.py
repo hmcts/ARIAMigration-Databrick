@@ -59,6 +59,14 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
 # MAGIC     <td>BugFix</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-473">ARIADM-473</a>/NSA/07-MAR-2025</td>
+# MAGIC     <td>Implement A360 batching for TD</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-432">ARIADM-432</a>/NSA/07-MAR-2025</td>
+# MAGIC     <td>TD - Uniqueness for file names and null values</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>

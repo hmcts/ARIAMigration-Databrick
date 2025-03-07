@@ -47,6 +47,10 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
 # MAGIC     <td>BugFix</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-472">ARIADM-472</a>/NSA/07-MAR-2025</td>
+# MAGIC     <td>Implement A360 batching for JOH</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC     
 # MAGIC    </tbody>

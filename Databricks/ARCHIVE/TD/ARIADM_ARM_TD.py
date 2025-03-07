@@ -59,6 +59,14 @@
 # MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-431">ARIADM-431</a>/<a href=https://tools.hmcts.net/jira/browse/ARIADM-430">ARIADM-430</a>/NSA/03-FEB-2025</td>
 # MAGIC     <td>BugFix</td>
 # MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-473">ARIADM-473</a>/NSA/07-MAR-2025</td>
+# MAGIC     <td>Implement A360 batching for TD</td>
+# MAGIC </tr>
+# MAGIC <tr>
+# MAGIC     <td style='text-align: left; '><a href=https://tools.hmcts.net/jira/browse/ARIADM-432">ARIADM-432</a>/NSA/07-MAR-2025</td>
+# MAGIC     <td>TD - Uniqueness for file names and null values</td>
+# MAGIC </tr>
 # MAGIC
 # MAGIC
 # MAGIC    </tbody>
@@ -88,6 +96,7 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from pyspark.sql.window import Window
 
 
 # COMMAND ----------
@@ -107,7 +116,7 @@ from datetime import datetime
 
 # COMMAND ----------
 
-read_hive = False
+read_hive = True
 # True
 
 raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
@@ -320,11 +329,15 @@ def Raw_Status():
 
 # COMMAND ----------
 
+checks = {}
+checks["PrimaryKeyCheckforNULLS"] = "(CaseNo IS NOT NULL and Forenames IS NOT NULL and Name IS NOT NULL)"
+
 @dlt.table(
     name="bronze_ac_ca_ant_fl_dt_hc",
     comment="Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre.",
     path=f"{bronze_mnt}/bronze_ac_ca_ant_fl_dt_hc"
 )
+@dlt.expect_all_or_fail(checks)
 def bronze_ac_ca_ant_fl_dt_hc():
     return (
         dlt.read("raw_appealcase").alias("ac")
@@ -352,7 +365,7 @@ def bronze_ac_ca_ant_fl_dt_hc():
                 dlt.read("raw_hearingcentre").alias("hc"),
                 col("d.CentreId") == col("hc.CentreId"),
                 "left_outer"
-            )
+            ).filter(col("ca.RelationShip").isNotNull())
             .select(
                 col("ac.CaseNo"),
                 col("a.Forenames"),
@@ -385,37 +398,36 @@ def bronze_ac_ca_ant_fl_dt_hc():
     path=f"{bronze_mnt}/bronze_iris_extract"
 )
 def bronze_iris_extract():
-    return (
-        spark.read.option("header", "true")
-            .option("inferSchema", "true")
-            # .csv("/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv")
-            .csv(file_path)
-            .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp())
-            .withColumn("AdtclmnModifiedDatetime", current_timestamp())
-            .withColumn("SourceFileName", lit(file_path))
-            .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD'))
-            .select(
-                col('AppCaseNo').alias('CaseNo'),
-                col('Fornames').alias('Forenames'),
-                col('Name'),
-                col('BirthDate').cast("timestamp"),
-                col('DestructionDate').cast("timestamp"),
-                col('HORef'),
-                col('PortReference'),
-                col('File_Location').alias('HearingCentreDescription'),
-                col('Description').alias('DepartmentDescription'),
-                col('Note'),
-                col('AdtclmnFirstCreatedDatetime'),
-                col('AdtclmnModifiedDatetime'),
-                col('SourceFileName'),
-                col('InsertedByProcessName')
-            )
+    df_iris = spark.read.option("header", "true") \
+    .option("inferSchema", "true") \
+    .csv(file_path) \
+    .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp()) \
+    .withColumn("AdtclmnModifiedDatetime", current_timestamp()) \
+    .withColumn("SourceFileName", lit(file_path)) \
+    .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD')) \
+    .select(
+        col('AppCaseNo').alias('CaseNo'),
+        col('Fornames').alias('Forenames'),
+        col('Name'),
+        col('BirthDate').cast("timestamp"),
+        col('DestructionDate').cast("timestamp"),
+        col('HORef'),
+        col('PortReference'),
+        col('File_Location').alias('HearingCentreDescription'),
+        col('Description').alias('DepartmentDescription'),
+        col('Note'),
+        col('AdtclmnFirstCreatedDatetime'),
+        col('AdtclmnModifiedDatetime'),
+        col('SourceFileName'),
+        col('InsertedByProcessName')
     )
+
+    return df_iris
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_td.bronze_iris_extract
+# RUN_ID = str(uuid.uuid4())  # Generates a unique RunID for each run
+
 
 # COMMAND ----------
 
@@ -779,6 +791,7 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
+# DBTITLE 1,HTML UDF
 # Helper to format dates in ISO format (YYYY-MM-DD)
 def format_date_dd_mm_yyyy(date_value):
     """
@@ -829,7 +842,8 @@ def generate_html(row, html_template=html_template):
         
         return html_template
     except Exception as e:
-        return f"Error generating HTML for tribunal_decision_{row['CaseNo'].replace('/', '_')}_{row['Forenames']}_{row['Name']}.html: {e}"
+        # return f"Error generating HTML for tribunal_decision_{row['CaseNo'].replace('/', '_')}_{row['Forenames']}_{row['Name']}.html: {e}"
+        return f"Error"
 
 # Register UDF
 generate_html_udf = udf(generate_html, StringType())
@@ -851,112 +865,7 @@ upload_udf = udf(upload_to_blob)
 
 # COMMAND ----------
 
-df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
-    
-
-
-# Apply the UDF to the combined DataFrame
-df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(row = struct(*df_tribunaldecision_detail.columns))   ) \
-                                        .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                        .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
-                                        .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
-display(df_with_html)
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation: stg_td_iris_unified
-@dlt.table(
-    name="stg_td_iris_unified",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_td_iris_unified"
-)
-def stg_td_iris_unified():
-
-    df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-    
-    # df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns)))
-
-    # Apply the UDF to the combined DataFrame
-    df_with_html = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-                                            .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                            .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
-                                            .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
-
-    return df_with_html
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation gold_td_iris_with_html
-@dlt.table(
-    name="gold_td_iris_with_html",
-    comment="Delta Live Gold Table with HTML content.",
-    path=f"{gold_mnt}/gold_td_iris_with_html"
-)
-def gold_td_iris_with_html():
-    # Load source data
-    df_combined = dlt.read("stg_td_iris_unified")
-
-    # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
-
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(64, col("CaseNo"))
-
-    # # Upload HTML files to Azure Blob Storage
-    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
-
-    df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
-    )
-    
-    # # Upload HTML files to Azure Blob Storage
-    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreach(upload_html)
-
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status)
-
-    # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName","UploadStatus")
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation gold_td_iris_with_json
-@dlt.table(
-    name="gold_td_iris_with_json",
-    comment="Delta Live Gold Table with JSON content.",
-    path=f"{gold_mnt}/gold_td_iris_with_json"
-)
-def gold_td_iris_with_json():
-    """
-    Delta Live Table for creating and uploading JSON content for judicial officers.
-    """
-    # Load source data
-    df_combined = dlt.read("stg_td_iris_unified")
-
-    # Optionally load data from Hive if needed
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
-
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(64, col("CaseNo"))
-
-    df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcollection"))
-    )
-
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status)
-
-    # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name","JSONcollection","JSONFileName","UploadStatus")
-
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation gold_td_iris_with_a360
+# DBTITLE 1,A360  UDF
 def generate_a360(row):
     try:
         metadata_data = {
@@ -1012,51 +921,197 @@ def generate_a360(row):
 # Register UDF
 generate_a360_udf = udf(generate_a360, StringType())
 
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_td_iris_unified
+@dlt.table(
+    name="stg_td_iris_unified",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_td_iris_unified"
+)
+def stg_td_iris_unified():
+
+    df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
+    df_td_metadata = dlt.read("silver_archive_metadata")
+
+     # Optional: Load from Hive if not an initial load
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
+        df_tribunaldecision_detail = spark.read.table(f"hive_metastore.{hive_schema}.silver_tribunaldecision_detail")
+        df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+    
+
+    # Apply the UDF to the combined DataFrame
+    df_with_html_json = df_tribunaldecision_detail.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("JSONcollection", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                            .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+
+    # Select distinct client identifiers with HTML and JSON content and order them
+    metadata_df = df_td_metadata.alias('a').join(df_with_html_json.alias('b'), ((col('b.CaseNo') == col('a.client_identifier')) & (col('b.Forenames') == col('a.bf_001')) & (col('b.Name') == col('a.bf_002'))), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier", "bf_001", "bf_002").distinct().orderBy("client_identifier", "bf_001", "bf_002")
+
+    # Define a window specification to assign row numbers  
+    window_spec = Window.orderBy("client_identifier","bf_001","bf_002")
+    df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
+                        .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
+
+    # Join the batch information with the original metadata
+    df_metadata = df_td_metadata.join(df_batch, ["client_identifier", "bf_001", "bf_002"], "left")
+
+    # Repartition the DataFrame to optimize parallelism
+    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+
+    # Generate A360 content and associated file names
+    df_with_a360 = df_metadata.withColumn(
+        "A360Content", generate_a360_udf(struct(*df_td_metadata.columns))
+    ).withColumn(
+        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
+    ).select(col("client_identifier").alias("CaseNo"),col("bf_001").alias("Forenames"),col("bf_002").alias("Name"), "A360BatchId", "A360FileName", "A360Content")
+
+    df_unified =  df_with_html_json.join(df_with_a360, ["CaseNo","Forenames","Name"], "left")
+
+      # Optionally load data from Hive
+    if read_hive:
+        display(df_unified)
+
+    return df_unified
+
+# COMMAND ----------
+
+num_cores = spark.sparkContext.defaultParallelism  # Get available cores
+optimal_partitions = 16 * 2  # 2x cores for parallelism
+# repartitioned_df = df_combined.repartition(optimal_partitions)
+optimal_partitions
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation gold_td_iris_with_html
+checks = {}
+checks["html_content_no_error"] = "(HTMLContent NOT LIKE 'Error%')"
+checks["html_content_no_error"] = "(HTMLContent IS NOT NULL)"
+checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+
+@dlt.table(
+    name="gold_td_iris_with_html",
+    comment="Delta Live Gold Table with HTML content.",
+    path=f"{gold_mnt}/gold_td_iris_with_html"
+)
+@dlt.expect_all_or_fail(checks)
+def gold_td_iris_with_html():
+    # Load source data
+    df_combined = dlt.read("stg_td_iris_unified")
+
+    # Optional: Load from Hive if not an initial load
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
+
+    # Repartition to optimize parallelism
+    repartitioned_df = df_combined.repartition(optimal_partitions)
+
+    # # Upload HTML files to Azure Blob Storage
+    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
+
+    df_with_upload_status = repartitioned_df.withColumn(
+        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
+    )
+    
+    # # Upload HTML files to Azure Blob Storage
+    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreach(upload_html)
+
+    # Optionally load data from Hive
+    if read_hive:
+        display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360BatchId","HTMLContent","HTMLFileName","UploadStatus"))
+
+    # Return the DataFrame for DLT table creation
+    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360BatchId","HTMLContent","HTMLFileName","UploadStatus")
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation gold_td_iris_with_json
+checks = {}
+checks["json_content_no_error"] = "(JSONcollection IS NOT NULL)"
+checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+
+
+
+@dlt.table(
+    name="gold_td_iris_with_json",
+    comment="Delta Live Gold Table with JSON content.",
+    path=f"{gold_mnt}/gold_td_iris_with_json"
+)
+@dlt.expect_all_or_fail(checks)
+def gold_td_iris_with_json():
+    """
+    Delta Live Table for creating and uploading JSON content for judicial officers.
+    """
+    # Load source data
+    df_combined = dlt.read("stg_td_iris_unified")
+
+    # Optionally load data from Hive if needed
+    if read_hive:
+        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
+
+    # Repartition to optimize parallelism
+    repartitioned_df = df_combined.repartition(optimal_partitions)
+
+    df_with_upload_status = repartitioned_df.withColumn(
+        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcollection"))
+    )
+
+    # Optionally load data from Hive
+    if read_hive:
+        display(df_with_upload_status)
+
+    # Return the DataFrame for DLT table creation
+    return df_with_upload_status.select("CaseNo","Forenames","Name","A360BatchId","JSONcollection","JSONFileName","UploadStatus")
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation gold_td_iris_with_a360
+checks = {}
+checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
+checks["A360_content_no_error"] = "(consolidate_A360Content IS NOT NULL)"
+checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+
 @dlt.table(
     name="gold_td_iris_with_a360",
     comment="Delta Live Gold Table with A360 content.",
     path=f"{gold_mnt}/gold_td_iris_with_a360"
 )
+@dlt.expect_all_or_fail(checks)
 def gold_td_iris_with_a360():
     
-    df_joh_metadata = dlt.read("silver_archive_metadata")
+    # df_joh_metadata = dlt.read("stg_td_iris_unified")
+    # df_a360 = dlt.read("stg_td_iris_unified")
+
+    df_a360 = dlt.read("stg_td_iris_unified")
 
     # Optionally load data from Hive
     if read_hive:
-        df_joh_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+        df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
+    # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
+    df_agg = df_a360.groupBy("A360FileName", "A360BatchId") \
+            .agg(concat_ws("\n", collect_list("A360Content")).alias("consolidate_A360Content")) \
+            .select(col("A360FileName"), col("consolidate_A360Content"), col("A360BatchId"))
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_joh_metadata.repartition(64)
+    # Repartition the DataFrame to optimize parallelism
+    repartitioned_df = df_agg.repartition(optimal_partitions)
+
+    # Remove existing files
+    dbutils.fs.rm(f"{gold_outputs}/A360", True)
 
     # Generate A360 content
     df_with_a360 = repartitioned_df.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-    ).withColumn(
-        "A360FileName", concat(
-            lit(f"{gold_outputs}/A360/tribunal_decision_"), 
-            regexp_replace(col("client_identifier"), "/", "_"), 
-            lit("_"), col("bf_001"), 
-            lit("_"), col("bf_002"), 
-            lit(".a360")
-        )
-    ).withColumn(
-        "UploadStatus", upload_udf(col("A360FileName"), col("A360Content"))
-    ).select(
-        col("client_identifier").alias("CaseNo"),
-        col("bf_001").alias("Forenames"),
-        col("bf_002").alias("Name"),
-        "A360Content",
-        "A360FileName",
-        "UploadStatus"
-    ).repartition(64, col("CaseNo"))
-      
-    # Optionally load data from Hive
+        "UploadStatus", upload_udf(col("A360FileName"), col("consolidate_A360Content"))
+    )
+
+    # # Optionally load data from Hive
     if read_hive:
         display(df_with_a360)
-
-
-    return df_with_a360.select("CaseNo","Forenames","Name", "A360Content","A360FileName","UploadStatus")
+   
+    return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
 
 
 # COMMAND ----------

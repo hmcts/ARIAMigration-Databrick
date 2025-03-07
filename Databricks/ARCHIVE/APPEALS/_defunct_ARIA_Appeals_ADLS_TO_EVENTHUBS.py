@@ -114,8 +114,9 @@ from pyspark.sql.types import StructType, StructField, StringType
 import time
 
 # Set throughput limits as parameters (1000 events or 1 MB per second)
-MAX_EVENTS_PER_SEC = 1000
-MAX_BYTES_PER_SEC = 1 * 1024 * 1024  # 1 MB in bytes
+Throughput_Units = 20
+MAX_EVENTS_PER_SEC = Throughput_Units * 1000
+MAX_BYTES_PER_SEC = Throughput_Units * 1024 * 1024  # 1 MB in bytes
 
 def process_partition_with_throughput(partition, throughput_limit=(MAX_EVENTS_PER_SEC, MAX_BYTES_PER_SEC)):
     import logging
@@ -175,7 +176,7 @@ def process_partition_with_throughput(partition, throughput_limit=(MAX_EVENTS_PE
         while retry_count < 3 and not success:
             try:
                 producer.produce(
-                    topic='evh-apl-pub-dev-uks-dlrm-01',
+                    topic='evh-bl-pub-dev-uks-dlrm-01',
                     key=row.file_path.encode('utf-8'),
                     value=value,
                     callback=delivery_report
@@ -220,6 +221,10 @@ result_rdd = optimized_html_df.rdd.mapPartitions(
 )
 result_df = result_rdd.toDF(schema).collect()
 
+
+# COMMAND ----------
+
+display(result_df)
 
 # COMMAND ----------
 

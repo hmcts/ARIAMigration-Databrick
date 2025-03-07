@@ -59,6 +59,10 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-365">ARIADM-365</a>/NSA/17-Feb-2024</td>
 # MAGIC          <td>Optimisation for the curation and generation of Gold output</td>
 # MAGIC       </tr>
+# MAGIC        <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
+# MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 
@@ -738,6 +742,13 @@ def raw_pou():
 def raw_caseadjudicator():
      return read_latest_parquet("CaseAdjudicator", "tv_caseadjudicator", "ARIA_ARM_APPEALS") 
  
+@dlt.table(
+name="raw_stmcases",
+comment="Delta Live Table ARIA AppealTypeCategory.",
+path=f"{raw_mnt}/raw_stmcases"
+)
+def raw_stmcases():
+    return read_latest_parquet("STMCases", "tv_stmcases", "ARIA_ARM_APPEALS") 
 
 
 # COMMAND ----------
@@ -1261,6 +1272,20 @@ def bronze_appealcase_link_linkdetail():
 
 # COMMAND ----------
 
+# spark.sql("""
+# CREATE TABLE hive_metastore.ariadm_arm_appeals.m7_backup
+# AS
+# SELECT *
+# FROM hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
+# """)
+
+# COMMAND ----------
+
+# %sql
+# select distinct IRISStatusOfCase from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
+
+# COMMAND ----------
+
 @dlt.table(
     name="bronze_appealcase_status_sc_ra_cs",
     comment="Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details.",
@@ -1301,6 +1326,36 @@ def bronze_appealcase_status_sc_ra_cs():
             ) .join(
                 dlt.read("raw_adjudicator").alias("dAdj"),
                 col("s.DeterminationBy") == col("dAdj.AdjudicatorId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_stmcases").alias("stm"),
+                col("s.StatusId") == col("stm.NewStatusId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_listtype").alias("lt"),
+                col("s.ListTypeId") == col("lt.ListTypeId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_hearingtype").alias("ht"),
+                col("s.HearingTypeId") == col("ht.HearingTypeId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_adjudicator").alias("a1"),
+                col("stm.Judiciary1Id") == col("a1.AdjudicatorId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_adjudicator").alias("a2"),
+                col("stm.Judiciary2Id") == col("a2.AdjudicatorId"),
+                "left_outer"
+            )
+            .join(
+                dlt.read("raw_adjudicator").alias("a3"),
+                col("stm.Judiciary3Id") == col("a3.AdjudicatorId"),
                 "left_outer"
             )
             .select(
@@ -1367,10 +1422,14 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("s.OtherCondition"),
                 col("s.OutcomeReasons"),
                 col("s.AdjournmentParentStatusId"),
-
                 col("s.AdditionalLanguageId"),  
                 col("s.CostOrderAppliedFor"),  
                 col("s.HearingCourt"),  
+                col("s.IRISStatusOfCase"),
+                col("s.ListedCentre").alias("HearingCentre"),
+                col("s.ListTypeId"),
+                col("s.HearingTypeId"),
+                
                 # CaseStatus fields
                 col("cs.Description").alias("CaseStatusDescription"),
                 col("cs.DoNotUse").alias("DoNotUseCaseStatus"),
@@ -1411,13 +1470,26 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("a.Title").alias("StatusDetailAdjudicatorTitle"),
                 col("a.Notes").alias('StatusDetailAdjudicatorNote'),
 
-                #Adjudicator DeterminationBy 
+                # Adjudicator DeterminationBy 
                 col("dAdj.Surname").alias("DeterminationByJudgeSurname"),
                 col("dAdj.Forenames").alias("DeterminationByJudgeForenames"),
-                col("dAdj.Title").alias("DeterminationByJudgeTitle")
+                col("dAdj.Title").alias("DeterminationByJudgeTitle"),
+
+                # ListType fields
+                col("lt.Description").alias("ListTypeDescription"),
+
+                # HearingType fields
+                col("ht.Description").alias("HearingTypeDescription"),
+
+                # STM Cases fields
+                col("stm.Judiciary1Id"),
+                expr("COALESCE(a1.Surname, '') || ' ' || COALESCE(a1.Forenames, '') || ' ' || COALESCE(a1.Title, '')").alias("Judiciary1Name"),
+                col("stm.Judiciary2Id"),
+                expr("COALESCE(a2.Surname, '') || ' ' || COALESCE(a2.Forenames, '') || ' ' || COALESCE(a2.Title, '')").alias("Judiciary2Name"),
+                col("stm.Judiciary3Id"),
+                expr("COALESCE(a3.Surname, '') || ' ' || COALESCE(a3.Forenames, '') || ' ' || COALESCE(a3.Title, '')").alias("Judiciary3Name")
             )
     )
-
 
 # COMMAND ----------
 
@@ -3054,63 +3126,6 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-# @dlt.table(
-#     name="silver_caseapplicant_detail",
-#     comment="Delta Live silver Table for casenapplicant detail.",
-#     path=f"{silver_mnt}/silver_caseapplicant_detail"
-# )
-# def silver_caseapplicant_detail():
-#     appeals_df = dlt.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
-#     flt_df = dlt.read("stg_appeals_filtered").alias('flt')
-
-#     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").select(
-#         "ca.AppellantId",
-#         "ca.CaseNo",
-#         "ca.CaseAppellantRelationship",
-#         "ca.PortReference",
-#         "ca.AppellantName",
-#         "ca.AppellantForenames",
-#         "ca.AppellantTitle",
-#         "ca.AppellantBirthDate",
-#         "ca.AppellantAddress1",
-#         "ca.AppellantAddress2",
-#         "ca.AppellantAddress3",
-#         "ca.AppellantAddress4",
-#         "ca.AppellantAddress5",
-#         "ca.AppellantPostcode",
-#         "ca.AppellantTelephone",
-#         "ca.AppellantFax",
-#         when(col("ca.Detained") == 1, 'HMP')
-#             .when(col("ca.Detained") == 2, 'IRC')
-#             .when(col("ca.Detained") == 3, 'No')
-#             .when(col("ca.Detained") == 4, 'Other')
-#             .alias("Detained"),
-#         "ca.AppellantEmail",
-#         "ca.FCONumber",
-#         "ca.PrisonRef",
-#         "ca.DetentionCentre",
-#         "ca.CentreTitle",
-#         "ca.DetentionCentreType",
-#         "ca.DCAddress1",
-#         "ca.DCAddress2",
-#         "ca.DCAddress3",
-#         "ca.DCAddress4",
-#         "ca.DCAddress5",
-#         "ca.DCPostcode",
-#         "ca.DCFax",
-#         "ca.DCSdx",
-#         "ca.Country",
-#         "ca.Nationality",
-#         "ca.Code",
-#         "ca.DoNotUseCountry",
-#         "ca.CountrySdx",
-#         "ca.DoNotUseNationality"
-#     )
-
-#     return joined_df
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Tarnsformation : silver_list_detail
 
@@ -3321,6 +3336,12 @@ def silver_link_detail():
 
 # COMMAND ----------
 
+# query = "SELECT * FROM hive_metastore.ariadm_arm_appeals.silver_status_detail WHERE CaseStatus = 35"
+# result_df = spark.sql(query)
+# display(result_df)
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_status_detail",
     comment="Delta Live silver Table for status detail.",
@@ -3374,7 +3395,6 @@ def silver_status_detail():
                               "st.COAReferenceNumber",
                               "st.HighCourtReference",
                               "st.OutOfTime",
-                            #   "st.ReconsiderationHearing",
                               when(col("st.ReconsiderationHearing") == True, "checked").otherwise("disabled").alias("ReconsiderationHearing"),
                               when(col("st.DecisionSentToHO") == 1, "YES").otherwise('NO').alias("DecisionSentToHO"),
                               "st.DecisionSentToHODate",
@@ -3447,8 +3467,34 @@ def silver_status_detail():
                               "st.DeterminationByJudgeSurname",
                               "st.DeterminationByJudgeForenames",
                               "st.DeterminationByJudgeTitle",
-                              col("mx.CaseStatusDescription").alias("CurrentStatus"),
-                              col("st.AdjournmentParentStatusId"))
+                              col("st.CaseStatusDescription").alias("CurrentStatus"),
+                              col("st.AdjournmentParentStatusId"),
+                              when(col("st.IRISStatusOfCase") == 1, "Adjudicator Appeal")
+                            .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
+                            .when(col("st.IRISStatusOfCase") == 11, "Scottish Forfeiture")
+                            .when(col("st.IRISStatusOfCase") == 12, "Tribunal Appeal")
+                            .when(col("st.IRISStatusOfCase") == 14, "Tribunal Direct")
+                            .when(col("st.IRISStatusOfCase") == 18, "Bail Renewal")
+                            .when(col("st.IRISStatusOfCase") == 19, "Bail Variation")
+                            .when(col("st.IRISStatusOfCase") == 21, "Tribunal Review")
+                            .when(col("st.IRISStatusOfCase") == 4, "Bail Application")
+                            .when(col("st.IRISStatusOfCase") == 5, "Direct to Divisional Court")
+                            .when(col("st.IRISStatusOfCase") == 6, "Forfeiture")
+                            .when(col("st.IRISStatusOfCase") == 9, "Paper Case")
+                            .otherwise(None)
+                              .alias("IRISStatusOfCase"),
+                              col("HearingCentre"),
+                              col("st.ListTypeId"),
+                              col("ListTypeDescription"),
+                              col("st.HearingTypeId"),
+                              col("HearingTypeDescription"),
+                              col("st.Judiciary1Id"),
+                              col("st.Judiciary1Name"),
+                              col("st.Judiciary2Id"),
+                              col("st.Judiciary2Name"),
+                              col("st.Judiciary3Id"),
+                              col("st.Judiciary3Name")
+                          )
 
     return joined_df
 
@@ -4187,7 +4233,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curated-connection-string-sbox")
 
 # COMMAND ----------
 
@@ -4328,7 +4374,8 @@ template_paths_and_names = [
     (f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html", "StatusDetailOnHoldChargebackTakenTemplate"),
     (f"{html_mnt}/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html", "StatusDetailClosedFeeNotPaidTemplate"),
     (f"{html_mnt}/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html", "StatusDetailCaseClosedFeeOutstandingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/DefaultStatusDetail.html", "DefaultStatusDetail")
+    (f"{html_mnt}/appeals/statusdetail/StatusDetailMigrationTemplate.html", "StatusDetailMigrationTemplate"),
+    (f"{html_mnt}/appeals/statusdetail/DefaultStatusDetail.html", "DefaultStatusDetail")  
 
 ]
 
@@ -4546,6 +4593,7 @@ def generate_html(row, templates=templates):
         html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
         html_template = html_template.replace(f"{{{{additional-tabs-size}}}}", str(additional_tabs_size))
 
+
         # StatusDetails tabs
         nested_table_number = 999
         nested_tab_group_number = 999
@@ -4658,6 +4706,13 @@ def generate_html(row, templates=templates):
                                         .replace("{{LanguageDescription}}", str(SDP.LanguageDescription or '')) \
                                         .replace("{{AppealCaseNote}}", str(row.AppealCaseNote or '')) \
                                         .replace("{{Language}}", str(row.Language or '')) \
+                                        .replace("{{IRISStatusOfCase}}", str(SDP.IRISStatusOfCase or '')) \
+                                        .replace("{{ListTypeDescription}}", str(SDP.ListTypeDescription or '')) \
+                                        .replace("{{HearingTypeDescription}}", str(SDP.HearingTypeDescription or '')) \
+                                        .replace("{{Judiciary1Name}}", str(SDP.Judiciary1Name or '')) \
+                                        .replace("{{Judiciary2Name}}", str(SDP.Judiciary2Name or '')) \
+                                        .replace("{{Judiciary3Name}}", str(SDP.Judiciary3Name or '')) \
+                                        .replace("{{ReasonAdjourn}}", str(SDP.ReasonAdjourn or '')) \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
@@ -4711,7 +4766,7 @@ data = [
     (7, "Permission to Divisional Court", None, None),
     (8, "Lodgement", None, None),
     (9, "Paper Case", None, None),
-    (10, "Preliminary Issue", "StatusDetailPreliminaryIssueTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPreliminaryIssueTemplate.html"),
+    (10, "Preliminary Issue", "StatusDetailPreliminaryIssueTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPreliminaryIssueTemplate.html"),
     (11, "Scottish Forfeiture", None, None),
     (12, "Tribunal Appeal", None, None),
     (13, "Tribunal Application", None, None),
@@ -4727,34 +4782,34 @@ data = [
     (23, "Record Hearing Outcome – Case", None, None),
     (24, "Record Hearing Outcome – Visit Visa", None, None),
     (25, "Statutory Review", None, None),
-    (26, "Case Management Review", "StatusDetailCaseManagementReviewTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailCaseManagementReviewTemplate.html"),
-    (27, "Court of Appeal", "StatusDetailAppellateCourtTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailAppellateCourtTemplate.html"),
-    (28, "High Court Review", "StatusDetailHighCourtReviewTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailHighCourtReviewTemplate.html"),
-    (29, "High Court Review (Filter)", "StatusDetailHighCourtReviewFilterTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailHighCourtReviewFilterTemplate.html"),
-    (30, "Immigration Judge – Hearing", "StatusDetailImmigrationJudgeHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
-    (31, "Immigration Judge – Paper", "StatusDetailImmigrationJudgeHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
-    (32, "Panel Hearing (Legal)", "StatusDetailPanelHearingLegalTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
-    (33, "Panel Hearing (Legal/Non Legal)", "StatusDetailPanelHearingLegalTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
-    (34, "Permission to Appeal", "StatusDetailPermissiontoAppealTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPermissiontoAppealTemplate.html"),
-    (35, "Migration", None, None),
-    (36, "Review of Cost Order", "StatusDetailReviewOfCostOrderTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailReviewofCostOrderTemplate.html"),
-    (37, "First Tier – Hearing", "StatusDetailFirstTierHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierHearingTemplate.html"),
-    (38, "First Tier – Paper", "StatusDetailFirstTierPaperTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierPaperTemplate.html"),
-    (39, "First Tier Permission Application", "StatusDetailFirstTierPermissionApplicationTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailFirstTierPermissionApplicationTemplate.html"),
-    (40, "Upper Tribunal Permission Application", "StatusDetailUpperTribunalPermissionApplicationTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalPermissionApplicationTemplate.html"),
-    (41, "Upper Tribunal Oral Permission Application", "StatusDetailUpperTribunalOralPermissionApplicationTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html"),
-    (42, "Upper Tribunal Hearing", "StatusDetailUpperTribunalHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalHearingTemplate.html"),
-    (43, "Upper Tribunal Hearing – Continuance", "StatusDetailUpperTribunalHearingContinuanceTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalHearingContinuanceTemplate.html"),
-    (44, "Upper Tribunal Oral Permission Hearing", "StatusDetailUpperTribunalOralPermissionHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionHearingTemplate.html"),
-    (45, "PTA Direct to Appellate Court", "StatusDetailPTADirecttoAppellateCourtTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailPTADirecttoAppellateCourtTemplate.html"),
-    (46, "Set Aside Application", "StatusDetailSetAsideApplicationTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailSetAsideApplicationTemplate.html"),
-    (47, "Judicial Review Permission Application", "StatusDetailJudicialReviewPermissionApplicationTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailJudicialReviewPermissionApplicationTemplate.html"),
-    (48, "Judicial Review Hearing", "StatusDetailJudicialReviewHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
-    (49, "Judicial Review Oral Permission Hearing", "StatusDetailJudicialReviewHearingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
-    (50, "On Hold – Chargeback Taken", "StatusDetailOnHoldChargebackTakenTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
-    (51, "Closed – Fee Not Paid", "StatusDetailClosedFeeNotPaidTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html"),
-    (52, "Case closed fee outstanding", "StatusDetailCaseClosedFeeOutstandingTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html"),
-    (53, "Upper Trib Case On Hold – Fee Not Paid", "StatusDetailOnHoldChargebackTakenTemplate", "/mnt/ingest00landingsboxhtml-template/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
+    (26, "Case Management Review", "StatusDetailCaseManagementReviewTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailCaseManagementReviewTemplate.html"),
+    (27, "Court of Appeal", "StatusDetailAppellateCourtTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailAppellateCourtTemplate.html"),
+    (28, "High Court Review", "StatusDetailHighCourtReviewTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewTemplate.html"),
+    (29, "High Court Review (Filter)", "StatusDetailHighCourtReviewFilterTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewFilterTemplate.html"),
+    (30, "Immigration Judge – Hearing", "StatusDetailImmigrationJudgeHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
+    (31, "Immigration Judge – Paper", "StatusDetailImmigrationJudgeHearingTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
+    (32, "Panel Hearing (Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
+    (33, "Panel Hearing (Legal/Non Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
+    (34, "Permission to Appeal", "StatusDetailPermissiontoAppealTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPermissiontoAppealTemplate.html"),
+    (35, "Migration", "StatusDetailMigrationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailMigrationTemplate.html"),
+    (36, "Review of Cost Order", "StatusDetailReviewOfCostOrderTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailReviewofCostOrderTemplate.html"),
+    (37, "First Tier – Hearing", "StatusDetailFirstTierHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierHearingTemplate.html"),
+    (38, "First Tier – Paper", "StatusDetailFirstTierPaperTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPaperTemplate.html"),
+    (39, "First Tier Permission Application", "StatusDetailFirstTierPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPermissionApplicationTemplate.html"),
+    (40, "Upper Tribunal Permission Application", "StatusDetailUpperTribunalPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalPermissionApplicationTemplate.html"),
+    (41, "Upper Tribunal Oral Permission Application", "StatusDetailUpperTribunalOralPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html"),
+    (42, "Upper Tribunal Hearing", "StatusDetailUpperTribunalHearingTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingTemplate.html"),
+    (43, "Upper Tribunal Hearing – Continuance", "StatusDetailUpperTribunalHearingContinuanceTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingContinuanceTemplate.html"),
+    (44, "Upper Tribunal Oral Permission Hearing", "StatusDetailUpperTribunalOralPermissionHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionHearingTemplate.html"),
+    (45, "PTA Direct to Appellate Court", "StatusDetailPTADirecttoAppellateCourtTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPTADirecttoAppellateCourtTemplate.html"),
+    (46, "Set Aside Application", "StatusDetailSetAsideApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailSetAsideApplicationTemplate.html"),
+    (47, "Judicial Review Permission Application", "StatusDetailJudicialReviewPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewPermissionApplicationTemplate.html"),
+    (48, "Judicial Review Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
+    (49, "Judicial Review Oral Permission Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
+    (50, "On Hold – Chargeback Taken", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
+    (51, "Closed – Fee Not Paid", "StatusDetailClosedFeeNotPaidTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html"),
+    (52, "Case closed fee outstanding", "StatusDetailCaseClosedFeeOutstandingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html"),
+    (53, "Upper Trib Case On Hold – Fee Not Paid", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
     (54, "Ork", None, None)
 ]
 
@@ -4852,7 +4907,7 @@ def stg_statusdetail_data():
 
     # casestatus with templates
     casestatus_array = [
-        26, 29, 27, 28, 30, 39, 41, 37, 38, 42, 40, 10, 34, 32, 31, 33, 36, 50, 
+        26, 29, 27, 28, 30, 35, 39, 41, 37, 38, 42, 40, 10, 34, 32, 31, 33, 36, 50, 
         43, 51, 52, 48, 44, 49, 46, 45, 47, 53
     ]
 
@@ -4955,7 +5010,6 @@ def stg_statusdetail_data():
     )
 
 
-
     df_agg2 = join_df.select("status.CaseNo","status.CaseStatus", "status.StatusId", 'status.CaseStatusDescription',  'status.InterpreterRequired',  'status.MiscDate2', 'status.VideoLink', 'status.RemittalOutcome', 'status.UpperTribunalAppellant', 'status.DecisionSentToHO', 
             'status.InitialHearingPoints', 'status.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'status.CostOrderAppliedFor', 'status.DecisionDate', 
             'status.DeterminationByJudgeSurname', 'status.DeterminationByJudgeForenames', 'status.DeterminationByJudgeTitle', 'status.MethodOfTyping', 
@@ -4966,7 +5020,8 @@ def stg_statusdetail_data():
             'status.WrittenOffDate', 'status.WrittenOffFileDate', 'status.ReferredEnforceDate', 'status.Letter1Date', 'status.Letter2Date', 'status.Letter3Date', 
             'status.ReferredFinanceDate', 'status.CourtActionAuthDate', 'status.BalancePaidDate', 'status.ReconsiderationHearing', 
             'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
-            'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType',  
+            'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
+            'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
@@ -4989,11 +5044,16 @@ def stg_statusdetail_data():
             'casestatus.ReferredFinanceDate', 'casestatus.CourtActionAuthDate', 'casestatus.BalancePaidDate', 'casestatus.ReconsiderationHearing', 
             'casestatus.UpperTribunalHearingDirectionId', 'casestatus.ListRequirementTypeId', 'casestatus.CourtSelection', 'casestatus.COAReferenceNumber', 'casestatus.Notes2', 
             'casestatus.HighCourtReference', 'casestatus.AdminCourtReference', 'casestatus.HearingCourt', 'casestatus.ApplicationType',  
+            'IRISStatusOfCase','ListTypeDescription','HearingTypeDescription','Judiciary1Name','Judiciary2Name','Judiciary3Name','ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle')).alias("TempCaseStatusDetails"))
     return df_final
+
+# COMMAND ----------
+
+gold_outputs
 
 # COMMAND ----------
 
@@ -5199,11 +5259,11 @@ def stg_appeals_unified():
     df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
 
     # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
 
 
     # Generate A360 content and associated file names
-    df_with_a360 = repartitioned_df.withColumn(
+    df_with_a360 = df_metadata.withColumn(
         "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
     ).withColumn(
         "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
@@ -5628,6 +5688,7 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # DBTITLE 1,Display HTML Content
+# # case_no = 'IM/00048/2003'
 # df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_appeals.gold_appeals_with_html")
 
 # display(df)
@@ -5635,6 +5696,11 @@ case_no = 'IM/00023/2003' # dependents
 # filtered_row = df.filter(col("CaseNo") == case_no).select("HTMLContent").first()
 
 # displayHTML(filtered_row["HTMLContent"])
+
+# COMMAND ----------
+
+# %sql
+# drop schema ariadm_arm_appeals cascade
 
 # COMMAND ----------
 
@@ -5949,4 +6015,86 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # %sql
-# select HearingTypeDesc from hive_metastore.ariadm_arm_appeals.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
+# select CaseNo, HTMLContent from hive_metastore.ariadm_arm_appeals.stg_appeals_unified
+# where HTMLContent like 'Error%'
+# -- Error generating HTML for CaseNo RD/00014/2006: [ATTRIBUTE_NOT_SUPPORTED] Attribute `IRISStatusOfCase` is not supported.
+
+# COMMAND ----------
+
+# %sql
+# select distinct VisitVisaType, InCamera from hive_metastore.ariadm_arm_appeals.silver_appealcase_detail
+
+# COMMAND ----------
+
+# %sql
+# select distinct Detained from hive_metastore.ariadm_arm_appeals.silver_applicant_detail
+
+# COMMAND ----------
+
+# @dlt.table(
+# name="raw_feescale",
+# comment="Delta Live Table ARIA AppealTypeCategory.",
+# path=f"{raw_mnt}/raw_feescale"
+# )
+# def raw_feescale():
+#     return read_latest_parquet("FeeScale", "tv_FeeScale", "ARIA_ARM_APPEALS") 
+
+
+# @dlt.table(
+# name="raw_feetype",
+# comment="Delta Live Table ARIA AppealTypeCategory.",
+# path=f"{raw_mnt}/raw_feetype"
+# )
+# def raw_feetype():
+#     return read_latest_parquet("FeeType", "tv_FeeType", "ARIA_ARM_APPEALS") 
+
+# # transactionmethod, transactionstatus, paymentremissionreason, transactiontype, feesatisfaction, feescale, feetype
+
+# COMMAND ----------
+
+# tableNames = [
+#     "CaseFeeSummary",
+#     "Transaction",
+#     "TransactionMethod",
+#     "PaymentRemissionReason",
+#     "TransactionType",
+#     "FeeSatisfaction",
+#     "FeeScale",
+#     "FeeType"
+# ]
+
+# for tableName in tableNames:
+#     df = spark.sql(f"""select * from tv_{tableName}""")
+#     df.write.mode("overwrite").format("csv").option("header", "true").save(f"/mnt/ingest00rawsboxraw/ARIADM/CSVEXPORT/{tableName}.csv")
+
+# COMMAND ----------
+
+# tableNames = [
+#     "CaseFeeSummary",
+#     "Transaction",
+#     "TransactionMethod",
+#     "PaymentRemissionReason",
+#     "TransactionType",
+#     "FeeSatisfaction",
+#     "FeeScale",
+#     "FeeType"
+# ]
+
+# output_path = "/mnt/ingest00rawsboxraw/ARIADM/CSVEXPORT/"
+
+# for tableName in tableNames:
+#     df = spark.sql(f"SELECT * FROM tv_{tableName}")
+    
+#     temp_path = f"{output_path}{tableName}_temp"
+#     final_path = f"{output_path}{tableName}.csv"
+
+#     # Write CSV as a single file
+#     df.coalesce(1).write.mode("overwrite").format("csv").option("header", "true").save(temp_path)
+    
+#     # Move and rename the single CSV file
+#     files = dbutils.fs.ls(temp_path)
+#     csv_file = [f.path for f in files if f.path.endswith(".csv")][0]  # Get the CSV file
+    
+#     dbutils.fs.mv(csv_file, final_path, True)  # Move and rename
+#     dbutils.fs.rm(temp_path, True)  # Clean up temp directory
+

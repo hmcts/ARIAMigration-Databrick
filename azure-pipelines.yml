@@ -39,7 +39,7 @@ steps:
 
   - script: |
       echo "Switching back to root directory..."
-      cd ..
+      cd $(Build.SourcesDirectory)
 
       echo "Cloning GitHub repository to sync from Azure DevOps..."
       git clone https://$(GitHub_PAT)@github.com/hmcts/ARIAMigration-Databrick.git github-repo
@@ -58,7 +58,7 @@ steps:
 
       # Copy files from Azure DevOps repo (excluding .git directory)
       echo "Copying latest files from Azure DevOps repo..."
-      rsync -av --exclude='.git' ../azure-repo/ ./
+      rsync -av --exclude='.git' cd $(Build.SourcesDirectory)/azure-repo/ ./
 
       # Commit and push changes
       echo "Committing changes..."

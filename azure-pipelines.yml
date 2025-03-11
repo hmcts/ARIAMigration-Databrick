@@ -49,11 +49,7 @@ steps:
       git checkout -B azure-sync
 
       echo "Fetching latest changes from Azure DevOps..."
-      git pull https://$(DevOps_PAT)@dev.azure.com/amcdevitt/test_github_sync/_git/test_github_sync github-sync --allow-unrelated-histories
-        
-      echo "Fetching latest changes from Azure DevOps..."
-      git fetch origin github-sync
-      git reset --hard origin/github-sync
+      git pull --no-rebase origin github-sync
 
       echo "Pushing Azure DevOps changes to GitHub (azure-sync branch)..."
       git push origin azure-sync

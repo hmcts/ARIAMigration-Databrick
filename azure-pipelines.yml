@@ -45,6 +45,7 @@ steps:
       git clone https://$(GitHub_PAT)@github.com/hmcts/ARIAMigration-Databrick.git github-repo
       cd github-repo
 
+
       # Check if main branch exists and create github-sync from it
       if git show-ref --verify --quiet refs/remotes/origin/main; then
         echo "Creating github-sync branch from main..."

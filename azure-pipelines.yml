@@ -45,12 +45,15 @@ steps:
       git clone https://$(GitHub_PAT)@github.com/hmcts/ARIAMigration-Databrick.git github-repo
       cd github-repo
 
-      echo "Switching to Azure DevOps sync branch in GitHub..."
-      git checkout -B azure-sync
+      # Check if the github-sync branch exists in GitHub, otherwise create it
+      git fetch origin github-sync || echo "Branch github-sync does not exist in GitHub."
+
+      # If the github-sync branch does not exist, create it from main
+      git checkout -B github-sync origin/main || echo "Creating github-sync branch from main."
 
       echo "Fetching latest changes from Azure DevOps..."
       git pull --no-rebase origin github-sync
 
-      echo "Pushing Azure DevOps changes to GitHub (azure-sync branch)..."
-      git push origin azure-sync
+      echo "Pushing Azure DevOps changes to GitHub (github-sync branch)..."
+      git push origin github-sync --force  # Force push to avoid non-fast-forward errors
     displayName: 'Sync Azure DevOps → GitHub'

@@ -27,6 +27,9 @@ steps:
       echo "Copying latest files from GitHub repo..."
       rsync -av --exclude='.git' ../ azure-repo/
 
+      echo "Pulling the latest changes from remote Azure DevOps repo (if any)..."
+      git pull --rebase origin github-sync
+
       echo "Committing and pushing changes to Azure DevOps (github-sync branch)..."
       git add .
       git commit -m "Sync from GitHub to Azure DevOps - $(date)"

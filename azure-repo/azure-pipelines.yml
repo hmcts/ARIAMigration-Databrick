@@ -1,0 +1,52 @@
+variables:
+  - group: Secrets 
+
+#trigger:
+#  branches:
+#    include:
+#      - main  
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - checkout: self  
+
+  - script: |
+      echo "Setting up Git configuration..."
+      git config --global user.email "Andrew.McDevitt@HMCTS.NET"
+      git config --global user.name "Azure DevOps Pipeline"
+
+      echo "Cloning Azure DevOps repository..."
+      git clone https://$(DevOps_PAT)@dev.azure.com/amcdevitt/test_github_sync/_git/test_github_sync azure-repo
+      cd azure-repo
+
+      echo "Switching to GitHub sync branch in Azure DevOps..."
+      git checkout -B github-sync
+
+      echo "Copying latest files from GitHub repo..."
+      rsync -av --exclude='.git' ../ azure-repo/
+
+      echo "Committing and pushing changes to Azure DevOps (github-sync branch)..."
+      git add .
+      git commit -m "Sync from GitHub to Azure DevOps - $(date)"
+      git push origin github-sync
+    displayName: 'Sync GitHub → Azure DevOps'
+
+  - script: |
+      echo "Switching back to root directory..."
+      cd ..
+
+      echo "Cloning GitHub repository to sync from Azure DevOps..."
+      git clone https://$(GitHub_PAT)@github.com/hmcts/ARIAMigration-Databrick.git github-repo
+      cd github-repo
+
+      echo "Switching to Azure DevOps sync branch in GitHub..."
+      git checkout -B azure-sync
+
+      echo "Fetching latest changes from Azure DevOps..."
+      git pull https://$(DevOps_PAT)@dev.azure.com/amcdevitt/test_github_sync/_git/test_github_sync github-sync --allow-unrelated-histories
+
+      echo "Pushing Azure DevOps changes to GitHub (azure-sync branch)..."
+      git push origin azure-sync
+    displayName: 'Sync Azure DevOps → GitHub'

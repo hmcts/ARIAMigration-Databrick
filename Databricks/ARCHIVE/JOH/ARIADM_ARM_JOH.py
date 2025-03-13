@@ -1113,83 +1113,13 @@ generate_a360_udf = udf(generate_a360, StringType())
 
 # COMMAND ----------
 
-# df_judicial_officer_details = spark.table(f"hive_metastore.{hive_schema}.silver_adjudicator_detail")
-# df_other_centres = spark.table(f"hive_metastore.{hive_schema}.silver_othercentre_detail")
-# df_roles = spark.table(f"hive_metastore.{hive_schema}.silver_appointment_detail")
-# df_history = spark.table(f"hive_metastore.{hive_schema}.silver_history_detail")
-
-# df_joh_metadata = spark.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
-
-
-
-# # Aggregate Other Centres
-# grouped_centres = df_other_centres.groupBy("AdjudicatorId").agg(
-#     collect_list("OtherCentres").alias("OtherCentres")
-# )
-
-# # Aggregate Roles
-# grouped_roles = df_roles.groupBy("AdjudicatorId").agg(
-#     collect_list(
-#         struct("Role", "DateOfAppointment", "EndDateOfAppointment")
-#     ).alias("Roles")
-# ).cache()
-
-
-# # Aggregate History
-# grouped_history = df_history.groupBy("AdjudicatorId").agg(
-#     collect_list(
-#         struct("HistDate", "HistType", "UserName", "Comment")
-#     ).alias("History")
-# )
-
-# # Join all aggregated data with JudicialOfficerDetails
-# df_combined = (
-#     df_judicial_officer_details
-#     .join(grouped_centres, "AdjudicatorId", "left")
-#     .join(grouped_roles, "AdjudicatorId", "left")
-#     .join(grouped_history, "AdjudicatorId", "left")
-# )
-
-# df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-#                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
-#                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
-#                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
-
-# # Select distinct client identifiers with HTML and JOSN content and order them
-# metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
-
-# # Define a window specification to assign row numbers
-# window_spec = Window.orderBy("client_identifier")
-# df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
-#                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
-
-# # Join the batch information with the original metadata
-# df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
-
-# # Repartition the DataFrame to optimize parallelism
-# repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
-
-# # Generate A360 content and associated file names
-# df_with_a360 = repartitioned_df.withColumn(
-#     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-# ).withColumn(
-#     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-# ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
-
-
-# df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
-
-# display(df_unified)
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation stg_judicial_officer_unified
+# DBTITLE 1,Transformation stg_judicial_officer_combined
 @dlt.table(
-    name="stg_judicial_officer_unified",
+    name="stg_judicial_officer_combined",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_judicial_officer_unified"
+    path=f"{gold_mnt}/stg_judicial_officer_combined"
 )
-def stg_judicial_officer_unified():
+def stg_judicial_officer_combined():
 
     df_judicial_officer_details = dlt.read("silver_adjudicator_detail")
     df_other_centres = dlt.read("silver_othercentre_detail")
@@ -1227,39 +1157,231 @@ def stg_judicial_officer_unified():
         .join(grouped_history, "AdjudicatorId", "left")
     )
 
-    df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-                        .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
+    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
+    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
+    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+
+    # # Select distinct client identifiers with HTML and JSON content and order them
+    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
+
+    # # Define a window specification to assign row numbers
+    # window_spec = Window.orderBy("client_identifier")
+    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
+    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
+
+    # # Join the batch information with the original metadata
+    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
+
+    # # Repartition the DataFrame to optimize parallelism
+    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+
+    # # Generate A360 content and associated file names
+    # df_with_a360 = repartitioned_df.withColumn(
+    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+    # ).withColumn(
+    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
+    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
+
+    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
+
+
+    return df_combined
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation  stg_create_joh_json_content
+@dlt.table(
+    name="stg_create_joh_json_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_create_joh_json_content"
+)
+def stg_create_joh_json_content():
+
+    df_combined = dlt.read("stg_judicial_officer_combined")
+
+    df = df_combined.withColumn("JSONContent", to_json(struct(*df_combined.columns))) \
+                    .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+
+    
+    df_with_json = df.withColumn("JSONStatus", when((col("JSONContent").like("Failure%") | col("JSONContent").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
+  
+
+    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
+    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
+    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+
+    # # Select distinct client identifiers with HTML and JSON content and order them
+    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
+
+    # # Define a window specification to assign row numbers
+    # window_spec = Window.orderBy("client_identifier")
+    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
+    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
+
+    # # Join the batch information with the original metadata
+    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
+
+    # # Repartition the DataFrame to optimize parallelism
+    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+
+    # # Generate A360 content and associated file names
+    # df_with_a360 = repartitioned_df.withColumn(
+    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+    # ).withColumn(
+    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
+    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
+
+    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
+
+
+    return df_with_json
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation stg_create_joh_iris_html_content
+@dlt.table(
+    name="stg_create_joh_html_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_create_joh_html_content"
+)
+def stg_create_joh_html_content():
+
+    df_combined = dlt.read("stg_judicial_officer_combined")
+
+    df = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
                         .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
-                        .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
 
-    # Select distinct client identifiers with HTML and JSON content and order them
-    metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
+    
+    df_with_html = df.withColumn("HTMLStatus", when((col("HTMLContent").like("Failure%") | col("HTMLContent").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
 
-    # Define a window specification to assign row numbers
-    window_spec = Window.orderBy("client_identifier")
-    df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
-                        .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
 
-    # Join the batch information with the original metadata
-    df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
+    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
+    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
+    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
 
-    # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+    # # Select distinct client identifiers with HTML and JSON content and order them
+    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
+
+    # # Define a window specification to assign row numbers
+    # window_spec = Window.orderBy("client_identifier")
+    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
+    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
+
+    # # Join the batch information with the original metadata
+    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
+
+    # # Repartition the DataFrame to optimize parallelism
+    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
+
+    # # Generate A360 content and associated file names
+    # df_with_a360 = repartitioned_df.withColumn(
+    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+    # ).withColumn(
+    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
+    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
+
+    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
+
+
+    return df_with_html
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation stg_create_joh_a360_content
+@dlt.table(
+    name="stg_create_joh_a360_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_create_joh_a360_content"
+)
+def stg_create_joh_a360_content():
+
+    df_td_metadata = dlt.read("silver_archive_metadata")
+   
+    # Optional: Load from Hive if not an initial load
+    if read_hive:
+        df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 
     # Generate A360 content and associated file names
-    df_with_a360 = repartitioned_df.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-    ).withColumn(
-        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
+    df = df_td_metadata.withColumn(
+        "A360Content", generate_a360_udf(struct(*df_td_metadata.columns))
+    )
 
-    df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
-    return df_unified
+    metadata_df = df.withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
+
+
+    return metadata_df
 
 # COMMAND ----------
 
  if read_hive:
      print("Loading data from Hive")
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation stg_judicial_officer_unified
+@dlt.table(
+    name="stg_judicial_officer_unified",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_judicial_officer_unified"
+)
+@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE 'failure%')")
+def stg_judicial_officer_unified():
+
+    # Read DLT sources
+    a360_df = dlt.read("stg_create_joh_a360_content").alias("a360")
+    html_df = dlt.read("stg_create_joh_html_content").alias("html")
+    json_df = dlt.read("stg_create_joh_json_content").alias("json")
+
+
+   
+    # Perform joins
+    df_unified = (
+        html_df
+        .join(json_df,  ((col("html.AdjudicatorId") == col("json.AdjudicatorId"))), "inner")
+        .join(
+            a360_df,
+            (col("json.AdjudicatorId") == col("a360.client_identifier")),
+            "inner"
+        )
+        .select(
+            col("a360.client_identifier"),
+            col("a360.bf_001"),
+            col("a360.bf_002"),
+            col("html.*"),
+            col("json.JSONContent"),
+            col("json.JSONFileName"),
+            col("json.JSONStatus"),
+            col("a360.A360Content"),
+            col("a360.A360Status")
+        )
+        .filter(
+            (~col("html.HTMLContent").like("Failure%")) &
+            (~col("a360.A360Content").like("Failure%")) &
+            (~col("json.JSONContent").like("Failure%"))
+        )
+    )
+
+
+
+   # Define a window specification for batching  
+    window_spec = Window.orderBy(col("client_identifier"), col("bf_001"), col("bf_002"))
+    
+    df_batch = df_unified.withColumn("row_num", row_number().over(window_spec)) \
+                         .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1) \
+                         .withColumn(
+                             "A360FileName", 
+                             concat(lit(f"{gold_outputs}/A360/judicial_officer_"), 
+                                      col("A360BatchId"), 
+                                      lit(".a360"))
+                         )
+                         
+
+    return df_batch.drop("row_num")
 
 # COMMAND ----------
 
@@ -1323,14 +1445,14 @@ def gold_judicial_officer_with_json():
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcollection"))
+        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONContent"))
     )
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONcollection","JSONFileName","UploadStatus"))
+        display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus"))
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONcollection","JSONFileName","UploadStatus")
+    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
 
 
 # COMMAND ----------

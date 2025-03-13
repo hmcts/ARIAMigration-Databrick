@@ -103,7 +103,7 @@ optimized_html_df = html_df.repartition(num_spark_partitions)
 
 # COMMAND ----------
 
-# display(optimized_html_df)
+display(optimized_html_df)
 
 # COMMAND ----------
 

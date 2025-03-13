@@ -1521,6 +1521,11 @@ def bronze_appealcase_appealcatagory_catagory():
 
 # COMMAND ----------
 
+# %sql
+# select Priority from hive_metastore.ariadm_arm_appeals.raw_category
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Transformation M10: bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at
 
@@ -6021,13 +6026,44 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
+# DBTITLE 1,VisitVisaType
 # %sql
 # select distinct VisitVisaType, InCamera from hive_metastore.ariadm_arm_appeals.silver_appealcase_detail
 
 # COMMAND ----------
 
+# DBTITLE 1,Detained
 # %sql
 # select distinct Detained from hive_metastore.ariadm_arm_appeals.silver_applicant_detail
+# -- NO - NULL
+# -- NULL --NULL
+
+# COMMAND ----------
+
+# DBTITLE 1,CostOrderAppliedFor
+# %sql
+# select CostOrderAppliedFor, CaseStatus, count(*) as count 
+# from hive_metastore.ariadm_arm_appeals.silver_status_detail
+# where CaseStatus in (27, 28, 29, 30, 31, 32, 33, 34)
+# group by CostOrderAppliedFor, CaseStatus
+
+# COMMAND ----------
+
+# DBTITLE 1,Flag
+# %sql
+# select ac.* from hive_metastore.ariadm_arm_appeals.silver_appealcategory_detail ac
+# join hive_metastore.ariadm_arm_appeals.silver_status_detail sd on sd.CaseNo = ac.CaseNo
+# where CaseStatus in (35)
+
+# COMMAND ----------
+
+# %sql
+# select Priority from hive_metastore.ariadm_arm_appeals.silver_humanright_detail
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select caseNo, BalanceDue, TransactionTypeId, TransactionDescription as  EventType, Amount, AmountDue, AmountPaid,TotalFeeDue,TotalPaymentsReceived from hive_metastore.ariadm_arm_appeals.silver_transaction_detail
 
 # COMMAND ----------
 

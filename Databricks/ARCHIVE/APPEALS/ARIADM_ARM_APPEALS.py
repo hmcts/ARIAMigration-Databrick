@@ -88,6 +88,7 @@ from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql.window import Window
 # from pyspark.sql.functions import row_number
+from delta.tables import DeltaTable
 
 # COMMAND ----------
 
@@ -114,16 +115,18 @@ pip install azure-storage-blob
 read_hive = True
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS"
+raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/ARIAFTA"
 landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS"
+bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/ARIAFTA"
+silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/ARIAFTA"
+gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/ARIAFTA"
 html_mnt = "/mnt/ingest00landingsboxhtml-template"
 
-gold_outputs = "ARIADM/ARM/APPEALS"
-hive_schema = "ariadm_arm_appeals"
+gold_outputs = "ARIADM/ARM/ARIAFTA"
+hive_schema = "ariadm_arm_ariafta"
 key_vault = "ingest00-keyvault-sbox"
+
+audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/ARIAFTA/fta_cr_audit_table"
 
 
 
@@ -217,6 +220,88 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # Return the DataFrame
     return df
 
+
+# COMMAND ----------
+
+# DBTITLE 1,Create or Validate Audit Delta Table in Azure
+audit_schema = StructType([
+    StructField("Runid", StringType(), True),
+    StructField("Unique_identifier_desc", StringType(), True),
+    StructField("Unique_identifier", StringType(), True),
+    StructField("Table_name", StringType(), True),
+    StructField("Stage_name", StringType(), True),
+    StructField("Record_count", IntegerType(), True),
+    StructField("Run_dt",TimestampType(), True),
+    StructField("Batch_id", StringType(), True),
+    StructField("Description", StringType(), True),
+    StructField("File_name", StringType(), True),
+    StructField("Status", StringType(), True)
+])
+
+# Define Delta Table Path in Azure Storage
+# audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
+
+
+if not DeltaTable.isDeltaTable(spark, audit_delta_path):
+    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
+
+    # Create an empty DataFrame
+    empty_df = spark.createDataFrame([], audit_schema)
+
+    # Write the empty DataFrame in Delta format to create the table
+    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
+
+    print("✅ Empty Delta table successfully created in Azure Storage.")
+else:
+    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
+
+
+# COMMAND ----------
+
+def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+    """
+    Creates an audit DataFrame and writes it to Delta format.
+
+    :param df: Input DataFrame from which unique identifiers are extracted.
+    :param unique_identifier_desc: Column name that acts as a unique identifier.
+    :param table_name: Name of the source table.
+    :param stage_name: Name of the data processing stage.
+    :param description: Description of the table.
+    :param additional_columns: List of additional columns to include in the audit DataFrame.
+    """
+
+    dt_desc = datetime.utcnow()
+
+    additional_columns = additional_columns or []  # Default to an empty list if None   
+    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
+
+    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
+    .withColumn("Runid", lit(run_id_value))\
+        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
+            .withColumn("Stage_name", lit(stage_name))\
+                .withColumn("Table_name", lit(table_name))\
+                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
+                        .withColumn("Description", lit(description))
+
+    list_cols = audit_df.columns
+
+    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
+
+    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
+
+
+
+# COMMAND ----------
+
+# # def log_audit_entry(df,unique_identifier):
+import uuid
+
+
+def datetime_uuid():
+    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+
+run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
@@ -770,199 +855,207 @@ def raw_stmcases():
     path=f"{bronze_mnt}/bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
-    return (
-        dlt.read("raw_appealcase").alias("ac")
-            .join(
-                dlt.read("raw_caserespondent").alias("cr"),
-                col("ac.CaseNo") == col("cr.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_mainrespondent").alias("mr"),
-                col("cr.MainRespondentId") == col("mr.MainRespondentId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_respondent").alias("r"),
-                col("cr.RespondentId") == col("r.RespondentId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_filelocation").alias("fl"),
-                col("ac.CaseNo") == col("fl.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_caserep").alias("crep"),
-                col("ac.CaseNo") == col("crep.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_representative").alias("rep"),
-                col("crep.RepresentativeId") == col("rep.RepresentativeId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_language").alias("l"),
-                col("ac.LanguageId") == col("l.LanguageId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_country").alias("c1"),
-                col("ac.CountryId") == col("c1.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_country").alias("c2"),
-                col("ac.ThirdCountryId") == col("c2.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_country").alias("n"),
-                col("ac.NationalityId") == col("n.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_feesatisfaction").alias("fs"),
-                col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_pou").alias("p"),
-                col("cr.RespondentId") == col("p.PouId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_embassy").alias("e"),
-                col("cr.RespondentId") == col("e.EmbassyId"),
-                "left_outer"
-            )
-            .select(
-                # Appeal Case columns
-                trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
-                col("ac.AppealTypeId"), col("ac.DateLodged"), col("ac.DateReceived"),
-                col("ac.PortId"), col("ac.HORef"), col("ac.DateServed"), 
-                col("ac.Notes").alias("AppealCaseNote"), col("ac.NationalityId"),
-                col('n.Nationality').alias('Nationality'), 
-                col("ac.Interpreter"), col("ac.CountryId"),col('c1.Country').alias("CountryOfTravelOrigin"),
-                col("ac.DateOfIssue"), 
-                col("ac.FamilyCase"), col("ac.OakingtonCase"), col("ac.VisitVisaType"),
-                col("ac.HOInterpreter"), col("ac.AdditionalGrounds"), col("ac.AppealCategories"),
-                col("ac.DateApplicationLodged"), col("ac.ThirdCountryId"),col('c2.Country').alias("ThirdCountry"),
-                col("ac.StatutoryClosureDate"), col("ac.PubliclyFunded"), col("ac.NonStandardSCPeriod"),
-                col("ac.CourtPreference"), col("ac.ProvisionalDestructionDate"), col("ac.DestructionDate"),
-                col("ac.FileInStatutoryClosure"), col("ac.DateOfNextListedHearing"),
-                col("ac.DocumentsReceived"), col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
-                col("ac.ReceivedFromRespondent"), col("ac.DateAppealReceived"), col("ac.RemovalDate"),
-                col("ac.CaseOutcomeId"), col("ac.AppealReceivedBy"), col("ac.InCamera"),col('ac.SecureCourtRequired'),
-                col("ac.DateOfApplicationDecision"), col("ac.UserId"), col("ac.SubmissionURN"),
-                col("ac.DateReinstated"), col("ac.DeportationDate"), col("ac.HOANRef").alias("CCDAppealNum"),
-                col("ac.HumanRights"), col("ac.TransferOutDate"), col("ac.CertifiedDate"),
-                col("ac.CertifiedRecordedDate"), col("ac.NoticeSentDate"),
-                col("ac.AddressRecordedDate"), col("ac.ReferredToJudgeDate"),
-                col("fs.Description").alias("CertOfFeeSatisfaction"),
+    
+    df = dlt.read("raw_appealcase").alias("ac") \
+        .join(
+            dlt.read("raw_caserespondent").alias("cr"),
+            col("ac.CaseNo") == col("cr.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_mainrespondent").alias("mr"),
+            col("cr.MainRespondentId") == col("mr.MainRespondentId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_respondent").alias("r"),
+            col("cr.RespondentId") == col("r.RespondentId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_filelocation").alias("fl"),
+            col("ac.CaseNo") == col("fl.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_caserep").alias("crep"),
+            col("ac.CaseNo") == col("crep.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_representative").alias("rep"),
+            col("crep.RepresentativeId") == col("rep.RepresentativeId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_language").alias("l"),
+            col("ac.LanguageId") == col("l.LanguageId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_country").alias("c1"),
+            col("ac.CountryId") == col("c1.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_country").alias("c2"),
+            col("ac.ThirdCountryId") == col("c2.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_country").alias("n"),
+            col("ac.NationalityId") == col("n.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_feesatisfaction").alias("fs"),
+            col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_pou").alias("p"),
+            col("cr.RespondentId") == col("p.PouId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_embassy").alias("e"),
+            col("cr.RespondentId") == col("e.EmbassyId"),
+            "left_outer"
+        ).select(
+            # Appeal Case columns
+            trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
+            col("ac.AppealTypeId"), col("ac.DateLodged"), col("ac.DateReceived"),
+            col("ac.PortId"), col("ac.HORef"), col("ac.DateServed"), 
+            col("ac.Notes").alias("AppealCaseNote"), col("ac.NationalityId"),
+            col('n.Nationality').alias('Nationality'), 
+            col("ac.Interpreter"), col("ac.CountryId"),col('c1.Country').alias("CountryOfTravelOrigin"),
+            col("ac.DateOfIssue"), 
+            col("ac.FamilyCase"), col("ac.OakingtonCase"), col("ac.VisitVisaType"),
+            col("ac.HOInterpreter"), col("ac.AdditionalGrounds"), col("ac.AppealCategories"),
+            col("ac.DateApplicationLodged"), col("ac.ThirdCountryId"),col('c2.Country').alias("ThirdCountry"),
+            col("ac.StatutoryClosureDate"), col("ac.PubliclyFunded"), col("ac.NonStandardSCPeriod"),
+            col("ac.CourtPreference"), col("ac.ProvisionalDestructionDate"), col("ac.DestructionDate"),
+            col("ac.FileInStatutoryClosure"), col("ac.DateOfNextListedHearing"),
+            col("ac.DocumentsReceived"), col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
+            col("ac.ReceivedFromRespondent"), col("ac.DateAppealReceived"), col("ac.RemovalDate"),
+            col("ac.CaseOutcomeId"), col("ac.AppealReceivedBy"), col("ac.InCamera"),col('ac.SecureCourtRequired'),
+            col("ac.DateOfApplicationDecision"), col("ac.UserId"), col("ac.SubmissionURN"),
+            col("ac.DateReinstated"), col("ac.DeportationDate"), col("ac.HOANRef").alias("CCDAppealNum"),
+            col("ac.HumanRights"), col("ac.TransferOutDate"), col("ac.CertifiedDate"),
+            col("ac.CertifiedRecordedDate"), col("ac.NoticeSentDate"),
+            col("ac.AddressRecordedDate"), col("ac.ReferredToJudgeDate"),
+            col("fs.Description").alias("CertOfFeeSatisfaction"),
 
-                # Case Respondent columns
-                col("cr.Respondent").alias("CRRespondent"),
-                col("cr.Reference").alias("CRReference"),
-                col("cr.Contact").alias("CRContact"),
-                
-                # Main Respondent columns
-                col("mr.Name").alias("MRName"),
-                # col("mr.Embassy").alias("MREmbassy"),
-                # col("mr.POU").alias("MRPOU"),
-                # col("mr.Respondent").alias("MRRespondent"),
-                
-                # Respondent columns
-                col("r.ShortName").alias("RespondentName"),
-                col("r.PostalName").alias("RespondentPostalName"),
-                col("r.Department").alias("RespondentDepartment"),
-                col("r.Address1").alias("RespondentAddress1"),
-                col("r.Address2").alias("RespondentAddress2"),
-                col("r.Address3").alias("RespondentAddress3"),
-                col("r.Address4").alias("RespondentAddress4"),
-                col("r.Address5").alias("RespondentAddress5"),
-                col("r.Postcode").alias("RespondentPostcode"),
-                col("r.Email").alias("RespondentEmail"),
-                col("r.Fax").alias("RespondentFax"),
-                col("r.Telephone").alias("RespondentTelephone"),
-                # col("r.Sdx").alias("RespondentSdx"),
-                
-                # File Location columns
-                col("fl.Note").alias("FileLocationNote"),
-                col("fl.TransferDate").alias("FileLocationTransferDate"),
-                
-                # Case Representative columns
-                col("crep.RepresentativeRef"),
-                col("crep.Name").alias("CaseRepName"),
-                col("crep.RepresentativeId"),
-                col("crep.Address1").alias("CaseRepAddress1"),
-                col("crep.Address2").alias("CaseRepAddress2"),
-                col("crep.Address3").alias("CaseRepAddress3"),
-                col("crep.Address4").alias("CaseRepAddress4"),
-                col("crep.Address5").alias("CaseRepAddress5"),
-                col("crep.Postcode").alias("CaseRepPostcode"),
-                col("crep.Telephone").alias("FileSpecificPhone"),
-                col("crep.Fax").alias("CaseRepFax"),
-                col("crep.Contact").alias("Contact"),
-                col("crep.DXNo1").alias("CaseRepDXNo1"),
-                col("crep.DXNo2").alias("CaseRepDXNo2"),
-                col("crep.TelephonePrime").alias("CaseRepTelephone"),
-                col("crep.Email").alias("CaseRepEmail"),
-                col("crep.FileSpecificFax"),
-                col("crep.FileSpecificEmail"),
-                col("crep.LSCCommission"),
-                
-                # Representative columns
-                col("rep.Name").alias("RepName"),
-                col("rep.Title").alias("RepTitle"),
-                col("rep.Forenames").alias("RepForenames"),
-                col("rep.Address1").alias("RepAddress1"),
-                col("rep.Address2").alias("RepAddress2"),
-                col("rep.Address3").alias("RepAddress3"),
-                col("rep.Address4").alias("RepAddress4"),
-                col("rep.Address5").alias("RepAddress5"),
-                col("rep.Postcode").alias("RepPostcode"),
-                col("rep.Telephone").alias("RepTelephone"),
-                col("rep.Fax").alias("RepFax"),
-                col("rep.Email").alias("RepEmail"),
-                # col("rep.Sdx").alias("RepSdx"),
-                col("rep.DXNo1").alias("RepDXNo1"),
-                col("rep.DXNo2").alias("RepDXNo2"),
-                
-                # Language columns
-                col("l.Description").alias("Language"),
-                col("l.DoNotUse").alias("DoNotUseLanguage"),
+            # Case Respondent columns
+            col("cr.Respondent").alias("CRRespondent"),
+            col("cr.Reference").alias("CRReference"),
+            col("cr.Contact").alias("CRContact"),
+            
+            # Main Respondent columns
+            col("mr.Name").alias("MRName"),
+            # col("mr.Embassy").alias("MREmbassy"),
+            # col("mr.POU").alias("MRPOU"),
+            # col("mr.Respondent").alias("MRRespondent"),
+            
+            # Respondent columns
+            col("r.ShortName").alias("RespondentName"),
+            col("r.PostalName").alias("RespondentPostalName"),
+            col("r.Department").alias("RespondentDepartment"),
+            col("r.Address1").alias("RespondentAddress1"),
+            col("r.Address2").alias("RespondentAddress2"),
+            col("r.Address3").alias("RespondentAddress3"),
+            col("r.Address4").alias("RespondentAddress4"),
+            col("r.Address5").alias("RespondentAddress5"),
+            col("r.Postcode").alias("RespondentPostcode"),
+            col("r.Email").alias("RespondentEmail"),
+            col("r.Fax").alias("RespondentFax"),
+            col("r.Telephone").alias("RespondentTelephone"),
+            # col("r.Sdx").alias("RespondentSdx"),
+            
+            # File Location columns
+            col("fl.Note").alias("FileLocationNote"),
+            col("fl.TransferDate").alias("FileLocationTransferDate"),
+            
+            # Case Representative columns
+            col("crep.RepresentativeRef"),
+            col("crep.Name").alias("CaseRepName"),
+            col("crep.RepresentativeId"),
+            col("crep.Address1").alias("CaseRepAddress1"),
+            col("crep.Address2").alias("CaseRepAddress2"),
+            col("crep.Address3").alias("CaseRepAddress3"),
+            col("crep.Address4").alias("CaseRepAddress4"),
+            col("crep.Address5").alias("CaseRepAddress5"),
+            col("crep.Postcode").alias("CaseRepPostcode"),
+            col("crep.Telephone").alias("FileSpecificPhone"),
+            col("crep.Fax").alias("CaseRepFax"),
+            col("crep.Contact").alias("Contact"),
+            col("crep.DXNo1").alias("CaseRepDXNo1"),
+            col("crep.DXNo2").alias("CaseRepDXNo2"),
+            col("crep.TelephonePrime").alias("CaseRepTelephone"),
+            col("crep.Email").alias("CaseRepEmail"),
+            col("crep.FileSpecificFax"),
+            col("crep.FileSpecificEmail"),
+            col("crep.LSCCommission"),
+            
+            # Representative columns
+            col("rep.Name").alias("RepName"),
+            col("rep.Title").alias("RepTitle"),
+            col("rep.Forenames").alias("RepForenames"),
+            col("rep.Address1").alias("RepAddress1"),
+            col("rep.Address2").alias("RepAddress2"),
+            col("rep.Address3").alias("RepAddress3"),
+            col("rep.Address4").alias("RepAddress4"),
+            col("rep.Address5").alias("RepAddress5"),
+            col("rep.Postcode").alias("RepPostcode"),
+            col("rep.Telephone").alias("RepTelephone"),
+            col("rep.Fax").alias("RepFax"),
+            col("rep.Email").alias("RepEmail"),
+            # col("rep.Sdx").alias("RepSdx"),
+            col("rep.DXNo1").alias("RepDXNo1"),
+            col("rep.DXNo2").alias("RepDXNo2"),
+            
+            # Language columns
+            col("l.Description").alias("Language"),
+            col("l.DoNotUse").alias("DoNotUseLanguage"),
 
-                # POU columns
-                col("p.ShortName").alias("POUShortName"),
-                col("p.PostalName").alias("POUPostalName"),
-                col("p.Address1").alias("POUAddress1"),
-                col("p.Address2").alias("POUAddress2"),
-                col("p.Address3").alias("POUAddress3"),
-                col("p.Address4").alias("POUAddress4"),
-                col("p.Address5").alias("POUAddress5"),
-                col("p.Postcode").alias("POUPostcode"),
-                col("p.Telephone").alias("POUTelephone"),
-                col("p.Fax").alias("POUFax"),
-                col("p.Email").alias("POUEmail"),
+            # POU columns
+            col("p.ShortName").alias("POUShortName"),
+            col("p.PostalName").alias("POUPostalName"),
+            col("p.Address1").alias("POUAddress1"),
+            col("p.Address2").alias("POUAddress2"),
+            col("p.Address3").alias("POUAddress3"),
+            col("p.Address4").alias("POUAddress4"),
+            col("p.Address5").alias("POUAddress5"),
+            col("p.Postcode").alias("POUPostcode"),
+            col("p.Telephone").alias("POUTelephone"),
+            col("p.Fax").alias("POUFax"),
+            col("p.Email").alias("POUEmail"),
 
-                # Embassy columns
-                col("e.Location").alias("EmbassyLocation"),
-                col("e.Embassy"),
-                col("e.Surname"),
-                col("e.Forename"),
-                col("e.Title"),
-                col("e.OfficialTitle"),
-                col("e.Address1").alias("EmbassyAddress1"),
-                col("e.Address2").alias("EmbassyAddress2"),
-                col("e.Address3").alias("EmbassyAddress3"),
-                col("e.Address4").alias("EmbassyAddress4"),
-                col("e.Address5").alias("EmbassyAddress5"),
-                col("e.Postcode").alias("EmbassyPostcode"),
-                col("e.Telephone").alias("EmbassyTelephone"),
-                col("e.Fax").alias("EmbassyFax"),
-                col("e.Email").alias("EmbassyEmail"),
-                # col("e.DoNotUse").alias("DoNotUseEmbassy")
-            )
-    )
+            # Embassy columns
+            col("e.Location").alias("EmbassyLocation"),
+            col("e.Embassy"),
+            col("e.Surname"),
+            col("e.Forename"),
+            col("e.Title"),
+            col("e.OfficialTitle"),
+            col("e.Address1").alias("EmbassyAddress1"),
+            col("e.Address2").alias("EmbassyAddress2"),
+            col("e.Address3").alias("EmbassyAddress3"),
+            col("e.Address4").alias("EmbassyAddress4"),
+            col("e.Address5").alias("EmbassyAddress5"),
+            col("e.Postcode").alias("EmbassyPostcode"),
+            col("e.Telephone").alias("EmbassyTelephone"),
+            col("e.Fax").alias("EmbassyFax"),
+            col("e.Email").alias("EmbassyEmail"),
+            # col("e.DoNotUse").alias("DoNotUseEmbassy")
+        )
+
+    table_name = "bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df
+    
 
 # COMMAND ----------
 

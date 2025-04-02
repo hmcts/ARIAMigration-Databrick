@@ -222,7 +222,7 @@ audit_schema = StructType([
 # COMMAND ----------
 
 # Define Delta Table Path in Azure Storage
-audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JR/jr_cr_audit_table"
+audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table"
 
 
 if not DeltaTable.isDeltaTable(spark, audit_delta_path):
@@ -240,7 +240,7 @@ else:
 
 # COMMAND ----------
 
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, file_name = False,status = False) -> None:
     """
     Creates an audit DataFrame and writes it to Delta format.
 
@@ -249,12 +249,19 @@ def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, 
     :param table_name: Name of the source table.
     :param stage_name: Name of the data processing stage.
     :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
+    :param additional_columns: options File_name or Status. List of additional columns to include in the audit DataFrame.
     """
 
     dt_desc = datetime.utcnow()
 
-    additional_columns = additional_columns or []  # Default to an empty list if None   
+    additional_columns = []
+    if file_name is True:
+        additional_columns.append("File_name")
+    if status is True:
+        additional_columns.append("Status")
+
+
+     # Default to an empty list if None   
     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
 
     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
@@ -592,6 +599,10 @@ def bronze_johistory_users():
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 # DLT Table 1: bronze_othercentre_hearingcentre
 @dlt.table(
     name="bronze_othercentre_hearingcentre",
@@ -748,6 +759,14 @@ def stg_joh_filtered():
 # MAGIC ### Transformation silver_adjudicator_detail
 # MAGIC
 # MAGIC
+
+# COMMAND ----------
+
+# # display(dbutils.fs.ls("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"))
+# path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"
+# df_cr = spark.read.load(path)
+
+# df_cr.display()
 
 # COMMAND ----------
 
@@ -1482,7 +1501,7 @@ def stg_create_joh_json_content():
 
     unique_identifier_desc = "AdjudicatorId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
 
 
@@ -1545,7 +1564,7 @@ def stg_create_joh_html_content():
 
     unique_identifier_desc = "AdjudicatorId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
 
 
@@ -1584,7 +1603,7 @@ def stg_create_joh_a360_content():
 
     unique_identifier_desc = "client_identifier"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,status=True)
 
 
 
@@ -1715,7 +1734,7 @@ def gold_judicial_officer_with_html():
 
     unique_identifier_desc = "AdjudicatorId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
 
     # Return the DataFrame for DLT table creation, including the upload status
@@ -1763,7 +1782,7 @@ def gold_judicial_officer_with_json():
 
     unique_identifier_desc = "AdjudicatorId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
 
 
@@ -1820,7 +1839,7 @@ def gold_judicial_officer_with_a360():
 
     unique_identifier_desc = "A360BatchId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
    
     return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")

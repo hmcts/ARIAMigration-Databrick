@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - main   # Trigger on commits to the main branch
+      - master   # Trigger on commits to the main branch
 
 pool:
   vmImage: 'ubuntu-latest' 

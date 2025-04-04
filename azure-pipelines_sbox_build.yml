@@ -9,6 +9,8 @@ pool:
 variables:
   DATABRICKS_HOST_WORKSPACE_MAIN00: 'https://adb-3635282203417052.12.azuredatabricks.net'
 
+  DATABRICKS_HOST_WORKSPACE_MAIN01: 'https://adb-376876256300083.3.azuredatabricks.net/'
+
 
   DATABRICKS_HOST_WORKSPACE_MAIN02: 'https://adb-1879076228317698.18.azuredatabricks.net'
 
@@ -36,6 +38,19 @@ steps:
     databricks workspace mkdirs /live
     databricks workspace import_dir Databricks /live --overwrite
   displayName: 'Publish Databricks folder to /live in Databricks MAIN00 Workspace'
+
+# Configure and deploy to Workspace MAIN01
+- script: |
+    echo "[DEFAULT]" > $(HOME)/.databrickscfg
+    echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
+    echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
+  displayName: 'Configure Databricks CLI for Workspace MAIN01'
+
+- script: |
+    databricks workspace delete /live --recursive
+    databricks workspace mkdirs /live
+    databricks workspace import_dir Databricks /live --overwrite
+  displayName: 'Publish Databricks folder to /live in Databricks MAIN01 Workspace'
 
 # Configure and deploy to Workspace MAIN02
 - script: |

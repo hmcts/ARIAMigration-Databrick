@@ -11,7 +11,6 @@ variables:
 
   DATABRICKS_HOST_WORKSPACE_MAIN01: 'https://adb-376876256300083.3.azuredatabricks.net/'
 
-
   DATABRICKS_HOST_WORKSPACE_MAIN02: 'https://adb-1879076228317698.18.azuredatabricks.net'
 
 

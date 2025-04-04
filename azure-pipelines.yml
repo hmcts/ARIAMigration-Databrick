@@ -1,0 +1,39 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  DATABRICKS_HOST: 'https://adb-3635282203417052.12.azuredatabricks.net/'
+
+steps:
+# use the latest python version
+  - task: UsePythonVersion@0
+    displayName: 'use python 3.x'
+    inputs:
+      versionSpec: '3.x'
+
+# 2. Install the Databricks CLI via pip
+- script: |
+    python -m pip install --upgrade pip
+    pip install databricks-cli
+  displayName: 'Install Databricks CLI'
+
+# 3. Configure the Databricks CLI by creating a config file (~/.databrickscfg)
+- script: |
+    echo "[DEFAULT]" > $(HOME)/.databrickscfg
+    echo "host = $(DATABRICKS_HOST)" >> $(HOME)/.databrickscfg
+    echo "token = $(DATABRICKS_TOKEN)" >> $(HOME)/.databrickscfg
+  displayName: 'Configure Databricks CLI'
+
+# 4. Import the Databricks folder from the repo into the /live folder of your Databricks workspace
+- script: |
+    databricks workspace import_dir Databricks /live --overwrite
+  displayName: 'Publish Databricks folder to /live in Databricks Workspace'
+

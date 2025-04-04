@@ -33,6 +33,7 @@ steps:
 
 - script: |
     databricks workspace delete /live --recursive 
+    databricks workspace mkdirs /live
     databricks workspace import_dir Databricks /live --overwrite
   displayName: 'Publish Databricks folder to /live in Databricks MAIN00 Workspace'
 
@@ -45,5 +46,6 @@ steps:
 
 - script: |
     databricks workspace delete /live --recursive
+    databricks workspace mkdirs /live
     databricks workspace import_dir Databricks /live --overwrite
   displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'

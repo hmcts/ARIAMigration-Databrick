@@ -10,9 +10,8 @@ resources:
             min_workers: 1
             max_workers: 5
             mode: ENHANCED
-      libraries:
-        - notebook:
-            path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_APPEALS_FTA
+      notebook_task:
+        notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_APPEALS_FTA
       schema: ariadm_arm_fta
       development: true
       data_sampling: false

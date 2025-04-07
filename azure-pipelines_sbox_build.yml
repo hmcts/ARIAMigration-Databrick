@@ -8,7 +8,7 @@ pool:
 
 variables:
   - name: env
-    value: 'Sbox'
+    value: 'sandbox'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN00
     value: 'https://adb-3635282203417052.12.azuredatabricks.net'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN01
@@ -107,6 +107,6 @@ stages:
         ls -l /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
         cd ARIA_DABs
-        databricks bundle validate --target sbox
-        databricks bundle deploy --target sbox
+        databricks bundle validate --target sandbox
+        databricks bundle deploy --target sandbox
       displayName: "Deploy Databricks resources to ingest02 workspace"

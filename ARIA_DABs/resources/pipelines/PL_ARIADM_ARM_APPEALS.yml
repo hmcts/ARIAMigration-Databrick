@@ -10,8 +10,9 @@ resources:
             min_workers: 1
             max_workers: 5
             mode: ENHANCED
-      notebook_task:
-        notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS
+      libraries:
+        - notebook:
+            path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS
       target: ariadm_arm_appeals
       development: true
       data_sampling: false

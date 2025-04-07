@@ -1,37 +1,51 @@
 bundle:
-  name: ARIA_DAB_INGEST02_TEST
+  name: ARIA_DAB_INGEST02
+#  git:
+#    origin_url: https://github.com/hmcts/ARIAMigration-Databrick
+#    branch: main
+
+workspace:
+  azure_client_id: 93076eb6-260a-486b-be27-b79035a64fb1 
+  azure_environment: sandbox 
+  azure_tenant_id: 531ff96d-0ae9-462a-8d2d-bec7c0b42082 
+  azure_use_msi: true 
+  azure_workspace_resource_id: /subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/ingest02-main-sbox/providers/Microsoft.Databricks/workspaces/ingest02-product-databricks001-sbox # For Azure Databricks only.
+
+permissions:
+  - level: CAN_MANAGE
+    service_principal_name: 93076eb6-260a-486b-be27-b79035a64fb1 
+
+# To update .whl in future once DABs are working
+#artifacts:
+#  <some-unique-artifact-identifier>:
+#    build: string
+#    files:
+#      - source: string
+#    path: string
+#    type: string   
+
+run_as:
+  - service_principal_name: ServicePrincipalCICD
+
 resources:
-  pipelines:
-    pipeline_ARIA_ARCHIVE_BAILS:
-      path: ./resources/pipelines/ARIA_ARCHIVE_BAILS.yml
-    pipeline_PL_ARIADM_ARM_APPEALS:
-      path: ./resources/pipelines/PL_ARIADM_ARM_APPEALS.yml
-    pipeline_PL_ARIADM_ARM_FTA:
-      path: ./resources/pipelines/PL_ARIADM_ARM_FTA.yml
-    pipeline_PL_ARIADM_ARM_JOH:
-      path: ./resources/pipelines/PL_ARIADM_ARM_JOH.yml
-    pipeline_PL_ARIADM_ARM_TD:
-      path: ./resources/pipelines/PL_ARIADM_ARM_TD.yml
   jobs:
-    db_wf_apl_fta_send:
-      path: ./resources/workflows/db_wf_apl_fta_send.yml
-    db_wf_bail_receive:
-      path: ./resources/workflows/db_wf_bail_receive.yml
-    db_wf_bail_reprocessing:
-      path: ./resources/workflows/db_wf_bail_reprocessing.yml
-    db_wf_bail_send:
-      path: ./resources/workflows/db_wf_bail_send.yml
-    db_wf_joh_receive:
-      path: ./resources/workflows/db_wf_joh_receive.yml
-    db_wf_joh_send:
-      path: ./resources/workflows/db_wf_joh_send.yml
-    db_wf_td_receive:
-      path: ./resources/workflows/db_wf_td_receive.yml
-    db_wf_td_send:
-      path: ./resources/workflows/db_wf_td_send.yml
+    db_wf_apl_fta_send: ${bundle.file(resources/workflows/db_wf_apl_fta_send.yml)}
+    db_wf_bail_receive: ${bundle.file(resources/workflows/db_wf_bail_receive.yml)}
+    db_wf_bail_reprocessing: ${bundle.file(resources/workflows/db_wf_bail_reprocessing.yml)}
+    db_wf_bail_send: ${bundle.file(resources/workflows/db_wf_bail_send.yml)}
+    db_wf_joh_receive: ${bundle.file(resources/workflows/db_wf_joh_receive.yml)}
+    db_wf_joh_send: ${bundle.file(resources/workflows/db_wf_joh_send.yml)}
+    db_wf_td_receive: ${bundle.file(resources/workflows/db_wf_td_receive.yml)}
+    db_wf_td_send: ${bundle.file(resources/workflows/db_wf_td_send.yml)}
+  
+  pipelines:
+    pipeline_ARIA_ARCHIVE_BAILS: ${bundle.file(resources/pipelines/ARIA_ARCHIVE_BAILS.yml)}
+    pipeline_PL_ARIADM_ARM_APPEALS: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_APPEALS.yml)}
+    pipeline_PL_ARIADM_ARM_FTA: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_FTA.yml)}
+    pipeline_PL_ARIADM_ARM_JOH: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_JOH.yml)}
+    pipeline_PL_ARIADM_ARM_TD: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_TD.yml)}
 
 targets:
   sandbox:
-    default: true
-    workspace_config:
-      workspace_url: "https://adb-1879076228317698.18.azuredatabricks.net/?o=1879076228317698&l=en" 
+      workspace:
+        host: "https://adb-1879076228317698.18.azuredatabricks.net/?o=1879076228317698&l=en" 

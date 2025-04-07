@@ -1,0 +1,31 @@
+resources:
+  jobs:
+    db_wf_joh_send:
+      name: db_wf_joh_send
+      tasks:
+        - task_key: create_joh_content
+          pipeline_task:
+            pipeline_id: 4c6239c3-47b9-4e38-a510-3523d5b2d001
+        - task_key: publish_html_json_eh
+          depends_on:
+            - task_key: create_joh_content
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick-new/Databricks/ARCHIVE/JOH/JOH_to_eventhubs_html_json
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+        - task_key: publish_a360_eh
+          depends_on:
+            - task_key: publish_html_json_eh
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick-new/Databricks/ARCHIVE/JOH/JOH_to_eventhubs_A360
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+        - task_key: joh_ack
+          depends_on:
+            - task_key: publish_a360_eh
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick-new/Databricks/ARCHIVE/JOH/joh_ack_autoloader
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+      queue:
+        enabled: true

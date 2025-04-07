@@ -1,0 +1,27 @@
+resources:
+  jobs:
+    db_wf_joh_recieve:
+      name: db_wf_joh_recieve
+      tasks:
+        - task_key: Response_Autoloader
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick-new/Databricks/ARCHIVE/JOH/joh_resp_autoloader
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+      job_clusters:
+        - job_cluster_key: Job_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            azure_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: -1
+            node_type_id: Standard_D4ds_v5
+            spark_env_vars:
+              PYSPARK_PYTHON: /databricks/python3/bin/python3
+            enable_elastic_disk: true
+            data_security_mode: LEGACY_SINGLE_USER_STANDARD
+            runtime_engine: PHOTON
+            num_workers: 8
+      queue:
+        enabled: true

@@ -104,6 +104,7 @@ stages:
 
     - script: |
         echo "Current working directory: $(pwd)"
+        ls -l /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
         databricks bundle validate ./ARIA_DABs --target sbox
         databricks bundle deploy ./ARIA_DABs --target sbox

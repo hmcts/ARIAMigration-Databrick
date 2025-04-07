@@ -108,39 +108,37 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
-        databricks bundle validate --target sandbox
-        databricks bundle deploy --target sandbox
-
-        databricks jobs list
-        databricks pipelines list
+        databricks bundle validate -t sandbox
+        databricks bundle deploy -t sandbox
+        databricks bundle run -t sandbox
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
-    - script: |
-       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       cd ARIA_DABs
-       databricks jobs create /resources/workflows/db_wf_apl_fta_send.yml
-       databricks jobs create /resources/workflows/db_wf_bail_receive.yml
-       databricks jobs create /resources/workflows/db_wf_bail_reprocessing.yml
-       databricks jobs create /resources/workflows/db_wf_bail_send.yml
-       databricks jobs create /resources/workflows/db_wf_joh_recieve.yml
-       databricks jobs create /resources/workflows/db_wf_joh_send.yml
-       databricks jobs create /resources/workflows/db_wf_td_receive.yml
-       databricks jobs create /resources/workflows/db_wf_td_send.yml
-      displayName: "Create Databricks workflows"
+#    - script: |
+#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+#       cd ARIA_DABs
+#       databricks jobs create /resources/workflows/db_wf_apl_fta_send.yml
+#       databricks jobs create /resources/workflows/db_wf_bail_receive.yml
+#       databricks jobs create /resources/workflows/db_wf_bail_reprocessing.yml
+#       databricks jobs create /resources/workflows/db_wf_bail_send.yml
+#       databricks jobs create /resources/workflows/db_wf_joh_recieve.yml
+#       databricks jobs create /resources/workflows/db_wf_joh_send.yml
+#       databricks jobs create /resources/workflows/db_wf_td_receive.yml
+#       databricks jobs create /resources/workflows/db_wf_td_send.yml
+#      displayName: "Create Databricks workflows"
 
-    - script: |
-       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       cd ARIA_DABs
-       databricks pipelines create /resources/pipelines/ARIA_ARCHIVE_BAILS.yml
-       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_APPEALS.yml
-       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_FTA.yml
-       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_JOH.yml
-       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_TD.yml
-      displayName: "Create Databricks pipelines"
+#    - script: |
+#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+#       cd ARIA_DABs
+#       databricks pipelines create /resources/pipelines/ARIA_ARCHIVE_BAILS.yml
+#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_APPEALS.yml
+#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_FTA.yml
+#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_JOH.yml
+#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_TD.yml
+#      displayName: "Create Databricks pipelines"
     
-    - script: |
-       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       cd ARIA_DABs
-       databricks jobs list
-       databricks pipelines list
-      displayName: "Query Databricks Pipelines & Workflows"
+#    - script: |
+#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+#       cd ARIA_DABs
+#       databricks jobs list
+#       databricks pipelines list
+#      displayName: "Query Databricks Pipelines & Workflows"

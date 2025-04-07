@@ -96,7 +96,6 @@ stages:
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
     - script: |
-        cd databricks-asset-bundles
-        databricks bundle validate --target sbox
-        databricks bundle deploy ./databricks-asset-bundles --target sbox
+        databricks bundle validate ./ARIA_DABs --target sbox
+        databricks bundle deploy ./ARIA_DABs --target sbox
       displayName: "Deploy Databricks resources to ingest02 workspace"

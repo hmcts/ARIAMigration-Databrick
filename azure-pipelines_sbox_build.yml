@@ -85,8 +85,11 @@ stages:
         versionSpec: '3.x'
 
     - script: |
-        python -m pip install --upgrade pip
-        pip install databricks-cli
+         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+         
+         brew install databricks/tap/databricks
+         databricks --version
       displayName: 'Install Databricks CLI'
 
     - script: |

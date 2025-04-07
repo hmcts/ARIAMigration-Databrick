@@ -103,6 +103,7 @@ stages:
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
     - script: |
+        echo "Current working directory: $(pwd)"
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
         databricks bundle validate ./ARIA_DABs --target sbox
         databricks bundle deploy ./ARIA_DABs --target sbox

@@ -1,84 +1,8 @@
 bundle:
   name: ARIA_DAB_INGEST02
-#  git:
-#    origin_url: https://github.com/hmcts/ARIAMigration-Databrick
-#    branch: main
 
-workspace:
-  host: https://adb-1879076228317698.18.azuredatabricks.net
-
-permissions:
-  - user_name: Andrew.McDevitt@hmcts.net
-    level: CAN_MANAGE
-  - user_name: Ara.Islam1@HMCTS.NET
-    level: CAN_MANAGE
-  - user_name: Naveen.Sriram@hmcts.net
-    level: CAN_MANAGE
-
-
-# To update .whl in future once DABs are working
-#artifacts:
-#  <some-unique-artifact-identifier>:
-#    build: string
-#    files:
-#      - source: string
-#    path: string
-#    type: string   
-
-resources:
-  jobs:
-    db_wf_apl_fta_send:
-      job_name: db_wf_apl_fta_send
-      file: ${bundle.file(resources/workflows/db_wf_apl_fta_send.yml)}
-
-    db_wf_apl_fta_send:
-      job_name: db_wf_bail_receive
-      file: ${bundle.file(resources/workflows/db_wf_bail_receive.yml)}
-
-    db_wf_bail_reprocessing:
-      job_name: db_wf_bail_reprocessing
-      file: ${bundle.file(resources/workflows/db_wf_bail_reprocessing.yml)}
-    
-    db_wf_bail_send:
-      job_name: db_wf_bail_send
-      file: ${bundle.file(resources/workflows/db_wf_bail_send.yml)}
-
-    db_wf_joh_receive:
-      job_name: db_wf_joh_receive
-      file: ${bundle.file(resources/workflows/db_wf_joh_receive.yml)}
-
-    db_wf_joh_send:
-      job_name: db_wf_joh_send
-      file: ${bundle.file(resources/workflows/db_wf_joh_send.yml)}
-
-    db_wf_td_receive:
-      job_name: db_wf_td_receive
-      file: ${bundle.file(resources/workflows/db_wf_td_receive.yml)}
-
-    db_wf_td_send:
-      job_name: db_wf_td_send 
-      file: ${bundle.file(resources/workflows/db_wf_td_send.yml)}
-  
-  pipelines:
-    ARIA_ARCHIVE_BAILS:
-      pipeline_name: ARIA_ARCHIVE_BAILS
-      file: ${bundle.file(resources/pipelines/ARIA_ARCHIVE_BAILS.yml)}
-
-    PL_ARIADM_ARM_APPEALS:
-      pipeline_name: PL_ARIADM_ARM_APPEALS
-      file: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_APPEALS.yml)}
-
-    PL_ARIADM_ARM_FTA:
-      pipeline_name: PL_ARIADM_ARM_FTA
-      file: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_FTA.yml)}
-
-    PL_ARIADM_ARM_JOH:
-      pipeline_name: PL_ARIADM_ARM_JOH
-      file: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_JOH.yml)}
-
-    PL_ARIADM_ARM_TD:
-      pipeline_name: PL_ARIADM_ARM_TD
-      file: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_TD.yml)}
+include:
+  - ${bundle.file(resources/*.yml)}
 
 targets:
   sandbox:

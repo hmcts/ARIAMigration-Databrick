@@ -72,12 +72,23 @@ stages:
         databricks workspace import_dir Databricks /live --overwrite
       displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
 
+
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
   - job: DeployJob
     displayName: 'Deploy Databricks Asset Bundles to $(env)-ingest02-databricks-product'
     steps:
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.x'
+      inputs:
+        versionSpec: '3.x'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install databricks-cli
+      displayName: 'Install Databricks CLI'
+
     - script: |
         echo "[DEFAULT]" > $(HOME)/.databrickscfg
         echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg

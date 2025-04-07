@@ -92,13 +92,18 @@ stages:
          databricks --version
       displayName: 'Install Databricks CLI'
 
+      #Ensure databrcks CLI is available in current session (loading homebrew shell)
     - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+        databricks --version  
         echo "[DEFAULT]" > $(HOME)/.databrickscfg
         echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+        cat ~/.databrickscfg  # Print the contents for debugging
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
     - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
         databricks bundle validate ./ARIA_DABs --target sbox
         databricks bundle deploy ./ARIA_DABs --target sbox
       displayName: "Deploy Databricks resources to ingest02 workspace"

@@ -1,7 +1,3 @@
-variables:
-  - name: env
-    value: 'Sbox'
-
 trigger:
   branches:
     include:
@@ -11,11 +7,14 @@ pool:
   vmImage: 'ubuntu-latest' 
 
 variables:
-  DATABRICKS_HOST_WORKSPACE_MAIN00: 'https://adb-3635282203417052.12.azuredatabricks.net'
-
-  DATABRICKS_HOST_WORKSPACE_MAIN01: 'https://adb-376876256300083.3.azuredatabricks.net/'
-
-  DATABRICKS_HOST_WORKSPACE_MAIN02: 'https://adb-1879076228317698.18.azuredatabricks.net'
+  - name: env
+    value: 'Sbox'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN00
+    value: 'https://adb-3635282203417052.12.azuredatabricks.net'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN01
+    value: 'https://adb-376876256300083.3.azuredatabricks.net/'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN02
+    value: 'https://adb-1879076228317698.18.azuredatabricks.net'
 
 stages:
 - stage: 'Build'
@@ -73,7 +72,6 @@ stages:
         databricks workspace import_dir Databricks /live --overwrite
       displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
 
-stages:
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
@@ -89,5 +87,3 @@ stages:
     - script: |
         databricks bundle deploy ./databricks-asset-bundles --target sbox
       displayName: "Deploy Databricks resources to ingest02 workspace"
-        
-  

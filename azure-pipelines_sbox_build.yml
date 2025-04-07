@@ -1,3 +1,7 @@
+variables:
+  - name: env
+    value: 'Sbox'
+
 trigger:
   branches:
     include:
@@ -18,7 +22,7 @@ stages:
   displayName: 'Build Stage'
   jobs:
   - job: BuildJob
-    displayName: 'Rune Build and deploy'
+    displayName: 'Run Build and deploy'
     steps:
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'
@@ -68,8 +72,22 @@ stages:
         databricks workspace mkdirs /live
         databricks workspace import_dir Databricks /live --overwrite
       displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
-    
+
+stages:
+- stage: 'Deploy'
+  displayName: 'Deploy Stage'
+  jobs:
+  - job: DeployJob
+    displayName: 'Deploy Databricks Asset Bundles to $(env)-ingest02-databricks-product'
+    steps:
+    - script: |
+        echo "[DEFAULT]" > $(HOME)/.databrickscfg
+        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+      displayName: 'Configure Databricks CLI for Workspace MAIN02'
+
     - script: |
         databricks bundle deploy ./databricks-asset-bundles --target sbox
       displayName: "Deploy Databricks resources to ingest02 workspace"
+        
   

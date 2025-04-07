@@ -106,6 +106,6 @@ stages:
         echo "Current working directory: $(pwd)"
         ls -l /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-        databricks bundle validate $(Build.SourcesDirectory)/ARIA_DABs --target sbox
-        databricks bundle deploy $(Build.SourcesDirectory)/ARIA_DABs --target sbox
+        databricks bundle validate ARIA_DABs --target sbox
+        databricks bundle deploy ARIA_DABs --target sbox
       displayName: "Deploy Databricks resources to ingest02 workspace"

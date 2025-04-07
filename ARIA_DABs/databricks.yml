@@ -4,6 +4,9 @@ bundle:
 include:
   - ${bundle.file(resources/*.yml)}
 
+workspace:
+  host: https://adb-1879076228317698.18.azuredatabricks.net
+  
 targets:
   sandbox:
       workspace: $(workspace)

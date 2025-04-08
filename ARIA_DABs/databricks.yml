@@ -2,13 +2,13 @@ bundle:
   name: ARIA_DAB_INGEST02
 
 include:
-  - resources/*.yml
+  - ${bundle.file(resources/*.yml)}
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net
   
 targets:
-  mode : development
-  default : true
   sandbox:
       workspace: *ingest02_workspace
+      mode : development
+      default : true

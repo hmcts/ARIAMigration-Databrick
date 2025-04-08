@@ -110,7 +110,7 @@ stages:
         cd ARIA_DABs
         databricks bundle validate -t sandbox
         databricks bundle deploy -t sandbox
-        databricks bundle run -t sandbox
+        databricks bundle run ARIA_ARCHIVE_BAILS.yml -t sandbox
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
 #    - script: |

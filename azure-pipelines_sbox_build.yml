@@ -111,6 +111,12 @@ stages:
         databricks bundle validate -t sandbox
         databricks bundle deploy -t sandbox
 
+        echo "Deploy exit code: $DEPLOY_EXIT"
+        echo "Checking .databricks directory for state file..."
+        ls -la .databricks/
+        cat .databricks/bundle.state || echo "No bundle state file found"
+
+
 #        if [ $? -eq 0 ]; then
 #          echo "Deploy successful, waiting 10 seconds before running..."
 #          sleep 10

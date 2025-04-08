@@ -91,6 +91,12 @@ stages:
          brew install databricks/tap/databricks
          databricks --version
       displayName: 'Install Databricks CLI'
+    
+    - script: |
+       rm terraform.tfstate
+       rm terraform.tfstate.backup
+      displayName: "Remove Terraform state file - do not know why this is there?"
+
 
       #Ensure databrcks CLI is available in current session (loading homebrew shell)
     - script: |
@@ -113,8 +119,7 @@ stages:
 
         echo "Deploy exit code: $DEPLOY_EXIT"
         echo "Checking .databricks directory for state file..."
-        ls -la .databricks/
-        ls -la .databricks/bundle/
+        echo "Listing file in .databricks/bundle/sandbox/" ls -la .databricks/bundle/
         cat .databricks/bundle.state || echo "No bundle state file found"
 
 

@@ -12,7 +12,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: "/Databricks/ARCHIVE/JOH/ARIADM_ARM_JOH.py"
+            path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       target: ARIADM_ARM_JOH
       development: true
       data_sampling: false

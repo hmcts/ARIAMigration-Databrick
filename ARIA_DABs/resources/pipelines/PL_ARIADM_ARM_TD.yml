@@ -12,7 +12,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: "/Databricks/ARCHIVE/TD/ARIADM_ARM_TD.py"
+            path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_TD"
       target: ariadm_arm_td
       development: true
       data_sampling: false

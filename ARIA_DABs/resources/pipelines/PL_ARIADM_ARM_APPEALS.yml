@@ -12,7 +12,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: "/Workspace/live/ARCHIVE/BAIL/Dynamic-ARIA-Bails v2"
+            path: "/Workspace/live/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS"
       target: ariadm_arm_appeals
       development: true
       data_sampling: false

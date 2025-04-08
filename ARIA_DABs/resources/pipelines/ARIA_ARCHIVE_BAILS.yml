@@ -1,7 +1,7 @@
 resources:
   pipelines:
     pipeline_aria_archive_bails:
-      name: ARIA_ARCHIVE_BAILS_v1
+      name: ARIA_ARCHIVE_BAILS
       configuration:
         pipeline.reset: "true"
       clusters:
@@ -13,7 +13,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: "/Databricks/ARCHIVE/BAIL/Dynamic-ARIA-Bails v2.py"
+            path: "/Workspace/live/ARCHIVE/BAIL/Dynamic-ARIA-Bails v2"
       target: aria_bails
       development: true
       data_sampling: false

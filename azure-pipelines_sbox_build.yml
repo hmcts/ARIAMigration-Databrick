@@ -109,23 +109,20 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
-        databricks bundle validate -t sandbox 
+        databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
 
-        echo "Deploy exit code: $DEPLOY_EXIT"
-        echo "Checking .databricks directory for state file..."
-        echo "Listing file in .databricks/bundle/sandbox/" 
-        ls -la .databricks/bundle/
-        cat .databricks/bundle.state || echo "No bundle state file found"
+        echo "Listing if deployment.json exists" 
+        ls .bundle/*/*/state/deployment.json
 
-        if [ $? -eq 0 ]; then
-          echo "Deploy successful, waiting 10 seconds before running..."
-          sleep 10
-          databricks bundle run -t sandbox resources/pipelines/ARIA_ARCHIVE_BAILS.yml
-        else
-          echo "Deploy failed"
-          exit 1
-        fi
+#        if [ $? -eq 0 ]; then
+#          echo "Deploy successful, waiting 10 seconds before running..."
+#          sleep 10
+#          databricks bundle run -t sandbox resources/pipelines/ARIA_ARCHIVE_BAILS.yml
+#        else
+#          echo "Deploy failed"
+#          exit 1
+#        fi
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
 #    - script: |

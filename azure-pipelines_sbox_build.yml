@@ -108,9 +108,19 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
+        databricks bundle destroy -t sandbox
+
         databricks bundle validate -t sandbox
         databricks bundle deploy -t sandbox
-        databricks bundle run ARIA_ARCHIVE_BAILS.yml -t sandbox
+
+        if [ $? -eq 0 ]; then
+          echo "Deploy successful, waiting 10 seconds before running..."
+          sleep 10
+          databricks bundle run ARIA_ARCHIVE_BAILS.yml -t sandbox
+        else
+          echo "Deploy failed"
+          exit 1
+        fi
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
 #    - script: |

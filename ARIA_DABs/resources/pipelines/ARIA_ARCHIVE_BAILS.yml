@@ -1,7 +1,7 @@
 resources:
   pipelines:
     pipeline_aria_archive_bails:
-      name: ARIA_ARCHIVE_BAILS
+      name: ARIA_ARCHIVE_BAILS_v1
       configuration:
         pipeline.reset: "true"
       clusters:

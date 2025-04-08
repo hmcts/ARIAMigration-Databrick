@@ -3,7 +3,7 @@ bundle:
 
 include:
 #  - ${bundle.file(resources/**/*.yml)}
-  - ${bundle.file(resources/pipelines/ARIA_ARCHIVE_BAILS.yml)}
+  - ${bundle.file(/resources/pipelines/ARIA_ARCHIVE_BAILS.yml)}
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

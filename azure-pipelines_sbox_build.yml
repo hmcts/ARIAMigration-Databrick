@@ -108,12 +108,13 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
-        databricks bundle validate -t sandbox
-        databricks bundle deploy -t sandbox
+        databricks bundle validate -t sandbox 
+        databricks bundle deploy -t sandbox --debug
 
         echo "Deploy exit code: $DEPLOY_EXIT"
         echo "Checking .databricks directory for state file..."
         ls -la .databricks/
+        ls -la .databricks/bundle/
         cat .databricks/bundle.state || echo "No bundle state file found"
 
 

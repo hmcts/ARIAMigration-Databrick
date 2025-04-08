@@ -112,6 +112,7 @@ stages:
         echo "Current dir: $(pwd)"
         ls -al  
 
+        databricks bundle destroy -t sandbox
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
 

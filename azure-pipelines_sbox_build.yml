@@ -104,7 +104,7 @@ stages:
     
     - script: |
        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       databricks workspace ls -r /Users/andrew.mcdevitt@hmcts.net/.bundle
+       databricks workspace list /Users/andrew.mcdevitt@hmcts.net/.bundle
       displayName: "Query all files in bundle directory"
 
     - script: |

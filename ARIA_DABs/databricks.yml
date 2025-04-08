@@ -2,7 +2,8 @@ bundle:
   name: ARIA_DAB_INGEST02
 
 include:
-  - ${bundle.file(resources/**/*.yml)}
+#  - ${bundle.file(resources/**/*.yml)}
+  - ${bundle.file(resources/pipelines/ARIA_ACRHIVE_BAILS.yml)}
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

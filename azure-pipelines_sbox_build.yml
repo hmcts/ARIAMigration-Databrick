@@ -104,26 +104,8 @@ stages:
     
     - script: |
        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-
-        # List the files and subdirectories
-        databricks workspace list /Users/andrew.mcdevitt@hmcts.net/.bundle
-
-        # For each item in the directory, delete it
-        for item in $(databricks workspace list /Users/andrew.mcdevitt@hmcts.net/.bundle); do
-          # Check if it's a directory or a file, and delete accordingly
-          if [[ "$item" == */ ]]; then
-            # It's a directory, so we recursively delete it
-            databricks workspace delete "/Users/andrew.mcdevitt@hmcts.net/.bundle/$item" --recursive
-          else
-            # It's a file, so delete it
-            databricks workspace delete "/Users/andrew.mcdevitt@hmcts.net/.bundle/$item"
-          fi
-        done
-
-        # Finally, delete the empty parent directory
-        databricks workspace delete /Users/andrew.mcdevitt@hmcts.net/.bundle
-
-      displayName: "Delete all files in bundle directory"
+       databricks workspace delete /Users/andrew.mcdevitt@hmcts.net/.bundle
+      displayName: "Delete bundle directory"
 
     - script: |
         databricks workspace delete /live --recursive

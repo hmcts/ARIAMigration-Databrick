@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
       - master 
-      
+
 pool:
   vmImage: 'ubuntu-latest' 
 
@@ -102,11 +102,6 @@ stages:
         cat ~/.databrickscfg  # Print the contents for debugging
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
     
-    - script: |
-       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       databricks workspace delete /Users/andrew.mcdevitt@hmcts.net/.bundle
-      displayName: "Delete bundle directory"
-
     - script: |
         databricks workspace delete /live --recursive
         echo "Current working directory: $(pwd)"

@@ -5,6 +5,9 @@ include:
 #  - ${bundle.file(resources/pipelines/*.yml)}
   - ${bundle.file(resources/pipelines/*.yml)}
 
+exclude: 
+  - ${bundle.file(resources/workflows/*.yml)}
+
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net
   

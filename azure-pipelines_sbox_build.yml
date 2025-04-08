@@ -103,12 +103,15 @@ stages:
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
     
     - script: |
-        databricks workspace delete /live --recursive
-        echo "Current working directory: $(pwd)"
-        ls -l /home/vsts/work/1/s
+        echo "Current dir: $(pwd)"
+        ls -al /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
+
+        echo "Current dir: $(pwd)"
+        ls -al  # You should now see bundle.yml here
+
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
 

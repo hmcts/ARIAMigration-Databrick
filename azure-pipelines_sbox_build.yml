@@ -104,8 +104,8 @@ stages:
     
     - script: |
        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       databricks workspace list /Users/andrew.mcdevitt@hmcts.net/.bundle
-      displayName: "Query all files in bundle directory"
+       databricks workspace delete /Users/andrew.mcdevitt@hmcts.net/.bundle
+      displayName: "Delete all files in bundle directory"
 
     - script: |
         databricks workspace delete /live --recursive

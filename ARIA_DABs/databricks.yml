@@ -3,6 +3,9 @@ bundle:
 
 include:
   - "resources/pipelines/ARIA_ARCHIVE_BAILS.yml"
+  - "resources/pipelines/PL_ARIADM_ARM_APPEALS.yml"
+  - "resources/pipelines/PL_ARIADM_ARM_JOH.yml"
+  - "resources/pipelines/PL_ARIADM_ARM_TD.yml"
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

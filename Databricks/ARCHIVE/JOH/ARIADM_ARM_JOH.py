@@ -199,6 +199,7 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
+
 # from pyspark.sql.types import StructType, StructField, LongType, StringType, IntegerType
 # from delta.tables import DeltaTable
 
@@ -219,7 +220,9 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # ])
 
 
+
 # COMMAND ----------
+
 
 # # Define Delta Table Path in Azure Storage
 # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table"
@@ -277,6 +280,7 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 #     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
 
 #     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
+
 
 
 
@@ -533,6 +537,7 @@ def bronze_adjudicator_et_hc_dnur():
 
     
 
+
 # COMMAND ----------
 
 # MAGIC
@@ -601,6 +606,7 @@ def bronze_johistory_users():
 
     
 
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -667,6 +673,20 @@ def bronze_othercentre_hearingcentre():
 
     
 
+    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+
+    ## Create and save audit log for this table
+    table_name = "bronze_othercentre_hearingcentre"
+    stage_name = "bronze_stage"
+
+    description = "Combines OtherCentre records with HearingCentre details, linking adjudicators to their assigned hearing centres. Includes metadata such as timestamps, source files, and process tracking for auditing and traceability."
+
+    unique_identifier_desc = "AdjudicatorId"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+    return df
+
 
 # COMMAND ----------
 
@@ -732,6 +752,7 @@ def bronze_adjudicator_role():
 
 
 
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -769,6 +790,7 @@ def stg_joh_filtered():
         .select(col("a.AdjudicatorId"))
     )
 
+
     return df
 
     # df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
@@ -790,6 +812,7 @@ def stg_joh_filtered():
     # except Exception as e:
 
     #     print(f"Audit logging failed with error: {str(e)}")
+
 
 
 
@@ -912,6 +935,7 @@ def silver_adjudicator_detail():
     #     print(f"Audit logging failed with error: {str(e)}")
 
 
+
 # COMMAND ----------
 
 # MAGIC
@@ -1013,6 +1037,7 @@ def silver_history_detail():
     #     print(f"Audit logging failed with error: {str(e)}")
 
 
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -1049,6 +1074,7 @@ def silver_othercentre_detail():
     # except Exception as e:
 
     #     print(f"Audit logging failed with error: {str(e)}")
+
 
 # COMMAND ----------
 
@@ -1090,8 +1116,20 @@ def silver_appointment_detail():
             col('rol.InsertedByProcessName')
         )
     )
+    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+
+    ## Create and save audit log for this table
+    table_name = "silver_appointment_detail"
+    stage_name = "silver_stage"
+
+    description = "Filters and enhances adjudicator role records by mapping role codes to their descriptions. Provides a structured view of adjudicator appointments, including start and end dates, and metadata for auditing."
+
+    unique_identifier_desc = "AdjudicatorId"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
 
     return df
+
 
     # try:
         
@@ -1228,6 +1266,19 @@ def silver_archive_metadata():
             col('adj.DesignatedCentre').alias('bf_005')
         )
     )
+    df_audit = df.withColumn("client_identifier",col("client_identifier").cast("string"))
+
+    ## Create and save audit log for this table
+    table_name = "silver_archive_metadata"
+    stage_name = "silver_stage"
+
+    description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
+
+    unique_identifier_desc = "client_identifier"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+    return df
 
     return df
 
@@ -1522,7 +1573,9 @@ def stg_judicial_officer_combined():
 
     # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
 
+
     # try:
+
 
     #     df_audit = df_combined.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
@@ -1597,9 +1650,11 @@ def stg_create_joh_json_content():
     # try:
     #     df_audit = df_with_json.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("JSONFileName")).withColumn("Status", col("JSONStatus"))
 
+
     #     ## Create and save audit log for this table
     #     table_name = "stg_create_joh_json_content"
     #     stage_name = "staging_stage"
+
 
     #     description = "Generates JSON-formatted adjudicator records for gold-level outputs. Creates structured JSON content for each adjudicator and assigns a filename. Tracks JSON creation status to identify failures and successful transformations"
 
@@ -1664,6 +1719,7 @@ def stg_create_joh_html_content():
 
     # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
 
+
     # try:
 
     #     df_audit = df_with_html.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("HTMLFileName")).withColumn("Status", col("HTMLStatus"))
@@ -1683,6 +1739,7 @@ def stg_create_joh_html_content():
     # except Exception as e:
 
     #     print(f"Audit logging failed with error: {str(e)}")
+
 
 
 # COMMAND ----------
@@ -1710,7 +1767,9 @@ def stg_create_joh_a360_content():
     
     return metadata_df
 
+
     # try:
+
 
     #     df_audit = metadata_df.withColumn("client_identifier",col("client_identifier").cast("string")).withColumn("Status", col("A360Status"))
 
@@ -1798,6 +1857,7 @@ def stg_judicial_officer_unified():
                                       lit(".a360"))
                          ).drop("row_num")
 
+
     return df_batch
 
     # try:
@@ -1822,7 +1882,7 @@ def stg_judicial_officer_unified():
 
                          
 
-    
+ 
 
 # COMMAND ----------
 
@@ -1856,6 +1916,7 @@ def gold_judicial_officer_with_html():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
+
 
     return df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
 
@@ -1914,6 +1975,7 @@ def gold_judicial_officer_with_json():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus"))
+
 
     return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
 
@@ -1981,6 +2043,7 @@ def gold_judicial_officer_with_a360():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_a360)
+
 
     return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
 

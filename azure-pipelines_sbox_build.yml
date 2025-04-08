@@ -110,7 +110,7 @@ stages:
         cd ARIA_DABs
 
         echo "Current dir: $(pwd)"
-        ls -al  # You should now see bundle.yml here
+        ls -al  
 
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug

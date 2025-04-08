@@ -88,6 +88,7 @@ from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql.window import Window
 # from pyspark.sql.functions import row_number
+from delta.tables import DeltaTable
 
 # COMMAND ----------
 
@@ -110,22 +111,61 @@ pip install azure-storage-blob
 
 # COMMAND ----------
 
+read_hive = False
 
-read_hive = True
+AppealCategory = "ARIAFTA"
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS"
-html_mnt = "/mnt/ingest00landingsboxhtml-template"
+raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
+landing_mnt = f"/mnt/ingest00landingsboxlanding/"  # CORE FULL LOAD SQL TABLES parquest
+bronze_mnt = f"/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS/{AppealCategory}"
+silver_mnt = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS/{AppealCategory}"
+gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
+html_mnt = f"/mnt/ingest00landingsboxhtml-template"
 
-gold_outputs = "ARIADM/ARM/APPEALS"
-hive_schema = "ariadm_arm_appeals"
+gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
+hive_schema = f"ariadm_arm_{AppealCategory.lower()}"
 key_vault = "ingest00-keyvault-sbox"
 
+audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
 
+# Print all variables
+variables = {
+    "read_hive": read_hive,
+    "AppealCategory": AppealCategory,
+    "raw_mnt": raw_mnt,
+    "landing_mnt": landing_mnt,
+    "bronze_mnt": bronze_mnt,
+    "silver_mnt": silver_mnt,
+    "gold_mnt": gold_mnt,
+    "html_mnt": html_mnt,
+    "gold_outputs": gold_outputs,
+    "hive_schema": hive_schema,
+    "key_vault": key_vault,
+    "audit_delta_path": audit_delta_path
+}
+
+display(variables)
+
+# COMMAND ----------
+
+# DBTITLE 1,Determine Workspace Environment Based on Host Name
+context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
+
+if "adb-3635282203417052" in workspace_host:
+    env = "dev-sbox"
+elif "adb-376876256300083" in workspace_host:
+    env = "test-sbox"
+elif "adb-4305432441461530" in workspace_host:
+    env = "stg"
+elif "adb-3100629970551492" in workspace_host:
+    env = "prod"
+else:
+    env = "unknown"
+
+workspace_env = {"workspace_host": workspace_host, "env": env}
+print(workspace_env)
 
 # COMMAND ----------
 
@@ -217,6 +257,88 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # Return the DataFrame
     return df
 
+
+# COMMAND ----------
+
+# DBTITLE 1,Create or Validate Audit Delta Table in Azure
+audit_schema = StructType([
+    StructField("Runid", StringType(), True),
+    StructField("Unique_identifier_desc", StringType(), True),
+    StructField("Unique_identifier", StringType(), True),
+    StructField("Table_name", StringType(), True),
+    StructField("Stage_name", StringType(), True),
+    StructField("Record_count", IntegerType(), True),
+    StructField("Run_dt",TimestampType(), True),
+    StructField("Batch_id", StringType(), True),
+    StructField("Description", StringType(), True),
+    StructField("File_name", StringType(), True),
+    StructField("Status", StringType(), True)
+])
+
+# Define Delta Table Path in Azure Storage
+# audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
+
+
+if not DeltaTable.isDeltaTable(spark, audit_delta_path):
+    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
+
+    # Create an empty DataFrame
+    empty_df = spark.createDataFrame([], audit_schema)
+
+    # Write the empty DataFrame in Delta format to create the table
+    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
+
+    print("✅ Empty Delta table successfully created in Azure Storage.")
+else:
+    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
+
+
+# COMMAND ----------
+
+def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+    """
+    Creates an audit DataFrame and writes it to Delta format.
+
+    :param df: Input DataFrame from which unique identifiers are extracted.
+    :param unique_identifier_desc: Column name that acts as a unique identifier.
+    :param table_name: Name of the source table.
+    :param stage_name: Name of the data processing stage.
+    :param description: Description of the table.
+    :param additional_columns: List of additional columns to include in the audit DataFrame.
+    """
+
+    dt_desc = datetime.utcnow()
+
+    additional_columns = additional_columns or []  # Default to an empty list if None   
+    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
+
+    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
+    .withColumn("Runid", lit(run_id_value))\
+        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
+            .withColumn("Stage_name", lit(stage_name))\
+                .withColumn("Table_name", lit(table_name))\
+                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
+                        .withColumn("Description", lit(description))
+
+    list_cols = audit_df.columns
+
+    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
+
+    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
+
+
+
+# COMMAND ----------
+
+# # def log_audit_entry(df,unique_identifier):
+import uuid
+
+
+def datetime_uuid():
+    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+
+run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
@@ -770,204 +892,207 @@ def raw_stmcases():
     path=f"{bronze_mnt}/bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
-    return (
-        dlt.read("raw_appealcase").alias("ac")
-            .join(
-                dlt.read("raw_caserespondent").alias("cr"),
-                col("ac.CaseNo") == col("cr.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_mainrespondent").alias("mr"),
-                col("cr.MainRespondentId") == col("mr.MainRespondentId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_respondent").alias("r"),
-                col("cr.RespondentId") == col("r.RespondentId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_filelocation").alias("fl"),
-                col("ac.CaseNo") == col("fl.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_caserep").alias("crep"),
-                col("ac.CaseNo") == col("crep.CaseNo"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_representative").alias("rep"),
-                col("crep.RepresentativeId") == col("rep.RepresentativeId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_language").alias("l"),
-                col("ac.LanguageId") == col("l.LanguageId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_country").alias("c1"),
-                col("ac.CountryId") == col("c1.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_country").alias("c2"),
-                col("ac.ThirdCountryId") == col("c2.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_country").alias("n"),
-                col("ac.NationalityId") == col("n.CountryId"),
-                "left_outer"
-            ).join(
-                dlt.read("raw_feesatisfaction").alias("fs"),
-                col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_pou").alias("p"),
-                col("cr.RespondentId") == col("p.PouId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_embassy").alias("e"),
-                col("cr.RespondentId") == col("e.EmbassyId"),
-                "left_outer"
-            )
-            .select(
-                # Appeal Case columns
-                trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
-                col("ac.AppealTypeId"), col("ac.DateLodged"), col("ac.DateReceived"),
-                col("ac.PortId"), col("ac.HORef"), col("ac.DateServed"), 
-                col("ac.Notes").alias("AppealCaseNote"), col("ac.NationalityId"),
-                col('n.Nationality').alias('Nationality'), 
-                col("ac.Interpreter"), col("ac.CountryId"),col('c1.Country').alias("CountryOfTravelOrigin"),
-                col("ac.DateOfIssue"), 
-                col("ac.FamilyCase"), col("ac.OakingtonCase"), col("ac.VisitVisaType"),
-                col("ac.HOInterpreter"), col("ac.AdditionalGrounds"), col("ac.AppealCategories"),
-                col("ac.DateApplicationLodged"), col("ac.ThirdCountryId"),col('c2.Country').alias("ThirdCountry"),
-                col("ac.StatutoryClosureDate"), col("ac.PubliclyFunded"), col("ac.NonStandardSCPeriod"),
-                col("ac.CourtPreference"), col("ac.ProvisionalDestructionDate"), col("ac.DestructionDate"),
-                col("ac.FileInStatutoryClosure"), col("ac.DateOfNextListedHearing"),
-                col("ac.DocumentsReceived"), col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
-                col("ac.ReceivedFromRespondent"), col("ac.DateAppealReceived"), col("ac.RemovalDate"),
-                col("ac.CaseOutcomeId"), col("ac.AppealReceivedBy"), col("ac.InCamera"),col('ac.SecureCourtRequired'),
-                col("ac.DateOfApplicationDecision"), col("ac.UserId"), col("ac.SubmissionURN"),
-                col("ac.DateReinstated"), col("ac.DeportationDate"), col("ac.HOANRef").alias("CCDAppealNum"),
-                col("ac.HumanRights"), col("ac.TransferOutDate"), col("ac.CertifiedDate"),
-                col("ac.CertifiedRecordedDate"), col("ac.NoticeSentDate"),
-                col("ac.AddressRecordedDate"), col("ac.ReferredToJudgeDate"),
-                col("fs.Description").alias("CertOfFeeSatisfaction"),
+    
+    df = dlt.read("raw_appealcase").alias("ac") \
+        .join(
+            dlt.read("raw_caserespondent").alias("cr"),
+            col("ac.CaseNo") == col("cr.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_mainrespondent").alias("mr"),
+            col("cr.MainRespondentId") == col("mr.MainRespondentId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_respondent").alias("r"),
+            col("cr.RespondentId") == col("r.RespondentId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_filelocation").alias("fl"),
+            col("ac.CaseNo") == col("fl.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_caserep").alias("crep"),
+            col("ac.CaseNo") == col("crep.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_representative").alias("rep"),
+            col("crep.RepresentativeId") == col("rep.RepresentativeId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_language").alias("l"),
+            col("ac.LanguageId") == col("l.LanguageId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_country").alias("c1"),
+            col("ac.CountryId") == col("c1.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_country").alias("c2"),
+            col("ac.ThirdCountryId") == col("c2.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_country").alias("n"),
+            col("ac.NationalityId") == col("n.CountryId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_feesatisfaction").alias("fs"),
+            col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_pou").alias("p"),
+            col("cr.RespondentId") == col("p.PouId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_embassy").alias("e"),
+            col("cr.RespondentId") == col("e.EmbassyId"),
+            "left_outer"
+        ).select(
+            # Appeal Case columns
+            trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
+            col("ac.AppealTypeId"), col("ac.DateLodged"), col("ac.DateReceived"),
+            col("ac.PortId"), col("ac.HORef"), col("ac.DateServed"), 
+            col("ac.Notes").alias("AppealCaseNote"), col("ac.NationalityId"),
+            col('n.Nationality').alias('Nationality'), 
+            col("ac.Interpreter"), col("ac.CountryId"),col('c1.Country').alias("CountryOfTravelOrigin"),
+            col("ac.DateOfIssue"), 
+            col("ac.FamilyCase"), col("ac.OakingtonCase"), col("ac.VisitVisaType"),
+            col("ac.HOInterpreter"), col("ac.AdditionalGrounds"), col("ac.AppealCategories"),
+            col("ac.DateApplicationLodged"), col("ac.ThirdCountryId"),col('c2.Country').alias("ThirdCountry"),
+            col("ac.StatutoryClosureDate"), col("ac.PubliclyFunded"), col("ac.NonStandardSCPeriod"),
+            col("ac.CourtPreference"), col("ac.ProvisionalDestructionDate"), col("ac.DestructionDate"),
+            col("ac.FileInStatutoryClosure"), col("ac.DateOfNextListedHearing"),
+            col("ac.DocumentsReceived"), col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
+            col("ac.ReceivedFromRespondent"), col("ac.DateAppealReceived"), col("ac.RemovalDate"),
+            col("ac.CaseOutcomeId"), col("ac.AppealReceivedBy"), col("ac.InCamera"),col('ac.SecureCourtRequired'),
+            col("ac.DateOfApplicationDecision"), col("ac.UserId"), col("ac.SubmissionURN"),
+            col("ac.DateReinstated"), col("ac.DeportationDate"), col("ac.HOANRef").alias("CCDAppealNum"),
+            col("ac.HumanRights"), col("ac.TransferOutDate"), col("ac.CertifiedDate"),
+            col("ac.CertifiedRecordedDate"), col("ac.NoticeSentDate"),
+            col("ac.AddressRecordedDate"), col("ac.ReferredToJudgeDate"),
+            col("fs.Description").alias("CertOfFeeSatisfaction"),
 
-                # Case Respondent columns
-                col("cr.Respondent").alias("CRRespondent"),
-                col("cr.Reference").alias("CRReference"),
-                col("cr.Contact").alias("CRContact"),
-                
-                # Main Respondent columns
-                col("mr.Name").alias("MRName"),
-                # col("mr.Embassy").alias("MREmbassy"),
-                # col("mr.POU").alias("MRPOU"),
-                # col("mr.Respondent").alias("MRRespondent"),
-                
-                # Respondent columns
-                col("r.ShortName").alias("RespondentName"),
-                col("r.PostalName").alias("RespondentPostalName"),
-                col("r.Department").alias("RespondentDepartment"),
-                col("r.Address1").alias("RespondentAddress1"),
-                col("r.Address2").alias("RespondentAddress2"),
-                col("r.Address3").alias("RespondentAddress3"),
-                col("r.Address4").alias("RespondentAddress4"),
-                col("r.Address5").alias("RespondentAddress5"),
-                col("r.Postcode").alias("RespondentPostcode"),
-                col("r.Email").alias("RespondentEmail"),
-                col("r.Fax").alias("RespondentFax"),
-                col("r.Telephone").alias("RespondentTelephone"),
-                # col("r.Sdx").alias("RespondentSdx"),
-                
-                # File Location columns
-                col("fl.Note").alias("FileLocationNote"),
-                col("fl.TransferDate").alias("FileLocationTransferDate"),
-                
-                # Case Representative columns
-                col("crep.RepresentativeRef"),
-                col("crep.Name").alias("CaseRepName"),
-                col("crep.RepresentativeId"),
-                col("crep.Address1").alias("CaseRepAddress1"),
-                col("crep.Address2").alias("CaseRepAddress2"),
-                col("crep.Address3").alias("CaseRepAddress3"),
-                col("crep.Address4").alias("CaseRepAddress4"),
-                col("crep.Address5").alias("CaseRepAddress5"),
-                col("crep.Postcode").alias("CaseRepPostcode"),
-                col("crep.Telephone").alias("FileSpecificPhone"),
-                col("crep.Fax").alias("CaseRepFax"),
-                col("crep.Contact").alias("Contact"),
-                col("crep.DXNo1").alias("CaseRepDXNo1"),
-                col("crep.DXNo2").alias("CaseRepDXNo2"),
-                col("crep.TelephonePrime").alias("CaseRepTelephone"),
-                col("crep.Email").alias("CaseRepEmail"),
-                col("crep.FileSpecificFax"),
-                col("crep.FileSpecificEmail"),
-                col("crep.LSCCommission"),
-                
-                # Representative columns
-                col("rep.Name").alias("RepName"),
-                col("rep.Title").alias("RepTitle"),
-                col("rep.Forenames").alias("RepForenames"),
-                col("rep.Address1").alias("RepAddress1"),
-                col("rep.Address2").alias("RepAddress2"),
-                col("rep.Address3").alias("RepAddress3"),
-                col("rep.Address4").alias("RepAddress4"),
-                col("rep.Address5").alias("RepAddress5"),
-                col("rep.Postcode").alias("RepPostcode"),
-                col("rep.Telephone").alias("RepTelephone"),
-                col("rep.Fax").alias("RepFax"),
-                col("rep.Email").alias("RepEmail"),
-                # col("rep.Sdx").alias("RepSdx"),
-                col("rep.DXNo1").alias("RepDXNo1"),
-                col("rep.DXNo2").alias("RepDXNo2"),
-                
-                # Language columns
-                col("l.Description").alias("Language"),
-                col("l.DoNotUse").alias("DoNotUseLanguage"),
+            # Case Respondent columns
+            col("cr.Respondent").alias("CRRespondent"),
+            col("cr.Reference").alias("CRReference"),
+            col("cr.Contact").alias("CRContact"),
+            
+            # Main Respondent columns
+            col("mr.Name").alias("MRName"),
+            # col("mr.Embassy").alias("MREmbassy"),
+            # col("mr.POU").alias("MRPOU"),
+            # col("mr.Respondent").alias("MRRespondent"),
+            
+            # Respondent columns
+            col("r.ShortName").alias("RespondentName"),
+            col("r.PostalName").alias("RespondentPostalName"),
+            col("r.Department").alias("RespondentDepartment"),
+            col("r.Address1").alias("RespondentAddress1"),
+            col("r.Address2").alias("RespondentAddress2"),
+            col("r.Address3").alias("RespondentAddress3"),
+            col("r.Address4").alias("RespondentAddress4"),
+            col("r.Address5").alias("RespondentAddress5"),
+            col("r.Postcode").alias("RespondentPostcode"),
+            col("r.Email").alias("RespondentEmail"),
+            col("r.Fax").alias("RespondentFax"),
+            col("r.Telephone").alias("RespondentTelephone"),
+            # col("r.Sdx").alias("RespondentSdx"),
+            
+            # File Location columns
+            col("fl.Note").alias("FileLocationNote"),
+            col("fl.TransferDate").alias("FileLocationTransferDate"),
+            
+            # Case Representative columns
+            col("crep.RepresentativeRef"),
+            col("crep.Name").alias("CaseRepName"),
+            col("crep.RepresentativeId"),
+            col("crep.Address1").alias("CaseRepAddress1"),
+            col("crep.Address2").alias("CaseRepAddress2"),
+            col("crep.Address3").alias("CaseRepAddress3"),
+            col("crep.Address4").alias("CaseRepAddress4"),
+            col("crep.Address5").alias("CaseRepAddress5"),
+            col("crep.Postcode").alias("CaseRepPostcode"),
+            col("crep.Telephone").alias("FileSpecificPhone"),
+            col("crep.Fax").alias("CaseRepFax"),
+            col("crep.Contact").alias("Contact"),
+            col("crep.DXNo1").alias("CaseRepDXNo1"),
+            col("crep.DXNo2").alias("CaseRepDXNo2"),
+            col("crep.TelephonePrime").alias("CaseRepTelephone"),
+            col("crep.Email").alias("CaseRepEmail"),
+            col("crep.FileSpecificFax"),
+            col("crep.FileSpecificEmail"),
+            col("crep.LSCCommission"),
+            
+            # Representative columns
+            col("rep.Name").alias("RepName"),
+            col("rep.Title").alias("RepTitle"),
+            col("rep.Forenames").alias("RepForenames"),
+            col("rep.Address1").alias("RepAddress1"),
+            col("rep.Address2").alias("RepAddress2"),
+            col("rep.Address3").alias("RepAddress3"),
+            col("rep.Address4").alias("RepAddress4"),
+            col("rep.Address5").alias("RepAddress5"),
+            col("rep.Postcode").alias("RepPostcode"),
+            col("rep.Telephone").alias("RepTelephone"),
+            col("rep.Fax").alias("RepFax"),
+            col("rep.Email").alias("RepEmail"),
+            # col("rep.Sdx").alias("RepSdx"),
+            col("rep.DXNo1").alias("RepDXNo1"),
+            col("rep.DXNo2").alias("RepDXNo2"),
+            
+            # Language columns
+            col("l.Description").alias("Language"),
+            col("l.DoNotUse").alias("DoNotUseLanguage"),
 
-                # POU columns
-                col("p.ShortName").alias("POUShortName"),
-                col("p.PostalName").alias("POUPostalName"),
-                col("p.Address1").alias("POUAddress1"),
-                col("p.Address2").alias("POUAddress2"),
-                col("p.Address3").alias("POUAddress3"),
-                col("p.Address4").alias("POUAddress4"),
-                col("p.Address5").alias("POUAddress5"),
-                col("p.Postcode").alias("POUPostcode"),
-                col("p.Telephone").alias("POUTelephone"),
-                col("p.Fax").alias("POUFax"),
-                col("p.Email").alias("POUEmail"),
+            # POU columns
+            col("p.ShortName").alias("POUShortName"),
+            col("p.PostalName").alias("POUPostalName"),
+            col("p.Address1").alias("POUAddress1"),
+            col("p.Address2").alias("POUAddress2"),
+            col("p.Address3").alias("POUAddress3"),
+            col("p.Address4").alias("POUAddress4"),
+            col("p.Address5").alias("POUAddress5"),
+            col("p.Postcode").alias("POUPostcode"),
+            col("p.Telephone").alias("POUTelephone"),
+            col("p.Fax").alias("POUFax"),
+            col("p.Email").alias("POUEmail"),
 
-                # Embassy columns
-                col("e.Location").alias("EmbassyLocation"),
-                col("e.Embassy"),
-                col("e.Surname"),
-                col("e.Forename"),
-                col("e.Title"),
-                col("e.OfficialTitle"),
-                col("e.Address1").alias("EmbassyAddress1"),
-                col("e.Address2").alias("EmbassyAddress2"),
-                col("e.Address3").alias("EmbassyAddress3"),
-                col("e.Address4").alias("EmbassyAddress4"),
-                col("e.Address5").alias("EmbassyAddress5"),
-                col("e.Postcode").alias("EmbassyPostcode"),
-                col("e.Telephone").alias("EmbassyTelephone"),
-                col("e.Fax").alias("EmbassyFax"),
-                col("e.Email").alias("EmbassyEmail"),
-                # col("e.DoNotUse").alias("DoNotUseEmbassy")
-            )
-    )
+            # Embassy columns
+            col("e.Location").alias("EmbassyLocation"),
+            col("e.Embassy"),
+            col("e.Surname"),
+            col("e.Forename"),
+            col("e.Title"),
+            col("e.OfficialTitle"),
+            col("e.Address1").alias("EmbassyAddress1"),
+            col("e.Address2").alias("EmbassyAddress2"),
+            col("e.Address3").alias("EmbassyAddress3"),
+            col("e.Address4").alias("EmbassyAddress4"),
+            col("e.Address5").alias("EmbassyAddress5"),
+            col("e.Postcode").alias("EmbassyPostcode"),
+            col("e.Telephone").alias("EmbassyTelephone"),
+            col("e.Fax").alias("EmbassyFax"),
+            col("e.Email").alias("EmbassyEmail"),
+            # col("e.DoNotUse").alias("DoNotUseEmbassy")
+        )
 
-# COMMAND ----------
+    table_name = "bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
+    stage_name = "bronze_stage"
 
-# MAGIC %md
-# MAGIC ### Transformation M2. bronze_ appealcase _ca_apt_country_detc 
+    description = "The bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df
+    
 
 # COMMAND ----------
 
@@ -977,70 +1102,81 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
     path=f"{bronze_mnt}/bronze_appealcase_ca_apt_country_detc"
 )
 def bronze_appealcase_ca_apt_country_detc():
-    return (
-        dlt.read("raw_caseappellant").alias("ca")
-            .join(
-                dlt.read("raw_appellant").alias("a"),
-                col("ca.AppellantId") == col("a.AppellantId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_detentioncentre").alias("dc"),
-                col("a.DetentionCentreId") == col("dc.DetentionCentreId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_country").alias("c"),
-                col("a.AppellantCountryId") == col("c.CountryId"),
-                "left_outer"
-            )
-            .select(
-                # Case Appellant fields
-                col("ca.AppellantId"),
-                trim(col("ca.CaseNo")).alias('CaseNo'),
-                col("ca.Relationship").alias("CaseAppellantRelationship"),
-                
-                # Appellant fields
-                col("a.PortReference"),
-                col("a.Name").alias("AppellantName"),
-                col("a.Forenames").alias("AppellantForenames"),
-                col("a.Title").alias("AppellantTitle"),
-                col("a.BirthDate").alias("AppellantBirthDate"),
-                col("a.Address1").alias("AppellantAddress1"),
-                col("a.Address2").alias("AppellantAddress2"),
-                col("a.Address3").alias("AppellantAddress3"),
-                col("a.Address4").alias("AppellantAddress4"),
-                col("a.Address5").alias("AppellantAddress5"),
-                col("a.Postcode").alias("AppellantPostcode"),
-                col("a.Telephone").alias("AppellantTelephone"),
-                col("a.Fax").alias("AppellantFax"),
-                col("a.Detained"),
-                col("a.Email").alias("AppellantEmail"),
-                col("a.FCONumber"),
-                col("a.PrisonRef"),
-                
-                # Detention Centre fields
-                col("dc.Centre").alias("DetentionCentre"),
-                col("dc.CentreTitle"),
-                col("dc.DetentionCentreType"),
-                col("dc.Address1").alias("DCAddress1"),
-                col("dc.Address2").alias("DCAddress2"),
-                col("dc.Address3").alias("DCAddress3"),
-                col("dc.Address4").alias("DCAddress4"),
-                col("dc.Address5").alias("DCAddress5"),
-                col("dc.Postcode").alias("DCPostcode"),
-                col("dc.Fax").alias("DCFax"),
-                col("dc.Sdx").alias("DCSdx"),
-                
-                # Country fields
-                col("c.Country"),
-                col("c.Nationality"),
-                col("c.Code"),
-                col("c.DoNotUse").alias("DoNotUseCountry"),
-                col("c.Sdx").alias("CountrySdx"),
-                col("c.DoNotUseNationality")
-            )
-    )
+    
+    df = dlt.read("raw_caseappellant").alias("ca") \
+        .join(
+            dlt.read("raw_appellant").alias("a"),
+            col("ca.AppellantId") == col("a.AppellantId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_detentioncentre").alias("dc"),
+            col("a.DetentionCentreId") == col("dc.DetentionCentreId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_country").alias("c"),
+            col("a.AppellantCountryId") == col("c.CountryId"),
+            "left_outer"
+        ).select(
+            # Case Appellant fields
+            col("ca.AppellantId"),
+            trim(col("ca.CaseNo")).alias('CaseNo'),
+            col("ca.Relationship").alias("CaseAppellantRelationship"),
+            
+            # Appellant fields
+            col("a.PortReference"),
+            col("a.Name").alias("AppellantName"),
+            col("a.Forenames").alias("AppellantForenames"),
+            col("a.Title").alias("AppellantTitle"),
+            col("a.BirthDate").alias("AppellantBirthDate"),
+            col("a.Address1").alias("AppellantAddress1"),
+            col("a.Address2").alias("AppellantAddress2"),
+            col("a.Address3").alias("AppellantAddress3"),
+            col("a.Address4").alias("AppellantAddress4"),
+            col("a.Address5").alias("AppellantAddress5"),
+            col("a.Postcode").alias("AppellantPostcode"),
+            col("a.Telephone").alias("AppellantTelephone"),
+            col("a.Fax").alias("AppellantFax"),
+            col("a.Detained"),
+            col("a.Email").alias("AppellantEmail"),
+            col("a.FCONumber"),
+            col("a.PrisonRef"),
+            
+            # Detention Centre fields
+            col("dc.Centre").alias("DetentionCentre"),
+            col("dc.CentreTitle"),
+            col("dc.DetentionCentreType"),
+            col("dc.Address1").alias("DCAddress1"),
+            col("dc.Address2").alias("DCAddress2"),
+            col("dc.Address3").alias("DCAddress3"),
+            col("dc.Address4").alias("DCAddress4"),
+            col("dc.Address5").alias("DCAddress5"),
+            col("dc.Postcode").alias("DCPostcode"),
+            col("dc.Fax").alias("DCFax"),
+            col("dc.Sdx").alias("DCSdx"),
+            
+            # Country fields
+            col("c.Country"),
+            col("c.Nationality"),
+            col("c.Code"),
+            col("c.DoNotUse").alias("DoNotUseCountry"),
+            col("c.Sdx").alias("CountrySdx"),
+            col("c.DoNotUseNationality")
+        )
+    table_name = "bronze_appealcase_ca_apt_country_detc"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_ca_apt_country_detc Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation M2. bronze_ appealcase _ca_apt_country_detc 
 
 # COMMAND ----------
 
@@ -1055,92 +1191,92 @@ def bronze_appealcase_ca_apt_country_detc():
     path=f"{bronze_mnt}/bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
-    return (
-        dlt.read("raw_status").alias("s")
-            .join(
-                dlt.read("raw_caselist").alias("cl"),
-                col("s.StatusId") == col("cl.StatusId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_hearingtype").alias("ht"),
-                col("cl.HearingTypeId") == col("ht.HearingTypeId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_list").alias("l"),
-                col("cl.ListId") == col("l.ListId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_listtype").alias("lt"),
-                col("l.ListTypeId") == col("lt.ListTypeId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_court").alias("c"),
-                col("l.CourtId") == col("c.CourtId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_hearingcentre").alias("hc"),
-                col("l.CentreId") == col("hc.CentreId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_listsitting").alias("ls"),
-                col("l.ListId") == col("ls.ListId"),
-                "left_outer"
-            )
-            .join(
-                dlt.read("raw_adjudicator").alias("a"),
-                col("ls.AdjudicatorId") == col("a.AdjudicatorId"),
-                "left_outer"
-            )
-            .select(
-                # Status fields
-                trim(col("s.CaseNo")).alias('CaseNo'),
-                col("s.Outcome"),
-                col("s.CaseStatus"),
-                col("s.StatusId"), 
+    df =   dlt.read("raw_status").alias("s") \
+        .join(
+            dlt.read("raw_caselist").alias("cl"),
+            col("s.StatusId") == col("cl.StatusId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_hearingtype").alias("ht"),
+            col("cl.HearingTypeId") == col("ht.HearingTypeId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_list").alias("l"),
+            col("cl.ListId") == col("l.ListId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_listtype").alias("lt"),
+            col("l.ListTypeId") == col("lt.ListTypeId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_court").alias("c"),
+            col("l.CourtId") == col("c.CourtId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_hearingcentre").alias("hc"),
+            col("l.CentreId") == col("hc.CentreId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_listsitting").alias("ls"),
+            col("l.ListId") == col("ls.ListId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_adjudicator").alias("a"),
+            col("ls.AdjudicatorId") == col("a.AdjudicatorId"),
+            "left_outer"
+        ).select(
+            # Status fields
+            trim(col("s.CaseNo")).alias('CaseNo'),
+            col("s.Outcome"),
+            col("s.CaseStatus"),
+            col("s.StatusId"), 
 
-                # CaseList fields
-                col("cl.TimeEstimate"),
-                col("cl.ListNumber"),
-                col("cl.HearingDuration"),
-                col("cl.StartTime"),
-                
-                # HearingType fields
-                col("ht.Description").alias("HearingTypeDesc"),
-                col("ht.TimeEstimate").alias("HearingTypeEst"),
-                col("ht.DoNotUse"),
-                
-                # Adjudicator fields
-                col("a.AdjudicatorId").alias("ListAdjudicatorId"), 
-                col("a.Surname").alias("ListAdjudicatorSurname"),
-                col("a.Forenames").alias("ListAdjudicatorForenames"),
-                col("a.Notes").alias("ListAdjudicatorNote"),
-                col("a.Title").alias("ListAdjudicatorTitle"),
-                
-                # List and related fields
-                col("l.ListName"),
-                col("l.StartTime").alias("ListStartTime"), 
-                col("lt.Description").alias("ListTypeDesc"),
-                col("lt.ListType"),
-                col("lt.DoNotUse").alias("DoNotUseListType"),
-                
-                # Court fields
-                col("c.CourtName"),
-                col("c.DoNotUse").alias("DoNotUseCourt"),
-                
-                # Hearing Centre fields
-                col("hc.Description").alias("HearingCentreDesc"),
+            # CaseList fields
+            col("cl.TimeEstimate"),
+            col("cl.ListNumber"),
+            col("cl.HearingDuration"),
+            col("cl.StartTime"),
+            
+            # HearingType fields
+            col("ht.Description").alias("HearingTypeDesc"),
+            col("ht.TimeEstimate").alias("HearingTypeEst"),
+            col("ht.DoNotUse"),
+            
+            # Adjudicator fields
+            col("a.AdjudicatorId").alias("ListAdjudicatorId"), 
+            col("a.Surname").alias("ListAdjudicatorSurname"),
+            col("a.Forenames").alias("ListAdjudicatorForenames"),
+            col("a.Notes").alias("ListAdjudicatorNote"),
+            col("a.Title").alias("ListAdjudicatorTitle"),
+            
+            # List and related fields
+            col("l.ListName"),
+            col("l.StartTime").alias("ListStartTime"), 
+            col("lt.Description").alias("ListTypeDesc"),
+            col("lt.ListType"),
+            col("lt.DoNotUse").alias("DoNotUseListType"),
+            
+            # Court fields
+            col("c.CourtName"),
+            col("c.DoNotUse").alias("DoNotUseCourt"),
+            
+            # Hearing Centre fields
+            col("hc.Description").alias("HearingCentreDesc"),
 
-                # ListSitting fields
-                col("ls.Chairman"),
-                col("ls.Position")
-            )
-    )
+            # ListSitting fields
+            col("ls.Chairman"),
+            col("ls.Position")
+        )
+    table_name = "bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj Delta Live Table combining Status, Case List, Hearing Type, Adjudicator, Court, and other related details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df
 
 # COMMAND ----------
 
@@ -1155,14 +1291,12 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
     path=f"{bronze_mnt}/bronze_appealcase_bfdiary_bftype"
 )
 def bronze_appealcase_bfdiary_bftype():
-    return (
-        dlt.read("raw_bfdiary").alias("bfd")
+    df =  dlt.read("raw_bfdiary").alias("bfd") \
             .join(
                 dlt.read("raw_bfType").alias("bft"),
                 col("bfd.BFTypeId") == col("bft.BFTypeId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 # BFDiary fields
                 trim(col("bfd.CaseNo")).alias('CaseNo'),
                 col("bfd.Entry"),
@@ -1174,7 +1308,17 @@ def bronze_appealcase_bfdiary_bftype():
                 col("bft.Description").alias("BFTypeDescription"),
                 col("bft.DoNotUse")
             )
-    )
+
+    table_name = "bronze_appealcase_bfdiary_bftype"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_bfdiary_bftype Delta Live Table combining BFDiary and BFType details.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df    
 
 
 # COMMAND ----------
@@ -1191,14 +1335,12 @@ def bronze_appealcase_bfdiary_bftype():
     path=f"{bronze_mnt}/bronze_appealcase_history_users"
 )
 def bronze_appealcase_history_users():
-    return (
-        dlt.read("raw_history").alias("h")
+    df =  dlt.read("raw_history").alias("h")\
             .join(
                 dlt.read("raw_users").alias("u"),
                 col("h.UserId") == col("u.UserId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 # History fields
                 col("h.HistoryId"),
                 trim(col("h.CaseNo")).alias('CaseNo'),
@@ -1214,8 +1356,17 @@ def bronze_appealcase_history_users():
                 col("u.Extension"),
                 col("u.DoNotUse")
             )
-    )
 
+    table_name = "bronze_appealcase_history_users"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_history_users Delta Live Table combining History and Users details"
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df   
 
 # COMMAND ----------
 
@@ -1230,25 +1381,20 @@ def bronze_appealcase_history_users():
     path=f"{bronze_mnt}/bronze_appealcase_link_linkdetail"
 )
 def bronze_appealcase_link_linkdetail():
-    return (
-        dlt.read("raw_link").alias("l")
+    df =  dlt.read("raw_link").alias("l")\
             .join(
                 dlt.read("raw_linkdetail").alias("ld"),
                 col("l.LinkNo") == col("ld.LinkNo"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_caseappellant").alias("ca"),
                 col("l.LinkNo") == col("ca.CaseNo"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_appellant").alias("a"),
                 col("ca.AppellantId") == col("a.AppellantId"),
                 "left_outer"
-            )
-            .filter(col("ca.AppellantId").isNull())
-            .select(
+            ).filter(col("ca.AppellantId").isNull()).select(
                 # Link fields
                 trim(col("l.CaseNo")).alias('CaseNo'),
                 col("l.LinkNo"),
@@ -1262,7 +1408,18 @@ def bronze_appealcase_link_linkdetail():
                 col("Title").alias("LinkTitle")
                 
             )
-    )
+
+    table_name = "bronze_appealcase_link_linkdetail"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_link_linkdetail Delta Live Table combining Link and LinkDetail details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df  
+
 
 
 # COMMAND ----------
@@ -1272,93 +1429,66 @@ def bronze_appealcase_link_linkdetail():
 
 # COMMAND ----------
 
-# spark.sql("""
-# CREATE TABLE hive_metastore.ariadm_arm_appeals.m7_backup
-# AS
-# SELECT *
-# FROM hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
-# """)
-
-# COMMAND ----------
-
-# %sql
-# select distinct IRISStatusOfCase from hive_metastore.ariadm_arm_appeals.bronze_appealcase_status_sc_ra_cs
-
-# COMMAND ----------
-
 @dlt.table(
     name="bronze_appealcase_status_sc_ra_cs",
     comment="Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details.",
     path=f"{bronze_mnt}/bronze_appealcase_status_sc_ra_cs"
 )
 def bronze_appealcase_status_sc_ra_cs():
-    return (
-        dlt.read("raw_status").alias("s")
+    df =   dlt.read("raw_status").alias("s")\
             .join(
                 dlt.read("raw_casestatus").alias("cs"),
                 col("s.CaseStatus") == col("cs.CaseStatusId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_statuscontact").alias("sc"),
                 col("s.StatusId") == col("sc.StatusId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_reasonadjourn").alias("ra"),
                 col("s.ReasonAdjournId") == col("ra.ReasonAdjournId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_language").alias("l"),
                 col("s.AdditionalLanguageId") == col("l.LanguageId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_decisiontype").alias("dt"),
                 col("s.Outcome") == col("dt.DecisionTypeId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_adjudicator").alias("a"),
                 col("s.AdjudicatorId") == col("a.AdjudicatorId"),
                 "left_outer"
-            ) .join(
+            ).join(
                 dlt.read("raw_adjudicator").alias("dAdj"),
                 col("s.DeterminationBy") == col("dAdj.AdjudicatorId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_stmcases").alias("stm"),
                 col("s.StatusId") == col("stm.NewStatusId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_listtype").alias("lt"),
                 col("s.ListTypeId") == col("lt.ListTypeId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_hearingtype").alias("ht"),
                 col("s.HearingTypeId") == col("ht.HearingTypeId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_adjudicator").alias("a1"),
                 col("stm.Judiciary1Id") == col("a1.AdjudicatorId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_adjudicator").alias("a2"),
                 col("stm.Judiciary2Id") == col("a2.AdjudicatorId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_adjudicator").alias("a3"),
                 col("stm.Judiciary3Id") == col("a3.AdjudicatorId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 # Status fields
                 col("s.StatusId"),
                 trim(col("s.CaseNo")).alias('CaseNo'),
@@ -1489,7 +1619,19 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("stm.Judiciary3Id"),
                 expr("COALESCE(a3.Surname, '') || ' ' || COALESCE(a3.Forenames, '') || ' ' || COALESCE(a3.Title, '')").alias("Judiciary3Name")
             )
-    )
+
+
+    table_name = "bronze_appealcase_status_sc_ra_cs"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_status_sc_ra_cs Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df  
+
 
 # COMMAND ----------
 
@@ -1504,25 +1646,29 @@ def bronze_appealcase_status_sc_ra_cs():
     path=f"{bronze_mnt}/bronze_appealcase_appealcatagory_catagory"
 )
 def bronze_appealcase_appealcatagory_catagory():
-    return (
-        dlt.read("raw_appealcategory").alias("ap")
+    df =  dlt.read("raw_appealcategory").alias("ap")\
             .join(
                 dlt.read("raw_category").alias("c"),
                 col("ap.CategoryId") == col("c.CategoryId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 trim(col("ap.CaseNo")).alias('CaseNo'),
                 col("c.Description").alias("CategoryDescription"),
-                col("c.Flag")
+                col("c.Flag"),
+                col("c.Priority")
             )
-    )
 
+    table_name = "bronze_appealcase_appealcatagory_catagory"
+    stage_name = "bronze_stage"
 
-# COMMAND ----------
+    description = "The bronze_appealcase_appealcatagory_catagory Delta Live Table for joining AppealCategory and Category tables to retrieve case and category details."
 
-# %sql
-# select Priority from hive_metastore.ariadm_arm_appeals.raw_category
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df    
+
 
 # COMMAND ----------
 
@@ -1548,17 +1694,17 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
     # appeal_grounds = dlt.read("raw_appealgrounds").alias("ag")
     appeal_type = dlt.read("raw_appealtype").alias("at")
 
-    return (
-        appeal_case
-        .join(case_fee_summary, col("ac.CaseNo") == col("cfs.CaseNo"), "left_outer")
-        .join(fee_satisfaction, col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer")
-        .join(payment_remission_reason, col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer")
-        .join(port, col("ac.PortId") == col("p.PortId"), "left_outer")
-        .join(embassy, col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer")
-        .join(hearing_centre, col("ac.CentreId") == col("hc.CentreId"), "left_outer")
-        .join(case_sponsor, col("ac.CaseNo") == col("cs.CaseNo"), "left_outer")
-        # .join(appeal_grounds, col("ac.CaseNo") == col("ag.CaseNo"), "left_outer") 
-        .join(appeal_type, col("ac.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
+    ## .join(appeal_grounds, col("ac.CaseNo") == col("ag.CaseNo"), "left_outer") 
+
+    df = appeal_case \
+        .join(case_fee_summary, col("ac.CaseNo") == col("cfs.CaseNo"), "left_outer") \
+        .join(fee_satisfaction, col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"), "left_outer") \
+        .join(payment_remission_reason, col("cfs.PaymentRemissionReason") == col("prr.PaymentRemissionReasonId"), "left_outer") \
+        .join(port, col("ac.PortId") == col("p.PortId"), "left_outer") \
+        .join(embassy, col("ac.VVEmbassyId") == col("e.EmbassyId"), "left_outer") \
+        .join(hearing_centre, col("ac.CentreId") == col("hc.CentreId"), "left_outer") \
+        .join(case_sponsor, col("ac.CaseNo") == col("cs.CaseNo"), "left_outer") \
+        .join(appeal_type, col("ac.AppealTypeId") == col("at.AppealTypeId"), "left_outer") \
         .select(
             # Appeal Case 
             trim(col("ac.CaseNo")).alias('CaseNo'),
@@ -1662,8 +1808,18 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
             col("at.DateStart").alias("AppealTypeDateStart"),
             col("at.DateEnd").alias("AppealTypeDateEnd")
         )
-    )
 
+
+    table_name = "bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at Delta Live Table for joining AppealCase, CaseFeeSummary, and other related tables to retrieve comprehensive case details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df 
 
 # COMMAND ----------
 
@@ -1678,14 +1834,12 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
     path=f"{bronze_mnt}/bronze_status_decisiontype"
 )
 def bronze_status_decisiontype():
-    return (
-        dlt.read("raw_status").alias("s")
+    df =  dlt.read("raw_status").alias("s")\
             .join(
                 dlt.read("raw_decisiontype").alias("dt"),
                 col("s.Outcome") == col("dt.DecisionTypeId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 trim(col("s.CaseNo")).alias('CaseNo'),
                 col("dt.Description").alias("DecisionTypeDescription"),
                 col("dt.DeterminationRequired"),
@@ -1694,7 +1848,17 @@ def bronze_status_decisiontype():
                 col("dt.BailRefusal"),
                 col("dt.BailHOConsent")
             )
-    )
+
+    table_name = "bronze_status_decisiontype"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_status_decisiontype Delta Live Table for joining Status and DecisionType tables to retrieve case and decision type details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df        
 
 
 # COMMAND ----------
@@ -1710,24 +1874,20 @@ def bronze_status_decisiontype():
     path=f"{bronze_mnt}/bronze_appealcase_t_tt_ts_tm"
 )
 def bronze_appealcase_t_tt_ts_tm():
-    return (
-        dlt.read("raw_transaction").alias("t")
+    df =  dlt.read("raw_transaction").alias("t")\
             .join(
                 dlt.read("raw_transactiontype").alias("tt"),
                 col("t.TransactionTypeId") == col("tt.TransactionTypeID"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_transactionstatus").alias("ts"),
                 col("t.Status") == col("ts.TransactionStatusID"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_transactionmethod").alias("tm"),
                 col("t.TransactionMethodId") == col("tm.TransactionMethodID"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 # Transaction fields
                 col("t.TransactionId"),
                 col("t.CaseNo"),
@@ -1776,7 +1936,17 @@ def bronze_appealcase_t_tt_ts_tm():
                 col("tm.InterfaceDescription").alias("TransactionMethodIntDesc"),
                 col("tm.DoNotUse").alias("DoNotUseTransactionMethod")
             )
-    )
+
+    table_name = "bronze_appealcase_t_tt_ts_tm"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_t_tt_ts_tm Delta Live Table for joining Transaction, TransactionType, TransactionStatus, and TransactionMethod tables to retrieve transaction details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 
 # COMMAND ----------
@@ -1792,21 +1962,29 @@ def bronze_appealcase_t_tt_ts_tm():
     path=f"{bronze_mnt}/bronze_appealcase_ahr_hr"
 )
 def bronze_appealcase_ahr_hr():
-    return (
-        dlt.read("raw_appealhumanright").alias("ahr")
+    df =  dlt.read("raw_appealhumanright").alias("ahr")\
             .join(
                 dlt.read("raw_humanright").alias("hr"),
                 col("ahr.HumanRightId") == col("hr.HumanRightId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("ahr.CaseNo"),
                 col("ahr.HumanRightId"),
                 col("hr.Description").alias("HumanRightDescription"),
                 col("hr.DoNotShow"),
                 col("hr.Priority")
             )
-    )
+
+    table_name = "bronze_appealcase_ahr_hr"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_ahr_hr Delta Live Table for joining AppealHumanRight and HumanRight tables to retrieve case and human rights details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 
 # COMMAND ----------
@@ -1822,14 +2000,12 @@ def bronze_appealcase_ahr_hr():
     path=f"{bronze_mnt}/bronze_appealcase_anm_nm"
 )
 def bronze_appealcase_anm_nm():
-    return (
-        dlt.read("raw_appealnewmatter").alias("anm")
+    df =  dlt.read("raw_appealnewmatter").alias("anm")\
             .join(
                 dlt.read("raw_newmatter").alias("nm"),
                 col("anm.NewMatterId") == col("nm.NewMatterId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("anm.AppealNewMatterId"),
                 col("anm.CaseNo"),
                 col("anm.NewMatterId"),
@@ -1842,7 +2018,17 @@ def bronze_appealcase_anm_nm():
                 col("nm.NotesRequired"),
                 col("nm.DoNotUse")
             )
-    )
+
+    table_name = "bronze_appealcase_anm_nm"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_anm_nm Delta  Live Table for joining AppealNewMatter and NewMatter tables to retrieve appeal and new matter details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 
 # COMMAND ----------
@@ -1858,14 +2044,12 @@ def bronze_appealcase_anm_nm():
     path=f"{bronze_mnt}/bronze_appealcase_dr_rd"
 )
 def bronze_appealcase_dr_rd():
-    return (
-        dlt.read("raw_documentsreceived").alias("dr")
+    df =  dlt.read("raw_documentsreceived").alias("dr")\
             .join(
                 dlt.read("raw_receiveddocument").alias("rd"),
                 col("dr.ReceivedDocumentId") == col("rd.ReceivedDocumentId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("dr.CaseNo"),
                 col("dr.ReceivedDocumentId"),
                 col("dr.DateRequested"),
@@ -1878,7 +2062,17 @@ def bronze_appealcase_dr_rd():
                 col("rd.DoNotUse"),
                 col("rd.Auditable")
             )
-    )
+
+    table_name = "bronze_appealcase_dr_rd"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_dr_rd Delta Live Table for joining DocumentsReceived and ReceivedDocument tables to retrieve document details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 
 # COMMAND ----------
@@ -1894,14 +2088,12 @@ def bronze_appealcase_dr_rd():
     path=f"{bronze_mnt}/bronze_appealcase_rsd_sd"
 )
 def bronze_appealcase_rsd_sd():
-    return (
-        dlt.read("raw_reviewstandarddirection").alias("rsd")
+    df =  dlt.read("raw_reviewstandarddirection").alias("rsd")\
             .join(
                 dlt.read("raw_StandardDirection").alias("sd"),
                 col("rsd.StandardDirectionId") == col("sd.StandardDirectionId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("rsd.ReviewStandardDirectionId"),
                 col("rsd.CaseNo"),
                 col("rsd.StatusId"),
@@ -1913,7 +2105,17 @@ def bronze_appealcase_rsd_sd():
                 col("sd.Description"),
                 col("sd.DoNotUse")
             )
-    )
+
+    table_name = "bronze_appealcase_rsd_sd"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appealcase_rsd_sd Delta Live Table for joining ReviewStandardDirection and StandardDirection tables to retrieve review standard direction details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 
 # COMMAND ----------
@@ -1929,8 +2131,7 @@ def bronze_appealcase_rsd_sd():
     path=f"{bronze_mnt}/bronze_review_specific_direction"
 )
 def bronze_review_specific_direction():
-    return (
-        dlt.read("raw_reviewspecificdirection")
+    df =  dlt.read("raw_reviewspecificdirection")\
             .select(
                 col("ReviewSpecificDirectionId"),
                 col("CaseNo"),
@@ -1941,7 +2142,17 @@ def bronze_review_specific_direction():
                 col("DateReceivedIND"),
                 col("DateReceivedAppellantRep")
             )
-    )
+
+    table_name = "bronze_review_specific_direction"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_review_specific_direction Delta Live Table for retrieving details from the ReviewSpecificDirection table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df        
 
 
 # COMMAND ----------
@@ -1959,7 +2170,7 @@ def bronze_review_specific_direction():
 )
 def bronze_cost_award():
     return (
-        dlt.read("raw_costaward").alias("ca")
+        dlt.read("raw_costaward").alias("ca")\
             # .join(
             #     dlt.read("raw_link").alias("1"),
             #     col("ca.CaseNo") == col("1.CaseNo"),
@@ -1969,18 +2180,15 @@ def bronze_cost_award():
                 dlt.read("raw_caseappellant").alias("cap"),
                 col("ca.CaseNo") == col("cap.CaseNo"),
                 "left_outer"  
-            )    
-            .join(
+            ).join(
                 dlt.read("raw_appellant").alias("a"),
                 col("cap.AppellantId") == col("a.AppellantId"),
                 "left_outer"  
-            )
-            .join(
+            ).join(
                 dlt.read("raw_casestatus").alias("cs"),
                 col("ca.AppealStage") == col("cs.CaseStatusId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 # Case Appellant columns
                 col("ca.CostAwardId"),
                 col("ca.CaseNo"),
@@ -2011,6 +2219,17 @@ def bronze_cost_award():
             )
     )
 
+    table_name = "bronze_cost_award"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_cost_award Delta Live Table for retrieving details from the CostAward table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
+
 # COMMAND ----------
 
 # DBTITLE 1,Cost award linked
@@ -2020,30 +2239,24 @@ def bronze_cost_award():
     path=f"{bronze_mnt}/bronze_cost_award_linked"
 )
 def bronze_cost_award_linked():
-    return (
-        dlt.read("raw_costaward").alias("ca") 
+    df =  dlt.read("raw_costaward").alias("ca")\
             .join(
                 dlt.read("raw_link").alias("l"),
                 col("ca.CaseNo") == col("l.CaseNo"),
                 "left_outer" 
-            ) 
-            .join(
+            ).join(
                 dlt.read("raw_caseappellant").alias("cap"),
                 col("ca.CaseNo") == col("cap.CaseNo"),
                 "left_outer"  
-            )
-            .join(
+            ).join(
                 dlt.read("raw_appellant").alias("a"),
                 col("cap.AppellantId") == col("a.AppellantId"),
                 "left_outer"  
-            )
-            .join(
+            ).join(
                 dlt.read("raw_casestatus").alias("cs"),
                 col("ca.AppealStage") == col("cs.CaseStatusId"),
                 "left_outer"
-            )
-            .filter(col("l.LinkNo").isNotNull())
-            .select(
+            ).filter(col("l.LinkNo").isNotNull()).select(
                 col("ca.CostAwardId"),
                 col("l.LinkNo"),
                 col("ca.CaseNo"),
@@ -2063,7 +2276,16 @@ def bronze_cost_award_linked():
                 col("ca.AppealStage"),
                 col("cs.Description").alias("AppealStageDescription")
             )
-    )
+    table_name = "bronze_cost_award_linked"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_cost_award_linked Delta Live Table for retrieving details from the CostAward_linked table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df       
 
 # COMMAND ----------
 
@@ -2079,24 +2301,20 @@ def bronze_cost_award_linked():
     path=f"{bronze_mnt}/bronze_cost_order"
 )
 def bronze_costorder():
-    return (
-        dlt.read("raw_costorder").alias("co")
+    df =  dlt.read("raw_costorder").alias("co")\
             .join(
                 dlt.read("raw_caserep").alias("cr"),
                 col("co.CaseNo") == col("cr.CaseNo"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_representative").alias("r"),
                 col("cr.RepresentativeId") == col("r.RepresentativeId"),
                 "left_outer"
-            )
-            .join(
+            ).join(
                 dlt.read("raw_decisiontype").alias("dt"),
                 col("co.OutcomeOfAppealWhereDecisionMade") == col("dt.DecisionTypeId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("co.CostOrderId"),
                 col("co.CaseNo"),
                 col("co.AppealStageWhenApplicationMade"),
@@ -2110,8 +2328,18 @@ def bronze_costorder():
                 col("co.ApplyingRepresentativeName").alias("ApplyingRepresentativeNameCaseRep"),
                 col("r.Name").alias("ApplyingRepresentativeNameRep")
             )
-    )
 
+
+    table_name = "bronze_costorder"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_costorder Delta Live Table for retrieving details from the CostOrder table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df       
 
 
 # COMMAND ----------
@@ -2127,21 +2355,29 @@ def bronze_costorder():
     path=f"{bronze_mnt}/bronze_hearing_points_change_reason"
 )
 def bronze_hearing_points_change_reason():
-    return (
-        dlt.read("raw_hearingpointschangereason").alias("hpcr")
+    df =  dlt.read("raw_hearingpointschangereason").alias("hpcr")\
             .join(
                 dlt.read("raw_status").alias("s"),
                 col("s.HearingPointsChangeReasonId") == col("hpcr.HearingPointsChangeReasonId"),
                 "left_outer"
-            )
-            .select(
+            ) .select(
                 col("s.CaseNo"),
                 col("s.StatusId"),
                 col("hpcr.HearingPointsChangeReasonId"),
                 col("hpcr.Description"),
                 col("hpcr.DoNotUse")
             )
-    )
+
+    table_name = "bronze_hearing_points_change_reason"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_hearing_points_change_reason Delta Live Table for retrieving details from the HearingPointsChangeReason table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df       
 
 # COMMAND ----------
 
@@ -2156,14 +2392,12 @@ def bronze_hearing_points_change_reason():
     path=f"{bronze_mnt}/bronze_hearing_points_history"
 )
 def bronze_hearing_points_history():
-    return (
-        dlt.read("raw_hearingpointshistory").alias("hph")
+    df =  dlt.read("raw_hearingpointshistory").alias("hph")\
             .join(
                 dlt.read("raw_status").alias("s"),
                 col("hph.StatusId") == col("s.StatusId"),
                 "left_outer"
-            )
-            .select(
+            ).select(
                 col("s.CaseNo"),
                 col("s.StatusId"),
                 col("hph.HearingPointsHistoryId"),
@@ -2174,7 +2408,18 @@ def bronze_hearing_points_history():
                 col("hph.InitialPoints"),
                 col("hph.FinalPoints")
             )
-    )
+
+
+    table_name = "bronze_hearing_points_history"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_hearing_points_history Delta Live Table for retrieving details from the HearingPointsHistory table."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df       
 
 # COMMAND ----------
 
@@ -2193,10 +2438,9 @@ def bronze_appeal_type_category():
     appeal_type = dlt.read("raw_appealtype")
     appeal_type_category = dlt.read("raw_appealtypecategory")
     
-    return (
-        appeal_case.alias("ac")
-        .join(appeal_type.alias("at"), col("ac.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
-        .join(appeal_type_category.alias("atc"), col("at.AppealTypeId") == col("atc.AppealTypeId"), "left_outer")
+    df =  appeal_case.alias("ac")\
+        .join(appeal_type.alias("at"), col("ac.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
+        .join(appeal_type_category.alias("atc"), col("at.AppealTypeId") == col("atc.AppealTypeId"), "left_outer")\
         .select(
             col("ac.CaseNo"),
             col("atc.AppealTypeCategoryId"),
@@ -2204,7 +2448,18 @@ def bronze_appeal_type_category():
             col("atc.CategoryId"),
             col("atc.FeeExempt")
         )
-    )
+
+    table_name = "bronze_appeal_type_category"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appeal_type_category Delta Live Table for retrieving details from the AppealTypeCategory table.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df    
+
 
 # COMMAND ----------
 
@@ -2222,15 +2477,24 @@ def bronze_appeal_grounds():
     appeal_grounds = dlt.read("raw_appealgrounds")
     appeal_type = dlt.read("raw_appealtype")
     
-    return (
-        appeal_grounds.alias("ag")
-        .join(appeal_type.alias("at"), col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")
+    df =  appeal_grounds.alias("ag")\
+        .join(appeal_type.alias("at"), col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
         .select(
             col("ag.CaseNo"),
             col("ag.AppealTypeId"),
             col("at.Description").alias("AppealTypeDescription")
         )
-    )
+
+    table_name = "bronze_appeal_grounds"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_appeal_grounds Delta Live Table for retrieving details from the AppealTypeCategory table.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df        
 
 # COMMAND ----------
 
@@ -2248,9 +2512,8 @@ def bronze_required_incompatible_adjudicator():
     case_adjudicator = dlt.read("raw_caseadjudicator")
     adjudicator = dlt.read("raw_adjudicator")
     
-    return (
-        case_adjudicator.alias("ca")
-        .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")
+    df = case_adjudicator.alias("ca")\
+        .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")\
         .select(
             col("ca.CaseNo"),
             col("ca.Required"),
@@ -2258,7 +2521,17 @@ def bronze_required_incompatible_adjudicator():
             col("adj.Forenames").alias("JudgeForenames"),
             col("adj.Title").alias("JudgeTitle")
         )
-    )
+
+    table_name = "bronze_required_incompatible_adjudicator"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_required_incompatible_adjudicator Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df        
 
 # COMMAND ----------
 
@@ -2275,10 +2548,9 @@ def bronze_required_incompatible_adjudicator():
 def bronze_case_adjudicator():
     case_adjudicator = dlt.read("raw_caseadjudicator")
     adjudicator = dlt.read("raw_adjudicator")
-    
-    return (
-        case_adjudicator.alias("ca")
-        .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")
+
+    df = case_adjudicator.alias("ca")\
+        .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")\
         .select(
             col("ca.CaseNo"),
             col("ca.Required"),
@@ -2286,7 +2558,17 @@ def bronze_case_adjudicator():
             col("adj.Forenames").alias("JudgeForenames"),
             col("adj.Title").alias("JudgeTitle")
         )
-    )
+
+    table_name = "bronze_case_adjudicator"
+    stage_name = "bronze_stage"
+
+    description = "The bronze_case_adjudicator Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+        
+    return df      
 
 # COMMAND ----------
 
@@ -2630,7 +2912,7 @@ def add_years(date_col, years):
 def stg_firsttier_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
-    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('FirstTier').alias('Segment'))
+    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFIA').alias('Segment'))
 
     return FTRetained_cases.orderBy("ac.CaseNo")
 
@@ -2696,7 +2978,7 @@ def stg_skeleton_filtered():
                 ((add_years(col("t.DecisionDate"), 2) >= current_date()) | col("t.DecisionDate").isNull())
             )
         )
-    ).select("ac.CaseNo", lit('FirstTier').alias('Segment'))
+    ).select("ac.CaseNo", lit('ARIAFTA').alias('Segment'))
 
     return archive_cases.orderBy("ac.CaseNo")
 
@@ -2719,7 +3001,7 @@ def stg_skeleton_filtered():
 def stg_uppertribunalretained_filtered():
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
     
-    UTRetained_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Retained').select("ac.CaseNo", lit('UpperTribunal').alias('Segment'))
+    UTRetained_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Retained').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
 
     return UTRetained_cases.orderBy("ac.CaseNo")
 
@@ -2741,7 +3023,7 @@ def stg_firsttieroverdue_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
 
-    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'FT Overdue').select("ac.CaseNo", lit('FirstTier').alias('Segment'))
+    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'FT Overdue').select("ac.CaseNo", lit('ARIAFTA').alias('Segment'))
 
 
     return FTOverdue_cases.orderBy("ac.CaseNo")
@@ -2764,7 +3046,7 @@ def stg_uppertribunaloverdue_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
 
-    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Overdue').select("ac.CaseNo", lit('UpperTribunal').alias('Segment'))
+    FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Overdue').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
 
     return FTOverdue_cases.orderBy("ac.CaseNo")
 
@@ -2795,7 +3077,7 @@ def stg_filepreservedcases_filtered():
             (col("ac.CaseType") == '1') &
             (col("fl.DeptId") == 520)
         )
-        .select("ac.CaseNo", lit('FilePreservedCases').alias('Segment'))
+        .select("ac.CaseNo", lit('ARIAFilePreservedCases').alias('Segment'))
     )
 
     return filtered_cases
@@ -2833,7 +3115,7 @@ def stg_appeals_filtered():
         .unionByName(stg_filepreservedcases_filtered)
         .unionByName(stg_uppertribunaloverdue_filtered)
         .unionByName(stg_filepreservedcases_filtered)
-    )
+    ).filter(col("Segment") == AppealCategory)
 
     # Selecting all columns from the combined cases
     return stg_firsttieroverdue_filtered
@@ -3006,6 +3288,15 @@ def silver_appealcase_detail():
         when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo2")).otherwise(col("RepDXNo2")).alias("RepresentativeDXNo2")
     )
 
+
+    table_name = "silver_appealcase_detail"
+    stage_name = "silver_stage"
+
+    description = "The bronze_cost_award_linked Delta Live silver Table for Appeals case details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3068,7 +3359,14 @@ def silver_applicant_detail():
         "ca.CountrySdx",
         "ca.DoNotUseNationality"
     )
+    table_name = "silver_applicant_detail"
+    stage_name = "silver_stage"
 
+    description = "The silver_applicant_detail Delta Live silver Table for casenapplicant detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3127,6 +3425,14 @@ def silver_dependent_detail():
         "ca.DoNotUseNationality"
     )
 
+    table_name = "silver_dependent_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_dependent_detail Delta Live silver Table for casenapplicant detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3177,6 +3483,14 @@ def silver_list_detail():
                               "ca.Position"
                           )
 
+    table_name = "silver_list_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_list_detail Delta Live silver Table for list detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3197,6 +3511,14 @@ def silver_dfdairy_detail():
 
     joined_df = appeals_df.join(flt_df, col("df.CaseNo") == col("flt.CaseNo"), "inner").select("df.*")
 
+    table_name = "silver_dfdairy_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_dfdairy_detail Delta Live silver Table for dfdairy detail"
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3304,6 +3626,16 @@ def silver_history_detail():
             .alias("HistTypeDescription")
         )
 
+
+
+    table_name = "silver_history_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_history_detail Delta Live silver Table for history detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(result_df,unique_identifier_desc,table_name,stage_name,description)
     return result_df
 
 
@@ -3332,6 +3664,14 @@ def silver_link_detail():
         "ld.LinkTitle"
     )
 
+    table_name = "silver_link_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_link_detail Delta Live silver Table for list detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3501,6 +3841,14 @@ def silver_status_detail():
                               col("st.Judiciary3Name")
                           )
 
+    table_name = "silver_status_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_status_detail Delta Live silver Table for status detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3521,6 +3869,14 @@ def silver_appealcategory_detail():
 
     joined_df = appeals_df.join(flt_df, col("ac.CaseNo") == col("flt.CaseNo"), "inner").select("ac.*")
 
+    table_name = "silver_appealcategory_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_appealcategory_detail Delta Live silver Table for status detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3653,6 +4009,15 @@ def silver_case_detail():
         col("case.AppealTypeDateStart").alias("AppealTypeDateStart"),
         col("case.AppealTypeDateEnd").alias("AppealTypeDateEnd")
     )
+
+    table_name = "silver_case_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_case_detail Delta Live silver Table for status detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)    
     return joined_df
 
 # COMMAND ----------
@@ -3667,6 +4032,15 @@ def silver_statusdecisiontype_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = status_decision_df.join(flt_df, col("status.CaseNo") == col("flt.CaseNo"), "inner").select("status.*")
+
+    table_name = "silver_statusdecisiontype_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_statusdecisiontype_detail Delta Live silver Table for transaction detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)        
     return joined_df
 
 
@@ -3785,6 +4159,16 @@ def silver_transaction_detail():
         col("TotalPaymentAdjustments.TotalPaymentAdjustments").alias("TotalPaymentAdjustments"),
         col("BalanceDue.BalanceDue").alias("BalanceDue")
     )
+
+
+    table_name = "silver_transaction_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_transaction_detail Delta Live silver Table for transaction detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)   
     return joined_df
 
 # COMMAND ----------
@@ -3804,6 +4188,15 @@ def silver_humanright_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = humanright_df.join(flt_df, col("hr.CaseNo") == col("flt.CaseNo"), "inner").select("hr.*")
+
+    table_name = "silver_humanright_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_humanright_detail Delta Live silver Table for human rights detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
     return joined_df
 
 
@@ -3836,6 +4229,15 @@ def silver_newmatter_detail():
         "nm.NotesRequired",
         "nm.DoNotUse"
     )
+
+    table_name = "silver_newmatter_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_newmatter_detail Delta Live silver Table for new matter detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
     return joined_df
 
 # COMMAND ----------
@@ -3855,6 +4257,15 @@ def silver_documents_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner").select("doc.*")
+
+    table_name = "silver_documents_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_documents_detail Delta Live silver Table for documents detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
     return joined_df
 
 
@@ -3875,6 +4286,15 @@ def sliver_direction_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = direction_df.join(flt_df, col("dir.CaseNo") == col("flt.CaseNo"), "inner").select("dir.*")
+
+    table_name = "sliver_direction_detail"
+    stage_name = "silver_stage"
+
+    description = "The sliver_direction_detail Delta Live silver Table for direction details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)         
     return joined_df
 
 
@@ -3895,6 +4315,15 @@ def Silver_reviewspecificdirection_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = review_specific_direction_df.join(flt_df, col("rsd.CaseNo") == col("flt.CaseNo"), "inner").select("rsd.*")
+
+    table_name = "silver_reviewspecificdirection_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_reviewspecificdirection_detail Delta Live silver Table for review-specific direction details."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
     return joined_df
 
 
@@ -3952,6 +4381,15 @@ def silver_linkedcostaward_detail():
         "ca.AppealStage",
         "ca.AppealStageDescription"
     )
+
+    table_name = "silver_linkedcostaward_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_linkedcostaward_detail Delta Live silver Table for cost award detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
     return joined_df
 
 # COMMAND ----------
@@ -4003,6 +4441,15 @@ def silver_costaward_detail():
         "ca.AppealStage",
         "ca.AppealStageDescription"
     )
+
+    table_name = "silver_costaward_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_costaward_detail Delta Live silver Table for cost award detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description) 
     return joined_df
 
 # COMMAND ----------
@@ -4061,6 +4508,15 @@ def silver_costorder_detail():
             .when(col("co.CostOrderDecision") == 4, "Not Valid Application")
             .alias("CostOrderDecision")
     )
+
+    table_name = "silver_costorder_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_costorder_detail Delta Live silver Table for cost order detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
     return joined_df
 
 # COMMAND ----------
@@ -4086,6 +4542,15 @@ def silver_hearingpointschange_detail():
         "hpc.Description",
         col("hpc.DoNotUse").alias("HearingPointsChangeDoNotUse")
     )
+
+    table_name = "silver_hearingpointschange_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_hearingpointschange_detail Delta Live silver Table for hearing points change reason detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
     return joined_df
 
 # COMMAND ----------
@@ -4105,6 +4570,14 @@ def silver_hearing_points_history_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = hearingpointshistory_df.join(flt_df, col("hph.CaseNo") == col("flt.CaseNo"), "inner").select("hph.*")
+    table_name = "silver_hearingpointshistory_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_hearingpointshistory_detail Delta Live silver Table for hearing points history detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
     return joined_df
 
 
@@ -4125,6 +4598,16 @@ def silver_appealtypecategory_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("atc.CaseNo") == col("flt.CaseNo"), "inner").select("atc.*")
+
+    table_name = "silver_appealtypecategory_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_appealtypecategory_detail Delta Live silver Table for appeal type category detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
+
     return joined_df
 
 
@@ -4145,6 +4628,15 @@ def silver_appeal_grounds_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("agt.CaseNo") == col("flt.CaseNo"), "inner").select("agt.*")
+
+    table_name = "silver_appealgrounds_detail"
+    stage_name = "silver_stage"
+
+    description = "The silver_appealgrounds_detail Delta Live silver Table for appeal ground  detail"
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
     return joined_df
 
 
@@ -4165,6 +4657,15 @@ def silver_required_incompatible_adjudicator():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
+
+    table_name = "silver_required_incompatible_adjudicator"
+    stage_name = "silver_stage"
+
+    description = "The silver_required_incompatible_adjudicator Delta Live silver Table for appeal ground  detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
     return joined_df
 
 # COMMAND ----------
@@ -4184,6 +4685,15 @@ def silver_case_adjudicator():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
+
+    table_name = "silver_case_adjudicator"
+    stage_name = "silver_stage"
+
+    description = "The silver_case_adjudicator Delta Live silver Table for appeal ground  detail."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
     return joined_df
 
 # COMMAND ----------
@@ -4192,12 +4702,6 @@ def silver_case_adjudicator():
 # MAGIC ### Transformation silver_archive_metadata
 # MAGIC
 # MAGIC
-
-# COMMAND ----------
-
-# “ARIAFTA” for First tier appeals 
-
-# “ARIAUTA” for Upper Tribunal appeals 
 
 # COMMAND ----------
 
@@ -4224,10 +4728,19 @@ def silver_archive_metadata():
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
-        col('ca.AppellantBirthDate').alias('bf_004'),
+        # col('ca.AppellantBirthDate').alias('bf_004'),
+        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))
-    
+
+    table_name = "silver_archive_metadata"
+    stage_name = "silver_stage"
+
+    description = "The silver_archive_metadata Delta Live Silver Table for Archive Metadata data."
+
+    unique_identifier_desc = "client_identifier"
+
+    create_audit_df(metadata_df,unique_identifier_desc,table_name,stage_name,description)     
     return metadata_df
 
 # COMMAND ----------
@@ -4846,10 +5359,21 @@ def stg_statichtml_data():
     # df_status_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
     # df_link_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_link_detail")
 
+
+
+    # df_status = spark.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
+    # df_category = spark.table("hive_metastore.ariadm_arm_fta.silver_appealcategory_detail")
+    # df_transaction = spark.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
+    # df_case = spark.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail")
+    # df_applicant = spark.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail")
+
     df_transaction_details = dlt.read("silver_transaction_detail")
+    df_category = dlt.read("silver_appealcategory_detail")
     df_history_details =  dlt.read("silver_history_detail")
     df_status_details =  dlt.read("silver_status_detail")
     df_link_details =  dlt.read("silver_link_detail")
+    df_case =  dlt.read("silver_appealcase_detail")
+    df_applicant =  dlt.read("silver_applicant_detail")
 
     # Get the latest transaction details
     window_spec = Window.partitionBy("CaseNo").orderBy("transactionid")
@@ -4867,13 +5391,143 @@ def stg_statichtml_data():
     df_link_details_derived = df_link_details.withColumn("connectedFiles", lit("Connected Files exist")).select("CaseNo", "connectedFiles").distinct()
 
     # Join all dataframes on CaseNo
-    df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "left") \
-                                                            .join(df_latest_status_details, "CaseNo", "left") \
-                                                            .join(df_link_details_derived, "CaseNo", "left")
+    df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") \
+                                                            .join(df_latest_status_details, "CaseNo", "outer") \
+                                                            .join(df_link_details_derived, "CaseNo", "outer")
 
     # display(df_stg_static_html_data)
 
-    return df_stg_static_html_data
+
+    # *********************************************************************Red Text Flag logic***************************************************/
+    cte = (df_status_details
+        .filter(col("CaseStatus").isin([27, 28, 29, 30, 31, 32, 33, 34]))
+        .select("CaseNo", when(col("ReconsiderationHearing") == 'enabled', 'REC').otherwise(lit(None)).alias("ReconsiderationHearing"))
+        .distinct())
+
+    cte_rec = cte.filter(col("ReconsiderationHearing") == 'REC').select("CaseNo", "ReconsiderationHearing").distinct()
+
+    # CTE for Flag_List
+    flag_list = (df_category
+        # .join(df_status_details, "CaseNo")
+        # .filter(col("CaseStatus") == 35)
+        .groupby("CaseNo")
+        .agg(sort_array(collect_list(struct(col("Priority"), concat_ws('', lit('*'), col("Flag"), lit('*')))), asc=True).alias("sorted_flags")))
+
+    cte_flag_3 = (flag_list
+        .select(
+            "CaseNo",
+            when(size(col("sorted_flags")) > 3,
+                concat(concat_ws(", ", expr("slice(transform(sorted_flags, x -> x.Col2), 1, 3)")), lit(", ...")))  # Fixing concat order
+            .otherwise(concat_ws(", ", expr("transform(sorted_flags, x -> x.Col2)")))  # If <= 3, take all
+            .alias("Flag_List")
+        )
+    )
+
+
+    # display(flag_list.filter((size(col("sorted_flags")) > 3)))
+    # # AS/00003/2005
+
+
+    # display(cte_flag_3.filter(col("CaseNo") == lit("AS/00003/2005")))
+
+    # display(cte_rec)
+
+    # CTE for Fee Flags (Fixing count() issue)
+    df_transaction_filtered = df_transaction_details.filter(col("TransactionTypeId") == 1).groupby("CaseNo").agg(count("*").alias("txn_count"))
+
+    cte_feeflag = (df_transaction_details
+        .join(df_transaction_filtered, "CaseNo", "left")
+        .withColumn("Fee_Flag", when((col("BalanceDue") == 0) & (col("TransactionTypeId") == 5), "FEE REMISSION")
+            .when((col("BalanceDue") == 0) & (col("TransactionTypeId") == 17), "FEE EXEMPT")
+            .when((col("TotalPaymentsReceived") >= col("TotalFeeDue")) & (col("txn_count") > 0), "FEE PAID")
+            .when((col("BalanceDue") > 0) & (col("txn_count") > 0), "FEE DUE")
+            .otherwise(lit(None))))
+
+    # cte_feeflagordered = cte_feeflag.withColumn(
+    #     "Fee_Flag_num",
+    #     when(col("Fee_Flag") == "FEE REMISSION", 1)
+    #     .when(col("Fee_Flag") == "FEE EXEMPT", 2)
+    #     .when(col("Fee_Flag") == "FEE PAID", 3)
+    #     .when(col("Fee_Flag") == "FEE DUE", 4)
+    #     .otherwise(0)
+    # ).filter(col("Fee_Flag_num") != 0)
+
+    # max_fee_flag_num = cte_feeflagordered.groupby("CaseNo").agg(min("Fee_Flag_num").alias("max_Fee_Flag_num"))
+
+    # final_fee_flag = (cte_feeflagordered
+    #     .join(max_fee_flag_num, ["CaseNo"], "inner")
+    #     .filter((col("max_Fee_Flag_num") != 0) | (col("max_Fee_Flag_num") != " "))
+    #     .select("CaseNo", "Fee_Flag", "Fee_Flag_num"))
+
+
+    # Assign numerical order based on priority
+    cte_feeflagordered = cte_feeflag.withColumn(
+        "Fee_Flag_num",
+        when(col("Fee_Flag") == "FEE REMISSION", 1)
+        .when(col("Fee_Flag") == "FEE EXEMPT", 2)
+        .when(col("Fee_Flag") == "FEE PAID", 3)
+        .when(col("Fee_Flag") == "FEE DUE", 4)
+        .otherwise(5)  # Default to lowest priority if Fee_Flag doesn't match
+    ).filter(col("Fee_Flag_num") != 5)  # Remove unrecognized flags
+
+    # Define window to get the top 1 priority Fee_Flag per CaseNo
+    window_spec = Window.partitionBy("CaseNo").orderBy("Fee_Flag_num")
+
+    # Assign row number based on priority order
+    cte_ranked = cte_feeflagordered.withColumn("rank", row_number().over(window_spec))
+
+    # Filter only the top 1 priority record per CaseNo
+    final_fee_flag = cte_ranked.filter(col("rank") == 1).select("CaseNo", "Fee_Flag", "Fee_Flag_num")
+
+
+    # Final query combining all CTEs
+    final_df = (df_case
+        .join(df_applicant.alias("a"), "CaseNo", "left")
+        .join(cte_rec, "CaseNo", "left")
+        .join(cte_flag_3, "CaseNo", "left")
+        .join(final_fee_flag, "CaseNo", "left")
+        .select(
+            "CaseNo",       
+            concat(
+                when(col("VisitVisaType") == 'Oral Hearing', "*ORAL*")
+                    .when(col("VisitVisaType") == 'On Papers', "*PAPER*")
+                    .otherwise('     '),
+                when(col("Detained").isin('HMP', 'IRC', 'OTHER'), concat_ws("", lit('*'), lit("DET"), lit('*'))).otherwise('    '),
+                when(col("ReconsiderationHearing") == 'REC', '*REC*').otherwise('')
+            ).alias("flag1"),
+            concat_ws("",
+                when(col("InCamera") == 'checked', '*CAM*').otherwise(''),
+                when(col("Fee_Flag").isNotNull(),concat( lit('*'), col("Fee_Flag"), lit('*'))).otherwise('')
+            ).alias("flag2"),
+            coalesce(col("Flag_List"), lit('')).alias("flag3")
+        )).distinct()
+    
+    # *********************************************************************Red Text Flag logic***************************************************/
+
+    # df_stg_static_html_data = df_stg_static_html_data.alias("a").join(final_df.alias("b"),"CaseNo", "left").select("a.*","flag1","flag2","flag3")
+
+    stg_static_html_data_columns_list = [col for col in df_stg_static_html_data.columns if col != 'CaseNo']
+
+    # df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
+    #                                               .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
+    #                                               .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), col("flag3"))
+    
+    df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
+                                                  .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
+                                                  .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), expr("regexp_replace(flag3, ',', '')").alias("flag3"))
+
+
+    table_name = "stg_statichtml_data"
+
+    stage_name = "stg_stage"
+
+    description = "The stg_statichtml_data Delta Live staging table is used to derive static HTML with a one-to-one column mapping."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_stg_static_html_final_data,unique_identifier_desc,table_name,stage_name,description)  
+
+    return df_stg_static_html_final_data
 
 # COMMAND ----------
 
@@ -5054,21 +5708,28 @@ def stg_statusdetail_data():
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle')).alias("TempCaseStatusDetails"))
+    
+    table_name = "stg_statusdetail_data"
+
+    stage_name = "stg_stage"
+
+    description = "The stg_statusdetail_data Delta Live staging table derives HTML data for status details in nested tabs in HTML output."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_final,unique_identifier_desc,table_name,stage_name,description)  
+
     return df_final
 
 # COMMAND ----------
 
-gold_outputs
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation: stg_appeals_unified
+# DBTITLE 1,Transformation: stg_fta_combined
 @dlt.table(
-    name="stg_appeals_unified",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_appeals_unified"
+    name="stg_apl_combined",
+    comment="Delta Live unified stage created all consolidated data.",
+    path=f"{gold_mnt}/stg_apl_combined"
 )
-def stg_appeals_unified():
+def stg_apl_combined():
 
     # Read unique CaseNo tables
     # M1
@@ -5096,7 +5757,7 @@ def stg_appeals_unified():
     # Read duplicate CaseNo tables and aggregate them
     df_appealcategory = dlt.read("silver_appealcategory_detail").groupBy("CaseNo").agg(
         collect_list(
-            struct( 'CategoryDescription', 'Flag')
+            struct( 'CategoryDescription', 'Flag',"Priority")
         ).alias("AppealCategoryDetails")
     )
 
@@ -5233,60 +5894,186 @@ def stg_appeals_unified():
         
     )
 
-   
-    # # HTML extra requirement- status details data
-    # df_with_statusdetail_data = df_combined.join(spark.read.table("hive_metastore.ariadm_arm_appeals.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("hive_metastore.ariadm_arm_appeals.stg_statichtml_data"), "CaseNo", "left")
+    df_with_json_content = df_combined.withColumn("JSONcollection", to_json(struct(*df_combined.columns)))
 
-    #HTML extra requirement- status details data
+    table_name = "stg_apl_combined"
+
+    stage_name = "stg_stage"
+
+    description = "The stg_apl_combined Delta Live unified stage created all consolidated data."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_combined,unique_identifier_desc,table_name,stage_name,description)  
+
+    return df_with_json_content
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_fta_create_json_content
+@dlt.table(
+    name="stg_apl_create_json_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_apl_create_json_content"
+)
+def stg_apl_create_json_content():
+
+    # Read unique CaseNo tables
+    # M1
+    df_combined = dlt.read("stg_apl_combined")
+   
+    df_with_json_content = df_combined.withColumn("JSONContent", to_json(struct(*df_combined.columns))).withColumn(
+        "JSONFileName", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
+    ).withColumn("JSONStatus", when((col("JSONContent").like("Failure%") | col("JSONContent").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
+
+    table_name = "stg_apl_create_json_content"
+
+    stage_name = "stg_stage"
+
+    description = "The stg_apl_create_json_content Delta Live staging table with HTML data"
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_with_json_content,unique_identifier_desc,table_name,stage_name,description)  
+
+    return df_with_json_content
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_fta_create_html_content
+@dlt.table(
+    name="stg_apl_create_html_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_apl_create_html_content"
+)
+def stg_apl_create_html_content():
+
+    # Read unique CaseNo tables
+    # M1
+    df_combined = dlt.read("stg_apl_combined")
+
+     #HTML extra requirement- status details data
     df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
 
-    # #HTML extra requirement- status details data
-    # df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
 
-    df_with_html_json_content = df_with_statusdetail_data.withColumn("HTMLContent", generate_html_udf(struct(*df_with_statusdetail_data.columns))) \
-        .withColumn("JSONcollection", to_json(struct(*df_combined.columns)))
+    df_with_html_content = df_with_statusdetail_data.withColumn("HTMLContent", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
+        "HTMLFileName", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("HTMLStatus", when((col("HTMLContent").like("Failure%") | col("HTMLContent").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+   
 
-    #A360 extra requirement for batch and metadata
-    # Read the metadata table from the Hive metastore
-    # df_joh_metadata = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_archive_metadata")
-    df_joh_metadata = dlt.read("silver_archive_metadata")
+    table_name = "stg_apl_create_html_content"
 
+    stage_name = "stg_stage"
+
+    description = "The stg_apl_create_html_content Delta Live staging table with HTML data"
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_with_html_content,unique_identifier_desc,table_name,stage_name,description)  
+
+    return df_with_html_content.select("CaseNo","HTMLContent","HTMLFileName","HTMLStatus")
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_fta_create_a360_content
+@dlt.table(
+    name="stg_apl_create_a360_content",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_apl_create_a360_content"
+)
+def stg_apl_create_a360_content():
+
+    df_combined = dlt.read("stg_apl_combined")
+    df_apl_metadata = dlt.read("silver_archive_metadata")
+    
 
     # Select distinct client identifiers with HTML and JOSN content and order them
-    metadata_df = df_joh_metadata.alias('a').join(df_with_html_json_content.alias('b'), col('b.CaseNo') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
+    # metadata_df = df_joh_metadata.alias('a')
 
     # Define a window specification to assign row numbers
     window_spec = Window.orderBy("client_identifier")
-    df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
+    df_batch = df_apl_metadata.withColumn("row_num", row_number().over(window_spec)) \
                         .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
 
     # Join the batch information with the original metadata
-    df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
+    df_metadata = df_apl_metadata.alias("a").join(df_batch.alias("b"), "client_identifier", "left").select("a.*", "b.A360BatchId")
 
     # Repartition the DataFrame to optimize parallelism
     # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
 
-
     # Generate A360 content and associated file names
     df_with_a360 = df_metadata.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
+        "A360Content", generate_a360_udf(struct(*df_apl_metadata.columns))
     ).withColumn(
-        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    ).withColumn(
-        "UploadStatus", upload_udf(col("A360FileName"), col("A360Content"))
-    ).select(col("client_identifier").alias("CaseNo"), "A360BatchId", "A360FileName", "A360Content")
+        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None)) ) \
+    .withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
 
 
+    table_name = "stg_apl_create_a360_content"
 
-    df_with_statusdetail_a360_data =  df_with_html_json_content.join(df_with_a360, "CaseNo", "left")
+    stage_name = "stg_stage"
 
-    df_unified = df_with_statusdetail_a360_data.withColumn(
-        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    ).withColumn(
-        "HTMLFileName", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html"))
-    ).withColumn(
-        "JSONFileName", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
+    description = "The stg_apl_create_a360_content Delta Live staging table with a360 data"
+
+    unique_identifier_desc = "client_identifier"
+
+    create_audit_df(df_with_a360,unique_identifier_desc,table_name,stage_name,description)  
+
+    return df_with_a360.select(col("client_identifier"),"A360Content","A360FileName","A360Status","A360BatchId")
+
+# COMMAND ----------
+
+# DBTITLE 1,Transformation: stg_appeals_unified
+@dlt.table(
+    name="stg_appeals_unified",
+    comment="Delta Live unified stage Gold Table for gold outputs.",
+    path=f"{gold_mnt}/stg_appeals_unified"
+)
+def stg_appeals_unified():
+
+    df_combined = dlt.read("stg_apl_combined")
+
+    # Read DLT sources
+    a360_df = dlt.read("stg_apl_create_a360_content").alias("a360")
+    html_df = dlt.read("stg_apl_create_html_content").alias("html")
+    json_df = dlt.read("stg_apl_create_json_content").alias("json")
+
+     # Perform joins
+    df_unified = (
+        html_df
+        .join(json_df,  ((col("html.CaseNo") == col("json.CaseNo"))), "inner")
+        .join(
+            a360_df,
+            (col("json.CaseNo") == col("a360.client_identifier")),
+            "inner"
+        )
+        .select(
+            col("a360.client_identifier"),
+            col("json.*"),
+            col("html.HTMLContent"),
+            col("html.HTMLFileName"),
+            col("html.HTMLStatus"),
+            col("a360.A360Content"),
+            col("a360.A360Status"),
+            col("a360.A360FileName"),
+            col("a360.A360BatchId")
+        )
+        .filter(
+            (~col("html.HTMLContent").like("Failure%")) &
+            (~col("a360.A360Content").like("Failure%")) &
+            (~col("json.JSONContent").like("Failure%"))
+        )
     )
+
+
+    table_name = "stg_appeals_unified"
+
+    stage_name = "stg_stage"
+
+    description = "The stg_appeals_unified Delta Live staging table consolidates all silver data, including HTML, JSON, and A360 content, along with its status."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_unified,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_unified
 
@@ -5313,16 +6100,31 @@ def gold_appeals_with_json():
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
 
-    df_with_upload_status = repartitioned_df.filter(~col("JSONcollection").like("Error%")).withColumn(
-            "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcollection"))
+    df_with_upload_status = repartitioned_df.filter(~col("JSONcontent").like("Error%")).withColumn(
+            "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcontent"))
         )
     
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("CaseNo","A360BatchId", "JSONcollection","JSONFileName","UploadStatus"))
+        display(df_with_upload_status.select("CaseNo","A360BatchId", "JSONcontent","JSONFileName","UploadStatus"))
+
+    
+    df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
+
+    
+    table_name = "gold_appeals_with_json"
+
+    stage_name = "gold_stage"
+
+    description = "The gold_appeals_with_json Delta Live staging table derives HTML content along with its corresponding name."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","A360BatchId", "JSONcollection","JSONFileName","UploadStatus")
+    return df_with_upload_status.select("CaseNo","A360BatchId", "JSONcontent","JSONFileName","UploadStatus")
 
 
 # COMMAND ----------
@@ -5356,6 +6158,18 @@ def gold_appeals_with_html():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_upload_status.select("CaseNo","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
+
+    df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
+
+    table_name = "gold_appeals_with_html"
+
+    stage_name = "gold_stage"
+
+    description = "The gold_appeals_with_html Delta Live staging table derives HTML content along with its corresponding name."
+
+    unique_identifier_desc = "CaseNo"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
 
 
     # Return the DataFrame for DLT table creation, including the upload status
@@ -5399,6 +6213,18 @@ def gold_appeals_with_a360():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_a360)
+
+    df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
+
+    table_name = "gold_appeals_with_a360"
+
+    stage_name = "gold_stage"
+
+    description = "The gold_appeals_with_a360 Delta Live staging table derives HTML content along with its corresponding name."
+
+    unique_identifier_desc = "A360BatchId"
+
+    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
    
     return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
 
@@ -5415,7 +6241,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 # COMMAND ----------
 
 # DBTITLE 1,Check Error Records in Appeals Data
-# df_unified = spark.read.table("hive_metastore.ariadm_arm_appeals.stg_appeals_unified")
+# df_unified = spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_unified")
 # display(df_unified.filter(col("A360FileName").isNull() | 
 #                           col("A360Content").like("Error%") | 
 #                           col("HTMLContent").like("Error%") | 
@@ -5425,9 +6251,9 @@ dbutils.notebook.exit("Notebook completed successfully")
 # COMMAND ----------
 
 # DBTITLE 1,Check for Creation errors
-# df_json = spark.read.table("hive_metastore.ariadm_arm_appeals.gold_appeals_with_json").alias("json")
-# df_html = spark.read.table("hive_metastore.ariadm_arm_appeals.gold_appeals_with_html").alias("html")
-# df_a360 = spark.read.table("hive_metastore.ariadm_arm_appeals.gold_appeals_with_a360").alias("a360")
+# df_json = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_json").alias("json")
+# df_html = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_html").alias("html")
+# df_a360 = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_a360").alias("a360")
 
 # df_joined = df_json.join(df_html, "CaseNo", "inner").join(df_a360, df_a360.A360BatchId == df_json.A360BatchId, "inner")
 # df_filtered = df_joined.filter((col("json.uploadstatus") != "success") | 
@@ -5437,8 +6263,8 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC -- select * from hive_metastore.ariadm_arm_appeals.gold_appeals_with_a360
+# %sql
+# select * from hive_metastore.ariadm_arm_appeals.gold_appeals_with_a360
 
 # COMMAND ----------
 
@@ -5692,11 +6518,17 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# DBTITLE 1,Display HTML Content
-# # case_no = 'IM/00048/2003'
-# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_appeals.gold_appeals_with_html")
+# %sql
+# select CaseNo,flag1,flag2,flag3 from hive_metastore.ariadm_arm_fta.stg_statichtml_data
+# -- where CaseNo like "TH/00002/2004"
 
-# display(df)
+# COMMAND ----------
+
+# DBTITLE 1,Display HTML Content
+# case_no = 'HR/00014/2004's
+# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
+
+# # display(df)
 # # Filter for the specific case and extract the JSON collection
 # filtered_row = df.filter(col("CaseNo") == case_no).select("HTMLContent").first()
 
@@ -6062,8 +6894,13 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select caseNo, BalanceDue, TransactionTypeId, TransactionDescription as  EventType, Amount, AmountDue, AmountPaid,TotalFeeDue,TotalPaymentsReceived from hive_metastore.ariadm_arm_appeals.silver_transaction_detail
+# %sql
+# -- select distinct TransactionDescription as  EventType from hive_metastore.ariadm_arm_appeals.silver_transaction_detail
+
+# COMMAND ----------
+
+# %sql
+# select caseNo, BalanceDue, TransactionTypeId, TransactionDescription as  EventType, Amount, AmountDue, AmountPaid,TotalFeeDue,TotalPaymentsReceived from hive_metastore.ariadm_arm_appeals.silver_transaction_detail
 
 # COMMAND ----------
 
@@ -6134,3 +6971,336 @@ case_no = 'IM/00023/2003' # dependents
 #     dbutils.fs.mv(csv_file, final_path, True)  # Move and rename
 #     dbutils.fs.rm(temp_path, True)  # Clean up temp directory
 
+
+# COMMAND ----------
+
+# %sql
+# drop schema ariadm_arm_appeals cascade
+
+# COMMAND ----------
+
+# %sql
+# select count(*) from hive_metastore.ariadm_arm_fta.gold_appeals_with_json
+
+# COMMAND ----------
+
+# %sql
+# select count(*)
+# , A360BatchId 
+# from hive_metastore.ariadm_arm_fta.gold_appeals_with_html
+# group by A360BatchId
+
+# COMMAND ----------
+
+# %sql
+# select count(*) from hive_metastore.ariadm_arm_fta.gold_appeals_with_a360
+
+# COMMAND ----------
+
+# DBTITLE 1,Red text Pyspark
+# df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_transaction_detail")
+# df_category = spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcategory_detail")
+# df_history_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_history_detail")
+# df_status_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_status_detail")
+# df_link_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_link_detail")
+# df_case =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail")
+# df_applicant =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail")
+
+# # Get the latest transaction details
+# window_spec = Window.partitionBy("CaseNo").orderBy("transactionid")
+# df_transaction_details_derived = df_transaction_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).select('CaseNo', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')
+
+# # Get the latest history details
+# window_spec = Window.partitionBy("CaseNo").orderBy(col("HistDate").desc())
+# df_latest_history_details = df_history_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", "lastDocument", "fileLocation")
+
+# # Get the latest status details
+# window_spec = Window.partitionBy("CaseNo").orderBy(col("KeyDate").desc())
+# df_latest_status_details = df_status_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", col("CaseStatusDescription").alias("currentstatus"))
+
+# # Derive connectedFiles column
+# df_link_details_derived = df_link_details.withColumn("connectedFiles", lit("Connected Files exist")).select("CaseNo", "connectedFiles").distinct()
+
+# # Join all dataframes on CaseNo
+# df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") \
+#                                                         .join(df_latest_status_details, "CaseNo", "outer") \
+#                                                         .join(df_link_details_derived, "CaseNo", "outer")
+
+# # display(df_stg_static_html_data)
+
+
+# # *********************************************************************Red Text Flag logic***************************************************/
+# cte = (df_status_details
+#     .filter(col("CaseStatus").isin([27, 28, 29, 30, 31, 32, 33, 34]))
+#     .select("CaseNo", when(col("ReconsiderationHearing") == 'enabled', 'REC').otherwise(lit(None)).alias("ReconsiderationHearing"))
+#     .distinct())
+
+# cte_rec = cte.filter(col("ReconsiderationHearing") == 'REC').select("CaseNo", "ReconsiderationHearing").distinct()
+
+# # CTE for Flag_List
+# flag_list = (df_category
+#     # .join(df_status_details, "CaseNo")
+#     # .filter(col("CaseStatus") == 35)
+#     .groupby("CaseNo")
+#     .agg(sort_array(collect_list(struct(col("Priority"), concat_ws('', lit('*'), col("Flag"), lit('*')))), asc=True).alias("sorted_flags")))
+
+# cte_flag_3 = (flag_list
+#     .select(
+#         "CaseNo",
+#         when(size(col("sorted_flags")) > 3,
+#             concat(concat_ws(", ", expr("slice(transform(sorted_flags, x -> x.Col2), 1, 3)")), lit(", ...")))  # Fixing concat order
+#         .otherwise(concat_ws(", ", expr("transform(sorted_flags, x -> x.Col2)")))  # If <= 3, take all
+#         .alias("Flag_List")
+#     )
+# )
+
+
+# # display(flag_list.filter((size(col("sorted_flags")) > 3)))
+# # # AS/00003/2005
+
+
+# # display(cte_flag_3.filter(col("CaseNo") == lit("AS/00003/2005")))
+
+# # display(cte_rec)
+
+# # CTE for Fee Flags (Fixing count() issue)
+# df_transaction_filtered = df_transaction_details.filter(col("TransactionTypeId") == 1).groupby("CaseNo").agg(count("*").alias("txn_count"))
+
+# cte_feeflag = (df_transaction_details
+#     .join(df_transaction_filtered, "CaseNo", "left")
+#     .withColumn("Fee_Flag", when((col("BalanceDue") == 0) & (col("TransactionTypeId") == 5), "FEE REMISSION")
+#         .when((col("BalanceDue") == 0) & (col("TransactionTypeId") == 17), "FEE EXEMPT")
+#         .when((col("TotalPaymentsReceived") >= col("TotalFeeDue")) & (col("txn_count") > 0), "FEE PAID")
+#         .when((col("BalanceDue") > 0) & (col("txn_count") > 0), "FEE DUE")
+#         .otherwise(lit(None))))
+
+# # cte_feeflagordered = cte_feeflag.withColumn(
+# #     "Fee_Flag_num",
+# #     when(col("Fee_Flag") == "FEE REMISSION", 1)
+# #     .when(col("Fee_Flag") == "FEE EXEMPT", 2)
+# #     .when(col("Fee_Flag") == "FEE PAID", 3)
+# #     .when(col("Fee_Flag") == "FEE DUE", 4)
+# #     .otherwise(0)
+# # ).filter(col("Fee_Flag_num") != 0)
+
+# # max_fee_flag_num = cte_feeflagordered.groupby("CaseNo").agg(min("Fee_Flag_num").alias("max_Fee_Flag_num"))
+
+# # final_fee_flag = (cte_feeflagordered
+# #     .join(max_fee_flag_num, ["CaseNo"], "inner")
+# #     .filter((col("max_Fee_Flag_num") != 0) | (col("max_Fee_Flag_num") != " "))
+# #     .select("CaseNo", "Fee_Flag", "Fee_Flag_num"))
+
+
+# # Assign numerical order based on priority
+# cte_feeflagordered = cte_feeflag.withColumn(
+#     "Fee_Flag_num",
+#     when(col("Fee_Flag") == "FEE REMISSION", 1)
+#     .when(col("Fee_Flag") == "FEE EXEMPT", 2)
+#     .when(col("Fee_Flag") == "FEE PAID", 3)
+#     .when(col("Fee_Flag") == "FEE DUE", 4)
+#     .otherwise(5)  # Default to lowest priority if Fee_Flag doesn't match
+# ).filter(col("Fee_Flag_num") != 5)  # Remove unrecognized flags
+
+# # Define window to get the top 1 priority Fee_Flag per CaseNo
+# window_spec = Window.partitionBy("CaseNo").orderBy("Fee_Flag_num")
+
+# # Assign row number based on priority order
+# cte_ranked = cte_feeflagordered.withColumn("rank", row_number().over(window_spec))
+
+# # Filter only the top 1 priority record per CaseNo
+# final_fee_flag = cte_ranked.filter(col("rank") == 1).select("CaseNo", "Fee_Flag", "Fee_Flag_num")
+
+
+# # Final query combining all CTEs
+# final_df = (df_case
+#     .join(df_applicant.alias("a"), "CaseNo", "left")
+#     .join(cte_rec, "CaseNo", "left")
+#     .join(cte_flag_3, "CaseNo", "left")
+#     .join(final_fee_flag, "CaseNo", "left")
+#     .select(
+#         "CaseNo",       
+#         concat(
+#             when(col("VisitVisaType") == 'Oral Hearing', "*ORAL*")
+#                 .when(col("VisitVisaType") == 'On Papers', "*PAPER*")
+#                 .otherwise('     '),
+#             when(col("Detained").isin('HMP', 'IRC', 'OTHER'), concat_ws("", lit('*'), lit("DET"), lit('*'))).otherwise('    '),
+#             when(col("ReconsiderationHearing") == 'REC', '*REC*').otherwise('')
+#         ).alias("flag1"),
+#         concat_ws("",
+#             when(col("InCamera") == 'checked', '*CAM*').otherwise(''),
+#             when(col("Fee_Flag").isNotNull(),concat( lit('*'), col("Fee_Flag"), lit('*'))).otherwise('')
+#         ).alias("flag2"),
+#         coalesce(col("Flag_List"), lit('')).alias("flag3")
+#     )).distinct()
+
+# # *********************************************************************Red Text Flag logic***************************************************/
+
+# # df_stg_static_html_data = df_stg_static_html_data.alias("a").join(final_df.alias("b"),"CaseNo", "left").select("a.*","flag1","flag2","flag3")
+
+# stg_static_html_data_columns_list = [col for col in df_stg_static_html_data.columns if col != 'CaseNo']
+
+# # df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
+# #                                               .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
+# #                                               .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), col("flag3"))
+
+# df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
+#                                                 .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
+#                                                 .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), expr("regexp_replace(flag3, ',', '')").alias("flag3"))
+
+# display(final_df)
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_fta.silver_appealcategory_detail
+
+# COMMAND ----------
+
+# DBTITLE 1,Red Text sql
+# %sql
+# WITH CTE AS (
+#     SELECT 
+#         CaseNo, 
+#         CASE 
+#             WHEN ReconsiderationHearing = 'enabled' THEN 'REC' 
+#             ELSE '' 
+#         END AS ReconsiderationHearing
+#     FROM hive_metastore.ariadm_arm_fta.silver_status_detail
+#     WHERE CaseStatus IN (27, 28, 29, 30, 31, 32, 33, 34)
+#     GROUP BY CaseNo, ReconsiderationHearing
+# ), cte_rec AS (
+#     SELECT 
+#         CaseNo,
+#         CASE 
+#             WHEN ReconsiderationHearing = 'REC' THEN 'REC' 
+#             ELSE '' 
+#         END AS ReconsiderationHearing 
+#     FROM CTE
+#     WHERE ReconsiderationHearing = 'REC' 
+#     GROUP BY CaseNo, ReconsiderationHearing
+# ), Flag_List AS (
+#     SELECT 
+#         ac.CaseNo, 
+#         sort_array(collect_list(struct(ac.Priority, concat('*', ac.Flag, '*'))), false) AS sorted_flags
+#     FROM hive_metastore.ariadm_arm_fta.silver_appealcategory_detail ac
+#     --JOIN hive_metastore.ariadm_arm_fta.silver_status_detail sd 
+#         -- ON sd.CaseNo = ac.CaseNo
+#     --WHERE sd.CaseStatus = 35
+#     GROUP BY ac.CaseNo
+# ), cte_flag_3 AS (
+#     SELECT 
+#         CaseNo, 
+#         CASE 
+#             WHEN size(sorted_flags) > 3 THEN concat_ws(', ', flatten(array(slice(transform(sorted_flags, x -> x.Col2), 1, 3)))) || ', ...' 
+#             ELSE concat_ws(', ', transform(sorted_flags, x -> x.Col2)) 
+#         END AS Flag_List
+#     FROM Flag_List
+# ), cte_feeflag AS (
+#     SELECT 
+#         caseNo, 
+#         BalanceDue, 
+#         TransactionTypeId, 
+#         TransactionDescription AS EventType, 
+#         Amount, 
+#         AmountDue, 
+#         AmountPaid,
+#         TotalFeeDue,
+#         TotalPaymentsReceived,
+#         CASE 
+#             WHEN BalanceDue = 0 AND TransactionTypeId = 5 THEN 'FEE REMISSION'
+#             WHEN BalanceDue = 0 AND TransactionTypeId = 17 THEN 'FEE EXEMPT'
+#             WHEN TotalPaymentsReceived >= TotalFeeDue AND EXISTS (
+#                 SELECT 1 
+#                 FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail t 
+#                 WHERE t.CaseNo = d.CaseNo AND t.TransactionTypeId = 1
+#             ) THEN 'FEE PAID'
+#             WHEN BalanceDue > 0 AND EXISTS (
+#                 SELECT 1 
+#                 FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail t 
+#                 WHERE t.CaseNo = d.CaseNo AND t.TransactionTypeId = 1
+#             ) THEN 'FEE DUE'
+#             ELSE ''
+#         END AS Fee_Flag
+#     FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail d
+# ), cte_feeflagordered AS (
+#    SELECT *,
+#         CASE 
+#             WHEN Fee_Flag = 'FEE REMISSION' THEN 1
+#             WHEN Fee_Flag = 'FEE EXEMPT' THEN 2
+#             WHEN Fee_Flag = 'FEE PAID' THEN 3
+#             WHEN Fee_Flag = 'FEE DUE' THEN 4
+#             ELSE 5 -- fallback, lowest priority
+#         END AS Fee_Flag_num
+#     FROM cte_feeflag
+#     WHERE Fee_Flag IN ('FEE REMISSION', 'FEE EXEMPT', 'FEE PAID', 'FEE DUE')
+# ),
+# ranked_flags AS (
+#     SELECT *,
+#            ROW_NUMBER() OVER (PARTITION BY CaseNo ORDER BY Fee_Flag_num) AS rn
+#     FROM cte_feeflagordered
+# ), final_fee_flag AS (
+#     SELECT 
+#         CaseNo, 
+#         Fee_flag, 
+#         Fee_Flag_num 
+#     FROM ranked_flags 
+#     WHERE rn = 1
+# )
+# , main AS 
+# (
+# SELECT
+#     a.CaseNo,
+#     CONCAT(
+#         CASE 
+#             WHEN VisitVisaType = 'Oral Hearing' THEN '*ORAL*' 
+#             WHEN VisitVisaType = 'On Papers' THEN '*PAPER*' 
+#             ELSE '     ' 
+#         END,
+#         CASE 
+#             WHEN Detained IN ('HMP', 'IRC', 'OTHER') THEN CONCAT('*', 'DET', '*') 
+#             ELSE '     ' 
+#         END,
+#         CASE 
+#             WHEN ReconsiderationHearing = 'REC' THEN '*REC*' 
+#             ELSE '' 
+#         END
+#     ) AS flag1,
+#     CONCAT(
+#         CASE 
+#             WHEN InCamera = 'checked' THEN '*CAM*' 
+#             ELSE '' 
+#         END,
+#         CASE 
+#             WHEN Fee_flag IS NULL THEN '' 
+#             ELSE CONCAT('*', Fee_flag, '*') 
+#         END
+#     ) AS flag2,
+#     coalesce(cf.Flag_List, '') AS flag3
+# FROM hive_metastore.ariadm_arm_fta.silver_appealcase_detail a
+# LEFT JOIN hive_metastore.ariadm_arm_fta.silver_applicant_detail b 
+#     ON a.CaseNo = b.CaseNo
+# LEFT JOIN cte_rec cr 
+#     ON a.CaseNo = cr.CaseNo
+# LEFT JOIN cte_flag_3 cf 
+#     ON a.CaseNo = cf.CaseNo
+# LEFT JOIN final_fee_flag fff 
+#     ON a.CaseNo = fff.CaseNo
+# )
+# select * FROM MAIN
+
+
+# COMMAND ----------
+
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%stg%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())

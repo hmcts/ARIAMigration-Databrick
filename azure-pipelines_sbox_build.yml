@@ -112,9 +112,6 @@ stages:
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
 
-        echo "Listing if deployment.json exists" 
-        ls .bundle/*/*/state/deployment.json
-
 #        if [ $? -eq 0 ]; then
 #          echo "Deploy successful, waiting 10 seconds before running..."
 #          sleep 10

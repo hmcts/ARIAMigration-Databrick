@@ -101,8 +101,13 @@ stages:
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         cat ~/.databrickscfg  # Print the contents for debugging
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
+    
+    - script: |
+       databricks workspace ls -r /Users/andrew.mcdevitt@hmcts.net/.bundle
+      displayName: "Query all files in bundle directory"
 
     - script: |
+        databricks workspace delete /live --recursive
         echo "Current working directory: $(pwd)"
         ls -l /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 

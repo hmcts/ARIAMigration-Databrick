@@ -4,6 +4,39 @@ bundle:
 include:
   - ${bundle.file(resources/*.yml)}
 
+resources:
+  pipelines:
+    # Define each pipeline explicitly
+    ARIA_ARCHIVE_BAILS:
+      path: resources/pipelines/ARIA_ARCHIVE_BAILS.yml
+    PL_ARIADM_ARM_JOH:
+      path: resources/pipelines/PL_ARIADM_ARM_JOH.yml
+    PL_ARIADM_ARM_TD:
+      path: resources/pipelines/PL_ARIADM_ARM_TD.yml
+    PL_ARIADM_ARM_APPEALS:
+      path: resources/pipelines/PL_ARIADM_ARM_APPEALS.yml
+    PL_ARIADM_ARM_FTA:
+      path: resources/pipelines/PL_ARIADM_ARM_FTA.yml
+      
+  workflows:
+    # Define each workflow explicitly
+    db_wf_bail_recieve:
+      path: resources/workflows/db_wf_bail_recieve.yml
+    db_wf_bail_send:
+      path: resources/workflows/db_wf_bail_send.yml
+    db_wf_td_receive:
+      path: resources/workflows/db_wf_td_receive.yml
+    db_wf_td_send:
+      path: resources/workflows/db_wf_td_send.yml
+    db_wf_apl_fta_send:
+      path: resources/workflows/db_wf_apl_fta_send.yml
+    db_wf_joh_recieve:
+      path: resources/workflows/db_wf_joh_recieve.yml
+    db_wf_joh_send:
+      path: resources/workflows/db_wf_joh_send.yml
+    db_wf_bail_reprocessing:
+      path: resources/workflows/db_wf_bail_reprocessing.yml
+
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net
   

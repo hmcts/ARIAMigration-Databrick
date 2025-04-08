@@ -13,8 +13,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/Dynamic-ARIA-Bails
-              v2
+            path: "/Databricks/ARCHIVE/BAIL/Dynamic-ARIA-Bails v2.py"
       target: aria_bails
       development: true
       data_sampling: false

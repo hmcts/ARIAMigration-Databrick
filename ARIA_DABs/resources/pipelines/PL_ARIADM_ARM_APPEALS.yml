@@ -12,7 +12,7 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS
+            path: "/Databricks/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS.py"
       target: ariadm_arm_appeals
       development: true
       data_sampling: false

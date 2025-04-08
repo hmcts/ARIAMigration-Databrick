@@ -2,78 +2,13 @@ bundle:
   name: ARIA_DAB_INGEST02
 
 include:
-  - ${bundle.file(resources/*.yml)}
-
-resources:
-  jobs:
-    db_wf_apl_fta_send:
-      name: db_wf_apl_fta_send
-      tasks:
-        - task_key
-      file: ${bundle.file(resources/workflows/db_wf_apl_fta_send.yml)}
-
-    db_wf_apl_fta_send:
-      job_name: db_wf_bail_receive
-      file: ${bundle.file(resources/workflows/db_wf_bail_receive.yml)}
-
-    db_wf_bail_reprocessing:
-      job_name: db_wf_bail_reprocessing
-      file: ${bundle.file(resources/workflows/db_wf_bail_reprocessing.yml)}
-    
-    db_wf_bail_send:
-      job_name: db_wf_bail_send
-      file: ${bundle.file(resources/workflows/db_wf_bail_send.yml)}
-
-    db_wf_joh_receive:
-      job_name: db_wf_joh_receive
-      file: ${bundle.file(resources/workflows/db_wf_joh_receive.yml)}
-
-    db_wf_joh_send:
-      job_name: db_wf_joh_send
-      file: ${bundle.file(resources/workflows/db_wf_joh_send.yml)}
-
-    db_wf_td_receive:
-      job_name: db_wf_td_receive
-      file: ${bundle.file(resources/workflows/db_wf_td_receive.yml)}
-
-    db_wf_td_send:
-      job_name: db_wf_td_send 
-      file: ${bundle.file(resources/workflows/db_wf_td_send.yml)}
-  
-  pipelines:
-    ARIA_ARCHIVE_BAILS:
-      name: ARIA_ARCHIVE_BAILS
-      libraries:
-        - notebook:
-          path: ${bundle.file(resources/pipelines/ARIA_ARCHIVE_BAILS.yml)}
-
-    PL_ARIADM_ARM_APPEALS:
-      name: PL_ARIADM_ARM_APPEALS
-      libraries:
-        - notebook:
-          path: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_APPEALS.yml)}
-
-    PL_ARIADM_ARM_FTA:
-      name: PL_ARIADM_ARM_FTA
-      libraries:
-        - notebook:
-          path: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_FTA.yml)}
-
-    PL_ARIADM_ARM_JOH:
-      name: PL_ARIADM_ARM_JOH
-      libraries:
-        - notebook:
-          path: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_JOH.yml)}
-
-    PL_ARIADM_ARM_TD:
-      name: PL_ARIADM_ARM_TD
-      libraries:
-        - notebook:
-          path: ${bundle.file(resources/pipelines/PL_ARIADM_ARM_TD.yml)}
+  - resources/*.yml
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net
   
 targets:
+  mode : development
+  default : true
   sandbox:
       workspace: *ingest02_workspace

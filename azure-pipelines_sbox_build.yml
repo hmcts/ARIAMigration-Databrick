@@ -108,8 +108,6 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
-        databricks workspace rm -r /Users/andrew.mcdevitt@hmcts.net/.bundle/ARIA_DAB_INGEST02/
-
         databricks bundle validate -t sandbox
         databricks bundle deploy -t sandbox
 

@@ -222,7 +222,7 @@ audit_schema = StructType([
 # COMMAND ----------
 
 # Define Delta Table Path in Azure Storage
-audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JR/jr_cr_audit_table"
+audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table"
 
 
 if not DeltaTable.isDeltaTable(spark, audit_delta_path):
@@ -240,7 +240,7 @@ else:
 
 # COMMAND ----------
 
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, file_name = False,status = False) -> None:
     """
     Creates an audit DataFrame and writes it to Delta format.
 
@@ -249,12 +249,19 @@ def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, 
     :param table_name: Name of the source table.
     :param stage_name: Name of the data processing stage.
     :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
+    :param additional_columns: options File_name or Status. List of additional columns to include in the audit DataFrame.
     """
 
     dt_desc = datetime.utcnow()
 
-    additional_columns = additional_columns or []  # Default to an empty list if None   
+    additional_columns = []
+    if file_name is True:
+        additional_columns.append("File_name")
+    if status is True:
+        additional_columns.append("Status")
+
+
+     # Default to an empty list if None   
     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
 
     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
@@ -502,19 +509,27 @@ def bronze_adjudicator_et_hc_dnur():
         )
     )
 
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+    try: 
 
-    ## Create and save audit log for this table
-    table_name = "bronze_adjudicator_et_hc_dnur"
-    stage_name = "bronze_stage"
+        df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    description = "Combines adjudicator data with hearing centre, employment terms, and do not use reason details. Provides a standardized view of adjudicators, their designated centres, employment terms, judicial status, and restrictions. Includes metadata such as source files, modification timestamps, and process tracking for auditing."
+        ## Create and save audit log for this table
+        table_name = "bronze_adjudicator_et_hc_dnur"
+        stage_name = "bronze_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Combines adjudicator data with hearing centre, employment terms, and do not use reason details. Provides a standardized view of adjudicators, their designated centres, employment terms, judicial status, and restrictions. Includes metadata such as source files, modification timestamps, and process tracking for auditing."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+        
+        print(f"Audit logging failed with error: {str(e)}")
+
+    
 
 # COMMAND ----------
 
@@ -562,17 +577,25 @@ def bronze_johistory_users():
 
     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "bronze_johistory_users"
-    stage_name = "bronze_stage"
+    try:
 
-    description = "Combines JoHistory records with user details, providing historical adjudicator activity along with corresponding user information. Includes comments, user names, audit timestamps, source filenames, and process metadata for tracking and auditing."
+        ## Create and save audit log for this table
+        table_name = "bronze_johistory_users"
+        stage_name = "bronze_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Combines JoHistory records with user details, providing historical adjudicator activity along with corresponding user information. Includes comments, user names, audit timestamps, source filenames, and process metadata for tracking and auditing."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+        
+    except Exception as e:
+    
+        print(f"Audit logging failed with error: {str(e)}")
+
+    
 
 # COMMAND ----------
 
@@ -618,17 +641,26 @@ def bronze_othercentre_hearingcentre():
 
     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "bronze_othercentre_hearingcentre"
-    stage_name = "bronze_stage"
+    try:
 
-    description = "Combines OtherCentre records with HearingCentre details, linking adjudicators to their assigned hearing centres. Includes metadata such as timestamps, source files, and process tracking for auditing and traceability."
+        ## Create and save audit log for this table
+        table_name = "bronze_othercentre_hearingcentre"
+        stage_name = "bronze_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Combines OtherCentre records with HearingCentre details, linking adjudicators to their assigned hearing centres. Includes metadata such as timestamps, source files, and process tracking for auditing and traceability."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+            
+    except Exception as e:
+    
+        print(f"Audit logging failed with error: {str(e)}")
+
+    
 
 
 # COMMAND ----------
@@ -673,17 +705,25 @@ def bronze_adjudicator_role():
 
     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "bronze_adjudicator_role"
-    stage_name = "bronze_stage"
+    try:
+        ## Create and save audit log for this table
+        table_name = "bronze_adjudicator_role"
+        stage_name = "bronze_stage"
 
-    description = "Stores adjudicator role assignments, tracking their appointments and end dates. Includes metadata such as timestamps, source files, and process details for auditing and historical reference."
+        description = "Stores adjudicator role assignments, tracking their appointments and end dates. Includes metadata such as timestamps, source files, and process details for auditing and historical reference."
 
-    unique_identifier_desc = "AdjudicatorId"
+        unique_identifier_desc = "AdjudicatorId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
 
-    return df
+        return df
+
+            
+    except Exception as e:
+    
+        print(f"Audit logging failed with error: {str(e)}")
+
+
 
 # COMMAND ----------
 
@@ -724,17 +764,25 @@ def stg_joh_filtered():
 
     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "stg_joh_filtered"
-    stage_name = "segmentation_stage"
+    try:
 
-    description = "Filters and segments adjudicators, retaining only those who are not assigned roles 7 or 8, or have no assigned role. Uses data from bronze_adjudicator_et_hc_dnur and bronze_adjudicator_role to generate a complete list of adjudicators."
+        ## Create and save audit log for this table
+        table_name = "stg_joh_filtered"
+        stage_name = "segmentation_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Filters and segments adjudicators, retaining only those who are not assigned roles 7 or 8, or have no assigned role. Uses data from bronze_adjudicator_et_hc_dnur and bronze_adjudicator_role to generate a complete list of adjudicators."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
+
 
 # COMMAND ----------
 
@@ -748,6 +796,14 @@ def stg_joh_filtered():
 # MAGIC ### Transformation silver_adjudicator_detail
 # MAGIC
 # MAGIC
+
+# COMMAND ----------
+
+# # display(dbutils.fs.ls("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"))
+# path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"
+# df_cr = spark.read.load(path)
+
+# df_cr.display()
 
 # COMMAND ----------
 
@@ -823,19 +879,27 @@ def silver_adjudicator_detail():
         )
     )
 
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "silver_adjudicator_detail"
-    stage_name = "silver_stage"
+    try:
 
-    description = "Filters adjudicators based on segmentation criteria and enriches their records with Hearing Centre and Do Not Use Reason (DNUR) details. Standardizes key attributes such as correspondence address, contact details, employment terms, and judicial status."
+        df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    unique_identifier_desc = "AdjudicatorId"
+        ## Create and save audit log for this table
+        table_name = "silver_adjudicator_detail"
+        stage_name = "silver_stage"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        description = "Filters adjudicators based on segmentation criteria and enriches their records with Hearing Centre and Do Not Use Reason (DNUR) details. Standardizes key attributes such as correspondence address, contact details, employment terms, and judicial status."
 
-    return df
+        unique_identifier_desc = "AdjudicatorId"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
 
 # COMMAND ----------
 
@@ -915,19 +979,26 @@ def silver_history_detail():
         )
     )
 
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "silver_history_detail"
-    stage_name = "silver_stage"
+        df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    description = "Filters and enhances historical adjudicator activity records by incorporating user details. Maps history types to their corresponding descriptions, providing a structured view of events such as allocations, case updates, and administrative actions."
+        ## Create and save audit log for this table
+        table_name = "silver_history_detail"
+        stage_name = "silver_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Filters and enhances historical adjudicator activity records by incorporating user details. Maps history types to their corresponding descriptions, providing a structured view of events such as allocations, case updates, and administrative actions."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
 
 # COMMAND ----------
 
@@ -944,19 +1015,25 @@ def silver_history_detail():
 def silver_othercentre_detail():
     df = (dlt.read("bronze_othercentre_hearingcentre").alias("hc").join(dlt.read("stg_joh_filtered").alias('flt'), col("hc.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select("hc.*"))
 
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "silver_othercentre_detail"
-    stage_name = "silver_stage"
+        df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    description = "Filters and enhances OtherCentre records by applying adjudicator segmentation criteria. Retains adjudicators linked to Hearing Centres while ensuring completeness through process metadata, timestamps, and source tracking."
+        ## Create and save audit log for this table
+        table_name = "silver_othercentre_detail"
+        stage_name = "silver_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Filters and enhances OtherCentre records by applying adjudicator segmentation criteria. Retains adjudicators linked to Hearing Centres while ensuring completeness through process metadata, timestamps, and source tracking."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
 # COMMAND ----------
 
@@ -998,19 +1075,27 @@ def silver_appointment_detail():
             col('rol.InsertedByProcessName')
         )
     )
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "silver_appointment_detail"
-    stage_name = "silver_stage"
+    try:
+        
+        df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    description = "Filters and enhances adjudicator role records by mapping role codes to their descriptions. Provides a structured view of adjudicator appointments, including start and end dates, and metadata for auditing."
+        ## Create and save audit log for this table
+        table_name = "silver_appointment_detail"
+        stage_name = "silver_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Filters and enhances adjudicator role records by mapping role codes to their descriptions. Provides a structured view of adjudicator appointments, including start and end dates, and metadata for auditing."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
 
 # COMMAND ----------
 
@@ -1126,19 +1211,25 @@ def silver_archive_metadata():
             col('adj.DesignatedCentre').alias('bf_005')
         )
     )
-    df_audit = df.withColumn("client_identifier",col("client_identifier").cast("string"))
 
-    ## Create and save audit log for this table
-    table_name = "silver_archive_metadata"
-    stage_name = "silver_stage"
+    try:
+        df_audit = df.withColumn("client_identifier",col("client_identifier").cast("string"))
 
-    description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
+        ## Create and save audit log for this table
+        table_name = "silver_archive_metadata"
+        stage_name = "silver_stage"
 
-    unique_identifier_desc = "client_identifier"
+        description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "client_identifier"
 
-    return df
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
 # COMMAND ----------
 
@@ -1410,20 +1501,29 @@ def stg_judicial_officer_combined():
 
     # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
 
-    df_audit = df_combined.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "stg_judicial_officer_combined"
-    stage_name = "staging_stage"
+        df_audit = df_combined.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
+        ## Create and save audit log for this table
+        table_name = "stg_judicial_officer_combined"
+        stage_name = "staging_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "AdjudicatorId"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df_combined
 
 
-    return df_combined
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
+
+    
 
 # COMMAND ----------
 
@@ -1471,22 +1571,26 @@ def stg_create_joh_json_content():
     # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
 
     # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
+    try:
+        df_audit = df_with_json.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("JSONFileName")).withColumn("Status", col("JSONStatus"))
 
-    df_audit = df_with_json.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("JSONFileName")).withColumn("Status", col("JSONStatus"))
+        ## Create and save audit log for this table
+        table_name = "stg_create_joh_json_content"
+        stage_name = "staging_stage"
 
-    ## Create and save audit log for this table
-    table_name = "stg_create_joh_json_content"
-    stage_name = "staging_stage"
+        description = "Generates JSON-formatted adjudicator records for gold-level outputs. Creates structured JSON content for each adjudicator and assigns a filename. Tracks JSON creation status to identify failures and successful transformations"
 
-    description = "Generates JSON-formatted adjudicator records for gold-level outputs. Creates structured JSON content for each adjudicator and assigns a filename. Tracks JSON creation status to identify failures and successful transformations"
+        unique_identifier_desc = "AdjudicatorId"
 
-    unique_identifier_desc = "AdjudicatorId"
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
+        return df_with_json
 
+    except Exception as e:
 
+        print(f"Audit logging failed with error: {str(e)}")
 
-    return df_with_json
+    
 
 # COMMAND ----------
 
@@ -1535,21 +1639,26 @@ def stg_create_joh_html_content():
 
     # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
 
-    df_audit = df_with_html.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("HTMLFileName")).withColumn("Status", col("HTMLStatus"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "stg_create_joh_html_content"
-    stage_name = "staging_stage"
+        df_audit = df_with_html.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("HTMLFileName")).withColumn("Status", col("HTMLStatus"))
 
-    description = "Generates HTML-formatted adjudicator records for gold-level outputs. Uses a UDF to transform data into structured HTML content and assigns a filename. Tracks HTML creation status to identify failures and succe"
+        ## Create and save audit log for this table
+        table_name = "stg_create_joh_html_content"
+        stage_name = "staging_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Generates HTML-formatted adjudicator records for gold-level outputs. Uses a UDF to transform data into structured HTML content and assigns a filename. Tracks HTML creation status to identify failures and succe"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
+        unique_identifier_desc = "AdjudicatorId"
 
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
 
+        return df_with_html
 
-    return df_with_html
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
 
 # COMMAND ----------
 
@@ -1574,21 +1683,27 @@ def stg_create_joh_a360_content():
 
     metadata_df = df.withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
 
-    df_audit = metadata_df.withColumn("client_identifier",col("client_identifier").cast("string")).withColumn("Status", col("A360Status"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "stg_create_joh_a360_content"
-    stage_name = "staging_stage"
+        df_audit = metadata_df.withColumn("client_identifier",col("client_identifier").cast("string")).withColumn("Status", col("A360Status"))
 
-    description = "Generates A360-formatted adjudicator records for gold-level outputs. Uses a UDF to transform metadata into A360 content and assigns processing statuses. Supports Hive-based retrieval for non-initial loads, ensuring comprehensive archival integration."
+        ## Create and save audit log for this table
+        table_name = "stg_create_joh_a360_content"
+        stage_name = "staging_stage"
 
-    unique_identifier_desc = "client_identifier"
+        description = "Generates A360-formatted adjudicator records for gold-level outputs. Uses a UDF to transform metadata into A360 content and assigns processing statuses. Supports Hive-based retrieval for non-initial loads, ensuring comprehensive archival integration."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status"])
+        unique_identifier_desc = "client_identifier"
 
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,status=True)
 
+        return metadata_df
 
-    return metadata_df
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
+
+  
 
 # COMMAND ----------
 
@@ -1656,21 +1771,29 @@ def stg_judicial_officer_unified():
                                       lit(".a360"))
                          ).drop("row_num")
 
-    df_audit = df_batch.withColumn("client_identifier",col("client_identifier").cast("string"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "stg_judicial_officer_unified"
-    stage_name = "Gold_stage"
+        df_audit = df_batch.withColumn("client_identifier",col("client_identifier").cast("string"))
 
-    description = "Unifies adjudicator records from multiple gold-level sources, integrating HTML, JSON, and A360 content. Ensures data integrity by filtering out records with failed content generation. Batches records into A360 files for structured archival and processing."
+        ## Create and save audit log for this table
+        table_name = "stg_judicial_officer_unified"
+        stage_name = "Gold_stage"
 
-    unique_identifier_desc = "client_identifier"
+        description = "Unifies adjudicator records from multiple gold-level sources, integrating HTML, JSON, and A360 content. Ensures data integrity by filtering out records with failed content generation. Batches records into A360 files for structured archival and processing."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+        unique_identifier_desc = "client_identifier"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
+
+        return df_batch
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
                          
 
-    return df_batch
+    
 
 # COMMAND ----------
 
@@ -1705,21 +1828,30 @@ def gold_judicial_officer_with_html():
     if read_hive:
         display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
 
-    df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("HTMLFileName"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "gold_judicial_officer_with_html"
-    stage_name = "Gold_stage"
+        df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("HTMLFileName"))
 
-    description = "Final gold-level table integrating adjudicator records with validated HTML content. Ensures data integrity by enforcing error-free HTML content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
+        ## Create and save audit log for this table
+        table_name = "gold_judicial_officer_with_html"
+        stage_name = "Gold_stage"
 
-    unique_identifier_desc = "AdjudicatorId"
+        description = "Final gold-level table integrating adjudicator records with validated HTML content. Ensures data integrity by enforcing error-free HTML content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+        unique_identifier_desc = "AdjudicatorId"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
+
+        # Return the DataFrame for DLT table creation, including the upload status
+        return df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
 
-    # Return the DataFrame for DLT table creation, including the upload status
-    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
+    
+    
 
 
 # COMMAND ----------
@@ -1751,24 +1883,30 @@ def gold_judicial_officer_with_json():
     # Optionally load data from Hive
     if read_hive:
         display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus"))
+    try:
+
+        df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
+
+        ## Create and save audit log for this table
+        table_name = "gold_judicial_officer_with_html"
+        stage_name = "Gold_stage"
+
+        description = "Final gold-level table integrating adjudicator records with validated JSON content. Ensures data integrity by enforcing error-free JSON content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
+
+        unique_identifier_desc = "AdjudicatorId"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
+
+        # Return the DataFrame for DLT table creation
+        return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
+
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
 
-    df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
 
-    ## Create and save audit log for this table
-    table_name = "gold_judicial_officer_with_html"
-    stage_name = "Gold_stage"
-
-    description = "Final gold-level table integrating adjudicator records with validated JSON content. Ensures data integrity by enforcing error-free JSON content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
-
-    unique_identifier_desc = "AdjudicatorId"
-
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
-
-
-
-    # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
+    
 
 
 # COMMAND ----------
@@ -1810,20 +1948,28 @@ def gold_judicial_officer_with_a360():
     if read_hive:
         display(df_with_a360)
 
-    df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
+    try:
 
-    ## Create and save audit log for this table
-    table_name = "gold_judicial_officer_with_html"
-    stage_name = "Gold_stage"
+        df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
 
-    description = "Final gold-level table consolidating adjudicator A360 content for structured archival and processing. Ensures data integrity by filtering out records with errors in A360 content. Aggregates and batches records, optimizes processing through repartitioning, and triggers upload operations."
+        ## Create and save audit log for this table
+        table_name = "gold_judicial_officer_with_html"
+        stage_name = "Gold_stage"
 
-    unique_identifier_desc = "A360BatchId"
+        description = "Final gold-level table consolidating adjudicator A360 content for structured archival and processing. Ensures data integrity by filtering out records with errors in A360 content. Aggregates and batches records, optimizes processing through repartitioning, and triggers upload operations."
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+        unique_identifier_desc = "A360BatchId"
+
+        create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
+
+        return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
+    
+    except Exception as e:
+
+        print(f"Audit logging failed with error: {str(e)}")
 
    
-    return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
+    
 
 # COMMAND ----------
 
@@ -1875,3 +2021,12 @@ dbutils.notebook.exit("Notebook completed successfully")
 # DBTITLE 1,A360 Failed Upload Status
 # %sql
 # select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_A360 where UploadStatus != 'success' and A360Content like '%ERROR%'
+
+# COMMAND ----------
+
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
+
+# COMMAND ----------
+
+# %sql
+# drop schema hive_metastore.ariadm_arm_joh cascade

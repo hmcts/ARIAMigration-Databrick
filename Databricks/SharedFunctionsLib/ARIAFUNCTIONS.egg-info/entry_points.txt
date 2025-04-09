@@ -1,0 +1,2 @@
+[console_scripts]
+main = wheel_package.main:main

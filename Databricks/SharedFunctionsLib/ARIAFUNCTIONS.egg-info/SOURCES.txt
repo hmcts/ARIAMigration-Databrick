@@ -1,0 +1,7 @@
+setup.py
+ARIAFUNCTIONS.egg-info/PKG-INFO
+ARIAFUNCTIONS.egg-info/SOURCES.txt
+ARIAFUNCTIONS.egg-info/dependency_links.txt
+ARIAFUNCTIONS.egg-info/entry_points.txt
+ARIAFUNCTIONS.egg-info/requires.txt
+ARIAFUNCTIONS.egg-info/top_level.txt

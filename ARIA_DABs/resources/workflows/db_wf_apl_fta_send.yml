@@ -11,7 +11,7 @@ resources:
           depends_on:
             - task_key: DLT_creation_of_content
           notebook_task:
-            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC
+            notebook_path: "/Users/andrew.mcdevitt/Documents/ARIA/databricks-asset-bundles/ARIAMigration-Databrick/Databricks/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
             base_parameters:
               gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
               topic: evh-apl-pub-dev-uks-dlrm-01
@@ -23,7 +23,7 @@ resources:
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC
+            notebook_path:  "/Users/andrew.mcdevitt/Documents/ARIA/databricks-asset-bundles/ARIAMigration-Databrick/Databricks/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
             base_parameters:
               gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
               topic: evh-apl-pub-dev-uks-dlrm-01
@@ -36,7 +36,7 @@ resources:
             - task_key: publish_HTML_JSON_to_eh
             - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/APPEALS/ARIAFTA/ARIADM_FTA_ACK_AUTOLOADER
+            notebook_path: "/Users/andrew.mcdevitt/Documents/ARIA/databricks-asset-bundles/ARIAMigration-Databrick/Databricks/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
             source: WORKSPACE
           existing_cluster_id: 1001-145537-3lr5mj25
       queue:

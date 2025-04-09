@@ -64,4 +64,4 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries:
-            - whl: ../../dist/*.whl
+            - whl: /Databricks/SharedFunctionsLib/dist/ariafunctions-0.0.1-py3-none-any.whl

@@ -48,7 +48,7 @@ resources:
 
 resources:
   jobs:
-    my-job:
+    wheel-job:
       name: wheel-job
       job_clusters:
         - job_cluster_key: DAB_job_cluster
@@ -64,4 +64,4 @@ resources:
             entry_point: main
             package_name: wheel_package
           libraries:
-            - whl: ../../../Databricks/SharedFunctionsLib/dist/*.whl
+            - whl: configuration/*.whl

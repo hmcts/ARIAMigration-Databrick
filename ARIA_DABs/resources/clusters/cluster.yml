@@ -64,4 +64,4 @@ resources:
             entry_point: main
             package_name: wheel_package
           libraries:
-            - whl: ./dist/*.whl
+            - whl: ../../../Databricks/SharedFunctionsLib/dist/*.whl

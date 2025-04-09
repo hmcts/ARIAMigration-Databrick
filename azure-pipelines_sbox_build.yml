@@ -94,7 +94,7 @@ stages:
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
-  - job: Downloading Artifacts
+  - job: DownloadingArtifacts
     displayName: 'Run Build and deploy'
     steps:
 

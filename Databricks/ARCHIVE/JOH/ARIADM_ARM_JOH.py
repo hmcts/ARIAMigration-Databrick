@@ -218,7 +218,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 #     StructField("Status", StringType(), True)
 # ])
 
-
 # COMMAND ----------
 
 # # Define Delta Table Path in Azure Storage
@@ -1683,7 +1682,6 @@ def stg_create_joh_html_content():
     # except Exception as e:
 
     #     print(f"Audit logging failed with error: {str(e)}")
-
 
 # COMMAND ----------
 

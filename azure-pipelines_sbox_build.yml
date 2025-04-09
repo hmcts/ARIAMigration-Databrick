@@ -94,6 +94,10 @@ stages:
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
+  - job: Downloading Artifacts
+    displayName: 'Run Build and deploy'
+    steps:
+
   - task: DownloadBuildArtifacts@1
     inputs:
       buildType: 'current'
@@ -110,45 +114,42 @@ stages:
       downloadPath: '$(Pipeline.Workspace)'
     displayName: 'Download Python Libraries Artifact'
 
-  - job: DeployJob
-    displayName: 'Deploy Databricks Asset Bundles to $(env)-ingest02-databricks-product'
-    steps:
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.x'
-      inputs:
-        versionSpec: '3.x'
+  - task: UsePythonVersion@0
+    displayName: 'Use Python 3.x'
+    inputs:
+      versionSpec: '3.x'
 
-    - script: |
-         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-         
-         brew install databricks/tap/databricks
-         databricks --version
-      displayName: 'Install Databricks CLI'
+  - script: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        
+        brew install databricks/tap/databricks
+        databricks --version
+    displayName: 'Install Databricks CLI'
 
-      #Ensure databrcks CLI is available in current session (loading homebrew shell)
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
-        databricks --version  
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        cat ~/.databrickscfg  # Print the contents for debugging
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
-    
-    - script: |
-        echo "Current dir: $(pwd)"
-        ls -al /home/vsts/work/1/s
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+    #Ensure databrcks CLI is available in current session (loading homebrew shell)
+  - script: |
+      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+      databricks --version  
+      echo "[DEFAULT]" > $(HOME)/.databrickscfg
+      echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+      echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+      cat ~/.databrickscfg  # Print the contents for debugging
+    displayName: 'Configure Databricks CLI for Workspace MAIN02'
+  
+  - script: |
+      echo "Current dir: $(pwd)"
+      ls -al /home/vsts/work/1/s
+      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        cd ARIA_DABs
+      cd ARIA_DABs
 
-        echo "Current dir: $(pwd)"
-        ls -al  
+      echo "Current dir: $(pwd)"
+      ls -al  
 
-        databricks bundle destroy -t sandbox 
-        databricks bundle validate -t sandbox --debug
-        databricks bundle deploy -t sandbox --debug
+      databricks bundle destroy -t sandbox 
+      databricks bundle validate -t sandbox --debug
+      databricks bundle deploy -t sandbox --debug
 
 #        if [ $? -eq 0 ]; then
 #          echo "Deploy successful, waiting 10 seconds before running..."
@@ -158,7 +159,7 @@ stages:
 #          echo "Deploy failed"
 #          exit 1
 #        fi
-      displayName: "Deploy Databricks resources to ingest02 workspace"
+    displayName: "Deploy Databricks resources to ingest02 workspace"
 
 #    - script: |
 #       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 

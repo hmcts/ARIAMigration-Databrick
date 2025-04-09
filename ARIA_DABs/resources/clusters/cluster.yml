@@ -33,13 +33,33 @@ resources:
         "criticality": "Low"
 
 # Adding python wheel to shared multi-node cluster above
+#resources:
+#  jobs:
+#    wheel-job:
+#      name: wheel-job
+#      tasks:
+#        - task_key: wheel-task
+#          job_cluster_key: DAB_JobCluster
+#          python_wheel_task:
+#            entry_point: main
+#            package_name: wheel_package
+#          libraries:
+#            - whl: "../Databricks/SharedFunctionsLib/dist/ARIAFUNCITONS-0.0.1-py3-none-any.whl"
+
 resources:
   jobs:
-    wheel-job:
+    my-job:
       name: wheel-job
+      job_clusters:
+        - job_cluster_key: DAB_job_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: Standard_D8ads_v5
+            num_workers: 2
+
       tasks:
-        - task_key: wheel-task
-          job_cluster_key: DAB_JobCluster
+        - task_key: run-my-wheel
+          job_cluster_key: DAB_job_cluster
           python_wheel_task:
             entry_point: main
             package_name: wheel_package

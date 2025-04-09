@@ -141,6 +141,9 @@ stages:
 
         echo "Current dir: $(pwd)"
         ls -al  
+        echo "Query if Python wheel exists"
+        ls ../Databricks/SharedFunctionsLib/dist/*.whl
+
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

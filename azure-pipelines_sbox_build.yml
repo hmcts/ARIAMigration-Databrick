@@ -81,7 +81,7 @@ stages:
     
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/requirements.txt
+        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/requirements.txt'
         ArtifactName: 'pythondependencies'
         publishLocation: 'Container'
       displayName: 'Publish Python Packages Artifact'

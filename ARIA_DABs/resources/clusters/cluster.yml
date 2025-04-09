@@ -65,3 +65,5 @@ resources:
             package_name: wheel_package
           libraries:
             - whl: ../../dist/*.whl
+            - pypi:
+               package: -r ../../dist/*.txt

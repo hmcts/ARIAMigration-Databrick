@@ -131,12 +131,7 @@ stages:
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         cat ~/.databrickscfg  # Print the contents for debugging
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
-    
-    - script: |
-        mkdir -p ARIA_DABs/dist
-        cp Databricks/SharedFunctionsLib/dist/*.whl ARIA_DABs/dist/
-      displayName: "Copy wheel into bundle directory"
-    
+        
     - script: |
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s
@@ -146,9 +141,12 @@ stages:
 
         echo "Current dir: $(pwd)"
         ls -al  
-        echo "Query if Python wheel exists in ARIA_DABs/dist/"
-        ls ARIA_DABs/dist/*.whl
 
+        echo "Query if requirements.txt exists in ARIA_DABs"
+        ls requirements.txt
+
+        echo "Query if Python wheel exists in Databricks/SharedFunctionsLib/dist/*.whl"
+        ls Databricks/SharedFunctionsLib/dist/*.whl
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

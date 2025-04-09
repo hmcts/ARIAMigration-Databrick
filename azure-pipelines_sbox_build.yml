@@ -133,6 +133,8 @@ stages:
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
     - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+
         set -e 
 
         WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)

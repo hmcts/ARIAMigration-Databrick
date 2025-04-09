@@ -131,7 +131,40 @@ stages:
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         cat ~/.databrickscfg  # Print the contents for debugging
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
-        
+
+    - script: |
+        set -e 
+
+        WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+
+        if [ -n "$WHEEL_FILE" ]; then
+          echo "Found wheel file: $WHEEL_FILE"
+
+          FILENAME=$(basename "$WHEEL_FILE")
+          echo "Extracted filename: $FILENAME"
+  
+          DEST_PATH="dbfs:/FileStore/shared_wheels/ariafunctions-0.0.1-py3-none-any.whl"
+          echo "Destination path: $DEST_PATH"
+
+          echo "copying wheel file to DBFS..."
+          echo "copying $WHEEL_FILE to $DEST_PATH"
+          databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+
+          echo "Listing files in $(workspacePath)/"
+
+          if [ $? -eq 0 ]; then
+            echo "Wheel file uploaded successfully to $(workspacePath)/"
+            exit 0
+          else
+            echo "No wheel files found!"
+            exit 1
+          fi
+        else
+          echo "No wheel file found"
+          exit 1
+        fi
+      displayName: 'Upload Wheel to Databricks DBFS'
+  
     - script: |
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s

@@ -66,4 +66,18 @@ resources:
           libraries:
             - whl: ../../dist/*.whl
             - pypi:
-               package: -r ../../dist/*.txt
+               package: azure-eventhub
+            - pypi:
+               package: setuptools
+            - pypi:
+               package: azure-storage-blob
+            - pypi:
+               package: confluent_kafka
+            - pypi:
+               package: aiohttp
+            - pypi:
+               package: numpy
+            - pypi:
+               package: logging
+            - pypi:
+               package: pyspark

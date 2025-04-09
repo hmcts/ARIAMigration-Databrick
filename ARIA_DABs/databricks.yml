@@ -3,7 +3,7 @@ bundle:
 
 include:
   - "resources/pipelines/*.yml"
-  - "resources/workflows/db_wf_apl_fta_send.yml"
+#  - "resources/workflows/db_wf_apl_fta_send.yml"
 
 
 workspace: &ingest02_workspace

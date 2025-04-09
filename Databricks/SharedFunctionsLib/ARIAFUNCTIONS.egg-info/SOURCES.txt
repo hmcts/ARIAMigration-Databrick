@@ -6,3 +6,4 @@ ARIAFUNCTIONS.egg-info/requires.txt
 ARIAFUNCTIONS.egg-info/top_level.txt
 shared_functions/__init__.py
 shared_functions/custom_functions.py
+shared_functions/main.py

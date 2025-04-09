@@ -7,7 +7,7 @@ resources:
           depends_on:
           - resources/clusters/cluster.yml
           pipeline_task:
-            pipeline_id: ${resources.pipelines.PL_ARIADM_ARM_FTA.id} #6b53ac7d-1c6e-4db5-ab25-c473977ee760 
+            pipeline_id: {resources.pipelines.PL_ARIADM_ARM_FTA.id} #6b53ac7d-1c6e-4db5-ab25-c473977ee760 
             full_refresh: false
         - task_key: publish_HTML_JSON_to_eh
           depends_on:

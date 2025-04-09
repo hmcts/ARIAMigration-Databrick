@@ -71,11 +71,45 @@ stages:
         databricks workspace mkdirs /live
         databricks workspace import_dir Databricks /live --overwrite
       displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+        ArtifactName: 'ariafunction'
+        publishLocation: 'Container'
+      displayName: 'Publish Wheel Artifact'
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/requirements.txt'
+        ArtifactName: 'pythondependencies'
+        publishLocation: 'Container'
+      displayName: 'Publish Python Packages Artifact'
+    
+    - script: |
+       ls $(Build.SourcesDirectory)/requirements.txt
+      displayName: "Query filepath for requirements.txt"
 
 
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
+  - task: DownloadBuildArtifacts@1
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: 'ariafunction'
+      downloadPath: '$(Pipeline.Workspace)'
+    displayName: 'Download wheel Artifact'
+
+  - task: DownloadBuildArtifacts@1
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: 'pythondependencies'
+      downloadPath: '$(Pipeline.Workspace)'
+    displayName: 'Download Python Libraries Artifact'
+
   - job: DeployJob
     displayName: 'Deploy Databricks Asset Bundles to $(env)-ingest02-databricks-product'
     steps:

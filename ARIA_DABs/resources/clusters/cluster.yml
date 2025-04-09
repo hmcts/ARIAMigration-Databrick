@@ -31,3 +31,17 @@ resources:
         "Data-Ingest-Project": "DLRM Ingestion Engine"
         "environment": "sandbox"
         "criticality": "Low"
+
+# Adding python wheel to shared multi-node cluster above
+resources:
+  jobs:
+    wheel-job:
+      name: wheel-job
+      tasks:
+        - task_key: wheel-task
+          cluster_key: DAB_JobCluster
+          python_wheel_task:
+            entry_point: main
+            package_name: wheel_package
+          libraries:
+            - whl: ../Databricks/SharedFunctionsLib/dist/*.whl

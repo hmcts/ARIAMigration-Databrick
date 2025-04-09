@@ -22,9 +22,6 @@ resources:
         PYSPARK_PYTHON: "/databricks/python3/bin/python3"
       spark_version: "15.4.x-scala2.12"
       custom_tags :
-        "Vendor": "Databricks"
-        "Creator": "andrew.mcdevitt@hmcts.net"
-        "ClusterName": "Multi-node job cluster"
         "application": "dlrm-data-ingest"
         "expiresAfter": "3000-01-01"
         "startupMode": "always"

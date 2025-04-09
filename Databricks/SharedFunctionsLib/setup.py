@@ -1,9 +1,5 @@
 from setuptools import find_packages, setup
 
-# add requiemtns.txt during wheel stage
-with open("requirements.txt") as f:
-    requirements = f.read()
-
 setup(
     name='ARIAFUNCTIONS',
     version='0.0.1',
@@ -11,10 +7,16 @@ setup(
     description='These are custom functions that will be used for the ARIA data migration',
     author='Ara Islam + Naveen Sriram',
     entry_points={
-        "packages": [
+        "console_scripts": [
             "main=wheel_package.main:main"
         ]
     },
-    install_requires=[]
+    install_requires = ['azure-eventhub',
+                        'setuptools',
+                        'azure-storage-blob',
+                        'confluent_kafka',
+                        'aiohttp',
+                        'numpy',
+                        'logging',
+                        'pyspark']
 )
-

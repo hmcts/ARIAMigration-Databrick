@@ -65,19 +65,3 @@ resources:
             package_name: wheel_package
           libraries:
             - whl: ../../dist/*.whl
-            - pypi:
-               package: azure-eventhub
-            - pypi:
-               package: setuptools
-            - pypi:
-               package: azure-storage-blob
-            - pypi:
-               package: confluent_kafka
-            - pypi:
-               package: aiohttp
-            - pypi:
-               package: numpy
-            - pypi:
-               package: logging
-            - pypi:
-               package: pyspark

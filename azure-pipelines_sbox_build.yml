@@ -137,6 +137,8 @@ stages:
         ls -al /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
+        # copy artifact to databricks workspace
+
         cd ARIA_DABs
 
         echo "Current dir: $(pwd)"
@@ -151,43 +153,10 @@ stages:
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
-
-  #        if [ $? -eq 0 ]; then
-  #          echo "Deploy successful, waiting 10 seconds before running..."
-  #          sleep 10
-  #          databricks bundle run -t sandbox resources/pipelines/ARIA_ARCHIVE_BAILS.yml
-  #        else
-  #          echo "Deploy failed"
-  #          exit 1
-  #        fi
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
-#    - script: |
-#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-#       cd ARIA_DABs
-#       databricks jobs create /resources/workflows/db_wf_apl_fta_send.yml
-#       databricks jobs create /resources/workflows/db_wf_bail_receive.yml
-#       databricks jobs create /resources/workflows/db_wf_bail_reprocessing.yml
-#       databricks jobs create /resources/workflows/db_wf_bail_send.yml
-#       databricks jobs create /resources/workflows/db_wf_joh_recieve.yml
-#       databricks jobs create /resources/workflows/db_wf_joh_send.yml
-#       databricks jobs create /resources/workflows/db_wf_td_receive.yml
-#       databricks jobs create /resources/workflows/db_wf_td_send.yml
-#      displayName: "Create Databricks workflows"
-
-#    - script: |
-#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-#       cd ARIA_DABs
-#       databricks pipelines create /resources/pipelines/ARIA_ARCHIVE_BAILS.yml
-#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_APPEALS.yml
-#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_FTA.yml
-#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_JOH.yml
-#       databricks pipelines create /resources/pipelines/PL_ARIADM_ARM_TD.yml
-#      displayName: "Create Databricks pipelines"
-    
-#    - script: |
-#       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-#       cd ARIA_DABs
-#       databricks jobs list
-#       databricks pipelines list
-#      displayName: "Query Databricks Pipelines & Workflows"
+# how to dynamically pull out cluster id
+#         echo "Installing Python packages on cluster ID: $(databricksClusterId)"
+#        databricks fs cp dbfs:/FileStore/dependencies/requirements.txt requirements.txt
+#        pip install -r requirements.txt
+# databricks bundle run -t sandbox 

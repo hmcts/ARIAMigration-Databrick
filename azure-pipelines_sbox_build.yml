@@ -85,11 +85,6 @@ stages:
         ArtifactName: 'pythondependencies'
         publishLocation: 'Container'
       displayName: 'Publish Python Packages Artifact'
-    
-    - script: |
-       ls $(Build.SourcesDirectory)/requirements.txt
-      displayName: "Query filepath for requirements.txt"
-
 
 - stage: 'Deploy'
   displayName: 'Deploy Stage'

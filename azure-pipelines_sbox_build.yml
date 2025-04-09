@@ -143,10 +143,10 @@ stages:
         ls -al  
 
         echo "Query if requirements.txt exists in ./requirements.txt"
-        ls ./requirements.txt
+        ls ../requirements.txt
 
         echo "Query if Python wheel exists in ./Databricks/SharedFunctionsLib/dist/*.whl"
-        ls ./Databricks/SharedFunctionsLib/dist/*.whl
+        ls ../Databricks/SharedFunctionsLib/dist/*.whl
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

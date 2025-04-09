@@ -133,6 +133,11 @@ stages:
       displayName: 'Configure Databricks CLI for Workspace MAIN02'
     
     - script: |
+        mkdir -p ARIA_DABs/dist
+        cp Databricks/SharedFunctionsLib/dist/*.whl ARIA_DABs/dist/
+      displayName: "Copy wheel into bundle directory"
+    
+    - script: |
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
@@ -141,8 +146,8 @@ stages:
 
         echo "Current dir: $(pwd)"
         ls -al  
-        echo "Query if Python wheel exists"
-        ls ../Databricks/SharedFunctionsLib/dist/*.whl
+        echo "Query if Python wheel exists in ARIA_DABs/dist/"
+        ls ARIA_DABs/dist/*.whl
 
 
         databricks bundle destroy -t sandbox 

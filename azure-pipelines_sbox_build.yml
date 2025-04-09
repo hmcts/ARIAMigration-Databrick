@@ -155,28 +155,9 @@ stages:
           echo "copying $WHEEL_FILE to $DEST_PATH"
           databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
 
-          #adding additional dest_path to test cluster.yml .whl workspace
-          # Define the target workspace path
-          DEST_PATH1="/Workspace/Shared/ariafunctions-0.0.1-py3-none-any.whl"
-          echo "Destination workspace path: $DEST_PATH1"
-
-          # Import the .whl file to Databricks workspace
-          echo "importing $WHEEL_FILE to $DEST_PATH1"
-          databricks workspace import "$WHEEL_FILE" "$DEST_PATH1" --overwrite
-          
-          echo "listing files in /Worksapce/Shared"
-          databricks workspace ls /Workspace/Shared
-
-
           echo "Displaying content of dbfs:/FileStore/shared_wheels"
           databricks fs ls dbfs:/FileStore/shared_wheels
-          if [ $? -eq 0 ]; then
-            echo "Wheel file uploaded successfully to $(workspacePath)/"
-            exit 0
-          else
-            echo "No wheel files found!"
-            exit 1
-          fi
+          
         else
           echo "No wheel file found"
           exit 1

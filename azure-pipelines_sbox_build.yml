@@ -156,21 +156,6 @@ stages:
           databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
 
           echo "Displaying content of dbfs:/FileStore/shared_wheels"
-          databricks fs ls dbfs:/FileStore/shared_wheels
-
-          echo "Listing files in $(workspacePath)/"
-
-          if [ $? -eq 0 ]; then
-            echo "Wheel file uploaded successfully to $(workspacePath)/"
-            exit 0
-          else
-            echo "No wheel files found!"
-            exit 1
-          fi
-        else
-          echo "No wheel file found"
-          exit 1
-        fi
       displayName: 'Upload Wheel to Databricks DBFS'
   
     - script: |

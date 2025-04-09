@@ -150,10 +150,13 @@ stages:
 
           echo "creating directory dbfs:/FileStore/shared_wheels"
           databricks fs mkdirs dbfs:/FileStore/shared_wheels    
-          
+
           echo "copying wheel file to DBFS..."
           echo "copying $WHEEL_FILE to $DEST_PATH"
           databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+
+          echo "Displaying content of dbfs:/FileStore/shared_wheels"
+          databricks fs ls dbfs:/FileStore/shared_wheels
 
           echo "Listing files in $(workspacePath)/"
 

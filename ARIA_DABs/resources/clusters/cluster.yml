@@ -1,0 +1,35 @@
+resources:
+  clusters:
+    apply_policy_default_values: false
+    autoscale:
+      min_workers: 2
+      max_workers: 8
+      target_workers: 2
+    azure_attributes:
+      first_on_demand: 1
+      availability: ON_DEMAND_AZURE
+      spot_bid_max_price: -1 
+    autotermination_minutes: 120
+    cluster_name: 'DAB_JobCluster'
+    data_security_mode: "LEGACY_SINGLE_USER_STANDARD"
+    driver_node_type_id: "Standard_D8ads_v5"
+    enable_elastic_disk: true
+    enable_local_disk_encryption: false
+    node_type_id: "Standard_D8ads_v5"
+    runtime_engine: "STANDARD"
+    spark_env_vars: 
+      PYSPARK_PYTHON: "/databricks/python3/bin/python3"
+    spark_version: "15.4.x-scala2.12"
+    custom_tags :
+      "Vendor": "Databricks"
+      "Creator": "andrew.mcdevitt@hmcts.net"
+      "ClusterName": "Multi-node job cluster"
+      "application": "dlrm-data-ingest"
+      "expiresAfter": "3000-01-01"
+      "startupMode": "always"
+      "autoShutdown": "true"
+      "builtFrom": "hmcts/dlrm-data-ingest-infra"
+      "businessArea": "cross-cutting"
+      "Data-Ingest-Project": "DLRM Ingestion Engine"
+      "environment": "sandbox"
+      "criticality": "Low"

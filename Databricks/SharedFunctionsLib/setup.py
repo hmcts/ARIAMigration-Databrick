@@ -6,17 +6,10 @@ setup(
     packages=find_packages(),
     description='These are custom functions that will be used for the ARIA data migration',
     author='Ara Islam + Naveen Sriram',
-    entry_points={
-        "console_scripts": [
-            "main=wheel_package.main:main"
-        ]
-    },
     install_requires = ['azure-eventhub',
-                        'setuptools',
                         'azure-storage-blob',
                         'confluent_kafka',
                         'aiohttp',
                         'numpy',
-                        'logging',
                         'pyspark']
 )

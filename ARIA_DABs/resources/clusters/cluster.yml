@@ -39,7 +39,7 @@ resources:
       name: wheel-job
       tasks:
         - task_key: wheel-task
-          cluster_key: DAB_JobCluster
+          job_cluster_key: DAB_JobCluster
           python_wheel_task:
             entry_point: main
             package_name: wheel_package

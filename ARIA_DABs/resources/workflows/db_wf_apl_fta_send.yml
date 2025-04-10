@@ -1,7 +1,7 @@
 resources:
   jobs:
-    db_wf_apl_fta_send_job-wheel-job:
-      name: db_wf_apl_fta_send_job-wheel-job
+    db_wf_apl_fta_send_job:
+      name: db_wf_apl_fta_send_job
       job_clusters:
         - job_cluster_key: db_wf_apl_fta_send_job
           new_cluster:
@@ -25,7 +25,7 @@ resources:
           notebook_task: 
             notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
             source: WORKSPACE
-            
+
         - task_key: DLT_creation_of_content
           depends_on:
             - task_key: validate_packages
@@ -45,3 +45,27 @@ resources:
               dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
               file_types: html,json
             source: WORKSPACE
+          
+        - task_key: publish_A360_to_eh
+          job_cluster_key: db_wf_apl_fta_send_job
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            base_parameters: #Will we remove these mounts and use SP once up and running? or do we need tf to provision
+              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
+              topic: evh-apl-pub-dev-uks-dlrm-01
+              dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
+              file_types: a360
+            source: WORKSPACE
+
+        - task_key: ARM_ack
+          job_cluster_key: db_wf_apl_fta_send_job
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh
+            - task_key: publish_A360_to_eh
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
+            source: WORKSPACE
+      queue:
+        enabled: true   

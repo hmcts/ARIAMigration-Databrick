@@ -64,4 +64,4 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: #seperate devops step to copy file into workspace
-            - whl: "dbfs:/FileStore/shared_wheels/ariafunctions-0.0.1-py3-none-any.whl"
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"

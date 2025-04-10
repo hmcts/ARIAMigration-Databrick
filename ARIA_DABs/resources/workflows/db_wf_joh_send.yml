@@ -27,6 +27,8 @@ resources:
             source: WORKSPACE
 
         - task_key: create_joh_content
+          depends_on:
+            - task_key: validate_packages
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_joh.id}
 

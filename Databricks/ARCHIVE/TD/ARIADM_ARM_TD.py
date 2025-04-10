@@ -979,7 +979,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Gold Outputs and Tracking DLT Table Creation
+# MAGIC ## Silver DLT staging table for gold transformation
 
 # COMMAND ----------
 
@@ -1144,7 +1144,7 @@ generate_a360_udf = udf(generate_a360, StringType())
 @dlt.table(
     name="stg_create_td_iris_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_td_iris_json_content"
+    path=f"{silver_mnt}/stg_create_td_iris_json_content"
 )
 def stg_create_td_iris_json_content():
 
@@ -1161,11 +1161,11 @@ def stg_create_td_iris_json_content():
 
     
     # Apply the UDF to the combined DataFrame
-    df_with_json = repartitioned_df.withColumn("JSONContent", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                            .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+    df_with_json = repartitioned_df.withColumn("JSON_Content", to_json(struct(*df_tribunaldecision_detail.columns))) \
+                                            .withColumn("File_name", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
 
 
-    df_with_json = df_with_json.withColumn("JSONStatus", when((col("JSONContent").like("Failure%") | col("JSONContent").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
+    df_with_json = df_with_json.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 
     ## Create and save audit log for this table
     # df = df_with_json.withColumn("File_name", col("JSONFileName"))
@@ -1189,7 +1189,7 @@ def stg_create_td_iris_json_content():
 @dlt.table(
     name="stg_create_td_iris_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_td_iris_html_content"
+    path=f"{silver_mnt}/stg_create_td_iris_html_content"
 )
 def stg_create_td_iris_html_content():
 
@@ -1208,12 +1208,12 @@ def stg_create_td_iris_html_content():
     repartitioned_df = df_tribunaldecision_detail.repartition(64)
 
     
-    df = repartitioned_df.withColumn("HTMLContent", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-                                           .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+    df = repartitioned_df.withColumn("HTML_Content", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
+                                           .withColumn("File_name", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
 
 
 
-    df_with_html = df.withColumn("HTMLStatus", when((col("HTMLContent").like("Failure%") | col("HTMLContent").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+    df_with_html = df.withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
 
     ## Create and save audit log for this table
     # df = df_with_html.withColumn("File_name", col("HTMLFileName"))
@@ -1237,7 +1237,7 @@ def stg_create_td_iris_html_content():
 @dlt.table(
     name="stg_create_td_iris_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_td_iris_a360_content"
+    path=f"{silver_mnt}/stg_create_td_iris_a360_content"
 )
 def stg_create_td_iris_a360_content():
 
@@ -1256,10 +1256,10 @@ def stg_create_td_iris_a360_content():
     
     # Generate A360 content and associated file names
     df = repartitioned_df.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_td_metadata.columns))
+        "A360_Content", generate_a360_udf(struct(*df_td_metadata.columns))
     )
 
-    metadata_df = df.withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
+    metadata_df = df.withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
 
     ## Create and save audit log for this table
     # df = metadata_df.withColumn("File_name", lit("NotBatchedYet"))
@@ -1288,16 +1288,16 @@ import dlt
 @dlt.table(
     name="stg_td_iris_unified",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_td_iris_unified"
+    path=f"{silver_mnt}/stg_td_iris_unified"
 )
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_td_iris_unified():
     
     # Read DLT sources
     a360_df = dlt.read("stg_create_td_iris_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_td_iris_html_content").alias("html")
+    html_df = dlt.read("stg_create_td_iris_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
     json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
 
 
@@ -1318,16 +1318,16 @@ def stg_td_iris_unified():
             col("a360.bf_002"),
             col("a360.bf_003"),
             col("html.*"),
-            col("json.JSONContent"),
-            col("json.JSONFileName"),
-            col("json.JSONStatus"),
-            col("a360.A360Content"),
-            col("a360.A360Status")
+            col("json.JSON_Content"),
+            col("json.File_name").alias("JSON_File_name"),
+            col("json.Status").alias("JSON_Status"),
+            col("a360.A360_Content"),
+            col("a360.Status").alias("Status")
         )
         .filter(
-            (~col("html.HTMLContent").like("Failure%")) &
-            (~col("a360.A360Content").like("Failure%")) &
-            (~col("json.JSONContent").like("Failure%"))
+            (~col("html.HTML_Content").like("Failure%")) &
+            (~col("a360.A360_Content").like("Failure%")) &
+            (~col("json.JSON_Content").like("Failure%"))
         )
     )
 
@@ -1335,11 +1335,11 @@ def stg_td_iris_unified():
     window_spec = Window.orderBy(F.col("client_identifier"), F.col("bf_003"), F.col("bf_003"))
     
     df_batch = df_unified.withColumn("row_num", F.row_number().over(window_spec)) \
-                         .withColumn("A360BatchId", F.floor((F.col("row_num") - 1) / 250) + 1) \
+                         .withColumn("A360_BatchId", F.floor((F.col("row_num") - 1) / 250) + 1) \
                          .withColumn(
-                             "A360FileName", 
+                             "File_name", 
                              F.concat(F.lit(f"{gold_outputs}/A360/tribunal_decision_"), 
-                                      F.col("A360BatchId"), 
+                                      F.col("A360_BatchId"), 
                                       F.lit(".a360"))
                          )
 
@@ -1369,11 +1369,16 @@ optimal_partitions
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Gold Outputs and Tracking DLT Table Creation
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation gold_td_iris_with_html
 checks = {}
-checks["html_content_no_error"] = "(HTMLContent NOT LIKE 'Error%')"
-checks["html_content_no_error"] = "(HTMLContent IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
+checks["html_content_no_error"] = "(HTML_Content IS NOT NULL)"
+checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_html",
@@ -1396,7 +1401,7 @@ def gold_td_iris_with_html():
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
+        "Status", upload_udf(col("File_Name"), col("HTML_Content"))
     )
     
     # # Upload HTML files to Azure Blob Storage
@@ -1404,7 +1409,7 @@ def gold_td_iris_with_html():
 
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360BatchId","HTMLContent","HTMLFileName","UploadStatus"))
+        display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status"))
 
     # table_name = "gold_td_iris_with_html"
     # stage_name = "gold_stage"
@@ -1420,14 +1425,14 @@ def gold_td_iris_with_html():
     # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360BatchId","HTMLContent","HTMLFileName","UploadStatus")
+    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status")
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_td_iris_with_json
 checks = {}
-checks["json_content_no_error"] = "(JSONContent IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+checks["json_content_no_error"] = "(JSON_Content IS NOT NULL)"
+checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 
 
 
@@ -1452,7 +1457,7 @@ def gold_td_iris_with_json():
     repartitioned_df = df_combined.repartition(optimal_partitions)
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONContent"))
+        "Status", upload_udf(col("File_Name"), col("JSON_Content"))
     )
 
     # Optionally load data from Hive
@@ -1473,7 +1478,7 @@ def gold_td_iris_with_json():
     # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name","A360BatchId","JSONContent","JSONFileName","UploadStatus")
+    return df_with_upload_status.select("CaseNo","Forenames","Name","A360_BatchId","JSON_Content","File_Name","Status")
 
 
 # COMMAND ----------
@@ -1482,7 +1487,7 @@ def gold_td_iris_with_json():
 checks = {}
 checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 checks["A360_content_no_error"] = "(consolidate_A360Content IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(UploadStatus NOT LIKE 'Error%')"
+checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_a360",
@@ -1502,22 +1507,22 @@ def gold_td_iris_with_a360():
         df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
-    df_agg = df_a360.groupBy("A360FileName", "A360BatchId") \
-            .agg(concat_ws("\n", collect_list("A360Content")).alias("consolidate_A360Content")) \
-            .select(col("A360FileName"), col("consolidate_A360Content"), col("A360BatchId"))
+    df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
+            .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
+            .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
     repartitioned_df = df_agg.repartition(optimal_partitions)
 
     # Remove existing files
-    dbutils.fs.rm(f"{gold_outputs}/A360", True)
+    # dbutils.fs.rm(f"{gold_outputs}/A360", True)
 
     # Generate A360 content
     df_with_a360 = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("A360FileName"), col("consolidate_A360Content"))
+        "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 
-    df_with_a360_review = df_with_a360.withColumn("A360BatchId_str", col("A360BatchId").cast("string"))
+    df_with_a360_review = df_with_a360.withColumn("A360BatchId_str", col("A360_BatchId").cast("string"))
     
 
     # # Optionally load data from Hive
@@ -1535,7 +1540,7 @@ def gold_td_iris_with_a360():
 
     # create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
    
-    return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
+    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 
 
 # COMMAND ----------
@@ -1550,62 +1555,62 @@ def gold_td_iris_with_a360():
 # COMMAND ----------
 
 # DBTITLE 1,Generate Audit DataFrame with Unique Identifiers
-# # def log_audit_entry(df,unique_identifier):
-import uuid
+# # # def log_audit_entry(df,unique_identifier):
+# import uuid
 
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+# def datetime_uuid():
+#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
 
-run_id_value = datetime_uuid()
+# run_id_value = datetime_uuid()
 
-audit_schema = StructType([
-    StructField("Runid", StringType(), True),
-    StructField("Unique_identifier_desc", StringType(), True),
-    StructField("Unique_identifier", StringType(), True),
-    StructField("Table_name", StringType(), True),
-    StructField("Stage_name", StringType(), True),
-    StructField("Record_count", IntegerType(), True),
-    StructField("Run_dt",TimestampType(), True),
-    StructField("Batch_id", StringType(), True),
-    StructField("Description", StringType(), True),
-    StructField("File_name", StringType(), True),
-    StructField("Status", StringType(), True)
-])
+# audit_schema = StructType([
+#     StructField("Runid", StringType(), True),
+#     StructField("Unique_identifier_desc", StringType(), True),
+#     StructField("Unique_identifier", StringType(), True),
+#     StructField("Table_name", StringType(), True),
+#     StructField("Stage_name", StringType(), True),
+#     StructField("Record_count", IntegerType(), True),
+#     StructField("Run_dt",TimestampType(), True),
+#     StructField("Batch_id", StringType(), True),
+#     StructField("Description", StringType(), True),
+#     StructField("File_name", StringType(), True),
+#     StructField("Status", StringType(), True)
+# ])
 
-def create_audit_df(df: DataFrame, unique_identifier_desc: str, table_name: str, stage_name: str, description: str, additional_columns: list = None) -> DataFrame:
-    """
-    Creates an audit DataFrame and writes it to Delta format.
+# def create_audit_df(df: DataFrame, unique_identifier_desc: str, table_name: str, stage_name: str, description: str, additional_columns: list = None) -> DataFrame:
+#     """
+#     Creates an audit DataFrame and writes it to Delta format.
 
-    :param df: Input DataFrame from which unique identifiers are extracted.
-    :param unique_identifier_desc: Column name that acts as a unique identifier.
-    :param table_name: Name of the source table.
-    :param stage_name: Name of the data processing stage.
-    :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
-    :return: DataFrame containing the audit information.
-    """
+#     :param df: Input DataFrame from which unique identifiers are extracted.
+#     :param unique_identifier_desc: Column name that acts as a unique identifier.
+#     :param table_name: Name of the source table.
+#     :param stage_name: Name of the data processing stage.
+#     :param description: Description of the table.
+#     :param additional_columns: List of additional columns to include in the audit DataFrame.
+#     :return: DataFrame containing the audit information.
+#     """
 
-    dt_desc = datetime.utcnow()
+#     dt_desc = datetime.utcnow()
 
-    additional_columns = additional_columns or []  # Default to an empty list if None   
-    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
+#     additional_columns = additional_columns or []  # Default to an empty list if None   
+#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
 
-    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"), *additional_columns) \
-        .withColumn("Runid", lit(run_id_value)) \
-        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc)) \
-        .withColumn("Stage_name", lit(stage_name)) \
-        .withColumn("Table_name", lit(table_name)) \
-        .withColumn("Run_dt", lit(dt_desc).cast(TimestampType())) \
-        .withColumn("Description", lit(description))
+#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"), *additional_columns) \
+#         .withColumn("Runid", lit(run_id_value)) \
+#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc)) \
+#         .withColumn("Stage_name", lit(stage_name)) \
+#         .withColumn("Table_name", lit(table_name)) \
+#         .withColumn("Run_dt", lit(dt_desc).cast(TimestampType())) \
+#         .withColumn("Description", lit(description))
 
-    list_cols = audit_df.columns
+#     list_cols = audit_df.columns
 
-    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
+#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
 
-    # final_audit_df.write.format("delta").mode("append").option("mergeSchema", "true").save(audit_delta_path)
+#     # final_audit_df.write.format("delta").mode("append").option("mergeSchema", "true").save(audit_delta_path)
     
-    return final_audit_df
+#     return final_audit_df
 
 
 # COMMAND ----------
@@ -1634,206 +1639,206 @@ def create_audit_df(df: DataFrame, unique_identifier_desc: str, table_name: str,
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: td_cr_audit_table
-@dlt.table(
-    name='td_cr_audit_table',
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{audit_mnt}/td_cr_audit_table"
-)
-def td_cr_audit_table():
-    audit_params = [
-         {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "bronze_ac_ca_ant_fl_dt_hc",
-            "stage_name": "bronze_stage",
-            "description": "The bronze_ac_ca_ant_fl_dt_hc table Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre."
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "bronze_iris_extract",
-            "stage_name": "bronze_stage",
-            "description": "Delta Live Table extracted from the IRIS Tribunal decision file extract."
-        },
-        {
-            "unique_identifier_cols": ["CaseNo"],
-            "table_name": "stg_td_filtered",
-            "stage_name": "silver_stage",
-            "description": "The stg_td_filtered - segmentation Table for appeal cases requiring tribunal decisions with unique list of CaseNo's"
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "silver_tribunaldecision_detail",
-            "stage_name": "silver_stage",
-            "description": "The silver_tribunaldecision_detail - or Tribunal Decision information"
-        },
-        {
-            "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
-            "table_name": "silver_archive_metadata",
-            "stage_name": "silver_stage",
-            "description": "The silver_archive_metadata table consolidates keys metadata for Archive Metadata da"
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "stg_create_td_iris_json_content",
-            "stage_name": "silver_stage",
-            "description": "The stg_create_td_iris_json_content table generates JSON content for TD cases",
-            "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "JSONStatus"}
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "stg_create_td_iris_html_content",
-            "stage_name": "silver_stage",
-            "description": "The stg_create_td_iris_html_content table generates HTML content for TD cases",
-            "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "HTMLStatus"}
-        },
-        {
-            "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
-            "table_name": "stg_create_td_iris_a360_content",
-            "stage_name": "silver_stage",
-            "description": "The stg_create_td_iris_a360_content table generates A360 content for TD cases",
-            "Extra_columns_mapping": {"File_name": "NotYetBatched", "Status": "A360Status"}
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "stg_td_iris_unified",
-            "stage_name": "silver_stage",
-            "description": "The stg_td_iris_unified table generates A360 BatchId for TD cases",
-            "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "A360Status"}
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "gold_td_iris_with_html",
-            "stage_name": "silver_stage",
-            "description": "The gold_td_iris_with_html with HTML Outputs Uploded..",
-            "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "UploadStatus"}
-        },
-        {
-            "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-            "table_name": "gold_td_iris_with_json",
-            "stage_name": "silver_stage",
-            "description": "The gold_td_iris_with_json with HTML Outputs Uploded..",
-            "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "UploadStatus"}
-        },
-        {
-            "unique_identifier_cols": ["A360BatchId"],
-            "table_name": "gold_td_iris_with_a360",
-            "stage_name": "silver_stage",
-            "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
-            "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
-        },
-        {
-            "unique_identifier_cols": ["A360BatchId"],
-            "table_name": "temp",
-            "stage_name": "silver_stage",
-            "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
-            "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
-        }
-    ]
+# @dlt.table(
+#     name='td_cr_audit_table',
+#     comment="Delta Live unified stage Gold Table for gold outputs.",
+#     path=f"{audit_mnt}/td_cr_audit_table"
+# )
+# def td_cr_audit_table():
+#     audit_params = [
+#          {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "bronze_ac_ca_ant_fl_dt_hc",
+#             "stage_name": "bronze_stage",
+#             "description": "The bronze_ac_ca_ant_fl_dt_hc table Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre."
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "bronze_iris_extract",
+#             "stage_name": "bronze_stage",
+#             "description": "Delta Live Table extracted from the IRIS Tribunal decision file extract."
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo"],
+#             "table_name": "stg_td_filtered",
+#             "stage_name": "silver_stage",
+#             "description": "The stg_td_filtered - segmentation Table for appeal cases requiring tribunal decisions with unique list of CaseNo's"
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "silver_tribunaldecision_detail",
+#             "stage_name": "silver_stage",
+#             "description": "The silver_tribunaldecision_detail - or Tribunal Decision information"
+#         },
+#         {
+#             "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
+#             "table_name": "silver_archive_metadata",
+#             "stage_name": "silver_stage",
+#             "description": "The silver_archive_metadata table consolidates keys metadata for Archive Metadata da"
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "stg_create_td_iris_json_content",
+#             "stage_name": "silver_stage",
+#             "description": "The stg_create_td_iris_json_content table generates JSON content for TD cases",
+#             "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "JSONStatus"}
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "stg_create_td_iris_html_content",
+#             "stage_name": "silver_stage",
+#             "description": "The stg_create_td_iris_html_content table generates HTML content for TD cases",
+#             "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "HTMLStatus"}
+#         },
+#         {
+#             "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
+#             "table_name": "stg_create_td_iris_a360_content",
+#             "stage_name": "silver_stage",
+#             "description": "The stg_create_td_iris_a360_content table generates A360 content for TD cases",
+#             "Extra_columns_mapping": {"File_name": "NotYetBatched", "Status": "A360Status"}
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "stg_td_iris_unified",
+#             "stage_name": "silver_stage",
+#             "description": "The stg_td_iris_unified table generates A360 BatchId for TD cases",
+#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "A360Status"}
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "gold_td_iris_with_html",
+#             "stage_name": "silver_stage",
+#             "description": "The gold_td_iris_with_html with HTML Outputs Uploded..",
+#             "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "UploadStatus"}
+#         },
+#         {
+#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
+#             "table_name": "gold_td_iris_with_json",
+#             "stage_name": "silver_stage",
+#             "description": "The gold_td_iris_with_json with HTML Outputs Uploded..",
+#             "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "UploadStatus"}
+#         },
+#         {
+#             "unique_identifier_cols": ["A360BatchId"],
+#             "table_name": "gold_td_iris_with_a360",
+#             "stage_name": "silver_stage",
+#             "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
+#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
+#         },
+#         {
+#             "unique_identifier_cols": ["A360BatchId"],
+#             "table_name": "temp",
+#             "stage_name": "silver_stage",
+#             "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
+#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
+#         }
+#     ]
 
-    audit_dataframes = []
+#     audit_dataframes = []
 
-    for params in audit_params:
-        table_name = params["table_name"]
-        stage_name = params["stage_name"]
-        unique_identifier_cols = params["unique_identifier_cols"]
-        description = params["description"]
-        extra_columns_mapping = params.get("Extra_columns_mapping", {})
-        unique_identifier_desc = "_".join(unique_identifier_cols)
+#     for params in audit_params:
+#         table_name = params["table_name"]
+#         stage_name = params["stage_name"]
+#         unique_identifier_cols = params["unique_identifier_cols"]
+#         description = params["description"]
+#         extra_columns_mapping = params.get("Extra_columns_mapping", {})
+#         unique_identifier_desc = "_".join(unique_identifier_cols)
 
-        try:
+#         try:
 
-            df_logging = dlt.read(table_name)
+#             df_logging = dlt.read(table_name)
 
-            df_audit = df_logging
-            if len(unique_identifier_cols) > 1:
-                df_audit = df_audit.withColumn(
-                    unique_identifier_desc, 
-                    concat_ws("_", *[col(c).cast("string") for c in unique_identifier_cols])
-                )
-            else:
-                df_audit = df_audit.withColumn(unique_identifier_desc, col(unique_identifier_desc))
+#             df_audit = df_logging
+#             if len(unique_identifier_cols) > 1:
+#                 df_audit = df_audit.withColumn(
+#                     unique_identifier_desc, 
+#                     concat_ws("_", *[col(c).cast("string") for c in unique_identifier_cols])
+#                 )
+#             else:
+#                 df_audit = df_audit.withColumn(unique_identifier_desc, col(unique_identifier_desc))
 
-            # Apply extra column mappings dynamically
-            for new_col, source_col in extra_columns_mapping.items():
-                if source_col == "NotYetBatched":
-                    df_audit = df_audit.withColumn(new_col, lit("NotYetBatched"))
-                else:
-                    df_audit = df_audit.withColumn(new_col, col(source_col))
+#             # Apply extra column mappings dynamically
+#             for new_col, source_col in extra_columns_mapping.items():
+#                 if source_col == "NotYetBatched":
+#                     df_audit = df_audit.withColumn(new_col, lit("NotYetBatched"))
+#                 else:
+#                     df_audit = df_audit.withColumn(new_col, col(source_col))
 
-            # Generate the audit DataFrame
-            df_audit_appended = create_audit_df(
-                df_audit,
-                unique_identifier_desc=unique_identifier_desc,
-                table_name=table_name,
-                stage_name=stage_name,
-                description=description
-            )
+#             # Generate the audit DataFrame
+#             df_audit_appended = create_audit_df(
+#                 df_audit,
+#                 unique_identifier_desc=unique_identifier_desc,
+#                 table_name=table_name,
+#                 stage_name=stage_name,
+#                 description=description
+#             )
 
-            audit_dataframes.append(df_audit_appended)
+#             audit_dataframes.append(df_audit_appended)
 
-        except Exception as e:
+#         except Exception as e:
 
-            # Table does not exist, create an audit entry for it
-            status = f"Failed - Table {table_name} does not exist"
+#             # Table does not exist, create an audit entry for it
+#             status = f"Failed - Table {table_name} does not exist"
 
-            row_data = {
-                "Runid": run_id_value,
-                "Unique_identifier_desc": unique_identifier_desc,
-                "Unique_identifier": None,
-                "Table_name": table_name,
-                "Stage_name": stage_name,
-                "Record_count": 0,
-                "Run_dt": datetime.now(),
-                "Batch_id": None,
-                "Description": description,
-                "File_name": None,
-                "Status": status
-            }
+#             row_data = {
+#                 "Runid": run_id_value,
+#                 "Unique_identifier_desc": unique_identifier_desc,
+#                 "Unique_identifier": None,
+#                 "Table_name": table_name,
+#                 "Stage_name": stage_name,
+#                 "Record_count": 0,
+#                 "Run_dt": datetime.now(),
+#                 "Batch_id": None,
+#                 "Description": description,
+#                 "File_name": None,
+#                 "Status": status
+#             }
 
-            row_df = spark.createDataFrame([row_data], schema=audit_schema)
-            audit_dataframes.append(row_df)
+#             row_df = spark.createDataFrame([row_data], schema=audit_schema)
+#             audit_dataframes.append(row_df)
 
-    df_final_audit = audit_dataframes[0]
-    for df in audit_dataframes[1:]:
-        df_final_audit = df_final_audit.unionByName(df, allowMissingColumns=True)
+#     df_final_audit = audit_dataframes[0]
+#     for df in audit_dataframes[1:]:
+#         df_final_audit = df_final_audit.unionByName(df, allowMissingColumns=True)
 
-    return df_final_audit
+#     return df_final_audit
 
 # COMMAND ----------
 
-Runid = run_id_value
-unique_identifier_cols = ["CaseNo", "Forenames", "Name"]
-unique_identifier_desc = "_".join(unique_identifier_cols)
-Unique_identifier = None
-Table_name = "stg"
-Stage_name = "silver_stage"
-Run_dt = datetime.now()
-Description = "The stg_create_td_iris_json_content table generates JSON content for TD cases"
-Status = "Failed"
+# Runid = run_id_value
+# unique_identifier_cols = ["CaseNo", "Forenames", "Name"]
+# unique_identifier_desc = "_".join(unique_identifier_cols)
+# Unique_identifier = None
+# Table_name = "stg"
+# Stage_name = "silver_stage"
+# Run_dt = datetime.now()
+# Description = "The stg_create_td_iris_json_content table generates JSON content for TD cases"
+# Status = "Failed"
 
-# Create an empty DataFrame
-empty_df = spark.createDataFrame([], audit_schema)
+# # Create an empty DataFrame
+# empty_df = spark.createDataFrame([], audit_schema)
 
-# Create a row
-row_data = {
-    "Runid": Runid,
-    "Unique_identifier_desc": unique_identifier_desc,
-    "Unique_identifier": Unique_identifier,
-    "Table_name": Table_name,
-    "Stage_name": Stage_name,
-    "Record_count": 0,
-    "Run_dt": Run_dt,
-    "Batch_id": None,
-    "Description": Description,
-    "File_name": None,
-    "Status": Status
-}
+# # Create a row
+# row_data = {
+#     "Runid": Runid,
+#     "Unique_identifier_desc": unique_identifier_desc,
+#     "Unique_identifier": Unique_identifier,
+#     "Table_name": Table_name,
+#     "Stage_name": Stage_name,
+#     "Record_count": 0,
+#     "Run_dt": Run_dt,
+#     "Batch_id": None,
+#     "Description": Description,
+#     "File_name": None,
+#     "Status": Status
+# }
 
-row_df = spark.createDataFrame([row_data], schema=audit_schema)
+# row_df = spark.createDataFrame([row_data], schema=audit_schema)
 
-# Append the row to the empty DataFrame
-final_df = empty_df.unionByName(row_df, allowMissingColumns=True)
+# # Append the row to the empty DataFrame
+# final_df = empty_df.unionByName(row_df, allowMissingColumns=True)
 
-display(final_df)
+# display(final_df)
 
 # COMMAND ----------
 

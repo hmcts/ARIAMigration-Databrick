@@ -514,27 +514,6 @@ def bronze_adjudicator_et_hc_dnur():
     )
 
     return df
-
-    # try: 
-
-    #     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "bronze_adjudicator_et_hc_dnur"
-    #     stage_name = "bronze_stage"
-
-    #     description = "Combines adjudicator data with hearing centre, employment terms, and do not use reason details. Provides a standardized view of adjudicators, their designated centres, employment terms, judicial status, and restrictions. Includes metadata such as source files, modification timestamps, and process tracking for auditing."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-        
-    #     print(f"Audit logging failed with error: {str(e)}")
-
     
 
 
@@ -585,25 +564,6 @@ def bronze_johistory_users():
     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
     return df
-
-    # try:
-
-    #     ## Create and save audit log for this table
-    #     table_name = "bronze_johistory_users"
-    #     stage_name = "bronze_stage"
-
-    #     description = "Combines JoHistory records with user details, providing historical adjudicator activity along with corresponding user information. Includes comments, user names, audit timestamps, source filenames, and process metadata for tracking and auditing."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-        
-    # except Exception as e:
-    
-    #     print(f"Audit logging failed with error: {str(e)}")
-
     
 
 
@@ -650,42 +610,6 @@ def bronze_othercentre_hearingcentre():
     )
     return df
 
-    # df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    # try:
-
-    #     ## Create and save audit log for this table
-    #     table_name = "bronze_othercentre_hearingcentre"
-    #     stage_name = "bronze_stage"
-
-    #     description = "Combines OtherCentre records with HearingCentre details, linking adjudicators to their assigned hearing centres. Includes metadata such as timestamps, source files, and process tracking for auditing and traceability."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-            
-    # except Exception as e:
-    
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-    
-
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    ## Create and save audit log for this table
-    table_name = "bronze_othercentre_hearingcentre"
-    stage_name = "bronze_stage"
-
-    description = "Combines OtherCentre records with HearingCentre details, linking adjudicators to their assigned hearing centres. Includes metadata such as timestamps, source files, and process tracking for auditing and traceability."
-
-    unique_identifier_desc = "AdjudicatorId"
-
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
 
 
 # COMMAND ----------
@@ -730,27 +654,6 @@ def bronze_adjudicator_role():
 
     return df
 
-    # df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    # try:
-    #     ## Create and save audit log for this table
-    #     table_name = "bronze_adjudicator_role"
-    #     stage_name = "bronze_stage"
-
-    #     description = "Stores adjudicator role assignments, tracking their appointments and end dates. Includes metadata such as timestamps, source files, and process details for auditing and historical reference."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-            
-    # except Exception as e:
-    
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
 
 
 # COMMAND ----------
@@ -793,27 +696,6 @@ def stg_joh_filtered():
 
     return df
 
-    # df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    # try:
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_joh_filtered"
-    #     stage_name = "segmentation_stage"
-
-    #     description = "Filters and segments adjudicators, retaining only those who are not assigned roles 7 or 8, or have no assigned role. Uses data from bronze_adjudicator_et_hc_dnur and bronze_adjudicator_role to generate a complete list of adjudicators."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
 
 
 # COMMAND ----------
@@ -828,14 +710,6 @@ def stg_joh_filtered():
 # MAGIC ### Transformation silver_adjudicator_detail
 # MAGIC
 # MAGIC
-
-# COMMAND ----------
-
-# # display(dbutils.fs.ls("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"))
-# path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table/"
-# df_cr = spark.read.load(path)
-
-# df_cr.display()
 
 # COMMAND ----------
 
@@ -912,27 +786,6 @@ def silver_adjudicator_detail():
     )
 
     return df
-
-
-    # try:
-
-    #     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "silver_adjudicator_detail"
-    #     stage_name = "silver_stage"
-
-    #     description = "Filters adjudicators based on segmentation criteria and enriches their records with Hearing Centre and Do Not Use Reason (DNUR) details. Standardizes key attributes such as correspondence address, contact details, employment terms, and judicial status."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
 
 
@@ -1016,27 +869,6 @@ def silver_history_detail():
 
     return df
 
-    # try:
-
-    #     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "silver_history_detail"
-    #     stage_name = "silver_stage"
-
-    #     description = "Filters and enhances historical adjudicator activity records by incorporating user details. Maps history types to their corresponding descriptions, providing a structured view of events such as allocations, case updates, and administrative actions."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
 
 # COMMAND ----------
 
@@ -1054,26 +886,6 @@ def silver_othercentre_detail():
     df = (dlt.read("bronze_othercentre_hearingcentre").alias("hc").join(dlt.read("stg_joh_filtered").alias('flt'), col("hc.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select("hc.*"))
 
     return df
-
-    # try:
-
-    #     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "silver_othercentre_detail"
-    #     stage_name = "silver_stage"
-
-    #     description = "Filters and enhances OtherCentre records by applying adjudicator segmentation criteria. Retains adjudicators linked to Hearing Centres while ensuring completeness through process metadata, timestamps, and source tracking."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
 
 # COMMAND ----------
@@ -1116,40 +928,8 @@ def silver_appointment_detail():
             col('rol.InsertedByProcessName')
         )
     )
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    ## Create and save audit log for this table
-    table_name = "silver_appointment_detail"
-    stage_name = "silver_stage"
-
-    description = "Filters and enhances adjudicator role records by mapping role codes to their descriptions. Provides a structured view of adjudicator appointments, including start and end dates, and metadata for auditing."
-
-    unique_identifier_desc = "AdjudicatorId"
-
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
 
     return df
-
-
-    # try:
-        
-    #     df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "silver_appointment_detail"
-    #     stage_name = "silver_stage"
-
-    #     description = "Filters and enhances adjudicator role records by mapping role codes to their descriptions. Provides a structured view of adjudicator appointments, including start and end dates, and metadata for auditing."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
 
 # COMMAND ----------
@@ -1266,45 +1046,13 @@ def silver_archive_metadata():
             col('adj.DesignatedCentre').alias('bf_005')
         )
     )
-    df_audit = df.withColumn("client_identifier",col("client_identifier").cast("string"))
-
-    ## Create and save audit log for this table
-    table_name = "silver_archive_metadata"
-    stage_name = "silver_stage"
-
-    description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
-
-    unique_identifier_desc = "client_identifier"
-
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
 
     return df
-
-    return df
-
-    # try:
-    #     df_audit = df.withColumn("client_identifier",col("client_identifier").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "silver_archive_metadata"
-    #     stage_name = "silver_stage"
-
-    #     description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
-
-    #     unique_identifier_desc = "client_identifier"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Gold Outputs and Tracking DLT Table Creation
+# MAGIC ## Silver DLT staging table for gold transformation
 
 # COMMAND ----------
 
@@ -1503,7 +1251,7 @@ generate_a360_udf = udf(generate_a360, StringType())
 @dlt.table(
     name="stg_judicial_officer_combined",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_judicial_officer_combined"
+    path=f"{silver_mnt}/stg_judicial_officer_combined"
 )
 def stg_judicial_officer_combined():
 
@@ -1545,58 +1293,6 @@ def stg_judicial_officer_combined():
 
     return df_combined
 
-    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
-    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
-    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
-
-    # # Select distinct client identifiers with HTML and JSON content and order them
-    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
-
-    # # Define a window specification to assign row numbers
-    # window_spec = Window.orderBy("client_identifier")
-    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
-    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
-
-    # # Join the batch information with the original metadata
-    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
-
-    # # Repartition the DataFrame to optimize parallelism
-    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
-
-    # # Generate A360 content and associated file names
-    # df_with_a360 = repartitioned_df.withColumn(
-    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-    # ).withColumn(
-    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
-
-    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
-
-
-    # try:
-
-
-    #     df_audit = df_combined.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_judicial_officer_combined"
-    #     stage_name = "staging_stage"
-
-    #     description = "Metadata table of adjudicator records by combining various metadata fields. Provides a structured view of adjudicator details, including event dates, region, and other relevant information for archival purposes."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df_combined
-
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
     
 
 # COMMAND ----------
@@ -1605,68 +1301,20 @@ def stg_judicial_officer_combined():
 @dlt.table(
     name="stg_create_joh_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_joh_json_content"
+    path=f"{silver_mnt}/stg_create_joh_json_content"
 )
 def stg_create_joh_json_content():
 
     df_combined = dlt.read("stg_judicial_officer_combined")
 
-    df = df_combined.withColumn("JSONContent", to_json(struct(*df_combined.columns))) \
-                    .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+    df = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))) \
+                    .withColumn("File_name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
 
     
-    df_with_json = df.withColumn("JSONStatus", when((col("JSONContent").like("Failure%") | col("JSONContent").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
+    df_with_json = df.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 
     return df_with_json
   
-
-    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
-    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
-    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
-
-    # # Select distinct client identifiers with HTML and JSON content and order them
-    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
-
-    # # Define a window specification to assign row numbers
-    # window_spec = Window.orderBy("client_identifier")
-    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
-    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
-
-    # # Join the batch information with the original metadata
-    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
-
-    # # Repartition the DataFrame to optimize parallelism
-    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
-
-    # # Generate A360 content and associated file names
-    # df_with_a360 = repartitioned_df.withColumn(
-    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-    # ).withColumn(
-    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
-
-    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
-    # try:
-    #     df_audit = df_with_json.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("JSONFileName")).withColumn("Status", col("JSONStatus"))
-
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_create_joh_json_content"
-    #     stage_name = "staging_stage"
-
-
-    #     description = "Generates JSON-formatted adjudicator records for gold-level outputs. Creates structured JSON content for each adjudicator and assigns a filename. Tracks JSON creation status to identify failures and successful transformations"
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
-
-    #     return df_with_json
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
     
 
@@ -1676,69 +1324,19 @@ def stg_create_joh_json_content():
 @dlt.table(
     name="stg_create_joh_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_joh_html_content"
+    path=f"{silver_mnt}/stg_create_joh_html_content"
 )
 def stg_create_joh_html_content():
 
     df_combined = dlt.read("stg_judicial_officer_combined")
 
-    df = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-                        .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+    df = df_combined.withColumn("HTML_Content", generate_html_udf(struct(*df_combined.columns))) \
+                        .withColumn("File_name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
 
     
-    df_with_html = df.withColumn("HTMLStatus", when((col("HTMLContent").like("Failure%") | col("HTMLContent").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+    df_with_html = df.withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
 
     return df_with_html
-
-
-    # df_with_html_json = df_combined.withColumn("HTMLContent", generate_html_udf(struct(*df_combined.columns))) \
-    #                     .withColumn("JSONcollection", to_json(struct(*df_combined.columns))) \
-    #                     .withColumn("HTMLFileName", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
-    #                     .withColumn("JSONFileName", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
-
-    # # Select distinct client identifiers with HTML and JSON content and order them
-    # metadata_df = df_joh_metadata.alias('a').join(df_with_html_json.alias('b'), col('b.AdjudicatorId') == col('a.client_identifier'), 'left').filter((~col("HTMLContent").like("Error%")) & (~col("JSONcollection").like("Error%"))).select("client_identifier").distinct().orderBy("client_identifier")
-
-    # # Define a window specification to assign row numbers
-    # window_spec = Window.orderBy("client_identifier")
-    # df_batch = metadata_df.withColumn("row_num", row_number().over(window_spec)) \
-    #                     .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
-
-    # # Join the batch information with the original metadata
-    # df_metadata = df_joh_metadata.join(df_batch, "client_identifier", "left")
-
-    # # Repartition the DataFrame to optimize parallelism
-    # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
-
-    # # Generate A360 content and associated file names
-    # df_with_a360 = repartitioned_df.withColumn(
-    #     "A360Content", generate_a360_udf(struct(*df_joh_metadata.columns))
-    # ).withColumn(
-    #     "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/judicial_officer_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None))
-    # ).select(col("client_identifier").alias("AdjudicatorId"), "A360BatchId", "A360FileName", "A360Content")
-
-    # df_unified =  df_with_html_json.join(df_with_a360, "AdjudicatorId", "left")
-
-
-    # try:
-
-    #     df_audit = df_with_html.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("File_name", col("HTMLFileName")).withColumn("Status", col("HTMLStatus"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_create_joh_html_content"
-    #     stage_name = "staging_stage"
-
-    #     description = "Generates HTML-formatted adjudicator records for gold-level outputs. Uses a UDF to transform data into structured HTML content and assigns a filename. Tracks HTML creation status to identify failures and succe"
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
-
-    #     return df_with_html
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
 
 
 
@@ -1748,7 +1346,7 @@ def stg_create_joh_html_content():
 @dlt.table(
     name="stg_create_joh_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_create_joh_a360_content"
+    path=f"{silver_mnt}/stg_create_joh_a360_content"
 )
 def stg_create_joh_a360_content():
 
@@ -1760,35 +1358,12 @@ def stg_create_joh_a360_content():
 
     # Generate A360 content and associated file names
     df = df_td_metadata.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_td_metadata.columns))
+        "A360_Content", generate_a360_udf(struct(*df_td_metadata.columns))
     )
 
-    metadata_df = df.withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
+    metadata_df = df.withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
     
     return metadata_df
-
-
-    # try:
-
-
-    #     df_audit = metadata_df.withColumn("client_identifier",col("client_identifier").cast("string")).withColumn("Status", col("A360Status"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_create_joh_a360_content"
-    #     stage_name = "staging_stage"
-
-    #     description = "Generates A360-formatted adjudicator records for gold-level outputs. Uses a UDF to transform metadata into A360 content and assigns processing statuses. Supports Hive-based retrieval for non-initial loads, ensuring comprehensive archival integration."
-
-    #     unique_identifier_desc = "client_identifier"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,status=True)
-
-    #     return metadata_df
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
   
 
 # COMMAND ----------
@@ -1802,16 +1377,16 @@ def stg_create_joh_a360_content():
 @dlt.table(
     name="stg_judicial_officer_unified",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_judicial_officer_unified"
+    path=f"{silver_mnt}/stg_judicial_officer_unified"
 )
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_judicial_officer_unified():
 
     # Read DLT sources
     a360_df = dlt.read("stg_create_joh_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_joh_html_content").alias("html")
+    html_df = dlt.read("stg_create_joh_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
     json_df = dlt.read("stg_create_joh_json_content").alias("json")
 
 
@@ -1830,16 +1405,16 @@ def stg_judicial_officer_unified():
             col("a360.bf_001"),
             col("a360.bf_002"),
             col("html.*"),
-            col("json.JSONContent"),
-            col("json.JSONFileName"),
-            col("json.JSONStatus"),
-            col("a360.A360Content"),
-            col("a360.A360Status")
+            col("json.JSON_Content"),
+            col("json.File_name").alias("JSON_File_name"),
+            col("json.Status").alias("JSON_Status"),
+            col("a360.A360_Content"),
+            col("a360.Status").alias("Status")
         )
         .filter(
-            (~col("html.HTMLContent").like("Failure%")) &
-            (~col("a360.A360Content").like("Failure%")) &
-            (~col("json.JSONContent").like("Failure%"))
+            (~col("html.HTML_Content").like("Failure%")) &
+            (~col("a360.A360_Content").like("Failure%")) &
+            (~col("json.JSON_Content").like("Failure%"))
         )
     )
 
@@ -1849,46 +1424,28 @@ def stg_judicial_officer_unified():
     window_spec = Window.orderBy(col("client_identifier"), col("bf_001"), col("bf_002"))
     
     df_batch = df_unified.withColumn("row_num", row_number().over(window_spec)) \
-                         .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1) \
+                         .withColumn("A360_BatchId", floor((col("row_num") - 1) / 250) + 1) \
                          .withColumn(
-                             "A360FileName", 
+                             "File_name", 
                              concat(lit(f"{gold_outputs}/A360/judicial_officer_"), 
-                                      col("A360BatchId"), 
+                                      col("A360_BatchId"), 
                                       lit(".a360"))
                          ).drop("row_num")
 
 
     return df_batch
-
-    # try:
-
-    #     df_audit = df_batch.withColumn("client_identifier",col("client_identifier").cast("string"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "stg_judicial_officer_unified"
-    #     stage_name = "Gold_stage"
-
-    #     description = "Unifies adjudicator records from multiple gold-level sources, integrating HTML, JSON, and A360 content. Ensures data integrity by filtering out records with failed content generation. Batches records into A360 files for structured archival and processing."
-
-    #     unique_identifier_desc = "client_identifier"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
-    #     return df_batch
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-                         
-
  
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Gold Outputs and Tracking DLT Table Creation
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_judicial_officer_with_html
 checks = {}
-checks["html_content_no_error"] = "(HTMLContent NOT LIKE 'Error%')"
+checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
 
 @dlt.table(
@@ -1910,40 +1467,15 @@ def gold_judicial_officer_with_html():
 
     # Trigger upload logic for each row
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
+        "Status", upload_udf(col("File_Name"), col("HTML_Content"))
     )
 
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
+        display(df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", "File_Name", "Status"))
 
 
-    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
-
-    # try:
-
-    #     df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("HTMLFileName"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "gold_judicial_officer_with_html"
-    #     stage_name = "Gold_stage"
-
-    #     description = "Final gold-level table integrating adjudicator records with validated HTML content. Ensures data integrity by enforcing error-free HTML content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
-
-    #     # Return the DataFrame for DLT table creation, including the upload status
-    #     return df_with_upload_status.select("AdjudicatorId","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
-    
-    
+    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", col("File_Name"), col("Status"))
 
 
 # COMMAND ----------
@@ -1970,39 +1502,14 @@ def gold_judicial_officer_with_json():
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("JSONFileName"), col("JSONContent"))
+        "UploadStatus", upload_udf(col("File_Name"), col("JSON_Content"))
     )
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus"))
+        display(df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content","File_Name","Status"))
 
 
-    return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
-
-    # try:
-
-    #     df_audit = df_with_upload_status.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "gold_judicial_officer_with_html"
-    #     stage_name = "Gold_stage"
-
-    #     description = "Final gold-level table integrating adjudicator records with validated JSON content. Ensures data integrity by enforcing error-free JSON content. Optimizes processing through repartitioning and triggers upload operations for structured archival and distribution."
-
-    #     unique_identifier_desc = "AdjudicatorId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
-
-    #     # Return the DataFrame for DLT table creation
-    #     return df_with_upload_status.select("AdjudicatorId","A360BatchId", "JSONContent","JSONFileName","UploadStatus")
-
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
-
-
-
-    
+    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content","File_Name","Status")   
 
 
 # COMMAND ----------
@@ -2025,9 +1532,9 @@ def gold_judicial_officer_with_a360():
         df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
-    df_agg = df_a360.groupBy("A360FileName", "A360BatchId") \
-            .agg(concat_ws("\n", collect_list("A360Content")).alias("consolidate_A360Content")) \
-            .select(col("A360FileName"), col("consolidate_A360Content"), col("A360BatchId"))
+    df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
+            .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
+            .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
     repartitioned_df = df_agg.repartition(64)
@@ -2037,7 +1544,7 @@ def gold_judicial_officer_with_a360():
 
     # Generate A360 content
     df_with_a360 = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("A360FileName"), col("consolidate_A360Content"))
+        "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 
     # Optionally load data from Hive
@@ -2045,27 +1552,7 @@ def gold_judicial_officer_with_a360():
         display(df_with_a360)
 
 
-    return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
-
-    # try:
-
-    #     df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
-
-    #     ## Create and save audit log for this table
-    #     table_name = "gold_judicial_officer_with_html"
-    #     stage_name = "Gold_stage"
-
-    #     description = "Final gold-level table consolidating adjudicator A360 content for structured archival and processing. Ensures data integrity by filtering out records with errors in A360 content. Aggregates and batches records, optimizes processing through repartitioning, and triggers upload operations."
-
-    #     unique_identifier_desc = "A360BatchId"
-
-    #     create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,file_name=True,status=True)
-
-    #     return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
-    
-    # except Exception as e:
-
-    #     print(f"Audit logging failed with error: {str(e)}")
+    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 
    
     

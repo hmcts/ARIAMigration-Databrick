@@ -145,7 +145,7 @@ stages:
           FILENAME=$(basename "$WHEEL_FILE")
           echo "Extracted filename: $FILENAME"
   
-          DEST_PATH="dbfs:/FileStore/shared_wheels/ariafunctions-0.0.1-py3-none-any.whl"
+          DEST_PATH="dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
           echo "Destination path: $DEST_PATH"
 
           echo "creating directory dbfs:/FileStore/shared_wheels"

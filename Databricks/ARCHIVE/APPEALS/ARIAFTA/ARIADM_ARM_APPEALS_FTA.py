@@ -1096,6 +1096,11 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Transformation M2. bronze_ appealcase _ca_apt_country_detc 
+
+# COMMAND ----------
+
 @dlt.table(
     name="bronze_appealcase_ca_apt_country_detc",
     comment="Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.",
@@ -1176,11 +1181,6 @@ def bronze_appealcase_ca_apt_country_detc():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Transformation M2. bronze_ appealcase _ca_apt_country_detc 
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ### Transformation M3. bronze_ appealcase _cl_ht_list_lt_hc_c_ls_adj
 
 # COMMAND ----------
@@ -1255,6 +1255,10 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
             col("lt.Description").alias("ListTypeDesc"),
             col("lt.ListType"),
             col("lt.DoNotUse").alias("DoNotUseListType"),
+            col("l.NumReqSeniorImmigrationJudge").alias("UpperTribJudge"),
+            col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
+            col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
+            col("l.NumReqNonLegalMember").alias("NonLegalMember"),
             
             # Court fields
             col("c.CourtName"),
@@ -2912,7 +2916,7 @@ def add_years(date_col, years):
 def stg_firsttier_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
-    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFIA').alias('Segment'))
+    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
 
     return FTRetained_cases.orderBy("ac.CaseNo")
 
@@ -3077,7 +3081,7 @@ def stg_filepreservedcases_filtered():
             (col("ac.CaseType") == '1') &
             (col("fl.DeptId") == 520)
         )
-        .select("ac.CaseNo", lit('ARIAFilePreservedCases').alias('Segment'))
+        .select("ac.CaseNo", lit('ARIAFPA').alias('Segment'))
     )
 
     return filtered_cases
@@ -3109,16 +3113,16 @@ def stg_appeals_filtered():
 
     # Using unionAll to combine all cases from the tables into one DataFrame
     combined_cases = (
-        stg_firsttier_filtered
-        .unionByName(stg_skeleton_filtered)
-        .unionByName(stg_uppertribunalretained_filtered)
-        .unionByName(stg_filepreservedcases_filtered)
-        .unionByName(stg_uppertribunaloverdue_filtered)
-        .unionByName(stg_filepreservedcases_filtered)
+    stg_firsttier_filtered
+    .unionByName(stg_skeleton_filtered)
+    .unionByName(stg_uppertribunalretained_filtered)
+    .unionByName(stg_filepreservedcases_filtered)
+    .unionByName(stg_firsttieroverdue_filtered)
+    .unionByName(stg_uppertribunaloverdue_filtered)
     ).filter(col("Segment") == AppealCategory)
 
     # Selecting all columns from the combined cases
-    return stg_firsttieroverdue_filtered
+    return combined_cases
 
 
 # COMMAND ----------
@@ -4563,9 +4567,9 @@ def silver_hearingpointschange_detail():
 @dlt.table(
     name="silver_hearingpointshistory_detail",
     comment="Delta Live silver Table for hearing points history detail.",
-    path=f"{silver_mnt}/silver_hearing_points_history_detail"
+    path=f"{silver_mnt}/silver_hearingpointshistory_detail"
 )
-def silver_hearing_points_history_detail():
+def silver_hearingpointshistory_detail():
     hearingpointshistory_df = dlt.read("bronze_hearing_points_history").alias("hph")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
@@ -4621,9 +4625,9 @@ def silver_appealtypecategory_detail():
 @dlt.table(
     name="silver_appealgrounds_detail",
     comment="Delta Live silver Table for appeal ground  detail.",
-    path=f"{silver_mnt}/silver_appeal_grounds_detail"
+    path=f"{silver_mnt}/silver_appealgrounds_detail"
 )
-def silver_appeal_grounds_detail():
+def silver_appealgrounds_detail():
     appealtypecategory_df = dlt.read("bronze_appeal_grounds").alias("agt")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 

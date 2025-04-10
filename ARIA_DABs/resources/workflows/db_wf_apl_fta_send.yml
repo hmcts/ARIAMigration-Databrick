@@ -8,16 +8,22 @@ resources:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 2
-          python_wheel_task:
-            entry_point: main
-            package_name: shared_functions
           libraries: 
             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+            
       tasks:
+        - task_key: validate_packages
+          job_cluster_key: DAB_job_cluster
+          notebook_task: 
+            notebook_path: "/Workspace/Users/test-packages-wheel"
+            source: WORKSPACE
         - task_key: DLT_creation_of_content
+          depends_on:
+            - task_key: validate_packages
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
             full_refresh: false
+
         - task_key: publish_HTML_JSON_to_eh
           job_cluster_key: DAB_job_cluster
           depends_on:

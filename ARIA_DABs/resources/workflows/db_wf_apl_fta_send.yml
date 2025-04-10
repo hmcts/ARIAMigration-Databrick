@@ -1,7 +1,7 @@
 resources:
   jobs:
-    wheel-job:
-      name: wheel-job
+    db_wf_apl_fta_send_job-wheel-job:
+      name: db_wf_apl_fta_send_job-wheel-job
       job_clusters:
         - job_cluster_key: db_wf_apl_fta_send_job
           new_cluster:

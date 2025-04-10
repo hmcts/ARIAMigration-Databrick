@@ -11,6 +11,7 @@ resources:
             max_workers: 5
             mode: ENHANCED
       libraries:
+        - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
         - notebook:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       target: ARIADM_ARM_JOH

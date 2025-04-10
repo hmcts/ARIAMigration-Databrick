@@ -4567,9 +4567,9 @@ def silver_hearingpointschange_detail():
 @dlt.table(
     name="silver_hearingpointshistory_detail",
     comment="Delta Live silver Table for hearing points history detail.",
-    path=f"{silver_mnt}/silver_hearing_points_history_detail"
+    path=f"{silver_mnt}/silver_hearingpointshistory_detail"
 )
-def silver_hearing_points_history_detail():
+def silver_hearingpointshistory_detail():
     hearingpointshistory_df = dlt.read("bronze_hearing_points_history").alias("hph")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
@@ -4625,9 +4625,9 @@ def silver_appealtypecategory_detail():
 @dlt.table(
     name="silver_appealgrounds_detail",
     comment="Delta Live silver Table for appeal ground  detail.",
-    path=f"{silver_mnt}/silver_appeal_grounds_detail"
+    path=f"{silver_mnt}/silver_appealgrounds_detail"
 )
-def silver_appeal_grounds_detail():
+def silver_appealgrounds_detail():
     appealtypecategory_df = dlt.read("bronze_appeal_grounds").alias("agt")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 

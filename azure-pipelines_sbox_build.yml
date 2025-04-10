@@ -79,13 +79,6 @@ stages:
         publishLocation: 'Container'
       displayName: 'Publish Wheel Artifact'
     
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/requirements.txt'
-        ArtifactName: 'pythondependencies'
-        publishLocation: 'Container'
-      displayName: 'Publish Python Packages Artifact'
-
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
@@ -100,14 +93,6 @@ stages:
         artifactName: 'ariafunction'
         downloadPath: '$(Pipeline.Workspace)'
       displayName: 'Download wheel Artifact'
-
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'pythondependencies'
-        downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download Python Libraries Artifact'
 
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'

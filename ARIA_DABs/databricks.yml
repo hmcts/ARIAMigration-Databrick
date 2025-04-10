@@ -6,6 +6,8 @@ include:
   - "resources/clusters/cluster.yml"
   - "resources/pipelines/*.yml"
   - "resources/workflows/db_wf_apl_fta_send.yml"
+  - "resources/workflows/db_wf_joh_recieve.yml"
+  - "resources/workflows/db_wf_joh_send.yml"
 
 
 workspace: &ingest02_workspace

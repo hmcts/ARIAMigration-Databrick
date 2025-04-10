@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='ARIAFUNCTIONS',
+    name='shared_functions',
     version='0.0.1',
     packages=find_packages(),
     description='These are custom functions that will be used for the ARIA data migration',
@@ -11,5 +11,5 @@ setup(
                         'confluent_kafka',
                         'aiohttp',
                         'numpy',
-                        'pyspark'],
+                        'pyspark']
 )

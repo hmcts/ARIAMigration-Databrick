@@ -157,7 +157,7 @@ stages:
 
           echo "Displaying content of dbfs:/FileStore/shared_wheels"
           databricks fs ls dbfs:/FileStore/shared_wheels
-          
+
         else
           echo "No wheel file found"
           exit 1
@@ -168,8 +168,6 @@ stages:
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-
-        # copy artifact to databricks workspace
 
         cd ARIA_DABs
 

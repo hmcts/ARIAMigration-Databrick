@@ -11,5 +11,5 @@ setup(
                         'confluent_kafka',
                         'aiohttp',
                         'numpy',
-                        'pyspark']
+                        'pyspark'],
 )

@@ -1,27 +1,35 @@
 resources:
   jobs:
-    db_wf_joh_recieve:
-      name: db_wf_joh_recieve
-      tasks:
-        - task_key: Response_Autoloader
-          notebook_task:
-            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick-new/Databricks/ARCHIVE/JOH/joh_resp_autoloader
-            source: WORKSPACE
-          job_cluster_key: Job_cluster
+    db_wf_joh_recieve_job:
+      name: db_wf_joh_recieve_job
       job_clusters:
-        - job_cluster_key: Job_cluster
+        - job_cluster_key: db_wf_apl_fta_send_job
           new_cluster:
-            spark_version: 15.4.x-scala2.12
-            azure_attributes:
-              first_on_demand: 1
-              availability: SPOT_WITH_FALLBACK_AZURE
-              spot_bid_max_price: -1
-            node_type_id: Standard_D4ds_v5
-            spark_env_vars:
-              PYSPARK_PYTHON: /databricks/python3/bin/python3
-            enable_elastic_disk: true
-            data_security_mode: LEGACY_SINGLE_USER_STANDARD
-            runtime_engine: PHOTON
-            num_workers: 8
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 2
+
+      tasks:
+        - task_key: run-my-wheel
+          job_cluster_key: db_wf_apl_fta_send_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+
+        - task_key: validate_packages
+          depends_on:
+            - task_key: run-my-wheel
+          job_cluster_key: db_wf_apl_fta_send_job
+          notebook_task: 
+            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            source: WORKSPACE
+
+        - task_key: Response_Autoloader
+          job_cluster_key: db_wf_apl_fta_send_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/JOH/joh_resp_autoloader"
+            source: WORKSPACE
       queue:
         enabled: true

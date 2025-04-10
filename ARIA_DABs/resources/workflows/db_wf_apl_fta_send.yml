@@ -10,12 +10,12 @@ resources:
             num_workers: 2
           libraries: 
             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
-            
+
       tasks:
         - task_key: validate_packages
           job_cluster_key: DAB_job_cluster
           notebook_task: 
-            notebook_path: "/Workspace/Users/test-packages-wheel"
+            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
             source: WORKSPACE
         - task_key: DLT_creation_of_content
           depends_on:

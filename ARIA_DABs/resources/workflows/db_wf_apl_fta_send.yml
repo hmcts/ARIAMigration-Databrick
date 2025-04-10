@@ -6,7 +6,7 @@ resources:
         - task_key: DLT_creation_of_content
         - job_cluster_key: DAB_job_cluster
           pipeline_task:
-            pipeline_id: ${resources.pipelines.PL_ARIADM_ARM_FTA.id}
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
             full_refresh: false
         - task_key: publish_HTML_JSON_to_eh
         - job_cluster_key: DAB_job_cluster

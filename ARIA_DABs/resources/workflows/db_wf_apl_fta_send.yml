@@ -8,7 +8,13 @@ resources:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 2
-      tasks:
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+
+          tasks:
         - task_key: DLT_creation_of_content
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}

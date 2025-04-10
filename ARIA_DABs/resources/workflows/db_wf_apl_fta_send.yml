@@ -4,12 +4,12 @@ resources:
       name: db_wf_apl_fta_send
       tasks:
         - task_key: DLT_creation_of_content
-          depends_on:
-          - resources/clusters/cluster.yml
+        - job_cluster_key: DAB_job_cluster
           pipeline_task:
-            pipeline_id: {resources.pipelines.PL_ARIADM_ARM_FTA.id} #6b53ac7d-1c6e-4db5-ab25-c473977ee760 
+            pipeline: PL_ARIADM_ARM_FTA 
             full_refresh: false
         - task_key: publish_HTML_JSON_to_eh
+        - job_cluster_key: DAB_job_cluster
           depends_on:
             - task_key: DLT_creation_of_content
           notebook_task:
@@ -20,26 +20,3 @@ resources:
               dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
               file_types: html,json
             source: WORKSPACE
-          existing_cluster_id: {resources.clusters.DAB_JobCluster.id} # 1001-145537-3lr5mj25 
-        - task_key: publish_A360_to_eh
-          depends_on:
-            - task_key: publish_HTML_JSON_to_eh
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
-            base_parameters:
-              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
-              topic: evh-apl-pub-dev-uks-dlrm-01
-              dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
-              file_types: a360
-            source: WORKSPACE
-          existing_cluster_id: 1001-145537-3lr5mj25 # Update with cluster name?
-        - task_key: ARM_ack
-          depends_on:
-            - task_key: publish_HTML_JSON_to_eh
-            - task_key: publish_A360_to_eh
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
-            source: WORKSPACE
-          existing_cluster_id: 1001-145537-3lr5mj25 # Update with cluster name?
-      queue:
-        enabled: true

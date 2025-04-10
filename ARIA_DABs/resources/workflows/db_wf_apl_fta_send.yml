@@ -3,7 +3,7 @@ resources:
     wheel-job:
       name: wheel-job
       job_clusters:
-        - job_cluster_key: DAB_job_cluster
+        - job_cluster_key: db_wf_apl_fta_send_job
           new_cluster:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
@@ -11,7 +11,7 @@ resources:
 
       tasks:
         - task_key: run-my-wheel
-          job_cluster_key: DAB_job_cluster
+          job_cluster_key: db_wf_apl_fta_send_job
           python_wheel_task:
             entry_point: main
             package_name: shared_functions
@@ -19,7 +19,7 @@ resources:
             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
 
         - task_key: validate_packages
-          job_cluster_key: DAB_job_cluster
+          job_cluster_key: db_wf_apl_fta_send_job
           notebook_task: 
             notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
             source: WORKSPACE
@@ -31,7 +31,7 @@ resources:
             full_refresh: false
 
         - task_key: publish_HTML_JSON_to_eh
-          job_cluster_key: DAB_job_cluster
+          job_cluster_key: db_wf_apl_fta_send_job
           depends_on:
             - task_key: DLT_creation_of_content
           notebook_task:

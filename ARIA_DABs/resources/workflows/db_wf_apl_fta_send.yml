@@ -15,14 +15,17 @@ resources:
           python_wheel_task:
             entry_point: main
             package_name: shared_functions
-          libraries: #seperate devops step to copy file into workspace
+          libraries: 
             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
 
         - task_key: validate_packages
+          depends_on:
+            - task_key: run-my-wheel
           job_cluster_key: db_wf_apl_fta_send_job
           notebook_task: 
             notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
             source: WORKSPACE
+            
         - task_key: DLT_creation_of_content
           depends_on:
             - task_key: validate_packages

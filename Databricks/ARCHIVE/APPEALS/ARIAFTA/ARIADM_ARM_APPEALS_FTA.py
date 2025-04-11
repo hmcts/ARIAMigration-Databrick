@@ -4750,7 +4750,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Gold Outputs and Tracking DLT Table Creation
+# MAGIC ## Silver DLT staging table for gold transformation
 
 # COMMAND ----------
 
@@ -5347,7 +5347,7 @@ lookup_list = lookup_df.collect()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Gold Create/Update to blob  storage
+# MAGIC ## Staging tables for Gold Outputs
 
 # COMMAND ----------
 
@@ -5355,7 +5355,7 @@ lookup_list = lookup_df.collect()
 @dlt.table(
     name="stg_statichtml_data",
     comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{gold_mnt}/stg_statichtml_data"
+    path=f"{silver_mnt}/stg_statichtml_data"
 )
 def stg_statichtml_data():
     # df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
@@ -5539,7 +5539,7 @@ def stg_statichtml_data():
 @dlt.table(
     name="stg_statusdetail_data",
     comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{gold_mnt}/stg_statusdetail_data"
+    path=f"{silver_mnt}/stg_statusdetail_data"
 )
 def stg_statusdetail_data():
     # df_list_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_list_detail")
@@ -5731,7 +5731,7 @@ def stg_statusdetail_data():
 @dlt.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.",
-    path=f"{gold_mnt}/stg_apl_combined"
+    path=f"{silver_mnt}/stg_apl_combined"
 )
 def stg_apl_combined():
 
@@ -5918,7 +5918,7 @@ def stg_apl_combined():
 @dlt.table(
     name="stg_apl_create_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_apl_create_json_content"
+    path=f"{silver_mnt}/stg_apl_create_json_content"
 )
 def stg_apl_create_json_content():
 
@@ -5926,19 +5926,19 @@ def stg_apl_create_json_content():
     # M1
     df_combined = dlt.read("stg_apl_combined")
    
-    df_with_json_content = df_combined.withColumn("JSONContent", to_json(struct(*df_combined.columns))).withColumn(
-        "JSONFileName", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
-    ).withColumn("JSONStatus", when((col("JSONContent").like("Failure%") | col("JSONContent").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
+    df_with_json_content = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))).withColumn(
+        "File_name", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
+    ).withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 
-    table_name = "stg_apl_create_json_content"
+    # table_name = "stg_apl_create_json_content"
 
-    stage_name = "stg_stage"
+    # stage_name = "stg_stage"
 
-    description = "The stg_apl_create_json_content Delta Live staging table with HTML data"
+    # description = "The stg_apl_create_json_content Delta Live staging table with HTML data"
 
-    unique_identifier_desc = "CaseNo"
+    # unique_identifier_desc = "CaseNo"
 
-    create_audit_df(df_with_json_content,unique_identifier_desc,table_name,stage_name,description)  
+    # create_audit_df(df_with_json_content,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_with_json_content
 
@@ -5948,7 +5948,7 @@ def stg_apl_create_json_content():
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_apl_create_html_content"
+    path=f"{silver_mnt}/stg_apl_create_html_content"
 )
 def stg_apl_create_html_content():
 
@@ -5960,21 +5960,21 @@ def stg_apl_create_html_content():
     df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
 
 
-    df_with_html_content = df_with_statusdetail_data.withColumn("HTMLContent", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-        "HTMLFileName", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("HTMLStatus", when((col("HTMLContent").like("Failure%") | col("HTMLContent").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+    df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
+        "File_name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
    
 
-    table_name = "stg_apl_create_html_content"
+    # table_name = "stg_apl_create_html_content"
 
-    stage_name = "stg_stage"
+    # stage_name = "stg_stage"
 
-    description = "The stg_apl_create_html_content Delta Live staging table with HTML data"
+    # description = "The stg_apl_create_html_content Delta Live staging table with HTML data"
 
-    unique_identifier_desc = "CaseNo"
+    # unique_identifier_desc = "CaseNo"
 
-    create_audit_df(df_with_html_content,unique_identifier_desc,table_name,stage_name,description)  
+    # create_audit_df(df_with_html_content,unique_identifier_desc,table_name,stage_name,description)  
 
-    return df_with_html_content.select("CaseNo","HTMLContent","HTMLFileName","HTMLStatus")
+    return df_with_html_content.select("CaseNo","HTML_Content","File_name","Status")
 
 # COMMAND ----------
 
@@ -5982,7 +5982,7 @@ def stg_apl_create_html_content():
 @dlt.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_apl_create_a360_content"
+    path=f"{silver_mnt}/stg_apl_create_a360_content"
 )
 def stg_apl_create_a360_content():
 
@@ -5996,33 +5996,38 @@ def stg_apl_create_a360_content():
     # Define a window specification to assign row numbers
     window_spec = Window.orderBy("client_identifier")
     df_batch = df_apl_metadata.withColumn("row_num", row_number().over(window_spec)) \
-                        .withColumn("A360BatchId", floor((col("row_num") - 1) / 250) + 1)
+                        .withColumn("A360_BatchId", floor((col("row_num") - 1) / 250) + 1)
 
     # Join the batch information with the original metadata
-    df_metadata = df_apl_metadata.alias("a").join(df_batch.alias("b"), "client_identifier", "left").select("a.*", "b.A360BatchId")
+    df_metadata = df_apl_metadata.alias("a").join(df_batch.alias("b"), "client_identifier", "left").select("a.*", "b.A360_BatchId")
 
     # Repartition the DataFrame to optimize parallelism
     # repartitioned_df = df_metadata.repartition(64, col("client_identifier"))
 
     # Generate A360 content and associated file names
     df_with_a360 = df_metadata.withColumn(
-        "A360Content", generate_a360_udf(struct(*df_apl_metadata.columns))
+        "A360_Content", generate_a360_udf(struct(*df_apl_metadata.columns))
     ).withColumn(
-        "A360FileName", when(col("A360BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360BatchId"), lit(".a360"))).otherwise(lit(None)) ) \
-    .withColumn("A360Status",when(col("A360Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
+        "File_name", when(col("A360_BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360_BatchId"), lit(".a360"))).otherwise(lit(None)) ) \
+    .withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
 
 
-    table_name = "stg_apl_create_a360_content"
+    # table_name = "stg_apl_create_a360_content"
 
-    stage_name = "stg_stage"
+    # stage_name = "stg_stage"
 
-    description = "The stg_apl_create_a360_content Delta Live staging table with a360 data"
+    # description = "The stg_apl_create_a360_content Delta Live staging table with a360 data"
 
-    unique_identifier_desc = "client_identifier"
+    # unique_identifier_desc = "client_identifier"
 
-    create_audit_df(df_with_a360,unique_identifier_desc,table_name,stage_name,description)  
+    # create_audit_df(df_with_a360,unique_identifier_desc,table_name,stage_name,description)  
 
-    return df_with_a360.select(col("client_identifier"),"A360Content","A360FileName","A360Status","A360BatchId")
+    return df_with_a360.select(col("client_identifier"),"A360_Content","File_name","Status","A360_BatchId")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from 
 
 # COMMAND ----------
 
@@ -6030,7 +6035,7 @@ def stg_apl_create_a360_content():
 @dlt.table(
     name="stg_appeals_unified",
     comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{gold_mnt}/stg_appeals_unified"
+    path=f"{silver_mnt}/stg_appeals_unified"
 )
 def stg_appeals_unified():
 
@@ -6039,7 +6044,7 @@ def stg_appeals_unified():
     # Read DLT sources
     a360_df = dlt.read("stg_apl_create_a360_content").alias("a360")
     html_df = dlt.read("stg_apl_create_html_content").alias("html")
-    json_df = dlt.read("stg_apl_create_json_content").alias("json")
+    json_df = dlt.read("stg_apl_create_json_content").alias("json").withColumn("JSON_File_name",col("File_name")).withColumn("JSON_Status",col("Status")).drop("File_name","Status")
 
      # Perform joins
     df_unified = (
@@ -6053,33 +6058,38 @@ def stg_appeals_unified():
         .select(
             col("a360.client_identifier"),
             col("json.*"),
-            col("html.HTMLContent"),
-            col("html.HTMLFileName"),
-            col("html.HTMLStatus"),
-            col("a360.A360Content"),
-            col("a360.A360Status"),
-            col("a360.A360FileName"),
-            col("a360.A360BatchId")
+            col("html.HTML_Content"),
+            col("html.File_name").alias("HTML_File_name"),
+            col("html.Status").alias("HTML_Status"),
+            col("a360.A360_Content"),
+            col("a360.Status").alias("Status"),
+            col("a360.File_Name").alias("File_Name"),
+            col("a360.A360_BatchId")
         )
         .filter(
-            (~col("html.HTMLContent").like("Failure%")) &
-            (~col("a360.A360Content").like("Failure%")) &
-            (~col("json.JSONContent").like("Failure%"))
+            (~col("html.HTML_Content").like("Failure%")) &
+            (~col("a360.A360_Content").like("Failure%")) &
+            (~col("json.JSON_Content").like("Failure%"))
         )
     )
 
 
-    table_name = "stg_appeals_unified"
+    # table_name = "stg_appeals_unified"
 
-    stage_name = "stg_stage"
+    # stage_name = "stg_stage"
 
-    description = "The stg_appeals_unified Delta Live staging table consolidates all silver data, including HTML, JSON, and A360 content, along with its status."
+    # description = "The stg_appeals_unified Delta Live staging table consolidates all silver data, including HTML, JSON, and A360 content, along with its status."
 
-    unique_identifier_desc = "CaseNo"
+    # unique_identifier_desc = "CaseNo"
 
-    create_audit_df(df_unified,unique_identifier_desc,table_name,stage_name,description)  
+    # create_audit_df(df_unified,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_unified
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Gold Outputs and Tracking DLT Table Creation
 
 # COMMAND ----------
 
@@ -6104,38 +6114,38 @@ def gold_appeals_with_json():
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
 
-    df_with_upload_status = repartitioned_df.filter(~col("JSONcontent").like("Error%")).withColumn(
-            "UploadStatus", upload_udf(col("JSONFileName"), col("JSONcontent"))
+    df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
+            "Status", upload_udf(col("File_Name"), col("JSON_content"))
         )
     
     # Optionally load data from Hive
     if read_hive:
-        display(df_with_upload_status.select("CaseNo","A360BatchId", "JSONcontent","JSONFileName","UploadStatus"))
+        display(df_with_upload_status.select("CaseNo","A360BatchId", "JSON_content","JSONFileName","UploadStatus"))
 
     
-    df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
+    # df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
 
     
-    table_name = "gold_appeals_with_json"
+    # table_name = "gold_appeals_with_json"
 
-    stage_name = "gold_stage"
+    # stage_name = "gold_stage"
 
-    description = "The gold_appeals_with_json Delta Live staging table derives HTML content along with its corresponding name."
+    # description = "The gold_appeals_with_json Delta Live staging table derives HTML content along with its corresponding name."
 
-    unique_identifier_desc = "CaseNo"
+    # unique_identifier_desc = "CaseNo"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
 
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","A360BatchId", "JSONcontent","JSONFileName","UploadStatus")
+    return df_with_upload_status.select("CaseNo","A360_BatchId", "JSON_content","File_Name","Status")
 
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_appeals_with_html
 checks = {}
-checks["html_content_no_error"] = "(HTMLContent NOT LIKE 'Error%')"
+checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_appeals_with_html",
@@ -6155,29 +6165,29 @@ def gold_appeals_with_html():
     repartitioned_df = df_combined.repartition(64)
 
     # Trigger upload logic for each row
-    df_with_upload_status = repartitioned_df.filter(~col("HTMLContent").like("Error%")).withColumn(
-        "UploadStatus", upload_udf(col("HTMLFileName"), col("HTMLContent"))
+    df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
+        "Status", upload_udf(col("File_name"), col("HTML_Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("CaseNo","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     display(df_with_upload_status.select("CaseNo","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
 
-    df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
+    # df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
 
-    table_name = "gold_appeals_with_html"
+    # table_name = "gold_appeals_with_html"
 
-    stage_name = "gold_stage"
+    # stage_name = "gold_stage"
 
-    description = "The gold_appeals_with_html Delta Live staging table derives HTML content along with its corresponding name."
+    # description = "The gold_appeals_with_html Delta Live staging table derives HTML content along with its corresponding name."
 
-    unique_identifier_desc = "CaseNo"
+    # unique_identifier_desc = "CaseNo"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
 
 
     # Return the DataFrame for DLT table creation, including the upload status
-    return df_with_upload_status.select("CaseNo","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus")
+    return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", "File_name", "Status")
 
 # COMMAND ----------
 
@@ -6199,9 +6209,9 @@ def gold_appeals_with_a360():
         df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
-    df_agg = df_a360.groupBy("A360FileName", "A360BatchId") \
-            .agg(concat_ws("\n", collect_list("A360Content")).alias("consolidate_A360Content")) \
-            .select(col("A360FileName"), col("consolidate_A360Content"), col("A360BatchId"))
+    df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
+            .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
+            .select(col("File_name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
     repartitioned_df = df_agg.repartition(64)
@@ -6211,26 +6221,26 @@ def gold_appeals_with_a360():
 
     # Generate A360 content
     df_with_a360 = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("A360FileName"), col("consolidate_A360Content"))
+        "Status", upload_udf(col("File_name"), col("consolidate_A360Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_a360)
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     display(df_with_a360)
 
-    df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
+    # df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
 
-    table_name = "gold_appeals_with_a360"
+    # table_name = "gold_appeals_with_a360"
 
-    stage_name = "gold_stage"
+    # stage_name = "gold_stage"
 
-    description = "The gold_appeals_with_a360 Delta Live staging table derives HTML content along with its corresponding name."
+    # description = "The gold_appeals_with_a360 Delta Live staging table derives HTML content along with its corresponding name."
 
-    unique_identifier_desc = "A360BatchId"
+    # unique_identifier_desc = "A360BatchId"
 
-    create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
+    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
    
-    return df_with_a360.select("A360BatchId", "consolidate_A360Content", "A360FileName", "UploadStatus")
+    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_name", "Status")
 
 # COMMAND ----------
 

@@ -1308,7 +1308,7 @@ def stg_create_joh_json_content():
     df_combined = dlt.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))) \
-                    .withColumn("File_name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+                    .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
 
     
     df_with_json = df.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
@@ -1331,7 +1331,7 @@ def stg_create_joh_html_content():
     df_combined = dlt.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("HTML_Content", generate_html_udf(struct(*df_combined.columns))) \
-                        .withColumn("File_name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+                        .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
 
     
     df_with_html = df.withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
@@ -1386,7 +1386,7 @@ def stg_judicial_officer_unified():
 
     # Read DLT sources
     a360_df = dlt.read("stg_create_joh_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_joh_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
+    html_df = dlt.read("stg_create_joh_html_content").alias("html").withColumn("HTML_File_name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
     json_df = dlt.read("stg_create_joh_json_content").alias("json")
 
 
@@ -1406,7 +1406,7 @@ def stg_judicial_officer_unified():
             col("a360.bf_002"),
             col("html.*"),
             col("json.JSON_Content"),
-            col("json.File_name").alias("JSON_File_name"),
+            col("json.File_Name").alias("JSON_File_name"),
             col("json.Status").alias("JSON_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status")

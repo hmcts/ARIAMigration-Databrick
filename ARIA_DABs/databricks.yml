@@ -1,6 +1,12 @@
 bundle:
   name: ARIA_DAB_INGEST02
 
+secrets:
+  oauth:
+    client_id: sp-client-id
+    client_secret: sp-client-secret
+    tenant_id: sp-tenant-id
+
 # include only cluster. specify 00,01, 02 when deploying
 include:
   - "resources/clusters/cluster.yml"

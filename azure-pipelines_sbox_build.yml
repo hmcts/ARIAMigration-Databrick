@@ -7,6 +7,7 @@ pool:
   vmImage: 'ubuntu-latest' 
 
 variables:
+  - group: Secrets
   - name: env
     value: 'sandbox'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN00
@@ -15,6 +16,8 @@ variables:
     value: 'https://adb-376876256300083.3.azuredatabricks.net/'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN02
     value: 'https://adb-1879076228317698.18.azuredatabricks.net'
+  - name: StorageAccount
+    value: 'ingest02rawsbox'
 
 stages:
 - stage: 'Build'
@@ -129,8 +132,8 @@ stages:
 
           FILENAME=$(basename "$WHEEL_FILE")
           echo "Extracted filename: $FILENAME"
-  
-          DEST_PATH="dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+
+          DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
           echo "Destination path: $DEST_PATH"
 
           echo "creating directory dbfs:/FileStore/shared_wheels"
@@ -156,6 +159,12 @@ stages:
 
         cd ARIA_DABs
 
+        echo "Assigning Databricks secrets values ..."
+        databricks secrets put --scope my-scope --key sp-client-id --string-value "$Client_ID"
+        databricks secrets put --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
+        databricks secrets put --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
+        echo "Assigned Databricks secrets values!"
+
         echo "Current dir: $(pwd)"
         ls -al  
 
@@ -164,8 +173,3 @@ stages:
         databricks bundle deploy -t sandbox --debug
       displayName: "Deploy Databricks resources to ingest02 workspace"
 
-# how to dynamically pull out cluster id
-#         echo "Installing Python packages on cluster ID: $(databricksClusterId)"
-#        databricks fs cp dbfs:/FileStore/dependencies/requirements.txt requirements.txt
-#        pip install -r requirements.txt
-# databricks bundle run -t sandbox 

@@ -6026,17 +6026,15 @@ def stg_apl_create_a360_content():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from 
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation: stg_appeals_unified
 @dlt.table(
     name="stg_appeals_unified",
     comment="Delta Live unified stage Gold Table for gold outputs.",
     path=f"{silver_mnt}/stg_appeals_unified"
 )
+@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_appeals_unified():
 
     df_combined = dlt.read("stg_apl_combined")
@@ -6044,7 +6042,7 @@ def stg_appeals_unified():
     # Read DLT sources
     a360_df = dlt.read("stg_apl_create_a360_content").alias("a360")
     html_df = dlt.read("stg_apl_create_html_content").alias("html")
-    json_df = dlt.read("stg_apl_create_json_content").alias("json").withColumn("JSON_File_name",col("File_name")).withColumn("JSON_Status",col("Status")).drop("File_name","Status")
+    json_df = dlt.read("stg_apl_create_json_content").withColumn("JSON_File_Name",col("File_name")).withColumn("JSON_Status",col("Status")).drop("File_Name","Status").alias("json")
 
      # Perform joins
     df_unified = (
@@ -6059,7 +6057,7 @@ def stg_appeals_unified():
             col("a360.client_identifier"),
             col("json.*"),
             col("html.HTML_Content"),
-            col("html.File_name").alias("HTML_File_name"),
+            col("html.File_name").alias("HTML_File_Name"),
             col("html.Status").alias("HTML_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status"),
@@ -6115,12 +6113,12 @@ def gold_appeals_with_json():
     repartitioned_df = df_unified.repartition(64)
 
     df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
-            "Status", upload_udf(col("File_Name"), col("JSON_content"))
+            "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
         )
     
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("CaseNo","A360BatchId", "JSON_content","JSONFileName","UploadStatus"))
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     display(df_with_upload_status.select("CaseNo","A360BatchId", "JSON_content","JSON_File_Name","UploadStatus"))
 
     
     # df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
@@ -6138,7 +6136,7 @@ def gold_appeals_with_json():
 
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","A360_BatchId", "JSON_content","File_Name","Status")
+    return df_with_upload_status.select("CaseNo","A360_BatchId", "JSON_content",col("JSON_File_Name").alias("File_Name"),"Status")
 
 
 # COMMAND ----------
@@ -6166,7 +6164,7 @@ def gold_appeals_with_html():
 
     # Trigger upload logic for each row
     df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
-        "Status", upload_udf(col("File_name"), col("HTML_Content"))
+        "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
     # # Optionally load data from Hive
@@ -6187,7 +6185,7 @@ def gold_appeals_with_html():
 
 
     # Return the DataFrame for DLT table creation, including the upload status
-    return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", "File_name", "Status")
+    return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), "Status")
 
 # COMMAND ----------
 

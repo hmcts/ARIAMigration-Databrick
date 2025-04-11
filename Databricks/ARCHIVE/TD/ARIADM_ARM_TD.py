@@ -1297,7 +1297,7 @@ def stg_td_iris_unified():
     
     # Read DLT sources
     a360_df = dlt.read("stg_create_td_iris_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_td_iris_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
+    html_df = dlt.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
     json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
 
 
@@ -1319,7 +1319,7 @@ def stg_td_iris_unified():
             col("a360.bf_003"),
             col("html.*"),
             col("json.JSON_Content"),
-            col("json.File_name").alias("JSON_File_name"),
+            col("json.File_name").alias("JSON_File_Name"),
             col("json.Status").alias("JSON_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status")
@@ -1337,7 +1337,7 @@ def stg_td_iris_unified():
     df_batch = df_unified.withColumn("row_num", F.row_number().over(window_spec)) \
                          .withColumn("A360_BatchId", F.floor((F.col("row_num") - 1) / 250) + 1) \
                          .withColumn(
-                             "File_name", 
+                             "File_Name", 
                              F.concat(F.lit(f"{gold_outputs}/A360/tribunal_decision_"), 
                                       F.col("A360_BatchId"), 
                                       F.lit(".a360"))
@@ -1407,9 +1407,9 @@ def gold_td_iris_with_html():
     # # Upload HTML files to Azure Blob Storage
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreach(upload_html)
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status"))
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status"))
 
     # table_name = "gold_td_iris_with_html"
     # stage_name = "gold_stage"

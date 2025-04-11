@@ -1502,14 +1502,14 @@ def gold_judicial_officer_with_json():
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("JSON_File_Name"), col("JSON_Content"))
+        "Status", upload_udf(col("JSON_File_name"), col("JSON_Content"))
     )
     # Optionally load data from Hive
     if read_hive:
         display(df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content","File_Name","Status"))
 
 
-    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content",col("JSON_File_Name").alias("File_Name"),"Status")   
+    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content",col("JSON_File_name").alias("File_Name"),"Status")   
 
 
 # COMMAND ----------
@@ -1616,3 +1616,8 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # %sql
 # drop schema hive_metastore.ariadm_arm_joh cascade
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.stg_create_joh_json_content --where UploadStatus != 'success' and A360Content like '%ERROR%'

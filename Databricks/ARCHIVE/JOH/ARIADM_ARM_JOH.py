@@ -1470,10 +1470,6 @@ def gold_judicial_officer_with_html():
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", "File_Name", "Status"))
-
 
     return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), col("Status"))
 
@@ -1504,9 +1500,6 @@ def gold_judicial_officer_with_json():
     df_with_upload_status = repartitioned_df.withColumn(
         "Status", upload_udf(col("JSON_File_name"), col("JSON_Content"))
     )
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content","File_Name","Status"))
 
 
     return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content",col("JSON_File_name").alias("File_Name"),"Status")   
@@ -1546,10 +1539,6 @@ def gold_judicial_officer_with_a360():
     df_with_a360 = repartitioned_df.withColumn(
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
-
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_a360)
 
 
     return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")

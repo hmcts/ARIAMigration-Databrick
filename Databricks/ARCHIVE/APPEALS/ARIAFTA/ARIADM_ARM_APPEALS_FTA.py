@@ -1081,15 +1081,6 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             col("e.Email").alias("EmbassyEmail"),
             # col("e.DoNotUse").alias("DoNotUseEmbassy")
         )
-
-    table_name = "bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df
     
@@ -1167,14 +1158,6 @@ def bronze_appealcase_ca_apt_country_detc():
             col("c.Sdx").alias("CountrySdx"),
             col("c.DoNotUseNationality")
         )
-    table_name = "bronze_appealcase_ca_apt_country_detc"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_ca_apt_country_detc Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df
 
@@ -1271,14 +1254,7 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
             col("ls.Chairman"),
             col("ls.Position")
         )
-    table_name = "bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj"
-    stage_name = "bronze_stage"
 
-    description = "The bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj Delta Live Table combining Status, Case List, Hearing Type, Adjudicator, Court, and other related details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df
 
@@ -1313,14 +1289,6 @@ def bronze_appealcase_bfdiary_bftype():
                 col("bft.DoNotUse")
             )
 
-    table_name = "bronze_appealcase_bfdiary_bftype"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_bfdiary_bftype Delta Live Table combining BFDiary and BFType details.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df    
 
@@ -1361,14 +1329,6 @@ def bronze_appealcase_history_users():
                 col("u.DoNotUse")
             )
 
-    table_name = "bronze_appealcase_history_users"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_history_users Delta Live Table combining History and Users details"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df   
 
@@ -1413,14 +1373,7 @@ def bronze_appealcase_link_linkdetail():
                 
             )
 
-    table_name = "bronze_appealcase_link_linkdetail"
-    stage_name = "bronze_stage"
 
-    description = "The bronze_appealcase_link_linkdetail Delta Live Table combining Link and LinkDetail details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df  
 
@@ -1624,15 +1577,6 @@ def bronze_appealcase_status_sc_ra_cs():
                 expr("COALESCE(a3.Surname, '') || ' ' || COALESCE(a3.Forenames, '') || ' ' || COALESCE(a3.Title, '')").alias("Judiciary3Name")
             )
 
-
-    table_name = "bronze_appealcase_status_sc_ra_cs"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_status_sc_ra_cs Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df  
 
@@ -1661,15 +1605,6 @@ def bronze_appealcase_appealcatagory_catagory():
                 col("c.Flag"),
                 col("c.Priority")
             )
-
-    table_name = "bronze_appealcase_appealcatagory_catagory"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_appealcatagory_catagory Delta Live Table for joining AppealCategory and Category tables to retrieve case and category details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df    
 
@@ -1813,15 +1748,6 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
             col("at.DateEnd").alias("AppealTypeDateEnd")
         )
 
-
-    table_name = "bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at Delta Live Table for joining AppealCase, CaseFeeSummary, and other related tables to retrieve comprehensive case details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df 
 
@@ -1852,15 +1778,6 @@ def bronze_status_decisiontype():
                 col("dt.BailRefusal"),
                 col("dt.BailHOConsent")
             )
-
-    table_name = "bronze_status_decisiontype"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_status_decisiontype Delta Live Table for joining Status and DecisionType tables to retrieve case and decision type details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df        
 
@@ -1940,15 +1857,6 @@ def bronze_appealcase_t_tt_ts_tm():
                 col("tm.InterfaceDescription").alias("TransactionMethodIntDesc"),
                 col("tm.DoNotUse").alias("DoNotUseTransactionMethod")
             )
-
-    table_name = "bronze_appealcase_t_tt_ts_tm"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_t_tt_ts_tm Delta Live Table for joining Transaction, TransactionType, TransactionStatus, and TransactionMethod tables to retrieve transaction details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -1978,15 +1886,6 @@ def bronze_appealcase_ahr_hr():
                 col("hr.DoNotShow"),
                 col("hr.Priority")
             )
-
-    table_name = "bronze_appealcase_ahr_hr"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_ahr_hr Delta Live Table for joining AppealHumanRight and HumanRight tables to retrieve case and human rights details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -2022,15 +1921,6 @@ def bronze_appealcase_anm_nm():
                 col("nm.NotesRequired"),
                 col("nm.DoNotUse")
             )
-
-    table_name = "bronze_appealcase_anm_nm"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_anm_nm Delta  Live Table for joining AppealNewMatter and NewMatter tables to retrieve appeal and new matter details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -2066,15 +1956,6 @@ def bronze_appealcase_dr_rd():
                 col("rd.DoNotUse"),
                 col("rd.Auditable")
             )
-
-    table_name = "bronze_appealcase_dr_rd"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_dr_rd Delta Live Table for joining DocumentsReceived and ReceivedDocument tables to retrieve document details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -2110,14 +1991,6 @@ def bronze_appealcase_rsd_sd():
                 col("sd.DoNotUse")
             )
 
-    table_name = "bronze_appealcase_rsd_sd"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appealcase_rsd_sd Delta Live Table for joining ReviewStandardDirection and StandardDirection tables to retrieve review standard direction details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -2146,15 +2019,6 @@ def bronze_review_specific_direction():
                 col("DateReceivedIND"),
                 col("DateReceivedAppellantRep")
             )
-
-    table_name = "bronze_review_specific_direction"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_review_specific_direction Delta Live Table for retrieving details from the ReviewSpecificDirection table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df        
 
@@ -2222,15 +2086,6 @@ def bronze_cost_award():
                 col("ca.AppealStage")
             )
     )
-
-    table_name = "bronze_cost_award"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_cost_award Delta Live Table for retrieving details from the CostAward table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -2280,14 +2135,6 @@ def bronze_cost_award_linked():
                 col("ca.AppealStage"),
                 col("cs.Description").alias("AppealStageDescription")
             )
-    table_name = "bronze_cost_award_linked"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_cost_award_linked Delta Live Table for retrieving details from the CostAward_linked table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df       
 
@@ -2332,16 +2179,6 @@ def bronze_costorder():
                 col("co.ApplyingRepresentativeName").alias("ApplyingRepresentativeNameCaseRep"),
                 col("r.Name").alias("ApplyingRepresentativeNameRep")
             )
-
-
-    table_name = "bronze_costorder"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_costorder Delta Live Table for retrieving details from the CostOrder table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df       
 
@@ -2371,15 +2208,6 @@ def bronze_hearing_points_change_reason():
                 col("hpcr.Description"),
                 col("hpcr.DoNotUse")
             )
-
-    table_name = "bronze_hearing_points_change_reason"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_hearing_points_change_reason Delta Live Table for retrieving details from the HearingPointsChangeReason table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df       
 
@@ -2412,16 +2240,6 @@ def bronze_hearing_points_history():
                 col("hph.InitialPoints"),
                 col("hph.FinalPoints")
             )
-
-
-    table_name = "bronze_hearing_points_history"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_hearing_points_history Delta Live Table for retrieving details from the HearingPointsHistory table."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df       
 
@@ -2452,15 +2270,6 @@ def bronze_appeal_type_category():
             col("atc.CategoryId"),
             col("atc.FeeExempt")
         )
-
-    table_name = "bronze_appeal_type_category"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appeal_type_category Delta Live Table for retrieving details from the AppealTypeCategory table.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df    
 
@@ -2488,15 +2297,6 @@ def bronze_appeal_grounds():
             col("ag.AppealTypeId"),
             col("at.Description").alias("AppealTypeDescription")
         )
-
-    table_name = "bronze_appeal_grounds"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_appeal_grounds Delta Live Table for retrieving details from the AppealTypeCategory table.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df        
 
@@ -2525,15 +2325,6 @@ def bronze_required_incompatible_adjudicator():
             col("adj.Forenames").alias("JudgeForenames"),
             col("adj.Title").alias("JudgeTitle")
         )
-
-    table_name = "bronze_required_incompatible_adjudicator"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_required_incompatible_adjudicator Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df        
 
@@ -2562,15 +2353,6 @@ def bronze_case_adjudicator():
             col("adj.Forenames").alias("JudgeForenames"),
             col("adj.Title").alias("JudgeTitle")
         )
-
-    table_name = "bronze_case_adjudicator"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_case_adjudicator Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
         
     return df      
 
@@ -3292,15 +3074,6 @@ def silver_appealcase_detail():
         when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo2")).otherwise(col("RepDXNo2")).alias("RepresentativeDXNo2")
     )
 
-
-    table_name = "silver_appealcase_detail"
-    stage_name = "silver_stage"
-
-    description = "The bronze_cost_award_linked Delta Live silver Table for Appeals case details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3363,14 +3136,7 @@ def silver_applicant_detail():
         "ca.CountrySdx",
         "ca.DoNotUseNationality"
     )
-    table_name = "silver_applicant_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_applicant_detail Delta Live silver Table for casenapplicant detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
+  
     return joined_df
 
 # COMMAND ----------
@@ -3428,15 +3194,7 @@ def silver_dependent_detail():
         "ca.CountrySdx",
         "ca.DoNotUseNationality"
     )
-
-    table_name = "silver_dependent_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_dependent_detail Delta Live silver Table for casenapplicant detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
+    
     return joined_df
 
 # COMMAND ----------
@@ -3487,14 +3245,7 @@ def silver_list_detail():
                               "ca.Position"
                           )
 
-    table_name = "silver_list_detail"
-    stage_name = "silver_stage"
 
-    description = "The silver_list_detail Delta Live silver Table for list detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3515,14 +3266,6 @@ def silver_dfdairy_detail():
 
     joined_df = appeals_df.join(flt_df, col("df.CaseNo") == col("flt.CaseNo"), "inner").select("df.*")
 
-    table_name = "silver_dfdairy_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_dfdairy_detail Delta Live silver Table for dfdairy detail"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3630,16 +3373,6 @@ def silver_history_detail():
             .alias("HistTypeDescription")
         )
 
-
-
-    table_name = "silver_history_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_history_detail Delta Live silver Table for history detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(result_df,unique_identifier_desc,table_name,stage_name,description)
     return result_df
 
 
@@ -3668,14 +3401,6 @@ def silver_link_detail():
         "ld.LinkTitle"
     )
 
-    table_name = "silver_link_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_link_detail Delta Live silver Table for list detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3845,14 +3570,6 @@ def silver_status_detail():
                               col("st.Judiciary3Name")
                           )
 
-    table_name = "silver_status_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_status_detail Delta Live silver Table for status detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
     return joined_df
 
 # COMMAND ----------
@@ -3873,14 +3590,7 @@ def silver_appealcategory_detail():
 
     joined_df = appeals_df.join(flt_df, col("ac.CaseNo") == col("flt.CaseNo"), "inner").select("ac.*")
 
-    table_name = "silver_appealcategory_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_appealcategory_detail Delta Live silver Table for status detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)
+    
     return joined_df
 
 # COMMAND ----------
@@ -4014,14 +3724,6 @@ def silver_case_detail():
         col("case.AppealTypeDateEnd").alias("AppealTypeDateEnd")
     )
 
-    table_name = "silver_case_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_case_detail Delta Live silver Table for status detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)    
     return joined_df
 
 # COMMAND ----------
@@ -4036,15 +3738,7 @@ def silver_statusdecisiontype_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = status_decision_df.join(flt_df, col("status.CaseNo") == col("flt.CaseNo"), "inner").select("status.*")
-
-    table_name = "silver_statusdecisiontype_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_statusdecisiontype_detail Delta Live silver Table for transaction detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)        
+   
     return joined_df
 
 
@@ -4164,15 +3858,7 @@ def silver_transaction_detail():
         col("BalanceDue.BalanceDue").alias("BalanceDue")
     )
 
-
-    table_name = "silver_transaction_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_transaction_detail Delta Live silver Table for transaction detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)   
+  
     return joined_df
 
 # COMMAND ----------
@@ -4193,14 +3879,6 @@ def silver_humanright_detail():
 
     joined_df = humanright_df.join(flt_df, col("hr.CaseNo") == col("flt.CaseNo"), "inner").select("hr.*")
 
-    table_name = "silver_humanright_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_humanright_detail Delta Live silver Table for human rights detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
     return joined_df
 
 
@@ -4233,15 +3911,7 @@ def silver_newmatter_detail():
         "nm.NotesRequired",
         "nm.DoNotUse"
     )
-
-    table_name = "silver_newmatter_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_newmatter_detail Delta Live silver Table for new matter detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
+ 
     return joined_df
 
 # COMMAND ----------
@@ -4261,15 +3931,7 @@ def silver_documents_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner").select("doc.*")
-
-    table_name = "silver_documents_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_documents_detail Delta Live silver Table for documents detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
+     
     return joined_df
 
 
@@ -4290,15 +3952,7 @@ def sliver_direction_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = direction_df.join(flt_df, col("dir.CaseNo") == col("flt.CaseNo"), "inner").select("dir.*")
-
-    table_name = "sliver_direction_detail"
-    stage_name = "silver_stage"
-
-    description = "The sliver_direction_detail Delta Live silver Table for direction details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)         
+       
     return joined_df
 
 
@@ -4319,15 +3973,7 @@ def Silver_reviewspecificdirection_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = review_specific_direction_df.join(flt_df, col("rsd.CaseNo") == col("flt.CaseNo"), "inner").select("rsd.*")
-
-    table_name = "silver_reviewspecificdirection_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_reviewspecificdirection_detail Delta Live silver Table for review-specific direction details."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
+  
     return joined_df
 
 
@@ -4386,14 +4032,7 @@ def silver_linkedcostaward_detail():
         "ca.AppealStageDescription"
     )
 
-    table_name = "silver_linkedcostaward_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_linkedcostaward_detail Delta Live silver Table for cost award detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
+      
     return joined_df
 
 # COMMAND ----------
@@ -4446,14 +4085,6 @@ def silver_costaward_detail():
         "ca.AppealStageDescription"
     )
 
-    table_name = "silver_costaward_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_costaward_detail Delta Live silver Table for cost award detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description) 
     return joined_df
 
 # COMMAND ----------
@@ -4512,15 +4143,7 @@ def silver_costorder_detail():
             .when(col("co.CostOrderDecision") == 4, "Not Valid Application")
             .alias("CostOrderDecision")
     )
-
-    table_name = "silver_costorder_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_costorder_detail Delta Live silver Table for cost order detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
+    
     return joined_df
 
 # COMMAND ----------
@@ -4547,14 +4170,6 @@ def silver_hearingpointschange_detail():
         col("hpc.DoNotUse").alias("HearingPointsChangeDoNotUse")
     )
 
-    table_name = "silver_hearingpointschange_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_hearingpointschange_detail Delta Live silver Table for hearing points change reason detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
     return joined_df
 
 # COMMAND ----------
@@ -4574,14 +4189,7 @@ def silver_hearingpointshistory_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = hearingpointshistory_df.join(flt_df, col("hph.CaseNo") == col("flt.CaseNo"), "inner").select("hph.*")
-    table_name = "silver_hearingpointshistory_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_hearingpointshistory_detail Delta Live silver Table for hearing points history detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
+       
     return joined_df
 
 
@@ -4603,15 +4211,6 @@ def silver_appealtypecategory_detail():
 
     joined_df = appealtypecategory_df.join(flt_df, col("atc.CaseNo") == col("flt.CaseNo"), "inner").select("atc.*")
 
-    table_name = "silver_appealtypecategory_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_appealtypecategory_detail Delta Live silver Table for appeal type category detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)  
-
     return joined_df
 
 
@@ -4632,15 +4231,7 @@ def silver_appealgrounds_detail():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("agt.CaseNo") == col("flt.CaseNo"), "inner").select("agt.*")
-
-    table_name = "silver_appealgrounds_detail"
-    stage_name = "silver_stage"
-
-    description = "The silver_appealgrounds_detail Delta Live silver Table for appeal ground  detail"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)      
+  
     return joined_df
 
 
@@ -4662,14 +4253,6 @@ def silver_required_incompatible_adjudicator():
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
 
-    table_name = "silver_required_incompatible_adjudicator"
-    stage_name = "silver_stage"
-
-    description = "The silver_required_incompatible_adjudicator Delta Live silver Table for appeal ground  detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
     return joined_df
 
 # COMMAND ----------
@@ -4689,15 +4272,7 @@ def silver_case_adjudicator():
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
-
-    table_name = "silver_case_adjudicator"
-    stage_name = "silver_stage"
-
-    description = "The silver_case_adjudicator Delta Live silver Table for appeal ground  detail."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(joined_df,unique_identifier_desc,table_name,stage_name,description)     
+  
     return joined_df
 
 # COMMAND ----------
@@ -4736,15 +4311,7 @@ def silver_archive_metadata():
         when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))
-
-    table_name = "silver_archive_metadata"
-    stage_name = "silver_stage"
-
-    description = "The silver_archive_metadata Delta Live Silver Table for Archive Metadata data."
-
-    unique_identifier_desc = "client_identifier"
-
-    create_audit_df(metadata_df,unique_identifier_desc,table_name,stage_name,description)     
+    
     return metadata_df
 
 # COMMAND ----------
@@ -5521,15 +5088,6 @@ def stg_statichtml_data():
                                                   .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), expr("regexp_replace(flag3, ',', '')").alias("flag3"))
 
 
-    table_name = "stg_statichtml_data"
-
-    stage_name = "stg_stage"
-
-    description = "The stg_statichtml_data Delta Live staging table is used to derive static HTML with a one-to-one column mapping."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df_stg_static_html_final_data,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_stg_static_html_final_data
 
@@ -5713,15 +5271,6 @@ def stg_statusdetail_data():
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle')).alias("TempCaseStatusDetails"))
     
-    table_name = "stg_statusdetail_data"
-
-    stage_name = "stg_stage"
-
-    description = "The stg_statusdetail_data Delta Live staging table derives HTML data for status details in nested tabs in HTML output."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df_final,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_final
 
@@ -5900,16 +5449,6 @@ def stg_apl_combined():
 
     df_with_json_content = df_combined.withColumn("JSONcollection", to_json(struct(*df_combined.columns)))
 
-    table_name = "stg_apl_combined"
-
-    stage_name = "stg_stage"
-
-    description = "The stg_apl_combined Delta Live unified stage created all consolidated data."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df_combined,unique_identifier_desc,table_name,stage_name,description)  
-
     return df_with_json_content
 
 # COMMAND ----------
@@ -5927,18 +5466,9 @@ def stg_apl_create_json_content():
     df_combined = dlt.read("stg_apl_combined")
    
     df_with_json_content = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))).withColumn(
-        "File_name", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
+        "File_Name", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
     ).withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 
-    # table_name = "stg_apl_create_json_content"
-
-    # stage_name = "stg_stage"
-
-    # description = "The stg_apl_create_json_content Delta Live staging table with HTML data"
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(df_with_json_content,unique_identifier_desc,table_name,stage_name,description)  
 
     return df_with_json_content
 
@@ -5961,20 +5491,10 @@ def stg_apl_create_html_content():
 
 
     df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-        "File_name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+        "File_Name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
    
 
-    # table_name = "stg_apl_create_html_content"
-
-    # stage_name = "stg_stage"
-
-    # description = "The stg_apl_create_html_content Delta Live staging table with HTML data"
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(df_with_html_content,unique_identifier_desc,table_name,stage_name,description)  
-
-    return df_with_html_content.select("CaseNo","HTML_Content","File_name","Status")
+    return df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status")
 
 # COMMAND ----------
 
@@ -6008,21 +5528,11 @@ def stg_apl_create_a360_content():
     df_with_a360 = df_metadata.withColumn(
         "A360_Content", generate_a360_udf(struct(*df_apl_metadata.columns))
     ).withColumn(
-        "File_name", when(col("A360_BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360_BatchId"), lit(".a360"))).otherwise(lit(None)) ) \
+        "File_Name", when(col("A360_BatchId").isNotNull(), concat(lit(f"{gold_outputs}/A360/appeals_"), col("A360_BatchId"), lit(".a360"))).otherwise(lit(None)) ) \
     .withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
+ 
 
-
-    # table_name = "stg_apl_create_a360_content"
-
-    # stage_name = "stg_stage"
-
-    # description = "The stg_apl_create_a360_content Delta Live staging table with a360 data"
-
-    # unique_identifier_desc = "client_identifier"
-
-    # create_audit_df(df_with_a360,unique_identifier_desc,table_name,stage_name,description)  
-
-    return df_with_a360.select(col("client_identifier"),"A360_Content","File_name","Status","A360_BatchId")
+    return df_with_a360.select(col("client_identifier"),"A360_Content","File_Name","Status","A360_BatchId")
 
 # COMMAND ----------
 
@@ -6042,7 +5552,7 @@ def stg_appeals_unified():
     # Read DLT sources
     a360_df = dlt.read("stg_apl_create_a360_content").alias("a360")
     html_df = dlt.read("stg_apl_create_html_content").alias("html")
-    json_df = dlt.read("stg_apl_create_json_content").withColumn("JSON_File_Name",col("File_name")).withColumn("JSON_Status",col("Status")).drop("File_Name","Status").alias("json")
+    json_df = dlt.read("stg_apl_create_json_content").withColumn("JSON_File_Name",col("File_Name")).withColumn("JSON_Status",col("Status")).drop("File_Name","Status").alias("json")
 
      # Perform joins
     df_unified = (
@@ -6057,7 +5567,7 @@ def stg_appeals_unified():
             col("a360.client_identifier"),
             col("json.*"),
             col("html.HTML_Content"),
-            col("html.File_name").alias("HTML_File_Name"),
+            col("html.File_Name").alias("HTML_File_Name"),
             col("html.Status").alias("HTML_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status"),
@@ -6069,18 +5579,7 @@ def stg_appeals_unified():
             (~col("a360.A360_Content").like("Failure%")) &
             (~col("json.JSON_Content").like("Failure%"))
         )
-    )
-
-
-    # table_name = "stg_appeals_unified"
-
-    # stage_name = "stg_stage"
-
-    # description = "The stg_appeals_unified Delta Live staging table consolidates all silver data, including HTML, JSON, and A360 content, along with its status."
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(df_unified,unique_identifier_desc,table_name,stage_name,description)  
+    ) 
 
     return df_unified
 
@@ -6115,24 +5614,6 @@ def gold_appeals_with_json():
     df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
             "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
         )
-    
-    # # Optionally load data from Hive
-    # if read_hive:
-    #     display(df_with_upload_status.select("CaseNo","A360BatchId", "JSON_content","JSON_File_Name","UploadStatus"))
-
-    
-    # df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
-
-    
-    # table_name = "gold_appeals_with_json"
-
-    # stage_name = "gold_stage"
-
-    # description = "The gold_appeals_with_json Delta Live staging table derives HTML content along with its corresponding name."
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
 
 
     # Return the DataFrame for DLT table creation
@@ -6167,22 +5648,6 @@ def gold_appeals_with_html():
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
-    # # Optionally load data from Hive
-    # if read_hive:
-    #     display(df_with_upload_status.select("CaseNo","A360BatchId", "HTMLContent", "HTMLFileName", "UploadStatus"))
-
-    # df_audit = df_with_upload_status.withColumn("CaseNo",col("CaseNo").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("JSONFileName"))
-
-    # table_name = "gold_appeals_with_html"
-
-    # stage_name = "gold_stage"
-
-    # description = "The gold_appeals_with_html Delta Live staging table derives HTML content along with its corresponding name."
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
-
 
     # Return the DataFrame for DLT table creation, including the upload status
     return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), "Status")
@@ -6209,7 +5674,7 @@ def gold_appeals_with_a360():
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
             .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
-            .select(col("File_name"), col("consolidate_A360Content"), col("A360_BatchId"))
+            .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
     repartitioned_df = df_agg.repartition(64)
@@ -6219,26 +5684,10 @@ def gold_appeals_with_a360():
 
     # Generate A360 content
     df_with_a360 = repartitioned_df.withColumn(
-        "Status", upload_udf(col("File_name"), col("consolidate_A360Content"))
+        "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
-
-    # # Optionally load data from Hive
-    # if read_hive:
-    #     display(df_with_a360)
-
-    # df_audit = df_with_a360.withColumn("A360BatchId",col("A360BatchId").cast("string")).withColumn("Status", col("UploadStatus")).withColumn("File_name",col("A360FileName"))
-
-    # table_name = "gold_appeals_with_a360"
-
-    # stage_name = "gold_stage"
-
-    # description = "The gold_appeals_with_a360 Delta Live staging table derives HTML content along with its corresponding name."
-
-    # unique_identifier_desc = "A360BatchId"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["Status","File_name"])
    
-    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_name", "Status")
+    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 
 # COMMAND ----------
 

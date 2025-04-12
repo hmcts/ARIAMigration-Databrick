@@ -162,10 +162,10 @@ stages:
         echo "Successfully created scope <my-scope>!"
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets put-secret  my-scope sp-client-id <<< "$Client_ID"
-        databricks secrets put-secret  my-scope sp-client-secret <<< "$Client_Secret"
-        databricks secrets put-secret  my-scope sp-tenant-id <<< "$Tenant_ID"
-        databricks secrets put-secret  my-scope raw-storage-account-key <<< "$Raw_StorageAccountKey"
+        databricks secrets put-secret  my-scope sp-client-id --value "$Client_ID"
+        databricks secrets put-secret  my-scope sp-client-secret --value "$Client_Secret"
+        databricks secrets put-secret  my-scope sp-tenant-id --value "$Tenant_ID"
+        databricks secrets put-secret  my-scope raw-storage-account-key --value "$Raw_StorageAccountKey"
 
         echo "Secrets assigned successfully!"
 

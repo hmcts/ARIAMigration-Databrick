@@ -160,9 +160,9 @@ stages:
         databricks secrets create-scope --scope my-scope || echo "Scope already exists."
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets put-secret --scope my-scope --key sp-client-id --string-value "$Client_ID"
-        databricks secrets put-secret --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
-        databricks secrets put-secret --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
+        databricks secrets write --scope my-scope --key sp-client-id --string-value "$Client_ID"
+        databricks secrets write --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
+        databricks secrets write --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
         echo "Secrets assigned successfully!"
       displayName: 'Push secrets to Databricks'
 

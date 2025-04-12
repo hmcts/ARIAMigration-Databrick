@@ -42,7 +42,7 @@ resources:
               "fs.azure.account.auth.type.ingest02landingsbox.dfs.core.windows.net": "OAuth"
               "fs.azure.account.oauth.provider.type.ingest02landingsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
               "fs.azure.account.oauth2.client.id.ingest02landingsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
-              "fs.azure.account.oauth2.client.secret.ingest02landigsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.secret.ingest02landingsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
               "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
 
       tasks:

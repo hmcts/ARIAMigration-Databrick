@@ -166,6 +166,9 @@ stages:
         databricks secrets put --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
         echo "Assigned Databricks secrets values!"
 
+        echo "Querying Databricks secret values"
+        databricks secrets list --scope my-scope
+
         echo "Current dir: $(pwd)"
         ls -al  
 

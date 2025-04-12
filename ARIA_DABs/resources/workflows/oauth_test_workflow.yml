@@ -1,7 +1,7 @@
 resources:
   jobs:
-    db_wf_joh_recieve_job:
-      name: db_wf_joh_recieve_job
+    OAuth_job:
+      name: OAuth_job
       job_clusters:
         - job_cluster_key: OAuth_job
           new_cluster:

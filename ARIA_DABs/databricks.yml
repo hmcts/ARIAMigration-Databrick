@@ -3,9 +3,9 @@ bundle:
 
 #secrets:
 #  oauth:
-#    sp-client-id: "{{secrets.my-scope.sp-client-id}}"
-#    sp-client-secret: "{{secrets.my-scope.sp-client-secret}}"
-#    sp-tenant-id: "{{secrets.my-scope.sp-tenant-id}}"
+#    sp_client_id: "{{secrets.my-scope.sp_client_id}}"
+#    sp_client_secret: "{{secrets.my-scope.sp_client_secret}}"
+#    sp_tenant_id: "{{secrets.my-scope.sp_tenant_id}}"
 
 # include only cluster. specify 00,01, 02 when deploying
 include:

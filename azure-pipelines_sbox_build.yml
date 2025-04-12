@@ -152,6 +152,20 @@ stages:
           exit 1
         fi
       displayName: 'Upload Wheel to Databricks DBFS'
+    
+    - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+
+        echo "Creating secret scope (if not exists)..."
+        databricks secrets create-scope --scope my-scope || echo "Scope already exists."
+
+        echo "Assigning Databricks secret values ..."
+        databricks secrets put-secret --scope my-scope --key sp-client-id --string-value "$Client_ID"
+        databricks secrets put-secret --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
+        databricks secrets put-secret --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
+        echo "Secrets assigned successfully!"
+      displayName: 'Push secrets to Databricks'
+
   
     - script: |
         echo "Current dir: $(pwd)"
@@ -159,15 +173,6 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         cd ARIA_DABs
-
-        echo "Assigning Databricks secrets values ..."
-        databricks secrets put --scope my-scope --key sp-client-id --string-value "$Client_ID"
-        databricks secrets put --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
-        databricks secrets put --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
-        echo "Assigned Databricks secrets values!"
-
-        echo "Querying Databricks secret values"
-        databricks secrets list --scope my-scope
 
         echo "Current dir: $(pwd)"
         ls -al  

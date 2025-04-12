@@ -14,6 +14,7 @@ include:
   - "resources/workflows/db_wf_apl_fta_send.yml"
   - "resources/workflows/db_wf_joh_recieve.yml"
   - "resources/workflows/db_wf_joh_send.yml"
+  - "resources/workflows/oauth_test_workflow.yml" 
 
 
 workspace: &ingest02_workspace

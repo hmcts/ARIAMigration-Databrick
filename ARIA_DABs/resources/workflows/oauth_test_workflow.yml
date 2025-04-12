@@ -1,0 +1,75 @@
+resources:
+  jobs:
+    db_wf_joh_recieve_job:
+      name: db_wf_joh_recieve_job
+      job_clusters:
+        - job_cluster_key: OAuth_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 2
+            spark_conf:
+              "fs.azure.account.auth.type.ingest02curatedsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02curatedsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02curatedsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+              # Test using a key
+              "fs.azure.account.key.ingest02rawsbox.dfs.core.windows.net": "{{secrets.my-scope.raw_storage_account_key}}"
+
+              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02externalsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02externalsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02externalsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02workspacesbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02workspacesbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02workspacesbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02workspacesbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02workspacesbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02xcuttingsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02xcuttingsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02xcuttingsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02xcuttingsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02xcuttingsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02landingsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02landingsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02landingsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02landingsbox.dfs.core.windows.net": "{{secrets.my-scope.sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+
+      tasks:
+        - task_key: run-my-wheel
+          job_cluster_key: OAuth_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+
+        - task_key: validate_packages
+          depends_on:
+            - task_key: run-my-wheel
+          job_cluster_key: OAuth_job
+          notebook_task: 
+            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            source: WORKSPACE
+
+        - task_key: Test_OAuth
+          depends_on: 
+            - task_key: validate_packages
+          job_cluster_key: OAuth_job
+          notebook_task:
+            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/OAuth test function"
+            source: WORKSPACE
+      queue:
+        enabled: true

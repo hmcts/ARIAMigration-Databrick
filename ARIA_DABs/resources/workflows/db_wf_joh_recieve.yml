@@ -13,7 +13,37 @@ resources:
               "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
               "fs.azure.account.oauth2.client.id.ingest02curatedsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
               "fs.azure.account.oauth2.client.secret.ingest02curatedsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
-              "fs.azure.account.oauth2.client.endpoint.ingest00curatedsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02tawsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02externalsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02externalsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02externalsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02workspacesbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02workspacesbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02workspacesbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02workspacesbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02workspacesbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02xcuttingsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02xcuttingsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02xcuttingsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02xcuttingsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02xcuttingsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
+
+              "fs.azure.account.auth.type.ingest02landingsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02landingsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02landingsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02landigsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
 
       tasks:
         - task_key: run-my-wheel

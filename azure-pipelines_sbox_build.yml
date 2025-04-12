@@ -162,9 +162,9 @@ stages:
         echo "Successfully created scope <my-scope>!"
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets put my-scope sp-client-id "$Client_ID"
-        databricks secrets put my-scope sp-client-secret "$Client_Secret"
-        databricks secrets put my-scope sp-tenant-id "$Tenant_ID"
+        databricks secrets put-secret my-scope sp-client-id "$Client_ID"
+        databricks secrets put-secret my-scope sp-client-secret "$Client_Secret"
+        databricks secrets put-secret my-scope sp-tenant-id "$Tenant_ID"
         echo "Secrets assigned successfully!"
       displayName: 'Push secrets to Databricks'
 

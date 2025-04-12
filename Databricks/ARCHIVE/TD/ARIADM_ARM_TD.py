@@ -525,21 +525,7 @@ def bronze_ac_ca_ant_fl_dt_hc():
                 col("ac.InsertedByProcessName")
             )
 
-    # table_name = "bronze_ac_ca_ant_fl_dt_hc"
-    # stage_name = "bronze_stage"
-
-    # description = "The bronze_ac_ca_ant_fl_dt_hc table Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre."
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
-
     return df
-
-
-
 
 
 # COMMAND ----------
@@ -583,17 +569,6 @@ def bronze_iris_extract():
         col('SourceFileName'),
         col('InsertedByProcessName')
     ).filter(lit(False))
-
-    # table_name = "bronze_iris_extract"
-    # stage_name = "bronze_stage"
-
-    # description = "The bronze_iris_extract table Delta Live Table extracted from the IRIS Tribunal decision file extract."
-
-    # df_audit = df_iris.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
 
     return df_iris
 
@@ -812,17 +787,6 @@ def silver_tribunaldecision_detail():
     joined_df = td_df.join(flt_df, col("td.CaseNo") == col("flt.CaseNo"), "inner").select("td.*")
 
     df = joined_df.unionByName(iris_df)
-
-    # table_name = "silver_tribunaldecision_detail"
-    # stage_name = "silver_stage"
-
-    # description = "The silver_tribunaldecision_detail - or Tribunal Decision information"
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description)
     
     return df
 
@@ -963,16 +927,6 @@ def silver_archive_metadata():
     )
     df = td_df.unionByName(iris_df)
 
-    # table_name = "silver_archive_metadata"
-    # stage_name = "silver_stage"
-
-    # description = "The silver_archive_metadata table consolidates keys metadata for Archive Metadata da."
-
-    # df_audit = df.withColumn("client_identifier_bf_002_bf_003", concat(col("client_identifier"), lit("_"), col("bf_002"), lit("_"), col("bf_003")))
-
-    # unique_identifier_desc = "client_identifier_bf_002_bf_003"
-
-    # create_audit_df(df_audit, unique_identifier_desc, table_name, stage_name, description)
 
     return df
 
@@ -1162,24 +1116,10 @@ def stg_create_td_iris_json_content():
     
     # Apply the UDF to the combined DataFrame
     df_with_json = repartitioned_df.withColumn("JSON_Content", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                            .withColumn("File_name", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+                                            .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
 
 
     df_with_json = df_with_json.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
-
-    ## Create and save audit log for this table
-    # df = df_with_json.withColumn("File_name", col("JSONFileName"))
-    # df = df.withColumn("Status",col("JSONStatus"))
-    # table_name = "stg_create_td_iris_json_content"
-    # stage_name = "staging_stage"
-
-    # description = "The stg_create_td_iris_json_content table generates JSON content for TD cases"
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit, unique_identifier_desc, table_name, stage_name, description,["File_name","Status"])
 
     return df_with_json
 
@@ -1209,25 +1149,11 @@ def stg_create_td_iris_html_content():
 
     
     df = repartitioned_df.withColumn("HTML_Content", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-                                           .withColumn("File_name", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                           .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
 
 
 
     df_with_html = df.withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
-
-    ## Create and save audit log for this table
-    # df = df_with_html.withColumn("File_name", col("HTMLFileName"))
-    # df = df.withColumn("Status",col("HTMLStatus"))
-    # table_name = "stg_create_td_iris_html_content"
-    # stage_name = "staging_stage"
-
-    # description = "The stg_create_td_iris_html_content table generates HTML content for TD cases"
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit, unique_identifier_desc, table_name, stage_name, description,["File_name","Status"])
 
     return df_with_html
 
@@ -1261,20 +1187,6 @@ def stg_create_td_iris_a360_content():
 
     metadata_df = df.withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
 
-    ## Create and save audit log for this table
-    # df = metadata_df.withColumn("File_name", lit("NotBatchedYet"))
-    # df = df.withColumn("Status",col("A360Status"))
-    # table_name = "stg_create_td_iris_a360_content"
-    # stage_name = "staging_stage"
-
-    # description = "The stg_create_td_iris_a360_content table generates A360 content for TD cases"
-
-    # df_audit = df.withColumn("client_identifier_bf_002_bf_003", concat(col("client_identifier"), lit("_"), col("bf_002"), lit("_"), col("bf_003")))
-
-    # unique_identifier_desc = "client_identifier_bf_002_bf_003"
-
-    # create_audit_df(df_audit, unique_identifier_desc, table_name, stage_name, description,["File_name","Status"])
-
     return metadata_df
 
 # COMMAND ----------
@@ -1297,7 +1209,7 @@ def stg_td_iris_unified():
     
     # Read DLT sources
     a360_df = dlt.read("stg_create_td_iris_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_td_iris_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
+    html_df = dlt.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
     json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
 
 
@@ -1319,7 +1231,7 @@ def stg_td_iris_unified():
             col("a360.bf_003"),
             col("html.*"),
             col("json.JSON_Content"),
-            col("json.File_name").alias("JSON_File_name"),
+            col("json.File_Name").alias("JSON_File_Name"),
             col("json.Status").alias("JSON_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status")
@@ -1337,25 +1249,11 @@ def stg_td_iris_unified():
     df_batch = df_unified.withColumn("row_num", F.row_number().over(window_spec)) \
                          .withColumn("A360_BatchId", F.floor((F.col("row_num") - 1) / 250) + 1) \
                          .withColumn(
-                             "File_name", 
+                             "File_Name", 
                              F.concat(F.lit(f"{gold_outputs}/A360/tribunal_decision_"), 
                                       F.col("A360_BatchId"), 
                                       F.lit(".a360"))
                          )
-
-    ## Create and save audit log for this table
-    # df = df_batch.withColumn("File_name", col("A360FileName"))
-    # df = df.withColumn("Status",col("A360Status"))
-    # table_name = "stg_td_iris_unified"
-    # stage_name = "staging_stage"
-
-    # description = "The stg_td_iris_unified table generates A360 BatchId for TD cases"
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit, unique_identifier_desc, table_name, stage_name, description,["File_name","Status"])
 
     return df_batch.drop("row_num")
 
@@ -1401,31 +1299,12 @@ def gold_td_iris_with_html():
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "Status", upload_udf(col("File_Name"), col("HTML_Content"))
+        "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
     
-    # # Upload HTML files to Azure Blob Storage
-    # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreach(upload_html)
-
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status"))
-
-    # table_name = "gold_td_iris_with_html"
-    # stage_name = "gold_stage"
-    # df = df_with_upload_status.withColumn("File_name", col("HTMLFileName"))
-    # df = df.withColumn("Status",col("UploadStatus"))
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # description = "The gold_td_iris_with_html with HTML Outputs.."
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content","File_Name","Status")
+    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content",col("HTML_File_Name").alias("File_Name"),"Status")
 
 # COMMAND ----------
 
@@ -1457,28 +1336,11 @@ def gold_td_iris_with_json():
     repartitioned_df = df_combined.repartition(optimal_partitions)
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "Status", upload_udf(col("File_Name"), col("JSON_Content"))
+        "Status", upload_udf(col("JSON_File_Name"), col("JSON_Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_upload_status)
-    
-    # table_name = "gold_td_iris_with_json"
-    # stage_name = "gold_stage"
-    # df = df_with_upload_status.withColumn("File_name", col("JSONFileName"))
-    # df = df.withColumn("Status",col("UploadStatus"))
-
-    # df_audit = df.withColumn("CaseNo_Forenames_Name", concat(col("CaseNo"), lit("_"), col("Forenames"), lit("_"), col("Name")))
-
-    # description = "The gold_td_iris_with_json with HTML Outputs.."
-
-    # unique_identifier_desc = "CaseNo_Forenames_Name"
-
-    # create_audit_df(df_audit,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
-
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name","A360_BatchId","JSON_Content","File_Name","Status")
+    return df_with_upload_status.select("CaseNo","Forenames","Name","A360_BatchId","JSON_Content",col("JSON_File_Name").alias("File_Name"),"Status")
 
 
 # COMMAND ----------
@@ -1522,23 +1384,7 @@ def gold_td_iris_with_a360():
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 
-    df_with_a360_review = df_with_a360.withColumn("A360BatchId_str", col("A360_BatchId").cast("string"))
-    
-
-    # # Optionally load data from Hive
-    if read_hive:
-        display(df_with_a360)
-
-    # table_name = "gold_td_iris_with_a360"
-    # stage_name = "gold_stage"
-    # df = df_with_a360_review.withColumn("File_name", col("A360FileName"))
-    # df = df.withColumn("Status",col("UploadStatus")).withColumn("A360BatchId_str", col("A360BatchId").cast("string"))
-
-    # description = "The gold_td_iris_with_a360 with HTML Outputs.."
-
-    # unique_identifier_desc = "A360BatchId_str"
-
-    # create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
+    # df_with_a360_review = df_with_a360.withColumn("A360BatchId_str", col("A360_BatchId").cast("string"))
    
     return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 

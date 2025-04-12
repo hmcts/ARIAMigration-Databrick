@@ -1049,7 +1049,7 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curated-connection-string")
 
 # COMMAND ----------
 
@@ -1302,7 +1302,7 @@ def stg_create_joh_json_content():
     df_combined = dlt.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))) \
-                    .withColumn("File_name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
+                    .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/judicial_officer_"), col("AdjudicatorId"), lit(f".json")))
 
     
     df_with_json = df.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
@@ -1325,7 +1325,7 @@ def stg_create_joh_html_content():
     df_combined = dlt.read("stg_judicial_officer_combined")
 
     df = df_combined.withColumn("HTML_Content", generate_html_udf(struct(*df_combined.columns))) \
-                        .withColumn("File_name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
+                        .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/judicial_officer_"), col("AdjudicatorId"), lit(f".html"))) \
 
     
     df_with_html = df.withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
@@ -1380,7 +1380,7 @@ def stg_judicial_officer_unified():
 
     # Read DLT sources
     a360_df = dlt.read("stg_create_joh_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_joh_html_content").alias("html").withColumn("HTML_File_name",col("File_name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status")
+    html_df = dlt.read("stg_create_joh_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status").alias("html")
     json_df = dlt.read("stg_create_joh_json_content").alias("json")
 
 
@@ -1400,7 +1400,7 @@ def stg_judicial_officer_unified():
             col("a360.bf_002"),
             col("html.*"),
             col("json.JSON_Content"),
-            col("json.File_name").alias("JSON_File_name"),
+            col("json.File_Name").alias("JSON_File_name"),
             col("json.Status").alias("JSON_Status"),
             col("a360.A360_Content"),
             col("a360.Status").alias("Status")
@@ -1459,14 +1459,11 @@ def gold_judicial_officer_with_html():
 
     # Trigger upload logic for each row
     df_with_upload_status = repartitioned_df.withColumn(
-        "Status", upload_udf(col("File_Name"), col("HTML_Content"))
+        "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
 
-
-    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", col("File_Name"), col("Status"))
+    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), col("Status"))
 
 
 # COMMAND ----------
@@ -1493,13 +1490,11 @@ def gold_judicial_officer_with_json():
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
     df_with_upload_status = repartitioned_df.withColumn(
-        "UploadStatus", upload_udf(col("File_Name"), col("JSON_Content"))
+        "Status", upload_udf(col("JSON_File_name"), col("JSON_Content"))
     )
-    # Optionally load data from Hive
-    if read_hive:
 
 
-    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content","File_Name","Status")   
+    return df_with_upload_status.select("AdjudicatorId","A360_BatchId", "JSON_Content",col("JSON_File_name").alias("File_Name"),"Status")   
 
 
 # COMMAND ----------
@@ -1537,9 +1532,7 @@ def gold_judicial_officer_with_a360():
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 
-    # Optionally load data from Hive
-    if read_hive:
-        display(df_with_a360)
+    return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 
    
     
@@ -1603,3 +1596,8 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # %sql
 # drop schema hive_metastore.ariadm_arm_joh cascade
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.stg_create_joh_json_content --where UploadStatus != 'success' and A360Content like '%ERROR%'

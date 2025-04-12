@@ -156,8 +156,10 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        echo "Creating secret scope (if not exists)..."
-        databricks secrets create-scope my-scope || echo "Scope already exists."
+        echo "Assigning Databricks Scope to store secret values"
+        databricks secrets delete-scope my-scope
+        databricks secrets create-scope my-scope 
+        echo "Successfully created scope <my-scope>!"
 
         echo "Assigning Databricks secret values ..."
         databricks secrets put my-scope sp-client-id "$Client_ID"

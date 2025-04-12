@@ -157,16 +157,15 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         echo "Creating secret scope (if not exists)..."
-        databricks secrets create-scope --scope my-scope || echo "Scope already exists."
+        databricks secrets create-scope my-scope || echo "Scope already exists."
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets write --scope my-scope --key sp-client-id --string-value "$Client_ID"
-        databricks secrets write --scope my-scope --key sp-client-secret --string-value "$Client_Secret"
-        databricks secrets write --scope my-scope --key sp-tenant-id --string-value "$Tenant_ID"
+        databricks secrets put my-scope sp-client-id --string-value "$Client_ID"
+        databricks secrets put my-scope sp-client-secret --string-value "$Client_Secret"
+        databricks secrets put my-scope sp-tenant-id --string-value "$Tenant_ID"
         echo "Secrets assigned successfully!"
       displayName: 'Push secrets to Databricks'
 
-  
     - script: |
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s

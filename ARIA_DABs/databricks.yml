@@ -1,12 +1,11 @@
 bundle:
   name: ARIA_DAB_INGEST02
 
-secrets:
-  oauth:
-    sp-client-id: "{{secrets.my-scope.sp-client-id}}"
-    sp-client-secret: "{{secrets.my-scope.sp-client-secret}}"
-    sp-tenant-id: "{{secrets.my-scope.sp-tenant-id}}"
-    raw02-storage-account: {{secrets.my-scope.raw-storage-account-key}}
+#secrets:
+#  oauth:
+#    sp-client-id: "{{secrets.my-scope.sp-client-id}}"
+#    sp-client-secret: "{{secrets.my-scope.sp-client-secret}}"
+#    sp-tenant-id: "{{secrets.my-scope.sp-tenant-id}}"
 
 # include only cluster. specify 00,01, 02 when deploying
 include:

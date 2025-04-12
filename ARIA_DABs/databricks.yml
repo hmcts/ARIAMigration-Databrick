@@ -3,9 +3,10 @@ bundle:
 
 secrets:
   oauth:
-    client_id: sp-client-id
-    client_secret: sp-client-secret
-    tenant_id: sp-tenant-id
+    sp-client-id: "{{secrets.my-scope.sp-client-id}}"
+    sp-client-secret: "{{secrets.my-scope.sp-client-secret}}"
+    sp-tenant-id: "{{secrets.my-scope.sp-tenant-id}}"
+    raw02-storage-account: {{secrets.my-scope.raw-storage-account-key}}
 
 # include only cluster. specify 00,01, 02 when deploying
 include:

@@ -21,6 +21,9 @@ resources:
               "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{secrets.oauth.client_secret}}"
               "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets.oauth.tenant_id}}/oauth2/token"
 
+              # Add a dummy key to satisfy Databricks and test I can access storage account. If not try real value
+              "fs.azure.account.key.ingest02rawsbox.dfs.core.windows.net": "dummy-key"
+
               "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
               "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
               "fs.azure.account.oauth2.client.id.ingest02externalsbox.dfs.core.windows.net": "{{secrets.oauth.client_id}}"

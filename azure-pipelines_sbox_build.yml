@@ -173,7 +173,7 @@ stages:
         databricks secrets list-scopes
 
         echo "Query databricks secrets inside my-scope"
-        databricks secrets list-secrets --scope my-scope"
+        databricks secrets list-secrets --scope my-scope
       displayName: 'Push secrets to Databricks'
 
     - script: |

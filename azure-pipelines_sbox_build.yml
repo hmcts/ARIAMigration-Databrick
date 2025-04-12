@@ -165,9 +165,15 @@ stages:
         databricks secrets put-secret  my-scope sp-client-id <<< "$Client_ID"
         databricks secrets put-secret  my-scope sp-client-secret <<< "$Client_Secret"
         databricks secrets put-secret  my-scope sp-tenant-id <<< "$Tenant_ID"
-        #databricks secrets put-secret  my-scope raw-storage-account-key <<< "$Raw_StorageAccountKey"
+        databricks secrets put-secret  my-scope raw-storage-account-key <<< "$Raw_StorageAccountKey"
 
         echo "Secrets assigned successfully!"
+
+        echo "Query databricks secret scopes"
+        databricks secrets list-scopes
+
+        echo "Query databricks secrets inside my-scope"
+        databricks secrets list-secrets --scope my-scope"
       displayName: 'Push secrets to Databricks'
 
     - script: |

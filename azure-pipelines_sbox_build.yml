@@ -164,7 +164,7 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         echo "Assigning Databricks Scope to store secret values"
-        databricks secrets delete-scope my-scope
+        databricks secrets delete-scope aria
         databricks secrets create-scope aria 
         echo "Successfully created scope <aria>!"
 
@@ -172,26 +172,25 @@ stages:
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_id" 
-        "string_value": "'"$Client_ID"'"
+        "string_value": "'$Client_ID'"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_secret" 
-        "string_value": "'"$Client_Secret"'"
+        "string_value": "'$Client_Secret'"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_id" 
-        "string_value": "'"$Tenant_ID"'"
+        "string_value": "'$Tenant_ID'"
         }'
-
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_url" 
-        "string_value": "'"$Tenant_URL"'"
+        "string_value": "'$Tenant_URL'"
         }'
         echo "Secrets assigned successfully!"
 

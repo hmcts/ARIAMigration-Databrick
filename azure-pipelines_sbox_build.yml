@@ -93,8 +93,12 @@ stages:
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
   jobs:
-  - job: DownloadingArtifacts
+  - job: DeployDatabricksResources
     displayName: 'Run Build and deploy'
+    pool:
+    # Use hmcts-sds-pltsbox pool for SBOX
+    # Use hmcts-sds-ptl pool for STG/PROD
+      hmcts-sds-ptlsbox
     steps:
 
     - task: DownloadBuildArtifacts@1

@@ -1,7 +1,7 @@
-#def main():
-#    print("Hello from shared_functions.main!")
+def main():
+    print("Hello from shared_functions.main!")
 
-import os
+""" import os
 from pyspark.sql import SparkSession
 def main():
     print("Setting Spark configs...")
@@ -34,4 +34,4 @@ def main():
         print("=== ADLS access successful ===")
     except Exception as e:
         print("=== ADLS access failed ===")
-        print(str(e))
+        print(str(e)) """

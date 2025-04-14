@@ -175,6 +175,21 @@ stages:
         databricks secrets put-secret aria Raw_StorageAccountKey <<< "$Raw_StorageAccountKey"
         echo "Secrets assigned successfully!"
 
+        echo "Hashing values before storing..."
+        echo "$Client_ID" | sha256sum
+        echo "$Client_Secret" | sha256sum
+        echo "$Tenant_ID" | sha256sum
+
+        Client_ID_Hash=$(echo -n "$Client_ID" | sha256sum)
+        echo "Client ID SHA256: $Client_ID_Hash"
+
+        Tenant_ID_Hash=$(echo -n "$Tenant_ID" | sha256sum)
+        echo "Client ID SHA256: $Client_ID_Hash"
+
+        Client_Secret_Hash=$(echo -n "$Client_Secret" | sha256sum)
+        echo "Client ID SHA256: $Client_ID_Hash"
+
+
         echo "Query databricks secret scopes"
         databricks secrets list-scopes
 

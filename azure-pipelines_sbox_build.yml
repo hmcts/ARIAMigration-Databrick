@@ -165,8 +165,6 @@ stages:
         databricks secrets put-secret  my-scope sp_client_id <<< "$Client_ID"
         databricks secrets put-secret  my-scope sp_client_secret <<< "$Client_Secret"
         databricks secrets put-secret  my-scope sp_tenant_id <<< "$Tenant_ID"
-        databricks secrets put-secret  my-scope raw_storage_account_key <<< "$Raw_StorageAccountKey"
-
         echo "Secrets assigned successfully!"
 
         echo "Query databricks secret scopes"
@@ -174,12 +172,6 @@ stages:
 
         echo "Query databricks secrets inside my-scope"
         databricks secrets list-secrets my-scope
-
-        echo "Assign environment variables to tenancy values for Spark Config"
-
-        TENANT_ID=$(databricks secrets get-secret my-scope sp_tenant_id)
-        CLIENT_ID=$(databricks secrets get-secret my-scope sp_client_id)
-        CLIENT_SECRET=$(databricks secrets get-secret my-scope sp_client_secret)
       displayName: 'Push secrets to Databricks'
 
     - script: |

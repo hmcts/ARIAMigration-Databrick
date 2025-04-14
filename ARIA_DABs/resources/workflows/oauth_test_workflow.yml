@@ -8,18 +8,18 @@ resources:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 2
-#            spark_conf:
+            spark_conf:
 #              "fs.azure.account.auth.type.ingest02curatedsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
 #              "fs.azure.account.oauth2.client.id.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_ID}}"
 #              "fs.azure.account.oauth2.client.secret.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
 #              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
 
-#              "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
-#              "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-#              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "{{env.CLIENT_ID}}"
-#              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
-#              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
+              "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
+              "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "{{secrets/my-scope/sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{secrets/my-scope/sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "{{secrets/my-scope/sp_tenant_id}}"
 
 #              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"

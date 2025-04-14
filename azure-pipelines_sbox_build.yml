@@ -177,9 +177,9 @@ stages:
 
         "Assign environment variables to tenancy values for Spark Config"
 
-        TENANT_ID=$(databricks secrets get --scope my-scope --key sp_tenant_id)
-        CLIENT_ID=$(databricks secrets get --scope my-scope --key sp_client_id)
-        CLIENT_SECRET=$(databricks secrets get --scope my-scope --key sp_client_secret)
+        TENANT_ID=$(databricks secrets get-secret my-scope sp_tenant_id)
+        CLIENT_ID=$(databricks secrets get-secret my-scope sp_client_id)
+        CLIENT_SECRET=$(databricks secrets get-secret my-scope sp_client_secret)
       displayName: 'Push secrets to Databricks'
 
     - script: |

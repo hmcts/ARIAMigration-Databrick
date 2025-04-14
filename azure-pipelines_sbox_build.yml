@@ -165,31 +165,29 @@ stages:
 
         echo "Assigning Databricks Scope to store secret values"
         databricks secrets delete-scope my-scope
-        databricks secrets create-scope my-scope 
-        echo "Successfully created scope <my-scope>!"
+        databricks secrets create-scope aria 
+        echo "Successfully created scope <aria>!"
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets put-secret my-scope sp_client_id <<< "$Client_ID"
-        databricks secrets put-secret my-scope sp_client_secret <<< "$Client_Secret"
-        databricks secrets put-secret my-scope sp_tenant_id <<< "$Tenant_ID"
-        databricks secrets put-secret my-scope Raw_StorageAccountKey <<< "$Raw_StorageAccountKey"
+        databricks secrets put-secret aria sp_client_id <<< "$Client_ID"
+        databricks secrets put-secret aria sp_client_secret <<< "$Client_Secret"
+        databricks secrets put-secret aria sp_tenant_id <<< "$Tenant_ID"
+        databricks secrets put-secret aria Raw_StorageAccountKey <<< "$Raw_StorageAccountKey"
         echo "Secrets assigned successfully!"
 
         echo "Query databricks secret scopes"
         databricks secrets list-scopes
 
         echo "Query databricks secrets inside my-scope"
-        databricks secrets list-secrets my-scope
+        databricks secrets list-secrets aria
 
-        CLIENT_ID=$(databricks secrets get-secret my-scope sp_client_id)
-        CLIENT_SECRET=$(databricks secrets get-secret my-scope sp_client_secret)
-        TENANT_ID=$(databricks secrets get-secret my-scope sp_tenant_id)
-        RawStorageAccountKey=${databricks secrets get-secret my-scope Raw_StorageAccountKey}
+        CLIENT_ID=$(databricks secrets get-secret aria sp_client_id)
+        CLIENT_SECRET=$(databricks secrets get-secret aria sp_client_secret)
+        TENANT_ID=$(databricks secrets get-secret aria sp_tenant_id)
 
         export CLIENT_ID
         export CLIENT_SECRET
         export TENANT_ID
-        export RawStorageAccountKey
       displayName: 'Push secrets to Databricks'
 
     - script: |

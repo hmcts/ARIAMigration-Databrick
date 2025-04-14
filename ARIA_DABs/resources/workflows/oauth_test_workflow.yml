@@ -17,9 +17,9 @@ resources:
 
               "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
               "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": ${CLIENT_ID}"
-              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "${CLIENT_SECRET}"
-              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "${TENANT_ID}"
+              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "{{secrets/aria/sp_client_id}}"
+              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "{{secrets/aria/sp_client_secret}}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/{{secrets/aria/sp_tenant_id}}/oauth2/token"
 
 #              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"

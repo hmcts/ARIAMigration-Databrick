@@ -180,13 +180,13 @@ stages:
         echo "Query databricks secrets inside my-scope"
         databricks secrets list-secrets my-scope
 
-#        CLIENT_ID = $(databricks secrets get-secret my-scope sp_client_id)
-#        CLIENT_SECRET = $(databricks secrets get-secret my-scope sp_client_secret)
-#        TENANT_ID = $(databricks secrets get-secret my-scope sp_tenant_id)
+        CLIENT_ID = $(databricks secrets get-secret my-scope sp_client_id)
+        CLIENT_SECRET = $(databricks secrets get-secret my-scope sp_client_secret)
+        TENANT_ID = $(databricks secrets get-secret my-scope sp_tenant_id)
 
-#        export CLIENT_ID
-#        export CLIENT_SECRET
-#        export TENANT_ID
+        export CLIENT_ID
+        export CLIENT_SECRET
+        export TENANT_ID
       displayName: 'Push secrets to Databricks'
 
     - script: |

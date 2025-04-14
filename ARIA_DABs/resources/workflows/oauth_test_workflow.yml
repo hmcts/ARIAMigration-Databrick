@@ -17,9 +17,9 @@ resources:
 
               "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
               "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "${{secrets.my-scope.sp_client_id}}"
-              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "${{secrets.my-scope.sp_client_secret}}"
-              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/${{secrets.my-scope.sp_tenant_id}}/oauth2/token"
+              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": "${secrets.my-scope.sp_client_id}"
+              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": "${secrets.my-scope.sp_client_secret}"
+              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": "https://login.microsoftonline.com/${secrets.my-scope.sp_tenant_id}/oauth2/token"
               # Test using a key
              # "fs.azure.account.key.ingest02rawsbox.dfs.core.windows.net": "{{secrets.my-scope.raw_storage_account_key}}"
 

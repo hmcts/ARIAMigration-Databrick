@@ -175,7 +175,7 @@ stages:
         echo "Query databricks secrets inside my-scope"
         databricks secrets list-secrets my-scope
 
-        "Assign environment variables to tenancy values for Spark Config"
+        echo "Assign environment variables to tenancy values for Spark Config"
 
         TENANT_ID=$(databricks secrets get-secret my-scope sp_tenant_id)
         CLIENT_ID=$(databricks secrets get-secret my-scope sp_client_id)

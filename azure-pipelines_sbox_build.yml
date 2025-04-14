@@ -33,9 +33,16 @@ stages:
         versionSpec: '3.x'
 
     - script: |
-        python -m pip install --upgrade pip
+        python --version
+        pip install --upgrade pip
+        pip install build
         pip install databricks-cli
-      displayName: 'Install Databricks CLI'
+        python -m build --wheel --outdir $(mainRepositoryName)/Databricks/SharedFunctionsLib/dist \
+          $(mainRepositoryName)/Databricks/SharedFunctionsLib
+
+        ls -la $(mainRepositoryName)/Databricks/SharedFunctionsLib/dist
+
+      displayName: 'Install Python dependencies & build Python wheel'
 
     # Configure and deploy to Workspace MAIN00
     - script: |

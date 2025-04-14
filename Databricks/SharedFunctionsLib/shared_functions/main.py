@@ -17,4 +17,4 @@ def main():
     spark.conf.set(f"fs.azure.account.oauth2.client.id.{storage_account}.dfs.core.windows.net", client_id)
     spark.conf.set(f"fs.azure.account.oauth2.client.secret.{storage_account}.dfs.core.windows.net", client_secret)
     spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{storage_account}.dfs.core.windows.net", tenant_url)
-    spark.conf.set(f"fs.azure.account.key.ingest00curatedsbox.dfs.core.windows.net", raw_storage_account_key)
+    spark.conf.set(f"fs.azure.account.key.{storage_account}.dfs.core.windows.net", raw_storage_account_key)

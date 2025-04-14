@@ -169,10 +169,30 @@ stages:
         echo "Successfully created scope <aria>!"
 
         echo "Assigning Databricks secret values ..."
-        databricks secrets put-secret aria sp_client_id <<< "$Client_ID"
-        databricks secrets put-secret aria sp_client_secret <<< "$Client_Secret"
-        databricks secrets put-secret aria sp_tenant_id <<< "$Tenant_ID"
-        databricks secrets put-secret aria Raw_StorageAccountKey <<< "$Raw_StorageAccountKey"
+        databricks secrets put-secret --json '{
+        "scope": "aria",
+        "key": "sp_client_id" 
+        "string_value": "'"$Client_ID"'"
+        }'
+
+        databricks secrets put-secret --json '{
+        "scope": "aria",
+        "key": "sp_client_secret" 
+        "string_value": "'"$Client_Secret"'"
+        }'
+
+        databricks secrets put-secret --json '{
+        "scope": "aria",
+        "key": "sp_tenant_id" 
+        "string_value": "'"$Tenant_ID"'"
+        }'
+
+
+        databricks secrets put-secret --json '{
+        "scope": "aria",
+        "key": "sp_tenant_url" 
+        "string_value": "'"$Tenant_URL"'"
+        }'
         echo "Secrets assigned successfully!"
 
         echo "Hashing values before storing..."

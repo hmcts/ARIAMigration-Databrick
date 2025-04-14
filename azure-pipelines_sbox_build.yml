@@ -8,7 +8,6 @@ pool:
   vmImage: 'ubuntu-latest' 
 
 variables:
-  - group: Secrets
   - name: env
     value: 'sandbox'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN00
@@ -168,46 +167,46 @@ stages:
         databricks secrets create-scope aria 
         echo "Successfully created scope <aria>!"
 
+        # Hashing values before storing them
+        echo "Hashing values before storing..."
+        echo "$(SP_CLIENT_ID)" | sha256sum
+        echo "$(SP_CLIENT_SECRET)" | sha256sum
+        echo "$(SP_TENANT_ID)" | sha256sum
+
+        Client_ID_Hash=$(echo -n "$(SP_CLIENT_ID)" | sha256sum)
+        echo "Client ID SHA256: $Client_ID_Hash"
+
+        Tenant_ID_Hash=$(echo -n "$(SP_TENANT_ID)" | sha256sum)
+        echo "Tenant ID SHA256: $Tenant_ID_Hash"
+
+        Client_Secret_Hash=$(echo -n "$(SP_CLIENT_SECRET)" | sha256sum)
+        echo "Client Secret SHA256: $Client_Secret_Hash"
+
         echo "Assigning Databricks secret values ..."
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_id",
-        "string_value": "'$Client_ID'"
+        "string_value": "$(SP_CLIENT_ID)"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_secret",
-        "string_value": "'$Client_Secret'"
+        "string_value": "$(SP_CLIENT_SECRET)"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_id",
-        "string_value": "'$Tenant_ID'"
+        "string_value": "$(SP_TENANT_ID)"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_url",
-        "string_value": "'$Tenant_URL'"
+        "string_value": "$(TENANT_URL)"
         }'
         echo "Secrets assigned successfully!"
-
-        echo "Hashing values before storing..."
-        echo "$Client_ID" | sha256sum
-        echo "$Client_Secret" | sha256sum
-        echo "$Tenant_ID" | sha256sum
-
-        Client_ID_Hash=$(echo -n "$Client_ID" | sha256sum)
-        echo "Client ID SHA256: $Client_ID_Hash"
-
-        Tenant_ID_Hash=$(echo -n "$Tenant_ID" | sha256sum)
-        echo "Tenant ID SHA256: $Tenant_ID_Hash"
-
-        Client_Secret_Hash=$(echo -n "$Client_Secret" | sha256sum)
-        echo "Client Secret SHA256: $Client_Secret_Hash"
-
 
         echo "Query databricks secret scopes"
         databricks secrets list-scopes
@@ -219,6 +218,18 @@ stages:
         CLIENT_SECRET=$(databricks secrets get-secret aria sp_client_secret)
         TENANT_ID=$(databricks secrets get-secret aria sp_tenant_id)
 
+        # Hashing the retrieved values
+        echo "Hashing values after retrieval..."
+        Retrieved_Client_ID_Hash=$(echo -n "$CLIENT_ID" | sha256sum)
+        echo "Retrieved Client ID SHA256: $Retrieved_Client_ID_Hash"
+
+        Retrieved_Tenant_ID_Hash=$(echo -n "$TENANT_ID" | sha256sum)
+        echo "Retrieved Tenant ID SHA256: $Retrieved_Tenant_ID_Hash"
+
+        Retrieved_Client_Secret_Hash=$(echo -n "$CLIENT_SECRET" | sha256sum)
+        echo "Retrieved Client Secret SHA256: $Retrieved_Client_Secret_Hash"
+
+        # Exporting the values
         export CLIENT_ID
         export CLIENT_SECRET
         export TENANT_ID

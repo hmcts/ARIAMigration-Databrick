@@ -181,10 +181,10 @@ stages:
         echo "Query databricks secrets inside my-scope"
         databricks secrets list-secrets my-scope
 
-        CLIENT_ID = $(databricks secrets get-secret my-scope sp_client_id)
-        CLIENT_SECRET = $(databricks secrets get-secret my-scope sp_client_secret)
-        TENANT_ID = $(databricks secrets get-secret my-scope sp_tenant_id)
-        RawStorageAccountKey = ${databricks secrets get-secret my-scope Raw_StorageAccountKey}
+        CLIENT_ID=$(databricks secrets get-secret my-scope sp_client_id)
+        CLIENT_SECRET=$(databricks secrets get-secret my-scope sp_client_secret)
+        TENANT_ID=$(databricks secrets get-secret my-scope sp_tenant_id)
+        RawStorageAccountKey=${databricks secrets get-secret my-scope Raw_StorageAccountKey}
 
         export CLIENT_ID
         export CLIENT_SECRET

@@ -1,6 +1,16 @@
 bundle:
   name: ARIA_DAB_INGEST02
 
+variables:
+  tenant_id:
+    default: ${BUNDLE_VAR_TENANT_ID}
+  client_id:
+    default: ${BUNDLE_VAR_CLIENT_ID}
+  client_secret:
+    default: ${BUNDLE_VAR_CLIENT_SECRET}
+  tenant_url:
+    default: ${BUNDLE_VAR_TENANT_URL}
+
 # include only cluster. specify 00,01, 02 when deploying
 include:
   - "resources/clusters/cluster.yml"
@@ -9,12 +19,6 @@ include:
   - "resources/workflows/db_wf_joh_recieve.yml"
   - "resources/workflows/db_wf_joh_send.yml"
   - "resources/workflows/oauth_test_workflow.yml" 
-
-#variables:
-#  oauth:
-#    tenant_id: {{secrets/my-scope/sp_tenant_id}}
-#    client_id: {{secrets/my-scope/sp_client_id}}
-#    client_secret: {{secrets/my-scope/sp_client_secret}}
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

@@ -15,11 +15,11 @@ resources:
 #              "fs.azure.account.oauth2.client.secret.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
 #              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
 
-              "fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net": "OAuth"
-              "fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              "fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net": ${CLIENT_ID}
-              "fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net": ${CLIENT_SECRET}
-              "fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net": https://login.microsoftonline.com/${TENANT_ID}/oauth2/token
+              fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net OAuth
+              fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider
+              fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net ${CLIENT_ID}
+              fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net ${CLIENT_SECRET}
+              fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net https://login.microsoftonline.com/${TENANT_ID}/oauth2/token
 
 #              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
@@ -45,9 +45,9 @@ resources:
 #              "fs.azure.account.oauth2.client.secret.ingest02landingsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
 #              "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
             spark_env_vars:
-              CLIENT_ID: $(CLIENT_ID)
-              CLIENT_SECRET: $(CLIENT_SECRET)
-              TENANT_ID: $(TENANT_ID)
+              CLIENT_ID={{secrets/aria/sp_client_id}}
+              CLIENT_SECRET={{secrets/aria/sp_client_secret}}
+              TENANT_ID={{secrets/aria/sp_tenant_id}}
             
 #              CLIENT_ID: "{{secrets/my-scope/sp_client_id}}"
 #              CLIENT_SECRET: "{{secrets/my-scope/sp_client_secret}}"

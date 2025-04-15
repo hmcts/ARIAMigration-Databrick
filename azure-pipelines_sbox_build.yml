@@ -170,14 +170,14 @@ stages:
         echo "View tenancy values"
         echo "Client_ID: $SP_CLIENT_ID"
         echo "Client_Secret: $SP_CLIENT_SECRET"
-        echo "Tenant_ID: $TENANT_ID"
-        echo "Tenant_URL: $TENANT_URL"
+        echo "Tenant_ID: $SP_TENANT_ID"
+        echo "Tenant_URL: $SP_TENANT_URL"
 
         echo "Hashing values before storing..."
         echo -n "Client_ID: $SP_CLIENT_ID" | sha256sum
         echo -n "Client_Secret: $SP_CLIENT_SECRET" | sha256sum
-        echo -n "Tenant_ID: $TENANT_ID" | sha256sum
-        echo -n "Tenant_URL: $TENANT_URL" | sha256sum
+        echo -n "Tenant_ID: $SP_TENANT_ID" | sha256sum
+        echo -n "Tenant_URL: $SP_TENANT_URL" | sha256sum
 
         echo "Assigning Databricks secret values ..."
         databricks secrets put-secret --json '{
@@ -201,7 +201,7 @@ stages:
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_url",
-        "string_value": "$(TENANT_URL)"
+        "string_value": "$(SP_TENANT_URL)"
         }'
         echo "Secrets assigned successfully!"
 
@@ -210,15 +210,6 @@ stages:
 
         echo "Query databricks secrets inside aria scope"
         databricks secrets list-secrets aria
-
-        CLIENT_ID={{secrets/aria/sp_client_id}}
-        CLIENT_SECRET={{secrets/aria/sp_client_secret}}
-        TENANT_ID={{secrets/aria/sp_tenant_id}}
-
-        # Exporting the values
-        export CLIENT_ID
-        export CLIENT_SECRET
-        export TENANT_ID
       displayName: 'Push secrets to Databricks'
 
     - script: |

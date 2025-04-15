@@ -195,9 +195,9 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
       
-        databricks workspace mkdirs /Workspace/Users/andrew.mcdevitt/init/
-        databricks workspace import (Build.SourcesDirectory)/Databricks/cluster_adls_init.sh --language PYTHON --format SOURCE --overwrite \
-          /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh \
+        databricks workspace mkdirs /Workspace/init/
+        databricks workspace import $(Build.SourcesDirectory)/Databricks/cluster_adls_init.sh --language PYTHON --format SOURCE --overwrite \
+          /Workspace/init/cluster_adls_init.sh
       
       displayName: 'Copying init script to /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh'
     

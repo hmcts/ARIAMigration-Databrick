@@ -194,7 +194,8 @@ stages:
 
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-        
+      
+        databricks mkdir /Workspace/Users/andrew.mcdevitt/init/
         databricks fs cp ./Databricks/cluster_adls_init.sh /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh
       displayName: 'Copying init script to /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh'
     

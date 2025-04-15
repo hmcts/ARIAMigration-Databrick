@@ -8,7 +8,12 @@ resources:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 2
+            spark_env_vars:
+              CLIENT_ID: "{{secrets/aria/sp_client_id}}"
+              CLIENT_SECRET: "{{secrets/aria/sp_client_secret}}"
+              TENANT_ID: "{{secrets/aria/sp_tenant_id}}"
             spark_conf:
+
 #              "fs.azure.account.auth.type.ingest02curatedsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
 #              "fs.azure.account.oauth2.client.id.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_ID}}"
@@ -44,10 +49,6 @@ resources:
 #              "fs.azure.account.oauth2.client.id.ingest02landingsbox.dfs.core.windows.net": "{{env.CLIENT_ID}}"
 #              "fs.azure.account.oauth2.client.secret.ingest02landingsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
 #              "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
-            spark_env_vars:
-              CLIENT_ID: "{{secrets/aria/sp_client_id}}"
-              CLIENT_SECRET: "{{secrets/aria/sp_client_secret}}"
-              TENANT_ID: "{{secrets/aria/sp_tenant_id}}"
             
 #              CLIENT_ID: "{{secrets/my-scope/sp_client_id}}"
 #              CLIENT_SECRET: "{{secrets/my-scope/sp_client_secret}}"

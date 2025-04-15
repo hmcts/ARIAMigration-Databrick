@@ -45,9 +45,9 @@ resources:
 #              "fs.azure.account.oauth2.client.secret.ingest02landingsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
 #              "fs.azure.account.oauth2.client.endpoint.ingest02landingsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
             spark_env_vars:
-              CLIENT_ID={{secrets/aria/sp_client_id}}
-              CLIENT_SECRET={{secrets/aria/sp_client_secret}}
-              TENANT_ID={{secrets/aria/sp_tenant_id}}
+              CLIENT_ID="{{secrets/aria/sp_client_id}}"
+              CLIENT_SECRET="{{secrets/aria/sp_client_secret}}"
+              TENANT_ID="{{secrets/aria/sp_tenant_id}}"
             
 #              CLIENT_ID: "{{secrets/my-scope/sp_client_id}}"
 #              CLIENT_SECRET: "{{secrets/my-scope/sp_client_secret}}"

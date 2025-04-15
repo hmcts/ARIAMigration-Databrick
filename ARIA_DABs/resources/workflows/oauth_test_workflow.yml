@@ -11,19 +11,20 @@ resources:
             spark_env_vars:
               CLIENT_ID={{secret/aria/sp_client_id}}
               CLIENT_SECRET={{secret/aria/sp_client_secret}}
+              TENANT_URL={{secrets/aria/sp_tenant_url}}
 
             spark_conf:
               fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net: "OAuth"
               fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
               fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net: "$${CLIENT_ID}"
               fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net: "$${CLIENT_SECRET}"
-              fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net: "${TENANT_URL}"
+              fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net: "$${TENANT_URL}"
 
 #              "fs.azure.account.auth.type.ingest02curatedsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
 #              "fs.azure.account.oauth2.client.id.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_ID}}"
 #              "fs.azure.account.oauth2.client.secret.ingest02curatedsbox.dfs.core.windows.net": "{{env.CLIENT_SECRET}}"
-#              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": "{{env.TENANT_ID}}"
+#              "fs.azure.account.oauth2.client.endpoint.ingest02curatedsbox.dfs.core.windows.net": https://login.microsoftonline.com/{{secrets/aria/sp_tenant_id}}/oauth2/token
 
 #              "fs.azure.account.auth.type.ingest02externalsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02externalsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"

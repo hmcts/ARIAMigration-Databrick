@@ -205,6 +205,12 @@ stages:
         echo "Query databricks secrets inside aria scope"
         databricks secrets list-secrets aria
 
+        echo "read secret values stored: tenant_url, tenant_id, client_id, client_secret"
+        databricks secrets get-secret aria sp_tenant_url | jq -r .value | base64 --decode
+        databricks secrets get-secret aria sp_tenant_id | jq -r .value | base64 --decode
+        databricks secrets get-secret aria sp_client_id | jq -r .value | base64 --decode
+        databricks secrets get-secret aria sp_client_secret | jq -r .value | base64 --decode
+        
         CLIENT_ID=$(databricks secrets get-secret aria sp_client_id)
         CLIENT_SECRET=$(databricks secrets get-secret aria sp_client_secret)
         TENANT_ID=$(databricks secrets get-secret aria sp_tenant_id)

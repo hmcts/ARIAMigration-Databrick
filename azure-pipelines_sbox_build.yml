@@ -198,8 +198,8 @@ stages:
         "string_value": "$SP_TENANT_ID"
         }'
 
-        echo -n "$SP_TENANT_URL" | databricks secrets put --scope aria --key sp_tenant_url
-        
+        echo -n "$SP_TENANT_URL" | databricks secrets put-secret aria sp_tenant_url
+
         echo "Secrets assigned successfully!"
 
         echo "Query databricks secret scopes"

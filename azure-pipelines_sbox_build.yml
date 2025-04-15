@@ -199,7 +199,7 @@ stages:
         databricks workspace import \
           ./Databricks/cluster_adls_init.sh \
           /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh \
-          --language SHELL \
+          --language PYTHON \
           --format SOURCE \
           --overwrite      
       displayName: 'Copying init script to /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh'

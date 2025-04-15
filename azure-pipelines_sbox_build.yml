@@ -226,6 +226,7 @@ stages:
         export BUNDLE_VAR_TENANT_ID=$SP_TENANT_ID
         export BUNDLE_VAR_CLIENT_ID=$SP_CLIENT_ID
         export BUNDLE_VAR_CLIENT_SECRET=$SP_CLIENT_SECRET
+        export BUNDLE_VAR_TENANT_URL=$SP_TENANT_URL
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

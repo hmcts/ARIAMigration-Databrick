@@ -10,6 +10,10 @@ include:
   - "resources/workflows/db_wf_joh_send.yml"
   - "resources/workflows/oauth_test_workflow.yml" 
 
+variables:
+  tenant_id: {{secrets/my-scope/sp_tenant_id}}
+  client_id: {{secrets/my-scope/sp_client_id}}
+  client_secret: {{secrets/my-scope/sp_client_secret}}
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

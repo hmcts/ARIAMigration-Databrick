@@ -2,14 +2,9 @@ bundle:
   name: ARIA_DAB_INGEST02
 
 variables:
-  tenant_id:
-    default: ${BUNDLE_VAR_TENANT_ID}
-  client_id:
-    default: ${BUNDLE_VAR_CLIENT_ID}
-  client_secret:
-    default: ${BUNDLE_VAR_CLIENT_SECRET}
-  tenant_url:
-    default: ${BUNDLE_VAR_TENANT_URL}
+  CLIENT_ID: {}
+  CLIENT_SECRET: {}
+  TENANT_URL: {}
 
 # include only cluster. specify 00,01, 02 when deploying
 include:

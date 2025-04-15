@@ -167,6 +167,12 @@ stages:
         databricks secrets create-scope aria 
         echo "Successfully created scope <aria>!"
 
+        echo "View tenancy values"
+        echo "Client_ID: $SP_CLIENT_ID"
+        echo "Client_Secret: $SP_CLIENT_SECRET"
+        echo "Tenant_ID: $TENANT_ID"
+        echo "Tenant_URL: $TENANT_URL"
+
         echo "Hashing values before storing..."
         echo -n "Client_ID: $SP_CLIENT_ID" | sha256sum
         echo -n "Client_Secret: $SP_CLIENT_SECRET" | sha256sum
@@ -210,7 +216,7 @@ stages:
         databricks secrets get-secret aria sp_tenant_id | jq -r .value | base64 --decode
         databricks secrets get-secret aria sp_client_id | jq -r .value | base64 --decode
         databricks secrets get-secret aria sp_client_secret | jq -r .value | base64 --decode
-        
+
         CLIENT_ID=$(databricks secrets get-secret aria sp_client_id)
         CLIENT_SECRET=$(databricks secrets get-secret aria sp_client_secret)
         TENANT_ID=$(databricks secrets get-secret aria sp_tenant_id)

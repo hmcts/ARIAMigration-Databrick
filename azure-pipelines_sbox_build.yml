@@ -183,25 +183,25 @@ stages:
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_id",
-        "string_value": "$(SP_CLIENT_ID)"
+        "string_value": "$SP_CLIENT_ID"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_client_secret",
-        "string_value": "$(SP_CLIENT_SECRET)"
+        "string_value": "$SP_CLIENT_SECRET"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_id",
-        "string_value": "$(SP_TENANT_ID)"
+        "string_value": "$SP_TENANT_ID"
         }'
 
         databricks secrets put-secret --json '{
         "scope": "aria",
         "key": "sp_tenant_url",
-        "string_value": "$(SP_TENANT_URL)"
+        "string_value": "$SP_TENANT_URL"
         }'
         echo "Secrets assigned successfully!"
 

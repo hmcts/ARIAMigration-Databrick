@@ -167,18 +167,11 @@ stages:
         databricks secrets create-scope aria 
         echo "Successfully created scope <aria>!"
 
-        # debug step. output "secrets" to a .txt
-        echo "$(SP_CLIENT_ID)" > client_id.txt
-        echo "$(SP_CLIENT_SECRET)" > client_secret.txt
-        echo "$(SP_TENANT_ID)" > tenant_id.txt
-        echo "$(SP_TENANT_URL)" > tenant_url.txt
-
-        # Hashing values before storing them
         echo "Hashing values before storing..."
-        echo -n "Client_ID: $(SP_CLIENT_ID)" | sha256sum
-        echo -n "Client_Secret: $(SP_CLIENT_SECRET)" | sha256sum
-        echo -n "Tenant_ID: $(SP_TENANT_ID)" | sha256sum
-        echo -n "Tenant_URL: $(SP_TENANT_URL)" | sha256sum
+        echo -n "Client_ID: $SP_CLIENT_ID" | sha256sum
+        echo -n "Client_Secret: $SP_CLIENT_SECRET" | sha256sum
+        echo -n "Tenant_ID: $TENANT_ID" | sha256sum
+        echo -n "Tenant_URL: $TENANT_URL" | sha256sum
 
         echo "Assigning Databricks secret values ..."
         databricks secrets put-secret --json '{

@@ -11,8 +11,9 @@ resources:
             spark_env_vars:
               CLIENT_ID={{secret/aria/sp_client_id}}
               CLIENT_SECRET={{secret/aria/sp_client_secret}}
-              TENANT_URL={{secrets/aria/sp_tenant_url}}
+              TENANT_URL="{{secrets/aria/sp_tenant_url}}"
               DUMP_VAR="{{secrets/aria/sp_tenant_url}}"
+              DUMP_VAR1={{secrets/aria/sp_tenant_url}}
 
             spark_conf:
               fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net: "OAuth"

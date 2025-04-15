@@ -10,7 +10,7 @@ resources:
             num_workers: 2
           init_scripts:
             workspace:
-              destination: "/Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh"
+              destination: "/Workspace/init/cluster_adls_init.sh"
 #            spark_env_vars:
 #              CLIENT_ID: "{{secret/aria/sp_client_id}}"
 #              CLIENT_SECRET: "{{secret/aria/sp_client_secret}}"

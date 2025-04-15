@@ -178,28 +178,11 @@ stages:
         echo -n "Client_Secret: $SP_CLIENT_SECRET" | sha256sum
         echo -n "Tenant_ID: $SP_TENANT_ID" | sha256sum
         echo -n "Tenant_URL: $SP_TENANT_URL" | sha256sum
-
-        echo "Assigning Databricks secret values ..."
-        databricks secrets put-secret --json '{
-        "scope": "aria",
-        "key": "sp_client_id",
-        "string_value": "$SP_CLIENT_ID"
-        }'
-
-        databricks secrets put-secret --json '{
-        "scope": "aria",
-        "key": "sp_client_secret",
-        "string_value": "$SP_CLIENT_SECRET"
-        }'
-
-        databricks secrets put-secret --json '{
-        "scope": "aria",
-        "key": "sp_tenant_id",
-        "string_value": "$SP_TENANT_ID"
-        }'
-
+        
+        echo -n "$SP_CLIENT_SECRET" | databricks secrets put-secret aria sp_client_secret
+        echo -n "$SP_CLIENT_ID" | databricks secrets put-secret aria sp_client_id
+        echo -n "$SP_TENANT_ID" | databricks secrets put-secret aria sp_tenant_id
         echo -n "$SP_TENANT_URL" | databricks secrets put-secret aria sp_tenant_url
-
         echo "Secrets assigned successfully!"
 
         echo "Query databricks secret scopes"
@@ -218,12 +201,6 @@ stages:
 
         echo "Current dir: $(pwd)"
         ls -al  
-
-        # Define bundle variables
-        export BUNDLE_VAR_TENANT_ID=$SP_TENANT_ID
-        export BUNDLE_VAR_TENANT_URL=$SP_TENANT_URL
-        echo "TENANT_URL=$BUNDLE_VAR_TENANT_URL"
-        echo "TENANT_ID=$BUNDLE_VAR_TENANT_ID"
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

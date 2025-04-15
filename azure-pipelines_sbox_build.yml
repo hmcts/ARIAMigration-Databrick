@@ -198,11 +198,8 @@ stages:
         "string_value": "$SP_TENANT_ID"
         }'
 
-        databricks secrets put-secret --json '{
-        "scope": "aria",
-        "key": "sp_tenant_url",
-        "string_value": "$SP_TENANT_URL"
-        }'
+        echo -n "$SP_TENANT_URL" | databricks secrets put --scope aria --key sp_tenant_url
+        
         echo "Secrets assigned successfully!"
 
         echo "Query databricks secret scopes"
@@ -212,16 +209,6 @@ stages:
         databricks secrets list-secrets aria
       displayName: 'Push secrets to Databricks'
     
-    - script: |
-       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-       
-       databricks secrets create-scope \
-        --scope aria-akv \
-        --scope-backend-type AZURE_KEYVAULT \
-        --resource-id /subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/ingest00-main-sbox/providers/Microsoft.KeyVault/vaults/ingest00-meta002-sbox \
-        --dns-name https://ingest00-meta002-sbox.vault.azure.net/
-      displayName: "Creating AKV secrets + scope"
-
     - script: |
         echo "Current dir: $(pwd)"
         ls -al /home/vsts/work/1/s

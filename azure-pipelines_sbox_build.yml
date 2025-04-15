@@ -190,6 +190,7 @@ stages:
 
         echo "Query databricks secrets inside aria scope"
         databricks secrets list-secrets aria
+        databricks secrets list-secrets ingest00-meta002-sbox
       displayName: 'Push secrets to Databricks'
 
     - script: |

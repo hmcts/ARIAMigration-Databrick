@@ -162,7 +162,7 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        echo "Query databricks secrets inside aria scope"
+        echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
         databricks secrets list-secrets ingest00-meta002-sbox 
       displayName: 'View KeyVault backed secret keys in Databricks'
     

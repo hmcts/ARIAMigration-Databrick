@@ -162,45 +162,9 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        echo "Assigning Databricks Scope to store secret values"
-        databricks secrets delete-scope aria
-        databricks secrets create-scope aria 
-        echo "Successfully created scope <aria>!"
-
-        echo "View tenancy values"
-        echo "Client_ID: $SP_CLIENT_ID"
-        echo "Client_Secret: $SP_CLIENT_SECRET"
-        echo "Tenant_ID: $SP_TENANT_ID"
-        echo "Tenant_URL: $SP_TENANT_URL"
-
-        echo "Hashing values before storing..."
-        echo -n "Client_ID: $SP_CLIENT_ID" | sha256sum
-        echo -n "Client_Secret: $SP_CLIENT_SECRET" | sha256sum
-        echo -n "Tenant_ID: $SP_TENANT_ID" | sha256sum
-        echo -n "Tenant_URL: $SP_TENANT_URL" | sha256sum
-        
-        echo -n "$SP_CLIENT_SECRET" | databricks secrets put-secret aria sp_client_secret
-        echo -n "$SP_CLIENT_ID" | databricks secrets put-secret aria sp_client_id
-        echo -n "$SP_TENANT_ID" | databricks secrets put-secret aria sp_tenant_id
-        echo -n "$SP_TENANT_URL" | databricks secrets put-secret aria sp_tenant_url
-        echo "Secrets assigned successfully!"
-
-        echo "Query databricks secret scopes"
-        databricks secrets list-scopes
-
         echo "Query databricks secrets inside aria scope"
-        databricks secrets list-secrets aria
-        databricks secrets list-secrets ingest00-meta002-sbox
-      displayName: 'Push secrets to Databricks'
-
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-      
-        databricks workspace mkdirs /Workspace/init/
-        databricks workspace import --file $(Build.SourcesDirectory)/Databricks/cluster_adls_init.sh --language PYTHON --format SOURCE --overwrite \
-          /Workspace/init/cluster_adls_init.sh
-      
-      displayName: 'Copying init script to /Workspace/Users/andrew.mcdevitt/init/cluster_adls_init.sh'
+        databricks secrets list-secrets ingest00-meta002-sbox 
+      displayName: 'View KeyVault backed secret keys in Databricks'
     
     - script: |
         echo "Current dir: $(pwd)"
@@ -211,13 +175,6 @@ stages:
 
         echo "Current dir: $(pwd)"
         ls -al  
-
-        # Define bundle variables
-        export BUNDLE_VAR_TENANT_ID=$SP_TENANT_ID
-        export BUNDLE_VAR_TENANT_URL=$SP_TENANT_URL
-
-        echo "TENANT_URL=$BUNDLE_VAR_TENANT_URL"
-        echo "TENANT_ID=$BUNDLE_VAR_TENANT_ID"
 
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug

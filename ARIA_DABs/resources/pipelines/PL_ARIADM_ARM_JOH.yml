@@ -13,7 +13,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
-        - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
       target: ARIADM_ARM_JOH
       development: true
       data_sampling: false

@@ -167,7 +167,7 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         SCOPE_NAME="ingest00-meta002-sbox"
-        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$ResourceGroup/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
+        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCEGROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULTNAME"
         DNS_NAME="https://$KeyVaultName.vault.azure.net/"
 
         if databricks secrets list-scopes | grep -q "\"name\": \"$SCOPE_NAME\""; then
@@ -175,7 +175,7 @@ stages:
         else
           echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
           databricks secrets create-scope --json "{
-            \"name\": \"$SCOPE_NAME\",
+            \"scope\": \"$SCOPE_NAME\",
             \"scope_backend_type\": \"AZURE_KEYVAULT\",
             \"initial_manage_principal\": \"users\",
             \"backend_azure_keyvault\": {
@@ -186,7 +186,7 @@ stages:
         fi
 
         echo "{
-        \"name\": \"$SCOPE_NAME\",
+        \"scope\": \"$SCOPE_NAME\",
         \"scope_backend_type\": \"AZURE_KEYVAULT\",
         \"initial_manage_principal\": \"users\",
         \"backend_azure_keyvault\": {
@@ -194,8 +194,10 @@ stages:
           \"dns_name\": \"$DNS_NAME\"
           }
         }"
-
       displayName: 'Creating Azure Key Vault backed secret scope'
+      env:
+        RESOURCEGROUP: $(ResourceGroup)
+        KEYVAULTNAME: $(KeyVaultName)
     
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 

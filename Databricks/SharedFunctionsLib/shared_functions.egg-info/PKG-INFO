@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: shared_functions
+Version: 0.0.1
+Summary: These are custom functions that will be used for the ARIA data migration
+Author: Ara Islam + Naveen Sriram
+Requires-Dist: azure-eventhub
+Requires-Dist: azure-storage-blob
+Requires-Dist: confluent_kafka
+Requires-Dist: aiohttp
+Requires-Dist: numpy
+Requires-Dist: pyspark
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: summary

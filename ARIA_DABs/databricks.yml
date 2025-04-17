@@ -1,0 +1,19 @@
+bundle:
+  name: ARIA_DAB_INGEST02
+
+include:
+  - "resources/clusters/cluster.yml"
+  - "resources/pipelines/*.yml"
+  - "resources/workflows/db_wf_apl_fta_send.yml"
+  - "resources/workflows/db_wf_joh_recieve.yml"
+  - "resources/workflows/db_wf_joh_send.yml"
+  - "resources/workflows/oauth_test_workflow.yml" 
+
+workspace: &ingest02_workspace
+  host: https://adb-1879076228317698.18.azuredatabricks.net
+  
+targets:
+  sandbox:
+      workspace: *ingest02_workspace
+      mode : development
+      default : true

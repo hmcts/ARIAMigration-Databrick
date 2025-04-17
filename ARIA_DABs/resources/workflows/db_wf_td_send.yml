@@ -1,0 +1,43 @@
+resources:
+  jobs:
+    db_wf_td_send:
+      name: db_wf_td_send
+      tasks:
+        - task_key: DLT_creation_of_content_td
+          pipeline_task:
+            pipeline_id: 1f40cdb4-1769-4773-b93a-325a4ebd2b4a
+            full_refresh: false
+        - task_key: publish_HTML_JSON_to_eh
+          depends_on:
+            - task_key: DLT_creation_of_content_td
+          notebook_task:
+            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/ARIATD/ARIA_TD_ADLS_TO_EVENTHUBS
+            base_parameters:
+              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/ARIATD/
+              topic: evh-td-pub-dev-uks-dlrm-01
+              dropzone_mount: /mnt/dropzoneariatd/ARIATD/
+              file_types: html,json
+            source: WORKSPACE
+          existing_cluster_id: 1001-145537-3lr5mj25
+        - task_key: publish_A360_to_eh
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh
+          notebook_task:
+            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/ARIATD/ARIA_TD_ADLS_TO_EVENTHUBS
+            base_parameters:
+              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/ARIATD/
+              topic: evh-td-pub-dev-uks-dlrm-01
+              dropzone_mount: /mnt/dropzoneariatd/ARIATD/
+              file_types: a360
+            source: WORKSPACE
+          existing_cluster_id: 1001-145537-3lr5mj25
+        - task_key: td_ARM_ack
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh
+            - task_key: publish_A360_to_eh
+          notebook_task:
+            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/ARIATD/ARIADM_TD_ACK_AUTOLOADER
+            source: WORKSPACE
+          existing_cluster_id: 1001-145537-3lr5mj25
+      queue:
+        enabled: true

@@ -1,0 +1,6 @@
+azure-eventhub
+azure-storage-blob
+confluent_kafka
+aiohttp
+numpy
+pyspark

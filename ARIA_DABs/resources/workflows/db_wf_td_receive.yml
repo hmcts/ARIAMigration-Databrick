@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    db_wf_td_recieve:
+      name: db_wf_td_recieve
+      tasks:
+        - task_key: db_wf_ariatd_recieve
+          notebook_task:
+            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-Appeals-453/Databricks/ARCHIVE/ARIATD/ARIADM_TD_RESPONSE_AUTOLOADER
+            source: WORKSPACE
+          existing_cluster_id: 1001-145537-3lr5mj25
+      queue:
+        enabled: true

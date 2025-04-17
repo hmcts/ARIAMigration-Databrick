@@ -236,7 +236,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-
 # from pyspark.sql.types import StructType, StructField, LongType, StringType, IntegerType
 # from delta.tables import DeltaTable
 
@@ -256,10 +255,7 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 #     StructField("Status", StringType(), True)
 # ])
 
-
-
 # COMMAND ----------
-
 
 # # Define Delta Table Path in Azure Storage
 # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table"
@@ -317,7 +313,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 #     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
 
 #     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
 
 
 
@@ -553,7 +548,6 @@ def bronze_adjudicator_et_hc_dnur():
     return df
     
 
-
 # COMMAND ----------
 
 # MAGIC
@@ -603,7 +597,6 @@ def bronze_johistory_users():
     return df
     
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -646,6 +639,7 @@ def bronze_othercentre_hearingcentre():
         )
     )
     return df
+
 
 
 
@@ -692,7 +686,6 @@ def bronze_adjudicator_role():
     return df
 
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -730,9 +723,7 @@ def stg_joh_filtered():
         .select(col("a.AdjudicatorId"))
     )
 
-
     return df
-
 
 
 # COMMAND ----------
@@ -907,6 +898,7 @@ def silver_history_detail():
     return df
 
 
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -923,6 +915,7 @@ def silver_othercentre_detail():
     df = (dlt.read("bronze_othercentre_hearingcentre").alias("hc").join(dlt.read("stg_joh_filtered").alias('flt'), col("hc.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select("hc.*"))
 
     return df
+
 
 
 # COMMAND ----------
@@ -1330,6 +1323,7 @@ def stg_judicial_officer_combined():
 
     return df_combined
 
+
     
 
 # COMMAND ----------
@@ -1376,7 +1370,6 @@ def stg_create_joh_html_content():
     return df_with_html
 
 
-
 # COMMAND ----------
 
 # DBTITLE 1,Transformation stg_create_joh_a360_content
@@ -1401,6 +1394,7 @@ def stg_create_joh_a360_content():
     metadata_df = df.withColumn("Status",when(col("A360_Content").like("Failure%"), "Failure on Creating A360 Content").otherwise("Successful creating A360 Content"))
     
     return metadata_df
+
   
 
 # COMMAND ----------
@@ -1469,14 +1463,12 @@ def stg_judicial_officer_unified():
                                       lit(".a360"))
                          ).drop("row_num")
 
-
     return df_batch
  
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Gold Outputs and Tracking DLT Table Creation
+
 
 # COMMAND ----------
 
@@ -1576,7 +1568,6 @@ def gold_judicial_officer_with_a360():
     df_with_a360 = repartitioned_df.withColumn(
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
-
 
     return df_with_a360.select("A360_BatchId", "consolidate_A360Content", "File_Name", "Status")
 

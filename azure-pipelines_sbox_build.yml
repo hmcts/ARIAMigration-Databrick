@@ -160,7 +160,7 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        databricks auth login --azure
+        databricks auth login
 
         SCOPE_NAME="ingest02-meta002-sbox"
         KEYVAULT_NAME="ingest02-meta002-sbox"

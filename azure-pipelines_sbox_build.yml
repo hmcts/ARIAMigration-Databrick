@@ -18,6 +18,10 @@ variables:
     value: 'https://adb-1879076228317698.18.azuredatabricks.net'
   - name: StorageAccount
     value: 'ingest02rawsbox'
+  - name: ResourceGroup
+    value: 'inest00-main-sbox'
+  - name: 'KeyVaultName'
+    value: 'ingest00-meta002-sbox'
 
 stages:
 - stage: 'Build'
@@ -160,10 +164,27 @@ stages:
       displayName: 'Upload Wheel to Databricks DBFS'
     
     - script: |
+        SCOPE_NAME="ingest00-meta002-sbox"
+        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$ResourceGroup/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
+        DNS_NAME="https://$KeyVaultName.vault.azure.net/"
+
+        # Check if the scope already exists
+        if databricks secrets list-scopes | grep -q "\"name\": \"$SCOPE_NAME\""; then
+          echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
+        else
+          echo "Creating secret scope '$SCOPE_NAME'..."
+          databricks secrets create-scope "$SCOPE_NAME" \
+            --scope-backend-type AZURE_KEYVAULT \
+            --resource-id "$RESOURCE_ID" \
+            --dns-name "$DNS_NAME"
+        fi
+      displayName: 'Creating Azure Key Vault backed secret scope'
+    
+    - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
-        databricks secrets list-secrets ingest00-meta002-sbox 
+        databricks secrets list-secrets $KeyVaultName
       displayName: 'View KeyVault backed secret keys in Databricks'
     
     - script: |

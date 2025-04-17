@@ -10,10 +10,10 @@ resources:
             num_workers: 2
             spark_conf:
               fs.azure.account.auth.type.ingest02rawsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest02rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest02rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest02rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest02rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+              fs.azure.account.oauth.provider.type.ingest00rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+              fs.azure.account.oauth2.client.id.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+              fs.azure.account.oauth2.client.secret.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+              fs.azure.account.oauth2.client.endpoint.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
 #              "fs.azure.account.auth.type.ingest02curatedsbox.dfs.core.windows.net": "OAuth"
 #              "fs.azure.account.oauth.provider.type.ingest02curatedsbox.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"

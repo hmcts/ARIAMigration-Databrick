@@ -938,7 +938,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(key_vault, "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(key_vault, "curated-connection-string")
 
 # COMMAND ----------
 

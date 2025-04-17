@@ -164,6 +164,8 @@ stages:
       displayName: 'Upload Wheel to Databricks DBFS'
     
     - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+
         SCOPE_NAME="ingest00-meta002-sbox"
         RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$ResourceGroup/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
         DNS_NAME="https://$KeyVaultName.vault.azure.net/"

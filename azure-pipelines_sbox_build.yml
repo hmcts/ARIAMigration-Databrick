@@ -16,12 +16,6 @@ variables:
     value: 'https://adb-376876256300083.3.azuredatabricks.net/'
   - name: DATABRICKS_HOST_WORKSPACE_MAIN02
     value: 'https://adb-1879076228317698.18.azuredatabricks.net'
-  - name: StorageAccount
-    value: 'ingest02rawsbox'
-  - name: ResourceGroup
-    value: 'inest00-main-sbox'
-  - name: 'KeyVaultName'
-    value: 'ingest00-meta002-sbox'
 
 stages:
 - stage: 'Build'
@@ -167,10 +161,12 @@ stages:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
         SCOPE_NAME="ingest00-meta002-sbox"
-        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCEGROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULTNAME"
-        DNS_NAME="https://$KeyVaultName.vault.azure.net/"
+        KEYVAULT_NAME="ingest00-meta002-sbox"
+        RESOURCE_GROUP="ingest00-main-sbox"
+        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
+        DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
 
-        if databricks secrets list-scopes | grep -q "\"name\": \"$SCOPE_NAME\""; then
+        if databricks secrets list-scopes | grep -q "\"scope\": \"$SCOPE_NAME\""; then
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
         else
           echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
@@ -195,9 +191,6 @@ stages:
           }
         }"
       displayName: 'Creating Azure Key Vault backed secret scope'
-      env:
-        RESOURCEGROUP: $(ResourceGroup)
-        KEYVAULTNAME: $(KeyVaultName)
     
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 

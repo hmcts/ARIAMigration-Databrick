@@ -177,8 +177,11 @@ stages:
           echo "Creating secret scope '$SCOPE_NAME'..."
           databricks secrets create-scope "$SCOPE_NAME" \
             --scope-backend-type AZURE_KEYVAULT \
-            --resource-id "$RESOURCE_ID" \
-            --dns-name "$DNS_NAME"
+            --initial-manage-principal "users" \
+            --json '{
+              --resource-id "$RESOURCE_ID" \
+              --dns-name "$DNS_NAME"        
+            }'
         fi
       displayName: 'Creating Azure Key Vault backed secret scope'
     

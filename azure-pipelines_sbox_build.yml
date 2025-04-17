@@ -175,10 +175,9 @@ stages:
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
         else
           echo "Creating secret scope '$SCOPE_NAME'..."
-          databricks secrets create-scope "$SCOPE_NAME" \
-            --scope-backend-type AZURE_KEYVAULT \
-            --initial-manage-principal "users" \
-            --json '{
+          databricks secrets create-scope "$SCOPE_NAME" --json '{
+              --scope-backend-type AZURE_KEYVAULT \
+              --initial-manage-principal "users" \
               --resource-id "$RESOURCE_ID" \
               --dns-name "$DNS_NAME"        
             }'

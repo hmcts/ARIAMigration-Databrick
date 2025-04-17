@@ -160,9 +160,9 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        SCOPE_NAME="ingest00-meta002-sbox"
-        KEYVAULT_NAME="ingest00-meta002-sbox"
-        RESOURCE_GROUP="ingest00-main-sbox"
+        SCOPE_NAME="ingest02-meta002-sbox"
+        KEYVAULT_NAME="ingest02-meta002-sbox"
+        RESOURCE_GROUP="ingest02-main-sbox"
         RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
         DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
 
@@ -194,9 +194,11 @@ stages:
     
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+        KEYVAULT_NAME="ingest02-meta002-sbox"
 
         echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
-        databricks secrets list-secrets $KeyVaultName
+        databricks secrets list-secrets $KEYVAULT_NAME
+        databricks secrets list-secrets ingest00-meta002-sbox
       displayName: 'View KeyVault backed secret keys in Databricks'
     
     - script: |

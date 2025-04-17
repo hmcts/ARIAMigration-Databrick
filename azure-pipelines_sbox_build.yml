@@ -170,18 +170,31 @@ stages:
         RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$ResourceGroup/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
         DNS_NAME="https://$KeyVaultName.vault.azure.net/"
 
-        # Check if the scope already exists
         if databricks secrets list-scopes | grep -q "\"name\": \"$SCOPE_NAME\""; then
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
         else
-          echo "Creating secret scope '$SCOPE_NAME'..."
-          databricks secrets create-scope "$SCOPE_NAME" --json '{
-              --scope-backend-type AZURE_KEYVAULT \
-              --initial-manage-principal "users" \
-              --resource-id "$RESOURCE_ID" \
-              --dns-name "$DNS_NAME"        
-            }'
+          echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
+          databricks secrets create-scope --json "{
+            \"name\": \"$SCOPE_NAME\",
+            \"scope_backend_type\": \"AZURE_KEYVAULT\",
+            \"initial_manage_principal\": \"users\",
+            \"backend_azure_keyvault\": {
+              \"resource_id\": \"$RESOURCE_ID\",
+              \"dns_name\": \"$DNS_NAME\"
+            }
+        }"
         fi
+
+        echo "{
+        \"name\": \"$SCOPE_NAME\",
+        \"scope_backend_type\": \"AZURE_KEYVAULT\",
+        \"initial_manage_principal\": \"users\",
+        \"backend_azure_keyvault\": {
+          \"resource_id\": \"$RESOURCE_ID\",
+          \"dns_name\": \"$DNS_NAME\"
+          }
+        }"
+
       displayName: 'Creating Azure Key Vault backed secret scope'
     
     - script: |

@@ -141,6 +141,8 @@ stages:
 
           echo "AAD Token_RESPONSE: $AAD_TOKEN_RESPONSE"
           echo "AAD TOKEN: $AAD_TOKEN"
+
+          echo "##vso[task.setvariable variable=AAD_TOKEN;]$AAD_TOKEN"
       displayName: 'Authenticate Azure using Service Principal to Retrieve AAD Token'
 
     - task: UsePythonVersion@0
@@ -219,8 +221,7 @@ stages:
             \"initial_manage_principal\": \"users\",
             \"backend_azure_keyvault\": {
               \"resource_id\": \"$RESOURCE_ID\",
-              \"dns_name\": \"$DNS_NAME\",
-              \"userAADToken\": \"$AAD_TOKEN\"
+              \"dns_name\": \"$DNS_NAME\"
             }
         }"
         fi

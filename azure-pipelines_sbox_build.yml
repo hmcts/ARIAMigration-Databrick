@@ -37,7 +37,7 @@ stages:
           $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
 
         ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-      displayName: 'Install Python dependencies & build Python wheel'
+      displayName: 'Install Python dependencies & build Python wheel!'
     
     - script: |
        pip install --upgrade pip

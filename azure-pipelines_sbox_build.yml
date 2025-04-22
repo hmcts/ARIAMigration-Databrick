@@ -135,7 +135,8 @@ stages:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          AAD_TOKEN=$(az account get-access-token --resource https://databricks.azure.net --query accessToken -o tsv)
+          az login --service-principal -u $SP_CLIENT_ID -p $SP_CLIENT_PASSWORD --tenant $SP_TENANT_ID
+          AAD_TOKEN=$(az account get-access-token --resource ingest02-product-databricks001-sbox)
           echo "AAD Token: $AAD_TOKEN"
       displayName: 'Authenticate Azure using Service Principal to Retrieve AAD Token'
 

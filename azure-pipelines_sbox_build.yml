@@ -92,7 +92,7 @@ stages:
     
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/AzureFunctions'
         ArtifactName: 'functionapp'
         publishLocation: 'Container'
       displayName: 'Publish Azure Function'
@@ -118,14 +118,14 @@ stages:
         downloadType: 'single'
         artifactName: 'functionapp'
         downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download Azure Function'
+      displayName: 'Download Azure Function Artifact'
     
     - task: AzureFunctionApp@2
       inputs: 
         connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
         appType: 'functionAppLinux'
         appName: 'af-joh-dev-uks-dlrm-02'
-        package: '$(Pipeline.Workspace)/functionapp' #'$(System.DefaultWorkingDirectory)/AzureFunctions'
+        package: '$(Pipeline.Workspace)/functionapp'
         deploymentMethod: 'auto'
       displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-02'
 

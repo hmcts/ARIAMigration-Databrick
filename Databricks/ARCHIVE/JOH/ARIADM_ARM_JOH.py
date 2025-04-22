@@ -1042,12 +1042,38 @@ def silver_archive_metadata():
             col('adj.Title').alias('bf_001'),
             col('adj.Forenames').alias('bf_002'),
             col('adj.Surname').alias('bf_003'),
-            col('adj.DateOfBirth').alias('bf_004'),
+            when(
+                    workspace_env["env"].lower() == 'dev-sbox',
+                    date_format(coalesce(col('adj.DateOfBirth'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+                ).otherwise(
+                    date_format(col('adj.DateOfBirth'), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+                ).alias('bf_004'),
             col('adj.DesignatedCentre').alias('bf_005')
         )
     )
 
     return df
+
+# COMMAND ----------
+
+df = (
+    spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj").join(spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
+        col('adj.AdjudicatorId').alias('client_identifier'),
+        date_format(coalesce(col('adj.DateOfRetirement'), col('adj.ContractEndDate'), col('adj.AdtclmnFirstCreatedDatetime')), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        lit("GBR").alias("region"),
+        lit("ARIA").alias("publisher"),
+        lit("ARIA Judicial Records").alias("record_class"),
+        lit('IA_Judicial_Office').alias("entitlement_tag"),
+        col('adj.Title').alias('bf_001'),
+        col('adj.Forenames').alias('bf_002'),
+        col('adj.Surname').alias('bf_003'),
+        col('adj.DateOfBirth').alias('bf_004'),
+        col('adj.DesignatedCentre').alias('bf_005')
+    )
+)
+
+display(df)
 
 # COMMAND ----------
 
@@ -1567,6 +1593,32 @@ dbutils.notebook.exit("Notebook completed successfully")
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
 # display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
+
+# COMMAND ----------
+
+# df = (
+#     spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj").join(spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
+#         col('adj.AdjudicatorId').alias('client_identifier'),
+#         date_format(coalesce(col('adj.DateOfRetirement'), col('adj.ContractEndDate'), col('adj.AdtclmnFirstCreatedDatetime')), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+#         date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+#         lit("GBR").alias("region"),
+#         lit("ARIA").alias("publisher"),
+#         lit("ARIA Judicial Records").alias("record_class"),
+#         lit('IA_Judicial_Office').alias("entitlement_tag"),
+#         col('adj.Title').alias('bf_001'),
+#         col('adj.Forenames').alias('bf_002'),
+#         col('adj.Surname').alias('bf_003'),
+#         when(
+#             workspace_env["env"] == 'dev-sbox',
+#             date_format(coalesce(col('adj.DateOfBirth'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+#         ).otherwise(
+#             date_format(col('adj.DateOfBirth'), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+#         ).alias('bf_004'),
+#         col('adj.DesignatedCentre').alias('bf_005')
+#     )
+# )
+
+# display(df)
 
 # COMMAND ----------
 

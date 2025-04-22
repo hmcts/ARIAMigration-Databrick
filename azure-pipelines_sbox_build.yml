@@ -166,7 +166,7 @@ stages:
         echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         cat ~/.databrickscfg  # Print the contents for debugging
-      displayName: 'Configure Databricks CLI for Workspace MAIN02 & Test scope creation: $SCOPE_NAME'
+      displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
@@ -221,9 +221,9 @@ stages:
             \"initial_manage_principal\": \"users\",
             \"backend_azure_keyvault\": {
               \"resource_id\": \"$RESOURCE_ID\",
-              \"dns_name\": \"$DNS_NAME\"
-            },
-            \"userAADToken\": \"$AAD_TOKEN\"
+              \"dns_name\": \"$DNS_NAME\",
+              \"userAADToken\": \"$AAD_TOKEN\"
+            }
         }"
         fi
 
@@ -233,9 +233,9 @@ stages:
         \"initial_manage_principal\": \"users\",
         \"backend_azure_keyvault\": {
           \"resource_id\": \"$RESOURCE_ID\",
-          \"dns_name\": \"$DNS_NAME\"
-          },
+          \"dns_name\": \"$DNS_NAME\",
           \"userAADToken\": \"$AAD_TOKEN\"
+          }
         }"
       displayName: 'Creating Azure Key Vault backed secret scope'
         

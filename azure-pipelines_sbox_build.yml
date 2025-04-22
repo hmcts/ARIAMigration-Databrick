@@ -222,7 +222,8 @@ stages:
             \"backend_azure_keyvault\": {
               \"resource_id\": \"$RESOURCE_ID\",
               \"dns_name\": \"$DNS_NAME\"
-            }
+            },
+            "userAADToken": $AAD_TOKEN
         }"
         fi
 
@@ -233,7 +234,8 @@ stages:
         \"backend_azure_keyvault\": {
           \"resource_id\": \"$RESOURCE_ID\",
           \"dns_name\": \"$DNS_NAME\"
-          }
+          },
+          "userAADToken": $AAD_TOKEN
         }"
       displayName: 'Creating Azure Key Vault backed secret scope'
         

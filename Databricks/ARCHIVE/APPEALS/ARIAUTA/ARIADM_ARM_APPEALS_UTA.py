@@ -113,7 +113,7 @@ pip install azure-storage-blob
 
 read_hive = False
 
-AppealCategory = "ARIAFTA"
+AppealCategory = "ARIAUTA"
 
 # Setting variables for use in subsequent cells
 raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
@@ -6769,3 +6769,13 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# key_vault = "ingest00-keyvault-sbox"
+
+# secrets = dbutils.secrets.list(key_vault)
+# display(secrets)
+
+# secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+# print(secret)

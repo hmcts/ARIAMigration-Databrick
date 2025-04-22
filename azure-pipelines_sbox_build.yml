@@ -207,7 +207,7 @@ stages:
         RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
         DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
 
-         echo "Test using AAD_TOKEN: $AAD_TOKEN"
+        echo "Test using AAD_TOKEN: $AAD_TOKEN"
 
         if databricks secrets list-scopes | grep -q "\"scope\": \"$SCOPE_NAME\""; then
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."

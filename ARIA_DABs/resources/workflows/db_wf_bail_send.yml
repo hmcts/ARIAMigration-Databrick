@@ -1,0 +1,42 @@
+resources:
+  jobs:
+    db_wf_bail_send:
+      name: db_wf_bail_send
+      tasks:
+        - task_key: DLT_creation_of_content_bails
+          pipeline_task:
+            pipeline_id: e66f2978-e1fc-4845-a850-af440f9678cb
+            full_refresh: true
+        - task_key: publish_HTML_JSON_to_eh_
+          depends_on:
+            - task_key: DLT_creation_of_content_bails
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/bails_to_eventhubs
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+        - task_key: publish_A360_to_eh
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh_
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/bails_to_eventhubs_A360
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+        - task_key: bails_ARM_ack
+          depends_on:
+            - task_key: publish_A360_to_eh
+            - task_key: publish_HTML_JSON_to_eh_
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/bails_ack_autoloader
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+        - task_key: Bails_Send_Dashboard
+          depends_on:
+            - task_key: bails_ARM_ack
+            - task_key: DLT_creation_of_content_bails
+          notebook_task:
+            notebook_path: /Workspace/Users/andrew.mcdevitt@hmcts.net/Bails Send Audit
+              Dashboard
+            source: WORKSPACE
+          existing_cluster_id: 0930-233618-mrfsuf2j
+      queue:
+        enabled: true

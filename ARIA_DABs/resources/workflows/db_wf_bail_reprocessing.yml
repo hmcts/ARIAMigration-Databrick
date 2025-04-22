@@ -1,0 +1,43 @@
+resources:
+  jobs:
+    db_wf_bail_reprocessing:
+      name: db_wf_bail_reprocessing
+      tasks:
+        - task_key: reprocessing_content
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/(Dev
+              fix) Dynamic-ARIA-Bails v2
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: publish_HTML_JSON_to_eh
+          depends_on:
+            - task_key: reprocessing_content
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/bails_to_eventhubs
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: pubslish_A360_to_eh
+          depends_on:
+            - task_key: publish_HTML_JSON_to_eh
+          notebook_task:
+            notebook_path: /Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/BAILS/bails_to_eventhubs
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+      job_clusters:
+        - job_cluster_key: Job_cluster
+          new_cluster:
+            cluster_name: ""
+            spark_version: 15.4.x-scala2.12
+            azure_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: -1
+            node_type_id: Standard_D4ds_v5
+            spark_env_vars:
+              PYSPARK_PYTHON: /databricks/python3/bin/python3
+            enable_elastic_disk: true
+            data_security_mode: LEGACY_SINGLE_USER_STANDARD
+            runtime_engine: PHOTON
+            num_workers: 8
+      queue:
+        enabled: true

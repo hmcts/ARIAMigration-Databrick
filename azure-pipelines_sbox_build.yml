@@ -1,25 +1,27 @@
 trigger:
   branches:
     include:
-      - master  
-# pr: none
+    - main
 
 pool:
   vmImage: 'ubuntu-latest' 
 
 variables:
-  DATABRICKS_HOST_WORKSPACE_MAIN00: 'https://adb-3635282203417052.12.azuredatabricks.net'
-
-  DATABRICKS_HOST_WORKSPACE_MAIN01: 'https://adb-376876256300083.3.azuredatabricks.net/'
-
-  DATABRICKS_HOST_WORKSPACE_MAIN02: 'https://adb-1879076228317698.18.azuredatabricks.net'
+  - name: env
+    value: 'sandbox'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN00
+    value: 'https://adb-3635282203417052.12.azuredatabricks.net'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN01
+    value: 'https://adb-376876256300083.3.azuredatabricks.net/'
+  - name: DATABRICKS_HOST_WORKSPACE_MAIN02
+    value: 'https://adb-1879076228317698.18.azuredatabricks.net'
 
 stages:
 - stage: 'Build'
   displayName: 'Build Stage'
   jobs:
   - job: BuildJob
-    displayName: 'Rune Build and deploy'
+    displayName: 'Run Build and deploy'
     steps:
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'
@@ -27,9 +29,20 @@ stages:
         versionSpec: '3.x'
 
     - script: |
-        python -m pip install --upgrade pip
+        python --version
+        pip install --upgrade pip
+        pip install build
         pip install databricks-cli
-      displayName: 'Install Databricks CLI'
+        python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
+          $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+
+        ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+      displayName: 'Install Python dependencies & build Python wheel'
+    
+    - script: |
+       pip install --upgrade pip
+       pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
+      displayName: 'Install AzureFunctions dependencies into package'
 
     # Configure and deploy to Workspace MAIN00
     - script: |
@@ -69,3 +82,131 @@ stages:
         databricks workspace mkdirs /live
         databricks workspace import_dir Databricks /live --overwrite
       displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+        ArtifactName: 'ariafunction'
+        publishLocation: 'Container'
+      displayName: 'Publish Wheel Artifact'
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
+        ArtifactName: 'functionapp'
+        publishLocation: 'Container'
+      displayName: 'Publish Azure Function'
+    
+- stage: 'Deploy'
+  displayName: 'Deploy Stage'
+  jobs:
+  - job: DeployDatabricksResources
+    displayName: 'Run Build and deploy'
+    steps:
+
+    - task: DownloadBuildArtifacts@1
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'ariafunction'
+        downloadPath: '$(Pipeline.Workspace)'
+      displayName: 'Download wheel Artifact'
+    
+    - task: DownloadBuildArtifacts@1
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'functionapp'
+        downloadPath: '$(Pipeline.Workspace)'
+      displayName: 'Download Azure Function Artifact'
+    
+    - task: AzureFunctionApp@2
+      inputs: 
+        connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
+        appType: 'functionAppLinux'
+        appName: 'af-joh-dev-uks-dlrm-02'
+        package: '$(Pipeline.Workspace)/functionapp'
+        deploymentMethod: 'auto'
+      displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-02'
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.x'
+      inputs:
+        versionSpec: '3.x'
+
+    - script: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          
+          brew install databricks/tap/databricks
+          databricks --version
+      displayName: 'Install Databricks CLI'
+
+      #Ensure databrcks CLI is available in current session (loading homebrew shell)
+    - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+        databricks --version  
+        echo "[DEFAULT]" > $(HOME)/.databrickscfg
+        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+        cat ~/.databrickscfg  # Print the contents for debugging
+      displayName: 'Configure Databricks CLI for Workspace MAIN02'
+
+    - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+
+        set -e 
+
+        WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+
+        if [ -n "$WHEEL_FILE" ]; then
+          echo "Found wheel file: $WHEEL_FILE"
+
+          FILENAME=$(basename "$WHEEL_FILE")
+          echo "Extracted filename: $FILENAME"
+
+          DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
+          echo "Destination path: $DEST_PATH"
+
+          echo "creating directory dbfs:/FileStore/shared_wheels"
+          databricks fs mkdirs dbfs:/FileStore/shared_wheels    
+
+          echo "copying wheel file to DBFS..."
+          echo "copying $WHEEL_FILE to $DEST_PATH"
+          databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+
+          echo "Displaying content of dbfs:/FileStore/shared_wheels"
+          databricks fs ls dbfs:/FileStore/shared_wheels
+
+        else
+          echo "No wheel file found"
+          exit 1
+        fi
+      displayName: 'Upload Wheel to Databricks DBFS'
+        
+    - script: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+        KEYVAULT_NAME="ingest02-meta002-sbox"
+
+        echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
+        databricks secrets list-secrets $KEYVAULT_NAME
+        databricks secrets list-secrets ingest00-meta002-sbox
+      displayName: 'View KeyVault backed secret keys in Databricks'
+    
+    - script: |
+        echo "Current dir: $(pwd)"
+        ls -al /home/vsts/work/1/s
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+
+        cd ARIA_DABs
+
+        echo "Current dir: $(pwd)"
+        ls -al  
+
+        databricks bundle destroy -t sandbox 
+        databricks bundle validate -t sandbox --debug
+        databricks bundle deploy -t sandbox --debug
+
+        databricks bundle run OAuth_job_v1
+      displayName: "Deploy Databricks resources to ingest02 workspace"
+

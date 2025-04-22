@@ -128,6 +128,16 @@ stages:
         package: '$(Pipeline.Workspace)/functionapp'
         deploymentMethod: 'auto'
       displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-02'
+    
+    - task: AzureCLI@2
+      inputs:
+      azureSubscription: 'DTS-DATAINGEST-SBOX' 
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        AAD_TOKEN=$(az account get-access-token --resource https://databricks.azure.net --query accessToken -o tsv)
+        echo "AAD Token: $AAD_TOKEN"
+      displayName: 'Authenticate Azure using Service Principal to Retrieve AAD Token'
 
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'
@@ -187,16 +197,13 @@ stages:
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        databricks auth login --client-id SP_CLIENT_ID \
-                      --client-secret $SP_CLIENT_SECRET \
-                      --azure-tenant-id $SP_TENANT_ID \
-                      --host $(DATABRICKS_HOST_WORKSPACE_MAIN02)
-
         SCOPE_NAME="ingest02-meta002-sbox"
         KEYVAULT_NAME="ingest02-meta002-sbox"
         RESOURCE_GROUP="ingest02-main-sbox"
         RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
         DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
+
+         echo "Test using AAD_TOKEN: $AAD_TOKEN"
 
         if databricks secrets list-scopes | grep -q "\"scope\": \"$SCOPE_NAME\""; then
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
@@ -208,7 +215,8 @@ stages:
             \"initial_manage_principal\": \"users\",
             \"backend_azure_keyvault\": {
               \"resource_id\": \"$RESOURCE_ID\",
-              \"dns_name\": \"$DNS_NAME\"
+              \"dns_name\": \"$DNS_NAME\",
+              \"userAADToken\": \"$AAD_TOKEN\"
             }
         }"
         fi

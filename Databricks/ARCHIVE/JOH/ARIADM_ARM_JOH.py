@@ -101,6 +101,43 @@ gold_outputs = "ARIADM/ARM/JOH"
 hive_schema = "ariadm_arm_joh"
 key_vault = "ingest00-keyvault-sbox"
 
+html_mnt = f"/mnt/ingest00landingsboxhtml-template"
+
+# Print all variables
+variables = {
+    "read_hive": read_hive,
+    "raw_mnt": raw_mnt,
+    "landing_mnt": landing_mnt,
+    "bronze_mnt": bronze_mnt,
+    "silver_mnt": silver_mnt,
+    "gold_mnt": gold_mnt,
+    "html_mnt": html_mnt,
+    "gold_outputs": gold_outputs,
+    "hive_schema": hive_schema,
+    "key_vault": key_vault
+}
+
+display(variables)
+
+# COMMAND ----------
+
+context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
+
+if "adb-3635282203417052" in workspace_host:
+    env = "dev-sbox"
+elif "adb-376876256300083" in workspace_host:
+    env = "test-sbox"
+elif "adb-4305432441461530" in workspace_host:
+    env = "stg"
+elif "adb-3100629970551492" in workspace_host:
+    env = "prod"
+else:
+    env = "unknown"
+
+workspace_env = {"workspace_host": workspace_host, "env": env}
+print(workspace_env)
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -1030,12 +1067,12 @@ def silver_archive_metadata():
             date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             lit("GBR").alias("region"),
             lit("ARIA").alias("publisher"),
-            lit("ARIA Judicial Records").alias("record_class"),
+            lit("ARIAJR").alias("record_class"),
             lit('IA_Judicial_Office').alias("entitlement_tag"),
             col('adj.Title').alias('bf_001'),
             col('adj.Forenames').alias('bf_002'),
             col('adj.Surname').alias('bf_003'),
-            col('adj.DateOfBirth').alias('bf_004'),
+            when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('adj.DateOfBirth'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('adj.DateOfBirth'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),                     
             col('adj.DesignatedCentre').alias('bf_005')
         )
     )

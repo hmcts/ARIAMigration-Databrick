@@ -121,22 +121,29 @@ display(variables)
 
 # COMMAND ----------
 
-context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
-workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
+# DBTITLE 1,Determine and Print Environment
+env_value = dbutils.secrets.get(key_vault, "Environment")
+env = "dev" if env_value == "development" else None
+print(f"Environment: {env}")
 
-if "adb-3635282203417052" in workspace_host:
-    env = "dev-sbox"
-elif "adb-376876256300083" in workspace_host:
-    env = "test-sbox"
-elif "adb-4305432441461530" in workspace_host:
-    env = "stg"
-elif "adb-3100629970551492" in workspace_host:
-    env = "prod"
-else:
-    env = "unknown"
+# COMMAND ----------
 
-workspace_env = {"workspace_host": workspace_host, "env": env}
-print(workspace_env)
+# context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+# workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
+
+# if "adb-3635282203417052" in workspace_host:
+#     env = "dev-sbox"
+# elif "adb-376876256300083" in workspace_host:
+#     env = "test-sbox"
+# elif "adb-4305432441461530" in workspace_host:
+#     env = "stg"
+# elif "adb-3100629970551492" in workspace_host:
+#     env = "prod"
+# else:
+#     env = "unknown"
+
+# workspace_env = {"workspace_host": workspace_host, "env": env}
+# print(workspace_env)
 
 # COMMAND ----------
 
@@ -1060,50 +1067,109 @@ def silver_appointment_detail():
     path=f"{silver_mnt}/silver_archive_metadata"
 )
 def silver_archive_metadata():
-    df = (
-        dlt.read("silver_adjudicator_detail").alias("adj").join(dlt.read("stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
-            col('adj.AdjudicatorId').alias('client_identifier'),
-            date_format(coalesce(col('adj.DateOfRetirement'), col('adj.ContractEndDate'), col('adj.AdtclmnFirstCreatedDatetime')), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-            date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-            lit("GBR").alias("region"),
-            lit("ARIA").alias("publisher"),
-            lit("ARIAJR").alias("record_class"),
-            lit('IA_Judicial_Office').alias("entitlement_tag"),
-            col('adj.Title').alias('bf_001'),
-            col('adj.Forenames').alias('bf_002'),
-            col('adj.Surname').alias('bf_003'),
-            when(
-                    workspace_env["env"].lower() == 'dev-sbox',
-                    date_format(coalesce(col('adj.DateOfBirth'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-                ).otherwise(
-                    date_format(col('adj.DateOfBirth'), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-                ).alias('bf_004'),
-            col('adj.DesignatedCentre').alias('bf_005')
+    # Read and join
+    # Read and join
+    df_base = (
+        spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj")
+        .join(
+            spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias("flt"),
+            col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
+            "inner"
         )
     )
 
-    return df
+    # Add environment as a literal column
+    # env = workspace_env["env"]
+    df_with_env = df_base.withColumn("env", lit(env))
+
+
+
+    # Now use Spark-native `when()` with column condition
+    df_final = (
+        df_with_env.select(
+            col("adj.AdjudicatorId").alias("client_identifier"),
+            date_format(
+                coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            ).alias("event_date"),
+            date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+            lit("GBR").alias("region"),
+            lit("ARIA").alias("publisher"),
+            lit("ARIAJR").alias("record_class"),
+            lit("IA_Judicial_Office").alias("entitlement_tag"),
+            col("adj.Title").alias("bf_001"),
+            col("adj.Forenames").alias("bf_002"),
+            col("adj.Surname").alias("bf_003"),
+            when(
+                col("env") == lit("dev"),
+                date_format(coalesce(col("adj.DateOfBirth"), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+            ).otherwise(
+                date_format(col("adj.DateOfBirth"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+            ).alias("bf_004"),
+            # col("env"),
+            col("adj.DesignatedCentre").alias("bf_005")
+        )
+    )
+
+    return df_final
+
 
 # COMMAND ----------
 
-df = (
-    spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj").join(spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
-        col('adj.AdjudicatorId').alias('client_identifier'),
-        date_format(coalesce(col('adj.DateOfRetirement'), col('adj.ContractEndDate'), col('adj.AdtclmnFirstCreatedDatetime')), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        lit("GBR").alias("region"),
-        lit("ARIA").alias("publisher"),
-        lit("ARIA Judicial Records").alias("record_class"),
-        lit('IA_Judicial_Office').alias("entitlement_tag"),
-        col('adj.Title').alias('bf_001'),
-        col('adj.Forenames').alias('bf_002'),
-        col('adj.Surname').alias('bf_003'),
-        col('adj.DateOfBirth').alias('bf_004'),
-        col('adj.DesignatedCentre').alias('bf_005')
-    )
-)
+# DBTITLE 1,temp: validation
+# # Read and join
+# df_base = (
+#     spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj")
+#     .join(
+#         spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias("flt"),
+#         col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
+#         "inner"
+#     )
+# )
 
-display(df)
+# # Add environment as a literal column
+# # env = workspace_env["env"]
+# df_with_env = df_base.withColumn("env", lit(env))
+
+
+
+# # Now use Spark-native `when()` with column condition
+# df_final = (
+#     df_with_env.select(
+#         col("adj.AdjudicatorId").alias("client_identifier"),
+#         date_format(
+#             coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
+#             "yyyy-MM-dd'T'HH:mm:ss'Z'"
+#         ).alias("event_date"),
+#         date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+#         lit("GBR").alias("region"),
+#         lit("ARIA").alias("publisher"),
+#         lit("ARIAJR").alias("record_class"),
+#         lit("IA_Judicial_Office").alias("entitlement_tag"),
+#         col("adj.Title").alias("bf_001"),
+#         col("adj.Forenames").alias("bf_002"),
+#         col("adj.Surname").alias("bf_003"),
+#         when(
+#             col("env") == "dev-sbox",
+#             date_format(coalesce(col("adj.DateOfBirth"), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+#         ).otherwise(
+#             date_format(col("adj.DateOfBirth"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+#         ).alias("bf_004"),
+#         col("env"),
+#         col("adj.DesignatedCentre").alias("bf_005")
+#     )
+# )
+
+
+
+# display(df_with_env.filter(col("adj.AdjudicatorId").isin([2023, 2001, 2094, 2058, 2012]),))
+
+# COMMAND ----------
+
+# DBTITLE 1,temp: validation
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.stg_create_joh_a360_content 
+# where client_identifier in (1660,2023, 2001, 2094, 2058, 2012)
 
 # COMMAND ----------
 
@@ -1491,10 +1557,6 @@ def stg_judicial_officer_unified():
 
     return df_batch
  
-
-# COMMAND ----------
-
-
 
 # COMMAND ----------
 

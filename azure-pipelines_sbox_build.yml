@@ -124,9 +124,10 @@ stages:
       inputs: 
         connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
         appType: 'functionAppLinux'
-        appName: 'af-joh-dev-uks-dlrm-01'
+        appName: 'af-joh-dev-uks-dlrm-02'
         package: '$(Pipeline.Workspace)/functionapp' #'$(System.DefaultWorkingDirectory)/AzureFunctions'
         deploymentMethod: 'auto'
+      displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-02'
 
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'
@@ -182,44 +183,7 @@ stages:
           exit 1
         fi
       displayName: 'Upload Wheel to Databricks DBFS'
-    
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-
-        databricks auth login
-
-        SCOPE_NAME="ingest02-meta002-sbox"
-        KEYVAULT_NAME="ingest02-meta002-sbox"
-        RESOURCE_GROUP="ingest02-main-sbox"
-        RESOURCE_ID="/subscriptions/df72bb30-d6fb-47bd-82ee-5eb87473ddb3/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
-        DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
-
-        if databricks secrets list-scopes | grep -q "\"scope\": \"$SCOPE_NAME\""; then
-          echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
-        else
-          echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
-          databricks secrets create-scope --json "{
-            \"scope\": \"$SCOPE_NAME\",
-            \"scope_backend_type\": \"AZURE_KEYVAULT\",
-            \"initial_manage_principal\": \"users\",
-            \"backend_azure_keyvault\": {
-              \"resource_id\": \"$RESOURCE_ID\",
-              \"dns_name\": \"$DNS_NAME\"
-            }
-        }"
-        fi
-
-        echo "{
-        \"scope\": \"$SCOPE_NAME\",
-        \"scope_backend_type\": \"AZURE_KEYVAULT\",
-        \"initial_manage_principal\": \"users\",
-        \"backend_azure_keyvault\": {
-          \"resource_id\": \"$RESOURCE_ID\",
-          \"dns_name\": \"$DNS_NAME\"
-          }
-        }"
-      displayName: 'Creating Azure Key Vault backed secret scope'
-    
+        
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
         KEYVAULT_NAME="ingest02-meta002-sbox"

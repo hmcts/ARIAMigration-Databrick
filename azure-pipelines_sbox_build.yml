@@ -160,13 +160,39 @@ stages:
 
       #Ensure databrcks CLI is available in current session (loading homebrew shell)
     - script: |
+        SCOPE_NAME="ingest02-meta002-sbox"
+        KEYVAULT_NAME="ingest02-meta002-sbox"
+        RESOURCE_GROUP="ingest02-main-sbox"
+        SUBSCRIPTION_ID="df72bb30-d6fb-47bd-82ee-5eb87473ddb3"
+        RESOURCE_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME"
+        DNS_NAME="https://$KEYVAULT_NAME.vault.azure.net/"
+
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
         databricks --version  
         echo "[DEFAULT]" > $(HOME)/.databrickscfg
         echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
         cat ~/.databrickscfg  # Print the contents for debugging
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
+
+        # Login using SP
+        az login --service-principal --username $SP_CLIENT_ID --password $SP_CLIENT_SECRET --tenant $SP_TENANT_ID
+
+        # Retrieve AAD Token
+        AAD_TOKEN_RESPONSE=$(az account get-access-token --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d) 
+        AAD_TOKEN=$(echo $AAD_TOKEN_RESPONSE | jq -r '.accessToken')
+        echo "AAD Token_RESPONSE: $AAD_TOKEN_RESPONSE"
+        echo "AAD TOKEN: $AAD_TOKEN"
+
+        export DATABRICKS_HOST=$(DATABRICKS_HOST_WORKSPACE_MAIN02)
+        export DATABRICKS_TOKEN=$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)
+
+        databricks secrets create-scope --scope $SCOPE_NAME \ 
+        --scope-backend-type 'AZURE_KEYVAULT' \
+        --resource-id $RESOURCE_ID \
+        --dns-name $DNS_NAME
+
+        databricks secrets list-scopes
+      displayName: 'Configure Databricks CLI for Workspace MAIN02 & Test scope creation: $SCOPE_NAME'
 
     - script: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  

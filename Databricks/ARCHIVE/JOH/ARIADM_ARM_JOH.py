@@ -1261,7 +1261,7 @@ def generate_a360(row):
 
         html_data = {
             "operation": "upload_new_file",
-            "relation_id": row.client_identifier,
+            "relation_id": str(row.client_identifier),
             "file_metadata": {
                 "publisher": row.publisher,
                 "dz_file_name": f"judicial_officer_{row.client_identifier}.html",
@@ -1271,7 +1271,7 @@ def generate_a360(row):
 
         json_data = {
             "operation": "upload_new_file",
-            "relation_id": row.client_identifier,
+            "relation_id": str(row.client_identifier),
             "file_metadata": {
                 "publisher": row.publisher,
                 "dz_file_name": f"judicial_officer_{row.client_identifier}.json",

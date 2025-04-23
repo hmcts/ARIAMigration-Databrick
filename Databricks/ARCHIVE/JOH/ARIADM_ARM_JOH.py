@@ -1697,3 +1697,14 @@ dbutils.notebook.exit("Notebook completed successfully")
 # files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
 
 # display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# DBTITLE 1,failures
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+# files_df = files_df.filter(col("path").contains("_0_"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))

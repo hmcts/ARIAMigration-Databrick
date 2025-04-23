@@ -122,28 +122,12 @@ display(variables)
 # COMMAND ----------
 
 # DBTITLE 1,Determine and Print Environment
-env_value = dbutils.secrets.get(key_vault, "Environment")
-env = "dev" if env_value == "development" else None
-print(f"Environment: {env}")
-
-# COMMAND ----------
-
-# context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
-# workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
-
-# if "adb-3635282203417052" in workspace_host:
-#     env = "dev-sbox"
-# elif "adb-376876256300083" in workspace_host:
-#     env = "test-sbox"
-# elif "adb-4305432441461530" in workspace_host:
-#     env = "stg"
-# elif "adb-3100629970551492" in workspace_host:
-#     env = "prod"
-# else:
-#     env = "unknown"
-
-# workspace_env = {"workspace_host": workspace_host, "env": env}
-# print(workspace_env)
+try:
+    env_value = dbutils.secrets.get(key_vault, "Environment")
+    env = "dev" if env_value == "development" else None
+    print(f"Environment: {env}")
+except:
+    env = "unkown"
 
 # COMMAND ----------
 
@@ -1070,9 +1054,9 @@ def silver_archive_metadata():
     # Read and join
     # Read and join
     df_base = (
-        spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj")
+        dlt.read("silver_adjudicator_detail").alias("adj")
         .join(
-            spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias("flt"),
+            dlt.read("stg_joh_filtered").alias("flt"),
             col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
             "inner"
         )
@@ -1113,63 +1097,6 @@ def silver_archive_metadata():
 
     return df_final
 
-
-# COMMAND ----------
-
-# DBTITLE 1,temp: validation
-# # Read and join
-# df_base = (
-#     spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj")
-#     .join(
-#         spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias("flt"),
-#         col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
-#         "inner"
-#     )
-# )
-
-# # Add environment as a literal column
-# # env = workspace_env["env"]
-# df_with_env = df_base.withColumn("env", lit(env))
-
-
-
-# # Now use Spark-native `when()` with column condition
-# df_final = (
-#     df_with_env.select(
-#         col("adj.AdjudicatorId").alias("client_identifier"),
-#         date_format(
-#             coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
-#             "yyyy-MM-dd'T'HH:mm:ss'Z'"
-#         ).alias("event_date"),
-#         date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-#         lit("GBR").alias("region"),
-#         lit("ARIA").alias("publisher"),
-#         lit("ARIAJR").alias("record_class"),
-#         lit("IA_Judicial_Office").alias("entitlement_tag"),
-#         col("adj.Title").alias("bf_001"),
-#         col("adj.Forenames").alias("bf_002"),
-#         col("adj.Surname").alias("bf_003"),
-#         when(
-#             col("env") == "dev-sbox",
-#             date_format(coalesce(col("adj.DateOfBirth"), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-#         ).otherwise(
-#             date_format(col("adj.DateOfBirth"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-#         ).alias("bf_004"),
-#         col("env"),
-#         col("adj.DesignatedCentre").alias("bf_005")
-#     )
-# )
-
-
-
-# display(df_with_env.filter(col("adj.AdjudicatorId").isin([2023, 2001, 2094, 2058, 2012]),))
-
-# COMMAND ----------
-
-# DBTITLE 1,temp: validation
-# %sql
-# select * from hive_metastore.ariadm_arm_joh.stg_create_joh_a360_content 
-# where client_identifier in (1660,2023, 2001, 2094, 2058, 2012)
 
 # COMMAND ----------
 
@@ -1316,14 +1243,14 @@ def generate_a360(row):
     try:
         metadata_data = {
             "operation": "create_record",
-            "relation_id": row.client_identifier,
+            "relation_id": str(row.client_identifier),
             "record_metadata": {
                 "publisher": row.publisher,
                 "record_class": row.record_class ,
                 "region": row.region,
                 "recordDate": str(row.recordDate),
                 "event_date": str(row.event_date),
-                "client_identifier": row.client_identifier,
+                "client_identifier": str(row.client_identifier),
                 "bf_001": row.bf_001 or "",
                 "bf_002": row.bf_002 or "",
                 "bf_003": row.bf_003 or "",
@@ -1752,3 +1679,21 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # %sql
 # select * from hive_metastore.ariadm_arm_joh.stg_create_joh_json_content --where UploadStatus != 'success' and A360Content like '%ERROR%'
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/submission/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))

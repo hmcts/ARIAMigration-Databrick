@@ -209,27 +209,11 @@ stages:
           echo "Secret scope '$SCOPE_NAME' already exists. Skipping creation."
         else
           echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
-          databricks secrets create-scope --json "{
-            \"scope\": \"$SCOPE_NAME\",
-            \"scope_backend_type\": \"AZURE_KEYVAULT\",
-            \"initial_manage_principal\": \"users\",
-            \"backend_azure_keyvault\": {
-              \"resource_id\": \"$RESOURCE_ID\",
-              \"dns_name\": \"$DNS_NAME\",
-              \"userAADToken\": \"$AAD_TOKEN\"
-            }
-        }"
-        fi
 
-        echo "{
-        \"scope\": \"$SCOPE_NAME\",
-        \"scope_backend_type\": \"AZURE_KEYVAULT\",
-        \"initial_manage_principal\": \"users\",
-        \"backend_azure_keyvault\": {
-          \"resource_id\": \"$RESOURCE_ID\",
-          \"dns_name\": \"$DNS_NAME\"
-          }
-        }"
+          MSYS_NO_PATHCONV=1 databricks secrets create-scope --scope $SCOPE_NAME \
+          --scope-backend-type 'AZURE_KEYVAULT' \
+          --resource-id $RESOURCE_ID' \ 
+          --dns-name $DNS_NAME
       displayName: 'Creating Azure Key Vault backed secret scope'
         
     - script: |

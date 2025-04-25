@@ -92,5 +92,13 @@ resources:
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/joh_ack_autoloader"
             source: WORKSPACE
+
+        - task_key: joh_send_dashboard
+          job_cluster_key: db_wf_joh_send_job
+          depends_on:
+            - task_key: joh_ack
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH Send Audit Dashboard"
+            source: WORKSPACE
       queue:
         enabled: true

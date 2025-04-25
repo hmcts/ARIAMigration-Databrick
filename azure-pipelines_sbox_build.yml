@@ -206,7 +206,5 @@ stages:
         databricks bundle destroy -t sandbox 
         databricks bundle validate -t sandbox --debug
         databricks bundle deploy -t sandbox --debug
-
-        databricks bundle run OAuth_job_v1
       displayName: "Deploy Databricks resources to ingest02 workspace"
 

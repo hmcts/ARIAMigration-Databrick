@@ -131,12 +131,12 @@ stages:
     
     - task: AzureCLI@2
       inputs:
-      azureSubscription: 'DTS-DATAINGEST-SBOX' 
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        AAD_TOKEN=$(az account get-access-token --resource https://databricks.azure.net --query accessToken -o tsv)
-        echo "AAD Token: $AAD_TOKEN"
+        azureSubscription: 'DTS-DATAINGEST-SBOX' 
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          AAD_TOKEN=$(az account get-access-token --resource https://databricks.azure.net --query accessToken -o tsv)
+          echo "AAD Token: $AAD_TOKEN"
       displayName: 'Authenticate Azure using Service Principal to Retrieve AAD Token'
 
     - task: UsePythonVersion@0

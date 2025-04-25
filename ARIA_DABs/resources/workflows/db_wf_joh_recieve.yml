@@ -75,7 +75,7 @@ resources:
           job_cluster_key: db_wf_apl_fta_send_job
           depends_on:
             - task_key: Response_Autoloader
-              timeout_seconds: 1200 #20 minute timeout for streaming job to complete before automatically triggering dashboard script
+              timeout_seconds: 1200 #20 minute timeout for response autoloader job to complete before automatically triggering dashboard script
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH Receive Audit Dashboard"
             source: WORKSPACE

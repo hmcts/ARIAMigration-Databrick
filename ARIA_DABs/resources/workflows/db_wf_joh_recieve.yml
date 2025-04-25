@@ -65,16 +65,15 @@ resources:
         - task_key: Response_Autoloader
           depends_on: 
             - task_key: validate_packages
-          timeout_seconds: 900
           job_cluster_key: db_wf_apl_fta_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/joh_resp_autoloader_start"
             source: WORKSPACE
       
         - task_key: joh_receive_dashboard
-          job_cluster_key: db_wf_apl_fta_send_job
-          depends_on:
+          depends_on: 
             - task_key: Response_Autoloader
+          job_cluster_key: db_wf_apl_fta_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH Receive Audit Dashboard"
             source: WORKSPACE

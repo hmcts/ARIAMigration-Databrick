@@ -214,10 +214,10 @@ stages:
         else
           echo "Creating Azure Key Vault backed secret scope '$SCOPE_NAME'..."
 
-          MSYS_NO_PATHCONV=1 databricks secrets create-scope --scope $SCOPE_NAME \
+          MSYS_NO_PATHCONV=1 databricks secrets create-scope --scope "$SCOPE_NAME" \
           --scope-backend-type 'AZURE_KEYVAULT' \
-          --resource-id $RESOURCE_ID \
-          --dns-name $DNS_NAME
+          --resource-id "$RESOURCE_ID" \
+          --dns-name "$DNS_NAME"
       displayName: 'Creating Azure Key Vault backed secret scope'
         
     - script: |

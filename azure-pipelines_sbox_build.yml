@@ -212,7 +212,7 @@ stages:
 
           MSYS_NO_PATHCONV=1 databricks secrets create-scope --scope $SCOPE_NAME \
           --scope-backend-type 'AZURE_KEYVAULT' \
-          --resource-id $RESOURCE_ID' \ 
+          --resource-id $RESOURCE_ID \ 
           --dns-name $DNS_NAME
       displayName: 'Creating Azure Key Vault backed secret scope'
         

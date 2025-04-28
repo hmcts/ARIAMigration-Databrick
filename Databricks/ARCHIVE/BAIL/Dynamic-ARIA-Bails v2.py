@@ -62,13 +62,14 @@
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode
 from pyspark.sql.types import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql import DataFrame
 import logging
 from pyspark.sql.window import Window
+
 
 # COMMAND ----------
 
@@ -815,7 +816,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("crep.LSCCommission").alias("CaseRepLSCCommission"),
         col("crep.Contact").alias("FileSpecifcContact"),
         col("crep.Telephone").alias("FileSpecificPhone"),
-        col("crep.RepresentativeRef").alias("CaseRepRepresentativeRef"),
+        col("crep.RepresentativeRef").alias("FileSpecificReference"),
         col("crep.FileSpecificFax"),
         col("crep.FileSpecificEmail"),
         # Representative Fields
@@ -978,70 +979,70 @@ def bronze_bail_ac_ca_apt_country_detc():
 # MAGIC
 # MAGIC SELECT 
 # MAGIC
+# MAGIC
 # MAGIC     -- Status
 # MAGIC     s.CaseNo,
 # MAGIC     s.StatusId,
 # MAGIC     s.Outcome,
-# MAGIC     
 # MAGIC     -- CaseList
 # MAGIC     cl.TimeEstimate AS CaseListTimeEstimate,
+# MAGIC     cl.ListNumber AS CaseListNumber,
+# MAGIC     cl.HearingDuration AS CaseListHearingDuration,
 # MAGIC     cl.StartTime AS CaseListStartTime,
-# MAGIC     
-# MAGIC     -- HearingType
+# MAGIC     --HearingType
 # MAGIC     ht.Description AS HearingTypeDesc,
-# MAGIC
-# MAGIC     
-# MAGIC     -- List
+# MAGIC     ht.TimeEstimate AS HearingTypeEst,
+# MAGIC     ht.DoNotUse,
+# MAGIC     --List
 # MAGIC     l.ListName,
+# MAGIC     l.StartDate AS HearingDate,
 # MAGIC     l.StartTime AS ListStartTime,
-# MAGIC     
-# MAGIC     -- ListType
+# MAGIC     l.NumReqSeniorImmigrationJudge AS UpperTribJudge,
+# MAGIC     l.NumReqDesignatedImmigrationJudge AS DesJudgeFirstTier,
+# MAGIC     l.NumReqImmigrationJudge AS JudgeFirstTier,
+# MAGIC     l.NumReqNonLegalMember AS NonLegalMember,
+# MAGIC     --ListType
 # MAGIC     lt.Description AS ListTypeDesc,
 # MAGIC     lt.ListType,
-# MAGIC     
-# MAGIC     -- Court
+# MAGIC     lt.DoNotUse AS DoNotUseListType,
+# MAGIC     --Court
 # MAGIC     c.CourtName,
-# MAGIC     
-# MAGIC     -- HearingCentre
+# MAGIC     c.DoNotUse AS DoNotUseCourt,
+# MAGIC     --HearingCentre
 # MAGIC     hc.Description AS HearingCentreDesc,
-# MAGIC     
 # MAGIC     -- ListSitting
 # MAGIC     ls.Chairman,
-# MAGIC     
+# MAGIC     Ls.Position,
 # MAGIC     -- Adjudicator
 # MAGIC     a.Surname AS AdjudicatorSurname,
 # MAGIC     a.Forenames AS AdjudicatorForenames,
-# MAGIC     a.Title AS AdjudicatorTitle
-# MAGIC
-# MAGIC     --DecisionType
-# MAGIC     dt.Description AS OutcomeDescription,
-# MAGIC     --AppealCase
+# MAGIC     a.Title AS AdjudicatorTitle,
+# MAGIC     a.Notes AS AdjudicatorNote,
+# MAGIC     --DecisionType 
+# MAGIC     dt.Description AS OutcomeDescription, 
+# MAGIC     --AppealCase 
 # MAGIC     ac.Notes
-# MAGIC
-# MAGIC FROM [ARIAREPORTS].[dbo].[Status] s
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[CaseList] cl ON s.StatusId = cl.StatusId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingType] ht ON cl.HearingTypeId = ht.HearingTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[List] l ON cl.ListId = l.ListId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListType] lt ON l.ListTypeId = lt.ListTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Court] c ON l.CourtId = c.CourtId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc ON l.CentreId = hc.CentreId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListSitting] ls ON l.ListId = ls.ListId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Adjudicator] a ON ls.AdjudicatorId = a.AdjudicatorId;
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[DecisionType] dt
-# MAGIC ON s.Outcome = dt.DecisionTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[AppealCase] ac
-# MAGIC ON s.CaseNo = ac.CaseNo
-# MAGIC
+# MAGIC     FROM [ARIAREPORTS].[dbo].[Status] s
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[CaseList] cl
+# MAGIC     ON s.StatusId = cl.StatusId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingType] ht
+# MAGIC     ON cl.HearingTypeId = ht.HearingTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[List] l
+# MAGIC     ON cl.ListId = l.ListId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListType] lt
+# MAGIC     ON l.ListTypeId = lt.ListTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Court] c
+# MAGIC     ON l.CourtId = c.CourtId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc
+# MAGIC     ON l.CentreId = hc.CentreId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListSitting] ls
+# MAGIC     ON l.ListId = ls.ListId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Adjudicator] a
+# MAGIC     ON ls.AdjudicatorId = a.AdjudicatorId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[DecisionType] dt
+# MAGIC     ON s.Outcome = dt.DecisionTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[AppealCase] ac
+# MAGIC     ON s.CaseNo = ac.CaseNo
 
 # COMMAND ----------
 
@@ -1078,6 +1079,10 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("l.ListName"),
             col("l.StartDate").alias("HearingDate"),
             col("l.StartTime").alias("ListStartTime"),
+            col("l.NumReqSeniorImmigrationJudge").alias("UpperTribJudge"),
+            col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
+            col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
+            col("l.NumReqNonLegalMember").alias("NonLegalMember"),
             # ListType
             col("lt.Description").alias("ListTypeDesc"),
             col("lt.ListType"),
@@ -1087,6 +1092,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("hc.Description").alias("HearingCentreDesc"),
             # ListSitting
             col("ls.Chairman"),
+            col("ls.Position"),
             # Adjudicator
             col("adj.Surname").alias("AdjudicatorSurname"),
             col("adj.Forenames").alias("AdjudicatorForenames"),
@@ -1112,6 +1118,72 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     return df
 
 
+
+
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import concat_ws, col, first, countDistinct
+
+# df_named = m3_df.withColumn(
+#     "FullName",
+#     concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
+# )
+
+# columns_to_group_by = [col(c) for c in m3_df.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
+
+# pivoted_df = df_named.groupBy(*columns_to_group_by) \
+#     .pivot("Position") \
+#     .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher")
+
+# pivoted_df.display()
+# rows = pivoted_df.collect()
+
+
+# COMMAND ----------
+
+# rows[303]
+
+# COMMAND ----------
+
+# labels = []
+
+# label_fields = ["UpperTribJudge", "DesJudgeFirstTier", "JudgeFirstTier", "NonLegalMember"]
+# row = rows[303]
+# caseno = row["CaseNo"]
+
+# for field in label_fields:
+#     count = row[field] if row[field] is not None else 0
+
+#     for i in range(count):
+#         labels.append(f"{field}_{i+1}")
+
+# positions = sorted([col for col in pivoted_df.columns if col.isdigit()], key=int)
+
+# label_col_map = dict(zip(positions, labels))
+
+# display(caseno, label_col_map)
+
+# for i in label_col_map.keys():
+#     labels_dict = label_col_map.get(i, 'N/A')
+#     print(f"Position {i}: {labels_dict}")
+#     print(row[i])
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col
+# m3_df = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj")
+
+# m3_df.filter(col("Caseno")=="ZZ/00001     ").display()
+
+
+# COMMAND ----------
+
+# UpperTribJudge = first_row["UpperTribJudge"]
+# DesJudgeFirstTier = first_row["DesJudgeFirstTier"]
+# JudgeFirstTier = first_row["JudgeFirstTier"]
+
+# print(f"UpperTribJudge: {UpperTribJudge}", f"DesJudgeFirstTier: {DesJudgeFirstTier}", f"JudgeFirstTier: {JudgeFirstTier}")
 
 
 
@@ -2138,27 +2210,13 @@ m3_grouped_cols = [
 def silver_m3():
     # 1. Read from the existing Hive table
     m3_df = dlt.read("bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
+    
 
-    grouped_m3 = m3_df.groupBy(m3_grouped_cols).agg(
-    concat_ws(" ",
-    first(when(col("Chairman") == True, col("AdjudicatorTitle"))),
-     first(when(col("Chairman") == True, col("AdjudicatorForenames"))),
-     first(when(col("Chairman") == True, col("AdjudicatorSurname")))).alias("JudgeFT"),
-    
-    concat_ws(" ",
-     first(when(col("Chairman") == False, col("AdjudicatorTitle"))),
-     first(when(col("Chairman") == False, col("AdjudicatorForenames"))),
-     first(when(col("Chairman") == False, col("AdjudicatorSurname")))).alias("CourtClerkUsher"),
-     
-     
-     )
-    
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
-    joined_df = grouped_m3.join(segmentation_df.alias("bs"), col("m3.CaseNo") == col("bs.CaseNo"), "inner")
+    joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
 
-    selected_columns = [col(c) for c in grouped_m3.columns if c != "CaseNo"]
+    df = joined_df.drop("BaseBailType")
 
-    df = joined_df.select("m3.CaseNo", *selected_columns)
 
     ## Create and save audit log for this table
     table_name = "silver_bail_m3_hearing_details"
@@ -2173,6 +2231,12 @@ def silver_m3():
     return df
 
 
+
+# COMMAND ----------
+
+# m3_df = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj")
+
+# m3_df.display()
 
 # COMMAND ----------
 
@@ -2386,7 +2450,7 @@ def silver_meta_data():
                    coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
-                 F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB")
+                 F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB")
                   .otherwise("ARIAB")
                   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
@@ -2395,7 +2459,8 @@ def silver_meta_data():
                  F.col("Surname").alias("bf_003"),
                  date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
                  F.col("PortReference").alias("bf_005"),
-                 F.col("RepPostcode").alias("bf_006")
+                 F.col("RepPostcode").alias("bf_006"),
+                 F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007")
              )
     )
     
@@ -2434,7 +2499,7 @@ def silver_meta_data():
 
 # COMMAND ----------
 
-
+#
 # Case status Mapping
 case_status_mappings = {
     11: {  # Scottish Payment Liability
@@ -2914,7 +2979,7 @@ stg_m1_m2_struct = struct(
     col("CaseRepLSCCommission"),
     col("FileSpecifcContact"),
     col("FileSpecificPhone"),
-    col("CaseRepRepresentativeRef"),
+    col("FileSpecificReference"),
     col("FileSpecificFax"),
     col("FileSpecificEmail"),
     col("RepAddress1"),
@@ -3012,6 +3077,76 @@ def stg_m1_m2():
 
 # COMMAND ----------
 
+# # # # read in the silver m3 filtered table
+
+# m3_df = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj")
+
+# columns_to_group_by = [col(c) for c in m3_df.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
+
+# df_named = m3_df.withColumn(
+#     "FullName",
+#     concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
+# )
+# pivoted_df = df_named.groupBy(*columns_to_group_by) \
+#     .pivot("Position",["3","10","11","12"]) \
+#     .agg(first("FullName"))
+
+
+# for c in pivoted_df.columns:
+#     if c == "null":
+#         new_col = "NoPosition"
+#     elif c.isdigit():
+#         if c == "3":
+#             new_col = "CourtClerkUsher"
+#         else:
+#             new_col = f"Position{c}"
+#     else:
+#         new_col = c
+#     pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
+
+
+
+
+# pivoted_df.display()
+
+
+
+
+# m3 = pivoted_df.alias("m3")
+
+# m7 = spark.read.table("hive_metastore.aria_bails.silver_bail_m7_status").alias("m7")
+
+# m3_new_columns = [col_name for col_name in m3.columns if col_name not in m7.columns]
+
+# status_tab = m7.alias("m7").join(
+#     m3.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
+#     on= ["CaseNo","StatusId"] ,how=
+#     "left"
+# )
+
+# status_tab_struct = struct(*[col(c) for c in status_tab.columns])
+
+# m7_m3_statuses = (
+#         status_tab
+#         .groupBy(col("CaseNo"))
+#         .agg(
+#             collect_list(
+#                 # Collect each record's columns as a struct
+#                 status_tab_struct
+#             ).alias("all_status_objects")
+#         )
+#     )
+
+# m7_m3_statuses.display()
+
+# COMMAND ----------
+
+# stg_m3_m7_df = spark.read.table("hive_metastore.aria_bails.stg_m3_m7")
+
+# stg_m3_m7_df.display()
+
+# COMMAND ----------
+
 @dlt.table(name="stg_m3_m7")
 def stg_m3_m7():
 
@@ -3022,101 +3157,51 @@ def stg_m3_m7():
 
     m3 = dlt.read("silver_bail_m3_hearing_details")
 
+    columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
+
+    df_named = m3.withColumn(
+        "FullName",
+        concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
+    )
+    pivoted_df = df_named.groupBy(*columns_to_group_by) \
+        .pivot("Position",["3","10","11","12"]) \
+        .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher").withColumnRenamed("null", "NoPossition")
+
+
+    for c in pivoted_df.columns:
+        if c == "null":
+            new_col = "NoPosition"
+        elif c.isdigit():
+            if c == "3":
+                new_col = "CourtClerkUsher"
+            else:
+                new_col = f"Position{c}"
+        else:
+            new_col = c
+        pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
+
+
+
+
     m7 = dlt.read("silver_bail_m7_status")
 
 
     # Get all columns in m3 not in m7
-    m3_new_columns = [col_name for col_name in m3.columns if col_name not in m7.columns]
+    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in m7.columns]
 
     status_tab = m7.alias("m7").join(
-        m3.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        (col("m7.CaseNo") == col("m3.CaseNo")) & (col("m7.StatusId") == col("m3.StatusId")),
+        pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
+        on= ["CaseNo","StatusId"] ,how=
         "left"
     )
 
 
     # create a nested list for the stausus table (m7_m3 tables)
 
-    status_tab_struct = struct(
-        col("m7.CaseNo"),
-        col("m7.StatusId"),
-        col("CaseStatus"),
-        col("DateReceived"),
-        col("StatusNotes1"),
-        col("Keydate"),
-        col("MiscDate1"),
-        col("MiscDate2"),
-        col("MiscDate3"),
-        col("TotalAmountOfFinancialCondition"),
-        col("TotalSecurity"),
-        col("StatusNotes2"),
-        col("DecisionDate"),
-        col("Outcome"),
-        col("OutcomeDescription"),
-        col("StatusPromulgated"),
-        col("StatusParty"),
-        col("ResidenceOrder"),
-        col("ReportingOrder"),
-        col("BailedTimePlace"),
-        col("BaileddateHearing"),
-        col("InterpreterRequired"),
-        col("BailConditions"),
-        col("LivesAndSleepsAt"),
-        col("AppearBefore"),
-        col("ReportTo"),
-        col("AdjournmentParentStatusId"),
-        col("HearingCentre"),
-        col("DecisionSentToHO"),
-        col("DecisionSentToHODate"),
-        col("VideoLink"),
-        col("WorkAndStudyRestriction"),
-        col("StatusBailConditionTagging"),
-        col("OtherCondition"),
-        col("OutcomeReasons"),
-        col("FC"),
-        col("CaseStatusDescription"),
-        col("ContactStatus"),
-        col("SCCourtName"),
-        col("SCAddress1"),
-        col("SCAddress2"),
-        col("SCAddress3"),
-        col("SCAddress4"),
-        col("SCAddress5"),
-        col("SCPostcode"),
-        col("SCTelephone"),
-        col("LanguageDescription"),
-        col("ListTypeId"),
-        col("ListType"),
-        col("HearingTypeId"),
-        col("HearingType"),
-        col("Judiciary1Id"),
-        col("Judiciary1Name"),
-        col("Judiciary2Id"),
-        col("Judiciary2Name"),
-        col("Judiciary3Id"),
-        col("Judiciary3Name"),
-        col("BailConditionsDesc"),
-        col("InterpreterRequiredDesc"),
-        col("ResidenceOrderDesc"),
-        col("ReportingOrderDesc"),
-        col("BailedTimePlaceDesc"),
-        col("BaileddateHearingDesc"),
-        col("StatusPartyDesc"),
-        col("CaseListTimeEstimate"),
-        col("CaseListStartTime"),
-        col("HearingTypeDesc"),
-        col("ListName"),
-        col("HearingDate"),
-        col("ListStartTime"),
-        col("ListTypeDesc"),
-        col("CourtName"),
-        col("HearingCentreDesc"),
-        col("JudgeFT"),
-        col("CourtClerkUsher")
-    )
+    status_tab_struct = struct(*[col(c) for c in status_tab.columns])
     m7_m3_statuses = (
         status_tab
-        .groupBy(col("m7.CaseNo"))
+        .groupBy(col("CaseNo"))
         .agg(
             collect_list(
                 # Collect each record's columns as a struct
@@ -3128,135 +3213,60 @@ def stg_m3_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
-def stg_statuses():
+# from pyspark.sql.window import Window
+# from pyspark.sql.functions import col, row_number, explode
 
-    m7_m3_statuses = dlt.read("stg_m3_m7")
+# exploded = m7_m3_statuses.select(col("CaseNo"), explode("all_status_objects").alias("status"))
 
-    # Logic to add the max status for each caseno
+# window_spec = Window.partitionBy("CaseNo").orderBy(col("status.StatusId").desc())
 
-    # Create a SQL-compatible named_struct that matches the schema of all_status_objects
-    status_tab_struct_sql = """
-        named_struct(
-            'CaseNo', '',
-            'StatusId', 0,
-            'CaseStatus', '',
-            'DateReceived', cast(null as timestamp),
-            'StatusNotes1', '',
-            'Keydate', cast(null as timestamp),
-            'MiscDate1', cast(null as timestamp),
-            'MiscDate2', cast(null as timestamp),
-            'MiscDate3', cast(null as timestamp),
-            'TotalAmountOfFinancialCondition', cast(0.0 as decimal(19,4)),
-            'TotalSecurity', cast(0.0 as decimal(19,4)),
-            'StatusNotes2', '',
-            'DecisionDate', cast(null as timestamp),
-            'Outcome', 0,
-            'OutcomeDescription', '',
-            'StatusPromulgated', cast(null as timestamp),
-            'StatusParty', 0,
-            'ResidenceOrder', 0,
-            'ReportingOrder', 0,
-            'BailedTimePlace', 0,
-            'BaileddateHearing', 0,
-            'InterpreterRequired', 0,
-            'BailConditions', 0,
-            'LivesAndSleepsAt', '',
-            'AppearBefore', '',
-            'ReportTo', '',
-            'AdjournmentParentStatusId', 0,
-            'HearingCentre', '',
-            'DecisionSentToHO', 0,
-            'DecisionSentToHODate', cast(null as timestamp),
-            'VideoLink', false,
-            'WorkAndStudyRestriction', '',
-            'StatusBailConditionTagging', '',
-            'OtherCondition', '',
-            'OutcomeReasons', '',
-            'FC', false,
-            'CaseStatusDescription', '',
-            'ContactStatus', '',
-            'SCCourtName', '',
-            'SCAddress1', '',
-            'SCAddress2', '',
-            'SCAddress3', '',
-            'SCAddress4', '',
-            'SCAddress5', '',
-            'SCPostcode', '',
-            'SCTelephone', '',
-            'LanguageDescription', '',
-            'ListTypeId', 0,
-            'ListType', '',
-            'HearingTypeId', 0,
-            'HearingType', '',
-            'Judiciary1Id', 0,
-            'Judiciary1Name', '',
-            'Judiciary2Id', 0,
-            'Judiciary2Name', '',
-            'Judiciary3Id', 0,
-            'Judiciary3Name', '',
-            'BailConditionsDesc', '',
-            'InterpreterRequiredDesc', '',
-            'ResidenceOrderDesc', '',
-            'ReportingOrderDesc', '',
-            'BailedTimePlaceDesc', '',
-            'BaileddateHearingDesc', '',
-            'StatusPartyDesc', '',
-            'CaseListTimeEstimate', 0,
-            'CaseListStartTime', cast(null as timestamp),
-            'HearingTypeDesc', '',
-            'ListName', '',
-            'HearingDate', cast(null as timestamp),
-            'ListStartTime', cast(null as timestamp),
-            'ListTypeDesc', '',
-            'CourtName', '',
-            'HearingCentreDesc', '',
-            'JudgeFT', '',
-            'CourtClerkUsher', ''
-        )
-    """
+# ordered_rank = exploded.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.StatusId").alias("MaxCaseStatusDescription"))
 
-    final_m7_m3_df = m7_m3_statuses.select(
-        col("CaseNo"),
-        expr(f"""
-            aggregate(
-                all_status_objects,
-                {status_tab_struct_sql},
-                (acc, x) -> 
-                    CASE 
-                        WHEN x.StatusId > acc.StatusId THEN x 
-                        ELSE acc 
-                    END
-            ).CaseStatusDescription
-        """).alias("MaxCaseStatusDescription"),
-        expr(f"""
-            aggregate(
-                all_status_objects,
-                {status_tab_struct_sql},
-                (acc, x) -> 
-                    CASE 
-                        WHEN x.LanguageDescription is not null THEN x 
-                        ELSE acc 
-                    END
-            ).LanguageDescription
-        """).alias("SecondaryLanguage")
-    )
-    return final_m7_m3_df
+# w_non_null_lang = Window.partitionBy("CaseNo").orderBy(col("status.LanguageDescription").desc())
+
+# top_non_null_lang = exploded.filter(col("status.LanguageDescription").isNotNull()).withColumn("rank", row_number().over(w_non_null_lang)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.LanguageDescription").alias("SecondaryLanguage"))
+
+# m3_m7_final = m7_m3_statuses.join(ordered_rank, on="CaseNo", how="left").join(top_non_null_lang, on="CaseNo", how="left")
+# m3_m7_final
+
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m7_m3_statuses", comment="Final Bail Status Table")
+@dlt.table(name="stg_m7_m3_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
 def final_m7_m3_statuses():
-
-    final_m7_m3_df = dlt.read("stg_statuses")
 
     m7_m3_statuses = dlt.read("stg_m3_m7")
 
+    exploded = m7_m3_statuses.select(col("CaseNo"), explode("all_status_objects").alias("status"))
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("status.StatusId").desc())
+
+    ordered_rank = exploded.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.StatusId").alias("MaxCaseStatusDescription"))
+
+    w_non_null_lang = Window.partitionBy("CaseNo").orderBy(col("status.LanguageDescription").desc())
+
+    top_non_null_lang = exploded.filter(col("status.LanguageDescription").isNotNull()).withColumn("rank", row_number().over(w_non_null_lang)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.LanguageDescription").alias("SecondaryLanguage"))
+
+    m3_m7_final = m7_m3_statuses.join(ordered_rank, on="CaseNo", how="left").join(top_non_null_lang, on="CaseNo", how="left")
+    m3_m7_final
 
 
-    final_m7_m3_statuses = m7_m3_statuses.join(final_m7_m3_df, "CaseNo", "left_outer")
+    return m3_m7_final
 
-    return final_m7_m3_statuses
+# COMMAND ----------
+
+# @dlt.table(name="stg_m7_m3_statuses", comment="Final Bail Status Table")
+# def final_m7_m3_statuses():
+
+#     final_m7_m3_df = dlt.read("stg_statuses")
+
+#     m7_m3_statuses = dlt.read("stg_m3_m7")
+
+
+
+#     final_m7_m3_statuses = m7_m3_statuses.join(final_m7_m3_df, "CaseNo", "left_outer")
+
+#     return final_m7_m3_statuses
 
 # COMMAND ----------
 
@@ -3276,6 +3286,11 @@ def m1_m2_m3_m7():
 
 
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Status Mapping dictionary
 
 # COMMAND ----------
 
@@ -3673,6 +3688,11 @@ def final_staging_bails():
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC dont need this
+
+# COMMAND ----------
+
 # html = bails_html_dyn
 
 # flag_list = []
@@ -3748,6 +3768,11 @@ def final_staging_bails():
 
 # MAGIC %md
 # MAGIC ## HTML Combined Code 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC dont need this
 
 # COMMAND ----------
 
@@ -4054,6 +4079,165 @@ def final_staging_bails():
 
 # COMMAND ----------
 
+# final_staging_bails_df = spark.read.table("hive_metastore.aria_bails.final_staging_bails")
+# rows = final_staging_bails_df.collect()
+
+# COMMAND ----------
+
+# final_staging_bails_df.display()
+
+# COMMAND ----------
+
+# final_staging_bails_df.filter(col())
+
+# COMMAND ----------
+
+# row = rows[391]
+
+
+# COMMAND ----------
+
+# final_staging_bails_df.display()
+
+
+
+# COMMAND ----------
+
+# first_row.all_status_objects
+
+# COMMAND ----------
+
+# labels = []
+
+# label_fields = ["UpperTribJudge", "DesJudgeFirstTier", "JudgeFirstTier", "NonLegalMember"]
+# row = rows[303]
+# caseno = row["CaseNo"]
+
+# for field in label_fields:
+#     count = row[field] if row[field] is not None else 0
+
+#     for i in range(count):
+#         labels.append(f"{field}_{i+1}")
+
+# positions = sorted([col for col in pivoted_df.columns if col.isdigit()], key=int)
+
+# label_col_map = dict(zip(positions, labels))
+
+# display(caseno, label_col_map)
+
+# for i in label_col_map.keys():
+#     labels_dict = label_col_map.get(i, 'N/A')
+#     print(f"Position {i}: {labels_dict}")
+#     print(row[i])
+
+# COMMAND ----------
+
+# if first_row.all_status_objects is not None:
+#     for index,status in enumerate(first_row.all_status_objects,start=1):
+#         print(f"Status {index}: {status}")
+
+
+# COMMAND ----------
+
+
+# html = bails_html_dyn
+# ### status
+# code = ""
+
+
+# if row.all_status_objects is not None:
+#     for index,status in enumerate(row.all_status_objects,start=1):
+#         ## get the case status in the list
+#         case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
+
+#         ## set the margin and id counter
+#         if index == 1:
+#             margin = "10px"
+#         else:
+#             margin = "600px"
+
+#         counter = 30+index
+
+#         if case_status in case_status_mappings:
+#             template = template_for_status[case_status]
+#             template = template.replace("{{margin_placeholder}}",str(margin))
+#             template = template.replace("{{index}}",str(counter))
+#             status_mapping = case_status_mappings[case_status]
+
+
+
+#             for placeholder,field_name in status_mapping.items():
+#                 if field_name in date_fields:
+#                     raw_value = status[field_name] if field_name in status else None
+#                     value = format_date_iso(raw_value)
+#                 else:
+#                     value = status[field_name] if field_name in status else None
+#                 template = template.replace(placeholder,str(value))
+            
+
+#             labels = []
+
+#             label_fields = ["UpperTribJudge", "DesJudgeFirstTier", "JudgeFirstTier", "NonLegalMember"]
+
+#             for label in label_fields:
+#                 count = status[label] if status[label] is not None else 0
+#                 for i in range(count):
+#                     labels.append(f"{label}_{i+1}")
+
+#             possitions = ["Position10","Position11","Position12"]
+
+#             possitions_labelled = dict(zip(possitions,labels))
+
+#             possitions_keys = list(possitions_labelled.keys())
+#             possitions_values = list(possitions_labelled.values())
+
+
+#             for i in range(1, 4):
+#                 label_placeholder = f"{{{{Label{i}}}}}"
+#                 value_placeholder = f"{{{{Label{i}value}}}}"
+
+#                 if i <= len(possitions_labelled):
+#                     label_value = possitions_values[i-1]
+#                     name_col = possitions_keys[i-1]
+#                     name_value = status[name_col] if status[name_col] is not None else ""
+#                     name_value = name_value if name_value else ""
+#                 else:
+#                     label_value = ""
+#                     name_value = ""
+
+#                 template = template.replace(label_placeholder, str(label_value))
+#                 template = template.replace(value_placeholder, str(name_value))
+
+
+
+                    
+#             if status["CourtClerkUsher"]:
+#                 template = template.replace("{{courtclerkusherplaceholder}}",status["CourtClerkUsher"])
+
+#             else:
+#                 template = template.replace("{{courtclerkusherplaceholder}}",'N/A')
+
+
+
+
+#             code += template + "\n"
+            
+                
+#         else:
+#             # logger.info(f"Mapping not found for CaseStatus: {case_status}, CaseNo: {row['m7.CaseNo']}")
+#             continue
+
+        
+        
+# if code:
+#     html = html.replace("{{statusplaceholder}}",code)
+# else:
+#     html = html.replace("{{statusplaceholder}}","")
+    
+# displayHTML(html)
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### UDF Create HTML
 
@@ -4075,7 +4259,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{CurrentStatus}}": row.MaxCaseStatusDescription,
         }
         for key, value in replacements.items():
-            html = html.replace(key, value if value is not None else "")
+            html = html.replace(key, str(value) if value is not None else "")
 
 
         # Replace placeholders with actual values
@@ -4277,6 +4461,53 @@ def create_html_column(row, html_template=bails_html_dyn):
                         else:
                             value = status[field_name] if field_name in status else None
                         template = template.replace(placeholder,str(value))
+                    
+
+                    labels = []
+
+                    label_fields = ["UpperTribJudge", "DesJudgeFirstTier", "JudgeFirstTier", "NonLegalMember"]
+
+                    for label in label_fields:
+                        count = status[label] if status[label] is not None else 0
+                        for i in range(count):
+                            labels.append(f"{label}_{i+1}")
+
+                    possitions = ["Position10","Position11","Position12"]
+
+                    possitions_labelled = dict(zip(possitions,labels))
+
+                    possitions_keys = list(possitions_labelled.keys())
+                    possitions_values = list(possitions_labelled.values())
+
+
+                    for i in range(1, 4):
+                        label_placeholder = f"{{{{Label{i}}}}}"
+                        value_placeholder = f"{{{{Label{i}value}}}}"
+
+                        if i <= len(possitions_labelled):
+                            label_value = possitions_values[i-1]
+                            name_col = possitions_keys[i-1]
+                            name_value = status[name_col] if status[name_col] is not None else ""
+                            name_value = name_value if name_value else ""
+                        else:
+                            label_value = ""
+                            name_value = ""
+
+                        template = template.replace(label_placeholder, str(label_value))
+                        template = template.replace(value_placeholder, str(name_value))
+
+
+
+                            
+                    if status["CourtClerkUsher"]:
+                        template = template.replace("{{courtclerkusherplaceholder}}",status["CourtClerkUsher"])
+
+                    else:
+                        template = template.replace("{{courtclerkusherplaceholder}}",'N/A')
+
+
+
+
                     code += template + "\n"
                     
                         
@@ -4284,6 +4515,7 @@ def create_html_column(row, html_template=bails_html_dyn):
                     # logger.info(f"Mapping not found for CaseStatus: {case_status}, CaseNo: {row['m7.CaseNo']}")
                     continue
 
+        if code:
             html = html.replace("{{statusplaceholder}}",code)
         else:
             html = html.replace("{{statusplaceholder}}","")
@@ -4296,28 +4528,28 @@ def create_html_column(row, html_template=bails_html_dyn):
             for casedetail in row.Case_detail:
                 if casedetail.AppellantDetainedDesc == "HMP" or casedetail.AppellantDetainedDesc == "IRC" or casedetail.AppellantDetainedDesc == "Others":
                     flag_1 = "DET"
-                    html = html.replace("{{flag1Placeholder}}", flag_1)
+                    html = html.replace("{{flag1Placeholder}}", str(flag_1))
                 if casedetail.InCamera == 1:
                     flag_2 = "CAM"
-                    html = html.replace("{{flag2Placeholder}}", flag_2)
+                    html = html.replace("{{flag2Placeholder}}", str(flag_2))
                 else:
                     flag_1 = ""
                     flag_2 = ""
-                    html = html.replace("{{flag1Placeholder}}", flag_1)
-                    html = html.replace("{{flag2Placeholder}}", flag_2)
+                    html = html.replace("{{flag1Placeholder}}", str(flag_1))
+                    html = html.replace("{{flag2Placeholder}}", str(flag_2))
 
         if row.appeal_category_details is not None:
             for appealcategorydetails in row.appeal_category_details:
                 flag_list.append(appealcategorydetails.Flag)
 
         flag_3 = " ".join(flag_list[:3])
-        html = html.replace("{{flag3Placeholder}}", flag_3)
+        html = html.replace("{{flag3Placeholder}}", str(flag_3))
 
         # Financial supporter
 
         sponsor_name = "Financial Condiiton Suportor details entered" if row.financial_condition_details else "Financial Condiiton Suportor details not entered"
 
-        html = html.replace("{{sponsorName}}",sponsor_name)
+        html = html.replace("{{sponsorName}}",str(sponsor_name))
 
         case_surety_replacement = {
         "{{SponsorName}}":"CaseSuretyName",
@@ -4378,9 +4610,10 @@ create_html_udf = udf(create_html_column, StringType())
 
 
 # # Pass columns as a struct
-# html_mc = df.withColumn("content", create_html_udf(struct(*df.columns)))
+# html_mc = final_staging_bails_df.withColumn("content", create_html_udf(struct(*final_staging_bails_df.columns)))
 
 # html_mc.display()
+
 
 
 # COMMAND ----------
@@ -4431,8 +4664,8 @@ upload_to_blob_udf = udf(upload_to_blob, StringType())
 @dlt.table(
     name="create_bails_html_content",
     comment="create the HTML content for bails and add a fail name",
-    path=f"{silver_mnt}/bail_html_content",
-)
+    path=f"{silver_mnt}/bail_html_content")
+# 
 def create_bails_html_content():
     df = dlt.read("final_staging_bails")
 
@@ -4723,9 +4956,9 @@ def save_html_to_blob():
 
 # COMMAND ----------
 
-df = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
+# df = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
 
-df.display()
+# df.display()
 
 # COMMAND ----------
 

@@ -71,8 +71,8 @@ resources:
             source: WORKSPACE
       
         - task_key: joh_receive_dashboard
-#          depends_on: 
-#            - task_key: Response_Autoloader
+          depends_on: 
+            - task_key: Response_Autoloader
           job_cluster_key: db_wf_apl_fta_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH Receive Audit Dashboard"

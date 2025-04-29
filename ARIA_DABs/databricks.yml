@@ -7,7 +7,8 @@ include:
   - "resources/workflows/db_wf_apl_fta_send.yml"
   - "resources/workflows/db_wf_joh_recieve.yml"
   - "resources/workflows/db_wf_joh_send.yml"
-  - "resources/workflows/oauth_test_workflow.yml" 
+  - "resources/workflows/db_wf_apl_fta_receive.yml"
+  - "resources/workflows/db_wf_apl_fta_send.yml" 
 
 workspace: &ingest02_workspace
   host: https://adb-1879076228317698.18.azuredatabricks.net

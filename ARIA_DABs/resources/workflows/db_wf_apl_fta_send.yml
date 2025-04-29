@@ -103,5 +103,13 @@ resources:
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
             source: WORKSPACE
+          
+        - task_key: appeal_fta_send_dashboard
+          job_cluster_key: db_wf_apl_fta_send_job
+          depends_on:
+            - task_key: ARM_ack
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA Send Audit Dashboard"
+            source: WORKSPACE
       queue:
         enabled: true   

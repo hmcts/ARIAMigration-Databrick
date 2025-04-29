@@ -1,9 +1,9 @@
 resources:
   jobs:
-    db_wf_fta_recieve:
-      name: db_wf_fta_recieve
+    db_wf_fta_receive:
+      name: db_wf_fta_receive
       job_clusters:
-        - job_cluster_key: db_wf_apl_fta_recieve_job
+        - job_cluster_key: db_wf_apl_fta_receive_job
           new_cluster:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
@@ -47,7 +47,7 @@ resources:
 
       tasks:
         - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fta_recieve_job
+          job_cluster_key: db_wf_apl_fta_receive_job
           python_wheel_task:
             entry_point: main
             package_name: shared_functions
@@ -57,17 +57,25 @@ resources:
         - task_key: validate_packages
           depends_on:
             - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fta_recieve_job
+          job_cluster_key: db_wf_apl_fta_receive_job
           notebook_task: 
             notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
             source: WORKSPACE
 
-        - task_key: db_wf_uta_recieve
+        - task_key: db_wf_uta_receive
           depends_on:
             - task_key: validate_packages
-          job_cluster_key: db_wf_apl_fta_recieve_job
+          job_cluster_key: db_wf_apl_fta_receive_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIADM_RESPONSE_AUTOLOADER_FTA"
+            source: WORKSPACE
+          
+        - task_key: appeal_fta_receive_dashboard
+          job_cluster_key: db_wf_apl_fta_receive_job
+          depends_on:
+            - task_key: db_wf_uta_receive
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA Receive Audit Dashboard"
             source: WORKSPACE
       queue:
         enabled: true

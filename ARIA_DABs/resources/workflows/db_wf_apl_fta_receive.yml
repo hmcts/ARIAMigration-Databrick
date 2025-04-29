@@ -67,7 +67,7 @@ resources:
             - task_key: validate_packages
           job_cluster_key: db_wf_apl_fta_receive_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS//ARIAFTA/ARIADM_RESPONSE_AUTOLOADER_FTA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_RESPONSE_AUTOLOADER_FTA"
             source: WORKSPACE
           
         - task_key: appeal_fta_receive_dashboard

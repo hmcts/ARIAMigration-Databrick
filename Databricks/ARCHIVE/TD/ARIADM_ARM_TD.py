@@ -157,23 +157,12 @@ display(variables)
 # COMMAND ----------
 
 # DBTITLE 1,Determine Workspace Environment Based on Host Name
-context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
-workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
-
-if "adb-3635282203417052" in workspace_host:
-    env = "dev-sbox"
-elif "adb-376876256300083" in workspace_host:
-    env = "test-sbox"
-elif "adb-4305432441461530" in workspace_host:
-    env = "stg"
-elif "adb-3100629970551492" in workspace_host:
-    env = "prod"
-else:
-    env = "unknown"
-
-workspace_env = {"workspace_host": workspace_host, "env": env}
-print(workspace_env)
-
+try:
+    env_value = dbutils.secrets.get(key_vault, "Environment")
+    env = "dev" if env_value == "development" else None
+    print(f"Environment: {env}")
+except:
+    env = "unkown"
 
 # COMMAND ----------
 
@@ -473,7 +462,7 @@ from delta.tables import DeltaTable
 # COMMAND ----------
 
 checks = {}
-checks["PrimaryKeyCheckforNULLS"] = "(CaseNo IS NOT NULL and Forenames IS NOT NULL and Name IS NOT NULL)"
+checks["PrimaryKeyCheckforNULLS"] = "(CaseNo IS NOT NULL)"
 
 @dlt.table(
     name="bronze_ac_ca_ant_fl_dt_hc",
@@ -483,50 +472,106 @@ checks["PrimaryKeyCheckforNULLS"] = "(CaseNo IS NOT NULL and Forenames IS NOT NU
 @dlt.expect_all_or_fail(checks)
 def bronze_ac_ca_ant_fl_dt_hc():
     df = dlt.read("raw_appealcase").alias("ac") \
-            .join(
-                dlt.read("raw_caseappellant").alias("ca"),
-                col("ac.CaseNo") == col("ca.CaseNo"),
-                "left_outer"
-            ) \
-            .join(
-                dlt.read("raw_appellant").alias("a"),
-                col("ca.AppellantId") == col("a.AppellantId"),
-                "left_outer"
-            ) \
-            .join(
-                dlt.read("raw_filelocation").alias("fl"),
-                col("ac.CaseNo") == col("fl.CaseNo"),
-                "left_outer"
-            ) \
-            .join(
-                dlt.read("raw_department").alias("d"),
-                col("fl.DeptId") == col("d.DeptId"),
-                "left_outer"
-            ) \
-            .join(
-                dlt.read("raw_hearingcentre").alias("hc"),
-                col("d.CentreId") == col("hc.CentreId"),
-                "left_outer"
-            ).filter(col("ca.RelationShip").isNotNull()) \
-            .select(
-                col("ac.CaseNo"),
-                col("a.Forenames"),
-                col("a.Name"),
-                col("a.BirthDate"),
-                col("ac.DestructionDate"),
-                col("ac.HORef"),
-                col("a.PortReference"),
-                col("hc.Description").alias("HearingCentreDescription"),
-                col("d.Description").alias("DepartmentDescription"),
-                col("fl.Note"),
-                col("ac.AdtclmnFirstCreatedDatetime"),
-                col("ac.AdtclmnModifiedDatetime"),
-                col("ac.SourceFileName"),
-                col("ac.InsertedByProcessName")
-            )
+        .join(
+            dlt.read("raw_caseappellant").alias("ca"),
+            col("ac.CaseNo") == col("ca.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_appellant").alias("a"),
+            col("ca.AppellantId") == col("a.AppellantId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_filelocation").alias("fl"),
+            col("ac.CaseNo") == col("fl.CaseNo"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_department").alias("d"),
+            col("fl.DeptId") == col("d.DeptId"),
+            "left_outer"
+        ) \
+        .join(
+            dlt.read("raw_hearingcentre").alias("hc"),
+            col("d.CentreId") == col("hc.CentreId"),
+            "left_outer"
+        ).filter(col("ca.RelationShip").isNull()) \
+        .select(
+            col("ac.CaseNo"),
+            col("a.Forenames"),
+            col("a.Name"),
+            col("a.BirthDate"),
+            col("ac.DestructionDate"),
+            col("ac.HORef"),
+            col("a.PortReference"),
+            col("hc.Description").alias("HearingCentreDescription"),
+            col("d.Description").alias("DepartmentDescription"),
+            col("fl.Note"),
+            col("ca.RelationShip"),
+            col("ac.AdtclmnFirstCreatedDatetime"),
+            col("ac.AdtclmnModifiedDatetime"),
+            col("ac.SourceFileName"),
+            col("ac.InsertedByProcessName")
+        )
 
     return df
 
+
+# COMMAND ----------
+
+# df = spark.read.table("hive_metastore.ariadm_arm_td.raw_appealcase").alias("ac") \
+#         .join(
+#             spark.read.table("hive_metastore.ariadm_arm_td.raw_caseappellant").alias("ca"),
+#             col("ac.CaseNo") == col("ca.CaseNo"),
+#             "left_outer"
+#         ) \
+#         .join(
+#             spark.read.table("hive_metastore.ariadm_arm_td.raw_appellant").alias("a"),
+#             col("ca.AppellantId") == col("a.AppellantId"),
+#             "left_outer"
+#         ) \
+#         .join(
+#             spark.read.table("hive_metastore.ariadm_arm_td.raw_filelocation").alias("fl"),
+#             col("ac.CaseNo") == col("fl.CaseNo"),
+#             "left_outer"
+#         ) \
+#         .join(
+#             spark.read.table("hive_metastore.ariadm_arm_td.raw_department").alias("d"),
+#             col("fl.DeptId") == col("d.DeptId"),
+#             "left_outer"
+#         ) \
+#         .join(
+#             spark.read.table("hive_metastore.ariadm_arm_td.raw_hearingcentre").alias("hc"),
+#             col("d.CentreId") == col("hc.CentreId"),
+#             "left_outer"
+#         ).filter(col("ca.RelationShip").isNull()) \
+#         .select(
+#             col("ac.CaseNo"),
+#             col("a.Forenames"),
+#             col("a.Name"),
+#             col("a.BirthDate"),
+#             col("ac.DestructionDate"),
+#             col("ac.HORef"),
+#             col("a.PortReference"),
+#             col("hc.Description").alias("HearingCentreDescription"),
+#             col("d.Description").alias("DepartmentDescription"),
+#             col("fl.Note"),
+#             col("ca.RelationShip"),
+#             col("ac.AdtclmnFirstCreatedDatetime"),
+#             col("ac.AdtclmnModifiedDatetime"),
+#             col("ac.SourceFileName"),
+#             col("ac.InsertedByProcessName")
+#         )
+
+# # display(df.filter(col("CaseNo") == lit("VA/00003/2009")))
+# display(df.filter(col("Forenames").isNull()))
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_td.bronze_ac_ca_ant_fl_dt_hc
+# where CaseNo = 'VA/00003/2009'
 
 # COMMAND ----------
 
@@ -564,6 +609,7 @@ def bronze_iris_extract():
         col('File_Location').alias('HearingCentreDescription'),
         col('Description').alias('DepartmentDescription'),
         col('Note'),
+        lit(None).alias("RelationShip").cast("string"),
         col('AdtclmnFirstCreatedDatetime'),
         col('AdtclmnModifiedDatetime'),
         col('SourceFileName'),
@@ -792,6 +838,12 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
+# %sql
+# select * from hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail
+# where CaseNo = 'VA/00003/2009'
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Transformation silver_archive_metadata
 # MAGIC <table style='float:left;'>
@@ -882,6 +934,12 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
+# %sql
+# select * from hive_metastore.ariadm_arm_td.silver_archive_metadata 
+# where bf_010 is null
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_archive_metadata",
     comment="Delta Live Silver Table for Archive Metadata data.",
@@ -890,40 +948,50 @@ def silver_tribunaldecision_detail():
 def silver_archive_metadata():
     td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
         col('td.CaseNo').alias('client_identifier'),
-        date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        when(env == lit('dev'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
+        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+        when(env == lit('dev'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
+        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         lit("ARIATD").alias("record_class"),
-        lit('IA_Tribunal').alias("entitlement_tag"),
+        # lit('IA_Tribunal').alias("entitlement_tag"),
         col("td.HORef").alias('bf_001'),
         col('td.Forenames').alias('bf_002'),
         col('td.Name').alias('bf_003'),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+         when(env == lit('dev'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('td.PortReference').alias('bf_005'),
         col('td.HearingCentreDescription').alias('bf_006'),
         col("td.DepartmentDescription").alias('bf_007'),
         col("td.Note").alias('bf_008'),
-         when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+         when((env == lit('dev')), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
         
     )
     iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
         col('iris.CaseNo').alias('client_identifier'),
-        date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        when(env == lit('dev'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
+        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+        when(env == lit('dev'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
+        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         lit("ARIATD").alias("record_class"),
-        lit('IA_Tribunal').alias("entitlement_tag"),
+        # lit('IA_Tribunal').alias("entitlement_tag"),
         col("iris.HORef").alias('bf_001'),
         col('iris.Forenames').alias('bf_002'),
         col('iris.Name').alias('bf_003'),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+         when(env == lit('dev'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('iris.PortReference').alias('bf_005'),
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),
         col("iris.Note").alias('bf_008'),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when((env == lit('dev') ), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
     )
     df = td_df.unionByName(iris_df)
 
@@ -1094,6 +1162,10 @@ generate_a360_udf = udf(generate_a360, StringType())
 
 # COMMAND ----------
 
+# spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail").filter(col("DestructionDate").isNotNull()).display()
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation: stg_create_td_iris_json_content
 @dlt.table(
     name="stg_create_td_iris_json_content",
@@ -1116,7 +1188,7 @@ def stg_create_td_iris_json_content():
     
     # Apply the UDF to the combined DataFrame
     df_with_json = repartitioned_df.withColumn("JSON_Content", to_json(struct(*df_tribunaldecision_detail.columns))) \
-                                            .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".json")))
+                                            .withColumn("File_Name", concat(lit(f"{gold_outputs}/JSON/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json")))
 
 
     df_with_json = df_with_json.withColumn("Status", when((col("JSON_Content").like("Failure%") | col("JSON_Content").isNull()), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
@@ -1149,7 +1221,7 @@ def stg_create_td_iris_html_content():
 
     
     df = repartitioned_df.withColumn("HTML_Content", generate_html_udf(struct(*df_tribunaldecision_detail.columns))) \
-                                           .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit("_"), col("Forenames"), lit("_"), col("Name"), lit(".html"))) \
+                                           .withColumn("File_Name", concat(lit(f"{gold_outputs}/HTML/tribunal_decision_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html"))) \
 
 
 
@@ -1779,3 +1851,17 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # %sql
 # drop schema hive_metastore.ariadm_arm_td cascade
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
+# MAGIC where CaseNo = 'VA/00003/2009'
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select CaseNo,count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
+# MAGIC group by CaseNo
+# MAGIC having count(*) > 1

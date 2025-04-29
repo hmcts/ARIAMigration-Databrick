@@ -113,7 +113,7 @@ pip install azure-storage-blob
 
 read_hive = False
 
-AppealCategory = "ARIAUTA"
+AppealCategory = "ARIAFTA"
 
 # Setting variables for use in subsequent cells
 raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
@@ -124,7 +124,7 @@ gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
 html_mnt = f"/mnt/ingest00landingsboxhtml-template"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
-hive_schema = f"ariadm_arm_{AppealCategory.lower()}"
+hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
 key_vault = "ingest00-keyvault-sbox"
 
 audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
@@ -149,7 +149,7 @@ display(variables)
 
 # COMMAND ----------
 
-# DBTITLE 1,Determine Workspace Environment Based on Host Name
+# DBTITLE 1,Determine and Print Environment
 try:
     env_value = dbutils.secrets.get(key_vault, "Environment")
     env = "dev" if env_value == "development" else None
@@ -3194,6 +3194,263 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC WITH adjudicator_details AS (
+# MAGIC   SELECT
+# MAGIC     CaseNo,
+# MAGIC     Position,
+# MAGIC     CONCAT(
+# MAGIC       ListAdjudicatorSurname, ', ', 
+# MAGIC       ListAdjudicatorForenames, ' (', 
+# MAGIC       ListAdjudicatorTitle, ')'
+# MAGIC     ) AS JudgeValue
+# MAGIC   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
+# MAGIC   WHERE Position IN (10, 11, 12,3)
+# MAGIC ),
+# MAGIC  base as (
+# MAGIC   select 
+# MAGIC     a.CaseNo,
+# MAGIC     a.Position,
+# MAGIC     a.UpperTribJudge,
+# MAGIC     a.DesJudgeFirstTier,
+# MAGIC     a.JudgeFirstTier,
+# MAGIC     a.NonLegalMember,
+# MAGIC     -- Calculate total number of labels needed for each field
+# MAGIC     coalesce(a.UpperTribJudge, 0) as utj,
+# MAGIC     coalesce(a.DesJudgeFirstTier, 0) as djt,
+# MAGIC     coalesce(a.JudgeFirstTier, 0) as jt,
+# MAGIC     coalesce(a.NonLegalMember, 0) as nlm,
+# MAGIC      CONCAT(
+# MAGIC       ListAdjudicatorSurname, ', ', 
+# MAGIC       ListAdjudicatorForenames, ' (', 
+# MAGIC       ListAdjudicatorTitle, ')'
+# MAGIC     ) AS JudgeValue
+# MAGIC   from 
+# MAGIC     hive_metastore.ariadm_arm_fta.silver_list_detail a 
+# MAGIC   where 
+# MAGIC     a.Position IS NOT NULL
+# MAGIC     -- and CaseNo = 'OC/00018/2003'
+# MAGIC )
+# MAGIC select
+# MAGIC   a.CaseNo,
+# MAGIC   -- a.Position,
+# MAGIC   a.UpperTribJudge,
+# MAGIC   a.DesJudgeFirstTier,
+# MAGIC   a.JudgeFirstTier,
+# MAGIC   a.NonLegalMember,
+# MAGIC
+# MAGIC   -- Assign Label 1
+# MAGIC   case 
+# MAGIC     when a.utj >= 1 then 'Upper Trib Judge'
+# MAGIC     when a.utj = 0 and a.djt >= 1 then 'Des Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     else null
+# MAGIC   end as Label1,
+# MAGIC
+# MAGIC   -- Assign Label 2
+# MAGIC   case 
+# MAGIC     when a.utj >= 2 then 'Upper Trib Judge'
+# MAGIC     when a.utj in (1) and a.djt >= 1 then 'Des Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt >= 2 then 'Des Judge First Tier'
+# MAGIC     when a.utj in (1) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt >= 2 then 'Judge First Tier'
+# MAGIC     when a.utj in (1) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 2 then 'Non-Legal Member'
+# MAGIC     else null
+# MAGIC   end as Label2,
+# MAGIC
+# MAGIC   -- Assign Label 3
+# MAGIC   case 
+# MAGIC     when a.utj >= 3 then 'Upper Trib Judge'
+# MAGIC     when a.utj in (2) and a.djt >= 1 then 'Des Judge First Tier'
+# MAGIC     when a.utj in (1) and a.djt >= 2 then 'Des Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt >= 3 then 'Des Judge First Tier'
+# MAGIC     when a.utj in (2) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj in (1) and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt in (2) and a.jt >= 1 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt in (1) and a.jt >= 2 then 'Judge First Tier'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt >= 3 then 'Judge First Tier'
+# MAGIC     when a.utj in (2) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj in (1) and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt in (2) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt in (1) and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt in (2) and a.nlm >= 1 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 2 then 'Non-Legal Member'
+# MAGIC     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 3 then 'Non-Legal Member'
+# MAGIC     else null
+# MAGIC   end as Label3,
+# MAGIC   a.Position,
+# MAGIC   
+# MAGIC   -- Judge values for Label1/2/3
+# MAGIC   a.JudgeValue,
+# MAGIC   adj1.JudgeValue AS Label1_JudgeValue,
+# MAGIC   adj2.JudgeValue AS Label2_JudgeValue,
+# MAGIC   adj3.JudgeValue AS Label3_JudgeValue,
+# MAGIC   adj4.JudgeValue AS CourtClerkUsher
+# MAGIC
+# MAGIC from base a
+# MAGIC
+# MAGIC LEFT JOIN adjudicator_details adj1 ON adj1.CaseNo = a.CaseNo AND adj1.Position = 10 and a.Position = adj1.Position
+# MAGIC LEFT JOIN adjudicator_details adj2 ON adj2.CaseNo = a.CaseNo AND adj2.Position = 11 and a.Position = adj2.Position
+# MAGIC LEFT JOIN adjudicator_details adj3 ON adj3.CaseNo = a.CaseNo AND adj3.Position = 12 and a.Position = adj3.Position
+# MAGIC LEFT JOIN adjudicator_details adj4 ON adj3.CaseNo = a.CaseNo AND adj4.Position = 3 and a.Position = adj4.Position
+# MAGIC WHERE 
+# MAGIC   a.Position IS NOT NULL
+# MAGIC   -- AND a.CaseNo = 'OC/00033/2003'
+# MAGIC   and a.CaseNo = 'RD/00014/2006'
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select CaseNo,
+# MAGIC  a.Position,
+# MAGIC     a.UpperTribJudge,
+# MAGIC     a.DesJudgeFirstTier,
+# MAGIC     a.JudgeFirstTier,
+# MAGIC     a.NonLegalMember, count(*)
+# MAGIC from hive_metastore.ariadm_arm_fta.silver_list_detail a
+# MAGIC group by all
+# MAGIC having count(*) > 1
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- Step 1: Create CTEs for each Position with max(ListStartTime) per CaseNo
+# MAGIC WITH cte_utj AS (
+# MAGIC   SELECT 
+# MAGIC     CaseNo,
+# MAGIC     ListStartTime,
+# MAGIC     CONCAT(ListAdjudicatorSurname, ', ', ListAdjudicatorForenames, ' (', ListAdjudicatorTitle, ')') AS JudgeValue
+# MAGIC   FROM (
+# MAGIC     SELECT *, ROW_NUMBER() OVER (PARTITION BY CaseNo ORDER BY ListStartTime DESC) AS rn
+# MAGIC     FROM hive_metastore.ariadm_arm_fta.silver_list_detail
+# MAGIC     WHERE Position = 3
+# MAGIC   ) t
+# MAGIC   WHERE rn = 1
+# MAGIC ),
+# MAGIC cte_djt AS (
+# MAGIC   SELECT 
+# MAGIC     CaseNo,
+# MAGIC     ListStartTime,
+# MAGIC     CONCAT(ListAdjudicatorSurname, ', ', ListAdjudicatorForenames, ' (', ListAdjudicatorTitle, ')') AS JudgeValue
+# MAGIC   FROM (
+# MAGIC     SELECT *, ROW_NUMBER() OVER (PARTITION BY CaseNo ORDER BY ListStartTime DESC) AS rn
+# MAGIC     FROM hive_metastore.ariadm_arm_fta.silver_list_detail
+# MAGIC     WHERE Position = 10
+# MAGIC   ) t
+# MAGIC   WHERE rn = 1
+# MAGIC ),
+# MAGIC cte_jt AS (
+# MAGIC   SELECT 
+# MAGIC     CaseNo,
+# MAGIC     ListStartTime,
+# MAGIC     CONCAT(ListAdjudicatorSurname, ', ', ListAdjudicatorForenames, ' (', ListAdjudicatorTitle, ')') AS JudgeValue
+# MAGIC   FROM (
+# MAGIC     SELECT *, ROW_NUMBER() OVER (PARTITION BY CaseNo ORDER BY ListStartTime DESC) AS rn
+# MAGIC     FROM hive_metastore.ariadm_arm_fta.silver_list_detail
+# MAGIC     WHERE Position = 11
+# MAGIC   ) t
+# MAGIC   WHERE rn = 1
+# MAGIC ),
+# MAGIC cte_nlm AS (
+# MAGIC   SELECT 
+# MAGIC     CaseNo,
+# MAGIC     ListStartTime,
+# MAGIC     CONCAT(ListAdjudicatorSurname, ', ', ListAdjudicatorForenames, ' (', ListAdjudicatorTitle, ')') AS JudgeValue
+# MAGIC   FROM (
+# MAGIC     SELECT *, ROW_NUMBER() OVER (PARTITION BY CaseNo ORDER BY ListStartTime DESC) AS rn
+# MAGIC     FROM hive_metastore.ariadm_arm_fta.silver_list_detail
+# MAGIC     WHERE Position = 12
+# MAGIC   ) t
+# MAGIC   WHERE rn = 1
+# MAGIC ),
+# MAGIC
+# MAGIC -- Step 2: Merge CTEs into a base
+# MAGIC base AS (
+# MAGIC   SELECT 
+# MAGIC     coalesce(utj.CaseNo, djt.CaseNo, jt.CaseNo, nlm.CaseNo) as CaseNo,
+# MAGIC     utj.JudgeValue as UpperTribJudge,
+# MAGIC     djt.JudgeValue as DesJudgeFirstTier,
+# MAGIC     jt.JudgeValue as JudgeFirstTier,
+# MAGIC     nlm.JudgeValue as NonLegalMember,
+# MAGIC     -- For counting judges available
+# MAGIC     CASE WHEN utj.JudgeValue IS NOT NULL THEN 1 ELSE 0 END AS utj,
+# MAGIC     CASE WHEN djt.JudgeValue IS NOT NULL THEN 1 ELSE 0 END AS djt,
+# MAGIC     CASE WHEN jt.JudgeValue IS NOT NULL THEN 1 ELSE 0 END AS jt,
+# MAGIC     CASE WHEN nlm.JudgeValue IS NOT NULL THEN 1 ELSE 0 END AS nlm
+# MAGIC   FROM cte_utj utj
+# MAGIC   FULL OUTER JOIN cte_djt djt ON utj.CaseNo = djt.CaseNo
+# MAGIC   FULL OUTER JOIN cte_jt jt ON coalesce(utj.CaseNo, djt.CaseNo) = jt.CaseNo
+# MAGIC   FULL OUTER JOIN cte_nlm nlm ON coalesce(utj.CaseNo, djt.CaseNo, jt.CaseNo) = nlm.CaseNo
+# MAGIC )
+# MAGIC
+# MAGIC -- Step 3: Final Selection with Labels
+# MAGIC SELECT
+# MAGIC   CaseNo,
+# MAGIC   UpperTribJudge,
+# MAGIC   DesJudgeFirstTier,
+# MAGIC   JudgeFirstTier,
+# MAGIC   NonLegalMember,
+# MAGIC
+# MAGIC   -- Assign Label1
+# MAGIC   CASE 
+# MAGIC     WHEN utj >= 1 THEN 'Upper Trib Judge'
+# MAGIC     WHEN utj = 0 AND djt >= 1 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     ELSE NULL
+# MAGIC   END AS Label1,
+# MAGIC
+# MAGIC   -- Assign Label2
+# MAGIC   CASE 
+# MAGIC     WHEN utj >= 2 THEN 'Upper Trib Judge'
+# MAGIC     WHEN utj = 1 AND djt >= 1 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 1 AND djt = 0 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 1 AND djt = 0 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt >= 2 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 1 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 1 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt >= 2 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 1 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 0 AND nlm >= 2 THEN 'Non-Legal Member'
+# MAGIC     ELSE NULL
+# MAGIC   END AS Label2,
+# MAGIC
+# MAGIC   -- Assign Label3
+# MAGIC   CASE 
+# MAGIC     WHEN utj >= 3 THEN 'Upper Trib Judge'
+# MAGIC     WHEN utj = 2 AND djt >= 1 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 2 AND djt = 0 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 2 AND djt = 0 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 1 AND djt >= 2 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 1 AND djt = 1 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 1 AND djt = 1 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 1 AND djt = 0 AND jt >= 2 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 1 AND djt = 0 AND jt = 1 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 1 AND djt = 0 AND jt = 0 AND nlm >= 2 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt >= 3 THEN 'Des Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 2 AND jt >= 1 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 2 AND jt = 0 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 1 AND jt >= 2 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 1 AND jt = 1 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 1 AND jt = 0 AND nlm >= 2 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt >= 3 THEN 'Judge First Tier'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 2 AND nlm >= 1 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 1 AND nlm >= 2 THEN 'Non-Legal Member'
+# MAGIC     WHEN utj = 0 AND djt = 0 AND jt = 0 AND nlm >= 3 THEN 'Non-Legal Member'
+# MAGIC     ELSE NULL
+# MAGIC   END AS Label3
+# MAGIC
+# MAGIC FROM base;
+# MAGIC
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_list_detail",
     comment="Delta Live silver Table for list detail.",
@@ -3205,7 +3462,59 @@ def silver_list_detail():
 
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner")\
                           .withColumn("TimeEstimate_hh_mm", 
-                                      expr("floor(TimeEstimate / 60) || ':' || lpad(cast(TimeEstimate % 60 as string), 2, '0')"))\
+                                      expr("floor(ca.TimeEstimate / 60) || ':' || lpad(cast(ca.TimeEstimate % 60 as string), 2, '0')"))\
+                          .withColumn("utj", coalesce(col("ca.UpperTribJudge"), lit(0)))\
+                          .withColumn("djt", coalesce(col("ca.DesJudgeFirstTier"), lit(0)))\
+                          .withColumn("jt", coalesce(col("ca.JudgeFirstTier"), lit(0)))\
+                          .withColumn("nlm", coalesce(col("ca.NonLegalMember"), lit(0)))\
+                          .withColumn("JudgeLabel1", 
+                                      expr("""
+                                      case 
+                                        when utj >= 1 then 'Upper Trib Judge'
+                                        when utj = 0 and djt >= 1 then 'Des Judge First Tier'
+                                        when utj = 0 and djt = 0 and jt >= 1 then 'Judge First Tier'
+                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        else null
+                                      end
+                                      """))\
+                          .withColumn("JudgeLabel2", 
+                                      expr("""
+                                      case 
+                                        when utj >= 2 then 'Upper Trib Judge'
+                                        when utj in (1) and djt >= 1 then 'Des Judge First Tier'
+                                        when utj = 0 and djt >= 2 then 'Des Judge First Tier'
+                                        when utj in (1) and djt = 0 and jt >= 1 then 'Judge First Tier'
+                                        when utj = 0 and djt in (1) and jt >= 1 then 'Judge First Tier'
+                                        when utj = 0 and djt = 0 and jt >= 2 then 'Judge First Tier'
+                                        when utj in (1) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 2 then 'Non-Legal Member'
+                                        else null
+                                      end
+                                      """))\
+                          .withColumn("JudgeLabel3", 
+                                      expr("""
+                                      case 
+                                        when utj >= 3 then 'Upper Trib Judge'
+                                        when utj in (2) and djt >= 1 then 'Des Judge First Tier'
+                                        when utj in (1) and djt >= 2 then 'Des Judge First Tier'
+                                        when utj = 0 and djt >= 3 then 'Des Judge First Tier'
+                                        when utj in (2) and djt = 0 and jt >= 1 then 'Judge First Tier'
+                                        when utj in (1) and djt in (1) and jt >= 1 then 'Judge First Tier'
+                                        when utj = 0 and djt in (2) and jt >= 1 then 'Judge First Tier'
+                                        when utj = 0 and djt in (1) and jt >= 2 then 'Judge First Tier'
+                                        when utj = 0 and djt = 0 and jt >= 3 then 'Judge First Tier'
+                                        when utj in (2) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        when utj in (1) and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt in (2) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt in (1) and jt in (1) and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt = 0 and jt in (2) and nlm >= 1 then 'Non-Legal Member'
+                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 2 then 'Non-Legal Member'
+                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 3 then 'Non-Legal Member'
+                                        else null
+                                      end
+                                      """))\
                           .select(
                               "ca.CaseNo",
                               "ca.Outcome",
@@ -3232,9 +3541,15 @@ def silver_list_detail():
                               "ca.DoNotUseCourt",
                               "ca.HearingCentreDesc",
                               "ca.Chairman",
-                              "ca.Position"
+                              "ca.Position",
+                              "ca.UpperTribJudge",
+                              "ca.DesJudgeFirstTier",
+                              "ca.JudgeFirstTier",
+                              "ca.NonLegalMember",
+                              "JudgeLabel1",
+                              "JudgeLabel2",
+                              "JudgeLabel3"
                           )
-
 
     return joined_df
 
@@ -4274,6 +4589,57 @@ def silver_case_adjudicator():
 
 # COMMAND ----------
 
+# metadata_df = spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail").alias("ac")\
+#         .join(spark.read.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
+#         .join(spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
+#         .filter(col("ca.CaseAppellantRelationship").isNull())\
+# .select(
+#     col('ac.CaseNo').alias('client_identifier'),
+#     # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+#     # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+#     when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+#     "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+#     when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+#     "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
+#     lit("GBR").alias("region"),
+#     lit("ARIA").alias("publisher"),
+#     # when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')
+#     # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
+#     # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
+#     # .alias("record_class"),
+#     col('flt.Segment').alias("record_class"),
+
+#     lit('IA_Tribunal').alias("entitlement_tag"),
+#     col('ac.HORef').alias('bf_001'),
+#     col('ca.AppellantForenames').alias('bf_002'),
+#     col('ca.AppellantName').alias('bf_003'),
+#     # col('ca.AppellantBirthDate').alias('bf_004'),
+#     when(env == lit('dev'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+#     col('ca.PortReference').alias('bf_005'),
+#     col('ca.AppellantPostcode').alias('bf_006'),
+#     col('flt.Segment'))
+
+# # display(metadata_df.filter(col("bf_004").isNull()))
+# display(metadata_df.groupBy("segment","record_class").agg(count('*').alias("count")))
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_fta.silver_archive_metadata
+# where client_identifier = "TH/00002/2004"
+# -- where bf_004 is null 
+
+# -- group by record_class
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.silver_archive_metadata
+# -- where bf_004 is null 
+
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_archive_metadata",
     comment="Delta Live Silver Table for Archive Metadata data.",
@@ -4294,8 +4660,12 @@ def silver_archive_metadata():
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
+        #  when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')
+        # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
+        # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
+        # .alias("record_class"),
         col('flt.Segment').alias("record_class"),
-        # lit('IA_Tribunal').alias("entitlement_tag"),
+        lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
@@ -4305,34 +4675,6 @@ def silver_archive_metadata():
         col('ca.AppellantPostcode').alias('bf_006'))
     
     return metadata_df
-
-# COMMAND ----------
-
-# metadata_df = spark.read.table("hive_metastore.ariadm_arm_uta.silver_appealcase_detail").alias("ac")\
-#     .join(spark.read.table("hive_metastore.ariadm_arm_uta.silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
-#     .join(spark.read.table("hive_metastore.ariadm_arm_uta.stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
-#     .filter(col("ca.CaseAppellantRelationship").isNull())\
-# .select(
-# col('ac.CaseNo').alias('client_identifier'),
-# # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-# # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-# "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-# "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
-# lit("GBR").alias("region"),
-# lit("ARIA").alias("publisher"),
-# col('flt.Segment').alias("record_class"),
-# # lit('IA_Tribunal').alias("entitlement_tag"),
-# col('ac.HORef').alias('bf_001'),
-# col('ca.AppellantForenames').alias('bf_002'),
-# col('ca.AppellantName').alias('bf_003'),
-# # col('ca.AppellantBirthDate').alias('bf_004'),
-# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
-# col('ca.PortReference').alias('bf_005'),
-# col('ca.AppellantPostcode').alias('bf_006'))
-
-# display(metadata_df)
 
 # COMMAND ----------
 
@@ -4361,28 +4703,32 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
-# DBTITLE 1,Function: Generate a360 Metadata
+import json
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
 def generate_a360(row):
     try:
+        # Base metadata
         metadata_data = {
             "operation": "create_record",
             "relation_id": row.client_identifier,
             "record_metadata": {
                 "publisher": row.publisher,
-                "record_class": row.record_class ,
+                "record_class": row.record_class,
                 "region": row.region,
                 "recordDate": str(row.recordDate),
                 "event_date": str(row.event_date),
                 "client_identifier": row.client_identifier,
-                # "entitlement_tag": row.entitlement_tag,
-                "bf_001": row.bf_001 or "",
-                "bf_002": row.bf_002 or "",
-                "bf_003": row.bf_003 or "",
-                "bf_004": str(row.bf_004) or "",
-                "bf_005": row.bf_005 or "",
-                "bf_006": row.bf_006 or ""
+                "entitlement_tag": row.entitlement_tag
             }
         }
+
+        # Dynamically add bf_00x fields only if not null
+        for col in ["bf_001", "bf_002", "bf_003", "bf_004", "bf_005", "bf_006"]:
+            value = getattr(row, col, None)
+            if value is not None:
+                metadata_data["record_metadata"][col] = str(value)
 
         html_data = {
             "operation": "upload_new_file",
@@ -4418,6 +4764,67 @@ def generate_a360(row):
 
 # Register UDF
 generate_a360_udf = udf(generate_a360, StringType())
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Function: Generate a360 Metadata
+# def generate_a360(row):
+#     try:
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": row.publisher,
+#                 "record_class": row.record_class ,
+#                 "region": row.region,
+#                 "recordDate": str(row.recordDate),
+#                 "event_date": str(row.event_date),
+#                 "client_identifier": row.client_identifier,
+#                 "entitlement_tag": row.entitlement_tag,
+#                 "bf_001": row.bf_001 or "",
+#                 "bf_002": row.bf_002 or "",
+#                 "bf_003": row.bf_003 or "",
+#                 "bf_004": str(row.bf_004) or "",
+#                 "bf_005": row.bf_005 or "",
+#                 "bf_006": row.bf_006 or ""
+#             }
+#         }
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": row.publisher,
+#                 "dz_file_name": f"appeals_{row.client_identifier.replace('/', '_')}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": row.publisher,
+#                 "dz_file_name": f"appeals_{row.client_identifier.replace('/', '_')}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
 
 # COMMAND ----------
 
@@ -5721,6 +6128,34 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/submission/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+# files_df = files_df.filter(col("path").contains("_0_"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
 # DBTITLE 1,Check Error Records in Appeals Data
 # df_unified = spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_unified")
 # display(df_unified.filter(col("A360FileName").isNull() | 
@@ -6785,13 +7220,3 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())
-
-# COMMAND ----------
-
-# key_vault = "ingest00-keyvault-sbox"
-
-# secrets = dbutils.secrets.list(key_vault)
-# display(secrets)
-
-# secret = dbutils.secrets.get(key_vault, "curated-connection-string")
-# print(secret)

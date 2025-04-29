@@ -124,7 +124,7 @@ gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
 html_mnt = f"/mnt/ingest00landingsboxhtml-template"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
-hive_schema = f"ariadm_arm_{AppealCategory.lower()}"
+hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
 key_vault = "ingest00-keyvault-sbox"
 
 audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
@@ -149,23 +149,13 @@ display(variables)
 
 # COMMAND ----------
 
-# DBTITLE 1,Determine Workspace Environment Based on Host Name
-context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
-workspace_host = str(context.tags().get("browserHostName"))  # Convert JavaObject to string
-
-if "adb-3635282203417052" in workspace_host:
-    env = "dev-sbox"
-elif "adb-376876256300083" in workspace_host:
-    env = "test-sbox"
-elif "adb-4305432441461530" in workspace_host:
-    env = "stg"
-elif "adb-3100629970551492" in workspace_host:
-    env = "prod"
-else:
-    env = "unknown"
-
-workspace_env = {"workspace_host": workspace_host, "env": env}
-print(workspace_env)
+# DBTITLE 1,Determine and Print Environment
+try:
+    env_value = dbutils.secrets.get(key_vault, "Environment")
+    env = "dev" if env_value == "development" else None
+    print(f"Environment: {env}")
+except:
+    env = "unkown"
 
 # COMMAND ----------
 
@@ -4284,6 +4274,57 @@ def silver_case_adjudicator():
 
 # COMMAND ----------
 
+# metadata_df = spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail").alias("ac")\
+#         .join(spark.read.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
+#         .join(spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
+#         .filter(col("ca.CaseAppellantRelationship").isNull())\
+# .select(
+#     col('ac.CaseNo').alias('client_identifier'),
+#     # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+#     # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+#     when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+#     "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+#     when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+#     "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
+#     lit("GBR").alias("region"),
+#     lit("ARIA").alias("publisher"),
+#     # when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')
+#     # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
+#     # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
+#     # .alias("record_class"),
+#     col('flt.Segment').alias("record_class"),
+
+#     lit('IA_Tribunal').alias("entitlement_tag"),
+#     col('ac.HORef').alias('bf_001'),
+#     col('ca.AppellantForenames').alias('bf_002'),
+#     col('ca.AppellantName').alias('bf_003'),
+#     # col('ca.AppellantBirthDate').alias('bf_004'),
+#     when(env == lit('dev'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+#     col('ca.PortReference').alias('bf_005'),
+#     col('ca.AppellantPostcode').alias('bf_006'),
+#     col('flt.Segment'))
+
+# # display(metadata_df.filter(col("bf_004").isNull()))
+# display(metadata_df.groupBy("segment","record_class").agg(count('*').alias("count")))
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_fta.silver_archive_metadata
+# -- where client_identifier = "TH/00002/2004"
+# -- where recordDate is null 
+
+# -- group by record_class
+
+# COMMAND ----------
+
+# %sql
+# select * from hive_metastore.ariadm_arm_joh.silver_archive_metadata
+# -- where recordDate is null 
+
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_archive_metadata",
     comment="Delta Live Silver Table for Archive Metadata data.",
@@ -4298,21 +4339,19 @@ def silver_archive_metadata():
         col('ac.CaseNo').alias('client_identifier'),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
-        when(col('flt.Segment') == 'FirstTier', 'ARIAFTA')
-        .when(col('flt.Segment') == 'UpperTribunal', 'ARIAUTA')
-        .alias("record_class"),
-        lit('IA_Tribunal').alias("entitlement_tag"),
+        col('flt.Segment').alias("record_class"),
+        # lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
         # col('ca.AppellantBirthDate').alias('bf_004'),
-        when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        when(env == lit('dev'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))
     
@@ -4345,6 +4384,72 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
+# DBTITLE 1,temp
+# import json
+# from pyspark.sql.functions import udf
+# from pyspark.sql.types import StringType
+
+# def generate_a360(row):
+#     try:
+#         # Base metadata
+#         metadata_data = {
+#             "operation": "create_record",
+#             "relation_id": row.client_identifier,
+#             "record_metadata": {
+#                 "publisher": row.publisher,
+#                 "record_class": row.record_class,
+#                 "region": row.region,
+#                 "recordDate": str(row.recordDate),
+#                 "event_date": str(row.event_date),
+#                 "client_identifier": row.client_identifier,
+#                 "entitlement_tag": row.entitlement_tag
+#             }
+#         }
+
+#         # Dynamically add bf_00x fields only if not null
+#         for col in ["bf_001", "bf_002", "bf_003", "bf_004", "bf_005", "bf_006"]:
+#             value = getattr(row, col, None)
+#             if value is not None:
+#                 metadata_data["record_metadata"][col] = str(value)
+
+#         html_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": row.publisher,
+#                 "dz_file_name": f"appeals_{row.client_identifier.replace('/', '_')}.html",
+#                 "file_tag": "html"
+#             }
+#         }
+
+#         json_data = {
+#             "operation": "upload_new_file",
+#             "relation_id": row.client_identifier,
+#             "file_metadata": {
+#                 "publisher": row.publisher,
+#                 "dz_file_name": f"appeals_{row.client_identifier.replace('/', '_')}.json",
+#                 "file_tag": "json"
+#             }
+#         }
+
+#         # Convert dictionaries to JSON strings
+#         metadata_data_str = json.dumps(metadata_data, separators=(',', ':'))
+#         html_data_str = json.dumps(html_data, separators=(',', ':'))
+#         json_data_str = json.dumps(json_data, separators=(',', ':'))
+
+#         # Combine the data
+#         all_data_str = f"{metadata_data_str}\n{html_data_str}\n{json_data_str}"
+
+#         return all_data_str
+#     except Exception as e:
+#         return f"Error generating A360 for client_identifier {row.client_identifier}: {e}"
+
+# # Register UDF
+# generate_a360_udf = udf(generate_a360, StringType())
+
+
+# COMMAND ----------
+
 # DBTITLE 1,Function: Generate a360 Metadata
 def generate_a360(row):
     try:
@@ -4358,7 +4463,7 @@ def generate_a360(row):
                 "recordDate": str(row.recordDate),
                 "event_date": str(row.event_date),
                 "client_identifier": row.client_identifier,
-                "entitlement_tag": row.entitlement_tag,
+                # "entitlement_tag": row.entitlement_tag,
                 "bf_001": row.bf_001 or "",
                 "bf_002": row.bf_002 or "",
                 "bf_003": row.bf_003 or "",
@@ -5702,6 +5807,34 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # MAGIC %md
 # MAGIC ## Appendix
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/submission/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import col, from_unixtime
+
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
+# files_df = files_df.filter(col("path").contains("_0_"))
+
+# display(files_df.orderBy(col("modificationTime").desc()))
 
 # COMMAND ----------
 

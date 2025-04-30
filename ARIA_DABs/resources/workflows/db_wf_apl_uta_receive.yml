@@ -75,7 +75,7 @@ resources:
             - task_key: uta_response_autoloader
           job_cluster_key: db_wf_apl_uta_receive_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/UTA_Send_Audit_Dashboard"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/UTA_Receive_Audit_Dashboard"
             source: WORKSPACE
       queue:
         enabled: true

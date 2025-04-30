@@ -82,7 +82,7 @@ resources:
             - task_key: audit_processing_td
           job_cluster_key: db_wf_td_send_job
           notebook_task:
-            notebook_path: "/Workspace/live//ARCHIVE/TD/ARIA_ADLS_TO_EVENTHUBS_GENRIC_TD"
+            notebook_path: "/Workspace/live/ARCHIVE/TD/ARIA_ADLS_TO_EVENTHUBS_GENRIC_TD"
             base_parameters:
               gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/TD/
               topic: evh-td-pub-dev-uks-dlrm-01

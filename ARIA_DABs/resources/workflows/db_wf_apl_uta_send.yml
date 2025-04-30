@@ -67,7 +67,7 @@ resources:
           depends_on:
             - task_key: validate_packages
           pipeline_task:
-            pipeline_id: $(resources.pipelines.pipeline_pl_ariadm_arm_uta.id)
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_uta.id}
             full_refresh: false
 
         - task_key: audit_processing_uta
@@ -97,7 +97,7 @@ resources:
             - task_key: publish_html_json_eh
           job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workapace/live/ARCHIVE/APPEALS/ARIAUTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workapace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
             base_parameters:
               audit_path: /mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_pub_audit_db_eh
               dropzone_mount: /mnt/dropzoneariauta/APPEALS/ARIAUTA/
@@ -119,7 +119,7 @@ resources:
             - task_key: uta_ack
           job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/ARIADM_RESPONSE_AUTOLOADER_UTA/UTA_Receive_Audit_Dashboard"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/UTA_Send_Audit_Dashboard"
             source: WORKSPACE
       queue:
         enabled: true

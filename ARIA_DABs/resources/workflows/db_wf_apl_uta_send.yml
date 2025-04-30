@@ -1,7 +1,7 @@
 resources:
   jobs:
-    db_wf_apl_uta_send:
-      name: db_wf_apl_uta_send
+    db_wf_apl_uta_send_job:
+      name: db_wf_apl_uta_send_job
       job_clusters:
         - job_cluster_key: db_wf_apl_uta_send_job
           new_cluster:
@@ -97,7 +97,7 @@ resources:
             - task_key: publish_html_json_eh
           job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workapace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
             base_parameters:
               audit_path: /mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_pub_audit_db_eh
               dropzone_mount: /mnt/dropzoneariauta/APPEALS/ARIAUTA/

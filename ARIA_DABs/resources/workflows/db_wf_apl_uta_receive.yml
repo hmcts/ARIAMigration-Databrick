@@ -1,7 +1,7 @@
 resources:
   jobs:
-    db_wf_uta_receive_job:
-      name: db_wf_uta_receive_job
+    db_wf_apl_uta_receive_job:
+      name: db_wf_apl_uta_receive_job
       job_clusters:
         - job_cluster_key: db_wf_apl_uta_receive_job
           new_cluster:

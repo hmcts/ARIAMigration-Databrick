@@ -110,5 +110,13 @@ resources:
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_ACK_AUTOLOADER_TD"
             source: WORKSPACE
+                
+        - task_key: td_send_dashboard
+          depends_on:
+            - task_key: td_ack
+          job_cluster_key: db_wf_td_send_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/TD/AUDIT/TD_Send_Audit_Dashboard"
+            source: WORKSPACE
       queue:
         enabled: true

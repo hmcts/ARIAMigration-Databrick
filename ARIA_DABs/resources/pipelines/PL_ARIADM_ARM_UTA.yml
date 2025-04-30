@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    pipeline_pl_ariadm_arm_uta:
+      name: PL_ARIADM_ARM_UTA
+      clusters:
+        - label: default
+          node_type_id: Standard_D4ads_v5
+          driver_node_type_id: Standard_D4ads_v5
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ARM_APPEALS_UTA"
+      schema: ariadm_arm_uta
+      development: true
+      data_sampling: false

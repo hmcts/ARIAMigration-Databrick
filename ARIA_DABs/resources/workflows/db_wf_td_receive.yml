@@ -70,7 +70,7 @@ resources:
         
         - task_key: td_receive_dashboard
           depends_on:
-            - task_key: td_response_autoloader
+            - task_key: db_wf_ariatd_receive
           job_cluster_key: db_wf_td_receive_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/TD/TD_Receive_Audit_Dashboard"

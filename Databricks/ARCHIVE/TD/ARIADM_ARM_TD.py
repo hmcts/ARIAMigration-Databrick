@@ -1130,7 +1130,7 @@ def generate_a360(row):
             "relation_id": row.client_identifier,
             "file_metadata": {
                 "publisher": row.publisher,
-                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}_{row.bf_001}_{row.bf_002}.html",
+                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}.html",
                 "file_tag": "html"
             }
         }
@@ -1140,7 +1140,7 @@ def generate_a360(row):
             "relation_id": row.client_identifier,
             "file_metadata": {
                 "publisher": row.publisher,
-                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}_{row.bf_001}_{row.bf_002}.json",
+                "dz_file_name": f"tribunal_decision_{row.client_identifier.replace('/', '_')}.json",
                 "file_tag": "json"
             }
         }
@@ -1159,10 +1159,6 @@ def generate_a360(row):
 
 # Register UDF
 generate_a360_udf = udf(generate_a360, StringType())
-
-# COMMAND ----------
-
-# spark.read.table("hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail").filter(col("DestructionDate").isNotNull()).display()
 
 # COMMAND ----------
 
@@ -1353,7 +1349,7 @@ checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 @dlt.table(
     name="gold_td_iris_with_html",
     comment="Delta Live Gold Table with HTML content.",
-    path=f"{gold_mnt}/gold_td_iris_with_html"
+    path=f"{gold_mnt}/Data/gold_td_iris_with_html"
 )
 @dlt.expect_all_or_fail(checks)
 def gold_td_iris_with_html():
@@ -1390,7 +1386,7 @@ checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 @dlt.table(
     name="gold_td_iris_with_json",
     comment="Delta Live Gold Table with JSON content.",
-    path=f"{gold_mnt}/gold_td_iris_with_json"
+    path=f"{gold_mnt}/Data/gold_td_iris_with_json"
 )
 @dlt.expect_all_or_fail(checks)
 def gold_td_iris_with_json():
@@ -1426,7 +1422,7 @@ checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 @dlt.table(
     name="gold_td_iris_with_a360",
     comment="Delta Live Gold Table with A360 content.",
-    path=f"{gold_mnt}/gold_td_iris_with_a360"
+    path=f"{gold_mnt}/Data/gold_td_iris_with_a360"
 )
 @dlt.expect_all_or_fail(checks)
 def gold_td_iris_with_a360():
@@ -1854,14 +1850,19 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
-# MAGIC where CaseNo = 'VA/00003/2009'
-# MAGIC
+# %sql
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
+# where CaseNo = 'VA/00003/2009'
+
+
+# COMMAND ----------
+
+# %sql
+# select CaseNo,count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
+# group by CaseNo
+# having count(*) > 1
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select CaseNo,count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
-# MAGIC group by CaseNo
-# MAGIC having count(*) > 1
+# MAGIC select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360

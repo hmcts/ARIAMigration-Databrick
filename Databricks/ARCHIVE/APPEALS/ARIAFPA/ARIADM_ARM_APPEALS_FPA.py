@@ -113,7 +113,7 @@ pip install azure-storage-blob
 
 read_hive = False
 
-AppealCategory = "ARIAFTA"
+AppealCategory = "ARIAFPA"
 
 # Setting variables for use in subsequent cells
 raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"

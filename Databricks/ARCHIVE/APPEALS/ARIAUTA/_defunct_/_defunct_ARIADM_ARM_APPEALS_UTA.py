@@ -113,7 +113,7 @@ pip install azure-storage-blob
 
 read_hive = False
 
-AppealCategory = "ARIAFPA"
+AppealCategory = "ARIAUTA"
 
 # Setting variables for use in subsequent cells
 raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
@@ -124,7 +124,7 @@ gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
 html_mnt = f"/mnt/ingest00landingsboxhtml-template"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
-hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
+hive_schema = f"ariadm_arm_{AppealCategory.lower()}"
 key_vault = "ingest00-keyvault-sbox"
 
 audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
@@ -149,7 +149,7 @@ display(variables)
 
 # COMMAND ----------
 
-# DBTITLE 1,Determine and Print Environment
+# DBTITLE 1,Determine Workspace Environment Based on Host Name
 try:
     env_value = dbutils.secrets.get(key_vault, "Environment")
     env = "dev" if env_value == "development" else None
@@ -3194,138 +3194,6 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-# DBTITLE 1,Anlysis
-# %sql
-# WITH adjudicator_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (10, 11, 12,3)
-# ),
-# CourtClerkUsher_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (3)
-# ),
-#  base as (
-#   select 
-#     a.CaseNo,
-#     a.StatusId,
-#     a.CaseStatus,
-#     a.Position,
-#     a.UpperTribJudge,
-#     a.DesJudgeFirstTier,
-#     a.JudgeFirstTier,
-#     a.NonLegalMember,
-#     -- Calculate total number of labels needed for each field
-#     coalesce(a.UpperTribJudge, 0) as utj,
-#     coalesce(a.DesJudgeFirstTier, 0) as djt,
-#     coalesce(a.JudgeFirstTier, 0) as jt,
-#     coalesce(a.NonLegalMember, 0) as nlm,
-#      CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   from 
-#     hive_metastore.ariadm_arm_fta.silver_list_detail a 
-#   -- where 
-#   --   -- a.Position IS NOT NULL
-#   --   -- and CaseNo = 'OC/00018/2003'
-# )
-# select
-#   a.CaseNo,
-#   a.statusid,
-#   -- a.Position,
-#   a.UpperTribJudge,
-#   a.DesJudgeFirstTier,
-#   a.JudgeFirstTier,
-#   a.NonLegalMember,
-
-#   -- Assign Label 1
-#   case 
-#     when a.utj >= 1 then 'Upper Trib Judge'
-#     when a.utj = 0 and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     else null
-#   end as Label1,
-
-#   -- Assign Label 2
-#   case 
-#     when a.utj >= 2 then 'Upper Trib Judge'
-#     when a.utj in (1) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 2 then 'Non-Legal Member'
-#     else null
-#   end as Label2,
-
-#   -- Assign Label 3
-#   case 
-#     when a.utj >= 3 then 'Upper Trib Judge'
-#     when a.utj in (2) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 3 then 'Des Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (2) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 3 then 'Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj in (1) and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (2) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (2) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 2 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 3 then 'Non-Legal Member'
-#     else null
-#   end as Label3,
-#   a.Position,
-  
-#   -- Judge values for Label1/2/3
-#   a.JudgeValue,
-#   adj1.JudgeValue AS Label1_JudgeValue,
-#   adj2.JudgeValue AS Label2_JudgeValue,
-#   adj3.JudgeValue AS Label3_JudgeValue,
-#   adj4.JudgeValue AS CourtClerkUsher
-
-# from base a
-
-# LEFT JOIN adjudicator_details adj1 ON adj1.CaseNo = a.CaseNo  AND adj1.StatusId = a.statusid AND adj1.Position = 10 and adj1.CaseStatus = a.CaseStatus --a.Position = adj1.Position
-# LEFT JOIN adjudicator_details adj2 ON adj2.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj2.Position = 11 and adj2.CaseStatus = a.CaseStatus--a.Position = adj2.Position
-# LEFT JOIN adjudicator_details adj3 ON adj3.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj3.Position = 12 and adj3.CaseStatus = a.CaseStatus--a.Position = adj3.Position
-# LEFT JOIN adjudicator_details adj4 ON adj4.CaseNo = a.CaseNo AND adj4.StatusId = a.statusid AND adj4.Position = 3 and adj4.CaseStatus = a.CaseStatus --and a.Position = adj4.Position
-# WHERE 
-#   a.Position IS NOT NULL
-#   -- AND a.CaseNo = 'OC/00033/2003'
-#   and a.CaseNo = 'RD/00014/2006'
-
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_list_detail",
     comment="Delta Live silver Table for list detail.",
@@ -3335,116 +3203,9 @@ def silver_list_detail():
     appeals_df = dlt.read("bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj").alias("ca")
     flt_df = dlt.read("stg_appeals_filtered").alias('flt')
 
-    adjudicator_details = (
-        appeals_df
-        .filter(col("Position").isin(10, 11, 12, 3))
-        .select(
-            "CaseNo",
-            "Position",
-            "StatusId",
-            "CaseStatus",
-            concat_ws(
-                "", 
-                col("ListAdjudicatorSurname"), 
-                lit(", "), 
-                col("ListAdjudicatorForenames"), 
-                lit(" ("), 
-                col("ListAdjudicatorTitle"), 
-                lit(")")
-            ).alias("JudgeValue")
-        )
-    )
-
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner")\
-                          .join(adjudicator_details.alias("adj1"), 
-                                (col("adj1.CaseNo") == col("ca.CaseNo")) & 
-                                (col("adj1.StatusId") == col("ca.StatusId")) & 
-                                (col("adj1.Position") == lit(10)) & 
-                                (col("adj1.CaseStatus") == col("ca.CaseStatus")), 
-                                "left")\
-                          .join(adjudicator_details.alias("adj2"), 
-                                (col("adj2.CaseNo") == col("ca.CaseNo")) & 
-                                (col("adj2.StatusId") == col("ca.StatusId")) & 
-                                (col("adj2.Position") == lit(11)) & 
-                                (col("adj2.CaseStatus") == col("ca.CaseStatus")), 
-                                "left")\
-                          .join(adjudicator_details.alias("adj3"), 
-                                (col("adj3.CaseNo") == col("ca.CaseNo")) & 
-                                (col("adj3.StatusId") == col("ca.StatusId")) & 
-                                (col("adj3.Position") == lit(12)) & 
-                                (col("adj3.CaseStatus") == col("ca.CaseStatus")), 
-                                "left")\
-                          .join(adjudicator_details.alias("adj4"), 
-                                (col("adj4.CaseNo") == col("ca.CaseNo")) & 
-                                (col("adj4.StatusId") == col("ca.StatusId")) & 
-                                (col("adj4.Position") == lit(3)) & 
-                                (col("adj4.CaseStatus") == col("ca.CaseStatus")), 
-                                "left")\
                           .withColumn("TimeEstimate_hh_mm", 
-                                      expr("floor(ca.TimeEstimate / 60) || ':' || lpad(cast(ca.TimeEstimate % 60 as string), 2, '0')"))\
-                          .withColumn("utj", coalesce(col("ca.UpperTribJudge"), lit(0)))\
-                          .withColumn("djt", coalesce(col("ca.DesJudgeFirstTier"), lit(0)))\
-                          .withColumn("jt", coalesce(col("ca.JudgeFirstTier"), lit(0)))\
-                          .withColumn("nlm", coalesce(col("ca.NonLegalMember"), lit(0)))\
-                          .withColumn("JudgeLabel1", 
-                                      expr("""
-                                      case 
-                                        when utj >= 1 then 'Upper Trib Judge'
-                                        when utj = 0 and djt >= 1 then 'Des Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn("JudgeLabel2", 
-                                      expr("""
-                                      case 
-                                        when utj >= 2 then 'Upper Trib Judge'
-                                        when utj in (1) and djt >= 1 then 'Des Judge First Tier'
-                                        when utj = 0 and djt >= 2 then 'Des Judge First Tier'
-                                        when utj in (1) and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (1) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 2 then 'Judge First Tier'
-                                        when utj in (1) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 2 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn("JudgeLabel3", 
-                                      expr("""
-                                      case 
-                                        when utj >= 3 then 'Upper Trib Judge'
-                                        when utj in (2) and djt >= 1 then 'Des Judge First Tier'
-                                        when utj in (1) and djt >= 2 then 'Des Judge First Tier'
-                                        when utj = 0 and djt >= 3 then 'Des Judge First Tier'
-                                        when utj in (2) and djt = 0 and jt >= 1 then 'Judge First Tier'
-                                        when utj in (1) and djt in (1) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (2) and jt >= 1 then 'Judge First Tier'
-                                        when utj = 0 and djt in (1) and jt >= 2 then 'Judge First Tier'
-                                        when utj = 0 and djt = 0 and jt >= 3 then 'Judge First Tier'
-                                        when utj in (2) and djt = 0 and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj in (1) and djt in (1) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (2) and jt = 0 and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt in (1) and jt in (1) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (2) and nlm >= 1 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt in (1) and nlm >= 2 then 'Non-Legal Member'
-                                        when utj = 0 and djt = 0 and jt = 0 and nlm >= 3 then 'Non-Legal Member'
-                                        else null
-                                      end
-                                      """))\
-                          .withColumn(
-                                      "JudgeValue_full", 
-                                      concat_ws("", 
-                                          col("ca.ListAdjudicatorSurname"), 
-                                          lit(", "), 
-                                          col("ca.ListAdjudicatorForenames"), 
-                                          lit(" ("), 
-                                          col("ca.ListAdjudicatorTitle"), 
-                                          lit(")")
-                                      )
-                                  )\
+                                      expr("floor(TimeEstimate / 60) || ':' || lpad(cast(TimeEstimate % 60 as string), 2, '0')"))\
                           .select(
                               "ca.CaseNo",
                               "ca.Outcome",
@@ -3471,19 +3232,7 @@ def silver_list_detail():
                               "ca.DoNotUseCourt",
                               "ca.HearingCentreDesc",
                               "ca.Chairman",
-                              "ca.Position",
-                              "ca.UpperTribJudge",
-                              "ca.DesJudgeFirstTier",
-                              "ca.JudgeFirstTier",
-                              "ca.NonLegalMember",
-                              "JudgeLabel1",
-                              "JudgeLabel2",
-                              "JudgeLabel3",
-                              col("JudgeValue_full").alias("JudgeValue"),
-                              col("adj1.JudgeValue").alias("Label1_JudgeValue"),
-                              col("adj2.JudgeValue").alias("Label2_JudgeValue"),
-                              col("adj3.JudgeValue").alias("Label3_JudgeValue"),
-                              col("adj4.JudgeValue").alias("CourtClerkUsher")
+                              "ca.Position"
                           )
 
 
@@ -3648,6 +3397,12 @@ def silver_link_detail():
 
 # MAGIC %md
 # MAGIC ### Tarnsformation : silver_status_detail
+
+# COMMAND ----------
+
+# query = "SELECT * FROM hive_metastore.ariadm_arm_appeals.silver_status_detail WHERE CaseStatus = 35"
+# result_df = spark.sql(query)
+# display(result_df)
 
 # COMMAND ----------
 
@@ -4539,12 +4294,8 @@ def silver_archive_metadata():
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
-        #  when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')
-        # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
-        # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
-        # .alias("record_class"),
         col('flt.Segment').alias("record_class"),
-        lit('IA_Tribunal').alias("entitlement_tag"),
+        # lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
@@ -4554,6 +4305,34 @@ def silver_archive_metadata():
         col('ca.AppellantPostcode').alias('bf_006'))
     
     return metadata_df
+
+# COMMAND ----------
+
+# metadata_df = spark.read.table("hive_metastore.ariadm_arm_uta.silver_appealcase_detail").alias("ac")\
+#     .join(spark.read.table("hive_metastore.ariadm_arm_uta.silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
+#     .join(spark.read.table("hive_metastore.ariadm_arm_uta.stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
+#     .filter(col("ca.CaseAppellantRelationship").isNull())\
+# .select(
+# col('ac.CaseNo').alias('client_identifier'),
+# # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+# # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+# "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+# "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
+# lit("GBR").alias("region"),
+# lit("ARIA").alias("publisher"),
+# col('flt.Segment').alias("record_class"),
+# # lit('IA_Tribunal').alias("entitlement_tag"),
+# col('ac.HORef').alias('bf_001'),
+# col('ca.AppellantForenames').alias('bf_002'),
+# col('ca.AppellantName').alias('bf_003'),
+# # col('ca.AppellantBirthDate').alias('bf_004'),
+# when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+# col('ca.PortReference').alias('bf_005'),
+# col('ca.AppellantPostcode').alias('bf_006'))
+
+# display(metadata_df)
 
 # COMMAND ----------
 
@@ -4583,32 +4362,27 @@ container_client = blob_service_client.get_container_client(container_name)
 # COMMAND ----------
 
 # DBTITLE 1,Function: Generate a360 Metadata
-import json
-from pyspark.sql.functions import udf
-from pyspark.sql.types import StringType
-
 def generate_a360(row):
     try:
-        # Base metadata
         metadata_data = {
             "operation": "create_record",
             "relation_id": row.client_identifier,
             "record_metadata": {
                 "publisher": row.publisher,
-                "record_class": row.record_class,
+                "record_class": row.record_class ,
                 "region": row.region,
                 "recordDate": str(row.recordDate),
                 "event_date": str(row.event_date),
                 "client_identifier": row.client_identifier,
-                "entitlement_tag": row.entitlement_tag
+                # "entitlement_tag": row.entitlement_tag,
+                "bf_001": row.bf_001 or "",
+                "bf_002": row.bf_002 or "",
+                "bf_003": row.bf_003 or "",
+                "bf_004": str(row.bf_004) or "",
+                "bf_005": row.bf_005 or "",
+                "bf_006": row.bf_006 or ""
             }
         }
-
-        # Dynamically add bf_00x fields only if not null
-        for col in ["bf_001", "bf_002", "bf_003", "bf_004", "bf_005", "bf_006"]:
-            value = getattr(row, col, None)
-            if value is not None:
-                metadata_data["record_metadata"][col] = str(value)
 
         html_data = {
             "operation": "upload_new_file",
@@ -4644,7 +4418,6 @@ def generate_a360(row):
 
 # Register UDF
 generate_a360_udf = udf(generate_a360, StringType())
-
 
 # COMMAND ----------
 
@@ -5049,13 +4822,6 @@ def generate_html(row, templates=templates):
                                         .replace("{{Judiciary2Name}}", str(SDP.Judiciary2Name or '')) \
                                         .replace("{{Judiciary3Name}}", str(SDP.Judiciary3Name or '')) \
                                         .replace("{{ReasonAdjourn}}", str(SDP.ReasonAdjourn or '')) \
-                                        .replace("{{JudgeLabel1}}", str(SDP.JudgeLabel1 or '')) \
-                                        .replace("{{JudgeLabel2}}", str(SDP.JudgeLabel2 or '')) \
-                                        .replace("{{JudgeLabel3}}", str(SDP.JudgeLabel3 or '')) \
-                                        .replace("{{Label1_JudgeValue}}", str(SDP.Label1_JudgeValue or '')) \
-                                        .replace("{{Label2_JudgeValue}}", str(SDP.Label2_JudgeValue or '')) \
-                                        .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
-                                        .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
@@ -5068,11 +4834,11 @@ def generate_html(row, templates=templates):
                                                 f"<tr><td id=\"midpadding\">{rstd.ReviewStandardDirectionId}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredIND)}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredAppellantRep)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedIND)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedAppellantRep)}</td></tr>"
                                                 for i, rstd in enumerate(SDP.ReviewStandardDirectionDirectionDetails or [])
                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
-                                        # .replace("{{AssignedjudicialofficersPlaceHolder}}", str("\n".join(
-                                        #         f"<tr><td id=\"midpadding\">{adjd.JudgeFT}</td><td id=\"midpadding\">{adjd.CourtClerkUsher}</td><td id=\"midpadding\"></td><td id=\"midpadding\"></td></tr>"
-                                        #         for i, adjd in enumerate(SDP.CaseStatusAdjudicatorDetails or [])
-                                        #     ) or '<tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>'))     
- 
+                                        .replace("{{AssignedjudicialofficersPlaceHolder}}", str("\n".join(
+                                                f"<tr><td id=\"midpadding\">{adjd.JudgeFT}</td><td id=\"midpadding\">{adjd.CourtClerkUsher}</td><td id=\"midpadding\"></td><td id=\"midpadding\"></td></tr>"
+                                                for i, adjd in enumerate(SDP.CaseStatusAdjudicatorDetails or [])
+                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>'))        
+                                                                                
 
                 status_details_code += line + '\n'
         else:
@@ -5347,21 +5113,6 @@ def stg_statichtml_data():
 
 # COMMAND ----------
 
-# display(spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail").printSchema())
-
-# COMMAND ----------
-
-# df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
-# window_spec = Window.partitionBy("CaseNo", "CaseStatus", "StatusId").orderBy(col("ListStartTime").desc())
-# df_list_details = df_list_details.withColumn("row_num", row_number().over(window_spec))
-# df_list_details = df_list_details.filter(col("row_num") == 1).drop("row_num")
-
-# display(df_list_details.filter(col("CaseNo") == "RD/00014/2006"))
-# #   -- AND a.CaseNo = 'OC/00033/2003'
-# #   and a.CaseNo = 'RD/00014/2006'
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation: stg_statusdetail_data
 @dlt.table(
     name="stg_statusdetail_data",
@@ -5374,11 +5125,6 @@ def stg_statusdetail_data():
     # df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_hearingpointschange_detail")
 
     df_list_details = dlt.read("silver_list_detail")
-    # # df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
-    # window_spec = Window.partitionBy("CaseNo", "CaseStatus", "StatusId").orderBy("ListStartTime")
-    # df_list_details = df_list_details.withColumn("row_num", row_number().over(window_spec))
-    # df_list_details = df_list_details.filter(col("row_num") == 1).drop("row_num")
-
     df_status_details = dlt.read("silver_status_detail")
     df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
 
@@ -5450,13 +5196,6 @@ def stg_statusdetail_data():
         "list.DoNotUseCourt",
         "list.HearingCentreDesc",
         "list.Position",
-        "JudgeLabel1",
-        "JudgeLabel2",
-        "JudgeLabel3",
-        "Label1_JudgeValue",
-        "Label2_JudgeValue",
-        "Label3_JudgeValue",
-        "CourtClerkUsher",
         "HearingPointsChangeReasondesc") \
         .join(adjourned_withdrawal_df.alias("adj"), 
             
@@ -5492,9 +5231,9 @@ def stg_statusdetail_data():
     join_df = status_refined_df.filter((col("status.CaseStatus").cast("integer")).isin(casestatus_array)) \
         .join(df_case_adjudicator.alias('cadj'), 'CaseNo', 'left') \
         .join(df_reviewspecificdirection.alias('rsd'), 'CaseNo', 'left') \
-        .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left')
-        # .withColumn("JudgeFT", when(col("Position") != 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None))) \
-        # .withColumn("CourtClerkUsher", when(col("Position") == 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None)))
+        .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left') \
+        .withColumn("JudgeFT", when(col("Position") != 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None))) \
+        .withColumn("CourtClerkUsher", when(col("Position") == 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None)))
         
 
     # df_agg01 = join_df.groupBy("status.CaseNo", "status.CaseStatus", "status.StatusId").agg(
@@ -5503,19 +5242,12 @@ def stg_statusdetail_data():
     # )
 
     df_agg01 = join_df.groupBy("status.CaseNo", "status.CaseStatus", "status.StatusId").agg(
-        collect_list(struct("AdjudicatorSurname", "AdjudicatorForenames", "AdjudicatorTitle", "status.KeyDate", "AdjudicatorId","Position")).alias("CaseStatusAdjudicatorDetails"),
+        collect_list(struct("AdjudicatorSurname", "AdjudicatorForenames", "AdjudicatorTitle", "status.KeyDate", "AdjudicatorId","JudgeFT","CourtClerkUsher","Position")).alias("CaseStatusAdjudicatorDetails"),
         max("status.KeyDate").alias("LatestKeyDate"),
         max_by("AdjudicatorSurname", "status.KeyDate").alias("LatestAdjudicatorSurname"),
         max_by("AdjudicatorForenames", "status.KeyDate").alias("LatestAdjudicatorForenames"),
         max_by("AdjudicatorTitle", "status.KeyDate").alias("LatestAdjudicatorTitle"),
-        max_by("AdjudicatorId", "status.KeyDate").alias("LatestAdjudicatorId"),
-        max_by("JudgeLabel1", "status.KeyDate").alias("JudgeLabel1"),
-        max_by("JudgeLabel2", "status.KeyDate").alias("JudgeLabel2"),
-        max_by("JudgeLabel3", "status.KeyDate").alias("JudgeLabel3"),
-        max_by("Label1_JudgeValue", "status.KeyDate").alias("Label1_JudgeValue"),
-        max_by("Label2_JudgeValue", "status.KeyDate").alias("Label2_JudgeValue"),
-        max_by("Label3_JudgeValue", "status.KeyDate").alias("Label3_JudgeValue"),
-        max_by("CourtClerkUsher", "status.KeyDate").alias("CourtClerkUsher")
+        max_by("AdjudicatorId", "status.KeyDate").alias("LatestAdjudicatorId")
     )
 
 
@@ -5557,204 +5289,10 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle','JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle')).alias("TempCaseStatusDetails"))
     
 
     return df_final
-
-# COMMAND ----------
-
-# df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
-# df_status_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_status_detail")
-# df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_hearingpointschange_detail")
-
-# # df_list_details = dlt.read("silver_list_detail")
-# # df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
-# window_spec = Window.partitionBy("CaseNo", "CaseStatus", "StatusId").orderBy("ListStartTime")
-# df_list_details = df_list_details.withColumn("row_num", row_number().over(window_spec))
-# df_list_details = df_list_details.filter(col("row_num") == 1).drop("row_num")
-
-# # df_status_details = dlt.read("silver_status_detail")
-# # df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
-
-# df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
-#     collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")
-# )
-
-# df_reviewspecificdirection = dlt.read("silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
-#     collect_list(struct(
-#         'ReviewSpecificDirectionId', 'CaseNo', 'StatusId', 'SpecificDirection', 
-#         'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
-#     )).alias("ReviewSpecficDirectionDetails")
-# )
-
-# df_reviewstandarddirection = dlt.read("sliver_direction_detail").groupBy("CaseNo").agg(
-#     collect_list(struct(
-#         'ReviewStandardDirectionId', 'CaseNo', 'StatusId', 'StandardDirectionId', 
-#         'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
-#     )).alias("ReviewStandardDirectionDirectionDetails")
-# )
-
-# # casestatus with templates
-# casestatus_array = [
-#     26, 29, 27, 28, 30, 35, 39, 41, 37, 38, 42, 40, 10, 34, 32, 31, 33, 36, 50, 
-#     43, 51, 52, 48, 44, 49, 46, 45, 47, 53
-# ]
-
-# # this returns the parent StatusID to the application to adjourn
-# adjourned_withdrawal_df = df_status_details.filter(
-#     col("StatusId").isin(
-#         df_status_details.filter(col("CaseStatus") == 17)
-#         .select("AdjournmentParentStatusId")
-#         .rdd.flatMap(lambda x: x)
-#         .collect()
-#     )
-# ).select("*")
-
-# # Join to merge M3 and M7
-# status_joined_df = df_list_details.alias("list").join(df_status_details.alias('status'), 
-#                                                     (col("list.CaseNo") == col("status.CaseNo")) & 
-#                                                     (col("list.Statusid") == col("status.Statusid")), "inner") \
-#                                                 .join(df_hearingpointschange_details.alias('hearing'), 
-#                                                             (col("status.CaseNo") == col("hearing.CaseNo")) & 
-#                                                             (col("status.Statusid") == col("hearing.Statusid")) & 
-#                                                             (col("status.HearingPointsChangeReasonId") == col("hearing.HearingPointsChangeReasonId")), "left") \
-#                                                     .withColumn("HearingPointsChangeReasondesc", col("hearing.Description")) \
-#                                                     .drop("list.CaseNo", "list.Statusid")
-
-# # Select and refine columns from the joined dataframe
-# status_refined_df = status_joined_df.select( "status.*", "list.Outcome",
-#     "list.TimeEstimate",
-#     "list.ListNumber",
-#     "list.HearingDuration",
-#     "list.StartTime",
-#     "list.HearingTypeDesc",
-#     "list.HearingTypeEst",
-#     "list.DoNotUse",
-#     "list.ListAdjudicatorId",
-#     "list.ListAdjudicatorSurname",
-#     "list.ListAdjudicatorForenames",
-#     "list.ListAdjudicatorNote",
-#     "list.ListAdjudicatorTitle",
-#     "list.ListName",
-#     "list.ListStartTime",
-#     "list.ListTypeDesc",
-#     "list.ListType",
-#     "list.DoNotUseListType",
-#     "list.CourtName",
-#     "list.DoNotUseCourt",
-#     "list.HearingCentreDesc",
-#     "list.Position",
-#     "JudgeLabel1",
-#     "JudgeLabel2",
-#     "JudgeLabel3",
-#     "Label1_JudgeValue",
-#     "Label2_JudgeValue",
-#     "Label3_JudgeValue",
-#     "CourtClerkUsher",
-#     "HearingPointsChangeReasondesc") \
-#     .join(adjourned_withdrawal_df.alias("adj"), 
-        
-#         ((col("status.StatusId") == col("adj.StatusId"))
-#         & (col("status.CaseNo") == col("adj.CaseNo"))
-#         & (col("status.CaseStatus") == col("adj.CaseStatus"))),
-        
-#         "left") \
-#     .withColumn("adjourned_withdrawal_enabled", when(col("adj.StatusId").isNotNull(), lit(True)).otherwise(lit(False))) \
-#     .withColumn("adjournDecisionTypeDescription",  when(col("adj.StatusId").isNotNull(),col("adj.DecisionTypeDescription")).otherwise(lit(None))) \
-#     .withColumn("adjournDateReceived", when(col("adj.StatusId").isNotNull(),col("adj.DateReceived")).otherwise(lit(None))) \
-#     .withColumn("adjournmiscdate1", when(col("adj.StatusId").isNotNull(),col("adj.miscdate1")).otherwise(lit(None))) \
-#     .withColumn("adjournmiscdate2", when(col("adj.StatusId").isNotNull(),col("adj.miscdate2")).otherwise(lit(None))) \
-#     .withColumn("adjournParty", when(col("adj.StatusId").isNotNull(),col("adj.Party")).otherwise(lit(None))) \
-#     .withColumn("adjournInTime", when(col("adj.StatusId").isNotNull(),col("adj.InTime")).otherwise(lit(None))) \
-#     .withColumn("adjournLetter1Date", when(col("adj.StatusId").isNotNull(),col("adj.Letter1Date")).otherwise(lit(None))) \
-#     .withColumn("adjournLetter2Date", when(col("adj.StatusId").isNotNull(),col("adj.Letter2Date")).otherwise(lit(None))) \
-#     .withColumn("adjournAdjudicatorSurname", when(col("adj.StatusId").isNotNull(),col("adj.StatusDetailAdjudicatorSurname")).otherwise(lit(None))) \
-#     .withColumn("adjournAdjudicatorForenames", when(col("adj.StatusId").isNotNull(),col("adj.StatusDetailAdjudicatorForenames")).otherwise(lit(None))) \
-#     .withColumn("adjournAdjudicatorTitle", when(col("adj.StatusId").isNotNull(),col("adj.StatusDetailAdjudicatorTitle")).otherwise(lit(None))) \
-#     .withColumn("adjournNotes1", when(col("adj.StatusId").isNotNull(),col("adj.Notes1")).otherwise(lit(None))) \
-#     .withColumn("adjournDecisionDate", when(col("adj.StatusId").isNotNull(),col("adj.DecisionDate")).otherwise(lit(None))) \
-#     .withColumn("adjournDecisionTypeDescription", when(col("adj.StatusId").isNotNull(),col("adj.DecisionTypeDescription")).otherwise(lit(None))) \
-#     .withColumn("adjournPromulgated", when(col("adj.StatusId").isNotNull(),col("adj.Promulgated")).otherwise(lit(None))) \
-#     .withColumn("adjournUKAITNo", when(col("adj.StatusId").isNotNull(),col("adj.UKAITNo")).otherwise(lit(None))) \
-#     .withColumn("AdjudicatorSurname", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorSurname")).otherwise(col("list.ListAdjudicatorSurname"))) \
-#     .withColumn("AdjudicatorForenames", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorForenames")).otherwise(col("list.ListAdjudicatorForenames"))) \
-#     .withColumn("AdjudicatorTitle", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorTitle")).otherwise(col("list.ListAdjudicatorTitle"))) \
-#     .withColumn("AdjudicatorId", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorId")).otherwise(col("list.ListAdjudicatorId"))) \
-#     .withColumn("AdjudicatorNote", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorNote")).otherwise(col("list.ListAdjudicatorNote")))
-
-# # Filter out only CaseStatus that are relevant for appeals
-# join_df = status_refined_df.filter((col("status.CaseStatus").cast("integer")).isin(casestatus_array)) \
-#     .join(df_case_adjudicator.alias('cadj'), 'CaseNo', 'left') \
-#     .join(df_reviewspecificdirection.alias('rsd'), 'CaseNo', 'left') \
-#     .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left')
-#     # .withColumn("JudgeFT", when(col("Position") != 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None))) \
-#     # .withColumn("CourtClerkUsher", when(col("Position") == 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None)))
-    
-
-# # df_agg01 = join_df.groupBy("status.CaseNo", "status.CaseStatus", "status.StatusId").agg(
-# #     collect_list(struct("AdjudicatorSurname", "AdjudicatorForenames", "AdjudicatorTitle", 'status.KeyDate', 'AdjudicatorId'
-# #     )).alias("CaseStatusAdjudicatorDetails")
-# # )
-
-# df_agg01 = join_df.groupBy("status.CaseNo", "status.CaseStatus", "status.StatusId").agg(
-#     collect_list(struct("AdjudicatorSurname", "AdjudicatorForenames", "AdjudicatorTitle", "status.KeyDate", "AdjudicatorId","Position")).alias("CaseStatusAdjudicatorDetails"),
-#     max("status.KeyDate").alias("LatestKeyDate"),
-#     max_by("AdjudicatorSurname", "status.KeyDate").alias("LatestAdjudicatorSurname"),
-#     max_by("AdjudicatorForenames", "status.KeyDate").alias("LatestAdjudicatorForenames"),
-#     max_by("AdjudicatorTitle", "status.KeyDate").alias("LatestAdjudicatorTitle"),
-#     max_by("AdjudicatorId", "status.KeyDate").alias("LatestAdjudicatorId"),
-#     max_by("JudgeLabel1", "status.KeyDate").alias("JudgeLabel1"),
-#     max_by("JudgeLabel2", "status.KeyDate").alias("JudgeLabel2"),
-#     max_by("JudgeLabel3", "status.KeyDate").alias("JudgeLabel3"),
-#     max_by("Label1_JudgeValue", "status.KeyDate").alias("Label1_JudgeValue"),
-#     max_by("Label2_JudgeValue", "status.KeyDate").alias("Label2_JudgeValue"),
-#     max_by("Label3_JudgeValue", "status.KeyDate").alias("Label3_JudgeValue"),
-#     max_by("CourtClerkUsher", "status.KeyDate").alias("CourtClerkUsher")
-# )
-
-
-# df_agg2 = join_df.select("status.CaseNo","status.CaseStatus", "status.StatusId", 'status.CaseStatusDescription',  'status.InterpreterRequired',  'status.MiscDate2', 'status.VideoLink', 'status.RemittalOutcome', 'status.UpperTribunalAppellant', 'status.DecisionSentToHO', 
-#         'status.InitialHearingPoints', 'status.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'status.CostOrderAppliedFor', 'status.DecisionDate', 
-#         'status.DeterminationByJudgeSurname', 'status.DeterminationByJudgeForenames', 'status.DeterminationByJudgeTitle', 'status.MethodOfTyping', 
-#         'adjournDecisionTypeDescription', 'status.Promulgated', 'status.UKAITNo', 'status.Extempore', 'status.WrittenReasonsRequestedDate', 
-#         'status.TypistSentDate', 'status.ExtemporeMethodOfTyping', 'status.TypistReceivedDate', 'status.WrittenReasonsSentDate', 'status.DecisionSentToHODate', 
-#         'status.DecisionTypeDescription', 'status.DateReceived', 'status.Party', 'status.OutOfTime', 'status.MiscDate1', 
-#         'status.HearingPointsChangeReasonId', 'status.DecisionByTCW', 'status.Allegation', 'status.DecidingCentre', 'status.Process', 'status.Tier', 'status.NoCertAwardDate', 
-#         'status.WrittenOffDate', 'status.WrittenOffFileDate', 'status.ReferredEnforceDate', 'status.Letter1Date', 'status.Letter2Date', 'status.Letter3Date', 
-#         'status.ReferredFinanceDate', 'status.CourtActionAuthDate', 'status.BalancePaidDate', 'status.ReconsiderationHearing', 
-#         'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
-#         'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
-#         'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
-#         'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
-#         'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
-#         'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-#         'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails').distinct()
-
-
-    
-# df_final = df_agg2.alias("casestatus").join(df_agg01.alias("adjj"), ((col("casestatus.StatusId") == col("adjj.StatusId"))
-#         & (col("casestatus.CaseNo") == col("adjj.CaseNo"))
-#         & (col("casestatus.CaseStatus") == col("adjj.CaseStatus"))), 'left')\
-#             .join(lookup_df.alias("lookup"), col("casestatus.CaseStatus") == col("lookup.id")) \
-#         .groupBy("casestatus.CaseNo").agg(collect_list(struct( "casestatus.CaseStatus", "casestatus.StatusId", "CaseStatusAdjudicatorDetails",'casestatus.CaseStatusDescription',  'casestatus.InterpreterRequired',  'casestatus.MiscDate2', 'casestatus.VideoLink', 'casestatus.RemittalOutcome', 'casestatus.UpperTribunalAppellant', 'casestatus.DecisionSentToHO', 
-#         'casestatus.InitialHearingPoints', 'casestatus.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'casestatus.CostOrderAppliedFor', 'casestatus.DecisionDate', 
-#         'casestatus.DeterminationByJudgeSurname', 'casestatus.DeterminationByJudgeForenames', 'casestatus.DeterminationByJudgeTitle', 'casestatus.MethodOfTyping', 
-#         'adjournDecisionTypeDescription', 'casestatus.Promulgated', 'casestatus.UKAITNo', 'casestatus.Extempore', 'casestatus.WrittenReasonsRequestedDate', 
-#         'casestatus.TypistSentDate', 'casestatus.ExtemporeMethodOfTyping', 'casestatus.TypistReceivedDate', 'casestatus.WrittenReasonsSentDate', 'casestatus.DecisionSentToHODate', 
-#         'casestatus.DecisionTypeDescription', 'casestatus.DateReceived', 'casestatus.Party', 'casestatus.OutOfTime', 'casestatus.MiscDate1', 
-#         'casestatus.HearingPointsChangeReasonId', 'casestatus.DecisionByTCW', 'casestatus.Allegation', 'casestatus.DecidingCentre', 'casestatus.Process', 'casestatus.Tier', 'casestatus.NoCertAwardDate', 
-#         'casestatus.WrittenOffDate', 'casestatus.WrittenOffFileDate', 'casestatus.ReferredEnforceDate', 'casestatus.Letter1Date', 'casestatus.Letter2Date', 'casestatus.Letter3Date', 
-#         'casestatus.ReferredFinanceDate', 'casestatus.CourtActionAuthDate', 'casestatus.BalancePaidDate', 'casestatus.ReconsiderationHearing', 
-#         'casestatus.UpperTribunalHearingDirectionId', 'casestatus.ListRequirementTypeId', 'casestatus.CourtSelection', 'casestatus.COAReferenceNumber', 'casestatus.Notes2', 
-#         'casestatus.HighCourtReference', 'casestatus.AdminCourtReference', 'casestatus.HearingCourt', 'casestatus.ApplicationType',  
-#         'IRISStatusOfCase','ListTypeDescription','HearingTypeDescription','Judiciary1Name','Judiciary2Name','Judiciary3Name','ReasonAdjourn', 
-#         'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
-#         'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
-#         'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-#         'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle','JudgeLabel1','JudgeLabel2','JudgeLabel2','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
-
-# df_final.printschema()
 
 # COMMAND ----------
 
@@ -5859,14 +5397,8 @@ def stg_apl_combined():
 
 
     df_list_detail = dlt.read("silver_list_detail").groupBy("CaseNo").agg(
-        collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc','UpperTribJudge','DesJudgeFirstTier','JudgeFirstTier','NonLegalMember')).alias("ListDetails")
+        collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc')).alias("ListDetails")
     )
-
-
-    #  |-- UpperTribJudge: integer (nullable = true)
-    #     |-- DesJudgeFirstTier: integer (nullable = true)
-    #     |-- JudgeFirstTier: integer (nullable = true)
-    #     |-- NonLegalMember: integer (nullable = true)
 
     df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
         collect_list(struct('CaseNo', 'Entry', 'EntryDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
@@ -6189,34 +5721,6 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/submission/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-# files_df = files_df.filter(col("path").contains("_0_"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
-
-# COMMAND ----------
-
 # DBTITLE 1,Check Error Records in Appeals Data
 # df_unified = spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_unified")
 # display(df_unified.filter(col("A360FileName").isNull() | 
@@ -6501,25 +6005,15 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# %sql
-# SELECT * FROM hive_metastore.ariadm_arm_fta.stg_apl_create_html_content
-
-# COMMAND ----------
-
-# display(df.count())
-
-# COMMAND ----------
-
 # DBTITLE 1,Display HTML Content
-# # case_no = 'HR/00014/2004'
-# case_no = 'AA/00001/2015'
+# case_no = 'HR/00014/2004's
 # df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
 
 # # display(df)
 # # Filter for the specific case and extract the JSON collection
-# filtered_row = df.filter(col("CaseNo") == case_no).select("HTML_Content").first()
+# filtered_row = df.filter(col("CaseNo") == case_no).select("HTMLContent").first()
 
-# displayHTML(filtered_row["HTML_Content"])
+# displayHTML(filtered_row["HTMLContent"])
 
 # COMMAND ----------
 
@@ -7291,3 +6785,13 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# key_vault = "ingest00-keyvault-sbox"
+
+# secrets = dbutils.secrets.list(key_vault)
+# display(secrets)
+
+# secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+# print(secret)

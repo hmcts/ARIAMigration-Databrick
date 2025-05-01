@@ -8,6 +8,8 @@ include:
   - "resources/workflows/db_wf_apl_fta_receive.yml"
   - "resources/workflows/db_wf_apl_uta_send.yml"
   - "resources/workflows/db_wf_apl_uta_receive.yml"
+  - "resources/workflows/db_wf_bail_receive.yml"
+  - "resources/workflows/db_wf_bail_send.yml"
   - "resources/workflows/db_wf_joh_recieve.yml"
   - "resources/workflows/db_wf_joh_send.yml"
   - "resources/workflows/db_wf_td_receive.yml"

@@ -1906,7 +1906,7 @@ def silver_m1():
                             
     )
 
-    return df
+    return df.dropDuplicates(["CaseNo"])
 
 # COMMAND ----------
 
@@ -3598,18 +3598,17 @@ def create_html_column(row, html_template=bails_html_dyn):
         flag_dict = {}
 
         if row.Case_detail is not None:
+            flag_1 = ""
+            flag_2 = "" 
             for casedetail in row.Case_detail:
                 if casedetail.AppellantDetainedDesc == "HMP" or casedetail.AppellantDetainedDesc == "IRC" or casedetail.AppellantDetainedDesc == "Others":
                     flag_1 = "DET"
-                    html = html.replace("{{flag1Placeholder}}", str(flag_1))
+                    # html = html.replace("{{flag1Placeholder}}", str(flag_1))
                 if casedetail.InCamera == 1:
                     flag_2 = "CAM"
-                    html = html.replace("{{flag2Placeholder}}", str(flag_2))
-                else:
-                    flag_1 = ""
-                    flag_2 = ""
-                    html = html.replace("{{flag1Placeholder}}", str(flag_1))
-                    html = html.replace("{{flag2Placeholder}}", str(flag_2))
+                    # html = html.replace("{{flag2Placeholder}}", str(flag_2))
+                html = html.replace("{{flag1Placeholder}}", str(flag_1))
+                html = html.replace("{{flag2Placeholder}}", str(flag_2))
 
         if row.appeal_category_details is not None:
             for appealcategorydetails in row.appeal_category_details:

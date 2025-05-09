@@ -124,10 +124,11 @@ stages:
       inputs: 
         connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
         appType: 'functionAppLinux'
-        appName: '00-af-joh-sbox-uks-dlrm-01'  #'af-joh-dev-uks-dlrm-02'
+        appName: 'af-joh-sbox-uks-dlrm-01'
+        resourceGroupName: 'ingest02-main-sbox'
         package: '$(Pipeline.Workspace)/functionapp'
         deploymentMethod: 'auto'
-      displayName: 'Deploy Azure Function to 00-af-joh-dev-uks-dlrm-02'
+      displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-01 to 02-main-sbox'
 
     - task: UsePythonVersion@0
       displayName: 'Use Python 3.x'

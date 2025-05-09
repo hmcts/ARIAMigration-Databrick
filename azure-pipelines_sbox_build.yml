@@ -42,7 +42,7 @@ stages:
     - script: |
        pip install --upgrade pip
        pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
-      displayName: 'Install AzureFunctions dependencies into package'
+      displayName: 'Install JOH AzureFunctions dependencies into package'
 
     # Configure and deploy to Workspace MAIN00
     - script: |
@@ -95,7 +95,7 @@ stages:
         PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
         ArtifactName: 'functionapp'
         publishLocation: 'Container'
-      displayName: 'Publish Azure Function'
+      displayName: 'Publish JOH Azure Function'
     
 - stage: 'Deploy'
   displayName: 'Deploy Stage'
@@ -124,7 +124,7 @@ stages:
       inputs: 
         connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
         appType: 'functionAppLinux'
-        appName: 'af-joh-dev-uks-dlrm-02'
+        appName: '00-af-joh-sbox-uks-dlrm-01' #'af-joh-dev-uks-dlrm-02'
         package: '$(Pipeline.Workspace)/functionapp'
         deploymentMethod: 'auto'
       displayName: 'Deploy Azure Function to af-joh-dev-uks-dlrm-02'

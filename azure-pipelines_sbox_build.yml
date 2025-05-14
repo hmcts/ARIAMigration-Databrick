@@ -171,6 +171,7 @@ stages:
         - ${{ each lz in deployment.landing_zones }}:
           - job: Deploy_Databricks_code_to_${{ deployment.environment }}${{ lz.landing_zone }}
             displayName: Deploy to ${{ deployment.environment }}${{ lz.landing_zone }}
+            dependsOn: ${{ deployment.dependsOn }}
             pool:
               vmImage: 'ubuntu-latest' 
 

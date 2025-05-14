@@ -14,7 +14,7 @@ parameters:
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptlsbox'
-        segments: ['sbails', 'bails', 'aplfpa', 'apluta', 'aplfp', 'td', 'joh']
+        segments: ['bails', 'aplfpa', 'apluta', 'aplfp', 'td', 'joh'] #sbails
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -71,83 +71,120 @@ parameters:
       #       Resource_Group: 'ingest01-main-prod'
       #       Client_ID: $(PROD_CLIENT_ID)
       #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
-stages:  
+
+stages:
+  # - stage:
+  #   displayName: 'No dependency stage'
+  #   jobs:
+  #     - job: BuildJob
+  #       displayName: 'Build Job'
+  #       steps:
+  #         - script: echo 'Initial stage set-up'
+  #           displayName: 'Initial stage set-up'
+
+  # - ${{ each deployment in parameters.environment_components }}:
+  #   - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+  #     - stage: Manual_Approval_${{ deployment.environment }}
+  #       displayName: 'Manual Approval for ${{ deployment.environment }}'
+  #       jobs:
+  #         - job: waitForValidation
+  #           displayName: Wait for Manual Validation
+  #           pool: server
+  #           steps:
+  #             - task: ManualValidation@1
+  #               timeoutInMinutes: 23160
+  #               inputs:
+  #                 approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
+  #                 instructions: Please validate the build configuration and resume
+
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each segment in deployment.segments}}:
-      - stage: ${{ format('{0}_{1}', deployment.deployment, segment) }}
-        displayName: 'Build Artifact for ${{ deployment.deployment }}-${{ segment }}'
+      - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+        displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
+#        dependsOn: Manual_Approval_${{ deployment.environment }}
         jobs:
-          - job: BuildArtifacts
-            displayName: 'Build Artifacts'
+          - job: BuildWheel
+            displayName: 'Build Shared Python Wheel'
             steps:
-            - task: UsePythonVersion@0
-              displayName: 'Use Python 3.x'
-              inputs:
-                versionSpec: '3.x'
+              - task: UsePythonVersion@0
+                displayName: 'Use Python 3.x'
+                inputs:
+                  versionSpec: '3.x'
 
-            - script: |
-                python --version
-                pip install --upgrade pip
-                pip install build
-                pip install databricks-cli
-                python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
-                  $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
-                ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-              displayName: 'Install Python dependencies & build Python wheel'
-            
-            - script: |
-                pip install --upgrade pip
-                pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
-              displayName: 'Install JOH AzureFunctions dependencies into package'
-            
-            - task: PublishBuildArtifacts@1
-              inputs:
-                PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
-                ArtifactName: 'ariafunction'
-                publishLocation: 'Container'
-              displayName: 'Publish Wheel Artifact'
+              - script: |
+                  python --version
+                  pip install --upgrade pip
+                  pip install build
+                  pip install databricks-cli
+                  python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
+                    $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+                displayName: 'Build Shared Python Wheel'
 
-            - task: PublishBuildArtifacts@1
-              inputs:
-                PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
-                ArtifactName: 'functionapp-${{ segment }}'
-                publishLocation: 'Container'
-              displayName: 'Publish ${{ segment }} Azure Function'
+              - task: PublishBuildArtifacts@1
+                inputs:
+                  PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+                  ArtifactName: 'ariafunction'
+                  publishLocation: 'Container'
+                displayName: 'Publish Shared Wheel Artifact'
+
+      - ${{ each segment in deployment.segments }}:
+        - stage: ${{ format('{0}_{1}', deployment.deployment, segment) }}
+          displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
+          dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+          jobs:
+            - job: BuildFunction
+              displayName: 'Build Azure Function for ${{ segment }}'
+              steps:
+                - script: |
+                    pip install --upgrade pip
+                    pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
+                      --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
+                  displayName: 'Install dependencies for ${{ segment }}'
+
+                - task: PublishBuildArtifacts@1
+                  inputs:
+                    PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
+                    ArtifactName: 'functionapp-${{ segment }}'
+                    publishLocation: 'Container'
+                  displayName: 'Publish Function App for ${{ segment }}'
   
+  # Loop through each environment, landing zone and segment to download and deploy the AzureFunction artifacts to the relevant function-app
+  # Ignore sbails-00 as not provisioned in 00.
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones}}:
+        - ${{ if not(and(eq(segment, 'sbails'), eq(lz.landing_zone, '00'))) }}:
 
-        - stage: Download_and_Deploy_${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}
-          displayName: 'Download and Deploy Artifacts ${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}'
-          jobs:
-            - job: Download_Deploy_Job
-              displayName: 'Download wheel and Azure Function artifacts'
-              steps:
-                - task: DownloadBuildArtifacts@1
-                  inputs:
-                    buildType: 'current'
-                    downloadType: 'single'
-                    artifactName: 'ariafunction'
-                    downloadPath: '$(Pipeline.Workspace)'
-                  displayName: 'Download Wheel Artifact'
+          - stage: Download_and_Deploy_${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}
+            displayName: 'Download and Deploy Artifacts ${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}'
+            dependsOn: ${{ format('{0}_{1}', deployment.deployment, segment) }}
+            jobs:
+              - job: Download_Deploy_Job
+                displayName: 'Download wheel and Azure Function artifacts'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'ariafunction'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Wheel Artifact'
 
-                - task: DownloadBuildArtifacts@1
-                  inputs:
-                    buildType: 'current'
-                    downloadType: 'single'
-                    artifactName: 'functionapp-${{ segment }}'
-                    downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
-                  displayName: 'Download Azure Function Artifact for ${{ segment }}'
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
+                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-                - task: AzureFunctionApp@2
-                  inputs:
-                    connectedServiceNameARM: ${{ deployment.service_connection }}
-                    appType: 'functionAppLinux'
-                    appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                    package: '$(Pipeline.Workspace)/${{ segment }}'
-                    deploymentMethod: 'auto'
-                  displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/${{ segment }}'
+                      deploymentMethod: 'auto'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
 
 # Loop over environment deployments
   - ${{ each deployment in parameters.environment_components }}:
@@ -156,18 +193,8 @@ stages:
       ${{ if ne(deployment.deployment, 'sbox_aria') }}:
         dependsOn: ${{ deployment.dependsOn }}
       jobs:
-        - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
-          - job: waitForValidation
-            displayName: Wait for Manual Validation
-            pool: server
-            steps:
-              - task: ManualValidation@1
-                timeoutInMinutes: 23160
-                inputs:
-                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
-                  instructions: Please validate the build configuration and resume
-
-        # Loop through landing zones in each environment.
+        # Loop through landing zones in each environment to deploy Databricks code to from GitHub
+        # Deploy HTML templates to relevant environment
         - ${{ each lz in deployment.landing_zones }}:
           - job: Deploy_Databricks_code_to_${{ deployment.environment }}${{ lz.landing_zone }}
             displayName: Deploy to ${{ deployment.environment }}${{ lz.landing_zone }}
@@ -245,6 +272,7 @@ stages:
                       --pattern '*.html' \
                       --overwrite true
   
+  # Deploy Python wheel and Databricks Asset Bundles to relevant environment and landing zone
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones }}:
       - stage: ${{ format('{0}_{1}', deployment.deployment, lz.landing_zone) }}
@@ -338,4 +366,4 @@ stages:
                 databricks bundle deploy -t sandbox --debug
 
               #  databricks bundle run -t sandbox db_wf_joh_recieve_job
-              displayName: "Deploy Databricks resources to ingest02 workspace"
+              displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"

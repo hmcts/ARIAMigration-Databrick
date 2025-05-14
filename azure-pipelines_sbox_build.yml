@@ -1,12 +1,12 @@
 trigger:
   branches:
     include:
-    - main
+      - main
 
 pool:
-  vmImage: 'ubuntu-latest' 
+  vmImage: 'ubuntu-latest'
 
-parameters:  
+parameters:
   - name: environment_components
     type: object
     default:
@@ -16,240 +16,147 @@ parameters:
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
-            databricks_token: $(DATABRICKS_TOKEN_WORKSPACE_MAIN00)"
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN00)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
-            databricks_token: $(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
-            databricks_token: $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
 
-      - deployment: 'stg_aria'
-        environment: 'stg'
-        service_connection: 'DTS-DATAINGEST-STG'
-        dependsOn: 'sbox_aria'
-        lzironments:
+      - deployment: stg_aria
+        environment: stg
+        service_connection: DTS-DATAINGEST-STG
+        dependsOn: sbox_aria
+        landing_zones:
           - landing_zone: '00'
-            databricks_host:
-            databricks_token:
-            Client_ID:
-            Subscription_ID:
             HTML_StorageAccount: 'ingest00landingstg'
+            Resource_Group: 'ingest00-main-stg'
+            Client_ID: $(STG_CLIENT_ID)
+            Subscription_ID: $(STG_SUBSCRIPTION_ID)
           - landing_zone: '01'
-            databricks_host:
-            databricks_token:
-            Client_ID:
-            Subscription_ID:
             HTML_StorageAccount: 'ingest01landingstg'
-      - deployment: 'prod_aria'
-        environment: 'prod'
-        service_connection: 'DTS-DATAINGEST-PROD'
-        dependsOn: 'stg_aria'
-        lzironments: 
-          - landing_zone: '00'
-            databricks_host:
-            databricks_token:
-            Client_ID:
-            Subscription_ID:
-            HTML_StorageAccount: 'ingest00landingprod'
-          - landing_zone: '01'
-            databricks_host:
-            databricks_token:
-            Client_ID:
-            Subscription_ID:
-            HTML_StorageAccount: 'ingest01landingprod'
+            Resource_Group: 'ingest01-main-stg'
+            Client_ID: $(STG_CLIENT_ID)
+            Subscription_ID: $(STG_SUBSCRIPTION_ID)
 
+      - deployment: prod_aria
+        environment: prod
+        service_connection: DTS-DATAINGEST-PROD
+        dependsOn: stg_aria
+        landing_zones: 
+          - landing_zone: '00'
+            HTML_StorageAccount: 'ingest00landingprod'
+            Resource_Group: 'ingest00-main-prod'
+            Client_ID: $(PROD_CLIENT_ID)
+            Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+          - landing_zone: '01'
+            HTML_StorageAccount: 'ingest01landingprod'
+            Resource_Group: 'ingest01-main-prod'
+            Client_ID: $(PROD_CLIENT_ID)
+            Subscription_ID: $(PROD_SUBSCRIPTION_ID)
 
 stages:
-- stage: 'Build'
-  displayName: 'Build Stage'
-  jobs:
-  - job: BuildJob
-    displayName: 'Run Build and deploy'
-    steps:
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.x'
-      inputs:
-        versionSpec: '3.x'
+  - stage: DownloadArtifacts
+    displayName: 'Download Build Artifacts'
+    jobs:
+      - job: DownloadJob
+        displayName: 'Download wheel and Azure Function artifacts'
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'ariafunction'
+              downloadPath: '$(Pipeline.Workspace)'
+            displayName: 'Download Wheel Artifact'
 
-    - script: |
-        python --version
-        pip install --upgrade pip
-        pip install build
-        pip install databricks-cli
-        python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
-          $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'functionapp'
+              downloadPath: '$(Pipeline.Workspace)'
+            displayName: 'Download Azure Function Artifact'
 
-        ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-      displayName: 'Install Python dependencies & build Python wheel'
-    
-    - script: |
-       pip install --upgrade pip
-       pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
-      displayName: 'Install JOH AzureFunctions dependencies into package'
-
-    # Configure and deploy to Workspace MAIN00
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN00'
-
-    - script: |
-        databricks workspace delete /live --recursive 
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN00 Workspace'
-
-    # Configure and deploy to Workspace MAIN01
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN01'
-
-    - script: |
-        databricks workspace delete /live --recursive
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN01 Workspace'
-
-    # Configure and deploy to Workspace MAIN02
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
-
-    - script: |
-        databricks workspace delete /live --recursive
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
-    
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
-        ArtifactName: 'ariafunction'
-        publishLocation: 'Container'
-      displayName: 'Publish Wheel Artifact'
-    
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
-        ArtifactName: 'functionapp'
-        publishLocation: 'Container'
-      displayName: 'Publish JOH Azure Function'
-    
-- stage: 'Deploy'
-  displayName: 'Deploy Stage'
-  jobs:
-  - job: DeployDatabricksResources
-    displayName: 'Run Build and deploy'
-    steps:
-
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'ariafunction'
-        downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download wheel Artifact'
-    
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'functionapp'
-        downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download Azure Function Artifact'
-    
-    # Loop through each environment
-    - "${{ each deployment in parameters.environment_components }}":
-      - stage: ${{ deployment.deployment }}
+# Loop over environment deployments
+  - ${{ each deployment in parameters.environment_components }}:
+    - stage: ${{ deployment.deployment }}
+      displayName: 'Deploy to ${{ deployment.environment }}'
+      ${{ if ne(deployment.deployment, 'sbox_aria') }}:
         dependsOn: ${{ deployment.dependsOn }}
-        jobs:
+      jobs:
+        - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
           - job: waitForValidation
+            displayName: Wait for Manual Validation
             pool: server
-            displayName: Wait for external validation
             steps:
-              - "${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}":
-                  - task: ManualValidation@1
-                    timeoutInMinutes: 23160 # task times out in 2 weeks
-                    inputs:
-                      approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
-                      instructions: Please validate the build configuration and resume
-
-      # Loop through each landing zone per environment 
-      - "${{ each lz in deployment.landing_zones }}":
-          - job: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
-            displayName: 'Deploy HTML to ADLS'
-            pool: ${{ eq(deployment.environment, 'sbox') && 'hmcts-sds-ptlsbox' || 'hmcts-sds-ptl' }}
-            # Use hmcts-sds-pltsbox pool for SBOX
-            # Use hmcts-sds-ptl pool for STG/PROD
-            steps:     
-              - task: AzureCLI@2
+              - task: ManualValidation@1
+                timeoutInMinutes: 23160
                 inputs:
-                  azureSubscription: ${{ if eq(deployment.environment, 'sbox') && 'DTS-DATAINGEST-SBOX' || 
-                                            eq(deployment.environment, 'stg') && 'DTS-DATAINGEST-STG' || 
-                                            eq(deployment.environment, 'prod') && 'DTS-DATAINGEST-PROD' }}
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
+                  instructions: Please validate the build configuration and resume
+
+        # Loop through landing zones in each environment
+        - ${{ each lz in deployment.landing_zones }}:
+          - job: Deploy_HTML_LZ${{ lz.landing_zone }}
+            displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
+            pool:
+              name: ${{ if eq(deployment.environment, 'sbox') }}: hmcts-sds-ptlsbox
+                    ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}: hmcts-sds-ptl
+            steps:
+              - task: AzureCLI@2
+                displayName: Configure Storage and Upload HTML Templates
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
-                    export AZURE_STORAGE_YES_PROMPT=true
-
-                    echo "Assigning Service Principal Blob Contributor Access"
+                    echo "Assigning SP Blob Contributor Access"
                     az role assignment create \
-                    --assignee $(lz.Client_ID) \
-                    --role "Storage Blob Data Contributor" \
-                    --scope /subscriptions/$(lz.Subscription_ID)/resourceGroups/$(lz.Resource_Group)/providers/Microsoft.Storage/storageAccounts/$(HTML_StorageAccount)
-                    echo "Success! Service Principal has been assigned Storage Blob Data Contributor for the following scope: /subscriptions/$(Subscription_ID)/resourceGroups/$(Resource_Group)/providers/Microsoft.Storage/storageAccounts/$(HTML_StorageAccount)"
-                    
-                    echo "Output  $(lz.HTML_StorageAccount) storage account key"
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Storage Blob Data Contributor" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
+
+                    echo "Retrieving Storage Account Key"
                     storage_account_key=$(az storage account keys list \
-                    --resource-group $(lz.Resource_Group) \
-                    --account-name $(lz.HTML_StorageAccount) \
-                    --query '[0].value' -o tsv)
-                    echo "Success! $(lz.HTML_StorageAccount) is $storage_account_key"
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --query '[0].value' -o tsv)
 
-                    echo "Retrieve  $(lz.HTML_StorageAccount) blob endpoint"
+                    echo "Retrieving Blob Endpoint"
                     blob_endpoint=$(az storage account show \
-                    --resource-group $(lz.Resource_Group) \
-                    --name $(lz.HTML_StorageAccount) \
-                    --query "primaryEndpoints.blob" -o tsv)
-                    echo "Success! $(lz.HTML_StorageAccount) is $blob_endpoint"
-                
-                    echo "Create storage container html-template if it does not exist"
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --name ${{ lz.HTML_StorageAccount }} \
+                      --query "primaryEndpoints.blob" -o tsv)
+
+                    echo "Creating html-template container if not exists"
                     az storage container create \
-                    --account-name $(lz.HTML_StorageAccount) \
-                    --name html-template \
-                    --account-key $storage_account_key \
-                    --blob-endpoint $blob_endpoint 
-                    echo "Success! html-template container created!"
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --name html-template \
+                      --account-key $storage_account_key \
+                      --blob-endpoint $blob_endpoint
 
-                    echo "Uploading HTML templates to blob storage $(HTML_StorageAccount)/html-template"
+                    echo "Uploading HTML Templates"
                     az storage blob upload-batch \
-                    --account-name $(lz.HTML_StorageAccount) \
-                    --account-key $storage_account_key \
-                    --destination html-template \
-                    --source '$(Build.SourcesDirectory)/HTML_Templates/' \
-                    --pattern '*.html' \
-                    --overwrite true
-                    echo "Success! HTML templates imported to $(lz.HTML_StorageAccount)/html-template"
-
-                displayName: 'Storage account and storage container configuration'
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --account-key $storage_account_key \
+                      --destination html-template \
+                      --source '$(Pipeline.Workspace)/HTML_Templates/' \
+                      --pattern '*.html' \
+                      --overwrite true
     
     - task: AzureFunctionApp@2
       inputs: 

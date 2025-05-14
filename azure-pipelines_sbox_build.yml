@@ -249,7 +249,9 @@ stages:
     - ${{ each lz in deployment.landing_zones }}:
       - stage: ${{ format('{0}_{1}', deployment.deployment, lz.landing_zone) }}
         displayName: 'Deploy Databricks resources to ${{ deployment.environment }} ${{ lz.landing_zone }}'
-        dependsOn: ${{ deployment.dependsOn }}
+        dependsOn:        
+          - ${{ each segment in deployment.segments }}:
+            - Download_and_Deploy_${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}
         jobs:   
           - job:
             displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'

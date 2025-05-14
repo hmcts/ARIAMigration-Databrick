@@ -114,7 +114,7 @@ stages:
                   approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
                   instructions: Please validate the build configuration and resume
 
-        # Loop through landing zones in each environment
+        # Loop through landing zones in each environment.
         - ${{ each lz in deployment.landing_zones }}:
           - job: Deploy_HTML_LZ${{ deployment.environment }}${{ lz.landing_zone }}
             displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}

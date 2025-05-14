@@ -13,6 +13,7 @@ parameters:
       - deployment: sbox_aria
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
+        pool_name: 'hmcts-sds-ptlsbox'
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -21,7 +22,6 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
-            pool_name: 'hmcts-sds-ptlsbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
@@ -29,7 +29,6 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
-            pool_name: 'hmcts-sds-ptlsbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
@@ -37,47 +36,42 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
-            pool_name: 'hmcts-sds-ptlsbox'
 
       - deployment: stg_aria
         environment: stg
         service_connection: DTS-DATAINGEST-STG
         dependsOn: sbox_aria
+        pool_name: 'hmcts-sds-ptl'
         landing_zones:
           - landing_zone: '00'
             HTML_StorageAccount: 'ingest00landingstg'
             Resource_Group: 'ingest00-main-stg'
             Client_ID: $(STG_CLIENT_ID)
             Subscription_ID: $(STG_SUBSCRIPTION_ID)
-            pool_name: 'hmcts-sds-ptl'
 
           - landing_zone: '01'
             HTML_StorageAccount: 'ingest01landingstg'
             Resource_Group: 'ingest01-main-stg'
             Client_ID: $(STG_CLIENT_ID)
             Subscription_ID: $(STG_SUBSCRIPTION_ID)
-            pool_name: 'hmcts-sds-ptl'
-
 
       - deployment: prod_aria
         environment: prod
         service_connection: DTS-DATAINGEST-PROD
         dependsOn: stg_aria
+        pool_name: 'hmcts-sds-ptl'
         landing_zones: 
           - landing_zone: '00'
             HTML_StorageAccount: 'ingest00landingprod'
             Resource_Group: 'ingest00-main-prod'
             Client_ID: $(PROD_CLIENT_ID)
             Subscription_ID: $(PROD_SUBSCRIPTION_ID)
-            pool_name: 'hmcts-sds-ptl'
 
           - landing_zone: '01'
             HTML_StorageAccount: 'ingest01landingprod'
             Resource_Group: 'ingest01-main-prod'
             Client_ID: $(PROD_CLIENT_ID)
             Subscription_ID: $(PROD_SUBSCRIPTION_ID)
-            pool_name: 'hmcts-sds-ptl'
-
 
 stages:
   - stage: DownloadArtifacts
@@ -122,10 +116,9 @@ stages:
 
         # Loop through landing zones in each environment
         - ${{ each lz in deployment.landing_zones }}:
-          - job: Deploy_HTML_LZ${{ lz.landing_zone }}
+          - job: Deploy_HTML_LZ${{ deployment.environment }}${{ lz.landing_zone }}
             displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
-            pool:
-              name: ${{ deployment.pool_name }}
+            pool: ${{ deployment.pool_name }}
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates
@@ -168,92 +161,92 @@ stages:
                       --pattern '*.html' \
                       --overwrite true
     
-    - task: AzureFunctionApp@2
-      inputs: 
-        connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
-        appType: 'functionAppLinux'
-        appName: 'af-joh-sbox02-uks-dlrm-01'
-        package: '$(Pipeline.Workspace)/functionapp'
-        deploymentMethod: 'auto'
-      displayName: 'Deploy Azure Function to af-joh-sbox02-uks-dlrm-01'
+              - task: AzureFunctionApp@2
+                inputs: 
+                  connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
+                  appType: 'functionAppLinux'
+                  appName: 'af-joh-sbox02-uks-dlrm-01'
+                  package: '$(Pipeline.Workspace)/functionapp'
+                  deploymentMethod: 'auto'
+                displayName: 'Deploy Azure Function to af-joh-sbox02-uks-dlrm-01'
 
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.x'
-      inputs:
-        versionSpec: '3.x'
+              - task: UsePythonVersion@0
+                displayName: 'Use Python 3.x'
+                inputs:
+                  versionSpec: '3.x'
 
-    - script: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          
-          brew install databricks/tap/databricks
-          databricks --version
-      displayName: 'Install Databricks CLI'
+              - script: |
+                    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                    
+                    brew install databricks/tap/databricks
+                    databricks --version
+                displayName: 'Install Databricks CLI'
 
-      #Ensure databrcks CLI is available in current session (loading homebrew shell)
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
-        databricks --version  
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        cat ~/.databrickscfg  # Print the contents for debugging
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
+                #Ensure databrcks CLI is available in current session (loading homebrew shell)
+              - script: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+                  databricks --version  
+                  echo "[DEFAULT]" > $(HOME)/.databrickscfg
+                  echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+                  echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+                  cat ~/.databrickscfg  # Print the contents for debugging
+                displayName: 'Configure Databricks CLI for Workspace MAIN02'
 
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+              - script: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
 
-        set -e 
+                  set -e 
 
-        WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+                  WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
 
-        if [ -n "$WHEEL_FILE" ]; then
-          echo "Found wheel file: $WHEEL_FILE"
+                  if [ -n "$WHEEL_FILE" ]; then
+                    echo "Found wheel file: $WHEEL_FILE"
 
-          FILENAME=$(basename "$WHEEL_FILE")
-          echo "Extracted filename: $FILENAME"
+                    FILENAME=$(basename "$WHEEL_FILE")
+                    echo "Extracted filename: $FILENAME"
 
-          DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
-          echo "Destination path: $DEST_PATH"
+                    DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
+                    echo "Destination path: $DEST_PATH"
 
-          echo "creating directory dbfs:/FileStore/shared_wheels"
-          databricks fs mkdirs dbfs:/FileStore/shared_wheels    
+                    echo "creating directory dbfs:/FileStore/shared_wheels"
+                    databricks fs mkdirs dbfs:/FileStore/shared_wheels    
 
-          echo "copying wheel file to DBFS..."
-          echo "copying $WHEEL_FILE to $DEST_PATH"
-          databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+                    echo "copying wheel file to DBFS..."
+                    echo "copying $WHEEL_FILE to $DEST_PATH"
+                    databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
 
-          echo "Displaying content of dbfs:/FileStore/shared_wheels"
-          databricks fs ls dbfs:/FileStore/shared_wheels
+                    echo "Displaying content of dbfs:/FileStore/shared_wheels"
+                    databricks fs ls dbfs:/FileStore/shared_wheels
 
-        else
-          echo "No wheel file found"
-          exit 1
-        fi
-      displayName: 'Upload Wheel to Databricks DBFS'
-        
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-        KEYVAULT_NAME="ingest02-meta002-sbox"
+                  else
+                    echo "No wheel file found"
+                    exit 1
+                  fi
+                displayName: 'Upload Wheel to Databricks DBFS'
+                  
+              - script: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+                  KEYVAULT_NAME="ingest02-meta002-sbox"
 
-        echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
-        databricks secrets list-secrets $KEYVAULT_NAME
-        databricks secrets list-secrets ingest00-meta002-sbox
-      displayName: 'View KeyVault backed secret keys in Databricks'
-    
-    - script: |
-        echo "Current dir: $(pwd)"
-        ls -al /home/vsts/work/1/s
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+                  echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
+                  databricks secrets list-secrets $KEYVAULT_NAME
+                  databricks secrets list-secrets ingest00-meta002-sbox
+                displayName: 'View KeyVault backed secret keys in Databricks'
+              
+              - script: |
+                  echo "Current dir: $(pwd)"
+                  ls -al /home/vsts/work/1/s
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-        cd ARIA_DABs
+                  cd ARIA_DABs
 
-        echo "Current dir: $(pwd)"
-        ls -al  
+                  echo "Current dir: $(pwd)"
+                  ls -al  
 
-        databricks bundle destroy -t sandbox 
-        databricks bundle validate -t sandbox --debug
-        databricks bundle deploy -t sandbox --debug
+                  databricks bundle destroy -t sandbox 
+                  databricks bundle validate -t sandbox --debug
+                  databricks bundle deploy -t sandbox --debug
 
-      #  databricks bundle run -t sandbox db_wf_joh_recieve_job
-      displayName: "Deploy Databricks resources to ingest02 workspace"
+                #  databricks bundle run -t sandbox db_wf_joh_recieve_job
+                displayName: "Deploy Databricks resources to ingest02 workspace"

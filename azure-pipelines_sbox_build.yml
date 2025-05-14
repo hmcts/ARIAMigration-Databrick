@@ -21,6 +21,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
+            pool_name: 'hmcts-sds-ptlsbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
@@ -28,6 +29,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
+            pool_name: 'hmcts-sds-ptlsbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
@@ -35,6 +37,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
+            pool_name: 'hmcts-sds-ptlsbox'
 
       - deployment: stg_aria
         environment: stg
@@ -46,11 +49,15 @@ parameters:
             Resource_Group: 'ingest00-main-stg'
             Client_ID: $(STG_CLIENT_ID)
             Subscription_ID: $(STG_SUBSCRIPTION_ID)
+            pool_name: 'hmcts-sds-ptl'
+
           - landing_zone: '01'
             HTML_StorageAccount: 'ingest01landingstg'
             Resource_Group: 'ingest01-main-stg'
             Client_ID: $(STG_CLIENT_ID)
             Subscription_ID: $(STG_SUBSCRIPTION_ID)
+            pool_name: 'hmcts-sds-ptl'
+
 
       - deployment: prod_aria
         environment: prod
@@ -62,11 +69,15 @@ parameters:
             Resource_Group: 'ingest00-main-prod'
             Client_ID: $(PROD_CLIENT_ID)
             Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+            pool_name: 'hmcts-sds-ptl'
+
           - landing_zone: '01'
             HTML_StorageAccount: 'ingest01landingprod'
             Resource_Group: 'ingest01-main-prod'
             Client_ID: $(PROD_CLIENT_ID)
             Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+            pool_name: 'hmcts-sds-ptl'
+
 
 stages:
   - stage: DownloadArtifacts
@@ -114,7 +125,7 @@ stages:
           - job: Deploy_HTML_LZ${{ lz.landing_zone }}
             displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
             pool:
-              name: ${{ if eq(deployment.environment, 'sbox') then 'hmcts-sds-ptlsbox' else 'hmcts-sds-ptl' }}
+              name: ${{ deployment.pool_name }}
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

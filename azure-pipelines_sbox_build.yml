@@ -37,41 +37,41 @@ parameters:
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
 
-      - deployment: stg_aria
-        environment: stg
-        service_connection: DTS-DATAINGEST-STG
-        dependsOn: sbox_aria
-        pool_name: 'hmcts-sds-ptl'
-        landing_zones:
-          - landing_zone: '00'
-            HTML_StorageAccount: 'ingest00landingstg'
-            Resource_Group: 'ingest00-main-stg'
-            Client_ID: $(STG_CLIENT_ID)
-            Subscription_ID: $(STG_SUBSCRIPTION_ID)
+      # - deployment: stg_aria
+      #   environment: stg
+      #   service_connection: DTS-DATAINGEST-STG
+      #   dependsOn: sbox_aria
+      #   pool_name: 'hmcts-sds-ptl'
+      #   landing_zones:
+      #     - landing_zone: '00'
+      #       HTML_StorageAccount: 'ingest00landingstg'
+      #       Resource_Group: 'ingest00-main-stg'
+      #       Client_ID: $(STG_CLIENT_ID)
+      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
 
-          - landing_zone: '01'
-            HTML_StorageAccount: 'ingest01landingstg'
-            Resource_Group: 'ingest01-main-stg'
-            Client_ID: $(STG_CLIENT_ID)
-            Subscription_ID: $(STG_SUBSCRIPTION_ID)
+      #     - landing_zone: '01'
+      #       HTML_StorageAccount: 'ingest01landingstg'
+      #       Resource_Group: 'ingest01-main-stg'
+      #       Client_ID: $(STG_CLIENT_ID)
+      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
 
-      - deployment: prod_aria
-        environment: prod
-        service_connection: DTS-DATAINGEST-PROD
-        dependsOn: stg_aria
-        pool_name: 'hmcts-sds-ptl'
-        landing_zones: 
-          - landing_zone: '00'
-            HTML_StorageAccount: 'ingest00landingprod'
-            Resource_Group: 'ingest00-main-prod'
-            Client_ID: $(PROD_CLIENT_ID)
-            Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+      # - deployment: prod_aria
+      #   environment: prod
+      #   service_connection: DTS-DATAINGEST-PROD
+      #   dependsOn: stg_aria
+      #   pool_name: 'hmcts-sds-ptl'
+      #   landing_zones: 
+      #     - landing_zone: '00'
+      #       HTML_StorageAccount: 'ingest00landingprod'
+      #       Resource_Group: 'ingest00-main-prod'
+      #       Client_ID: $(PROD_CLIENT_ID)
+      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
 
-          - landing_zone: '01'
-            HTML_StorageAccount: 'ingest01landingprod'
-            Resource_Group: 'ingest01-main-prod'
-            Client_ID: $(PROD_CLIENT_ID)
-            Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+      #     - landing_zone: '01'
+      #       HTML_StorageAccount: 'ingest01landingprod'
+      #       Resource_Group: 'ingest01-main-prod'
+      #       Client_ID: $(PROD_CLIENT_ID)
+      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
 
 stages:
   - stage: DownloadArtifacts

@@ -114,7 +114,7 @@ stages:
           - job: Deploy_HTML_LZ${{ lz.landing_zone }}
             displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
             pool:
-              name: ${{ eq(deployment.environment, 'sbox') && 'hmcts-sds-ptlsbox' || 'hmcts-sds-ptl' }}
+              name: ${{ if eq(deployment.environment, 'sbox') then 'hmcts-sds-ptlsbox' else 'hmcts-sds-ptl' }}
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

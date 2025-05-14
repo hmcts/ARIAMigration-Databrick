@@ -135,8 +135,8 @@ stages:
 
 # Loop over environment deployments
   - ${{ each deployment in parameters.environment_components }}:
-    - stage: ${{ replace(deployment.deployment,'-','_') }}
-      displayName: 'Deploy_to_${{ deployment.environment }}'
+    - stage: ${{ deployment.deployment }}
+      displayName: 'Deploy to ${{ deployment.environment }}'
       ${{ if ne(deployment.deployment, 'sbox_aria') }}:
         dependsOn: ${{ deployment.dependsOn }}
       jobs:
@@ -153,8 +153,8 @@ stages:
 
         # Loop through landing zones in each environment.
         - ${{ each lz in deployment.landing_zones }}:
-          - job: Deploy to ${{ deployment.environment }}${{ lz.landing_zone }}
-            displayName: Deploy HTML to ADLS - ${{ deployment.environment }} - LZ${{ lz.landing_zone }}
+          - job: Deploy_to_${{ deployment.environment }}${{ lz.landing_zone }}
+            displayName: Deploy to ${{ deployment.environment }}${{ lz.landing_zone }}
             pool: ${{ deployment.pool_name }}
             steps:
               - task: UsePythonVersion@0

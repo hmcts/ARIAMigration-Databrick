@@ -135,8 +135,8 @@ stages:
 
 # Loop over environment deployments
   - ${{ each deployment in parameters.environment_components }}:
-    - stage: ${{ deployment.deployment }}
-      displayName: 'Deploy to ${{ deployment.environment }}'
+    - stage: ${{ replace(deployment.deployment,'-','_') }}
+      displayName: 'Deploy_to_${{ deployment.environment }}'
       ${{ if ne(deployment.deployment, 'sbox_aria') }}:
         dependsOn: ${{ deployment.dependsOn }}
       jobs:

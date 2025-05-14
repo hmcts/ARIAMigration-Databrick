@@ -72,8 +72,80 @@ parameters:
       #       Resource_Group: 'ingest01-main-prod'
       #       Client_ID: $(PROD_CLIENT_ID)
       #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
-
 stages:
+  - stage: 'Build'
+    displayName: 'Build Stage'
+    jobs:
+    - job: BuildJob
+      displayName: 'Run Build and deploy'
+      steps:
+      - task: UsePythonVersion@0
+        displayName: 'Use Python 3.x'
+        inputs:
+          versionSpec: '3.x'
+
+      - script: |
+          python --version
+          pip install --upgrade pip
+          pip install build
+          pip install databricks-cli
+          python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
+            $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+          ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+        displayName: 'Install Python dependencies & build Python wheel'
+      
+      - script: |
+          pip install --upgrade pip
+          pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
+        displayName: 'Install JOH AzureFunctions dependencies into package'
+      # Configure and deploy to Workspace MAIN00
+      - script: |
+          echo "[DEFAULT]" > $(HOME)/.databrickscfg
+          echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
+          echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
+        displayName: 'Configure Databricks CLI for Workspace MAIN00'
+      - script: |
+          databricks workspace delete /live --recursive 
+          databricks workspace mkdirs /live
+          databricks workspace import_dir Databricks /live --overwrite
+        displayName: 'Publish Databricks folder to /live in Databricks MAIN00 Workspace'
+      # Configure and deploy to Workspace MAIN01
+      - script: |
+          echo "[DEFAULT]" > $(HOME)/.databrickscfg
+          echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
+          echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
+        displayName: 'Configure Databricks CLI for Workspace MAIN01'
+      - script: |
+          databricks workspace delete /live --recursive
+          databricks workspace mkdirs /live
+          databricks workspace import_dir Databricks /live --overwrite
+        displayName: 'Publish Databricks folder to /live in Databricks MAIN01 Workspace'
+      # Configure and deploy to Workspace MAIN02
+      - script: |
+          echo "[DEFAULT]" > $(HOME)/.databrickscfg
+          echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+          echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
+        displayName: 'Configure Databricks CLI for Workspace MAIN02'
+      - script: |
+          databricks workspace delete /live --recursive
+          databricks workspace mkdirs /live
+          databricks workspace import_dir Databricks /live --overwrite
+        displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
+      
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+          ArtifactName: 'ariafunction'
+          publishLocation: 'Container'
+        displayName: 'Publish Wheel Artifact'
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
+          ArtifactName: 'functionapp'
+          publishLocation: 'Container'
+        displayName: 'Publish JOH Azure Function'
+
   - stage: DownloadArtifacts
     displayName: 'Download Build Artifacts'
     jobs:

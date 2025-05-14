@@ -102,6 +102,30 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
+# Service principal credentials
+client_id = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-CLIENT-ID")
+client_secret = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-CLIENT-SECRET")
+tenant_id = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-TENANT-ID")
+
+# Storage account names
+
+checkpoint_storage = "ingest00xcuttingsbox"
+
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+
+check_point_path = "abfss://db-rsp-checkpoint@ingest00xcuttingsbox.dfs.core.windows.net/ARIATD/RSP/"
+
+schema_location = "abfss://db-rsp-checkpoint@ingest00xcuttingsbox.dfs.core.windows.net/ARIATD/RSP/schema"
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Functions to Read Latest Landing Files
 

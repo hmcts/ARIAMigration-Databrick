@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="en"><head id="head"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Archived Appeal Record </title>
+    <style>
+        
+        #labels {
+            text-align: right;
+        }
+        
+        br {
+            display:block;
+            content: "";
+            margin-top:5px;
+        }
+
+        .activeBtn {
+            background-color: darkgray;
+        }
+
+        #closeBtn {
+            background-color: #bf3636;
+        }
+
+        #table1 {
+            border: 1.5px solid #000;
+            width: 1050px;
+        }
+
+        #table2 {
+            border: 1.5px solid #000;
+            width: 500px;
+            height: 400px
+        }
+
+        #table3 {
+            border: 1.5px solid #000;
+            width: 500px;
+            height:400px;
+        }
+
+        #table4 {
+            border: 1.5px solid #000;
+            width: 500px;
+        }
+
+        #table5 {
+            border: none;
+            width: 500px;
+        }
+
+        #table6 {
+            border-collapse: collapse;
+            border: 1.5px solid #000;
+            width: 1000px;    
+        }
+
+        #table7 {
+            border: 1.5px solid #000;
+            width: 1010px;
+        }
+
+        #table8 {
+            border-collapse: collapse;
+            border: 1.5px solid #000;
+            width: 1000px;
+        }
+
+        #table9 {
+            border: none;
+            width: 990px;
+        }
+
+        #table10 {
+            border: 1.5px solid #000;
+            width: 1020px;
+            height: 400px
+        }
+        
+        #table11 {
+            border-collapse: collapse;
+            border: 1.5px solid #000;
+            width: 500px;
+        }
+
+        #table12 {
+            border: 1.5px solid #000;
+            width: 425px;
+        }
+
+        #table13 {
+            border: 1.5px solid #000;
+            width:700px;
+            height:400px;
+        }
+
+        #table14{
+            border: none;
+            width:700px;
+        }
+
+        #midpadding {
+            padding: 10px;
+            border: 1.5px solid #000;
+        }
+
+        .tabs {
+            position: relative;
+            min-height: 200px; /*{{tabs-min-height}}px; */ /* This part sucks */ /* review */
+            clear: both;
+            margin: 25px 0;
+            }
+
+        .tab {
+            float: left;
+            }
+
+        .tab label {
+            background: #F2F2F2; 
+            padding: 2.5px; 
+            border: 1.5px solid #000; 
+            margin-left: -1px; 
+            position: relative;
+            left: 1px; 
+            font-size: 15px;
+            }
+
+        .tab [type=radio] {
+            display: none;   
+            }
+        
+        .tab [type=radio]:checked ~ .content {
+            display: block;
+        }
+
+        .tab .content {
+            display: none;   
+            }
+
+        /* NESTED TABS */
+        .nested-tabs {
+            position: relative;
+            min-height: 200px; /* This part sucks */
+            clear: both;
+        }
+
+        .nested-tab {
+            float: left;
+        }
+
+        .nested-tab label {
+            background: #F2F2F2; 
+            padding: 2.5px; 
+            border: 1.5px solid #000; 
+            /* margin-left: -1px;  */
+            position: relative;
+            left: 1px; 
+            font-size: 15px;
+        }
+
+        .nested-tab [type=radio] {
+            display: none;   
+        }
+        
+        .nested-content {
+            position: absolute;
+            top: 19px;
+            left: 0;
+            background: #F2F2F2;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            border: 1.5px solid #000;
+            width: 1010px;
+            height: 520px;
+            display: none;
+        }
+
+        .nested-tab [type=radio]:checked ~ label {
+            background: white;
+            z-index: 2;
+        }
+
+        [type=radio]:checked ~ label ~ .nested-content {
+            display: block;
+        }
+
+
+        .content {
+            position: absolute;
+            top: 21px;
+            left: 0;
+            background: #F2F2F2;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            border: 1.5px solid #000;
+            width: 1035px; /*1135px;*/
+            height: 1000px; /*{{content-height}}px; *//* review */
+            overflow: auto;
+            }
+
+        .content2 {
+            position: absolute;
+            top: 21px;
+            left: 0;
+            background: #F2F2F2;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            border: 1.5px solid #000;
+            width: 1135px;
+            height: 1170px; 
+            }
+
+        [type=radio]:checked ~ label {
+            background: white;
+            border-bottom: 1px solid rgb(253, 253, 253);
+            z-index: 2;
+            }
+
+        [type=radio]:checked ~ label ~ .content {
+            z-index: 1;
+            }
+        
+        [type=radio]:checked ~ label ~ .content2 {
+            z-index: 1;
+            }
+
+        .addInfoTab {
+            display: none;
+        }
+
+        #toggle:checked  {
+            display: block;
+        }
+
+        .hidden {
+            position: absolute;
+            left: -100vw;
+        }
+
+        .content label {
+            background: none;
+            padding: 0;
+            border: none;
+            margin-left: 0;
+            position: static;
+            left: 0;
+        }
+
+        .content2 label {
+            background: none;
+            padding: 0;
+            border: none;
+            margin-left: 0;
+            position: static;
+            left: 0;
+        }
+
+    </style>
+</head>
+
+<body style="background-color: #F2F2F2;">
+    <h3 class="MsoNormal">ARIA Archived Case Record</h3>
+
+    <!-- Case Details -->
+    <div id="caseDetails">
+        <table id="table1">
+            <tbody><tr>
+                <th colspan="3" style="text-align: left;">Case details</th>
+            </tr>
+            <tr>
+                <td id="labels" style="width:70px"><label for="CaseNo">Case No : </label></td>
+                <td><input type="text" id="caseNum" name="caseNum" value="{{CaseNo}}" readonly></td>
+                <!--Testing out input labels for dynamic flags in ARIA-->
+                <!-- Example values for flags: -->
+                <td><input 
+                    type="text" 
+                    id="flag1" 
+                    style="background-color:  #F2F2F2; border: #F2F2F2; width: 80%; color: red; font-size: large; font-weight: bold;" 
+                    name="flag1" 
+                    value="{{flag1}}">
+                </td>
+                <td><input 
+                    type="text" 
+                    id="flag2" 
+                    style="background-color:  #F2F2F2; border: #F2F2F2; width: 80%; color: red; font-size: large; font-weight: bold;" 
+                    name="flag2" 
+                    value="{{flag2}}" 
+                    >
+                </td>
+                <td><input
+                     type="text"
+                     id="flag3"
+                     style="background-color:  #F2F2F2; border: #F2F2F2; width: 80%; color: red; font-size: large; font-weight: bold;" 
+                     name="flag3" 
+                     value="{{flag3}}">
+				</td>
+
+            </tr>
+        </tbody></table>
+    </div>  
+    <br>
+
+    <!-- Appellant Details -->
+    <div id="appellantDetails">
+        <table id="table1">
+            <tbody><tr>
+                <td>
+                    <label for="Name">Name : </label> <input type="text" id="lastName" name="lastName" value="{{AppellantName}}" readonly> &nbsp;
+                    <label for="Forenames"> Forenames : </label><input type="text" id="firstName" name="firstName" value="{{AppellantForenames}}" readonly> &nbsp;
+                    <label for="title"> Title : </label><input type="text" id="Title" name="Title" size="10" value="{{AppellantTitle}}" readonly>&nbsp;
+                    <label for="dob"> Date of Birth : </label> <input type="Date" id="birthDate" name="birthDate" value="{{AppellantBirthDate}}" size="15" readonly>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="ccdAppealnum">CCD Appeal No : </label><input type="text" id="ccdappealNum" name="ccdappealNum" value="{{CCDAppealNum}}" size="15" readonly>&nbsp;
+                    <label for="hoRef"> HO Ref : </label> <input type="text" id="hoRef" name="hoRef" value="{{HORef}}" size="15" readonly>&nbsp;
+                    <label for="portRef"> Port Ref : </label> <input type="text" id="portRef" name="portRef" value="{{PortReference}}" size="15" readonly> &nbsp;
+                    <label for="fcoNum"> FCO No : </label><input type="text" id="fcoNum" name="fcoNum" value="{{FCONumber}}" size="15" readonly>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="caseOutcomeId">Case Outcome ID : </label><input type="text" id="caseOutcomeId" name="Name" value="{{CaseOutcomeId}}" size="10" readonly>&nbsp;
+                    <label for="submissionUrn"> Submission URN : </label><input type="text" id="submissionUrn" name="submissionUrn" value="{{SubmissionURN}}" size="10" readonly>&nbsp;
+                    <label for="paymentUrn"> Copy to Agg. Payment URN : </label><input type="checkbox" id="paymentUrn" name="paymentUrn" value="" disabled>&nbsp;
+                    <label for="reinstatedDate"> Reinstated : </label><input type="Date" id="reinstatedDate" name="reinstatedDate" value="{{DateReinstated}}" size="10" readonly>
+                </td>
+            </tr>
+
+        </tbody></table>
+    </div>
+    <br>
+
+
+    <!-- First tab group -->
+    <div class="tabs">
+        <!-- Main -->
+        <div class="tab">
+            <input type="radio" id="tab-1" name="tab-group-1" checked>
+            <label for="tab-1">Main</label>
+            <div class="content">
+                <div id="main">
+                    <table id="table2">
+                        <tbody><tr>
+                        <td style="vertical-align: top;">
+                            <table id="table3">
+                                <tbody><tr>
+                                <td style="vertical-align: top;">
+                                    <table id="table4">
+                                    <tbody><tr>
+                                        <th colspan="2" style="text-align: left; padding-left: 10px;">Application to respondent</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left:10px">
+                                            <label for="dateLodged">Lodged : </label>
+                                            <input type="Date" id="dateLodged" name="dateLodged" value="{{DateApplicationLodged}}" readonly>
+                                        </td>
+                                        <td>
+                                            <label for="decisionDate">Decision : </label>
+                                            <input type="Date" id="decisionDate" name="decisionDate" value="{{DateOfApplicationDecision}}" readonly>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="2" style="text-align: left; padding-left:10px;">Appeal to IA</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left:10px">
+                                            <label for="dateLodgedIA">Lodged : </label>
+                                            <input type="Date" id="dateLodgedIA" name="dateLodgedIA" value="{{DateLodged}}" readonly>
+                                        </td>
+                                        <td>
+                                            <label for="decisionDateIA">Received : </label>
+                                            <input type="Date" id="decisionDateIA" name="decisionDate" value="{{DateReceived}}" readonly>
+                                        </td>
+                                    </tr>
+                                    </tbody></table>                                   
+                                </td>
+                                </tr>
+                                <tr>
+                                <td style="vertical-align: top;">
+                                    <table id="table5">
+                                        <tbody>
+                                            <tr>
+                                                <td id="labels"><label for="appealType">Appeal type :</label></td>
+                                                <td><input type="text" id="appealType" name="appealType" value="{{AppealTypeDescription}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td><label for="additionalGrounds">Additional grounds : </label><input type="text" id="additionalGrounds" name="additionalGrounds" value="{{AdditionalGrounds}}" size="3" readonly></td>
+                                                <td><label for="appealCategoriesField">Appeal categories : </label><input type="li" id="appealCategoriesField" name="appealCategoriesField" value="{{AppealCategories}}" size="3" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="appealProcess">Appeal Process : </label></td>
+                                                <td><input type="text" id="appealProcess" name="appealProcess" value="{{VisitVisaType}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="embassy"> Embassy : </label></td>
+                                                <td><input type="text" id="embassy" name="embassy" value="{{EmbassyLocation}}" readonly> </td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="nationality">Nationality : </label></td>
+                                                <td><input type="text" id="nationality" name="nationality" value="{{Nationality}}" readonly> </td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="travelOrigin">Country of travel origin : </label></td>
+                                                <td><input type="text" id="travelOrigin" name="travelOrigin" value="{{CountryOfTravelOrigin}}" readonly> </td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="port">Port of entry : </label></td>
+                                                <td><input type="text" id="port" name="port" value="{{POUPortName}}" readonly> </td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="hearingCentre">Dedicated hearing centre : </label></td>
+                                                <td><input type="text" id="hearingCentre" name="hearingCentre" value="{{DedicatedHearingCentre}}" readonly> </td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="newMattersField">New matters : </label></td>
+                                                <td><label for="humanRights">Human Rights : </label><input type="text" id="humanRights" name="humanRights" value="{{HumanRights}}" size="3" readonly></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                        <td style="vertical-align: top;">
+                            <table id="table3">
+                                <tbody><tr>
+                                    <td id="labels"><label for="certFeeSatisfaction">Cert. of Fee Satisfaction : </label></td>
+                                    <td colspan="2"><input type="text" id="certFeeSatisfaction" name="certFeeSatisfaction" value="{{CertOfFeeSatisfaction}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="currentStatus">Current status : </label></td>
+                                    <td colspan="2"><input type="text" id="currentStatus" name="currentStatus" value="{{currentstatus}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="connectedFiles">Connected files : </label></td>
+                                    <td colspan="2"><input type="text" id="connectedFiles" name="connectedFiles" value="{{connectedFiles}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateOfIssue">Date of issue : </label></td>
+                                    <td colspan="2"><input type="date" id="dateOfIssue" name="dateOfIssue" value="{{DateOfIssue}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="fileLocation">File location : </label></td>
+                                    <td colspan="2"><input type="text" id="fileLocation" name="fileLocation" value="{{fileLocation}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="newHearingDate">New hearing date : </label></td>
+                                    <td colspan="2"><input type="date" id="newHearingDate" name="newHearingDate" value="" disabled></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="lastDocument">Last Document : </label></td>
+                                    <td colspan="2"><input type="text" id="lastDocument" name="lastDocument" value="{{lastDocument}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="documentTracking">Document tracking : </label></td>
+                                    <td colspan="2"><input type="text" id="documentTracking" name="documentTracking" value="{{DocumentsReceived}}" readonly>&nbsp;</td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="transOutOfFastTrack">Trans. out of fast track : </label></td>
+                                    <td><input type="date" id="lastDocument" name="lastDocument" value="{{TransferOutDate}}" readonly></td>
+                                    <td id="labels"><label for="secureCourtReq">Secure Court Req :</label><input type="checkbox" id="secureCourtReq" {{SecureCourtRequired}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="removalDate">Removal date : </label></td>
+                                    <td><input type="date" id="removalDate" name="removalDate" value="{{RemovalDate}}" readonly></td>
+                                    <td id="labels"><label for="inCamera">In camera :</label><input type="checkbox" id="inCamera" {{InCamera}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="deportationDate">Deportation date : </label></td>
+                                    <td><input type="date" id="deportationDate" name="deportationDate" value="{{DeportationDate}}" readonly>&nbsp;</td>
+                                    <td id="labels"><label for="publicallyFunded">Publically funded :</label><input type="checkbox" id="publicallyFunded" {{PubliclyFunded}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="provisionalDestructionDate">Provisional Destruction : </label></td>
+                                    <td><input type="date" id="provisionalDestructionDate" name="provisionalDestructionDate" value="{{ProvisionalDestructionDate}}" readonly></td>
+                                    <td id="labels"><label for="validityIssues">Validity issues :</label><input type="checkbox" id="validityIssues" {{validityIssues}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateNoticeServed">Date notice served : </label></td>
+                                    <td><input type="date" id="dateNoticeServed" name="dateNoticeServed" value="{{NoticeSentDate}}" readonly></td>
+                                    <td id="labels"><label for="ootIssue">Out of time issue :</label><input type="checkbox" id="ootIssue" {{OutOfTimeIssue}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="AppealReceivedBy">Appeal received by : </label></td>
+                                    <td><input type="text" id="AppealReceivedBy" name="AppealReceivedBy" value="{{AppealReceivedBy}}" readonly></td>
+                                    <td></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parties -->
+        <div class="tab">
+            <input type="radio" id="tab-2" name="tab-group-1">
+            <label for="tab-2">Parties</label>
+            <div class="content">
+                <div id="parties">
+                    <table id="table2">
+                        <tbody><tr>
+                            <!-- Left Side -->
+                            <td style="vertical-align: top;">
+                                <table id="table3">
+                                    <tbody><tr>
+                                        <th colspan="4" style="text-align: left;">Main Appellant</th>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="Detained">Detained: </label></td>
+                                        <td><input type="text" id="Detained" name="Detained" value="{{Detained}}" readonly></td>
+                                        
+                                        
+                                        <td id="labels"><label for="Centre">Centre: </label></td>
+                                        <td><input type="text" id="Centre" name="Centre" value="{{DetentionCentre}}" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels" style="vertical-align: top;"><label for="Address">Address: </label></td>
+                                        <td colspan="3" style="vertical-align: top;">
+                                            <input type="text" id="addressLine1" name="addressLine1" size="55" value="{{AppellantAddress1}}"readonly><br>
+                                            <input type="text" id="addressLine2" name="addressLine2" size="55" value="{{AppellantAddress2}}"readonly><br>
+                                            <input type="text" id="addressLine3" name="addressLine3" size="55" value="{{AppellantAddress3}}"readonly><br>
+                                            <input type="text" id="addressLine4" name="addressLine4" size="55" value="{{AppellantAddress4}}"readonly><br>
+                                            <input type="text" id="addressLine5" name="addressLine5" size="55" value="{{AppellantAddress5}}"readonly><br>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="Country">Country: </label></td>
+                                        <td colspan="3"><input type="text" id="Country" name="Country" size="40" value="{{Country}}" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="Postcode">Postcode: </label></td>
+                                        <td colspan="3"><input type="text" id="Postcode" name="Postcode"value="{{DCPostcode}}" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="Phone">Phone: </label></td>
+                                        <td colspan="3"><input type="text" id="phone" name="phone" size="40" value="{{AppellantTelephone}}" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="Email">Email: </label></td>
+                                        <td colspan="3"><input type="text" id="email" name="email" size="55"  value="{{AppellantEmail}}" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="PrisonRef">Prison Ref: </label></td>
+                                        <td colspan="3"><input type="text" id="PrisonRef" name="PrisonRef" value="{{PrisonRef}}" readonly></td>
+                                    </tr>
+                                </tbody></table>
+                            </td>
+
+                            <!-- right side -->
+                            <td style="vertical-align: top;">
+                                <table id="table3">
+                                    <tbody><tr>
+                                        <td>
+                                            <table id="table4">
+                                                <tbody><tr>
+                                                    <th colspan="2" style="text-align: left; padding-left: 5px;">Respondent</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" style="width:30px; padding-left: 5px;"><label for="Name">Name: </label></td>
+                                                    <td><input type="text" id="respondentName" name="respondentName" value="{{MRName}}" size="50" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table id="table4">
+                                                <tbody><tr>
+                                                    <th colspan="2" style="text-align: left; padding-left: 5px;">Representative</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" style="width:30px; padding-left: 5px;"><label for="Name">Name: </label></td>
+                                                    <td><input type="text" id="repName" name="repName" size="50" value ="{{RepresentativeName}}" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table id="table4">
+                                                <tbody><tr>
+                                                    <th colspan="2" style="text-align: left; padding-left: 5px;">Sponsor</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" style="width:30px; padding-left: 5px;"><label for="Name">Name: </label></td>
+                                                    <td><input type="text" id="sponsorName" name="sponsorName" size="50" value="{{CaseSponsorName}},{{CaseSponsorForenames}} {{CaseSponsorTitle}}" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table id="table4">
+                                                <tbody><tr>
+                                                    <th colspan="2" style="text-align: left; padding-left: 5px; padding-bottom: 20px;">Dependents</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" colspan="3" style="padding-right:20px"></td>
+                                                    <td id="labels" style="width:30px; padding-left: 5px; text-align: right; white-space: nowrap;"><label for="Name">{{Dependents}} </label></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table id="table4">
+                                                <tbody><tr>
+                                                    <th colspan="2" style="text-align: left; padding-left: 5px;">Interpreter Requirements</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="Required">Required: </label></td><td><input type="text" id="required" name="required" size="3" value="{{Interpreter}}" readonly></td>
+                                                    <td id="labels"><label for="Language">Language: </label></td><td><input type="text" id="language" name="language" size="26" value="{{Language}}" readonly></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="HOInterpreter">HO Interpreter:</label></td>
+                                                    <td colspan="3"><input type="text" id="HOInterpreter" name="HOInterpreter" size="45" value="{{HOInterpreter}}" readonly></td>
+                                                </tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left: 5px;">
+                                            <label for="courtPreference">Court Preference: </label><input type="text" id="courtPreference" name="courtPreference" value="{{CourtPreference}}" readonly>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div class="tab">
+            <input type="radio" id="tab-3" name="tab-group-1">
+            <label for="tab-3">Status</label>
+            <div class="content">
+                <div id="status">
+                    <table id="table2">
+                        <tbody><tr>
+                            <td style="text-align: right; padding-right: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: top;">
+                        <table id="table6">
+                            <tbody><tr>
+                                <th>Status of Case</th>
+                                <th>Date of Hearing</th>
+                                <th>Int.(s) Req</th>
+                                <th>Date of Decision</th>
+                                <th>Outcome</th>
+                                <th>Date of Service</th>
+                            </tr>
+                            {{StatusPlaceHolder}}
+                            <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                            <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>             -->
+                        
+                        </tbody></table>
+                        </td>
+                    </tr>
+                    </tbody></table>                           
+                </div>
+
+                <!-- review copy 01 start -->
+                 {{StatusDetailsPlaceHolder}}
+                <!-- review END OF REPEAT copy 01 -->
+
+
+
+
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="tab">
+            <input type="radio" id="tab-4" name="tab-group-1">
+            <label for="tab-4">History</label>
+            <div class="content">
+                <div id="history">
+                    <table id="table2">
+                        <tbody>
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <table id="table6">
+                                    <tbody><tr>
+                                        <th>Date</th>
+                                        <th>Event type</th>
+                                        <th>User</th>
+                                        <th>Comment</th>
+                                    </tr>
+                                    {{HistoryPlaceHolder}}
+                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                </tbody></table>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BF Diary -->
+        <div class="tab">
+            <input type="radio" id="tab-5" name="tab-group-1">
+            <label for="tab-5">B/F Diary</label>
+            <div class="content">
+                <div id="bfdiary">
+                    <table id="table2">
+                        <tbody><tr>
+                            <td>
+                                <table id="table6">
+                                    <tbody><tr>
+                                        <th>B/F Date</th>
+                                        <th>B/F type</th>
+                                        <th>B/F Entry</th>
+                                        <th>Date Completed</th>
+                
+                                    </tr>
+                                    
+                                    {{bfdiaryPlaceHolder}}
+                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                </tbody></table>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- S.C. / Misc -->
+        <div class="tab">
+            <input type="radio" id="tab-6" name="tab-group-1">
+            <label for="tab-6">S.C. / Misc</label>
+            <div class="content">
+                <div id="scmisc">
+                    <table id="table2">
+                        <tbody><tr>
+                            <td style="vertical-align: top;">
+                                <table id="table7">
+                                    <tbody><tr>
+                                        <th colspan="4" style="text-align: left; padding-left:10px;">Statutory closure details</th>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label>File in statutory closure : </label><input type="checkbox" id="fileStatClosure" name="fileStatClosure" {{FileInStatutoryClosure}}></td>
+                                        <td id="labels"><label>Statutory closure date : </label><input type="Date" id="dateStatClosure" name="dateStatClosure" value="{{StatutoryClosureDate}}" readonly></td>
+                                        <td id="labels"><label>Non-standard SC period : </label><input type="checkbox" id="nonStandardSCPeriod" name="nonStandardSCPeriod" {{NonStandardSCPeriod}}></td>
+                                        <td id="labels"><label>Date of next listed hearing : </label><input type="checkbox" id="dateNextListedHearing" name="dateNextListedHearing" {{DateOfNextListedHearing}}></td>
+                                    </tr>
+                                </tbody></table>
+                                <br>
+                                <table id="table7">
+                                    <tbody><tr>
+                                        <th style="text-align: left; padding-left:10px">Cost order details</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table id="table8">
+                                                <tbody><tr>
+                                                    <th>Appeal Stage when CO Application Made</th>
+                                                    <th>Date of CO Application</th>
+                                                    <th>Appeal Stage when CO Decision Made</th>
+                                                    <th>Outcome of Appeal where CO Decision Made</th>
+                                                    <th>Date of CO Decision</th>
+                                                    <th>Cost Order Decision</th>
+                                                    <th>Applying Representative</th>
+                                                </tr>
+                                                {{CostorderdetailsPlaceHolder}}
+                                                <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                                <br>
+                                <table id="table9">
+                                    <tbody><tr>
+                                        <td id="labels" style="vertical-align: top; width:125px"><label for="Notes" style="vertical-align: top;">Notes : </label></td>
+                                        <td><textarea id="notes" name="notes" rows="8" cols="100" readonly>{{AppealCaseNote}}</textarea></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels" style="width:125px"><label for="Third Country">Third Country : </label></td>
+                                        <td><input type="text" id="thirdCountry" name="thirdCountry" size="50" value="{{ThirdCountry}}" readonly></td>
+                                    </tr>
+            
+                                </tbody></table>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Linked Files -->
+        <div class="tab">
+            <input type="radio" id="tab-22" name="tab-group-1">
+            <label for="tab-22">Linked Files</label>
+    
+            <div class="content">
+                <div id="linkedfiles">
+                    <br>
+                    <br>
+                    <table id="table7">
+                        <tbody><tr>
+                            <th style="vertical-align: top; text-align: left; padding-left:5px">View Links</th>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <table id="table8">
+                                    <tbody><tr>
+                                        <th style="width:10%">Copy</th>
+                                        <th style="width:20%">File Number</th>
+                                        <th style="width:35%">Appellant Name</th>
+                                        <th style="width:35%">Comment</th>
+                                    </tr>
+                                    {{LinkedFilesPlaceHolder}}
+                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                </tbody></table>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div> 
+        </div>  
+
+        <!-- Maintain Typing -->
+         <div class="tab">
+            <input type="radio" id="tab-23" name="tab-group-1">
+            <label for="tab-23">Maintain Typing</label>
+
+            <div class="content">
+                <div id="typing">
+                    <br>
+                    <br>
+                    <table id="table10">
+                        <tbody><tr>
+                            <th style="vertical-align: top; text-align: left; padding-left:5px">Maintain Typing</th>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: top;" colspan="2">
+                                <table id="table7">
+                                    <tbody><tr>
+                                        <th style="vertical-align: top; text-align: left; padding-left:5px">Typing type</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;"><input type="checkbox" id="file" disabled><label for="file">Files</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <input type="checkbox" id="miscellaneous" disabled><label for="miscellaneous">Miscellaneous</label></td> 
+                                    </tr>
+                                </tbody></table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: top;" colspan="2">
+                                <table id="table7">
+                                    <tbody><tr>
+                                        <th colspan="4" style="vertical-align: top; text-align: left; padding-left:5px">File details</th>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="caseNo">File number : </label></td>
+                                        <td><input type="text" id="caseNo" value="" readonly></td>
+                                        <td id="labels"><label for="fullName">Name : </label></td>
+                                        <td><input type="text" id="fullName" size="70" value=""readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels" style="vertical-align: top;"><label for="statusTypes">Status types : </label></td>
+                                        <td colspan="3" style="vertical-align: top;">
+                                            <table id="table11">
+                                                <tbody><tr>
+                                                    <th style="width:20%; text-align: left;">Status No.</th>
+                                                    <th style="width:40%; text-align: left;">Status</th>
+                                                    <th style="width:40%; text-align: left;">Outcome</th>
+                                                </tr>
+                                                <!-- {{StatusTypesPlaceHolder}} -->
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <!-- left side -->
+                            <td style="vertical-align: top;">
+                                <table id="table4">
+                                    <tbody><tr>
+                                        <td colspan="2">
+                                            <table id="table12">
+                                                <tbody><tr>
+                                                    <th style="width:40%; text-align: left;">Nature of Typing</th>
+                                                    <th style="width:60%; text-align: left;">Author</th>
+                                                </tr>
+                                                <!-- {{NatureofTypingPlaceHolder}} -->
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="natureOfTyping">Nature of Typing : </label></td>
+                                        <td><input type="text" id="natureOfTyping" value="" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels" style="padding-bottom:14px; vertical-align: top;"><label for="author">Author : </label></td>
+                                        <td style="padding-bottom:14px; vertical-align: top;"><input type="text" id="author" value="" readonly></td>
+                                    </tr>                                    
+                                </tbody></table>
+                            </td>
+                            <!-- right side -->
+                            <td style="vertical-align: top;">
+                                <table id="table4">
+                                    <tbody><tr>
+                                        <td colspan="2">
+                                            <table id="table12">
+                                                <tbody><tr>
+                                                    <th style="width:40%; text-align: left;">Date</th>
+                                                    <th style="width:60%; text-align: left;">Stage of Typing</th>
+                                                </tr>
+                                                <!-- {{stageOfTypingPlaceHolder}} -->
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            </tbody></table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="dateToTyping">Date to typing : </label></td>
+                                        <td><input type="date" id="dateToTyping" value=""readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="stageOfTyping">Stage of typing : </label></td>
+                                        <td><input type="text" id="author" size="30" value="" readonly></td>
+                                    </tr>  
+                                    <tr>
+                                        <td id="labels"><label for="dateAllocatedToTypist">Date allocated to typist : </label></td>
+                                        <td><input type="date" id="dateAllocatedToTypist" value=""readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="typistName">Typist's name : </label></td>
+                                        <td><input type="text" id="typistName" size="30" value="" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="dateReturnedToSource">Date returned to source : </label></td>
+                                        <td><input type="date" id="dateReturnedToSource" value="" readonly></td>
+                                    </tr>               
+                                </tbody></table>
+                            </td>
+                            </tr>
+                        </tbody></table>
+                </div>
+            </div>
+         </div>
+
+        <!-- Maintain Cost Award -->
+         <div class="tab">
+            <input type="radio" id="tab-24" name="tab-group-1">
+            <label for="tab-24">Maintain Cost Award</label>
+
+            <div class="content">
+                <div id="costAwards">
+                    <br>
+                    <br>
+                    <table id="table10">
+                        <tbody><tr>
+                            <th style="vertical-align: top; text-align: left; padding-left:5px">Maintain Cost Awards</th>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: top;" colspan="2">
+                                <table id="table6">
+                                    <tbody><tr>
+                                        <th style="width:10%">CaseNo</th>
+                                        <th style="width:15%">Appellant</th>
+                                        <th style="width:10%">Appeal Stage</th>
+                                        <th>Application Date</th>
+                                        <th>Type of Cost Award</th>
+                                        <th>Applying Party</th>
+                                        <th>Paying Party</th>
+                                        <th>Minded To Award Direction</th>
+                                        <th>Objection To Minded To Award</th>
+                                        <th>Costs Award Decision</th>
+                                        <th>Date Of Costs Decision</th>
+                                        <th>Costs Amount</th>
+                                    </tr>
+                                    {{MaintainCostAwardsPlaceHolder}}
+                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    <tr><td colspan="12" style="padding:5px;">Linked Cases (view only)</td></tr>
+                                    {{LinkedCasesviewonlyPlaceHolder}}
+                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                </tbody></table> 
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>                 
+            </div>
+         </div>
+    </div>
+
+    <!-- Second Tab Group -->
+    <div class="additional-tabs" style="padding-top:850px">
+        <div class="tabs" > <!-- style="margin-top: {{nested_tabs_size}}px"> -->
+            <!-- Additional Grounds -->
+            <div class="tab">
+                <input type="radio" id="tab-7" name="tab-group-2" checked>
+                <label for="tab-7">Additional Grounds</label>
+                <div class="content2">
+                    <div id="additionalGroundsTab">
+                        <br>
+                        <br>
+                        <table id="table3" style="height: 200px;">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Additional Grounds</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table11">
+                                        <tbody><tr>
+                                            <th style="width:20%"></th>
+                                            <th style="width:80%; text-align: left; padding-left:5px">Additional Grounds</th>
+                                        </tr>
+                                        {{AdditionalGroundsPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div> 
+            </div>
+
+            <!-- Appeal Categories -->
+            <div class="tab">
+                <input type="radio" id="tab-8" name="tab-group-2">
+                <label for="tab-8">Appeal Categories</label>
+                <div class="content2">      
+                    <div id="appealCategories">
+                        <br>
+                        <br>
+                        <table id="table3">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Appeal Categories</th>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;" colspan="2">
+                                    <table id="table11">
+                                        <tbody><tr>
+                                            <th style="width:60%">Category Description</th>
+                                            <th style="width:20%">Flag</th>
+                                            <th style="width:20%">Apply</th>
+                                        </tr>
+                                        {{AppealCategoriesPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Matters -->
+            <div class="tab">
+                <input type="radio" id="tab-9" name="tab-group-2">
+                <label for="tab-9">New Matters</label>
+                <div class="content2">
+                    <div id="newMatters">
+                        <br>
+                        <br>
+                        <table id="table7">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">New Matters</th>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;" colspan="2">
+                                    <table id="table8">
+                                        <tbody><tr>
+                                            <th style="width:25%">Description</th>
+                                            <th style="width:35%">Detail</th>
+                                            <th style="width:10%">Received Date</th>
+                                            <th style="width:10%">Referred to HO Date</th>
+                                            <th style="width:10%">HO Decision</th>
+                                            <th style="width:10%">HO Decision Date</th>
+                                        </tr>
+                                        {{NewMattersPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Human Rights -->
+            <div class="tab">
+                <input type="radio" id="tab-10" name="tab-group-2">
+                <label for="tab-10">Human Rights</label>
+                <div class="content2">
+                    <div id="humanRight" >
+                        <br>
+                        <br>
+                        <table id="table3">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Human Rights</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table11">
+                                        <tbody><tr>
+                                            <th style="width:80%; text-align: left; padding-left:5px">Human Right Description</th>
+                                            <th style="width:20%; text-align: left; padding-left:5px">Apply</th>
+                                        </tr>
+                                        {{HumanRightsPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Tracking -->
+            <div class="tab">
+                <input type="radio" id="tab-11" name="tab-group-2">
+                <label for="tab-11">Document Tracking</label>
+                <div class="content2">
+                    <div id="documents">
+                        <br>
+                        <br>
+                        <table id="table7">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Document Tracking</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table8">
+                                        <tbody><tr>
+                                            <th style="width:40%; text-align: left; padding-left:5px">Document</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">Date Requested</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">Date Required</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">Date Received</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">Rep. Date</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">POU Date</th>
+                                            <th style="width:10%; text-align: left; padding-left:5px">No Longer Required</th>
+                                        </tr>
+                                        {{DocumentTrackingPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Non-suspensive Certification -->
+            <div class="tab">
+                <input type="radio" id="tab-12" name="tab-group-2">
+                <label for="tab-12">Deportation date</label>
+    
+                <div class="content2">
+                    <div id="NSCert">
+                        <br>
+                        <br>
+                        <table id="table3" style="height: 200px;">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Non-suspensive Certification</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table4">
+                                        <tbody><tr>
+                                            <td id="labels"><label for="NSdateCertified">Date Certified : </label></td>
+                                            <td><input type="date" id="NSdateCertified" value="{{CertifiedDate}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="NSdateCertReceived">Date Certification Received : </label></td>
+                                            <td><input type="date" id="NSdateCertReceived" value="{{CertifiedRecordedDate}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="NSdateNoticeSent">Date Notice Sent : </label></td>
+                                            <td><input type="date" id="NSdateNoticeSent" value="{{NoticeSentDate}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="NSdateAddressDue">Date Address Due : </label></td>
+                                            <td><input type="date" id="NSdateAddressDue" value="{{NoticeSentDate}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="NSdateAddressReceived">Date Address Received : </label></td>
+                                            <td><input type="date" id="NSdateAddressReceived" value="{{DateReceived}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="NSdateRefToJudge">Date Referred to Judge : </label></td>
+                                            <td><input type="date" id="NSdateRefToJudge" value="{{ReferredToJudgeDate}}" readonly></td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div> 
+
+            <!-- Respondent -->
+            <div class="tab">
+                <input type="radio" id="tab-13" name="tab-group-2">
+                <label for="tab-13">Respondent</label>
+                <div class="content2">         
+                    <div id="respondent">
+                        <br>
+                        <br>
+                        <table id="table3">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Respondent Details</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table4">
+                                        <tbody><tr>
+                                            <td id="labels" style="padding:5px"><label for="respondentName">Respondent : </label></td>
+                                            <td><input type="text" id="respondentName" value="{{MRName}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="padding:5px">
+                                                <table id="table4">
+                                                    <tbody><tr>
+                                                        <th colspan="2" style="vertical-align: top; text-align: left; padding-left:5px">Respondent representative</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="embassy">Embassy : </label></td>
+                                                        <td><input type="text" id="embassy" value="{{EmbassyLocation}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="POU">P.O.U. : </label></td>
+                                                        <td><input type="text" id="POU" value="{{POUShortName}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="respondentName">Respondent : </label></td>
+                                                        <td><input type="text" id="respondentName" value="{{RespondentName}}" readonly></td>
+                                                    </tr>
+                                                </tbody></table>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels" style="vertical-align: top;"><label for="respondentAddress">Address: </label></td>
+                                            <td style="vertical-align: top;">
+                                                <input type="text" id="addressLine1" name="addressLine1" size="30" value="{{RespondentAddress1}}" readonly><br>
+                                                <input type="text" id="addressLine2" name="addressLine2" size="30" value="{{RespondentAddress2}}" readonly><br>
+                                                <input type="text" id="addressLine3" name="addressLine3" size="30" value="{{RespondentAddress3}}" readonly><br>
+                                                <input type="text" id="addressLine4" name="addressLine4" size="30" value="{{RespondentAddress4}}" readonly><br>
+                                                <input type="text" id="addressLine5" name="addressLine5" size="30" value="{{RespondentAddress5}}" readonly><br>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="respondentPostcode">Postcode : </label></td>
+                                            <td><input type="text" id="respondentPostcode" value="{{RespondentPostcode}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="respondentPhone">Phone : </label></td>
+                                            <td><input type="text" id="respondentPhone" value="{{RespondentTelephone}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="respondentFax">Fax : </label></td>
+                                            <td><input type="text" id="respondentFax" value="{{RespondentFax}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="respondentEmail">Email : </label></td>
+                                            <td><input type="text" id="respondentEmail" value="{{RespondentEmail}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="padding:5px">
+                                                <table id="table4">
+                                                    <tbody><tr>
+                                                        <td id="labels"><label for="respondentRef">Reference : </label></td>
+                                                        <td><input type="text" id="respondentRef" value="{{CRReference}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="respondentContact">Contact : </label></td>
+                                                        <td><input type="text" id="respondentContact" value="{{CRContact}}" readonly></td>
+                                                    </tr>
+                                                </tbody></table>
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div> 
+
+            <!-- Representative -->
+            <div class="tab">
+                <input type="radio" id="tab-14" name="tab-group-2">
+                <label for="tab-14">Representative</label>
+                <div class="content2">
+                    <div id="representative">
+                        <br>
+                        <br>
+                        <table id="table3">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Representative Details</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table4">
+                                        <tbody><tr>
+                                            <th colspan="3" style="vertical-align: top; text-align: left; padding-left:5px">Prime contact details</th>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td><label for="selectFromList">Select from list : </label><input type="radio" id="selectFromList"></td>
+                                            <td><label for="freeText">Free Text : </label><input type="radio" id="freeText" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repName">Representative : </label></td>
+                                            <td colspan="2"><input type="text" id="repName" value="{{RepresentativeName}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels" style="vertical-align: top;"><label for="respondentAddress">Address : </label></td>
+                                            <td colspan="2" style="vertical-align: top;">
+                                                <input type="text" id="addressLine1" name="addressLine1" value="{{RepresentativeAddress1}}" size="50" readonly><br>
+                                                <input type="text" id="addressLine2" name="addressLine2" value="{{RepresentativeAddress2}}" size="50" readonly><br>
+                                                <input type="text" id="addressLine3" name="addressLine3" value="{{RepresentativeAddress3}}" size="50" readonly><br>
+                                                <input type="text" id="addressLine4" name="addressLine4" value="{{RepresentativeAddress4}}" size="50" readonly><br>
+                                                <input type="text" id="addressLine5" name="addressLine5" value="{{RepresentativeAddress5}}" size="50" readonly><br>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repPostcode">Postcode : </label></td>
+                                            <td colspan="2"><input type="text" id="repPostcode" value="{{RepresentativePostcode}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repPhone">Phone : </label></td>
+                                            <td colspan="2"><input type="text" id="repPhone" value="{{RepresentativeTelephone}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repFax">Fax : </label></td>
+                                            <td colspan="2"><input type="text" id="repFax" value="{{RepresentativeFax}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repEmail">Email : </label></td>
+                                            <td colspan="2"><input type="text" id="repEmail" size="50" value="{{RepresentativeEmail}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="dxNo">DX No : </label></td>
+                                            <td colspan="2"><input type="text" id="dxNo" value="{{RepresentativeDXNo1}}" size="20" readonly> <input type="text" id="dxNo" size="20" value="{{RepresentativeDXNo2}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repLAARef">LAA Ref No : </label></td>
+                                            <td colspan="2"><input type="text" id="repLAARef" value="{{LSCReference}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="repLAACommission">LAA commission : </label></td>
+                                            <td colspan="2"><input type="text" id="repLAACommission" value="{{LSCCommission}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" style="padding:5px">
+                                                <table id="table4">
+                                                    <tbody><tr>
+                                                        <th colspan="2" style="vertical-align: top; text-align: left; padding-left:5px">File Specific contact</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="repRef">Reference : </label></td>
+                                                        <td><input type="text" id="repRef" size="50" value="{{RepresentativeRef}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="repRef">Contact : </label></td>
+                                                        <td><input type="text" id="repRef" size="50" value="{{Contact}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="FSrepPhone">Phone : </label></td>
+                                                        <td><input type="text" id="repPhone" value="{{FileSpecificPhone}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="FSrepFax">Fax : </label></td>
+                                                        <td><input type="text" id="repFax" value="{{FileSpecificFax}}" readonly></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="labels"><label for="FSrepEmail">Email : </label></td>
+                                                        <td><input type="text" id="repEmail" size="50" value="{{FileSpecificEmail}}" readonly></td>
+                                                    </tr>
+                                                </tbody></table>
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sponsor -->
+            <div class="tab">
+                <input type="radio" id="tab-15" name="tab-group-2">
+                <label for="tab-15">Sponsor</label>
+                <div class="content2">
+                    <div id="sponsor">
+                        <br>
+                        <br>
+                        <table id="table3" style="height:250px">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Sponsor Details</th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table4">
+                                        <tbody><tr>
+                                            <td id="labels"><label for="sponsorName">Name : </label></td>
+                                            <td><input type="text" id="sponsorName" size="50" value="{{CaseSponsorName}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="sponsorForename">Forename(s) : </label></td>
+                                            <td><input type="text" id="sponsorForename" size="50" value="{{CaseSponsorForenames}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="sponsorTitle">Title : </label></td>
+                                            <td><input type="text" id="sponsorTitle" value="{{CaseSponsorTitle}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels" style="vertical-align: top;"><label for="sponsorAddress">Address: </label></td>
+                                            <td style="vertical-align: top;">
+                                                <input type="text" id="addressLine1" name="addressLine1" size="50" value="{{CaseSponsorAddress1}}" readonly><br>
+                                                <input type="text" id="addressLine2" name="addressLine2" size="50" value="{{CaseSponsorAddress2}}" readonly><br>
+                                                <input type="text" id="addressLine3" name="addressLine3" size="50" value="{{CaseSponsorAddress3}}" readonly><br>
+                                                <input type="text" id="addressLine4" name="addressLine4" size="50" value="{{CaseSponsorAddress4}}" readonly><br>
+                                                <input type="text" id="addressLine5" name="addressLine5" size="50" value="{{CaseSponsorAddress5}}" readonly><br>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="sponsorPostcode">Postcode : </label></td>
+                                            <td><input type="text" id="sponsorPostcode" value="{{CaseSponsorPostcode}}"  readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="sponsorPhone">Phone : </label></td>
+                                            <td><input type="text" id="sponsorPhone" value="{{CaseSponsorTelephone}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="sponsorEmail">Email : </label></td>
+                                            <td colspan="2"><input type="text" id="sponsorEmail" size="50" value="{{CaseSponsorEmail}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td><input type="checkbox" id="sponsorAuthorised" {{Authorised}}> <label for="sponsorAuthorised">Authorised to receive information</label></td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>  
+
+            <!-- Dependents -->
+             <div class="tab">
+                <input type="radio" id="tab-16" name="tab-group-2">
+                <label for="tab-16">Dependents</label>
+                <div class="content2">
+                    <div id="dependents">
+                        <br>
+                        <br>
+                        <table id="table3">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px">Dependents</th>
+                                <th style="vertical-align: top; text-align: right;"></th>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: top;">
+                                    <table id="table11">
+                                        <tbody><tr>
+                                            <th style="width:60%; text-align: left; padding-left:5px">Name</th>
+                                            <th style="width:40%; text-align: left; padding-left:5px">Relationship</th>
+                                        </tr>
+                                        {{DependentsPlaceHolder}}
+                                        <!-- <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                        <tr><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px"></td><td></td>
+                            </tr>
+
+                            {{DependentsdetailsPlaceHolder}}
+                            
+                            
+
+
+                                        
+
+
+
+
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </div> 
+             </div>
+            
+            <!-- Payments -->
+            <div class ="tab">
+                <input type="radio" id="tab-25" name="tab-group-2">
+                <label for="tab-25">Payments</label>
+                <div class="content2">
+                    <div id="payments">
+                        <br>
+                        <br>
+                        <table id="table10">
+                            <tbody><tr>
+                                <th style="vertical-align: top; text-align: left; padding-left:5px"><label style="text-align: left;" for="paymentEventSummary">Payment Events Summary</label></th>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;" colspan="2">
+                                    <table id="table7" style="vertical-align: top;">
+                                        <tbody><tr>
+                                            <td id="labels"><label for="1stTierFee">1st Tier Fee : </label></td><td><input type="text" id="1stTierFee" name="1stTierFee" value="{{FirstTierFee}}" readonly></td>
+                                            <td id="labels"><label for="totalPaymentsReceived">Total Payments Received : </label></td><td><input type="text" id="totalPaymentsReceived" name="totalPaymentsReceived" value="{{TotalPaymentsReceived}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="totalFeeAdj">Total Fee Adjustments : </label></td><td><input type="text" id="totalFeeAdj" name="totalFeeAdj" value="{{TotalFeeAdjustments}}" readonly></td>
+                                            <td id="labels"><label for="totalFeeAdj">Total Payment Adjustments : </label></td><td><input type="text" id="totalPaymentAdj" name="totalPaymentAdj" value="{{TotalPaymentAdjustments}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="totalFeeDue"><strong>Total Fee Due : </strong></label></td><td><input type="text" id="totalFeeDue" name="totalFeeDue" value="{{TotalFeeDue}}" readonly></td>
+                                            <td id="labels"><label for="balanceDue"><strong>Balance Due : </strong></label></td><td><input type="text" id="balanceDue" name="balanceDue" value="{{BalanceDue}}" readonly></td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;" colspan="2">
+                                    <table id="table7" style="vertical-align: top;">
+                                        <tbody><tr>
+                                            <td id="labels"><label for="dateOfAppDecision">Date of Application Decision : </label></td><td><input type="date" id="dateOfAppDecision" name="dateOfAppDecision" value="{{DateOfApplicationDecision}}"readonly></td>
+                                            <td id="labels"><label for="dateCorrectFeeReceived">Date Correct Fee Received : </label></td><td><input type="date" id="dateCorrectFeeReceived" name="dateCorrectFeeReceived" value="{{dateCorrectFeeReceived}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td><td></td>
+                                            <td id="labels"><label for="dateCorrectFeeDeemedReceived">Date Correct Fee Deemed Received : </label></td><td><input type="date" id="dateCorrectFeeDeemedReceived" name="dateCorrectFeeDeemedReceived" value="{{DateCorrectFeeDeemedReceived}}" readonly></td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;" colspan="2">
+                                    <table id="table7" style="vertical-align: top;">
+                                        <tbody><tr>
+                                            <td id="labels"><label for="paymentRemissionRequested">Payment Remission Requested : </label></td>
+                                            <!-- <td><select id="paymentRemissionGranted" name="paymentRemissionGranted" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="yes">Yes</option>
+                                                <option value="no">No</option>
+                                            </select></td> -->
+
+                                            <td><input type="text" id="paymentRemissionRequested" value="{{PaymentRemissionrequested}}" readonly></td>
+
+
+                                            <td id="labels"><label for="asfRef">ASF Ref. :</label></td>
+                                            <td><input type="text" id="asfRef" name="asfRef" value="{{ASFReferenceNo}}"readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="paymentRemissionGranted">Payment Remission Granted : </label></td>
+                                            <!-- <td><select id="paymentRemissionGranted" name="paymentRemissionGranted" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="yes">Yes</option>
+                                                <option value="no">No</option>
+                                            </select></td> -->
+
+                                            <td><input type="text" id="paymentRemissionGranted" value="{{PaymentRemissionGranted}}" readonly></td>
+
+
+                                            <td id="labels"><label for="asfRefStatus">ASF Ref. Status : </label></td>
+                                            <!-- <td><select id="asfRefStatus" name="asfRefStatus" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Invalid">Invalid</option>
+                                                <option value="Unverified">Unverified</option>
+                                                <option value="Verified">Verified</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="asfRefStatus" name="asfRefStatus" value="{{ASFReferenceNoStatus}}"readonly></td>
+
+
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="paymentRemissionReason">Payment Remission Reason :</label></td>
+                                            <!-- <td><select id="paymentRemissionReason" name="paymentRemissionReason" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Asylum Support">Asylum Support</option>
+                                                <option value="Convention Case">Convention Case</option>
+                                                <option value="Help with Fees">Help with Fees</option>
+                                                <option value="Home Office Waiver">Home Office Waiver</option>
+                                                <option value="LAA Funded">LAA Funded</option>
+                                                <option value="Oral Hearing Direction">Oral Hearing Direction</option>
+                                                <option value="Other">Other</option>
+                                                <option value="S17 Childrens Act">S17 Childrens Act</option>
+                                                <option value="S20 Childrens Act">S20 Childrens Act</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="paymentRemissionReason" value="{{PaymentRemissionReasonDescription}}" readonly></td>
+                                            <td id="labels"><label for="s17Ref">s17 Ref. :</label></td>
+                                            <td><input type="text" id="s17Ref" name="s17Ref" value="{{S17Reference}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="labels" style="vertical-align: top;"><label for="paymentRemissionReasonNotes">Payment Remission Reason Notes :</label></td>
+                                            <td><textarea id="paymentRemissionReasonNotes" name="paymentRemissionReasonNotes" readonly>{{PaymentRemissionReasonNote}}</textarea></td>
+                                            
+                                            
+                                            <td id="labels" style="vertical-align: top;"><label for="s17RefStatus">s17 Ref. Status : </label><br><label for="s20Ref">s20 Ref. :</label></td>
+                                            
+                                            
+                                            <!-- <td style="vertical-align: top;"><select id="s17RefStatus" name="s17RefStatus" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Invalid">Invalid</option>
+                                                <option value="Unverified">Unverified</option>
+                                                <option value="Verified">Verified</option>
+                                            </select><br> -->
+                                            <td><input type="text" id="s17RefStatus" name="s17RefStatus" value="{{S17ReferenceStatus}}" readonly><br><input type="text" id="S20Ref" name="S20Ref" value="{{S20Reference}}" readonly></td>
+
+                                            <!-- <td></td> -->
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="lcpRequested">LCP Requested : </label></td>
+                                            <!-- <td><select id="lcpRequested" name="lcpRequested" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="yes">Yes</option>
+                                                <option value="no">No</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="lcpRequested" value="{{LCPRequested}}" readonly></td>
+                                            <td id="labels"><label for="s20RefStatus">s20 Ref. Status : </label></td>
+                                            <!-- <td><select id="s20RefStatus" name="s20RefStatus" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Invalid">Invalid</option>
+                                                <option value="Unverified">Unverified</option>
+                                                <option value="Verified">Verified</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="s20RefStatus" name="s20RefStatus" value="{{S20ReferenceStatus}}"readonly></td>
+                                            
+                                        </tr>
+                                        <tr>
+                                            <td id="labels"><label for="lcpOutcome">LCP Outcome :</label></td>
+                                            <td><input type="text" id="lcpOutcome" value="{{LCPOutcome}}" readonly></td>
+                                            <!-- <td><select id="lcpOutcome" name="lcpOutcome" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Information Requested">Information Requested</option>
+                                                <option value="Refused">Refused</option>
+                                                <option value="Full Remission">Full Remission</option>
+                                                <option value="Part Remission">Part Remission</option>
+                                                <option value="Part Remission Deferred">Part Remission Deferred</option>
+                                                <option value="Deferred">Deferred</option>
+                                            </select></td> -->
+                                            <td id="labels"><label for="hoWavierStatus">HO Wavier Status : </label></td>
+                                            <!-- <td><select id="hoWavierStatus" name="hoWavierStatus" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Invalid">Invalid</option>
+                                                <option value="Unverified">Unverified</option>
+                                                <option value="Verified">Verified</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="hoWavierStatus" name="hoWavierStatus" value="{{HomeOfficeWaiverStatus}}"readonly></td>
+                                            
+                                        </tr>
+                                        <tr>
+                                            <td></td><td></td>
+                                            <td id="labels"><label for="laaRef">LAA Ref. :</label></td>
+                                            <td><input type="text" id="laaRef" name="laaRef" value="{{LSCReference}}" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td><td></td>
+                                            <td id="labels"><label for="laaRefStatus">LAA Ref. Status : </label></td>
+                                            <!-- <td><select id="laaRefStatus" name="laaRefStatus" disabled>
+                                                <option value="" selected=""></option>
+                                                <option value="Invalid">Invalid</option>
+                                                <option value="Unverified">Unverified</option>
+                                                <option value="Verified">Verified</option>
+                                            </select></td> -->
+                                            <td><input type="text" id="laaRefStatus" name="laaRefStatus" value="{{LSCStatus}}"readonly></td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+
+                            </tr>
+                            <tr>
+                                <td colspan="2">
+                                    <table id="table7">
+                                        <tbody><tr>
+                                            <td>
+                                                <table id="table8">
+                                                    <tbody><tr>
+                                                        <th>Event Date</th>
+                                                        <th>Event Type</th>
+                                                        <th>Event Status</th>
+                                                        <th>Amount Due</th>
+                                                        <th>Amount Paid</th>
+                                                        <th>Cleared Date</th>
+                                                        <th>Payment Reference</th>
+                                                        <th>Aggregated Payment URN</th>
+                                                    </tr>
+                                                    {{PaymentEventsSummaryPlaceHolder}}
+                                                    <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                                    <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                                </tbody></table>
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+
+                    <div class="nested-tabs">
+                        <!-- Payment Details copy 01-->   
+                                {{paymentdetailsPlaceHolder}}
+                         <!-- Payment Details copy 02-->
+                    </div>
+                </div>
+            </div> 
+        </div>
+    </div>
+</div>
+</body></html>

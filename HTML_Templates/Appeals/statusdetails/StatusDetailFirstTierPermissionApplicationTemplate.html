@@ -1,0 +1,562 @@
+<!-- review END OF REPEAT copy 01 -->
+<div class="nested-tabs" style="margin-top: {{nested_tabs_size}}px">
+    <!-- Status Details -->
+    <div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+        <input type="radio" id="nested-tab-1{{nested_table_number}}" name="nested-tab-group-1{{nested_tab_group_number}}" checked>
+        <label for="nested-tab-1{{nested_table_number}}">Status Details</label>
+        <div class="nested-content">
+
+
+            <!-- This tab is to be used for the following status(es):
+                1. First Tier Permission Application
+            -->
+            <div id="ftpa" style="display: block;">
+                <br>
+                <br>
+                <table id="table10">
+                    <tbody><tr>
+                        <th style="vertical-align: top; text-align: left; padding-left:5px">Status Details</th>
+                    </tr>
+                    <tr>
+                        <!-- left side -->
+                        <td>
+                            <table id="table3">
+                                <tbody><tr>
+                                    <td id="labels"><label for="statusOfCase">Status of case : </label></td>
+                                    <td colspan="2"><input type="text" id="statusOfCase" name="statusOfCase" value="{{CaseStatusDescription}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateOfApplication">  Date of application : </label></td>
+                                    <td><input type="date" id="dateOfApplication" name="dateOfApplication" value="{{DateReceived}}" readonly></td>
+                                    
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{Party}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="appOOT">Application out of time: </label></td>
+                                    <td colspan="2"><input type="checkbox" id="appOOT" name="appOOT" {{OutOfTime}}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
+                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{AdjudicatorId}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateToJudge">Date to judicial officer : </label></td>
+                                    <td colspan="2"><input type="date" id="dateToJudge" name="dateToJudge" value="{{MiscDate1}}"readonly></td>
+                                </tr>
+                            
+                                <tr>
+                                    <td style="padding: 10px;"></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px;"></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px;"></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                
+                                <tr>
+                                    <td id="labels"><label for="decisionToHO">Decision sent to HO for personal service : </label></td>
+                                    <td><input id="decisionToHO" name="decisionToHO" value ="{{DecisionSentToHO}}"type="text" readonly>
+                                        </td>
+                                    <td>Date sent : <input type="date" id="dateSent" name="dateSent" value ="DecisionSentToHODate" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="initalHearingPoints">Initial hearing points : </label></td>
+                                    <td colspan="2"><input type="text" id="initalHearingPoints" name="initalHearingPoints" value="{{InitialHearingPoints}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="finalHearingPoints">Final Hearing Points : </label></td>
+                                    <td colspan="2"><input type="text" id="finalHearingPoints" name="finalHearingPoints" value="{{FinalHearingPoints}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="reasonPointsChange">Reason for points change : </label></td>
+                                    <td colspan="2"><input type="text" id="reasonPointsChange" name="reasonPointsChange" value="{{HearingPointsChangeReasondesc}}" readonly></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                        <!-- right side -->
+                        <td>
+                            <table id="table3">
+                                <tbody><tr>
+                                    <td style="padding:10px"> </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: right; vertical-align: top;">Cost order applied for : <input type="checkbox" id="costOrder" name="costOrder" {{CostOrderAppliedFor}} readonly></td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;">
+                                        <table id="table4">
+                                            <tbody><tr>
+                                                <th colspan="3" style="text-align: left;">Outcome</th>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{DecisionDate}}" readonly></td>
+                                                <td style="text-align: right;"><label for="tcwDecision">TCW Decision : </label><input type="checkbox" id="tcwDecision" name="tcwDecision" {{DecisionByTCW}} readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="decisionBy">Decision by : </label></td>
+                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value="{{{{DeterminationByJudgeSurname}}, {{DeterminationByJudgeForenames}} ({{DeterminationByJudgeTitle}})}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
+                                                <td colspan="2"><input type="text" id="methodOfTyping" name="methodOfTyping" value="{{MethodOfTyping}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                <td colspan="2"><input type="text" id="outcome" name="outcome" value="{{adjournDecisionTypeDescription}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="dateOfService">Date of Service : </label></td>
+                                                <td colspan="2"><input type="date" id="dateOfService" name="dateOfService" value ="{{Promulgated}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                <td colspan="2"><input type="text" id="UKAITNo" name="UKAITNo"  value="{{UKAITNo}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="extempore">Extempore : </label></td>
+                                                <td colspan="2"><input type="checkbox" id="extempore" name="extempore" value="{{Extempore}}"readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="writtenReasonsRequest">Written reasons request : </label></td>
+                                                <td colspan="2"><input type="date" id="writtenReasonsRequest" name="writtenReasonsRequest" value="{{WrittenReasonsRequestedDate}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="sentForTyping">Sent for typing : </label></td>
+                                                <td colspan="2"><input type="date" id="sentForTyping" name="sentForTyping" value ="{{TypistSentDate}}"readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="extemMethodOfTyping">Extem. method of typing : </label></td>
+                                                <td colspan="2"><input type="text" id="extemMethodOfTyping" name="extemMethodOfTyping"  value="{{ExtemporeMethodOfTyping}}"readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="typingReasonsReceived">Typing reasons received : </label></td>
+                                                <td colspan="2"><input type="date" id="typingReasonsReceived" name="typingReasonsReceived" value="{{TypistReceivedDate}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="writtenReasonsSent">Written reasons sent : </label></td>
+                                                <td colspan="2"><input type="date" id="writtenReasonsSent" name="writtenReasonsReceived" value ="{{WrittenReasonsSentDate}}"readonly></td>
+                                            </tr>                        
+                                        </tbody></table>
+                                    </td>
+                                </tr>               
+                            </tbody></table>
+                        </td>
+                    </tr>
+                </tbody></table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Adjournment/Withdrawal Details -->
+    <div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+        <input type="radio" id="nested-tab-2{{nested_table_number}}" name="nested-tab-group-1{{nested_tab_group_number}}">
+        <label for="nested-tab-2{{nested_table_number}}">Adjournment/Withdrawal Details</label>
+        <div class="nested-content">
+            <div id="adjWithDetails">
+                <br>
+                <br>
+                <table id="table10">
+                        <!-- left side -->
+                        <td>
+                            <table id="table3">
+                                <tbody><tr>
+                                    <td id="labels"><label for="adjWithType">Type : </label></td>
+                                    <td colspan="2"><input type="text" id="adjWithType" name="adjWithType" value="{{DecisionTypeDescription}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateOfRequest">Date of request : </label></td>
+                                    <td colspan="2"><input type="date" id="dateOfRequest" name="dateOfRequest" value="{{adjournDateReceived}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateOfHearing">Date of hearing : </label></td>
+                                    <td colspan="2"><input type="date" id="dateOfHearing" name="dateOfHearing" value="{{KeyDate}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="dateHearingNotified">Date hearing notified : </label></td>
+                                    <td colspan="2"><input type="date" id="dateHearingNotified" name="dateHearingNotified" value="{{adjournmiscdate2}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
+                                    <td colspan="2"><input type="text" id="partyMakingApp" name="partyMakingApp" value="{{adjournParty}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="byConsent">By consent : </label></td>
+                                    <td colspan="2"><input type="text" id="byConsent" name="byConsent" value="{{adjournInTime}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="issuedToAppellant">Issued to appellant : </label></td>
+                                    <td colspan="2"><input type="date" id="issuedToAppellant" name="issuedToAppellant" value="{{adjournLetter1Date}}"readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="responseReceived">Response received : </label></td>
+                                    <td><input type="date" id="responseReceived" name="responseReceived" value="{{adjournLetter2Date}}" readonly></td>
+                                    <td>TCW decision : <input type="checkbox" id="tcwDecision" name="tcwDecision" {DecisionByTCW}></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
+                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{adjournAdjudicatorSurname}},{{adjournAdjudicatorForenames}} ({{adjournAdjudicatorTitle}}) " readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels" style="vertical-align: top;"><label for="reason">Reason : </label></td>
+                                    <td colspan="2" style="vertical-align: top;"><textarea id="reason" name="reason" rows="6" cols="30" readonly>{{adjournNotes1}}</textarea></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+
+                        <!-- right side -->
+                        <td>
+                            <table id="table3">
+                                <tbody><tr>
+                                    <td style="padding:10px"> </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:10px"> </td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;">
+                                        <table id="table4" style="height:345px">
+                                            <tbody><tr>
+                                                <th colspan="2" style="text-align: left;">Outcome</th>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="dateOfDecision">Date of decision : </label></td>
+                                                <td><input type="date" id="dateOfDecision" name="dateOfDecision" value="{{adjournDecisionDate}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="outcome">Outcome : </label></td>
+                                                <td><input type="text" id="outcome" name="outcome" value="{{adjournDecisionTypeDescription}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="datePartiesNotified">Date parties notified : </label></td>
+                                                <td><input type="date" id="datePartiesNotified" name="datePartiesNotified" value="{{adjournPromulgated}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="UKAITNo">UKAIT number : </label></td>
+                                                <td><input type="text" id="UKAITNo" name="UKAITNo" value="{{UKAITNo}}" readonly></td>
+                                            </tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                            <tr><td style="padding:10px"> </td></tr>
+                                        </tbody></table>                           
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hearing Details -->
+    <!-- This tab is only required for the following case status(es):
+        1. First Tier - Hearing
+        2. First Tier - Paper
+        3. Case Management Review
+        4. Preliminary Issue
+        5. Review of Cost Order
+        6. Immigration Judge - Hearing
+        7. Immigration Judge - Paper
+        8. Panel Heaing (Legal)
+        9. Panel Heaing (Legal / Non Legal)
+        10. Upper Tribunal Hearing
+        11. Upper Tribunal Hearing - Continuance
+        12. Upper Tribunal Oral Permission Hearing
+        13. Judicial Review Hearing
+        14. Judicial Review Oral Permission Hearing
+    -->
+     <div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+        <input type="radio" id="nested-tab-3{{nested_table_number}}" name="nested-tab-group-1{{nested_tab_group_number}}">
+        <label for="nested-tab-3{{nested_table_number}}">Hearing Details</label>
+        <div class="nested-content">
+            <div id="hearingDetails">
+                <br>
+                <br>
+                <table id="table7">
+                    <tbody><tr>
+                        <th style="vertical-align: top; text-align: left; padding-left:5px"> Hearing Details</th>
+                        
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <table id="table7">
+                                <tbody><tr>
+                                    <th colspan="6" style="vertical-align: top; text-align: left; padding-left:5px">Hearing Details</th>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="hearingCentre">Hearing Centre : </label></td>
+                                    <td><input type="text" id="hearingCentre" value ="{{HearingCentreDesc}}" readonly></td>
+                                    <td id="labels"><label for="court">Court : </label></td>
+                                    <td><input type="text" id="court" value="{{CourtName}}" readonly></td>
+                                    <td id="labels"><label for="hearingDate">Hearing Date : </label></td>
+                                    <td><input type="text" id="hearingDate" value="{{KeyDate}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="listName">List name : </label></td>
+                                    <td><input type="text" id="listName" value="{{ListName}}" readonly></td>
+                                    <td id="labels"><label for="listType">List type : </label></td>
+                                    <td><input type="text" id="listType" value="{{ListTypeDesc}}"  readonly></td>
+                                    <td id="labels"><label for="hearingType">Hearing Type : </label></td>
+                                    <td><input type="text" id="hearingType" value="{{HearingTypeDesc}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="listStartTime">List start time : </label></td>
+                                    <td><input type="text" id="listStartTime" value="{{ListStartTime}}" readonly></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <table id="table7" style="width: 100%;">
+                                <tbody>
+                                    <tr>
+                                        <th colspan="6" style="vertical-align: top; text-align: left; padding-left:5px">Assigned judicial officers</th>
+                                    </tr>
+                                    <!-- <tr>
+                                        <td id="labels" style="width:20%"><label for="judgeFT">Judge First-tier : </label></td>
+                                        <td><input type="text" id="judgeFT" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td id="labels"><label for="courtClerkUsher">Court clerk/Usher : </label></td>
+                                        <td><input type="text" id="courtClerkUsher" readonly></td>
+                                    </tr> -->
+                                    <tr>
+                                        <td colspan="6">
+                                            <table id="table7" style="width: 100%; border-collapse: collapse;">
+                                                <tbody>
+                                                    <tr>
+                                                        <th>Judge First Tier</th>
+                                                        <th>Court clerk/Usher</th>
+                                                        <th>Upper Trib Judge</th>
+                                                        <th>Non Legal Member</th>
+                                                    </tr>
+                                                    {{AssignedjudicialofficersPlaceHolder}}
+                                                    <!-- <tr><td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                        <td id="midpadding"></td>
+                                                    </tr> -->
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <!-- left side -->
+                        <td>
+                            <table id="table3" style="height: 210px;">
+                                <tbody><tr>
+                                    <th style="vertical-align: top; text-align: left; padding-left:5px">File Details</th>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="startTime">Start time : </label></td>
+                                    <td><input type="text" id="startTime" value="{{StartTime}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="estDuration">Estimated duration : </label></td>
+                                    <td><input type="text" id="estDuration" value="{{TimeEstimate}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="vertical-align: top; text-align: left; padding-left:5px">Required/Incompatible judicial officers</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table id="table11">
+                                            <tbody><tr>
+                                                <th style="vertical-align: top; text-align: left; padding-left:5px">Judical Officers</th>
+                                                <th style="vertical-align: top; text-align: left; padding-left:5px">Req</th>
+                                            </tr>
+                                            {{RequiredIncompatiblejudicialofficersPlaceHolder}}
+                                            <!-- <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            <tr><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                            <tr><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                                        </tbody></table>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                        <!-- right side -->
+                        <td style="vertical-align: top;">
+                            <table id="table3" style="height:235px;">
+                                <tbody><tr>
+                                    <th style="padding:10px"></th>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="outcome">Outcome : </label></td>
+                                    <td><input type="text" id="outcome" value = "{{DecisionTypeDescription}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;" id="labels"><label for="notes">Notes : </label></td>
+                                    <td style="vertical-align: top;"><textarea id="outcome" cols="45" rows="11" readonly>{{AppealCaseNote}}</textarea></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+     </div>
+
+    <!-- Additional Languages -->
+     <!-- This tab is only required for the following case status(es):
+        1. First Tier - Hearing
+        2. First Tier - Paper
+        3. Case Management Review
+        4. Preliminary Issue
+        5. Review of Cost Order
+        6. Immigration Judge - Hearing
+        7. Immigration Judge - Paper
+        8. Panel Heaing (Legal)
+        9. Panel Heaing (Legal / Non Legal)
+        10. Upper Tribunal Hearing
+        11. Upper Tribunal Hearing - Continuance
+        12. Upper Tribunal Oral Permission Hearing
+        13. Judicial Review Hearing
+        14. Judicial Review Oral Permission Hearing
+    -->
+    <div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+        <input type="radio" id="nested-tab-4{{nested_table_number}}" name="nested-tab-group-1{{nested_tab_group_number}}">
+        <label for="nested-tab-4{{nested_table_number}}">Additional Languages</label>
+        <div class="nested-content">
+            <div id="additionalLanguages">
+                <br>
+                <br>
+                <table id="table4">
+                    <tbody><tr>
+                        <th style="vertical-align: top; text-align: left; padding-left:5px">Additional Language Requirements</th>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <table id="table4">
+                                <tbody><tr>
+                                    <td style="vertical-align: top;" id="labels"><label for="primaryLanguage">Primary langauge selected : </label></td>
+                                    <td style="vertical-align: top;"><input id="primaryLanguage" type="text" value="{{Language}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;" id="labels"><label for="secondaryLanguage">Secondary langauge selected : </label></td>
+                                    <td style="vertical-align: top;"><input id="secondaryLanguage" type="text" value="{{LanguageDescription}}" readonly></td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- This tab is only required for the following case status(es):
+        1. Case Manangement Reviee
+    -->
+    <!-- Review Directions -->
+    <div class="nested-tab" style="padding-right:2px; border: 1px solid black; ">
+        <input type="radio" id="nested-tab-5{{nested_table_number}}" name="nested-tab-group-1{{nested_tab_group_number}}">
+        <label for="nested-tab-5{{nested_table_number}}">Review Directions</label>
+        <div class="nested-content">
+            <div id="cmrOrders">
+                <br>
+                <br>
+                <table id="table10">
+                    <tbody><tr>
+                        <th style="vertical-align: top; text-align: left; padding-left:5px">Review Directions</th>
+                        
+                    </tr>
+                    <tr>
+                        <td>Standard directions</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top;" colspan="2">
+                            <table id="table6">
+                                <tbody>
+                                <tr>
+                                    <td style="border: 1.5px solid #000;"></td>
+                                    <td colspan="2" style="text-align: center; border: 1.5px solid #000;">Date Required</td>
+                                    <td colspan="2" style="text-align: center; border: 1.5px solid #000;">Date Received</td>
+                                </tr>
+                                <tr>
+                                    <th style="border: 1.5px solid #000;">Standard Directions</th>
+                                    <th style="border: 1.5px solid #000;">IND</th>
+                                    <th style="border: 1.5px solid #000;">Appellant/Rep</th>
+                                    <th style="border: 1.5px solid #000;">IND</th>
+                                    <th style="border: 1.5px solid #000;">Appellant/Rep</th>
+                                </tr>
+                                {{StandarddirectionsPlacHolder}}
+                                <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                               
+                                
+                            </tbody></table> 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Specific directions</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top;" colspan="2">
+                            <table id="table6">
+                                <tbody>
+                                <tr>
+                                    <td style="border: 1.5px solid #000;"></td>
+                                    <td colspan="2" style="text-align: center; border: 1.5px solid #000;">Date Required</td>
+                                    <td colspan="2" style="text-align: center; border: 1.5px solid #000;">Date Received</td>
+                                </tr>
+                                <tr>
+                                    <th style="border: 1.5px solid #000;">Specific Directions</th>
+                                    <th style="border: 1.5px solid #000;">IND</th>
+                                    <th style="border: 1.5px solid #000;">Appellant/Rep</th>
+                                    <th style="border: 1.5px solid #000;">IND</th>
+                                    <th style="border: 1.5px solid #000;">Appellant/Rep</th>
+                                </tr>
+                                {{SpecificdirectionsPlaceHolder}}
+                                <!-- <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
+                                <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr> -->
+                               
+                                
+                            </tbody></table> 
+                        </td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- review END OF REPEAT copy 01 -->
+  

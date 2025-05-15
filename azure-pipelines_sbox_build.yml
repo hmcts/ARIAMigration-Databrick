@@ -293,9 +293,9 @@ stages:
   
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each segment in deployment.segments }}:
-      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ segment }}
-        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}_${{ segment }}'
+  #  - ${{ each segment in deployment.segments }}:
+      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}
+        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}'
         dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}
         jobs:
           - ${{ each lz in deployment.landing_zones }}:

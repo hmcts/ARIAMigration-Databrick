@@ -195,8 +195,14 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each segment in deployment.segments}}:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ segment }}
-        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}_${{ segment }}'
-        dependsOn: Deploy_Functions_${{ deployment.environment }}_${{ segment }}
+        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}'
+        dependsOn: 
+        - Deploy_Functions_${{ deployment.environment }}_${{ segment }}
+        # - Deploy_Functions_${{ deployment.environment }}_bails
+        # - Deploy_Functions_${{ deployment.environment }}_apluta
+        # - Deploy_Functions_${{ deployment.environment }}_td
+        # - Deploy_Functions_${{ deployment.environment }}_joh
+        
         jobs:
           - ${{ each lz in deployment.landing_zones}}:
             - ${{ if eq(lz.landing_zone, '02') }}:
@@ -282,7 +288,7 @@ stages:
     - ${{ each segment in deployment.segments }}:
       - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ segment }}
         displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}_${{ segment }}'
-        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ segment }}
+        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ segment }} 
         jobs:
           - ${{ each lz in deployment.landing_zones }}:
             - ${{ if eq(lz.landing_zone, '02') }}:    

@@ -238,7 +238,14 @@ stages:
       - ${{ if eq(deployment.environment, 'sbox')}}:
         - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
           displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-          dependsOn: ${{ parameters.html_stage_dependencies[deployment.environment] }}
+          ${{ if eq(deployment.environment, 'sbox') }}:
+            dependsOn: ${{ parameters.html_stage_dependencies[format('{0}{1}', deployment.environment, lz.landing_zone)] }}
+          ${{ if eq(deployment.environment, 'stg') }}:
+            dependsOn: ${{ parameters.html_stage_dependencies[format('stg{0}', lz.landing_zone)] }}
+          ${{ if eq(deployment.environment, 'prod') }}:
+            dependsOn: ${{ parameters.html_stage_dependencies[format('prod{0}', lz.landing_zone)] }}
+ #         dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}', deployment.environment, lz.landing_zone)] }} 
+#         dependsOn: ${{ parameters.html_stage_dependencies[deployment.deployment] }}
 
           jobs:
     #        - ${{ each lz in deployment.landing_zones}}:

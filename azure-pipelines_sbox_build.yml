@@ -150,12 +150,11 @@ stages:
                   displayName: 'Publish Function App for ${{ segment }}'
   
   # Loop through each environment, landing zone and segment to download and deploy the AzureFunction artifacts to the relevant function-app
-  # Ignore sbails-00 as not provisioned in 00.
+  # Ignore 00 and 01 as TF not provisioned new naming conventions AF to those landing zones
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones}}:
-        - ${{ if or(not(and(eq(segment, 'sbails'), eq(lz.landing_zone, '00'))), not(or(eq(lz.landing_zone, '00'), eq(lz.landing_zone, '01')))) }}:
-
+        - ${{ if eq(lz.landing_zone, '02') }}:
           - stage: Download_and_Deploy_${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}
             displayName: 'Download and Deploy Artifacts ${{ deployment.environment }}_${{ segment }}_${{ lz.landing_zone }}'
             dependsOn: ${{ format('{0}_{1}', deployment.deployment, segment) }}

@@ -14,7 +14,7 @@ parameters:
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptlsbox'
-        segments: ['bails', 'apluta', 'td', 'joh'] #sbails does not exist in 00, (fpa, fta) -> causing tf errors at the moment to create even though they dont exist
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta'] #sbails does not exist in 00
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -49,11 +49,8 @@ parameters:
       #       Resource_Group: 'ingest00-main-stg'
       #       Client_ID: $(STG_CLIENT_ID)
       #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
-      #     - landing_zone: '01'
-      #       HTML_StorageAccount: 'ingest01landingstg'
-      #       Resource_Group: 'ingest01-main-stg'
-      #       Client_ID: $(STG_CLIENT_ID)
-      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
+      #       databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
+      #       databricks_token: "$(STG_DATABRICKS_TOKEN_WORKSPACE)"
 
       # - deployment: prod_aria
       #   environment: prod
@@ -66,11 +63,54 @@ parameters:
       #       Resource_Group: 'ingest00-main-prod'
       #       Client_ID: $(PROD_CLIENT_ID)
       #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
-      #     - landing_zone: '01'
-      #       HTML_StorageAccount: 'ingest01landingprod'
-      #       Resource_Group: 'ingest01-main-prod'
-      #       Client_ID: $(PROD_CLIENT_ID)
-      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+  
+  - name: html_stage_dependencies
+    type: object
+    default:
+      sbox_00:
+        - Deploy_Functions_sbox00_bails
+        - Deploy_Functions_sbox00_apluta
+        - Deploy_Functions_sbox00_td
+        - Deploy_Functions_sbox00_joh
+        - Deploy_Functions_sbox00_aplfpa
+        - Deploy_Functions_sbox00_aplfta
+  #     - Deploy_Functions_sbox00_sbails
+
+      sbox_01:
+        - Deploy_Functions_sbox01_bails
+        - Deploy_Functions_sbox01_apluta
+        - Deploy_Functions_sbox01_td
+        - Deploy_Functions_sbox01_joh
+        - Deploy_Functions_sbox01_aplfpa
+        - Deploy_Functions_sbox01_aplfta
+  #     - Deploy_Functions_sbox01_sbails
+
+      sbox_02:
+        - Deploy_Functions_sbox02_bails
+        - Deploy_Functions_sbox02_apluta
+        - Deploy_Functions_sbox02_td
+        - Deploy_Functions_sbox02_joh
+        - Deploy_Functions_sbox02_aplfpa
+        - Deploy_Functions_sbox02_aplfta
+  #     - Deploy_Functions_sbox02_sbails
+      
+      stg:
+        - Deploy_Functions_stg00_bails
+        - Deploy_Functions_stg00_apluta
+        - Deploy_Functions_stg00_td
+        - Deploy_Functions_stg00_joh
+        - Deploy_Functions_stg00_aplfpa
+        - Deploy_Functions_stg00_aplfta
+  #     - Deploy_Functions_stg00_sbails
+
+      prod:
+        - Deploy_Functions_prod00_bails
+        - Deploy_Functions_prod00_apluta
+        - Deploy_Functions_prod00_td
+        - Deploy_Functions_prod00_joh
+        - Deploy_Functions_prod00_aplfpa
+        - Deploy_Functions_prod00_aplfta
+  #     - Deploy_Functions_prod00_sbails
 
 stages:
   - stage: Init
@@ -98,7 +138,7 @@ stages:
                   approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
                   instructions: Please validate the build configuration and resume
 
-  # Build shared wheel first as a single operation
+  # Build shared wheel first as a single operation per environment
   - ${{ each deployment in parameters.environment_components }}:
     - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
       displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
@@ -194,27 +234,16 @@ stages:
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
   #  - ${{ each segment in deployment.segments}}:
-      - stage: Deploy_HTML_Databricks_${{ deployment.environment }}
-        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}'
+    - ${{ each lz in deployment.landing_zones}}:
+      - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
         ${{ if eq(deployment.environment, 'sbox')}}:
-          dependsOn: 
-            - Deploy_Functions_${{ deployment.environment }}_bails
-            - Deploy_Functions_${{ deployment.environment }}_apluta
-            - Deploy_Functions_${{ deployment.environment }}_td
-            - Deploy_Functions_${{ deployment.environment }}_joh
-        
-        # ${{ if eq(deployment.environment, 'stg')}}:
-        # dependsOn:
-        #   - Deploy_Functions_${{ deployment.environment }}_bails
-        #   - Deploy_Functions_${{ deployment.environment }}_apluta
-        #   - Deploy_Functions_${{ deployment.environment }}_td
-        #   - Deploy_Functions_${{ deployment.environment }}_joh
+          dependsOn: ${{ parameters.html_stage_dependencies[deployment.environment] }}
 
-        
         jobs:
-          - ${{ each lz in deployment.landing_zones}}:
+  #        - ${{ each lz in deployment.landing_zones}}:
             - ${{ if eq(lz.landing_zone, '02') }}:
-              - job: Deploy_Databricks_HTML_${{ lz.landing_zone }}
+              - job: Deploy_Databricks_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                 pool:
                   vmImage: 'ubuntu-latest'
@@ -240,9 +269,15 @@ stages:
                       databricks workspace mkdirs /live
                       databricks workspace import_dir Databricks /live --overwrite
                     displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
+                
+            - ${{ if ne(lz.landing_zone, '02') }}:
+              - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+                displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
+                steps:
+                  - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"
 
-              - job: Configure_HTML_Upload_${{ lz.landing_zone }}
-                displayName: 'Upload HTML Templates to LZ ${{ lz.landing_zone }}'
+              - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+                displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
                 pool: 
                   name: ${{ deployment.pool_name }}
                 steps:
@@ -293,12 +328,11 @@ stages:
   
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
-  #  - ${{ each segment in deployment.segments }}:
-      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}
-        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}'
-        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}
+    - ${{ each lz in deployment.landing_zones }}:
+      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
+        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
         jobs:
-          - ${{ each lz in deployment.landing_zones }}:
             - ${{ if eq(lz.landing_zone, '02') }}:    
               - job:
                 displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
@@ -386,3 +420,9 @@ stages:
 
                   #  databricks bundle run -t sandbox db_wf_joh_recieve_job
                   displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
+            
+            - ${{ if ne(lz.landing_zone, '02') }}:
+              - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+                displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
+                steps:
+                  - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"

@@ -238,12 +238,15 @@ stages:
         - ${{ if eq(deployment.environment, 'sbox')}}:
           - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
             displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-            ${{ if eq(deployment.environment, 'sbox') }}:
-              dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}_{2}', deployment.environment, lz.landing_zone, segment)] }}
-            ${{ if eq(deployment.environment, 'stg') }}:
-              dependsOn: ${{ parameters.html_stage_dependencies[format('stg_{0}_{1}', lz.landing_zone, segment)] }}
-            ${{ if eq(deployment.environment, 'prod') }}:
-              dependsOn: ${{ parameters.html_stage_dependencies[format('prod_{0}_{1}', lz.landing_zone, segment)] }}
+            dependsOn:
+              - ${{ each dependency in parameters.html_stage_dependencies[format('{0}_{1}', deployment.deployment, lz.landing_zone)] }}:
+                - ${{ dependency }}
+            # ${{ if eq(deployment.environment, 'sbox') }}:
+            #   dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}_{2}', deployment.environment, lz.landing_zone, segment)] }}
+            # ${{ if eq(deployment.environment, 'stg') }}:
+            #   dependsOn: ${{ parameters.html_stage_dependencies[format('stg_{0}_{1}', lz.landing_zone, segment)] }}
+            # ${{ if eq(deployment.environment, 'prod') }}:
+            #   dependsOn: ${{ parameters.html_stage_dependencies[format('prod_{0}_{1}', lz.landing_zone, segment)] }}
   #         dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}', deployment.environment, lz.landing_zone)] }} 
   #         dependsOn: ${{ parameters.html_stage_dependencies[deployment.deployment] }}
 

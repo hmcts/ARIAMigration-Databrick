@@ -1,212 +1,388 @@
 trigger:
   branches:
     include:
-    - main
+      - main
 
 pool:
-  vmImage: 'ubuntu-latest' 
+  vmImage: 'ubuntu-latest'
 
-variables:
-  - name: env
-    value: 'sandbox'
-  - name: DATABRICKS_HOST_WORKSPACE_MAIN00
-    value: 'https://adb-3635282203417052.12.azuredatabricks.net'
-  - name: DATABRICKS_HOST_WORKSPACE_MAIN01
-    value: 'https://adb-376876256300083.3.azuredatabricks.net/'
-  - name: DATABRICKS_HOST_WORKSPACE_MAIN02
-    value: 'https://adb-1879076228317698.18.azuredatabricks.net'
+parameters:
+  - name: environment_components
+    type: object
+    default:
+      - deployment: sbox_aria
+        environment: sbox
+        service_connection: DTS-DATAINGEST-SBOX
+        pool_name: 'hmcts-sds-ptlsbox'
+        segments: ['bails', 'apluta', 'td', 'joh'] #sbails does not exist in 00, (fpa, fta) -> causing tf errors at the moment to create even though they dont exist
+        landing_zones: 
+          - landing_zone: '00'
+            databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN00)"
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest00landingsbox'
+            Resource_Group: 'ingest00-main-sbox'
+          - landing_zone: '01'
+            databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest01landingsbox'
+            Resource_Group: 'ingest01-main-sbox'
+          - landing_zone: '02'
+            databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest02landingsbox'
+            Resource_Group: 'ingest02-main-sbox'
+
+      # - deployment: stg_aria
+      #   environment: stg
+      #   service_connection: DTS-DATAINGEST-STG
+      #   dependsOn: sbox_aria
+      #   pool_name: 'hmcts-sds-ptl'
+      #   landing_zones:
+      #     - landing_zone: '00'
+      #       HTML_StorageAccount: 'ingest00landingstg'
+      #       Resource_Group: 'ingest00-main-stg'
+      #       Client_ID: $(STG_CLIENT_ID)
+      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
+      #     - landing_zone: '01'
+      #       HTML_StorageAccount: 'ingest01landingstg'
+      #       Resource_Group: 'ingest01-main-stg'
+      #       Client_ID: $(STG_CLIENT_ID)
+      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
+
+      # - deployment: prod_aria
+      #   environment: prod
+      #   service_connection: DTS-DATAINGEST-PROD
+      #   dependsOn: stg_aria
+      #   pool_name: 'hmcts-sds-ptl'
+      #   landing_zones: 
+      #     - landing_zone: '00'
+      #       HTML_StorageAccount: 'ingest00landingprod'
+      #       Resource_Group: 'ingest00-main-prod'
+      #       Client_ID: $(PROD_CLIENT_ID)
+      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+      #     - landing_zone: '01'
+      #       HTML_StorageAccount: 'ingest01landingprod'
+      #       Resource_Group: 'ingest01-main-prod'
+      #       Client_ID: $(PROD_CLIENT_ID)
+      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
 
 stages:
-- stage: 'Build'
-  displayName: 'Build Stage'
-  jobs:
-  - job: BuildJob
-    displayName: 'Run Build and deploy'
-    steps:
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.x'
-      inputs:
-        versionSpec: '3.x'
+  - stage: Init
+    displayName: 'No dependency stage'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Job'
+        steps:
+          - script: echo 'Initial stage set-up'
+            displayName: 'Initial stage set-up'
 
-    - script: |
-        python --version
-        pip install --upgrade pip
-        pip install build
-        pip install databricks-cli
-        python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
-          $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+      - stage: Manual_Approval_${{ deployment.environment }}
+        displayName: 'Manual Approval for ${{ deployment.environment }}'
+        dependsOn: Init
+        jobs:
+          - job: waitForValidation
+            displayName: Wait for Manual Validation
+            pool: server
+            steps:
+              - task: ManualValidation@1
+                timeoutInMinutes: 23160
+                inputs:
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
+                  instructions: Please validate the build configuration and resume
 
-        ls -la $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-      displayName: 'Install Python dependencies & build Python wheel'
-    
-    - script: |
-       pip install --upgrade pip
-       pip install -r AzureFunctions/requirements.txt --target="./AzureFunctions/.python_packages/lib/site-packages"
-      displayName: 'Install JOH AzureFunctions dependencies into package'
+  # Build shared wheel first as a single operation
+  - ${{ each deployment in parameters.environment_components }}:
+    - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+      displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
+      ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+        dependsOn: Manual_Approval_${{ deployment.environment }}
+      ${{ else }}:
+        dependsOn: Init
+      jobs:
+        - job: BuildWheel
+          displayName: 'Build Shared Python Wheel'
+          steps:
+            - task: UsePythonVersion@0
+              displayName: 'Use Python 3.x'
+              inputs:
+                versionSpec: '3.x'
 
-    # Configure and deploy to Workspace MAIN00
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN00)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN00'
+            - script: |
+                python --version
+                pip install --upgrade pip
+                pip install build
+                pip install databricks-cli
+                python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
+                  $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+              displayName: 'Build Shared Python Wheel'
 
-    - script: |
-        databricks workspace delete /live --recursive 
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN00 Workspace'
+            - task: PublishBuildArtifacts@1
+              inputs:
+                PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+                ArtifactName: 'ariafunction'
+                publishLocation: 'Container'
+              displayName: 'Publish Shared Wheel Artifact'
 
-    # Configure and deploy to Workspace MAIN01
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN01)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN01'
+  # Build function app package for each segment
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each segment in deployment.segments }}:
+      - stage: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+        displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
+        dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+        jobs:
+          - job: BuildFunction
+            displayName: 'Build Azure Function for ${{ segment }}'
+            steps:
+              - script: |
+                  pip install --upgrade pip
+                  pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
+                    --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
+                displayName: 'Install dependencies for ${{ segment }}'
 
-    - script: |
-        databricks workspace delete /live --recursive
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN01 Workspace'
+              - task: PublishBuildArtifacts@1
+                inputs:
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
+                  ArtifactName: 'functionapp-${{ segment }}'
+                  publishLocation: 'Container'
+                displayName: 'Publish Function App for ${{ segment }}'
+  
+  # Loop through for LZ 02 to deploy artifacts first
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each segment in deployment.segments}}:
+      - stage: Deploy_Functions_${{ deployment.environment }}_${{ segment }}
+        displayName: 'Deploy Functions for ${{ deployment.environment }}_${{ segment }}'
+        dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+        jobs:
+          - ${{ each lz in deployment.landing_zones}}:
+            - ${{ if eq(lz.landing_zone, '02') }}:
+              - job: Deploy_Function_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'ariafunction'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Wheel Artifact'
 
-    # Configure and deploy to Workspace MAIN02
-    - script: |
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
+                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-    - script: |
-        databricks workspace delete /live --recursive
-        databricks workspace mkdirs /live
-        databricks workspace import_dir Databricks /live --overwrite
-      displayName: 'Publish Databricks folder to /live in Databricks MAIN02 Workspace'
-    
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
-        ArtifactName: 'ariafunction'
-        publishLocation: 'Container'
-      displayName: 'Publish Wheel Artifact'
-    
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions'
-        ArtifactName: 'functionapp'
-        publishLocation: 'Container'
-      displayName: 'Publish JOH Azure Function'
-    
-- stage: 'Deploy'
-  displayName: 'Deploy Stage'
-  jobs:
-  - job: DeployDatabricksResources
-    displayName: 'Run Build and deploy'
-    steps:
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/${{ segment }}'
+                      deploymentMethod: 'auto'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
 
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'ariafunction'
-        downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download wheel Artifact'
-    
-    - task: DownloadBuildArtifacts@1
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'functionapp'
-        downloadPath: '$(Pipeline.Workspace)'
-      displayName: 'Download Azure Function Artifact'
-    
-    - task: AzureFunctionApp@2
-      inputs: 
-        connectedServiceNameARM: 'DTS-DATAINGEST-SBOX'
-        appType: 'functionAppLinux'
-        appName: 'af-joh-sbox02-uks-dlrm-01'
-        package: '$(Pipeline.Workspace)/functionapp'
-        deploymentMethod: 'auto'
-      displayName: 'Deploy Azure Function to af-joh-sbox02-uks-dlrm-01'
-
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.x'
-      inputs:
-        versionSpec: '3.x'
-
-    - script: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          
-          brew install databricks/tap/databricks
-          databricks --version
-      displayName: 'Install Databricks CLI'
-
-      #Ensure databrcks CLI is available in current session (loading homebrew shell)
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
-        databricks --version  
-        echo "[DEFAULT]" > $(HOME)/.databrickscfg
-        echo "host = $(DATABRICKS_HOST_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        echo "token = $(DATABRICKS_TOKEN_WORKSPACE_MAIN02)" >> $(HOME)/.databrickscfg
-        cat ~/.databrickscfg  # Print the contents for debugging
-      displayName: 'Configure Databricks CLI for Workspace MAIN02'
-
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
-
-        set -e 
-
-        WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
-
-        if [ -n "$WHEEL_FILE" ]; then
-          echo "Found wheel file: $WHEEL_FILE"
-
-          FILENAME=$(basename "$WHEEL_FILE")
-          echo "Extracted filename: $FILENAME"
-
-          DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
-          echo "Destination path: $DEST_PATH"
-
-          echo "creating directory dbfs:/FileStore/shared_wheels"
-          databricks fs mkdirs dbfs:/FileStore/shared_wheels    
-
-          echo "copying wheel file to DBFS..."
-          echo "copying $WHEEL_FILE to $DEST_PATH"
-          databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
-
-          echo "Displaying content of dbfs:/FileStore/shared_wheels"
-          databricks fs ls dbfs:/FileStore/shared_wheels
-
-        else
-          echo "No wheel file found"
-          exit 1
-        fi
-      displayName: 'Upload Wheel to Databricks DBFS'
+  # Deploy HTML templates and Databricks code
+  - ${{ each deployment in parameters.environment_components }}:
+  #  - ${{ each segment in deployment.segments}}:
+      - stage: Deploy_HTML_Databricks_${{ deployment.environment }}
+        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}'
+        ${{ if eq(deployment.environment, 'sbox')}}:
+          dependsOn: 
+            - Deploy_Functions_${{ deployment.environment }}_bails
+            - Deploy_Functions_${{ deployment.environment }}_apluta
+            - Deploy_Functions_${{ deployment.environment }}_td
+            - Deploy_Functions_${{ deployment.environment }}_joh
         
-    - script: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-        KEYVAULT_NAME="ingest02-meta002-sbox"
+        # ${{ if eq(deployment.environment, 'stg')}}:
+        # dependsOn:
+        #   - Deploy_Functions_${{ deployment.environment }}_bails
+        #   - Deploy_Functions_${{ deployment.environment }}_apluta
+        #   - Deploy_Functions_${{ deployment.environment }}_td
+        #   - Deploy_Functions_${{ deployment.environment }}_joh
 
-        echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
-        databricks secrets list-secrets $KEYVAULT_NAME
-        databricks secrets list-secrets ingest00-meta002-sbox
-      displayName: 'View KeyVault backed secret keys in Databricks'
-    
-    - script: |
-        echo "Current dir: $(pwd)"
-        ls -al /home/vsts/work/1/s
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+        
+        jobs:
+          - ${{ each lz in deployment.landing_zones}}:
+            - ${{ if eq(lz.landing_zone, '02') }}:
+              - job: Deploy_Databricks_HTML_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                pool:
+                  vmImage: 'ubuntu-latest'
+                steps:
+                  - task: UsePythonVersion@0
+                    displayName: 'Use Python 3.x'
+                    inputs:
+                      versionSpec: '3.x'
 
-        cd ARIA_DABs
+                  - script: |
+                      pip install --upgrade pip
+                      pip install databricks-cli
+                    displayName: 'Install Databricks CLI'
 
-        echo "Current dir: $(pwd)"
-        ls -al  
+                  - script: |
+                      echo "[DEFAULT]" > $(HOME)/.databrickscfg
+                      echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
+                      echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+                    displayName: "Configure Databricks CLI for ENV${{ deployment.environment }} LZ${{ lz.landing_zone }}"
 
-        databricks bundle destroy -t sandbox 
-        databricks bundle validate -t sandbox --debug
-        databricks bundle deploy -t sandbox --debug
+                  - script: |
+                      databricks workspace delete /live --recursive || true
+                      databricks workspace mkdirs /live
+                      databricks workspace import_dir Databricks /live --overwrite
+                    displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
 
-      #  databricks bundle run -t sandbox db_wf_joh_recieve_job
-      displayName: "Deploy Databricks resources to ingest02 workspace"
+              - job: Configure_HTML_Upload_${{ lz.landing_zone }}
+                displayName: 'Upload HTML Templates to LZ ${{ lz.landing_zone }}'
+                pool: 
+                  name: ${{ deployment.pool_name }}
+                steps:
+                  - task: AzureCLI@2
+                    displayName: Configure Storage and Upload HTML Templates
+                    inputs:
+                      azureSubscription: ${{ deployment.service_connection }}
+                      scriptType: 'bash'
+                      scriptLocation: 'inlineScript'
+                      inlineScript: |
+                        echo "Assigning SP Blob Contributor Access"
+                        az role assignment create \
+                          --assignee "${{ lz.Client_ID }}" \
+                          --role "Storage Blob Data Contributor" \
+                          --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
 
+                        echo "Retrieving Storage Account Key"
+                        storage_account_key=$(az storage account keys list \
+                          --resource-group ${{ lz.Resource_Group }} \
+                          --account-name ${{ lz.HTML_StorageAccount }} \
+                          --query '[0].value' -o tsv)
+                        echo "Success! $(HTML_StorageAccount) is $storage_account_key"
+
+                        echo "Retrieving Blob Endpoint"
+                        blob_endpoint=$(az storage account show \
+                          --resource-group ${{ lz.Resource_Group }} \
+                          --name ${{ lz.HTML_StorageAccount }} \
+                          --query "primaryEndpoints.blob" -o tsv)
+                        echo "Success! $(HTML_StorageAccount) is $blob_endpoint"
+
+                        echo "Creating html-template container if not exists"
+                        az storage container create \
+                          --account-name ${{ lz.HTML_StorageAccount }} \
+                          --name html-template \
+                          --account-key $storage_account_key \
+                          --blob-endpoint $blob_endpoint
+                        echo "Success! html-template container created!"
+
+                        echo "Uploading HTML Templates"
+                        az storage blob upload-batch \
+                          --account-name ${{ lz.HTML_StorageAccount }} \
+                          --account-key $storage_account_key \
+                          --destination html-template \
+                          --source '$(Build.SourcesDirectory)/HTML_Templates/' \
+                          --pattern '*.html' \
+                          --overwrite true
+                        echo "Success! HTML templates imported to $(HTML_StorageAccount)/html-template"
+  
+  # Deploy Python wheel to Databricks as final stage
+  - ${{ each deployment in parameters.environment_components }}:
+  #  - ${{ each segment in deployment.segments }}:
+      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}
+        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}'
+        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}
+        jobs:
+          - ${{ each lz in deployment.landing_zones }}:
+            - ${{ if eq(lz.landing_zone, '02') }}:    
+              - job:
+                displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
+                pool: 
+                  vmImage: 'ubuntu-latest'
+                    
+                steps:
+                - task: UsePythonVersion@0
+                  displayName: 'Use Python 3.x'
+                  inputs:
+                    versionSpec: '3.x'
+
+                - script: |
+                      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                      
+                      brew install databricks/tap/databricks
+                      databricks --version
+                  displayName: 'Install Databricks CLI'
+
+                  #Ensure databrcks CLI is available in current session (loading homebrew shell)
+                - script: |
+                    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+                    databricks --version  
+                    echo "[DEFAULT]" > $(HOME)/.databrickscfg
+                    echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
+                    echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+                    cat ~/.databrickscfg  # Print the contents for debugging
+                  displayName: 'Configure Databricks CLI for Workspace 00, 01'
+
+                - script: |
+                    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+
+                    set -e 
+
+                    WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+
+                    if [ -n "$WHEEL_FILE" ]; then
+                      echo "Found wheel file: $WHEEL_FILE"
+
+                      FILENAME=$(basename "$WHEEL_FILE")
+                      echo "Extracted filename: $FILENAME"
+
+                      DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
+                      echo "Destination path: $DEST_PATH"
+
+                      echo "creating directory dbfs:/FileStore/shared_wheels"
+                      databricks fs mkdirs dbfs:/FileStore/shared_wheels    
+
+                      echo "copying wheel file to DBFS..."
+                      echo "copying $WHEEL_FILE to $DEST_PATH"
+                      databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+
+                      echo "Displaying content of dbfs:/FileStore/shared_wheels"
+                      databricks fs ls dbfs:/FileStore/shared_wheels
+
+                    else
+                      echo "No wheel file found"
+                      exit 1
+                    fi
+                  displayName: 'Upload Wheel to Databricks DBFS'
+                    
+                # - script: |
+                #     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+                #     KEYVAULT_NAME="ingest02-meta002-sbox"
+
+                #     echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
+                #     databricks secrets list-secrets $KEYVAULT_NAME
+                #     databricks secrets list-secrets ingest00-meta002-sbox
+                #   displayName: 'View KeyVault backed secret keys in Databricks'
+                
+                - script: |
+                    echo "Current dir: $(pwd)"
+                    ls -al /home/vsts/work/1/s
+                    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+
+                    cd ARIA_DABs
+
+                    echo "Current dir: $(pwd)"
+                    ls -al  
+
+                    databricks bundle destroy -t sandbox 
+                    databricks bundle validate -t sandbox --debug
+                    databricks bundle deploy -t sandbox --debug
+
+                  #  databricks bundle run -t sandbox db_wf_joh_recieve_job
+                  displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"

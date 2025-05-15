@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head id="head">
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        
+        <title>Judicial Officer Details</title>
+    
+        <style>
+            #labels {
+                text-align: right;
+            }
+
+            #table1 {
+                border: 1.5px solid #000;
+                width: 713px;
+            }
+
+            #table2 {
+                border: 1.5px solid #000;
+                width: 700px;
+                height: 400px;
+            }
+
+            #table3 {
+                border: 1.5px solid #000;
+                width: 350px;
+                height: 400px;
+            }
+
+            #table4 {
+                border-collapse: collapse;
+                padding: 10px;
+                border: 1.5px solid #000;
+                width: 340px;
+            }
+
+            #table5 {
+                border-collapse: collapse;
+                border: 1.5px solid #000;
+                width: 713px;
+                height: 400px;
+            }
+
+            #table6 {
+                border-collapse: collapse;
+                border: 1.5px solid #000;
+                width: 1010px;
+            }
+            
+            #table7 {
+                border: 1.5px solid #000;
+                width: 718px;
+            }
+
+            #midpadding {
+                padding: 10px;
+                border: 1.5px solid #000;
+            }
+
+            #midpadding2 {
+                padding: 10px;
+                
+            }
+
+            button:focus {
+                outline: 2px solid #000;
+            }
+
+
+            .tabs {
+                position: relative;
+                min-height: 200px; /* This part sucks */
+                clear: both;
+                /* margin: 25px 0; */
+            }
+
+            .tab {
+                float: left;
+            }
+
+            .tab label {
+                background: #F2F2F2; 
+                padding: 2.5px; 
+                border: 1.5px solid #000; 
+                margin-left: -1px; 
+                position: relative;
+                left: 1px; 
+                font-size: 15px;
+            }
+
+            .tab [type=radio] {
+                display: none;   
+            }
+
+            .content {
+                position: absolute;
+                top: 21px;
+                left: 0;
+                background: #F2F2F2;
+                right: 0;
+                bottom: 0;
+                padding: 20px;
+                border: 1.5px solid #000;
+                width: 720px;
+                min-height: 500px;
+                overflow: auto;
+            }
+
+            #toggle:checked  {
+                display: block;
+            }
+
+            [type=radio]:checked ~ label {
+                background: white;
+                border-bottom: 1px solid rgb(253, 253, 253);
+                z-index: 2;
+                }
+
+            [type=radio]:checked ~ label ~ .content {
+                z-index: 1;
+                }
+            
+            .content label {
+                background: none;
+                padding: 0;
+                border: none;
+                margin-left: 0;
+                position: static;
+                left: 0;
+            }
+
+        </style>
+
+    </head>
+
+    <body bgcolor="#F2F2F2">
+
+        <!-- Header -->
+        <div id="header">
+            <h3>Judicial Officer Details</h3>
+            <table id="table1">
+                <tbody>
+                    <tr>
+                        <td id="labels"><label for="surname">Surname : </label></td>
+                        <td><input type="text" id="surname" size="50" value="{{Surname}}" readonly=""></td>
+                        <td id="labels"><label for="title">Title : </label></td>
+                        <td><input type="text" id="title" value="{{Title}}" readonly=""></td>
+                    </tr>
+                    <tr>
+                        <td id="labels"><label for="name">Forename(s) : </label></td>
+                        <td><input type="text" id="name" size="50" value={{Forenames}} readonly=""></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <br>
+
+        <div class="tabs">
+            <!-- Main -->
+            <div class="tab">
+                <input type="radio" id="tab-1" name="tab-group-1" checked="">
+                <label for="tab-1">Main</label>
+                <div class="content">
+                    <div id="Main">
+                        <table id="table2">
+                            <tbody>
+                                <tr>
+                                <!-- left side -->
+                                    <td style="vertical-align: top;">
+                                        <table id="table3">
+                                            <tbody>
+                                                <tr>
+                                                    <th colspan="2" style="text-align: left;">General</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dateOfBirth">Date of birth : </label></td>
+                                                    <td><input type="date" id="dateOfBirth" value="{{DateOfBirth}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="correspondenceAddress">Correspondence address : </label></td>
+                                                    <td><input type="text" id="correspondenceAddress" value="{{CorrespondenceAddress}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="contactTelephoneNo">Contact telephone number : </label></td>
+                                                    <td><input type="text" id="contactTelephoneNo" value="{{Telephone}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="contactDetails">Contact details : </label></td>
+                                                    <td><input type="textarea" id="contactDetails" value="{{ContactDetails}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="avShortNotice">Available at short notice : </label></td>
+                                                    <td><input type="checkbox" id="avShortNotice" value="{{AvailableAtShortNotice}}" disabled=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="designatedCentre">Designated centre : </label></td>
+                                                    <td><input type="text" id="designatedCentre" value="{{DesignatedCentre}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <table id="table4">
+                                                            <tbody><tr>
+                                                                <td></td>
+                                                                <td>Other centres</td>
+                                                            </tr>
+                                                            {{OtherCentre}}
+
+                                                    </tbody></table>
+                                                    </td>
+                                                </tr>
+
+
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                    <!-- right side -->
+                                    <td style="vertical-align: top;">
+                                        <table id="table3">
+                                            <tbody>
+                                                <tr>
+                                                    <th colspan="2" style="text-align: left;">Employment Details</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="employmentTerms">Employment terms : </label></td>
+                                                    <td><input type="text" id="employmentTerms" value="{{EmploymentTerm}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="permEmployment">Permanent employment : </label></td>
+                                                    <td><input type="text" id="permEmployment" value="{{FullTime}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="identityNo">Identity number : </label></td>
+                                                    <td><input type="text" id="identityNo" value="{{IdentityNumber}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="retirementDatePractice">Retirement date - practice : </label></td>
+                                                    <td><input type="date" id="retirementDatePractice" value="{{DateOfRetirement}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="iaContractEndDate">IA Contract end date : </label></td>
+                                                    <td><input type="date" id="iaContractEndDate" value="{{ContractEndDate}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="contractRenewalDate">Contract renewal date : </label></td>
+                                                    <td><input type="date" id="contractRenewalDate" value="{{ContractRenewalDate}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="doNotUse">Do not use : </label></td>
+                                                    <td><input type="checkbox" id="doNotUse" value="{{DoNotUse}}" disabled=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="dnuReason">Do not use reason : </label></td>
+                                                    <td><input type="text" id="dnuReason" value="{{DoNotUseReason}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="judicialStatus">Judicial status : </label></td>
+                                                    <td><input type="text" id="judicialStatus" value="{{JudicialStatus}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <table id="table4">
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td></td>
+                                                                    <td>Roles</td>
+                                                                    <td>Date of appointment</td>
+                                                                    <td>End date</td>
+                                                                </tr>
+                                                                {{AppointmentPlaceHolder}}
+                                                                
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Addresses -->
+            <div class="tab">
+                <input type="radio" id="tab-2" name="tab-group-1">
+                <label for="tab-2">Addresses</label>
+                <div class="content">
+                    <div id="Addresses">
+                        <table id="table2">
+                            <tbody>
+                                <tr>
+                                <!-- left side -->
+                                    <td style="vertical-align: top;">
+                                        <table id="table3">
+                                            <tbody>
+                                                <tr>
+                                                    <th colspan="2" style="text-align: left;">Home</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" style="vertical-align: top;"><label for="homeAddress">Address : </label></td>
+                                                    <td style="vertical-align: top;">
+                                                        <input type="text" id="addressLine1" value="{{Address1}}" readonly><br>
+                                                        <input type="text" id="addressLine2" value="{{Address2}}" readonly><br>
+                                                        <input type="text" id="addressLine3" value="{{Address3}}" readonly><br>
+                                                        <input type="text" id="addressLine4" value="{{Address4}}" readonly><br>
+                                                        <input type="text" id="addressLine5" value="{{Address5}}" readonly>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="homePostcode">Postcode : </label></td>
+                                                    <td><input type="text" id="postcode" value="{{Postcode}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="homePhone">Phone : </label></td>
+                                                    <td><input type="text" id="homePhone" value="{{Telephone}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="homeMobile">Mobile : </label></td>
+                                                    <td><input type="text" id="homeMobile" value="{{Mobile}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="homeEmail">Email : </label></td>
+                                                    <td><input type="text" id="homeEmail" value="{{Email}}" readonly=""></td>
+                                                </tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                    <!-- right side -->
+                                    <td style="vertical-align: top;">
+                                        <table id="table3">
+                                            <tbody>
+                                                <tr>
+                                                    <th colspan="2" style="text-align: left;">Business</th>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels" style="vertical-align: top;"><label for="businessAddress">Address : </label></td>
+                                                    <td style="vertical-align: top;">
+                                                        <input type="text" id="businessAddressLine1"value="{{BusinessAddress1}}" readonly=""><br>
+                                                        <input type="text" id="businessAddressLine2"value="{{BusinessAddress2}}" readonly=""><br>
+                                                        <input type="text" id="businessAddressLine3"value="{{BusinessAddress3}}" readonly=""><br>
+                                                        <input type="text" id="businessAddressLine4"value="{{BusinessAddress4}}" readonly=""><br>
+                                                        <input type="text" id="businessAddressLine5"value="{{BusinessAddress5}}" readonly="">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="businessPostcode">Postcode : </label></td>
+                                                    <td><input type="text" id="businessPostcode" value="{{BusinessPostcode}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="businessPhone">Phone : </label></td>
+                                                    <td><input type="text" id="businessPhone" value="{{BusinessTelephone}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="businessFax">Fax : </label></td>
+                                                    <td><input type="text" id="businessFax" value="{{BusinessFax}}" readonly=""></td>
+                                                </tr>
+                                                <tr>
+                                                    <td id="labels"><label for="businessEmail">Email : </label></td>
+                                                    <td><input type="text" id="businessEmail" value="{{BusinessEmail}}" readonly=""></td>
+                                                </tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                                <tr><td id="midpadding2"></td><td id="midpadding2"></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </td> 
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Miscellaneous -->
+            <div class="tab">
+                <input type="radio" id="tab-3" name="tab-group-1">
+                <label for="tab-3">Miscellaneous</label>
+                <div class="content">
+                    <div id="Miscellaneous">
+                        <table id="table5">
+                            <tbody>
+                                <tr>
+                                    <td id="labels" style="width:200px; vertical-align: top;"><label for="judicialInstructions">Judicial instructions : </label></td>
+                                    <td style="width:500px; vertical-align: top;"><textarea id="judicialInstructions" rows="12" cols="60" readonly="">{{JudicialInstructions}}</textarea></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels" style="width:200px; vertical-align: top;"><label for="judicialInstructionsDate">Judicial instructions date : </label></td>
+                                    <td style="width:500px; vertical-align: top;"><input type="date" id="judicialInstructionsDate"value="{{JudicialInstructionsDate}}" readonly=""></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels" style="width:200px; vertical-align: top;"><label for="notes">Notes : </label></td>
+                                    <td style="width:500px; vertical-align: top;"><textarea id="notes" rows="10" cols="60" readonly="">{{Notes}}</textarea></td>
+                                </tr>                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="tab">
+                <input type="radio" id="tab-4" name="tab-group-1">
+                <label for="tab-4">History</label>
+                <div class="content">
+                    <div id="History">
+                        <table id="table2">
+                            <tbody>
+                                <tr>
+                                    <td style="padding:10px">
+                                    </td>
+                                </tr>
+                                    <tr>
+                                        <td style="vertical-align:top;">
+                                        <table id="table5">
+                                            <tbody>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Transaction type</th>
+                                                    <th>User</th>
+                                                    <th>Comment</th>
+                                                </tr>
+                                                    {{HistoryPlaceHolder}}
+
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>

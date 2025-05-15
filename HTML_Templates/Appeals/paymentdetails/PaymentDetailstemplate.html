@@ -1,0 +1,130 @@
+<!-- Payment Details copy 01-->
+<div class="nested-tab" style="padding-right:2px; border: 1px solid black">
+    <input type="radio" id="nested-tab-{{nested_table_number}}" name="nested-tab-group-18" checked>
+    <label for="nested-tab-{{nested_table_number}}">Payment Details{{payment_number}}</label>
+    <div class="nested-content">
+        
+                                       <div id="paymentDetails">
+            <br>
+            <br>
+            <table id="table13">
+                <tbody>
+                <tr>
+                    <th style="vertical-align: top; text-align: left; padding-left: 5px;">Payment Details</th>
+                </tr>
+                <tr>
+                <!-- left side -->
+                <td style="vertical-align: top;">
+                    <table id="table12" style="padding-left: 100px;">
+                        <tbody>
+                        <tr>
+                            <td id="labels"><label for="eventDate">Event Date : </label></td>
+                            <td><input type="date" id="eventDate" name="eventDate" value="{{TransactionDate}}" readonly></td>
+                        </tr>
+                        <tr>
+                            <td id="labels"><label for="eventType">Event Type : </label></td>
+                            <!-- <td><select id="eventType" disabled style="width:150px;">
+                                <option></option>
+                            </select></td> -->
+                            <td><input type="text" id="eventType" value="{{TransactionDescription}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="eventStatus">Event Status : </label></td>
+                            <!-- <td><select id="eventStatus" disabled style="width:150px;">
+                                <option></option>
+                            </select></td> -->
+                            <td><input type="text" id="eventStatus" value="{{TransactionStatusDesc}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="eventNotifiedDate">Event Notified Date : </label></td>
+                            <td><input type="date" id="eventNotifiedDate" value="{{LiberataNotifiedDate}}" readonly></td>    
+                        </tr>
+                    </tbody></table>
+                    <table id="table12" style="padding-left: 45px;">
+                        <tbody>
+                        <tr>
+                            <td id="labels"><label for="barclayTransId">Barclaycard Transaction ID : </label></td>
+                            <td><input type="text" id="barclayTransId" value="{{BarclaycardTransactionId}}" readonly></td>
+                        </tr>
+                        <tr>
+                            <td id="labels"><label for="paymentRef">Payment Reference : </label></td>
+                            <td><input type="text" id="paymentRef" value="{{PaymentReference}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="originalPayRef">Original Payment Reference : </label></td>
+                            <td><input type="text" id="originalPayRef" value="{{OriginalPaymentReference}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="aggPaymentUrn">Aggregated Payment URN : </label></td>
+                            <td><input type="text" id="aggPaymentUrn" value="{{AggregatedPaymentURN}}" readonly></td>   
+                        </tr>
+                    </tbody></table>
+                </td>
+                <!-- right side -->
+                <td style="vertical-align: top;">
+                    <table id="table12" style="padding-right: 75px">
+                        <tbody>
+                        <tr>
+                            <td id="labels"><label for="expectedPaymentDate">Expected Payment Date : </label></td>
+                            <td><input type="date" id="expectedPaymentDate" value="{{ExpectedDate}}"readonly></td>
+                        </tr>
+                        <tr>
+                            <td id="labels"><label for="clearedDate">Cleared Date : </label></td>
+                            <td><input type="date" id="clearedDate" value="{{clearedDate}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="eventAmount">Event Amount(£) : </label></td>
+                            <td><input type="text" id="eventAmount" value="{{Amount}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels"><label for="eventMethod">Event Method : </label></td>
+                            <!-- <td><select id="eventMethod" disabled style="width:148px;">
+                                <option></option>
+                            </select></td>                                   -->
+                            <td><input type="text" id="eventMethod" value="{{TransactionMethodDesc}}" readonly></td>
+                    </tbody></table>
+                    <table id="table12" style="padding-right: 180px">
+                        <tbody>
+                        <tr>
+                            <td id="labels"><label for="lastCardDigit">Last 4 Digits from Card : </label></td>
+                            <td><input type="text" id="lastCardDigit" size="6" value="{{Last4DigitsCard}}" readonly></td>
+                        </tr>
+                        <tr>
+                            <td id="labels"><label for="createUserId">Create User ID : </label></td>
+                            <td><input type="text" id="createUserId" size="6" value="{{CreateUserId}}" readonly></td>
+                        </tr> 
+                        <tr>
+                            <td id="labels" style="padding-bottom: 30px;"><label for="editUserId">Last Edit User ID : </label></td>
+                            <td><input type="text" id="editUserId" size="6" value="{{LastEditUserId}}" readonly></td>
+                        </tr>                              
+                    </tbody></table>
+                </td>
+                </tr>
+                <tr>
+                    <td style="vertical-align: top;">
+                        <label for="payerSurname">Payer Surname :</label>
+                        <input type="text" id="payerSurname" style="width:300px" value="{{payerSurname}}" readonly>
+                    </td>
+                    <td style="vertical-align: top;">
+                        <label for="payerForename">Payer Forenames :</label>
+                        <input type="text" id="payerForename" style="width:300px" value="{{payerForename}}" readonly>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="vertical-align: top;">
+                        <label for="notes" style="display: block;">Notes:</label>
+                        <textarea id="notes" rows="7" style="width:850px;">{{TransactionNotes}}</textarea>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        
+
+
+
+
+    </div>
+ </div>
+ <!-- Payment Details copy 02-->

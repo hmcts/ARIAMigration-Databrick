@@ -196,40 +196,46 @@ stages:
   
   # Loop through for LZ 02 to deploy artifacts first
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each segment in deployment.segments}}:
-      - stage: Deploy_Functions_${{ deployment.environment }}_${{ segment }}
-        displayName: 'Deploy Functions for ${{ deployment.environment }}_${{ segment }}'
-        dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-        jobs:
-          - ${{ each lz in deployment.landing_zones}}:
-            - ${{ if eq(lz.landing_zone, '02') }}:
-              - job: Deploy_Function_${{ lz.landing_zone }}
-                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-                steps:
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'ariafunction'
-                      downloadPath: '$(Pipeline.Workspace)'
-                    displayName: 'Download Wheel Artifact'
+    - ${{ each lz in deployment.landing_zones}}:
+      - ${{ each segment in deployment.segments}}:
+        - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
+          displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
+          dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+          jobs:
+          - ${{ if eq(lz.landing_zone, '02') }}:
+            - job: Deploy_Function_${{ lz.landing_zone }}
+              displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'ariafunction'
+                    downloadPath: '$(Pipeline.Workspace)'
+                  displayName: 'Download Wheel Artifact'
 
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'functionapp-${{ segment }}'
-                      downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
-                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
+                - task: DownloadBuildArtifacts@1
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'functionapp-${{ segment }}'
+                    downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
+                  displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-                  - task: AzureFunctionApp@2
-                    inputs:
-                      connectedServiceNameARM: ${{ deployment.service_connection }}
-                      appType: 'functionAppLinux'
-                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/${{ segment }}'
-                      deploymentMethod: 'auto'
-                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                - task: AzureFunctionApp@2
+                  inputs:
+                    connectedServiceNameARM: ${{ deployment.service_connection }}
+                    appType: 'functionAppLinux'
+                    appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                    package: '$(Pipeline.Workspace)/${{ segment }}'
+                    deploymentMethod: 'auto'
+                  displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                  
+          - ${{ if ne(lz.landing_zone, '02') }}:
+            - job: DummyJob
+              displayName: 'No deployment for this LZ'
+              steps:
+              - script: echo "Skipping deployment"
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
@@ -238,18 +244,8 @@ stages:
         - ${{ if eq(deployment.environment, 'sbox')}}:
           - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
             displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-            dependsOn:
-              - ${{ each dependency in parameters.html_stage_dependencies[format('{0}_{1}', deployment.deployment, lz.landing_zone)] }}:
-                - ${{ dependency }}
-            # ${{ if eq(deployment.environment, 'sbox') }}:
-            #   dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}_{2}', deployment.environment, lz.landing_zone, segment)] }}
-            # ${{ if eq(deployment.environment, 'stg') }}:
-            #   dependsOn: ${{ parameters.html_stage_dependencies[format('stg_{0}_{1}', lz.landing_zone, segment)] }}
-            # ${{ if eq(deployment.environment, 'prod') }}:
-            #   dependsOn: ${{ parameters.html_stage_dependencies[format('prod_{0}_{1}', lz.landing_zone, segment)] }}
-  #         dependsOn: ${{ parameters.html_stage_dependencies[format('{0}_{1}', deployment.environment, lz.landing_zone)] }} 
-  #         dependsOn: ${{ parameters.html_stage_dependencies[deployment.deployment] }}
-
+            dependsOn: 
+              - ${{ format('Deploy_Functions_{0}{1}_{2}', deployment.environment, lz.landing_zone, segment) }}
             jobs:
       #        - ${{ each lz in deployment.landing_zones}}:
                 - ${{ if eq(lz.landing_zone, '02') }}:

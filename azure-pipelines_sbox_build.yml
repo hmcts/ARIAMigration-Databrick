@@ -101,6 +101,7 @@ stages:
       - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
         displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
 #        dependsOn: Manual_Approval_${{ deployment.environment }}
+        # Build Python wheel
         jobs:
           - job: BuildWheel
             displayName: 'Build Shared Python Wheel'
@@ -126,6 +127,7 @@ stages:
                   publishLocation: 'Container'
                 displayName: 'Publish Shared Wheel Artifact'
 
+        # Publish Wheel Artifacts for each segment across each environment
       - ${{ each segment in deployment.segments }}:
         - stage: ${{ format('{0}_{1}', deployment.deployment, segment) }}
           displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
@@ -249,12 +251,14 @@ stages:
                       --resource-group ${{ lz.Resource_Group }} \
                       --account-name ${{ lz.HTML_StorageAccount }} \
                       --query '[0].value' -o tsv)
+                    echo "Success! $(HTML_StorageAccount) is $storage_account_key"
 
                     echo "Retrieving Blob Endpoint"
                     blob_endpoint=$(az storage account show \
                       --resource-group ${{ lz.Resource_Group }} \
                       --name ${{ lz.HTML_StorageAccount }} \
                       --query "primaryEndpoints.blob" -o tsv)
+                    echo "Success! $(HTML_StorageAccount) is $blob_endpoint"
 
                     echo "Creating html-template container if not exists"
                     az storage container create \
@@ -262,15 +266,17 @@ stages:
                       --name html-template \
                       --account-key $storage_account_key \
                       --blob-endpoint $blob_endpoint
+                    echo "Success! html-template container created!"
 
                     echo "Uploading HTML Templates"
                     az storage blob upload-batch \
                       --account-name ${{ lz.HTML_StorageAccount }} \
                       --account-key $storage_account_key \
                       --destination html-template \
-                      --source '$(Pipeline.Workspace)/HTML_Templates/' \
+                      --source '$(Build.SourcesDirectory)/HTML_Templates/' \
                       --pattern '*.html' \
                       --overwrite true
+                    echo "Success! HTML templates imported to $(HTML_StorageAccount)/html-template"
   
   # Deploy Python wheel and Databricks Asset Bundles to relevant environment and landing zone
   - ${{ each deployment in parameters.environment_components }}:

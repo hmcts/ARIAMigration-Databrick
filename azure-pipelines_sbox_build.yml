@@ -198,44 +198,46 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - ${{ each segment in deployment.segments}}:
-        - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
-          displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
-          dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-          jobs:
-          - ${{ if eq(lz.landing_zone, '02') }}:
-            - job: Deploy_Function_${{ lz.landing_zone }}
-              displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-              steps:
-                - task: DownloadBuildArtifacts@1
-                  inputs:
-                    buildType: 'current'
-                    downloadType: 'single'
-                    artifactName: 'ariafunction'
-                    downloadPath: '$(Pipeline.Workspace)'
-                  displayName: 'Download Wheel Artifact'
+        - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}: #remove landing zone/sbox in future updates
 
-                - task: DownloadBuildArtifacts@1
-                  inputs:
-                    buildType: 'current'
-                    downloadType: 'single'
-                    artifactName: 'functionapp-${{ segment }}'
-                    downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
-                  displayName: 'Download Azure Function Artifact for ${{ segment }}'
+          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
+            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
+            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+            jobs:
+            - ${{ if eq(lz.landing_zone, '02') }}:
+              - job: Deploy_Function_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'ariafunction'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Wheel Artifact'
 
-                - task: AzureFunctionApp@2
-                  inputs:
-                    connectedServiceNameARM: ${{ deployment.service_connection }}
-                    appType: 'functionAppLinux'
-                    appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                    package: '$(Pipeline.Workspace)/${{ segment }}'
-                    deploymentMethod: 'auto'
-                  displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
+                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-          - ${{ if ne(lz.landing_zone, '02') }}:
-            - job: DummyJob
-              displayName: 'No deployment for this LZ'
-              steps:
-              - script: echo "Skipping deployment"
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/${{ segment }}'
+                      deploymentMethod: 'auto'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+
+            - ${{ if ne(lz.landing_zone, '02') }}:
+              - job: DummyJob
+                displayName: 'No deployment for this LZ'
+                steps:
+                - script: echo "Skipping deployment"
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:

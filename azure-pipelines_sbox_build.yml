@@ -64,54 +64,6 @@ parameters:
       #       Client_ID: $(PROD_CLIENT_ID)
       #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
   
-  - name: html_stage_dependencies
-    type: object
-    default:
-      sbox_00:
-        - Deploy_Functions_sbox00_bails
-        - Deploy_Functions_sbox00_apluta
-        - Deploy_Functions_sbox00_td
-        - Deploy_Functions_sbox00_joh
-        - Deploy_Functions_sbox00_aplfpa
-        - Deploy_Functions_sbox00_aplfta
-  #     - Deploy_Functions_sbox00_sbails
-
-      sbox_01:
-        - Deploy_Functions_sbox01_bails
-        - Deploy_Functions_sbox01_apluta
-        - Deploy_Functions_sbox01_td
-        - Deploy_Functions_sbox01_joh
-        - Deploy_Functions_sbox01_aplfpa
-        - Deploy_Functions_sbox01_aplfta
-  #     - Deploy_Functions_sbox01_sbails
-
-      sbox_02:
-        - Deploy_Functions_sbox02_bails
-        - Deploy_Functions_sbox02_apluta
-        - Deploy_Functions_sbox02_td
-        - Deploy_Functions_sbox02_joh
-        - Deploy_Functions_sbox02_aplfpa
-        - Deploy_Functions_sbox02_aplfta
-  #     - Deploy_Functions_sbox02_sbails
-      
-      stg_00:
-        - Deploy_Functions_stg00_bails
-        - Deploy_Functions_stg00_apluta
-        - Deploy_Functions_stg00_td
-        - Deploy_Functions_stg00_joh
-        - Deploy_Functions_stg00_aplfpa
-        - Deploy_Functions_stg00_aplfta
-  #     - Deploy_Functions_stg00_sbails
-
-      prod_00:
-        - Deploy_Functions_prod00_bails
-        - Deploy_Functions_prod00_apluta
-        - Deploy_Functions_prod00_td
-        - Deploy_Functions_prod00_joh
-        - Deploy_Functions_prod00_aplfpa
-        - Deploy_Functions_prod00_aplfta
-  #     - Deploy_Functions_prod00_sbails
-
 stages:
   - stage: Init
     displayName: 'No dependency stage'
@@ -241,13 +193,19 @@ stages:
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each segment in deployment.segments}}:
+    #- ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones}}:
         - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}: #remove landing zone/sbox in future updates
-          - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
+          - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-            dependsOn: 
-              - ${{ format('Deploy_Functions_{0}{1}_{2}', deployment.environment, lz.landing_zone, segment) }}
+            dependsOn:
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
+              - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+
             jobs:
       #        - ${{ each lz in deployment.landing_zones}}:
                 - ${{ if eq(lz.landing_zone, '02') }}:
@@ -336,12 +294,12 @@ stages:
     
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each segment in deployment.segments}}:
+    #- ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones }}:
         - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}:
-          - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
-            displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}${{ segment }}'
-            dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
+          - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
+            displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
+            dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
             jobs:
                 - ${{ if eq(lz.landing_zone, '02') }}:    
                   - job:

@@ -230,7 +230,7 @@ stages:
                     package: '$(Pipeline.Workspace)/${{ segment }}'
                     deploymentMethod: 'auto'
                   displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
-                  
+
           - ${{ if ne(lz.landing_zone, '02') }}:
             - job: DummyJob
               displayName: 'No deployment for this LZ'
@@ -241,7 +241,7 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones}}:
-        - ${{ if eq(deployment.environment, 'sbox')}}:
+        - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}: #remove landing zone/sbox in future updates
           - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
             displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
             dependsOn: 
@@ -336,100 +336,101 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each segment in deployment.segments}}:
       - ${{ each lz in deployment.landing_zones }}:
-        - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
-          displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}${{ segment }}'
-          dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
-          jobs:
-              - ${{ if eq(lz.landing_zone, '02') }}:    
-                - job:
-                  displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
-                  pool: 
-                    vmImage: 'ubuntu-latest'
-                      
-                  steps:
-                  - task: UsePythonVersion@0
-                    displayName: 'Use Python 3.x'
-                    inputs:
-                      versionSpec: '3.x'
-
-                  - script: |
-                        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}:
+          - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
+            displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}${{ segment }}'
+            dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_${{ segment }}
+            jobs:
+                - ${{ if eq(lz.landing_zone, '02') }}:    
+                  - job:
+                    displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
+                    pool: 
+                      vmImage: 'ubuntu-latest'
                         
-                        brew install databricks/tap/databricks
-                        databricks --version
-                    displayName: 'Install Databricks CLI'
+                    steps:
+                    - task: UsePythonVersion@0
+                      displayName: 'Use Python 3.x'
+                      inputs:
+                        versionSpec: '3.x'
 
-                    #Ensure databrcks CLI is available in current session (loading homebrew shell)
-                  - script: |
-                      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
-                      databricks --version  
-                      echo "[DEFAULT]" > $(HOME)/.databrickscfg
-                      echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
-                      echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
-                      cat ~/.databrickscfg  # Print the contents for debugging
-                    displayName: 'Configure Databricks CLI for Workspace 00, 01'
+                    - script: |
+                          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                          
+                          brew install databricks/tap/databricks
+                          databricks --version
+                      displayName: 'Install Databricks CLI'
 
-                  - script: |
-                      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+                      #Ensure databrcks CLI is available in current session (loading homebrew shell)
+                    - script: |
+                        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
+                        databricks --version  
+                        echo "[DEFAULT]" > $(HOME)/.databrickscfg
+                        echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
+                        echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+                        cat ~/.databrickscfg  # Print the contents for debugging
+                      displayName: 'Configure Databricks CLI for Workspace 00, 01'
 
-                      set -e 
+                    - script: |
+                        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  
 
-                      WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+                        set -e 
 
-                      if [ -n "$WHEEL_FILE" ]; then
-                        echo "Found wheel file: $WHEEL_FILE"
+                        WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
 
-                        FILENAME=$(basename "$WHEEL_FILE")
-                        echo "Extracted filename: $FILENAME"
+                        if [ -n "$WHEEL_FILE" ]; then
+                          echo "Found wheel file: $WHEEL_FILE"
 
-                        DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
-                        echo "Destination path: $DEST_PATH"
+                          FILENAME=$(basename "$WHEEL_FILE")
+                          echo "Extracted filename: $FILENAME"
 
-                        echo "creating directory dbfs:/FileStore/shared_wheels"
-                        databricks fs mkdirs dbfs:/FileStore/shared_wheels    
+                          DEST_PATH="dbfs:/FileStore/shared_wheels/$FILENAME"
+                          echo "Destination path: $DEST_PATH"
 
-                        echo "copying wheel file to DBFS..."
-                        echo "copying $WHEEL_FILE to $DEST_PATH"
-                        databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+                          echo "creating directory dbfs:/FileStore/shared_wheels"
+                          databricks fs mkdirs dbfs:/FileStore/shared_wheels    
 
-                        echo "Displaying content of dbfs:/FileStore/shared_wheels"
-                        databricks fs ls dbfs:/FileStore/shared_wheels
+                          echo "copying wheel file to DBFS..."
+                          echo "copying $WHEEL_FILE to $DEST_PATH"
+                          databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
 
-                      else
-                        echo "No wheel file found"
-                        exit 1
-                      fi
-                    displayName: 'Upload Wheel to Databricks DBFS'
-                      
-                  # - script: |
-                  #     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
-                  #     KEYVAULT_NAME="ingest02-meta002-sbox"
+                          echo "Displaying content of dbfs:/FileStore/shared_wheels"
+                          databricks fs ls dbfs:/FileStore/shared_wheels
 
-                  #     echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
-                  #     databricks secrets list-secrets $KEYVAULT_NAME
-                  #     databricks secrets list-secrets ingest00-meta002-sbox
-                  #   displayName: 'View KeyVault backed secret keys in Databricks'
-                  
-                  - script: |
-                      echo "Current dir: $(pwd)"
-                      ls -al /home/vsts/work/1/s
-                      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+                        else
+                          echo "No wheel file found"
+                          exit 1
+                        fi
+                      displayName: 'Upload Wheel to Databricks DBFS'
+                        
+                    # - script: |
+                    #     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
+                    #     KEYVAULT_NAME="ingest02-meta002-sbox"
 
-                      cd ARIA_DABs
+                    #     echo "Query databricks secrets inside KeyVault backed scope (ingest00-meta002-sbox)"
+                    #     databricks secrets list-secrets $KEYVAULT_NAME
+                    #     databricks secrets list-secrets ingest00-meta002-sbox
+                    #   displayName: 'View KeyVault backed secret keys in Databricks'
+                    
+                    - script: |
+                        echo "Current dir: $(pwd)"
+                        ls -al /home/vsts/work/1/s
+                        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 
 
-                      echo "Current dir: $(pwd)"
-                      ls -al  
+                        cd ARIA_DABs
 
-                      databricks bundle destroy -t sandbox 
-                      databricks bundle validate -t sandbox --debug
-                      databricks bundle deploy -t sandbox --debug
+                        echo "Current dir: $(pwd)"
+                        ls -al  
 
-                    #  databricks bundle run -t sandbox db_wf_joh_recieve_job
-                    displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
-              
-              - ${{ if ne(lz.landing_zone, '02') }}:
-                - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
-                  displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
-                  steps:
-                    - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"
+                        databricks bundle destroy -t sandbox 
+                        databricks bundle validate -t sandbox --debug
+                        databricks bundle deploy -t sandbox --debug
+
+                      #  databricks bundle run -t sandbox db_wf_joh_recieve_job
+                      displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
+                
+                - ${{ if ne(lz.landing_zone, '02') }}:
+                  - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+                    displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
+                    steps:
+                      - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"

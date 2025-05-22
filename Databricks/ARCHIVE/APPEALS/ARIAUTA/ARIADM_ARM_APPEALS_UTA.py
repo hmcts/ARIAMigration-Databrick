@@ -106,6 +106,107 @@ pip install azure-storage-blob
 
 # COMMAND ----------
 
+# DBTITLE 1,Determine KeyVault Name Based on Workspace URL
+# Get the current Databricks workspace URL from Spark configuration
+workspace_url = spark.conf.get("spark.databricks.workspaceUrl")
+
+# Define mapping of known workspace URLs to Key Vault/environment names
+workspace_mapping = {
+    "adb-3635282203417052.12.azuredatabricks.net": "ingest00-meta002-sbox",
+    "adb-376876256300083.3.azuredatabricks.net": "ingest01-meta002-sbox",
+    "adb-1879076228317698.18.azuredatabricks.net": "ingest02-meta002-sbox",
+    "adb-4305432441461530.10.azuredatabricks.net": "ingest00-meta002-stg",
+    "adb-3100629970551492.12.azuredatabricks.net": "ingest00-meta002-prod"
+}
+
+# Fail if the current workspace URL is not found in the mapping
+if workspace_url not in workspace_mapping:
+    raise ValueError(f"Unrecognized Databricks workspace URL: {workspace_url}")
+
+# Retrieve the corresponding Key Vault/environment name
+KeyVault_name = workspace_mapping[workspace_url]
+
+# Print the resolved Key Vault/environment name
+print(f"Workspace URL maps to Key Vault: {KeyVault_name}")
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Determine Environment Code  and Name from KeyVault Secret
+LZ_KEY = dbutils.secrets.get(KeyVault_name, "LZ-KEY")
+
+if "00" in LZ_KEY:
+    env_code = "00"
+elif "01" in LZ_KEY:
+    env_code = "01"
+elif "02" in LZ_KEY:
+    env_code = "02"
+else:
+    raise ValueError(f"Unexpected key vault name: {key_vault}")
+
+print(f"env_code: {env_code}")  # This won't be redacted
+
+env = dbutils.secrets.get(KeyVault_name, "ENV")
+
+if "sbox" in env:
+    env_name = "sbox"
+elif "stg" in env:
+    env_name = "stg"
+elif "prod" in env:
+    env_name = "prod"
+else:
+    raise ValueError(f"Unexpected key vault name: {key_vault}")
+
+print(f"env_code: {env_name}")  # This won't be redacted
+
+# COMMAND ----------
+
+# DBTITLE 1,Configure SP OAuth
+# Service principal credentials
+client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
+client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
+tenant_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-TENANT-ID")
+
+# Storage account names
+curated_storage = f"ingest{env_code}curated{env_name}"
+checkpoint_storage = f"ingest{env_code}xcutting{env_name}"
+raw_storage = f"ingest{env_code}raw{env_name}"
+landing_storage = f"ingest{env_code}landing{env_name}"
+
+# Spark config for curated storage (Delta table)
+spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{curated_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{curated_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{curated_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{curated_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{raw_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{raw_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{raw_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{raw_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{raw_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{landing_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{landing_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# COMMAND ----------
+
+dbutils.fs.ls(f"abfss://bronze@ingest00curatedsbox.dfs.core.windows.net")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
 
@@ -116,18 +217,18 @@ read_hive = False
 AppealCategory = "ARIAUTA"
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
-landing_mnt = f"/mnt/ingest00landingsboxlanding/"  # CORE FULL LOAD SQL TABLES parquest
-bronze_mnt = f"/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS/{AppealCategory}"
-silver_mnt = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS/{AppealCategory}"
-gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
-html_mnt = f"/mnt/ingest00landingsboxhtml-template"
+raw_mnt = f"abfss://raw@ingest{env_code}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+landing_mnt =  f"abfss://landing@ingest{env_code}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"  # CORE FULL LOAD SQL TABLES parquest
+bronze_mnt = f"abfss://bronze@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+silver_mnt =  f"abfss://silver@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+gold_mnt =f"abfss://gold@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+html_mnt = f"abfss://html-template@ingest{env_code}landing{env_name}.dfs.core.windows.net/"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
 hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
-key_vault = "ingest00-keyvault-sbox"
+# key_vault = "ingest00-keyvault-sbox"
 
-audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
+audit_delta_path = f"abfss://silver@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
 
 # Print all variables
 variables = {
@@ -141,7 +242,7 @@ variables = {
     "html_mnt": html_mnt,
     "gold_outputs": gold_outputs,
     "hive_schema": hive_schema,
-    "key_vault": key_vault,
+    "key_vault": KeyVault_name,
     "audit_delta_path": audit_delta_path
 }
 
@@ -251,84 +352,84 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # COMMAND ----------
 
 # DBTITLE 1,Create or Validate Audit Delta Table in Azure
-audit_schema = StructType([
-    StructField("Runid", StringType(), True),
-    StructField("Unique_identifier_desc", StringType(), True),
-    StructField("Unique_identifier", StringType(), True),
-    StructField("Table_name", StringType(), True),
-    StructField("Stage_name", StringType(), True),
-    StructField("Record_count", IntegerType(), True),
-    StructField("Run_dt",TimestampType(), True),
-    StructField("Batch_id", StringType(), True),
-    StructField("Description", StringType(), True),
-    StructField("File_name", StringType(), True),
-    StructField("Status", StringType(), True)
-])
+# audit_schema = StructType([
+#     StructField("Runid", StringType(), True),
+#     StructField("Unique_identifier_desc", StringType(), True),
+#     StructField("Unique_identifier", StringType(), True),
+#     StructField("Table_name", StringType(), True),
+#     StructField("Stage_name", StringType(), True),
+#     StructField("Record_count", IntegerType(), True),
+#     StructField("Run_dt",TimestampType(), True),
+#     StructField("Batch_id", StringType(), True),
+#     StructField("Description", StringType(), True),
+#     StructField("File_name", StringType(), True),
+#     StructField("Status", StringType(), True)
+# ])
 
-# Define Delta Table Path in Azure Storage
-# audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-    # Create an empty DataFrame
-    empty_df = spark.createDataFrame([], audit_schema)
-
-    # Write the empty DataFrame in Delta format to create the table
-    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-    print("✅ Empty Delta table successfully created in Azure Storage.")
-else:
-    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
+# # Define Delta Table Path in Azure Storage
+# # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
 
 
-# COMMAND ----------
+# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
+#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
 
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-    """
-    Creates an audit DataFrame and writes it to Delta format.
+#     # Create an empty DataFrame
+#     empty_df = spark.createDataFrame([], audit_schema)
 
-    :param df: Input DataFrame from which unique identifiers are extracted.
-    :param unique_identifier_desc: Column name that acts as a unique identifier.
-    :param table_name: Name of the source table.
-    :param stage_name: Name of the data processing stage.
-    :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
-    """
+#     # Write the empty DataFrame in Delta format to create the table
+#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
 
-    dt_desc = datetime.utcnow()
-
-    additional_columns = additional_columns or []  # Default to an empty list if None   
-    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-    .withColumn("Runid", lit(run_id_value))\
-        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-            .withColumn("Stage_name", lit(stage_name))\
-                .withColumn("Table_name", lit(table_name))\
-                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-                        .withColumn("Description", lit(description))
-
-    list_cols = audit_df.columns
-
-    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
+#     print("✅ Empty Delta table successfully created in Azure Storage.")
+# else:
+#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
 
 
 # COMMAND ----------
 
-# # def log_audit_entry(df,unique_identifier):
-import uuid
+# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+#     """
+#     Creates an audit DataFrame and writes it to Delta format.
+
+#     :param df: Input DataFrame from which unique identifiers are extracted.
+#     :param unique_identifier_desc: Column name that acts as a unique identifier.
+#     :param table_name: Name of the source table.
+#     :param stage_name: Name of the data processing stage.
+#     :param description: Description of the table.
+#     :param additional_columns: List of additional columns to include in the audit DataFrame.
+#     """
+
+#     dt_desc = datetime.utcnow()
+
+#     additional_columns = additional_columns or []  # Default to an empty list if None   
+#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
+
+#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
+#     .withColumn("Runid", lit(run_id_value))\
+#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
+#             .withColumn("Stage_name", lit(stage_name))\
+#                 .withColumn("Table_name", lit(table_name))\
+#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
+#                         .withColumn("Description", lit(description))
+
+#     list_cols = audit_df.columns
+
+#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
+
+#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
 
 
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
 
-run_id_value = datetime_uuid()
+# COMMAND ----------
+
+# # # def log_audit_entry(df,unique_identifier):
+# import uuid
+
+
+# def datetime_uuid():
+#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+
+# run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
@@ -4563,7 +4664,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
 
 # COMMAND ----------
 

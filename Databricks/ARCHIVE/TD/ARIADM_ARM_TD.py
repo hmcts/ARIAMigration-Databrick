@@ -102,30 +102,6 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-# Service principal credentials
-client_id = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-CLIENT-ID")
-client_secret = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-CLIENT-SECRET")
-tenant_id = dbutils.secrets.get("ingest00-meta002-sbox", "SERVICE-PRINCIPLE-TENANT-ID")
-
-# Storage account names
-
-checkpoint_storage = "ingest00xcuttingsbox"
-
-
-# Spark config for checkpoint storage
-spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
-spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
-spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
-spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
-spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
-
-
-check_point_path = "abfss://db-rsp-checkpoint@ingest00xcuttingsbox.dfs.core.windows.net/ARIATD/RSP/"
-
-schema_location = "abfss://db-rsp-checkpoint@ingest00xcuttingsbox.dfs.core.windows.net/ARIATD/RSP/schema"
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Functions to Read Latest Landing Files
 
@@ -136,27 +112,83 @@ schema_location = "abfss://db-rsp-checkpoint@ingest00xcuttingsbox.dfs.core.windo
 
 # COMMAND ----------
 
+# DBTITLE 1,Extract Environment Details and Generate KeyVault Name
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env_name = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
+
+print(f"env_code: {lz_key}")  # This won't be redacted
+print(f"env_name: {env_name}")  # This won't be redacted
+
+KeyVault_name = f"ingest{lz_key}-meta002-{env_name}"
+print(f"KeyVault_name: {KeyVault_name}") 
+
+# COMMAND ----------
+
+# DBTITLE 1,Configure SP OAuth
+
+# Service principal credentials
+client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
+client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
+tenant_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-TENANT-ID")
+
+# Storage account names
+curated_storage = f"ingest{lz_key}curated{env_name}"
+checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
+raw_storage = f"ingest{lz_key}raw{env_name}"
+landing_storage = f"ingest{lz_key}landing{env_name}"
+
+# Spark config for curated storage (Delta table)
+spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{curated_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{curated_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{curated_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{curated_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{raw_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{raw_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{raw_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{raw_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{raw_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{landing_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{landing_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
-# DBTITLE 1,Data Paths and Configuration for Ingest Process
+# DBTITLE 1,Set Paths and Hive Schema Variables
 read_hive = False
 
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/TD"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/TD"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/TD"
-file_path = "/mnt/ingest00landingsboxlanding/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
+# raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
+# raw_mnt = f"abfss://raw@ingest00rawsbox.dfs.core.windows.net/ARIADM/ARM/TD"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
+landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
+silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
+gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
+file_path = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
 gold_outputs = "ARIADM/ARM/TD"
 hive_schema = "ariadm_arm_td"
-key_vault = "ingest00-keyvault-sbox"
-audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD/td_cr_audit_table"
-audit_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD"
-
-html_mnt = f"/mnt/ingest00landingsboxhtml-template"
+audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/TD/td_cr_audit_table"
+audit_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/TD"
+html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
 
 # audit_table_name = audit_delta_path.split("/")[-1]
 
@@ -171,22 +203,13 @@ variables = {
     "html_mnt": html_mnt,
     "gold_outputs": gold_outputs,
     "hive_schema": hive_schema,
-    "key_vault": key_vault,
+    "key_vault": KeyVault_name,
     "audit_delta_path": audit_delta_path,
-    "audit_mnt": audit_mnt
+    "audit_mnt": audit_mnt,
+    "file_path": file_path
 }
 
 display(variables)
-
-# COMMAND ----------
-
-# DBTITLE 1,Determine Workspace Environment Based on Host Name
-try:
-    env_value = dbutils.secrets.get(key_vault, "Environment")
-    env = "dev" if env_value == "development" else None
-    print(f"Environment: {env}")
-except:
-    env = "unkown"
 
 # COMMAND ----------
 
@@ -974,9 +997,9 @@ def silver_archive_metadata():
         col('td.CaseNo').alias('client_identifier'),
         # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when(env == lit('dev'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when(env == lit('dev'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
@@ -986,21 +1009,21 @@ def silver_archive_metadata():
         col('td.Forenames').alias('bf_002'),
         col('td.Name').alias('bf_003'),
         # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
-         when(env == lit('dev'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+         when(env_name == lit('sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('td.PortReference').alias('bf_005'),
         col('td.HearingCentreDescription').alias('bf_006'),
         col("td.DepartmentDescription").alias('bf_007'),
         col("td.Note").alias('bf_008'),
-         when((env == lit('dev')), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+         when((env_name == lit('sbox')), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
         
     )
     iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
         col('iris.CaseNo').alias('client_identifier'),
         # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when(env == lit('dev'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when(env == lit('dev'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
@@ -1010,12 +1033,12 @@ def silver_archive_metadata():
         col('iris.Forenames').alias('bf_002'),
         col('iris.Name').alias('bf_003'),
         # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
-         when(env == lit('dev'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+         when(env_name == lit('sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('iris.PortReference').alias('bf_005'),
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),
         col("iris.Note").alias('bf_008'),
-        when((env == lit('dev') ), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when((env_name == lit('sbox') ), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
     )
     df = td_df.unionByName(iris_df)
 
@@ -1030,7 +1053,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
 
 # COMMAND ----------
 

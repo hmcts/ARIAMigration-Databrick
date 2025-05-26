@@ -92,10 +92,6 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-# from SharedFunctionsLib.custom_functions import *
-
-# COMMAND ----------
-
 pip install azure-storage-blob
 
 
@@ -106,32 +102,89 @@ pip install azure-storage-blob
 
 # COMMAND ----------
 
+# DBTITLE 1,Extract Environment Details and Generate KeyVault Name
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env_name = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
+
+print(f"env_code: {lz_key}")  # This won't be redacted
+print(f"env_name: {env_name}")  # This won't be redacted
+
+KeyVault_name = f"ingest{lz_key}-meta002-{env_name}"
+print(f"KeyVault_name: {KeyVault_name}") 
+
+# COMMAND ----------
+
+# DBTITLE 1,Configure SP OAuth
+
+# Service principal credentials
+client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
+client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
+tenant_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-TENANT-ID")
+
+# Storage account names
+curated_storage = f"ingest{lz_key}curated{env_name}"
+checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
+raw_storage = f"ingest{lz_key}raw{env_name}"
+landing_storage = f"ingest{lz_key}landing{env_name}"
+
+# Spark config for curated storage (Delta table)
+spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{curated_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{curated_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{curated_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{curated_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{raw_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{raw_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{raw_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{raw_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{raw_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{landing_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{landing_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
 
 # COMMAND ----------
 
-read_hive = False
+# DBTITLE 1,Set Paths and Hive Schema Variables
+# read_hive = False
 
 AppealCategory = "ARIAFPA"
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"/mnt/ingest00rawsboxraw/ARIADM/ARM/APPEALS/{AppealCategory}"
-landing_mnt = f"/mnt/ingest00landingsboxlanding/"  # CORE FULL LOAD SQL TABLES parquest
-bronze_mnt = f"/mnt/ingest00curatedsboxbronze/ARIADM/ARM/APPEALS/{AppealCategory}"
-silver_mnt = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/APPEALS/{AppealCategory}"
-gold_mnt = f"/mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/{AppealCategory}"
-html_mnt = f"/mnt/ingest00landingsboxhtml-template"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+landing_mnt =  f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"  # CORE FULL LOAD SQL TABLES parquest
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+silver_mnt =  f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+gold_mnt =f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
 hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
-key_vault = "ingest00-keyvault-sbox"
+# key_vault = "ingest00-keyvault-sbox"
 
-audit_delta_path = f"/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
+audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
 
 # Print all variables
 variables = {
-    "read_hive": read_hive,
+    # "read_hive": read_hive,
     "AppealCategory": AppealCategory,
     "raw_mnt": raw_mnt,
     "landing_mnt": landing_mnt,
@@ -141,21 +194,11 @@ variables = {
     "html_mnt": html_mnt,
     "gold_outputs": gold_outputs,
     "hive_schema": hive_schema,
-    "key_vault": key_vault,
+    "key_vault": KeyVault_name,
     "audit_delta_path": audit_delta_path
 }
 
 display(variables)
-
-# COMMAND ----------
-
-# DBTITLE 1,Determine and Print Environment
-try:
-    env_value = dbutils.secrets.get(key_vault, "Environment")
-    env = "dev" if env_value == "development" else None
-    print(f"Environment: {env}")
-except:
-    env = "unkown"
 
 # COMMAND ----------
 
@@ -251,84 +294,84 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 # COMMAND ----------
 
 # DBTITLE 1,Create or Validate Audit Delta Table in Azure
-audit_schema = StructType([
-    StructField("Runid", StringType(), True),
-    StructField("Unique_identifier_desc", StringType(), True),
-    StructField("Unique_identifier", StringType(), True),
-    StructField("Table_name", StringType(), True),
-    StructField("Stage_name", StringType(), True),
-    StructField("Record_count", IntegerType(), True),
-    StructField("Run_dt",TimestampType(), True),
-    StructField("Batch_id", StringType(), True),
-    StructField("Description", StringType(), True),
-    StructField("File_name", StringType(), True),
-    StructField("Status", StringType(), True)
-])
+# audit_schema = StructType([
+#     StructField("Runid", StringType(), True),
+#     StructField("Unique_identifier_desc", StringType(), True),
+#     StructField("Unique_identifier", StringType(), True),
+#     StructField("Table_name", StringType(), True),
+#     StructField("Stage_name", StringType(), True),
+#     StructField("Record_count", IntegerType(), True),
+#     StructField("Run_dt",TimestampType(), True),
+#     StructField("Batch_id", StringType(), True),
+#     StructField("Description", StringType(), True),
+#     StructField("File_name", StringType(), True),
+#     StructField("Status", StringType(), True)
+# ])
 
-# Define Delta Table Path in Azure Storage
-# audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-    # Create an empty DataFrame
-    empty_df = spark.createDataFrame([], audit_schema)
-
-    # Write the empty DataFrame in Delta format to create the table
-    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-    print("✅ Empty Delta table successfully created in Azure Storage.")
-else:
-    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
+# # Define Delta Table Path in Azure Storage
+# # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
 
 
-# COMMAND ----------
+# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
+#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
 
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-    """
-    Creates an audit DataFrame and writes it to Delta format.
+#     # Create an empty DataFrame
+#     empty_df = spark.createDataFrame([], audit_schema)
 
-    :param df: Input DataFrame from which unique identifiers are extracted.
-    :param unique_identifier_desc: Column name that acts as a unique identifier.
-    :param table_name: Name of the source table.
-    :param stage_name: Name of the data processing stage.
-    :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
-    """
+#     # Write the empty DataFrame in Delta format to create the table
+#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
 
-    dt_desc = datetime.utcnow()
-
-    additional_columns = additional_columns or []  # Default to an empty list if None   
-    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-    .withColumn("Runid", lit(run_id_value))\
-        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-            .withColumn("Stage_name", lit(stage_name))\
-                .withColumn("Table_name", lit(table_name))\
-                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-                        .withColumn("Description", lit(description))
-
-    list_cols = audit_df.columns
-
-    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
+#     print("✅ Empty Delta table successfully created in Azure Storage.")
+# else:
+#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
 
 
 # COMMAND ----------
 
-# # def log_audit_entry(df,unique_identifier):
-import uuid
+# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
+#     """
+#     Creates an audit DataFrame and writes it to Delta format.
+
+#     :param df: Input DataFrame from which unique identifiers are extracted.
+#     :param unique_identifier_desc: Column name that acts as a unique identifier.
+#     :param table_name: Name of the source table.
+#     :param stage_name: Name of the data processing stage.
+#     :param description: Description of the table.
+#     :param additional_columns: List of additional columns to include in the audit DataFrame.
+#     """
+
+#     dt_desc = datetime.utcnow()
+
+#     additional_columns = additional_columns or []  # Default to an empty list if None   
+#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
+
+#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
+#     .withColumn("Runid", lit(run_id_value))\
+#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
+#             .withColumn("Stage_name", lit(stage_name))\
+#                 .withColumn("Table_name", lit(table_name))\
+#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
+#                         .withColumn("Description", lit(description))
+
+#     list_cols = audit_df.columns
+
+#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
+
+#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
 
 
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
 
-run_id_value = datetime_uuid()
+# COMMAND ----------
+
+# # # def log_audit_entry(df,unique_identifier):
+# import uuid
+
+
+# def datetime_uuid():
+#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+
+# run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
@@ -3194,138 +3237,6 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-# DBTITLE 1,Anlysis
-# %sql
-# WITH adjudicator_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (10, 11, 12,3)
-# ),
-# CourtClerkUsher_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (3)
-# ),
-#  base as (
-#   select 
-#     a.CaseNo,
-#     a.StatusId,
-#     a.CaseStatus,
-#     a.Position,
-#     a.UpperTribJudge,
-#     a.DesJudgeFirstTier,
-#     a.JudgeFirstTier,
-#     a.NonLegalMember,
-#     -- Calculate total number of labels needed for each field
-#     coalesce(a.UpperTribJudge, 0) as utj,
-#     coalesce(a.DesJudgeFirstTier, 0) as djt,
-#     coalesce(a.JudgeFirstTier, 0) as jt,
-#     coalesce(a.NonLegalMember, 0) as nlm,
-#      CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   from 
-#     hive_metastore.ariadm_arm_fta.silver_list_detail a 
-#   -- where 
-#   --   -- a.Position IS NOT NULL
-#   --   -- and CaseNo = 'OC/00018/2003'
-# )
-# select
-#   a.CaseNo,
-#   a.statusid,
-#   -- a.Position,
-#   a.UpperTribJudge,
-#   a.DesJudgeFirstTier,
-#   a.JudgeFirstTier,
-#   a.NonLegalMember,
-
-#   -- Assign Label 1
-#   case 
-#     when a.utj >= 1 then 'Upper Trib Judge'
-#     when a.utj = 0 and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     else null
-#   end as Label1,
-
-#   -- Assign Label 2
-#   case 
-#     when a.utj >= 2 then 'Upper Trib Judge'
-#     when a.utj in (1) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 2 then 'Non-Legal Member'
-#     else null
-#   end as Label2,
-
-#   -- Assign Label 3
-#   case 
-#     when a.utj >= 3 then 'Upper Trib Judge'
-#     when a.utj in (2) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 3 then 'Des Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (2) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 3 then 'Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj in (1) and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (2) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (2) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 2 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 3 then 'Non-Legal Member'
-#     else null
-#   end as Label3,
-#   a.Position,
-  
-#   -- Judge values for Label1/2/3
-#   a.JudgeValue,
-#   adj1.JudgeValue AS Label1_JudgeValue,
-#   adj2.JudgeValue AS Label2_JudgeValue,
-#   adj3.JudgeValue AS Label3_JudgeValue,
-#   adj4.JudgeValue AS CourtClerkUsher
-
-# from base a
-
-# LEFT JOIN adjudicator_details adj1 ON adj1.CaseNo = a.CaseNo  AND adj1.StatusId = a.statusid AND adj1.Position = 10 and adj1.CaseStatus = a.CaseStatus --a.Position = adj1.Position
-# LEFT JOIN adjudicator_details adj2 ON adj2.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj2.Position = 11 and adj2.CaseStatus = a.CaseStatus--a.Position = adj2.Position
-# LEFT JOIN adjudicator_details adj3 ON adj3.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj3.Position = 12 and adj3.CaseStatus = a.CaseStatus--a.Position = adj3.Position
-# LEFT JOIN adjudicator_details adj4 ON adj4.CaseNo = a.CaseNo AND adj4.StatusId = a.statusid AND adj4.Position = 3 and adj4.CaseStatus = a.CaseStatus --and a.Position = adj4.Position
-# WHERE 
-#   a.Position IS NOT NULL
-#   -- AND a.CaseNo = 'OC/00033/2003'
-#   and a.CaseNo = 'RD/00014/2006'
-
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_list_detail",
     comment="Delta Live silver Table for list detail.",
@@ -4533,9 +4444,9 @@ def silver_archive_metadata():
         col('ac.CaseNo').alias('client_identifier'),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
@@ -4549,7 +4460,7 @@ def silver_archive_metadata():
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
         # col('ca.AppellantBirthDate').alias('bf_004'),
-        when(env == lit('dev'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        when(env_name == lit('sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))
     
@@ -4563,7 +4474,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
 
 # COMMAND ----------
 
@@ -5758,7 +5669,7 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_combined
+# DBTITLE 1,Transformation: stg_apl_combined
 @dlt.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.",
@@ -5941,7 +5852,7 @@ def stg_apl_combined():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_json_content
+# DBTITLE 1,Transformation: stg_apl_create_json_content
 @dlt.table(
     name="stg_apl_create_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -5962,7 +5873,7 @@ def stg_apl_create_json_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_html_content
+# DBTITLE 1,Transformation: stg_apl_create_html_content
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -5986,7 +5897,7 @@ def stg_apl_create_html_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_a360_content
+# DBTITLE 1,Transformation: stg_fpl_create_a360_content
 @dlt.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -6092,10 +6003,6 @@ def gold_appeals_with_json():
     df_unified = dlt.read("stg_appeals_unified")
     
 
-    # Optionally load data from Hive if needed
-    if read_hive:
-        df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
-
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
 
@@ -6124,10 +6031,6 @@ def gold_appeals_with_html():
     # Load source data
     df_combined = dlt.read("stg_appeals_unified")
 
-    # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
-
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64)
 
@@ -6155,9 +6058,6 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 def gold_appeals_with_a360():
     df_a360 = dlt.read("stg_appeals_unified")
 
-    # Optionally load data from Hive
-    if read_hive:
-        df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \

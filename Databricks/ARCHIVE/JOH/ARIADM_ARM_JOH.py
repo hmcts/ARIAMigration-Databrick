@@ -84,28 +84,84 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 # COMMAND ----------
 
+# DBTITLE 1,Extract Environment Details and Generate KeyVault Name
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env_name = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
+
+print(f"env_code: {lz_key}")  # This won't be redacted
+print(f"env_name: {env_name}")  # This won't be redacted
+
+KeyVault_name = f"ingest{lz_key}-meta002-{env_name}"
+print(f"KeyVault_name: {KeyVault_name}") 
+
+# COMMAND ----------
+
+# DBTITLE 1,Configure SP OAuth
+# Service principal credentials
+client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
+client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
+tenant_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-TENANT-ID")
+
+# Storage account names
+curated_storage = f"ingest{lz_key}curated{env_name}"
+checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
+raw_storage = f"ingest{lz_key}raw{env_name}"
+landing_storage = f"ingest{lz_key}landing{env_name}"
+
+# Spark config for curated storage (Delta table)
+spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{curated_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{curated_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{curated_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{curated_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{checkpoint_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{checkpoint_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{checkpoint_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{checkpoint_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{checkpoint_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{raw_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{raw_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{raw_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{raw_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{raw_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{landing_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{landing_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `read_hive = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `read_hive = true` is required.
 
 # COMMAND ----------
 
-read_hive = False
+# DBTITLE 1,Set Paths and Hive Schema Variables
+# read_hive = False
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/JOH"
-landing_mnt = "/mnt/ingest00landingsboxlanding"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/JOH"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/JOH"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/JOH"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
+landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
+silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
+gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
 gold_outputs = "ARIADM/ARM/JOH"
 hive_schema = "ariadm_arm_joh"
-key_vault = "ingest00-keyvault-sbox"
+# key_vault = "ingest00-keyvault-sbox"
 
-html_mnt = f"/mnt/ingest00landingsboxhtml-template"
+html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
 
 # Print all variables
 variables = {
-    "read_hive": read_hive,
+    # "read_hive": read_hive,
     "raw_mnt": raw_mnt,
     "landing_mnt": landing_mnt,
     "bronze_mnt": bronze_mnt,
@@ -114,7 +170,7 @@ variables = {
     "html_mnt": html_mnt,
     "gold_outputs": gold_outputs,
     "hive_schema": hive_schema,
-    "key_vault": key_vault
+    "key_vault": KeyVault_name
 }
 
 display(variables)
@@ -123,7 +179,7 @@ display(variables)
 
 # DBTITLE 1,Determine and Print Environment
 try:
-    env_value = dbutils.secrets.get(key_vault, "Environment")
+    env_value = dbutils.secrets.get(KeyVault_name, "Environment")
     env = "dev" if env_value == "development" else None
     print(f"Environment: {env}")
 except:
@@ -1064,7 +1120,7 @@ def silver_archive_metadata():
 
     # Add environment as a literal column
     # env = workspace_env["env"]
-    df_with_env = df_base.withColumn("env", lit(env))
+    df_with_env = df_base.withColumn("env", lit(env_name))
 
 
 
@@ -1085,7 +1141,7 @@ def silver_archive_metadata():
             col("adj.Forenames").alias("bf_002"),
             col("adj.Surname").alias("bf_003"),
             when(
-                col("env") == lit("dev"),
+                col("env") == lit("sbox"),
                 date_format(coalesce(col("adj.DateOfBirth"), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
             ).otherwise(
                 date_format(col("adj.DateOfBirth"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
@@ -1105,7 +1161,7 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get(key_vault, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
 
 # COMMAND ----------
 
@@ -1161,7 +1217,7 @@ def upload_to_blob(file_name, file_content):
 upload_udf = udf(upload_to_blob)
 
 # Load template
-html_template_list = spark.read.text("/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html").collect()
+html_template_list = spark.read.text(f"{html_mnt}/JOH/JOH-Details-no-js-updated-v2.html").collect()
 html_template = "".join([row.value for row in html_template_list])
 
 # Modify the UDF to accept a row object
@@ -1402,8 +1458,8 @@ def stg_create_joh_a360_content():
     df_td_metadata = dlt.read("silver_archive_metadata")
    
     # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
+    # if read_hive:
+    #   df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 
     # Generate A360 content and associated file names
     df = df_td_metadata.withColumn(
@@ -1418,8 +1474,8 @@ def stg_create_joh_a360_content():
 
 # COMMAND ----------
 
- if read_hive:
-     print("Loading data from Hive")
+#  if read_hive:
+#      print("Loading data from Hive")
 
 # COMMAND ----------
 
@@ -1502,9 +1558,9 @@ def gold_judicial_officer_with_html():
     # Load source data
     df_combined = dlt.read("stg_judicial_officer_unified")
 
-    # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+    # # Optional: Load from Hive if not an initial load
+    # if read_hive:
+    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
 
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
@@ -1534,9 +1590,9 @@ def gold_judicial_officer_with_json():
     df_combined = dlt.read("stg_judicial_officer_unified")
     
 
-    # Optionally load data from Hive if needed
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
+    # # Optionally load data from Hive if needed
+    # if read_hive:
+    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
 
      # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
@@ -1564,9 +1620,9 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 def gold_judicial_officer_with_a360():
     df_a360 = dlt.read("stg_judicial_officer_unified")
 
-    # Optionally load data from Hive
-    if read_hive:
-        df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \

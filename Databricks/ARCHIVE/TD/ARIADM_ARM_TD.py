@@ -1093,7 +1093,7 @@ def format_date_dd_mm_yyyy(date_value):
         raise ValueError(f"Invalid date input: {date_value}. Error: {e}")
 
 # Load template
-html_template_list = spark.read.text(f"{html_mnt}/TD-Details-no-js-v1.html").collect()
+html_template_list = spark.read.text(f"{html_mnt}/TD/TD-Details-no-js-v1.html").collect()
 html_template = "".join([row.value for row in html_template_list])
 
 # Modify the UDF to accept a row object

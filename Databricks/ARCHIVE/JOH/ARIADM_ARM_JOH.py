@@ -1217,7 +1217,7 @@ def upload_to_blob(file_name, file_content):
 upload_udf = udf(upload_to_blob)
 
 # Load template
-html_template_list = spark.read.text("/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html").collect()
+html_template_list = spark.read.text(f"{html_mnt}/JOH/JOH-Details-no-js-updated-v2.html").collect()
 html_template = "".join([row.value for row in html_template_list])
 
 # Modify the UDF to accept a row object

@@ -74,8 +74,8 @@ from pyspark.sql.window import Window
 
 # COMMAND ----------
 
-spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+# spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+# spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
 
 # COMMAND ----------
 
@@ -148,13 +148,13 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # read_hive = False
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
 landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
-bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
-silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
-gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/JOH"
-gold_outputs = "ARIADM/ARM/JOH"
-hive_schema = "ariadm_arm_joh"
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
+silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
+gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
+gold_outputs = "ARIADM/CCD/APPEALS"
+hive_schema = "ariadm_ccd_apl"
 # key_vault = "ingest00-keyvault-sbox"
 
 html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
@@ -178,12 +178,12 @@ display(variables)
 # COMMAND ----------
 
 # DBTITLE 1,Determine and Print Environment
-try:
-    env_value = dbutils.secrets.get(KeyVault_name, "Environment")
-    env = "dev" if env_value == "development" else None
-    print(f"Environment: {env}")
-except:
-    env = "unkown"
+# try:
+#     env_value = dbutils.secrets.get(KeyVault_name, "Environment")
+#     env = "dev" if env_value == "development" else None
+#     print(f"Environment: {env}")
+# except:
+#     env = "unkown"
 
 # COMMAND ----------
 
@@ -365,14 +365,14 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-import uuid
+# import uuid
 
 
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
+# def datetime_uuid():
+#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
 
-run_id_value = datetime_uuid()
+# run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
@@ -381,76 +381,228 @@ run_id_value = datetime_uuid()
 
 # COMMAND ----------
 
+
 @dlt.table(
-    name="raw_adjudicatorrole",
-    comment="Delta Live Table ARIA AdjudicatorRole.",
-    path=f"{raw_mnt}/Raw_AdjudicatorRole"
+    name="raw_appealcase",
+    comment="Delta Live Table ARIA AppealCase.",
+    path=f"{raw_mnt}/Raw_AppealCase"
 )
-def Raw_AdjudicatorRole():
-    return read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH_ARA")
+def Raw_AppealCase():
+    return read_latest_parquet("AppealCase", "tv_AppealCase", "ARIA_ARM_APPEALS")
 
+@dlt.table(
+    name="raw_caserep",
+    comment="Delta Live Table ARIA CaseRep.",
+    path=f"{raw_mnt}/Raw_CaseRep"
+)
+def raw_CaseRep():
+     return read_latest_parquet("CaseRep", "tv_CaseRep", "ARIA_ARM_APPEALS") 
+ 
 
+@dlt.table(
+    name="raw_representative",
+    comment="Delta Live Table ARIA Representative.",
+    path=f"{raw_mnt}/Raw_Representative"
+)
+def raw_Representative():
+     return read_latest_parquet("Representative", "tv_Representative", "ARIA_ARM_APPEALS")
+
+@dlt.table(
+    name="raw_casesponsor",
+    comment="Delta Live Table ARIA CaseSponsor.",
+    path=f"{raw_mnt}/Raw_CaseSponsor"
+)
+def raw_CaseSponsor():
+     return read_latest_parquet("CaseSponsor", "tv_CaseSponsor", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_caserespondent",
+    comment="Delta Live Table ARIA CaseRespondent.",
+    path=f"{raw_mnt}/Raw_CaseRespondent"
+)
+def CaseRespondent():
+    return read_latest_parquet("CaseRespondent", "tv_CaseRespondent", "ARIA_ARM_APPEALS")
+
+@dlt.table(
+    name="raw_filelocation",
+    comment="Delta Live Table ARIA FileLocation.",
+    path=f"{raw_mnt}/Raw_FileLocation"
+)
+def raw_FileLocation():
+     return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_casefeesummary",
+    comment="Delta Live Table ARIA CaseFeeSummary.",
+    path=f"{raw_mnt}/Raw_CaseFeeSummary"
+)
+def raw_CaseFeeSummary():
+    return read_latest_parquet("CaseFeeSummary", "tv_CaseFeeSummary", "ARIA_ARM_APPEALS")  
+ 
+@dlt.table(
+    name="raw_caseappellant",
+    comment="Delta Live Table ARIA CaseAppellant.",
+    path=f"{raw_mnt}/Raw_CaseAppellant"
+)
+def raw_CaseAppellant():
+     return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_APPEALS")
+ 
+@dlt.table(
+    name="raw_appellant",
+    comment="Delta Live Table ARIA Appellant.",
+    path=f"{raw_mnt}/Raw_Appellant"
+)
+def raw_Appellant():
+     return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_transaction",
+    comment="Delta Live Table ARIA Transaction.",
+    path=f"{raw_mnt}/Raw_Transaction"
+)
+def raw_Transaction():
+     return read_latest_parquet("Transaction", "tv_Transaction", "ARIA_ARM_APPEALS")   
+
+@dlt.table(
+    name="raw_transactiontype",
+    comment="Delta Live Table ARIA TransactionType.",
+    path=f"{raw_mnt}/Raw_TransactionType"
+)
+def raw_TransactionType():
+     return read_latest_parquet("TransactionType", "tv_TransactionType", "ARIA_ARM_APPEALS")  
+ 
+@dlt.table(
+    name="raw_link",
+    comment="Delta Live Table ARIA Link.",
+    path=f"{raw_mnt}/Raw_Link"
+)
+def raw_Link():
+     return read_latest_parquet("Link", "tv_Link", "ARIA_ARM_APPEALS")  
+ 
+@dlt.table(
+    name="raw_linkdetail",
+    comment="Delta Live Table ARIA LinkDetail.",
+    path=f"{raw_mnt}/Raw_LinkDetail"
+)
+def raw_LinkDetail():
+     return read_latest_parquet("LinkDetail", "tv_LinkDetail", "ARIA_ARM_APPEALS")  
+ 
+@dlt.table(
+    name="raw_caseadjudicator",
+    comment="Delta Live Table ARIA AppealTypeCategory.",
+    path=f"{raw_mnt}/raw_caseadjudicator"
+)
+def raw_caseadjudicator():
+     return read_latest_parquet("CaseAdjudicator", "tv_caseadjudicator", "ARIA_ARM_APPEALS") 
+ 
 @dlt.table(
     name="raw_adjudicator",
     comment="Delta Live Table ARIA Adjudicator.",
     path=f"{raw_mnt}/Raw_Adjudicator"
 )
-def Raw_Adjudicator():
-    return read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_JOH_ARA")
-
+def raw_Adjudicator():
+     return read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_APPEALS")
+ 
+@dlt.table(
+    name="raw_appealcategory",
+    comment="Delta Live Table ARIA AppealCategory.",
+    path=f"{raw_mnt}/Raw_AppealCategory"
+)
+def raw_AppealCategory():
+     return read_latest_parquet("AppealCategory", "tv_AppealCategory", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_documentsreceived",
+    comment="Delta Live Table ARIA DocumentsReceived.",
+    path=f"{raw_mnt}/Raw_DocumentsReceived"
+)
+def raw_DocumentsReceived():
+     return read_latest_parquet("DocumentsReceived", "tv_DocumentsReceived", "ARIA_ARM_APPEALS")  
+ 
 
 @dlt.table(
-    name="raw_employmentterm",
-    comment="Delta Live Table ARIA EmploymentTerm.",
-    path=f"{raw_mnt}/Raw_EmploymentTerm"
+    name="raw_history",
+    comment="Delta Live Table ARIA History.",
+    path=f"{raw_mnt}/Raw_History"
 )
-def Raw_EmploymentTerm():
-     return read_latest_parquet("ARIAEmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
+def raw_History():
+     return read_latest_parquet("History", "tv_History", "ARIA_ARM_APPEALS")  
 
 
-@dlt.table(
-    name="raw_donotusereason",
-    comment="Delta Live Table ARIA DoNotUseReason.",
-    path=f"{raw_mnt}/Raw_DoNotUseReason"
-)
-def Raw_DoNotUseReason():
-    return read_latest_parquet("DoNotUseReason", "tv_DoNotUseReason", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
-    name="raw_johistory",
-    comment="Delta Live Table ARIA JoHistory.",
-    path=f"{raw_mnt}/Raw_JoHistory"
-)
-def Raw_JoHistory():
-    return read_latest_parquet("JoHistory", "tv_JoHistory", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
-    name="raw_othercentre",
-    comment="Delta Live Table ARIA OtherCentre.",
-    path=f"{raw_mnt}/Raw_OtherCentre"
-)
-def Raw_OtherCentre():
-    return read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH_ARA")
+# @dlt.table(
+#     name="raw_adjudicatorrole",
+#     comment="Delta Live Table ARIA AdjudicatorRole.",
+#     path=f"{raw_mnt}/Raw_AdjudicatorRole"
+# )
+# def Raw_AdjudicatorRole():
+#     return read_latest_parquet("AdjudicatorRole", "tv_AdjudicatorRole", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
-    name="raw_hearingcentre",
-    comment="Delta Live Table ARIA HearingCentre.",
-    path=f"{raw_mnt}/Raw_HearingCentre"
-)
-def Raw_HearingCentre():
-    return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
+# @dlt.table(
+#     name="raw_adjudicator",
+#     comment="Delta Live Table ARIA Adjudicator.",
+#     path=f"{raw_mnt}/Raw_Adjudicator"
+# )
+# def Raw_Adjudicator():
+#     return read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_JOH_ARA")
 
 
-@dlt.table(
-    name="raw_users",
-    comment="Delta Live Table ARIA Users.",
-    path=f"{raw_mnt}/Raw_Users"
-)
-def Raw_Users():
-    return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH_ARA")
+# @dlt.table(
+#     name="raw_employmentterm",
+#     comment="Delta Live Table ARIA EmploymentTerm.",
+#     path=f"{raw_mnt}/Raw_EmploymentTerm"
+# )
+# def Raw_EmploymentTerm():
+#      return read_latest_parquet("ARIAEmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
+
+
+# @dlt.table(
+#     name="raw_donotusereason",
+#     comment="Delta Live Table ARIA DoNotUseReason.",
+#     path=f"{raw_mnt}/Raw_DoNotUseReason"
+# )
+# def Raw_DoNotUseReason():
+#     return read_latest_parquet("DoNotUseReason", "tv_DoNotUseReason", "ARIA_ARM_JOH_ARA")
+
+
+# @dlt.table(
+#     name="raw_johistory",
+#     comment="Delta Live Table ARIA JoHistory.",
+#     path=f"{raw_mnt}/Raw_JoHistory"
+# )
+# def Raw_JoHistory():
+#     return read_latest_parquet("JoHistory", "tv_JoHistory", "ARIA_ARM_JOH_ARA")
+
+
+# @dlt.table(
+#     name="raw_othercentre",
+#     comment="Delta Live Table ARIA OtherCentre.",
+#     path=f"{raw_mnt}/Raw_OtherCentre"
+# )
+# def Raw_OtherCentre():
+#     return read_latest_parquet("OtherCentre", "tv_OtherCentre", "ARIA_ARM_JOH_ARA")
+
+
+# @dlt.table(
+#     name="raw_hearingcentre",
+#     comment="Delta Live Table ARIA HearingCentre.",
+#     path=f"{raw_mnt}/Raw_HearingCentre"
+# )
+# def Raw_HearingCentre():
+#     return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
+
+
+# @dlt.table(
+#     name="raw_users",
+#     comment="Delta Live Table ARIA Users.",
+#     path=f"{raw_mnt}/Raw_Users"
+# )
+# def Raw_Users():
+#     return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH_ARA")
 
 
 # COMMAND ----------
@@ -462,275 +614,665 @@ def Raw_Users():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Transformation bronze_adjudicator_et_hc_dnur
+# MAGIC ### Transformation M1 bronze_appealcase_crep_rep_floc_cspon_cfs
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ```sql
-# MAGIC SELECT adj.AdjudicatorId, 
-# MAGIC   adj.Surname, 
-# MAGIC        adj.Forenames, 
-# MAGIC        adj.Title, 
-# MAGIC        adj.DateOfBirth, 
-# MAGIC        adj.CorrespondenceAddress, 
-# MAGIC        adj.ContactTelephone, 
-# MAGIC        adj.ContactDetails, 
-# MAGIC        adj.AvailableAtShortNotice, 
-# MAGIC        hc.Description as DesignatedCentre, 
-# MAGIC        et.Description as EmploymentTerms, 
-# MAGIC        adj.FullTime, 
-# MAGIC        adj.IdentityNumber, 
-# MAGIC        adj.DateOfRetirement, 
-# MAGIC        adj.ContractEndDate, 
-# MAGIC        adj.ContractRenewalDate, 
-# MAGIC        dnur.DoNotUse, 
-# MAGIC        dnur.Description as DoNotUseReason, 
-# MAGIC        adj.JudicialStatus, 
-# MAGIC        adj.Address1, 
-# MAGIC        adj.Address2, 
-# MAGIC        adj.Address3, 
-# MAGIC        adj.Address4, 
-# MAGIC        adj.Address5, 
-# MAGIC        adj.Postcode, 
-# MAGIC        adj.Telephone, 
-# MAGIC        adj.Mobile, 
-# MAGIC        adj.Email, 
-# MAGIC        adj.BusinessAddress1, 
-# MAGIC        adj.BusinessAddress2, 
-# MAGIC        adj.BusinessAddress3, 
-# MAGIC        adj.BusinessAddress4, 
-# MAGIC        adj.BusinessAddress5, 
-# MAGIC        adj.BusinessPostcode, 
-# MAGIC        adj.BusinessTelephone, 
-# MAGIC        adj.BusinessFax, 
-# MAGIC        adj.BusinessEmail, 
-# MAGIC        adj.JudicialInstructions, 
-# MAGIC        adj.JudicialInstructionsDate, 
-# MAGIC        adj.Notes 
-# MAGIC FROM [ARIAREPORTS].[dbo].[Adjudicator] adj 
-# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc 
-# MAGIC         ON adj.CentreId = hc.CentreId 
-# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[EmploymentTerm] et 
-# MAGIC         ON adj.EmploymentTerms = et.EmploymentTermId 
-# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[DoNotUseReason] dnur 
-# MAGIC         ON adj.DoNotUseReason = dnur.DoNotUseReasonId 
+# MAGIC -- m1.bronze_appealcase_crep_rep_floc_cspon_cfs
+# MAGIC SELECT
+# MAGIC -- AppealCase
+# MAGIC ac.CaseNo,
+# MAGIC ac.CasePrefix,
+# MAGIC ac.OutOfTimeIssue,
+# MAGIC ac.DateLodged,
+# MAGIC ac.DateAppealReceived,
+# MAGIC ac.CentreId,
+# MAGIC ac.NationalityId,
+# MAGIC ac.AppealTypeId,
+# MAGIC ac.DeportationDate,
+# MAGIC ac.RemovalDate,
+# MAGIC ac.VisitVisaType,
+# MAGIC ac.DateOfApplicationDecision,
+# MAGIC ac.HORef,
+# MAGIC ac.InCamera,
+# MAGIC ac.CourtPreference,
+# MAGIC ac.LanguageId,
+# MAGIC ac.Interpreter,
+# MAGIC -- CaseRep
+# MAGIC crep.RepresentativeId,
+# MAGIC crep.Name AS CaseRepName,
+# MAGIC crep.Address1 AS CaseRepAddress1,
+# MAGIC crep.Address2 AS CaseRepAddress2,
+# MAGIC crep.Address3 AS CaseRepAddress3,
+# MAGIC crep.Address4 AS CaseRepAddress4,
+# MAGIC crep.Address5 AS CaseRepAddress5,
+# MAGIC crep.Postcode AS CaseRepPostcode,
+# MAGIC crep.Contact,
+# MAGIC crep.Email AS CaseRepEmail,
+# MAGIC crep.FileSpecificEmail,
+# MAGIC -- Representative
+# MAGIC rep.Name AS RepName,
+# MAGIC rep.Address1 AS RepAddress1,
+# MAGIC rep.Address2 AS RepAddress2,
+# MAGIC rep.Address3 AS RepAddress3,
+# MAGIC rep.Address4 AS RepAddress4,
+# MAGIC rep.Address5 AS RepAddress5,
+# MAGIC rep.Postcode AS RepPostcode,
+# MAGIC rep.Email AS RepEmail,
+# MAGIC -- CaseSponsor
+# MAGIC cspon.Name AS SponsorName,
+# MAGIC cspon.Forenames AS SponsorForenames,
+# MAGIC cspon.Address1 AS SponsorAddress1,
+# MAGIC cspon.Address2 AS SponsorAddress2,
+# MAGIC cspon.Address3 AS SponsorAddress3,
+# MAGIC cspon.Address4 AS SponsorAddress4,
+# MAGIC cspon.Address5 AS SponsorAddress5,
+# MAGIC cspon.Postcode AS SponsorPostcode,
+# MAGIC cspon.Email AS SponsorEmail,
+# MAGIC cspon.Telephone AS SponsorTelephone,
+# MAGIC cspon.Authorised AS SponsorAuthorisation,
+# MAGIC -- CaseRespondent
+# MAGIC cr.MainRespondentId,
+# MAGIC -- FileLocation
+# MAGIC floc.DeptId,
+# MAGIC -- CaseFeeSummary
+# MAGIC cfs.PaymentRemissionRequested,
+# MAGIC cfs.PaymentRemissionReason,
+# MAGIC cfs.PaymentRemissionGranted,
+# MAGIC cfs.PaymentRemissionReasonNote,
+# MAGIC cfs.LSCReference,
+# MAGIC cfs.ASFReferenceNo,
+# MAGIC cfs.DateCorrectFeeReceived
+# MAGIC FROM dbo.AppealCase ac
+# MAGIC LEFT OUTER JOIN dbo.CaseRep crep ON ac.CaseNo = crep.CaseNo
+# MAGIC LEFT OUTER JOIN dbo.Representative rep ON crep.RepresentativeId = rep.RepresentativeId
+# MAGIC LEFT OUTER JOIN dbo.CaseSponsor cspon ON cspon.CaseNo = ac.CaseNo
+# MAGIC LEFT OUTER JOIN dbo.CaseRespondent cr on ac.CaseNo = cr.CaseNo
+# MAGIC LEFT OUTER JOIN dbo.FileLocation floc ON floc.CaseNo = ac.CaseNo
+# MAGIC LEFT OUTER JOIN dbo.CaseFeeSummary cfs ON cfs.CaseNo = ac.CaseNo
 # MAGIC ```
 
 # COMMAND ----------
 
 from pyspark.sql.functions import col
+import dlt
 
 @dlt.table(
-    name="bronze_adjudicator_et_hc_dnur",
-    comment="Delta Live Table combining Adjudicator data with Hearing Centre, Employment Terms, and Do Not Use Reason.",
-    path=f"{bronze_mnt}/bronze_adjudicator_et_hc_dnur"
+    name="bronze_appealcase_crep_rep_floc_cspon_cfs",
+    comment="Delta Live Table combining AppealCase with CaseRep, Representative, CaseSponsor, CaseRespondent, FileLocation, and CaseFeeSummary data.",
+    path=f"{bronze_mnt}/bronze_appealcase_crep_rep_floc_cspon_cfs"
 )
-def bronze_adjudicator_et_hc_dnur():
+def bronze_appealcase_crep_rep_floc_cspon_cfs():
     df = (
-        dlt.read("raw_adjudicator").alias("adj")
-            .join(
-                dlt.read("raw_hearingcentre").alias("hc"),
-                col("adj.CentreId") == col("hc.CentreId"),
-                "left_outer",
-            )
-            .join(
-                dlt.read("raw_employmentterm").alias("et"),
-                col("adj.EmploymentTerms") == col("et.EmploymentTermId"),
-                "left_outer",
-            )
-            .join(
-                dlt.read("raw_donotusereason").alias("dnur"),
-                col("adj.DoNotUseReason") == col("dnur.DoNotUseReasonId"),
-                "left_outer",
-            )
+        dlt.read("raw_appealcase").alias("ac")
+        .join(dlt.read("raw_caserep").alias("crep"), col("ac.CaseNo") == col("crep.CaseNo"), "left_outer")
+        .join(dlt.read("raw_representative").alias("rep"), col("crep.RepresentativeId") == col("rep.RepresentativeId"), "left_outer")
+        .join(dlt.read("raw_casesponsor").alias("cspon"), col("ac.CaseNo") == col("cspon.CaseNo"), "left_outer")
+        .join(dlt.read("raw_caserespondent").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), "left_outer")
+        .join(dlt.read("raw_filelocation").alias("floc"), col("ac.CaseNo") == col("floc.CaseNo"), "left_outer")
+        .join(dlt.read("raw_casefeesummary").alias("cfs"), col("ac.CaseNo") == col("cfs.CaseNo"), "left_outer")
         .select(
-            col("adj.AdjudicatorId"),
-            col("adj.Surname"),
-            col("adj.Forenames"),
-            col("adj.Title"),
-            col("adj.DateOfBirth"),
-            col("adj.CorrespondenceAddress"),
-            col("adj.ContactTelephone"),
-            col("adj.ContactDetails"),
-            col("adj.AvailableAtShortNotice"),
-            col("hc.Description").alias("DesignatedCentre"),
-            col("et.Description").alias("EmploymentTerm"),
-            col("adj.FullTime"),
-            col("adj.IdentityNumber"),
-            col("adj.DateOfRetirement"),
-            col("adj.ContractEndDate"),
-            col("adj.ContractRenewalDate"),
-            col("dnur.DoNotUse"),
-            col("dnur.Description").alias("DoNotUseReason"),
-            col("adj.JudicialStatus"),
-            col("adj.Address1"),
-            col("adj.Address2"),
-            col("adj.Address3"),
-            col("adj.Address4"),
-            col("adj.Address5"),
-            col("adj.Postcode"),
-            col("adj.Telephone"),
-            col("adj.Mobile"),
-            col("adj.Email"),
-            col("adj.BusinessAddress1"),
-            col("adj.BusinessAddress2"),
-            col("adj.BusinessAddress3"),
-            col("adj.BusinessAddress4"),
-            col("adj.BusinessAddress5"),
-            col("adj.BusinessPostcode"),
-            col("adj.BusinessTelephone"),
-            col("adj.BusinessFax"),
-            col("adj.BusinessEmail"),
-            col("adj.JudicialInstructions"),
-            col("adj.JudicialInstructionsDate"),
-            col("adj.Notes"),
-            col("adj.AdtclmnFirstCreatedDatetime"),
-            col("adj.AdtclmnModifiedDatetime"),
-            col("adj.SourceFileName"),
-            col("adj.InsertedByProcessName")
+            # AppealCase
+            col("ac.CaseNo"),
+            col("ac.CasePrefix"),
+            col("ac.OutOfTimeIssue"),
+            col("ac.DateLodged"),
+            col("ac.DateAppealReceived"),
+            col("ac.CentreId"),
+            col("ac.NationalityId"),
+            col("ac.AppealTypeId"),
+            col("ac.DeportationDate"),
+            col("ac.RemovalDate"),
+            col("ac.VisitVisaType"),
+            col("ac.DateOfApplicationDecision"),
+            col("ac.HORef"),
+            col("ac.InCamera"),
+            col("ac.CourtPreference"),
+            col("ac.LanguageId"),
+            col("ac.Interpreter"),
+
+            # CaseRep
+            col("crep.RepresentativeId"),
+            col("crep.Name").alias("CaseRepName"),
+            col("crep.Address1").alias("CaseRepAddress1"),
+            col("crep.Address2").alias("CaseRepAddress2"),
+            col("crep.Address3").alias("CaseRepAddress3"),
+            col("crep.Address4").alias("CaseRepAddress4"),
+            col("crep.Address5").alias("CaseRepAddress5"),
+            col("crep.Postcode").alias("CaseRepPostcode"),
+            col("crep.Contact"),
+            col("crep.Email").alias("CaseRepEmail"),
+            col("crep.FileSpecificEmail"),
+
+            # Representative
+            col("rep.Name").alias("RepName"),
+            col("rep.Address1").alias("RepAddress1"),
+            col("rep.Address2").alias("RepAddress2"),
+            col("rep.Address3").alias("RepAddress3"),
+            col("rep.Address4").alias("RepAddress4"),
+            col("rep.Address5").alias("RepAddress5"),
+            col("rep.Postcode").alias("RepPostcode"),
+            col("rep.Email").alias("RepEmail"),
+
+            # CaseSponsor
+            col("cspon.Name").alias("SponsorName"),
+            col("cspon.Forenames").alias("SponsorForenames"),
+            col("cspon.Address1").alias("SponsorAddress1"),
+            col("cspon.Address2").alias("SponsorAddress2"),
+            col("cspon.Address3").alias("SponsorAddress3"),
+            col("cspon.Address4").alias("SponsorAddress4"),
+            col("cspon.Address5").alias("SponsorAddress5"),
+            col("cspon.Postcode").alias("SponsorPostcode"),
+            col("cspon.Email").alias("SponsorEmail"),
+            col("cspon.Telephone").alias("SponsorTelephone"),
+            col("cspon.Authorised").alias("SponsorAuthorisation"),
+
+            # CaseRespondent
+            col("cr.MainRespondentId"),
+
+            # FileLocation
+            col("floc.DeptId"),
+
+            # CaseFeeSummary
+            col("cfs.PaymentRemissionRequested"),
+            col("cfs.PaymentRemissionReason"),
+            col("cfs.PaymentRemissionGranted"),
+            col("cfs.PaymentRemissionReasonNote"),
+            col("cfs.LSCReference"),
+            col("cfs.ASFReferenceNo"),
+            col("cfs.DateCorrectFeeReceived")
         )
     )
 
     return df
-    
+
 
 # COMMAND ----------
 
 # MAGIC
 # MAGIC %md
-# MAGIC ### Transformation  bronze_johistory_users 
+# MAGIC ### Transformation M2 bronze_appealcase_caseappellant_appellant
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ```sql
-# MAGIC SELECT jh.AdjudicatorId, 
-# MAGIC        jh.HistDate, 
-# MAGIC        jh.HistType, 
-# MAGIC        u.FullName as UserName, 
-# MAGIC        jh.Comment 
-# MAGIC FROM [ARIAREPORTS].[dbo].[JoHistory] jh 
-# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Users] u 
-# MAGIC         ON jh.UserId = u.UserId 
+# MAGIC -- m2.bronze_appealcase_caseappellant_appellant 
+# MAGIC -- This query *could* pull back multiple rows per case however for all the cases migrating to CCD there is only ever 1 row per CaseNo. 
+# MAGIC
+# MAGIC SELECT 
+# MAGIC ac.CaseNo, 
+# MAGIC -- Appellant 
+# MAGIC ap.Name AS AppellantName, 
+# MAGIC ap.Forenames AS AppellantForenames, 
+# MAGIC ap.BirthDate, 
+# MAGIC ap.Email AS AppellantEmail, 
+# MAGIC ap.Telephone AS AppellantTelephone, 
+# MAGIC ap.Address1 AS AppellantAddress1, 
+# MAGIC ap.Address2 AS AppellantAddress2, 
+# MAGIC ap.Address3 AS AppellantAddress3, 
+# MAGIC ap.Address4 AS AppellantAddress4, 
+# MAGIC ap.Address5 AS AppellantAddress5, 
+# MAGIC ap.Postcode AS AppellantPostcode, 
+# MAGIC ap.AppellantCountryId, 
+# MAGIC ap.FCONumber 
+# MAGIC FROM dbo.AppealCase ac 
+# MAGIC LEFT OUTER JOIN dbo.CaseAppellant cap ON cap.CaseNO = ac.CaseNo 
+# MAGIC LEFT OUTER JOIN dbo.Appellant ap ON cap.AppellantId = ap.AppellantId 
 # MAGIC ```
 
 # COMMAND ----------
 
 @dlt.table(
-    name="bronze_johistory_users",
-    comment="Delta Live Table combining JoHistory data with Users information.",
-    path=f"{bronze_mnt}/bronze_johistory_users" 
+    name="bronze_appealcase_caseappellant_appellant",
+    comment="DLT table joining AppealCase with CaseAppellant and Appellant details.",
+    path=f"{bronze_mnt}/bronze_appealcase_caseappellant_appellant"
 )
-def bronze_johistory_users():
-    df =  (
-        dlt.read("raw_johistory").alias("joh")
-            .join(dlt.read("raw_users").alias("u"), col("joh.UserId") == col("u.UserId"), "left_outer")
+def bronze_appealcase_caseappellant_appellant():
+    df = (
+        dlt.read("raw_appealcase").alias("ac")
+        .join(dlt.read("raw_caseappellant").alias("cap"), col("ac.CaseNo") == col("cap.CaseNo"), "left_outer")
+        .join(dlt.read("raw_appellant").alias("ap"), col("cap.AppellantId") == col("ap.AppellantId"), "left_outer")
+        .select(
+            col("ac.CaseNo"),
+
+            # Appellant
+            col("ap.Name").alias("AppellantName"),
+            col("ap.Forenames").alias("AppellantForenames"),
+            col("ap.BirthDate"),
+            col("ap.Email").alias("AppellantEmail"),
+            col("ap.Telephone").alias("AppellantTelephone"),
+            col("ap.Address1").alias("AppellantAddress1"),
+            col("ap.Address2").alias("AppellantAddress2"),
+            col("ap.Address3").alias("AppellantAddress3"),
+            col("ap.Address4").alias("AppellantAddress4"),
+            col("ap.Address5").alias("AppellantAddress5"),
+            col("ap.Postcode").alias("AppellantPostcode"),
+            col("ap.AppellantCountryId"),
+            col("ap.FCONumber")
+        )
+    )
+
+    return df
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation M3 bronze_status_htype_clist_list_ltype_court_lsitting_adj
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ```sql
+# MAGIC -- m3.bronze_status_htype_clist_list_ltype_court_lsitting_adj 
+# MAGIC -- This will return multiple rows per CaseNo  
+# MAGIC SELECT  
+# MAGIC s.StatusId, 
+# MAGIC s.CaseNo, 
+# MAGIC s.CaseStatus, 
+# MAGIC s.Outcome, 
+# MAGIC s.KeyDate AS HearingDate, 
+# MAGIC s.CentreId, 
+# MAGIC s.DecisionDate, 
+# MAGIC s.Party, 
+# MAGIC s.DateReceived, 
+# MAGIC s.OutOfTime, 
+# MAGIC s.DecisionReserved, 
+# MAGIC s.AdjudicatorId, 
+# MAGIC adjs.Surname AS AdjSurname,  
+# MAGIC adjs.Forenames AS AdjForenames,  
+# MAGIC adjs.Title AS AdjTitle,  
+# MAGIC s.Promulgated AS DateOfService, 
+# MAGIC s.AdditionalLanguageId, 
+# MAGIC -- Listing details fields 
+# MAGIC s.ListedCentre AS HearingCentre, 
+# MAGIC c.CourtName, 
+# MAGIC l.ListName, 
+# MAGIC lt.Description AS ListType, 
+# MAGIC ht.Description AS HearingType, 
+# MAGIC cl.StartTime, 
+# MAGIC cl.TimeEstimate, 
+# MAGIC -- Assigned Judges & Clerk for Listing Details 
+# MAGIC adjLS1.Surname AS Judge1FTSurname, 
+# MAGIC adjLS1.Forenames AS Judge1FTForenames, 
+# MAGIC adjLS1.Title AS Judge1FTTitle,	 
+# MAGIC adjLS2.Surname AS Judge2FTSurname, 
+# MAGIC adjLS2.Forenames AS Judge2FTForenames, 
+# MAGIC adjLS2.Title AS Judge2FTTitle,	 
+# MAGIC adjLS3.Surname AS Judge3FTSurname, 
+# MAGIC adjLS3.Forenames AS Judge3FTForenames, 
+# MAGIC adjLS3.Title AS Judge3FTTitle,	 
+# MAGIC adjLS4.Surname AS CourtClerkSurname, 
+# MAGIC adjLS4.Forenames AS CourtClerkForenames, 
+# MAGIC adjLS4.Title AS CourtClerkTitle, 
+# MAGIC ac.Notes 
+# MAGIC FROM dbo.Status s 
+# MAGIC LEFT OUTER JOIN dbo.CaseList cl ON cl.StatusId = s.StatusId 
+# MAGIC LEFT OUTER JOIN dbo.List l ON l.ListId = cl.ListId 
+# MAGIC LEFT OUTER JOIN dbo.HearingType ht ON cl.HearingTypeId = ht.HearingTypeId 
+# MAGIC LEFT OUTER JOIN dbo.Adjudicator adjs ON s.AdjudicatorId = adjs.AdjudicatorId 
+# MAGIC LEFT OUTER JOIN dbo.ListType lt ON l.ListTypeId = lt.ListTypeId 
+# MAGIC LEFT OUTER JOIN dbo.Court c ON c.CourtId = l.CourtId 
+# MAGIC LEFT OUTER JOIN dbo.AppealCase ac ON ac.CaseNO = s.CaseNo 
+# MAGIC LEFT OUTER JOIN dbo.ListSitting LS1 ON l.ListId = LS1.ListId AND LS1.Position = 10 AND LS1.Cancelled = 0 
+# MAGIC LEFT OUTER JOIN dbo.Adjudicator adjLS1 ON LS1.AdjudicatorId = adjLS1.AdjudicatorId 
+# MAGIC LEFT OUTER JOIN dbo.ListSitting LS2 ON l.ListId = LS2.ListId AND LS2.Position = 11 AND LS2.Cancelled = 0 
+# MAGIC LEFT OUTER JOIN dbo.Adjudicator adjLS2 ON LS2.AdjudicatorId = adjLS2.AdjudicatorId 
+# MAGIC LEFT OUTER JOIN dbo.ListSitting LS3 ON l.ListId = LS3.ListId AND LS3.Position = 12 AND LS3.Cancelled = 0 
+# MAGIC LEFT OUTER JOIN dbo.Adjudicator adjLS3 ON LS3.AdjudicatorId = adjLS3.AdjudicatorId 
+# MAGIC LEFT OUTER JOIN dbo.ListSitting LS4 ON l.ListId = LS4.ListId AND LS4.Position = 3 AND LS4.Cancelled = 0 
+# MAGIC LEFT OUTER JOIN dbo.Adjudicator adjLS4 ON LS4.AdjudicatorId = adjLS4.AdjudicatorId
+# MAGIC
+# MAGIC ```
+
+# COMMAND ----------
+
+dlt.table(
+    name="bronze_status_htype_clist_list_ltype_court_lsitting_adj",
+    comment="DLT table joining Status with hearing types, court listings, adjudicators, and associated metadata.",
+    path=f"{bronze_mnt}/bronze_status_htype_clist_list_ltype_court_lsitting_adj"
+)
+def bronze_status_htype_clist_list_ltype_court_lsitting_adj():
+    df = (
+        dlt.read("raw_status").alias("s")
+        .join(dlt.read("raw_caselist").alias("cl"), col("s.StatusId") == col("cl.StatusId"), "left_outer")
+        .join(dlt.read("raw_list").alias("l"), col("cl.ListId") == col("l.ListId"), "left_outer")
+        .join(dlt.read("raw_hearingtype").alias("ht"), col("cl.HearingTypeId") == col("ht.HearingTypeId"), "left_outer")
+        .join(dlt.read("raw_adjudicator").alias("adjs"), col("s.AdjudicatorId") == col("adjs.AdjudicatorId"), "left_outer")
+        .join(dlt.read("raw_listtype").alias("lt"), col("l.ListTypeId") == col("lt.ListTypeId"), "left_outer")
+        .join(dlt.read("raw_court").alias("c"), col("l.CourtId") == col("c.CourtId"), "left_outer")
+        .join(dlt.read("raw_appealcase").alias("ac"), col("s.CaseNo") == col("ac.CaseNo"), "left_outer")
+        # Judges & Clerks by Position in ListSitting
+        .join(dlt.read("raw_listsitting").alias("LS1"), (col("l.ListId") == col("LS1.ListId")) & (col("LS1.Position") == 10) & (col("LS1.Cancelled") == 0), "left_outer")
+        .join(dlt.read("raw_adjudicator").alias("adjLS1"), col("LS1.AdjudicatorId") == col("adjLS1.AdjudicatorId"), "left_outer")
+        .join(dlt.read("raw_listsitting").alias("LS2"), (col("l.ListId") == col("LS2.ListId")) & (col("LS2.Position") == 11) & (col("LS2.Cancelled") == 0), "left_outer")
+        .join(dlt.read("raw_adjudicator").alias("adjLS2"), col("LS2.AdjudicatorId") == col("adjLS2.AdjudicatorId"), "left_outer")
+        .join(dlt.read("raw_listsitting").alias("LS3"), (col("l.ListId") == col("LS3.ListId")) & (col("LS3.Position") == 12) & (col("LS3.Cancelled") == 0), "left_outer")
+        .join(dlt.read("raw_adjudicator").alias("adjLS3"), col("LS3.AdjudicatorId") == col("adjLS3.AdjudicatorId"), "left_outer")
+        .join(dlt.read("raw_listsitting").alias("LS4"), (col("l.ListId") == col("LS4.ListId")) & (col("LS4.Position") == 3) & (col("LS4.Cancelled") == 0), "left_outer")
+        .join(dlt.read("raw_adjudicator").alias("adjLS4"), col("LS4.AdjudicatorId") == col("adjLS4.AdjudicatorId"), "left_outer")
+        .select(
+            col("s.StatusId"),
+            col("s.CaseNo"),
+            col("s.CaseStatus"),
+            col("s.Outcome"),
+            col("s.KeyDate").alias("HearingDate"),
+            col("s.CentreId"),
+            col("s.DecisionDate"),
+            col("s.Party"),
+            col("s.DateReceived"),
+            col("s.OutOfTime"),
+            col("s.DecisionReserved"),
+            col("s.AdjudicatorId"),
+            col("adjs.Surname").alias("AdjSurname"),
+            col("adjs.Forenames").alias("AdjForenames"),
+            col("adjs.Title").alias("AdjTitle"),
+            col("s.Promulgated").alias("DateOfService"),
+            col("s.AdditionalLanguageId"),
+            col("s.ListedCentre").alias("HearingCentre"),
+            col("c.CourtName"),
+            col("l.ListName"),
+            col("lt.Description").alias("ListType"),
+            col("ht.Description").alias("HearingType"),
+            col("cl.StartTime"),
+            col("cl.TimeEstimate"),
+            # Assigned Judges & Clerk
+            col("adjLS1.Surname").alias("Judge1FTSurname"),
+            col("adjLS1.Forenames").alias("Judge1FTForenames"),
+            col("adjLS1.Title").alias("Judge1FTTitle"),
+            col("adjLS2.Surname").alias("Judge2FTSurname"),
+            col("adjLS2.Forenames").alias("Judge2FTForenames"),
+            col("adjLS2.Title").alias("Judge2FTTitle"),
+            col("adjLS3.Surname").alias("Judge3FTSurname"),
+            col("adjLS3.Forenames").alias("Judge3FTForenames"),
+            col("adjLS3.Title").alias("Judge3FTTitle"),
+            col("adjLS4.Surname").alias("CourtClerkSurname"),
+            col("adjLS4.Forenames").alias("CourtClerkForenames"),
+            col("adjLS4.Title").alias("CourtClerkTitle"),
+            col("ac.Notes")
+        )
+    )
+
+    return df
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation M4 bronze_appealcase_transaction_transactiontype
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ```sql
+# MAGIC -- m4.bronze_appealcase_transaction_transactiontype
+# MAGIC -- This will return multiple rows per CaseNo
+# MAGIC SELECT
+# MAGIC -- Transaction
+# MAGIC t.CaseNo,
+# MAGIC t.TransactionId,
+# MAGIC t.TransactionTypeId,
+# MAGIC t.ReferringTransactionId,
+# MAGIC t.Amount,
+# MAGIC t.TransactionDate,
+# MAGIC t.Status,
+# MAGIC -- TransactionType
+# MAGIC tt.SumBalance,
+# MAGIC tt.SumTotalFee,
+# MAGIC tt.SumTotalPay
+# MAGIC FROM dbo.[Transaction] t
+# MAGIC LEFT OUTER JOIN dbo.TransactionType tt ON t.TransactionTypeId = tt.TransactionTypeId
+# MAGIC ```
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_appealcase_transaction_transactiontype",
+    comment="DLT table joining Transaction with TransactionType to return multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_appealcase_transaction_transactiontype"
+)
+def bronze_appealcase_transaction_transactiontype():
+    df = (
+        dlt.read("raw_transaction").alias("t")
+        .join(
+            dlt.read("raw_transactiontype").alias("tt"),
+            col("t.TransactionTypeId") == col("tt.TransactionTypeId"),
+            "left_outer"
+        )
+        .select(
+            col("t.CaseNo"),
+            col("t.TransactionId"),
+            col("t.TransactionTypeId"),
+            col("t.ReferringTransactionId"),
+            col("t.Amount"),
+            col("t.TransactionDate"),
+            col("t.Status"),
+            col("tt.SumBalance"),
+            col("tt.SumTotalFee"),
+            col("tt.SumTotalPay")
+        )
+    )
+
+    return df
+
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation M5 bronze_appealcase_transaction_transactiontype
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ```sql
+# MAGIC -- m5.bronze_appealcase_link_linkdetail
+# MAGIC -- This can return multiple rows per CaseNo
+# MAGIC SELECT
+# MAGIC -- Link
+# MAGIC l.CaseNo,
+# MAGIC l.LinkNo,
+# MAGIC -- LinkDetail
+# MAGIC ld.ReasonLinkId
+# MAGIC FROM dbo.Link l
+# MAGIC LEFT OUTER JOIN dbo.LinkDetail ld ON l.LinkNo = ld.LinkNo
+# MAGIC ORDER BY CaseNO
+# MAGIC ```
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+import dlt
+
+@dlt.table(
+    name="bronze_appealcase_link_linkdetail",
+    comment="DLT table joining Link with LinkDetail. Can return multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_appealcase_link_linkdetail"
+)
+def bronze_appealcase_link_linkdetail():
+    df = (
+        dlt.read("raw_link").alias("l")
+        .join(
+            dlt.read("raw_linkdetail").alias("ld"),
+            col("l.LinkNo") == col("ld.LinkNo"),
+            "left_outer"
+        )
+        .select(
+            col("l.CaseNo"),
+            col("l.LinkNo"),
+            col("ld.ReasonLinkId")
+        )
+    )
+
+    return df
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation M6 bronze_caseadjudicator_adjudicator
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_caseadjudicator_adjudicator",
+    comment="DLT table joining CaseAdjudicator with Adjudicator. Can return multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_caseadjudicator_adjudicator"
+)
+def bronze_caseadjudicator_adjudicator():
+    df = (
+        dlt.read("raw_caseadjudicator").alias("ca")
+        .join(
+            dlt.read("raw_adjudicator").alias("adj"),
+            (col("ca.AdjudicatorId") == col("adj.AdjudicatorId")) & (col("adj.DoNotList") == 0),
+            "inner"
+        )
+        .select(
+            col("ca.CaseNo"),
+            col("ca.Required"),
+            col("adj.Surname").alias("JudgeSurname"),
+            col("adj.Forenames").alias("JudgeForenames"),
+            col("adj.Title").alias("JudgeTitle")
+        )
+    )
+
+    return df
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_appealcategory
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_appealcategory",
+    comment="DLT table for AppealCategory. Returns multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_appealcategory"
+)
+def bronze_appealcategory():
+    return (
+        dlt.read("raw_appealcategory")
+        .select(
+            col("CaseNo"),
+            col("CategoryId")
+        )
+    )
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_documentsreceived
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_documentsreceived",
+    comment="DLT table for DocumentsReceived; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_documentsreceived"
+)
+def bronze_documentsreceived():
+    return (
+        dlt.read("raw_documentsreceived")      # adjust if your raw table name differs
             .select(
-                col("joh.AdjudicatorId"),
-                col("joh.HistDate"),
-                col("joh.HistType"),
-                col("u.FullName").alias("UserName"),
-                col("joh.Comment"),
-                col("joh.AdtclmnFirstCreatedDatetime"),
-                col("joh.AdtclmnModifiedDatetime"),
-                col("joh.SourceFileName"),
-                col("joh.InsertedByProcessName")
+                col("CaseNo"),
+                col("ReceivedDocumentId"),
+                col("DateReceived")
             )
     )
 
-    df_audit = df.withColumn("AdjudicatorId",col("AdjudicatorId").cast("string"))
 
-    return df
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_history
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_history",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_history"
+)
+def bronze_history():
+    return (
+        dlt.read("raw_history")   # Replace with actual raw source name if different
+            .select(
+                col("HistoryId"),
+                col("CaseNo"),
+                col("HistType"),
+                col("Comment")
+            )
+    )
+
+
+# COMMAND ----------
+
+
+
+@dlt.table(
+    name="bronze_balance_due",
+    comment="DLT table for balance due per CaseNo based on specific transaction rules.",
+    path=f"{bronze_mnt}/bronze_balance_due"
+)
+def bronze_balance_due():
+    # Read transaction and transaction type data
+    tx = dlt.read("bronze_appealcase_transaction_transactiontype")
     
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Transformation bronze_othercentre_hearingcentre 
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ```sql
-# MAGIC SELECT oc.AdjudicatorId, 
-# MAGIC        hc.Description As OtherCentres 
-# MAGIC FROM [ARIAREPORTS].[dbo].[OtherCentre] oc 
-# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc 
-# MAGIC         ON oc.CentreId = hc.CentreId 
-# MAGIC ```
-
-# COMMAND ----------
-
-# DLT Table 1: bronze_othercentre_hearingcentre
-@dlt.table(
-    name="bronze_othercentre_hearingcentre",
-    comment="Delta Live Table combining OtherCentre data with HearingCentre information.",
-    path=f"{bronze_mnt}/bronze_othercentre_hearingcentre" 
-)
-def bronze_othercentre_hearingcentre():
-    df =  (
-        dlt.read("raw_othercentre").alias("oc")
-        .join(
-            dlt.read("raw_hearingcentre").alias("hc"),
-            col("hc.CentreId") == col("oc.CentreId"),
-            "left_outer",
-        )
-        .select(
-            col("oc.AdjudicatorId"),
-            col("hc.Description").alias("OtherCentres"),
-            col("oc.AdtclmnFirstCreatedDatetime"),
-            col("oc.AdtclmnModifiedDatetime"),
-            col("oc.SourceFileName"),
-            col("oc.InsertedByProcessName")
-        )
-    )
-    return df
-
-
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Transformation bronze_adjudicatorrole
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ```sql
-# MAGIC SELECT AdjudicatorId, 
-# MAGIC        Role, 
-# MAGIC        DateOfAppointment, 
-# MAGIC        EndDateOfAppointment 
-# MAGIC FROM [ARIAREPORTS].[dbo].[AdjudicatorRole] 
-# MAGIC ```
-
-# COMMAND ----------
-
-
-# DLT Table 2: bronze_adjudicator_role
-@dlt.table(
-    name="bronze_adjudicator_role",
-    comment="Delta Live Table for Adjudicator Role data.",
-    path=f"{bronze_mnt}/bronze_adjudicator_role" 
-)
-def bronze_adjudicator_role():
-    df =  (
-        dlt.read("raw_adjudicatorrole").alias("adjr")
-        .select(
-            col("adjr.AdjudicatorId"),
-            col("adjr.Role"),
-            col("adjr.DateOfAppointment"),
-            col("adjr.EndDateOfAppointment"),
-            col("adjr.AdtclmnFirstCreatedDatetime"),
-            col("adjr.AdtclmnModifiedDatetime"),
-            col("adjr.SourceFileName"),
-            col("adjr.InsertedByProcessName")
-        )
+    # Filter for balance-related transactions
+    filtered_tx = (
+        tx.filter((col("SumBalance") == 1) & (~col("TransactionId").isin(
+            dlt.read("bronze_appealcase_transaction_transactiontype")
+                .filter(col("TransactionTypeId").isin([6, 19]))
+                .select("ReferringTransactionId")
+                .rdd.flatMap(lambda x: x).collect()
+        )))
     )
 
-    return df
+    # Aggregate by CaseNo
+    return (
+        filtered_tx
+            .groupBy("CaseNo")
+            .agg(sum("Amount").alias("BalanceDue"))
+    )
+
+
+# COMMAND ----------
+
+
+@dlt.table(
+    name="bronze_representation",
+    comment="DLT table to identify representation type (AIP or LR) per CaseNo based on CaseRep data.",
+    path=f"{bronze_mnt}/bronze_representation"
+)
+def bronze_representation():
+    df = dlt.read("bronze_appealcase_caserep_rep")  # corresponds to M1
+
+    return (
+        df.filter(col("CaseType") == 1)
+          .select("CaseNo", "RepresentativeId", "Name")
+          .withColumn(
+              "Representation",
+              when((col("RepresentativeId") == 957) |
+                   (col("RepresentativeId").isNull()) |
+                   (col("Name").rlike("(?i)no\\s*rep")) |
+                   (col("Name").rlike("(?i)none")) |
+                   (col("Name").rlike("(?i)unrepresented")) |
+                   (col("Name").rlike("(?i)self")) |
+                   (col("Name").rlike("(?i)not\\s*rep")) |
+                   (col("Name") == "-") |
+                   (col("Name").rlike("(?i)\\(spo")) |
+                   (col("Name").rlike("(?i)spons")),
+                   "AIP"
+              ).otherwise("LR")
+          )
+          .select("CaseNo", "Representation")
+    )
 
 
 # COMMAND ----------

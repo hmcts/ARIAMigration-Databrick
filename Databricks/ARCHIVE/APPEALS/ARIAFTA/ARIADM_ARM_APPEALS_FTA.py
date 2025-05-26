@@ -92,10 +92,6 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-# from SharedFunctionsLib.custom_functions import *
-
-# COMMAND ----------
-
 pip install azure-storage-blob
 
 
@@ -162,17 +158,13 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 
 # COMMAND ----------
 
-dbutils.fs.ls(f"abfss://bronze@ingest00curatedsbox.dfs.core.windows.net")
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
 
 # COMMAND ----------
 
 # DBTITLE 1,Set Paths and Hive Schema Variables
-read_hive = False
+# read_hive = False
 
 AppealCategory = "ARIAFTA"
 
@@ -192,7 +184,7 @@ audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.win
 
 # Print all variables
 variables = {
-    "read_hive": read_hive,
+    # "read_hive": read_hive,
     "AppealCategory": AppealCategory,
     "raw_mnt": raw_mnt,
     "landing_mnt": landing_mnt,
@@ -207,16 +199,6 @@ variables = {
 }
 
 display(variables)
-
-# COMMAND ----------
-
-# DBTITLE 1,Determine and Print Environment
-try:
-    env_value = dbutils.secrets.get(key_vault, "Environment")
-    env = "dev" if env_value == "development" else None
-    print(f"Environment: {env}")
-except:
-    env = "unkown"
 
 # COMMAND ----------
 
@@ -3255,138 +3237,6 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-# DBTITLE 1,Anlysis
-# %sql
-# WITH adjudicator_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (10, 11, 12,3)
-# ),
-# CourtClerkUsher_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (3)
-# ),
-#  base as (
-#   select 
-#     a.CaseNo,
-#     a.StatusId,
-#     a.CaseStatus,
-#     a.Position,
-#     a.UpperTribJudge,
-#     a.DesJudgeFirstTier,
-#     a.JudgeFirstTier,
-#     a.NonLegalMember,
-#     -- Calculate total number of labels needed for each field
-#     coalesce(a.UpperTribJudge, 0) as utj,
-#     coalesce(a.DesJudgeFirstTier, 0) as djt,
-#     coalesce(a.JudgeFirstTier, 0) as jt,
-#     coalesce(a.NonLegalMember, 0) as nlm,
-#      CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   from 
-#     hive_metastore.ariadm_arm_fta.silver_list_detail a 
-#   -- where 
-#   --   -- a.Position IS NOT NULL
-#   --   -- and CaseNo = 'OC/00018/2003'
-# )
-# select
-#   a.CaseNo,
-#   a.statusid,
-#   -- a.Position,
-#   a.UpperTribJudge,
-#   a.DesJudgeFirstTier,
-#   a.JudgeFirstTier,
-#   a.NonLegalMember,
-
-#   -- Assign Label 1
-#   case 
-#     when a.utj >= 1 then 'Upper Trib Judge'
-#     when a.utj = 0 and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     else null
-#   end as Label1,
-
-#   -- Assign Label 2
-#   case 
-#     when a.utj >= 2 then 'Upper Trib Judge'
-#     when a.utj in (1) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 2 then 'Non-Legal Member'
-#     else null
-#   end as Label2,
-
-#   -- Assign Label 3
-#   case 
-#     when a.utj >= 3 then 'Upper Trib Judge'
-#     when a.utj in (2) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 3 then 'Des Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (2) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 3 then 'Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj in (1) and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (2) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (2) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 2 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 3 then 'Non-Legal Member'
-#     else null
-#   end as Label3,
-#   a.Position,
-  
-#   -- Judge values for Label1/2/3
-#   a.JudgeValue,
-#   adj1.JudgeValue AS Label1_JudgeValue,
-#   adj2.JudgeValue AS Label2_JudgeValue,
-#   adj3.JudgeValue AS Label3_JudgeValue,
-#   adj4.JudgeValue AS CourtClerkUsher
-
-# from base a
-
-# LEFT JOIN adjudicator_details adj1 ON adj1.CaseNo = a.CaseNo  AND adj1.StatusId = a.statusid AND adj1.Position = 10 and adj1.CaseStatus = a.CaseStatus --a.Position = adj1.Position
-# LEFT JOIN adjudicator_details adj2 ON adj2.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj2.Position = 11 and adj2.CaseStatus = a.CaseStatus--a.Position = adj2.Position
-# LEFT JOIN adjudicator_details adj3 ON adj3.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj3.Position = 12 and adj3.CaseStatus = a.CaseStatus--a.Position = adj3.Position
-# LEFT JOIN adjudicator_details adj4 ON adj4.CaseNo = a.CaseNo AND adj4.StatusId = a.statusid AND adj4.Position = 3 and adj4.CaseStatus = a.CaseStatus --and a.Position = adj4.Position
-# WHERE 
-#   a.Position IS NOT NULL
-#   -- AND a.CaseNo = 'OC/00033/2003'
-#   and a.CaseNo = 'RD/00014/2006'
-
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_list_detail",
     comment="Delta Live silver Table for list detail.",
@@ -6154,8 +6004,8 @@ def gold_appeals_with_json():
     
 
     # Optionally load data from Hive if needed
-    if read_hive:
-        df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+    # if read_hive:
+    #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
@@ -6185,9 +6035,9 @@ def gold_appeals_with_html():
     # Load source data
     df_combined = dlt.read("stg_appeals_unified")
 
-    # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+    # # Optional: Load from Hive if not an initial load
+    # if read_hive:
+    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64)
@@ -6216,9 +6066,9 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 def gold_appeals_with_a360():
     df_a360 = dlt.read("stg_appeals_unified")
 
-    # Optionally load data from Hive
-    if read_hive:
-        df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \

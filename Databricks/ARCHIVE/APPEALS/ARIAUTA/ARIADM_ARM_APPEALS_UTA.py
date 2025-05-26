@@ -92,10 +92,6 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-# from SharedFunctionsLib.custom_functions import *
-
-# COMMAND ----------
-
 pip install azure-storage-blob
 
 
@@ -106,72 +102,31 @@ pip install azure-storage-blob
 
 # COMMAND ----------
 
-# DBTITLE 1,Determine KeyVault Name Based on Workspace URL
-# Get the current Databricks workspace URL from Spark configuration
-workspace_url = spark.conf.get("spark.databricks.workspaceUrl")
+# DBTITLE 1,Extract Environment Details and Generate KeyVault Name
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env_name = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
 
-# Define mapping of known workspace URLs to Key Vault/environment names
-workspace_mapping = {
-    "adb-3635282203417052.12.azuredatabricks.net": "ingest00-meta002-sbox",
-    "adb-376876256300083.3.azuredatabricks.net": "ingest01-meta002-sbox",
-    "adb-1879076228317698.18.azuredatabricks.net": "ingest02-meta002-sbox",
-    "adb-4305432441461530.10.azuredatabricks.net": "ingest00-meta002-stg",
-    "adb-3100629970551492.12.azuredatabricks.net": "ingest00-meta002-prod"
-}
+print(f"env_code: {lz_key}")  # This won't be redacted
+print(f"env_name: {env_name}")  # This won't be redacted
 
-# Fail if the current workspace URL is not found in the mapping
-if workspace_url not in workspace_mapping:
-    raise ValueError(f"Unrecognized Databricks workspace URL: {workspace_url}")
-
-# Retrieve the corresponding Key Vault/environment name
-KeyVault_name = workspace_mapping[workspace_url]
-
-# Print the resolved Key Vault/environment name
-print(f"Workspace URL maps to Key Vault: {KeyVault_name}")
-
-
-# COMMAND ----------
-
-# DBTITLE 1,Determine Environment Code  and Name from KeyVault Secret
-LZ_KEY = dbutils.secrets.get(KeyVault_name, "LZ-KEY")
-
-if "00" in LZ_KEY:
-    env_code = "00"
-elif "01" in LZ_KEY:
-    env_code = "01"
-elif "02" in LZ_KEY:
-    env_code = "02"
-else:
-    raise ValueError(f"Unexpected key vault name: {key_vault}")
-
-print(f"env_code: {env_code}")  # This won't be redacted
-
-env = dbutils.secrets.get(KeyVault_name, "ENV")
-
-if "sbox" in env:
-    env_name = "sbox"
-elif "stg" in env:
-    env_name = "stg"
-elif "prod" in env:
-    env_name = "prod"
-else:
-    raise ValueError(f"Unexpected key vault name: {key_vault}")
-
-print(f"env_code: {env_name}")  # This won't be redacted
+KeyVault_name = f"ingest{lz_key}-meta002-{env_name}"
+print(f"KeyVault_name: {KeyVault_name}") 
 
 # COMMAND ----------
 
 # DBTITLE 1,Configure SP OAuth
+
 # Service principal credentials
 client_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-ID")
 client_secret = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-CLIENT-SECRET")
 tenant_id = dbutils.secrets.get(KeyVault_name, "SERVICE-PRINCIPLE-TENANT-ID")
 
 # Storage account names
-curated_storage = f"ingest{env_code}curated{env_name}"
-checkpoint_storage = f"ingest{env_code}xcutting{env_name}"
-raw_storage = f"ingest{env_code}raw{env_name}"
-landing_storage = f"ingest{env_code}landing{env_name}"
+curated_storage = f"ingest{lz_key}curated{env_name}"
+checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
+raw_storage = f"ingest{lz_key}raw{env_name}"
+landing_storage = f"ingest{lz_key}landing{env_name}"
 
 # Spark config for curated storage (Delta table)
 spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
@@ -203,36 +158,33 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 
 # COMMAND ----------
 
-dbutils.fs.ls(f"abfss://bronze@ingest00curatedsbox.dfs.core.windows.net")
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC Please note that running the DLT pipeline with the parameter `initial_load = true` will ensure the creation of the corresponding Hive tables. However, during this stage, none of the gold outputs (HTML, JSON, and A360) are processed. To generate the gold outputs, a secondary run with `initial_load = true` is required.
 
 # COMMAND ----------
 
-read_hive = False
+# DBTITLE 1,Set Paths and Hive Schema Variables
+# read_hive = False
 
 AppealCategory = "ARIAUTA"
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"abfss://raw@ingest{env_code}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-landing_mnt =  f"abfss://landing@ingest{env_code}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"  # CORE FULL LOAD SQL TABLES parquest
-bronze_mnt = f"abfss://bronze@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-silver_mnt =  f"abfss://silver@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-gold_mnt =f"abfss://gold@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-html_mnt = f"abfss://html-template@ingest{env_code}landing{env_name}.dfs.core.windows.net/"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+landing_mnt =  f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"  # CORE FULL LOAD SQL TABLES parquest
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+silver_mnt =  f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+gold_mnt =f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
 
 gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
 hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
 # key_vault = "ingest00-keyvault-sbox"
 
-audit_delta_path = f"abfss://silver@ingest{env_code}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
+audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
 
 # Print all variables
 variables = {
-    "read_hive": read_hive,
+    # "read_hive": read_hive,
     "AppealCategory": AppealCategory,
     "raw_mnt": raw_mnt,
     "landing_mnt": landing_mnt,
@@ -247,16 +199,6 @@ variables = {
 }
 
 display(variables)
-
-# COMMAND ----------
-
-# DBTITLE 1,Determine and Print Environment
-try:
-    env_value = dbutils.secrets.get(key_vault, "Environment")
-    env = "dev" if env_value == "development" else None
-    print(f"Environment: {env}")
-except:
-    env = "unkown"
 
 # COMMAND ----------
 
@@ -3295,138 +3237,6 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-# DBTITLE 1,Anlysis
-# %sql
-# WITH adjudicator_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (10, 11, 12,3)
-# ),
-# CourtClerkUsher_details AS (
-#   SELECT
-#     CaseNo,
-#     Position,
-#     StatusId,
-#     CaseStatus,
-#     CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   FROM hive_metastore.ariadm_arm_fta.silver_list_detail
-#   WHERE Position IN (3)
-# ),
-#  base as (
-#   select 
-#     a.CaseNo,
-#     a.StatusId,
-#     a.CaseStatus,
-#     a.Position,
-#     a.UpperTribJudge,
-#     a.DesJudgeFirstTier,
-#     a.JudgeFirstTier,
-#     a.NonLegalMember,
-#     -- Calculate total number of labels needed for each field
-#     coalesce(a.UpperTribJudge, 0) as utj,
-#     coalesce(a.DesJudgeFirstTier, 0) as djt,
-#     coalesce(a.JudgeFirstTier, 0) as jt,
-#     coalesce(a.NonLegalMember, 0) as nlm,
-#      CONCAT(
-#       ListAdjudicatorSurname, ', ', 
-#       ListAdjudicatorForenames, ' (', 
-#       ListAdjudicatorTitle, ')'
-#     ) AS JudgeValue
-#   from 
-#     hive_metastore.ariadm_arm_fta.silver_list_detail a 
-#   -- where 
-#   --   -- a.Position IS NOT NULL
-#   --   -- and CaseNo = 'OC/00018/2003'
-# )
-# select
-#   a.CaseNo,
-#   a.statusid,
-#   -- a.Position,
-#   a.UpperTribJudge,
-#   a.DesJudgeFirstTier,
-#   a.JudgeFirstTier,
-#   a.NonLegalMember,
-
-#   -- Assign Label 1
-#   case 
-#     when a.utj >= 1 then 'Upper Trib Judge'
-#     when a.utj = 0 and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     else null
-#   end as Label1,
-
-#   -- Assign Label 2
-#   case 
-#     when a.utj >= 2 then 'Upper Trib Judge'
-#     when a.utj in (1) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 2 then 'Non-Legal Member'
-#     else null
-#   end as Label2,
-
-#   -- Assign Label 3
-#   case 
-#     when a.utj >= 3 then 'Upper Trib Judge'
-#     when a.utj in (2) and a.djt >= 1 then 'Des Judge First Tier'
-#     when a.utj in (1) and a.djt >= 2 then 'Des Judge First Tier'
-#     when a.utj = 0 and a.djt >= 3 then 'Des Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj in (1) and a.djt in (1) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (2) and a.jt >= 1 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt in (1) and a.jt >= 2 then 'Judge First Tier'
-#     when a.utj = 0 and a.djt = 0 and a.jt >= 3 then 'Judge First Tier'
-#     when a.utj in (2) and a.djt = 0 and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj in (1) and a.djt in (1) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (2) and a.jt = 0 and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt in (1) and a.jt in (1) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (2) and a.nlm >= 1 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt in (1) and a.nlm >= 2 then 'Non-Legal Member'
-#     when a.utj = 0 and a.djt = 0 and a.jt = 0 and a.nlm >= 3 then 'Non-Legal Member'
-#     else null
-#   end as Label3,
-#   a.Position,
-  
-#   -- Judge values for Label1/2/3
-#   a.JudgeValue,
-#   adj1.JudgeValue AS Label1_JudgeValue,
-#   adj2.JudgeValue AS Label2_JudgeValue,
-#   adj3.JudgeValue AS Label3_JudgeValue,
-#   adj4.JudgeValue AS CourtClerkUsher
-
-# from base a
-
-# LEFT JOIN adjudicator_details adj1 ON adj1.CaseNo = a.CaseNo  AND adj1.StatusId = a.statusid AND adj1.Position = 10 and adj1.CaseStatus = a.CaseStatus --a.Position = adj1.Position
-# LEFT JOIN adjudicator_details adj2 ON adj2.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj2.Position = 11 and adj2.CaseStatus = a.CaseStatus--a.Position = adj2.Position
-# LEFT JOIN adjudicator_details adj3 ON adj3.CaseNo = a.CaseNo AND adj2.StatusId = a.statusid AND adj3.Position = 12 and adj3.CaseStatus = a.CaseStatus--a.Position = adj3.Position
-# LEFT JOIN adjudicator_details adj4 ON adj4.CaseNo = a.CaseNo AND adj4.StatusId = a.statusid AND adj4.Position = 3 and adj4.CaseStatus = a.CaseStatus --and a.Position = adj4.Position
-# WHERE 
-#   a.Position IS NOT NULL
-#   -- AND a.CaseNo = 'OC/00033/2003'
-#   and a.CaseNo = 'RD/00014/2006'
-
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_list_detail",
     comment="Delta Live silver Table for list detail.",
@@ -4634,9 +4444,9 @@ def silver_archive_metadata():
         col('ac.CaseNo').alias('client_identifier'),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when(env == lit('dev'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        when(env_name == lit('sbox'), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
@@ -4650,7 +4460,7 @@ def silver_archive_metadata():
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
         # col('ca.AppellantBirthDate').alias('bf_004'),
-        when(env == lit('dev'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        when(env_name == lit('sbox'), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))
     
@@ -5859,7 +5669,7 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_combined
+# DBTITLE 1,Transformation: stg_apl_combined
 @dlt.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.",
@@ -6042,7 +5852,7 @@ def stg_apl_combined():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_json_content
+# DBTITLE 1,Transformation: stg_apl_create_json_content
 @dlt.table(
     name="stg_apl_create_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -6063,7 +5873,7 @@ def stg_apl_create_json_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_html_content
+# DBTITLE 1,Transformation: stg_apl_create_html_content
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -6087,7 +5897,7 @@ def stg_apl_create_html_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_a360_content
+# DBTITLE 1,Transformation: stg_apl_create_a360_content
 @dlt.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -6191,11 +6001,6 @@ def gold_appeals_with_json():
     """
     # Load source data
     df_unified = dlt.read("stg_appeals_unified")
-    
-
-    # Optionally load data from Hive if needed
-    if read_hive:
-        df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
@@ -6225,10 +6030,6 @@ def gold_appeals_with_html():
     # Load source data
     df_combined = dlt.read("stg_appeals_unified")
 
-    # Optional: Load from Hive if not an initial load
-    if read_hive:
-        df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
-
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64)
 
@@ -6255,10 +6056,6 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 @dlt.expect_all_or_fail(checks)
 def gold_appeals_with_a360():
     df_a360 = dlt.read("stg_appeals_unified")
-
-    # Optionally load data from Hive
-    if read_hive:
-        df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
@@ -6292,7 +6089,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # from pyspark.sql.functions import col, from_unixtime
 
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/submission/"))
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariauta/ARIAUTA/submission/"))
 # files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
 
 # display(files_df.orderBy(col("modificationTime").desc()))
@@ -6301,7 +6098,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # from pyspark.sql.functions import col, from_unixtime
 
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariauta/ARIAUTA/response/"))
 # files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
 
 # display(files_df.orderBy(col("modificationTime").desc()))
@@ -6310,7 +6107,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # from pyspark.sql.functions import col, from_unixtime
 
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/response/"))
+# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariauta/ARIAUTA/response/"))
 # files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
 # files_df = files_df.filter(col("path").contains("_0_"))
 
@@ -6319,7 +6116,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 # COMMAND ----------
 
 # DBTITLE 1,Check Error Records in Appeals Data
-# df_unified = spark.read.table("hive_metastore.ariadm_arm_fta.stg_appeals_unified")
+# df_unified = spark.read.table("hive_metastore.ariadm_arm_uta.stg_appeals_unified")
 # display(df_unified.filter(col("A360FileName").isNull() | 
 #                           col("A360Content").like("Error%") | 
 #                           col("HTMLContent").like("Error%") | 
@@ -6329,9 +6126,9 @@ dbutils.notebook.exit("Notebook completed successfully")
 # COMMAND ----------
 
 # DBTITLE 1,Check for Creation errors
-# df_json = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_json").alias("json")
-# df_html = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_html").alias("html")
-# df_a360 = spark.read.table("hive_metastore.ariadm_arm_fta.gold_appeals_with_a360").alias("a360")
+# df_json = spark.read.table("hive_metastore.ariadm_arm_uta.gold_appeals_with_json").alias("json")
+# df_html = spark.read.table("hive_metastore.ariadm_arm_uta.gold_appeals_with_html").alias("html")
+# df_a360 = spark.read.table("hive_metastore.ariadm_arm_uta.gold_appeals_with_a360").alias("a360")
 
 # df_joined = df_json.join(df_html, "CaseNo", "inner").join(df_a360, df_a360.A360BatchId == df_json.A360BatchId, "inner")
 # df_filtered = df_joined.filter((col("json.uploadstatus") != "success") | 
@@ -6597,13 +6394,13 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # %sql
-# select CaseNo,flag1,flag2,flag3 from hive_metastore.ariadm_arm_fta.stg_statichtml_data
+# select CaseNo,flag1,flag2,flag3 from hive_metastore.ariadm_arm_uta.stg_statichtml_data
 # -- where CaseNo like "TH/00002/2004"
 
 # COMMAND ----------
 
 # %sql
-# SELECT * FROM hive_metastore.ariadm_arm_fta.stg_apl_create_html_content
+# SELECT * FROM hive_metastore.ariadm_arm_uta.stg_apl_create_html_content
 
 # COMMAND ----------
 
@@ -6614,7 +6411,7 @@ case_no = 'IM/00023/2003' # dependents
 # DBTITLE 1,Display HTML Content
 # # case_no = 'HR/00014/2004'
 # case_no = 'AA/00001/2015'
-# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
+# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_uta.gold_appeals_with_html")
 
 # # display(df)
 # # Filter for the specific case and extract the JSON collection
@@ -7068,31 +6865,31 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # %sql
-# select count(*) from hive_metastore.ariadm_arm_fta.gold_appeals_with_json
+# select count(*) from hive_metastore.ariadm_arm_uta.gold_appeals_with_json
 
 # COMMAND ----------
 
 # %sql
 # select count(*)
 # , A360BatchId 
-# from hive_metastore.ariadm_arm_fta.gold_appeals_with_html
+# from hive_metastore.ariadm_arm_uta.gold_appeals_with_html
 # group by A360BatchId
 
 # COMMAND ----------
 
 # %sql
-# select count(*) from hive_metastore.ariadm_arm_fta.gold_appeals_with_a360
+# select count(*) from hive_metastore.ariadm_arm_uta.gold_appeals_with_a360
 
 # COMMAND ----------
 
 # DBTITLE 1,Red text Pyspark
-# df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_transaction_detail")
-# df_category = spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcategory_detail")
-# df_history_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_history_detail")
-# df_status_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_status_detail")
-# df_link_details =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_link_detail")
-# df_case =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail")
-# df_applicant =  spark.read.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail")
+# df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_uta.silver_transaction_detail")
+# df_category = spark.read.table("hive_metastore.ariadm_arm_uta.silver_appealcategory_detail")
+# df_history_details =  spark.read.table("hive_metastore.ariadm_arm_uta.silver_history_detail")
+# df_status_details =  spark.read.table("hive_metastore.ariadm_arm_uta.silver_status_detail")
+# df_link_details =  spark.read.table("hive_metastore.ariadm_arm_uta.silver_link_detail")
+# df_case =  spark.read.table("hive_metastore.ariadm_arm_uta.silver_appealcase_detail")
+# df_applicant =  spark.read.table("hive_metastore.ariadm_arm_uta.silver_applicant_detail")
 
 # # Get the latest transaction details
 # window_spec = Window.partitionBy("CaseNo").orderBy("transactionid")
@@ -7240,7 +7037,7 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # %sql
-# select * from hive_metastore.ariadm_arm_fta.silver_appealcategory_detail
+# select * from hive_metastore.ariadm_arm_uta.silver_appealcategory_detail
 
 # COMMAND ----------
 
@@ -7253,7 +7050,7 @@ case_no = 'IM/00023/2003' # dependents
 #             WHEN ReconsiderationHearing = 'enabled' THEN 'REC' 
 #             ELSE '' 
 #         END AS ReconsiderationHearing
-#     FROM hive_metastore.ariadm_arm_fta.silver_status_detail
+#     FROM hive_metastore.ariadm_arm_uta.silver_status_detail
 #     WHERE CaseStatus IN (27, 28, 29, 30, 31, 32, 33, 34)
 #     GROUP BY CaseNo, ReconsiderationHearing
 # ), cte_rec AS (
@@ -7270,8 +7067,8 @@ case_no = 'IM/00023/2003' # dependents
 #     SELECT 
 #         ac.CaseNo, 
 #         sort_array(collect_list(struct(ac.Priority, concat('*', ac.Flag, '*'))), false) AS sorted_flags
-#     FROM hive_metastore.ariadm_arm_fta.silver_appealcategory_detail ac
-#     --JOIN hive_metastore.ariadm_arm_fta.silver_status_detail sd 
+#     FROM hive_metastore.ariadm_arm_uta.silver_appealcategory_detail ac
+#     --JOIN hive_metastore.ariadm_arm_uta.silver_status_detail sd 
 #         -- ON sd.CaseNo = ac.CaseNo
 #     --WHERE sd.CaseStatus = 35
 #     GROUP BY ac.CaseNo
@@ -7299,17 +7096,17 @@ case_no = 'IM/00023/2003' # dependents
 #             WHEN BalanceDue = 0 AND TransactionTypeId = 17 THEN 'FEE EXEMPT'
 #             WHEN TotalPaymentsReceived >= TotalFeeDue AND EXISTS (
 #                 SELECT 1 
-#                 FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail t 
+#                 FROM hive_metastore.ariadm_arm_uta.silver_transaction_detail t 
 #                 WHERE t.CaseNo = d.CaseNo AND t.TransactionTypeId = 1
 #             ) THEN 'FEE PAID'
 #             WHEN BalanceDue > 0 AND EXISTS (
 #                 SELECT 1 
-#                 FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail t 
+#                 FROM hive_metastore.ariadm_arm_uta.silver_transaction_detail t 
 #                 WHERE t.CaseNo = d.CaseNo AND t.TransactionTypeId = 1
 #             ) THEN 'FEE DUE'
 #             ELSE ''
 #         END AS Fee_Flag
-#     FROM hive_metastore.ariadm_arm_fta.silver_transaction_detail d
+#     FROM hive_metastore.ariadm_arm_uta.silver_transaction_detail d
 # ), cte_feeflagordered AS (
 #    SELECT *,
 #         CASE 
@@ -7364,8 +7161,8 @@ case_no = 'IM/00023/2003' # dependents
 #         END
 #     ) AS flag2,
 #     coalesce(cf.Flag_List, '') AS flag3
-# FROM hive_metastore.ariadm_arm_fta.silver_appealcase_detail a
-# LEFT JOIN hive_metastore.ariadm_arm_fta.silver_applicant_detail b 
+# FROM hive_metastore.ariadm_arm_uta.silver_appealcase_detail a
+# LEFT JOIN hive_metastore.ariadm_arm_uta.silver_applicant_detail b 
 #     ON a.CaseNo = b.CaseNo
 # LEFT JOIN cte_rec cr 
 #     ON a.CaseNo = cr.CaseNo
@@ -7379,16 +7176,16 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").count())
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").count())
 
 # COMMAND ----------
 
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").count())
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").count())
 
 # COMMAND ----------
 
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%stg%'").groupBy("Table_name").count())
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_cr_audit_table").filter("Table_name LIKE '%stg%'").groupBy("Table_name").count())
 
 # COMMAND ----------
 
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())
+# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())

@@ -138,10 +138,17 @@ stages:
                   pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
                     --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ segment }}'
+              
+              - task: ArchiveFiles@2
+                inputs:
+                  rootFolderOrFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}' 
+                  archiveType: 'zip' 
+                  archiveFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}.zip'  
+                  verbose: true 
 
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}/'
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}.zip'
                   ArtifactName: 'functionapp-${{ segment }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'

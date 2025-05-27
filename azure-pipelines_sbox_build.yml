@@ -139,12 +139,12 @@ stages:
                     --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ segment }}'
               
-              - task: ArchiveFiles@2
-                inputs:
-                  rootFolderOrFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}' 
-                  archiveType: 'zip' 
-                  archiveFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}.zip'  
-                  verbose: true 
+              # - task: ArchiveFiles@2
+              #   inputs:
+              #     rootFolderOrFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}' 
+              #     archiveType: 'zip' 
+              #     archiveFile: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}.zip'  
+              #     verbose: true 
 
               - task: PublishBuildArtifacts@1
                 inputs:
@@ -188,7 +188,7 @@ stages:
                       connectedServiceNameARM: ${{ deployment.service_connection }}
                       appType: 'functionAppLinux'
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}/${{ segment }}'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 

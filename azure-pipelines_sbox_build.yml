@@ -182,7 +182,7 @@ stages:
                       appType: 'functionAppLinux'
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
                       package: '$(Pipeline.Workspace)/${{ segment }}'
-                      deploymentMethod: 'auto'
+                      deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 
             - ${{ if ne(lz.landing_zone, '02') }}:

@@ -10,7 +10,7 @@ parameters:
   - name: environment_components
     type: object
     default:
-      - deployment: sbox_aria
+      - deployment: sbox_aria # look at deployment to other environments
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptlsbox'

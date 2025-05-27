@@ -14,7 +14,7 @@ parameters:
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptlsbox'
-        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta'] #sbails does not exist in 00
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -138,7 +138,7 @@ stages:
                   pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
                     --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ segment }}'
-
+              
               - task: PublishBuildArtifacts@1
                 inputs:
                   PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
@@ -173,7 +173,7 @@ stages:
                       buildType: 'current'
                       downloadType: 'single'
                       artifactName: 'functionapp-${{ segment }}'
-                      downloadPath: '$(Pipeline.Workspace)/${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)'
                     displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
                   - task: AzureFunctionApp@2
@@ -181,9 +181,9 @@ stages:
                       connectedServiceNameARM: ${{ deployment.service_connection }}
                       appType: 'functionAppLinux'
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/${{ segment }}'
-                      deploymentMethod: 'auto'
-                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
+                      deploymentMethod: 'zipDeploy'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 
             - ${{ if ne(lz.landing_zone, '02') }}:
               - job: DummyJob
@@ -204,6 +204,7 @@ stages:
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
           jobs:
     #        - ${{ each lz in deployment.landing_zones}}:

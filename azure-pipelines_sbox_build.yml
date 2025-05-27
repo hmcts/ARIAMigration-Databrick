@@ -208,7 +208,7 @@ stages:
 
           jobs:
     #        - ${{ each lz in deployment.landing_zones}}:
-              - ${{ if and(eq(lz.landing_zone, '02') }}:
+              - ${{ if eq(lz.landing_zone, '02') }}:
                 - job: Deploy_Databricks_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
                   displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                   pool:

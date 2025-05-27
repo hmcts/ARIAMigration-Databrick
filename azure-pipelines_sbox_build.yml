@@ -188,7 +188,7 @@ stages:
                       connectedServiceNameARM: ${{ deployment.service_connection }}
                       appType: 'functionAppLinux'
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}/${{ segment }}.zip'
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 

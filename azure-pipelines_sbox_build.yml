@@ -148,7 +148,7 @@ stages:
 
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}.zip'
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
                   ArtifactName: 'functionapp-${{ segment }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'
@@ -188,7 +188,7 @@ stages:
                       connectedServiceNameARM: ${{ deployment.service_connection }}
                       appType: 'functionAppLinux'
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}/${{ segment }}.zip'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}/${{ segment }}'
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 

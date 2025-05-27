@@ -10,11 +10,11 @@ parameters:
   - name: environment_components
     type: object
     default:
-      - deployment: sbox_aria # look at deployment to other environments
+      - deployment: sbox_aria
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptlsbox'
-        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta'] #sbails does not exist in 00
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -183,7 +183,7 @@ stages:
                       appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
                       package: '$(Pipeline.Workspace)/${{ segment }}'
                       deploymentMethod: 'auto'
-                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 
             - ${{ if ne(lz.landing_zone, '02') }}:
               - job: DummyJob
@@ -204,10 +204,11 @@ stages:
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
             - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
           jobs:
     #        - ${{ each lz in deployment.landing_zones}}:
-              - ${{ if eq(lz.landing_zone, '02') }}:
+              - ${{ if and(eq(lz.landing_zone, '02') }}:
                 - job: Deploy_Databricks_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
                   displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                   pool:

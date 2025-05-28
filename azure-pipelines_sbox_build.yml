@@ -150,13 +150,13 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - ${{ each segment in deployment.segments}}:
-        - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}: #remove landing zone/sbox in future updates
+        - ${{ if eq(deployment.environment, 'sbox') }}: #02 removed
 
           - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
             displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
             dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
             jobs:
-            - ${{ if eq(lz.landing_zone, '02') }}:
+ #           - ${{ if eq(lz.landing_zone, '02') }}:
               - job: Deploy_Function_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                 steps:
@@ -185,16 +185,16 @@ stages:
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 
-            - ${{ if ne(lz.landing_zone, '02') }}:
-              - job: DummyJob
-                displayName: 'No deployment for this LZ'
-                steps:
-                - script: echo "Skipping deployment"
+ #           - ${{ if ne(lz.landing_zone, '02') }}:
+              # - job: DummyJob
+              #   displayName: 'No deployment for this LZ'
+              #   steps:
+              #   - script: echo "Skipping deployment"
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
-      - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}: #remove landing zone/sbox in future updates
+      - ${{ if eq(deployment.environment, 'sbox') }}: #02 removed
         - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
           displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
           dependsOn:
@@ -208,7 +208,7 @@ stages:
 
           jobs:
     #        - ${{ each lz in deployment.landing_zones}}:
-              - ${{ if eq(lz.landing_zone, '02') }}:
+    #          - ${{ if eq(lz.landing_zone, '02') }}:
                 - job: Deploy_Databricks_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
                   displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                   pool:
@@ -236,11 +236,11 @@ stages:
                         databricks workspace import_dir Databricks /live --overwrite
                       displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
                   
-              - ${{ if ne(lz.landing_zone, '02') }}:
-                - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
-                  displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
-                  steps:
-                    - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"
+      #        - ${{ if ne(lz.landing_zone, '02') }}:
+                # - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+                #   displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
+                #   steps:
+                #     - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"
 
                 - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
                   displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
@@ -295,12 +295,12 @@ stages:
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones }}:
-      - ${{ if and(eq(deployment.environment, 'sbox'), eq(lz.landing_zone, '02')) }}:
+      - ${{ if eq(deployment.environment, 'sbox') }}: #02
         - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
           displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
           dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
           jobs:
-              - ${{ if eq(lz.landing_zone, '02') }}:    
+    #          - ${{ if eq(lz.landing_zone, '02') }}:    
                 - job:
                   displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
                   pool: 
@@ -388,8 +388,8 @@ stages:
                     #  databricks bundle run -t sandbox db_wf_joh_recieve_job
                     displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
               
-              - ${{ if ne(lz.landing_zone, '02') }}:
-                - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
-                  displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
-                  steps:
-                    - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"
+              # - ${{ if ne(lz.landing_zone, '02') }}:
+              #   - job: Skip_Deploy_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+              #     displayName: 'Skip Deploy for LZ ${{ lz.landing_zone }}'
+              #     steps:
+              #       - script: echo "No deployment needed for landing zone ${{ lz.landing_zone }}"

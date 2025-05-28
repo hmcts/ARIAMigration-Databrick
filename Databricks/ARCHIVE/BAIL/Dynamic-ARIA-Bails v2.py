@@ -1,13 +1,4 @@
 # Databricks notebook source
-# # Use the dbutils.library.install function
-# # Use pip to install the library
-# %pip install /Workspace/Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/SharedFunctionsLib/dist/ARIAFUNCITONS-0.0.1-py3-none-any.whl
-
-
-# dbutils.library.restartPython()  # Restart the Python process to pick up the new library
-
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -64,11 +55,11 @@ import dlt
 import json
 from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode
 from pyspark.sql.types import *
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql import DataFrame
 import logging
 from pyspark.sql.window import Window
+from pyspark.sql.types import  StringType, IntegerType
 
 
 # COMMAND ----------
@@ -151,7 +142,7 @@ def extract_timestamp(file_path):
     return timestamp_str
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
-def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
+def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str ) -> "DataFrame":
     """
     Reads the latest .parquet file from a specified folder, adds audit columns, creates a temporary Spark view, and returns the DataFrame.
     
@@ -211,16 +202,108 @@ def format_date(date_value):
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC # Configure OAuth
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Define local variables
+
+# COMMAND ----------
+
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
+
+
+
+# COMMAND ----------
+
+print(f"lz_key: {lz_key} and env: {env}")
+
+# COMMAND ----------
+
+keyvault_name = f"ingest{lz_key}-meta002-{env}"
+print(keyvault_name)
+
+# COMMAND ----------
+
+# Access the Service Principle secrets from keyvaults
+client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
+tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
+client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
+
+
+# COMMAND ----------
+
+# Storage account and containers to authenticate
+raw_storage_account = f"ingest{lz_key}raw{env}"
+raw_storage_container = "raw"
+
+external_storage_account = f"ingest{lz_key}external{env}"
+external_storage_container = "external-csv"
+
+landing_storage_account = f"ingest{lz_key}landing{env}"
+landing_storage_container = "landing"
+landing_html_storage_container = "html-template"
+
+curated_storage_account = f"ingest{lz_key}curated{env}"
+bronze_storage_container = "bronze"
+silver_storage_container = "silver"
+gold_storage_container = "gold"
+
+
+# COMMAND ----------
+
+## Set up OAuth 
+### config for Landing zone
+
+storage_accounts = [raw_storage_account,external_storage_account,landing_storage_account,curated_storage_account]
+
+for storage_account in storage_accounts:
+    configs = {
+        f"fs.azure.account.auth.type.{storage_account}.dfs.core.windows.net": "OAuth",
+        f"fs.azure.account.oauth.provider.type.{storage_account}.dfs.core.windows.net":
+            "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
+        f"fs.azure.account.oauth2.client.id.{storage_account}.dfs.core.windows.net": client_id,
+        f"fs.azure.account.oauth2.client.secret.{storage_account}.dfs.core.windows.net": client_secret,
+        f"fs.azure.account.oauth2.client.endpoint.{storage_account}.dfs.core.windows.net":
+            f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+    }
+
+    for key,val in configs.items():
+        spark.conf.set(key,val)
+
+# COMMAND ----------
+
+# Print out the auth config for each storage account to confirm
+for storage_account in storage_accounts:
+    key = f"fs.azure.account.auth.type.{storage_account}.dfs.core.windows.net"
+    print(f"{key}: {spark.conf.get(key, 'MISSING')}")
+
+# COMMAND ----------
+
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/BAILS"
-external_mnt = "/mnt/ingest00externalsboxexternal-csv"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/BAILS"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/BAILS"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/BAILS"
+raw_base_path = f"abfss://{raw_storage_container}@{raw_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+bronze_base_path = f"abfss://{bronze_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net"
+
+landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
+
+landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/bailsv3"
+
+
 gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'
 gold_json_outputs = 'ARIADM/ARM/BAILS/JSON/'
 gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
+
 
 # COMMAND ----------
 
@@ -229,26 +312,19 @@ gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
 
 # COMMAND ----------
 
-secret = secret = dbutils.secrets.get("ingest00-keyvault-sbox", "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(keyvault_name, f"curated{env}-connection-string-{env}")
  
  
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
  
-# Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+# Set up the BlobServiceClient with the connection string
  
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+blob_service_client = BlobServiceClient.from_connection_string(secret)
  
 # Specify the container name
 container_name = "gold"
 container_client = blob_service_client.get_container_client(container_name)
-
-audit_container_client = blob_service_client.get_container_client("silver")
-
-# COMMAND ----------
-
-
 
 
 # COMMAND ----------
@@ -270,165 +346,165 @@ audit_container_client = blob_service_client.get_container_client("silver")
 
 # load in all the raw tables
 
-@dlt.table(name="raw_appeal_cases", comment="Raw Appeal Cases",path=f"{raw_mnt}/raw_appeal_cases")
+@dlt.table(name="raw_appeal_cases", comment="Raw Appeal Cases",path=f"{raw_base_path}/raw_appeal_cases")
 def bail_raw_appeal_cases():
-    return read_latest_parquet("AppealCase","tv_AppealCase","ARIA_ARM_BAIL")
+    return read_latest_parquet("AppealCase","tv_AppealCase","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_respondents", comment="Raw Case Respondents",path=f"{raw_mnt}/raw_case_respondents")
+@dlt.table(name="raw_case_respondents", comment="Raw Case Respondents",path=f"{raw_base_path}/raw_case_respondents")
 def bail_raw_case_respondents():
-    return read_latest_parquet("CaseRespondent","tv_CaseRespondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseRespondent","tv_CaseRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_respondent", comment="Raw Respondents",path=f"{raw_mnt}/raw_respondents")
+@dlt.table(name="raw_respondent", comment="Raw Respondents",path=f"{raw_base_path}/raw_respondents")
 def bail_raw_respondent():
-    return read_latest_parquet("Respondent","tv_Respondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("Respondent","tv_Respondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_main_respondent", comment="Raw Main Respondent",path=f"{raw_mnt}/raw_main_respondent")
+@dlt.table(name="raw_main_respondent", comment="Raw Main Respondent",path=f"{raw_base_path}/raw_main_respondent")
 def bail_raw_main_respondent():
-    return read_latest_parquet("MainRespondent","tv_MainRespondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("MainRespondent","tv_MainRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_pou", comment="Raw Pou",path=f"{raw_mnt}/raw_pou")
+@dlt.table(name="raw_pou", comment="Raw Pou",path=f"{raw_base_path}/raw_pou")
 def bail_raw_pou():
-    return read_latest_parquet("Pou","tv_Pou","ARIA_ARM_BAIL")
+    return read_latest_parquet("Pou","tv_Pou","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_file_location", comment="Raw File Location",path=f"{raw_mnt}/raw_file_location")
+@dlt.table(name="raw_file_location", comment="Raw File Location",path=f"{raw_base_path}/raw_file_location")
 def bail_raw_file_location():
-    return read_latest_parquet("FileLocation","tv_FileLocation","ARIA_ARM_BAIL")
+    return read_latest_parquet("FileLocation","tv_FileLocation","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_rep", comment="Raw Case Rep",path=f"{raw_mnt}/raw_case_rep")
+@dlt.table(name="raw_case_rep", comment="Raw Case Rep",path=f"{raw_base_path}/raw_case_rep")
 def bail_raw_case_rep():
-    return read_latest_parquet("CaseRep","tv_CaseRep","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseRep","tv_CaseRep","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_representative", comment="Raw Representative",path=f"{raw_mnt}/raw_Representative")
+@dlt.table(name="raw_representative", comment="Raw Representative",path=f"{raw_base_path}/raw_Representative")
 def bail_raw_Representative():
-    return read_latest_parquet("Representative","tv_Representative","ARIA_ARM_BAIL")
+    return read_latest_parquet("Representative","tv_Representative","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_language", comment="Raw Language",path=f"{raw_mnt}/raw_language")
+@dlt.table(name="raw_language", comment="Raw Language",path=f"{raw_base_path}/raw_language")
 def bail_raw_language():
-    return read_latest_parquet("Language","tv_Language","ARIA_ARM_BAIL")
+    return read_latest_parquet("Language","tv_Language","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_cost_award", comment="Raw Cost Award",path=f"{raw_mnt}/raw_cost_award")
+@dlt.table(name="raw_cost_award", comment="Raw Cost Award",path=f"{raw_base_path}/raw_cost_award")
 def bail_raw_cost_award():
-    return read_latest_parquet("CostAward","tv_CostAward","ARIA_ARM_BAIL") 
+    return read_latest_parquet("CostAward","tv_CostAward","ARIA_ARM_BAIL",landing_base_path) 
 
-@dlt.table(name='raw_case_list', comment='Raw Case List',path=f"{raw_mnt}/raw_case_list")
+@dlt.table(name='raw_case_list', comment='Raw Case List',path=f"{raw_base_path}/raw_case_list")
 def bail_case_list():
-    return read_latest_parquet("CaseList","tv_CaseList","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseList","tv_CaseList","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_type', comment='Raw Hearing Type',path=f"{raw_mnt}/raw_hearing_type")
+@dlt.table(name='raw_hearing_type', comment='Raw Hearing Type',path=f"{raw_base_path}/raw_hearing_type")
 def bail_hearing_type():
-    return read_latest_parquet("HearingType","tv_HearingType","ARIA_ARM_BAIL")
+    return read_latest_parquet("HearingType","tv_HearingType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list',comment='Raw List',path=f"{raw_mnt}/raw_list")
+@dlt.table(name='raw_list',comment='Raw List',path=f"{raw_base_path}/raw_list")
 def bail_list():
-    return read_latest_parquet("List","tv_List","ARIA_ARM_BAIL")
+    return read_latest_parquet("List","tv_List","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_type',comment='Raw List Type',path=f"{raw_mnt}/raw_list_type")
+@dlt.table(name='raw_list_type',comment='Raw List Type',path=f"{raw_base_path}/raw_list_type")
 def bail_list_type():
-    return read_latest_parquet("ListType","tv_ListType","ARIA_ARM_BAIL")
+    return read_latest_parquet("ListType","tv_ListType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_court',comment='Raw Bail Court',path=f"{raw_mnt}/raw_court")
+@dlt.table(name='raw_court',comment='Raw Bail Court',path=f"{raw_base_path}/raw_court")
 def bail_court():
-    return read_latest_parquet("Court","tv_Court","ARIA_ARM_BAIL")
+    return read_latest_parquet("Court","tv_Court","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_centre',comment='Raw  Hearing Centre',path=f"{raw_mnt}/raw_hearing_centre")
+@dlt.table(name='raw_hearing_centre',comment='Raw  Hearing Centre',path=f"{raw_base_path}/raw_hearing_centre")
 def bail_hearing_centre():
-    return read_latest_parquet("HearingCentre","tv_HearingCentre","ARIA_ARM_BAIL")
+    return read_latest_parquet("HearingCentre","tv_HearingCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_sitting',comment='Raw List Sitting',path=f"{raw_mnt}/raw_list_sitting")
+@dlt.table(name='raw_list_sitting',comment='Raw List Sitting',path=f"{raw_base_path}/raw_list_sitting")
 def bail_list_sitting():
-    return read_latest_parquet("ListSitting","tv_ListSitting","ARIA_ARM_BAIL")
+    return read_latest_parquet("ListSitting","tv_ListSitting","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_adjudicator',comment='Raw Adjudicator',path=f"{raw_mnt}/raw_adjudicator")
+@dlt.table(name='raw_adjudicator',comment='Raw Adjudicator',path=f"{raw_base_path}/raw_adjudicator")
 def bail_adjudicator():
-    return read_latest_parquet("Adjudicator","tv_Adjudicator","ARIA_ARM_BAIL")
+    return read_latest_parquet("Adjudicator","tv_Adjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appellant',comment='Raw Bail Appellant',path=f"{raw_mnt}/raw_appellant")
+@dlt.table(name='raw_appellant',comment='Raw Bail Appellant',path=f"{raw_base_path}/raw_appellant")
 def bail_appellant():
-    return read_latest_parquet("Appellant","tv_Appellant","ARIA_ARM_BAIL")
+    return read_latest_parquet("Appellant","tv_Appellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_appellant',comment='Raw Bail Case Appellant',path=f"{raw_mnt}/raw_case_appellant")
+@dlt.table(name='raw_case_appellant',comment='Raw Bail Case Appellant',path=f"{raw_base_path}/raw_case_appellant")
 def bail_case_appellant():
-    return read_latest_parquet("CaseAppellant","tv_CaseAppellant","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseAppellant","tv_CaseAppellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_detention_centre',comment='Raw Nail Detention Centre',path=f"{raw_mnt}/raw_detention_centre")
+@dlt.table(name='raw_detention_centre',comment='Raw Nail Detention Centre',path=f"{raw_base_path}/raw_detention_centre")
 def bail_detention_centre():
-    return read_latest_parquet("DetentionCentre","tv_DetentionCentre","ARIA_ARM_BAIL")
+    return read_latest_parquet("DetentionCentre","tv_DetentionCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_country',comment='Raw Bail Country',path=f"{raw_mnt}/raw_country")
+@dlt.table(name='raw_country',comment='Raw Bail Country',path=f"{raw_base_path}/raw_country")
 def bail_country():
-    return read_latest_parquet("Country","tv_Country","ARIA_ARM_BAIL")
+    return read_latest_parquet("Country","tv_Country","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_diary',comment='Raw Bail BF Diary',path=f"{raw_mnt}/raw_bf_diary")
+@dlt.table(name='raw_bf_diary',comment='Raw Bail BF Diary',path=f"{raw_base_path}/raw_bf_diary")
 def bail_bf_diary():
-    return read_latest_parquet("BFDiary","tv_BFDiary","ARIA_ARM_BAIL")
+    return read_latest_parquet("BFDiary","tv_BFDiary","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_type',comment='Raw Bail BF Type',path=f"{raw_mnt}/raw_bf_type")
+@dlt.table(name='raw_bf_type',comment='Raw Bail BF Type',path=f"{raw_base_path}/raw_bf_type")
 def bail_bf_type():
-    return read_latest_parquet("BFType","tv_BFType","ARIA_ARM_BAIL")
+    return read_latest_parquet("BFType","tv_BFType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_history',comment='Raw Bail History',path=f"{raw_mnt}/raw_history")
+@dlt.table(name='raw_history',comment='Raw Bail History',path=f"{raw_base_path}/raw_history")
 def bail_history():
-    return read_latest_parquet("History","tv_History","ARIA_ARM_BAIL")
+    return read_latest_parquet("History","tv_History","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_users',comment='Raw Bail Users',path=f"{raw_mnt}/raw_users")
+@dlt.table(name='raw_users',comment='Raw Bail Users',path=f"{raw_base_path}/raw_users")
 def bail_users():
-    return read_latest_parquet("Users","tv_Users","ARIA_ARM_BAIL")
+    return read_latest_parquet("Users","tv_Users","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link',comment='Raw Bail Link',path=f"{raw_mnt}/raw_link")
+@dlt.table(name='raw_link',comment='Raw Bail Link',path=f"{raw_base_path}/raw_link")
 def bail_link():
-    return read_latest_parquet("Link","tv_Link","ARIA_ARM_BAIL")
+    return read_latest_parquet("Link","tv_Link","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link_detail',comment='Raw Bail Link Detail',path=f"{raw_mnt}/raw_link_detail")
+@dlt.table(name='raw_link_detail',comment='Raw Bail Link Detail',path=f"{raw_base_path}/raw_link_detail")
 def bail_link_detail():
-    return read_latest_parquet("LinkDetail","tv_LinkDetail","ARIA_ARM_BAIL")
+    return read_latest_parquet("LinkDetail","tv_LinkDetail","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status',comment='Raw Bail Status',path=f"{raw_mnt}/raw_status")
+@dlt.table(name='raw_status',comment='Raw Bail Status',path=f"{raw_base_path}/raw_status")
 def bail_status():
-    return read_latest_parquet("Status","tv_Status","ARIA_ARM_BAIL")
+    return read_latest_parquet("Status","tv_Status","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_status',comment='Raw Bail Case Status',path=f"{raw_mnt}/raw_case_status")
+@dlt.table(name='raw_case_status',comment='Raw Bail Case Status',path=f"{raw_base_path}/raw_case_status")
 def bail_case_status():
-    return read_latest_parquet("CaseStatus","tv_CaseStatus","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseStatus","tv_CaseStatus","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status_contact',comment='Raw Bail Status Contact',path=f"{raw_mnt}/raw_status_contact")
+@dlt.table(name='raw_status_contact',comment='Raw Bail Status Contact',path=f"{raw_base_path}/raw_status_contact")
 def bail_status_contact():
-    return read_latest_parquet("StatusContact","tv_StatusContact","ARIA_ARM_BAIL")
+    return read_latest_parquet("StatusContact","tv_StatusContact","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn',path=f"{raw_mnt}/raw_reason_adjourn")
+@dlt.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn',path=f"{raw_base_path}/raw_reason_adjourn")
 def bail_reason_adjourn():
-    return read_latest_parquet("ReasonAdjourn","tv_ReasonAdjourn","ARIA_ARM_BAIL")
+    return read_latest_parquet("ReasonAdjourn","tv_ReasonAdjourn","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appeal_category',comment='Raw Bail Appeal Category',path=f"{raw_mnt}/raw_appeal_category")
+@dlt.table(name='raw_appeal_category',comment='Raw Bail Appeal Category',path=f"{raw_base_path}/raw_appeal_category")
 def bail_appeal_category():
-    return read_latest_parquet("AppealCategory","tv_AppealCategory","ARIA_ARM_BAIL")
+    return read_latest_parquet("AppealCategory","tv_AppealCategory","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_category',comment='Raw Bail Category',path=f"{raw_mnt}/raw_category")
+@dlt.table(name='raw_category',comment='Raw Bail Category',path=f"{raw_base_path}/raw_category")
 def bail_category():
-    return read_latest_parquet("Category","tv_Category","ARIA_ARM_BAIL")
+    return read_latest_parquet("Category","tv_Category","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_surety",comment="Raw Bail Surety",path=f"{raw_mnt}/raw_case_surety")
+@dlt.table(name="raw_case_surety",comment="Raw Bail Surety",path=f"{raw_base_path}/raw_case_surety")
 def bail_case_surety():
-    return read_latest_parquet("CaseSurety","tv_CaseSurety","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseSurety","tv_CaseSurety","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_port",comment="Raw Bail Port",path=f"{raw_mnt}/raw_port")
+@dlt.table(name="raw_port",comment="Raw Bail Port",path=f"{raw_base_path}/raw_port")
 def bail_port():
-    return read_latest_parquet("Port","tv_Port","ARIA_ARM_BAIL")
+    return read_latest_parquet("Port","tv_Port","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decisiontype",comment="Raw Bail Decision Type",path=f"{raw_mnt}/raw_decisiontype")
+@dlt.table(name="raw_decisiontype",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decisiontype")
 def bail_decisiontype():
-    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL")
+    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator",path=f"{raw_mnt}/raw_case_adjudicator")
+@dlt.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator",path=f"{raw_base_path}/raw_case_adjudicator")
 def bail_case_adjudictor():
-    return read_latest_parquet("CaseAdjudicator","tv_CaseAdjudicator","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseAdjudicator","tv_CaseAdjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_embassy",comment="Raw Bail Embassy",path=f"{raw_mnt}/raw_embassy")
+@dlt.table(name="raw_embassy",comment="Raw Bail Embassy",path=f"{raw_base_path}/raw_embassy")
 def bail_embassy():
-    return read_latest_parquet("Embassy","tv_Embassy","ARIA_ARM_BAIL")
+    return read_latest_parquet("Embassy","tv_Embassy","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decision_type",comment="Raw Bail Decision Type",path=f"{raw_mnt}/raw_decision_type")
+@dlt.table(name="raw_decision_type",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decision_type")
 def bail_decision_type():
-    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL")
+    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
 
 
@@ -437,109 +513,9 @@ def bail_decision_type():
 
 # COMMAND ----------
 
-@dlt.table(name="raw_stm_cases", comment="Raw Bail STM Cases",path=f"{raw_mnt}/raw_stm_cases")
+@dlt.table(name="raw_stm_cases", comment="Raw Bail STM Cases",path=f"{raw_base_path}/raw_stm_cases")
 def raw_stm_cases():
-    return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Audit Log function
-
-# COMMAND ----------
-
-from pyspark.sql.types import StructType, StructField, LongType, StringType, IntegerType
-from delta.tables import DeltaTable
-
-
-
-# COMMAND ----------
-
-audit_schema = StructType([
-    StructField("Runid", StringType(), True),
-    StructField("Unique_identifier_desc", StringType(), True),
-    StructField("Unique_identifier", StringType(), True),
-    StructField("Table_name", StringType(), True),
-    StructField("Stage_name", StringType(), True),
-    StructField("Record_count", IntegerType(), True),
-    StructField("Run_dt",TimestampType(), True),
-    StructField("Batch_id", StringType(), True),
-    StructField("Description", StringType(), True),
-    StructField("File_name", StringType(), True),
-    StructField("Status", StringType(), True)
-])
-
-# Define Delta Table Path in Azure Storage
-audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-    # Create an empty DataFrame
-    empty_df = spark.createDataFrame([], audit_schema)
-
-    # Write the empty DataFrame in Delta format to create the table
-    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-    print("✅ Empty Delta table successfully created in Azure Storage.")
-else:
-    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-
-# COMMAND ----------
-
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-    """
-    Creates an audit DataFrame and writes it to Delta format.
-
-    :param df: Input DataFrame from which unique identifiers are extracted.
-    :param unique_identifier_desc: Column name that acts as a unique identifier.
-    :param table_name: Name of the source table.
-    :param stage_name: Name of the data processing stage.
-    :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
-    """
-
-    dt_desc = datetime.utcnow()
-
-    additional_columns = additional_columns or []  # Default to an empty list if None   
-    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-    .withColumn("Runid", lit(run_id_value))\
-        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-            .withColumn("Stage_name", lit(stage_name))\
-                .withColumn("Table_name", lit(table_name))\
-                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-                        .withColumn("Description", lit(description))
-
-    list_cols = audit_df.columns
-
-    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
-audit = spark.read.format("delta").load(audit_delta_path)
-
-audit.display()
-
-# COMMAND ----------
-
-
-import uuid
-
-
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-run_id_value = datetime_uuid()
-
+    return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL",landing_base_path)
 
 # COMMAND ----------
 
@@ -707,7 +683,7 @@ run_id_value = datetime_uuid()
     name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
     comment='ARIA Migration Archive Bails cases bronze table',
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
+    path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
@@ -905,7 +881,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     name='bronze_bail_ac_ca_apt_country_detc',
     comment='ARIA Migration Archive Bails cases bronze table',
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_ca_apt_country_detc")
+    path=f"{bronze_base_path}/bronze_bail_ac_ca_apt_country_detc")
 def bronze_bail_ac_ca_apt_country_detc():
     df =  (
         dlt.read("raw_case_appellant").alias("ca")
@@ -1031,7 +1007,7 @@ def bronze_bail_ac_ca_apt_country_detc():
     name="bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj",
     comment="ARIA Migration Archive Bails cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
+    path=f"{bronze_base_path}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     df =  (
@@ -1119,7 +1095,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     name="bronze_bail_ac_bfdiary_bftype", 
     comment="ARIA Migration Archive Bails cases bronze table", 
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_bfdiary_bftype")
+    path=f"{bronze_base_path}/bronze_bail_ac_bfdiary_bftype")
 def bronze_bail_ac_bfdiary_bftype():
     df = (
         dlt.read("raw_bf_diary").alias("bfd")
@@ -1163,7 +1139,7 @@ def bronze_bail_ac_bfdiary_bftype():
     name="bronze_bail_ac_history_users", 
     comment="ARIA Migration Archive Bails cases bronze table", 
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_history_users")
+    path=f"{bronze_base_path}/bronze_bail_ac_history_users")
 def bronze_bail_ac_history_users():
     df = (
         dlt.read("raw_history").alias("h")
@@ -1223,7 +1199,7 @@ def bronze_bail_ac_history_users():
   name="bronze_bail_ac_link_linkdetail", 
   comment="ARIA Migration Archive Bails cases bronze table", 
   partition_cols=["CaseNo"],
-  path=f"{bronze_mnt}/bronze_bail_ac_link_linkdetail")
+  path=f"{bronze_base_path}/bronze_bail_ac_link_linkdetail")
 def bronze_bail_ac_link_linkdetail():
     df = (
         dlt.read("raw_link").alias("l")
@@ -1324,7 +1300,7 @@ def bronze_bail_ac_link_linkdetail():
     name="bronze_bail_status_sc_ra_cs",
     comment="ARIA Migration Archive Bails Status cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_status_sc_ra_cs"
+    path=f"{bronze_base_path}/bronze_bail_status_sc_ra_cs"
 )
 def bronze_bail_status_sc_ra_cs():
     df = (
@@ -1498,7 +1474,7 @@ def bronze_bail_status_sc_ra_cs():
     name="bronze_bail_ac_appealcategory_category",
     comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_appealcategory_category"
+    path=f"{bronze_base_path}/bronze_bail_ac_appealcategory_category"
 )
 def bronze_bail_ac_appealcategory_category():
     df = (
@@ -1527,7 +1503,7 @@ def bronze_bail_ac_appealcategory_category():
 @dlt.table(
     name="bronze_case_surety_query",
     comment="ARIA Migration Archive Case Surety cases bronze table",
-    path=f"{bronze_mnt}/bronze_case_surety_query"
+    path=f"{bronze_base_path}/bronze_case_surety_query"
 )
 def bronze_case_surety_query():
     df = (
@@ -1585,7 +1561,7 @@ def bronze_case_surety_query():
 @dlt.table(
     name="judicial_requirement",
     comment="ARIA Migration Archive Judicial Requirements cases table",
-    path=f"{bronze_mnt}/judicial_requirement"
+    path=f"{bronze_base_path}/judicial_requirement"
 )
 
 def judicial_requirement():
@@ -1647,7 +1623,7 @@ def judicial_requirement():
 @dlt.table(
     name="linked_cases_cost_award",
     comment="Linked Cases Cost Award cases table",
-    path=f"{bronze_mnt}/linked_cases_cost_award"
+    path=f"{bronze_base_path}/linked_cases_cost_award"
 )
 def linked_cases_cost_award():
     df =  (
@@ -1697,7 +1673,7 @@ from pyspark.sql import functions as F
 @dlt.table(
     name="silver_normal_bail",
     comment="Silver Normal Bail cases table",
-    path=f"{silver_mnt}/silver_normal_bail"
+    path=f"{silver_base_path}/silver_normal_bail"
 )
 def silver_normal_bail():
     # Read the necessary raw data
@@ -1772,7 +1748,7 @@ def silver_normal_bail():
 @dlt.table(
     name="silver_legal_hold_normal_bail",
     comment="Silver table for legal hold normal bail cases",
-    path=f"{silver_mnt}/silver_legal_hold_normal_bail"
+    path=f"{silver_base_path}/silver_legal_hold_normal_bail"
 )
 def silver_legal_hold_normal_bail():
     # Read the necessary raw data
@@ -1820,9 +1796,9 @@ def silver_legal_hold_normal_bail():
 
 @dlt.table(name="silver_scottish_bails_funds",
            comment="Silver table for Scottish Bails Funds cases",
-           path=f"{silver_mnt}/silver_scottish_bails_funds")
+           path=f"{silver_base_path}/silver_scottish_bails_funds")
 def silver_scottish_bails_funds():
-    df = spark.read.format("csv").option("header", "true").load(f"{external_mnt}/Scottish__Bailsfile.csv").select(
+    df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
         col("Caseno/ Bail Ref no").alias("CaseNo"),
         lit("ScottishBailsFunds").alias("BaseBailType")
         )
@@ -1840,7 +1816,7 @@ def silver_scottish_bails_funds():
 
 @dlt.table(name="silver_bail_combined_segmentation_nb_lhnb",
            comment="Silver table for combined segmentation Normal bails, legal hold normal bail cases and Scottish Bails Holding Funds",
-           path=f"{silver_mnt}/silver_bail_combined_segmentation_nb_lhnb")
+           path=f"{silver_base_path}/silver_bail_combined_segmentation_nb_lhnb")
 def silver_bail_combined_segmentation_nb_lhnb():
     nb = dlt.read("silver_normal_bail").select("CaseNo", "BaseBailType")
     lhnb = dlt.read("silver_legal_hold_normal_bail").select("CaseNo", "BaseBailType")
@@ -1864,7 +1840,7 @@ def silver_bail_combined_segmentation_nb_lhnb():
 @dlt.table(name="silver_bail_m1_case_details",
            comment="ARIA Migration Archive Bails m1 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m1")
+           path=f"{silver_base_path}/silver_bail_m1")
 def silver_m1():
     m1_df = dlt.read("bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
     
@@ -1918,7 +1894,7 @@ def silver_m1():
 @dlt.table(name="silver_bail_m2_case_appellant",
            comment="ARIA Migration Archive Bails m2 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m2_case_appellant")
+           path=f"{silver_base_path}/silver_bail_m2_case_appellant")
 def silver_m2():
     m2_df = dlt.read("bronze_bail_ac_ca_apt_country_detc").alias("m2")
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
@@ -1967,7 +1943,7 @@ m3_grouped_cols = [
 @dlt.table(name="silver_bail_m3_hearing_details", 
            comment="ARIA Migration Archive Bails m3 silver table", 
            partition_cols=["CaseNo"], 
-           path=f"{silver_mnt}/silver_bail_m3")
+           path=f"{silver_base_path}/silver_bail_m3")
 
 def silver_m3():
     # 1. Read from the existing Hive table
@@ -1993,7 +1969,7 @@ def silver_m3():
 @dlt.table(name="silver_bail_m4_bf_diary",
            comment="ARIA Migration Archive Bails m4 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m4_bf_diary")
+           path=f"{silver_base_path}/silver_bail_m4_bf_diary")
 def silver_m4():
     m4_df = dlt.read("bronze_bail_ac_bfdiary_bftype").alias("m4")
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
@@ -2014,7 +1990,7 @@ def silver_m4():
 @dlt.table(name="silver_bail_m5_history",
            comment="ARIA Migration Archive Bails m5 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m5_history")
+           path=f"{silver_base_path}/silver_bail_m5_history")
 def silver_m5():
     m5_df = dlt.read("bronze_bail_ac_history_users").alias("m5")
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
@@ -2036,7 +2012,7 @@ def silver_m5():
 @dlt.table(name="silver_bail_m6_link",
            comment="ARIA Migration Archive Bails m6 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m6_link")
+           path=f"{silver_base_path}/silver_bail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_bail_ac_link_linkdetail").alias("m6")
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
@@ -2060,7 +2036,7 @@ def silver_m6():
 @dlt.table(name="silver_bail_m7_status",
            comment="ARIA Migration Archive Bails m7 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m7_status")
+           path=f"{silver_base_path}/silver_bail_m7_status")
 def silver_m7():
     m7_df = dlt.read("bronze_bail_status_sc_ra_cs").alias("m7")
 
@@ -2109,7 +2085,7 @@ def silver_m7():
 @dlt.table(name="silver_bail_m8",
            comment="ARIA Migration Archive Bails m8 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m8")
+           path=f"{silver_base_path}/silver_bail_m8")
 def silver_m8():
     m8_df = dlt.read("bronze_bail_ac_appealcategory_category").alias("m8")
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
@@ -2129,7 +2105,7 @@ def silver_m8():
 @dlt.table(
   name="silver_bail_meta_data",
   comment="ARIA Migration Archive Bails meta data table",
-  path=f"{silver_mnt}/silver_bail_meta_data"
+  path=f"{silver_base_path}/silver_bail_meta_data"
 )
 def silver_meta_data():
   m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
@@ -2526,49 +2502,49 @@ date_fields = {
 
 # COMMAND ----------
 
-fcs_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/Bails/fcs_template.html"
-with open (fcs_template_path, "r") as f:
-    fcs_template = f.read()
+fcs_template_path = f"{landing_html_tmpl_base_path}/fcs_template.html"
+fcs_template = dbutils.fs.head(fcs_template_path, 100000)
+
 
 # COMMAND ----------
 
 # File paths ofr status HTML templates
-bail_Application_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_applicaiton.html"
-bail_Variation_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail _variation.html"
-bail_Renewal_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_renewal.html"
-bail_Payment_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_payment_liability.html"
-bail_Scottish_Payment_Liability_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_scottish_payment_liability.html"
-bail_Lodgement_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_lodgement.html"
-migration_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_migration.html"
+bail_Application_path = f"{landing_html_tmpl_base_path}/bail_applicaiton.html"
+bail_Variation_path = f"{landing_html_tmpl_base_path}/bail _variation.html"
+bail_Renewal_path = f"{landing_html_tmpl_base_path}/bail_renewal.html"
+bail_Payment_path = f"{landing_html_tmpl_base_path}/bail_payment_liability.html"
+bail_Scottish_Payment_Liability_path = f"{landing_html_tmpl_base_path}/bail_scottish_payment_liability.html"
+bail_Lodgement_path = f"{landing_html_tmpl_base_path}/bail_lodgement.html"
+migration_path = f"{landing_html_tmpl_base_path}/bail_migration.html"
 
 # Path of the  bail HTML template
-bails_html_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bails-no-js-v3.html"
+bails_html_path = f"{landing_html_tmpl_base_path}/bails-no-js-v3.html"
 
 
 # read in the different templates
-with open(bails_html_path, "r") as f:
-    bails_html_dyn = f.read()
+bails_html_dyn = dbutils.fs.head(bails_html_path, 100000)
 
-with open(bail_Application_path, "r") as f:
-    bail_Application = f.read()
 
-with open(bail_Payment_path, "r") as f:
-    bail_Payment = f.read()
+bail_Application = dbutils.fs.head(bail_Application_path, 100000)
+    
 
-with open(bail_Variation_path, "r") as f:
-    bail_Variation = f.read()
+bail_Payment = dbutils.fs.head(bail_Payment_path, 100000)
+    
 
-with open(bail_Renewal_path, "r") as f:
-    bail_Renewal = f.read()
+bail_Variation = dbutils.fs.head(bail_Variation_path, 100000)
+    
 
-with open(bail_Scottish_Payment_Liability_path, "r") as f:
-    bail_Scottish_Payment_Liability = f.read()
+bail_Renewal = dbutils.fs.head(bail_Renewal_path, 100000)
+    
 
-with open(bail_Lodgement_path, "r") as f:
-    bail_Lodgement = f.read()
+bail_Scottish_Payment_Liability = dbutils.fs.head(bail_Scottish_Payment_Liability_path, 100000)
+    
 
-with open(migration_path, "r") as f:
-    migration = f.read()
+bail_Lodgement = dbutils.fs.head(bail_Lodgement_path, 100000)
+    
+
+migration = dbutils.fs.head(migration_path, 100000)
+    
 
 
 # displayHTML(bails_html_dyn)
@@ -3667,6 +3643,10 @@ def create_html_column(row, html_template=bails_html_dyn):
 
         html = html.replace("{{SecondaryLanguage}}",str(row.SecondaryLanguage))
 
+        for cd_row in row.Case_detail:
+            html = html.replace("{{HearingNotes}}",str(cd_row.AppealCaseNote))
+
+
 
         return html
     
@@ -3681,43 +3661,6 @@ create_html_udf = udf(create_html_column, StringType())
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Setting up 'Write' Funciton
-
-# COMMAND ----------
-
-secret = secret = dbutils.secrets.get("ingest00-keyvault-sbox", "curatedsbox-connection-string-sbox")
- 
- 
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-import os
- 
-# Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
- 
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
- 
-# Specify the container name
-container_name = "gold"
-container_client = blob_service_client.get_container_client(container_name)
-
-# COMMAND ----------
-
-def upload_to_blob(file_name, file_content):
-    try:
-        # blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/{file_name}")
-        blob_client = container_client.get_blob_client(f"{file_name}")
-        blob_client.upload_blob(file_content, overwrite=True)
-        return "success"
-    except Exception as e:
-        return f"error: {str(e)}"
- 
-
-
-upload_to_blob_udf = udf(upload_to_blob, StringType())
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ### Create HTML Content
 
 # COMMAND ----------
@@ -3726,7 +3669,7 @@ upload_to_blob_udf = udf(upload_to_blob, StringType())
 @dlt.table(
     name="create_bails_html_content",
     comment="create the HTML content for bails and add a fail name",
-    path=f"{silver_mnt}/bail_html_content")
+    path=f"{silver_base_path}/bail_html_content")
 # 
 def create_bails_html_content():
     df = dlt.read("final_staging_bails")
@@ -3747,6 +3690,48 @@ def create_bails_html_content():
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Setting up 'Write' Funciton
+
+# COMMAND ----------
+
+# secret = secret = dbutils.secrets.get(keyvault_name, "curatedsbox-connection-string-sbox")
+ 
+ 
+# from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+# import os
+ 
+# # Set up the BlobServiceClient with your connection string
+# connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+ 
+# blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+ 
+# # Specify the container name
+# container_name = "gold"
+# container_client = blob_service_client.get_container_client(container_name)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Upload to blob UDF
+# MAGIC
+
+# COMMAND ----------
+
+def upload_to_blob(file_name, file_content):
+    try:
+        blob_client = container_client.get_blob_client(f"{file_name}")
+        blob_client.upload_blob(file_content, overwrite=True)
+        return "success"
+    except Exception as e:
+        return f"error: {str(e)}"
+ 
+
+
+upload_to_blob_udf = udf(upload_to_blob, StringType())
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## JSON Combined Dev
 
 # COMMAND ----------
@@ -3762,7 +3747,7 @@ from pyspark.sql.functions import to_json,struct
 @dlt.table(
     name="create_bails_json_content",
     comment="create the JSON content for bails and add a fail name",
-    path=f"{silver_mnt}/bail_json_content",
+    path=f"{silver_base_path}/bail_json_content",
 )
 def create_bails_json_content():
     try:
@@ -3857,7 +3842,7 @@ generate_a360_udf = udf(generate_a360, StringType())
 
 @dlt.table(name="create_bails_a360_content", 
            comment="A360 content for bails",
-           path=f"{gold_mnt}/Data/create_bails_a360_content")
+           path=f"{gold_base_path}/Data/create_bails_a360_content")
 
 def gold_bails_with_a360():
     """
@@ -3898,7 +3883,7 @@ def gold_bails_with_a360():
 # COMMAND ----------
 
 
-@dlt.table(name="gold_bails_HTML_JSON_a360", comment="A360 content for bails", path=f"{gold_mnt}/Data/gold_bails_HTML_JSON_a360")
+@dlt.table(name="gold_bails_HTML_JSON_a360", comment="A360 content for bails", path=f"{gold_base_path}/Data/gold_bails_HTML_JSON_a360")
 @dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE '%failure%')")
 @dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE '%failure%')")
 @dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE '%failure%')")
@@ -3939,10 +3924,16 @@ def gold_bails_HTML_JSON_with_a360():
 
 # COMMAND ----------
 
+# results_df_dev = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
+
+# results_df_dev.display()
+
+# COMMAND ----------
+
 @dlt.table(
     name="save_html_to_blob",
     comment="upload HTML content to blob storage",
-    path=f"{silver_mnt}/save_html_to_blob",
+    path=f"{silver_base_path}/save_html_to_blob",
 )
 def save_html_to_blob():
     results_df = dlt.read("gold_bails_HTML_JSON_a360")
@@ -3968,16 +3959,10 @@ def save_html_to_blob():
 
 # COMMAND ----------
 
-# df = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
-
-# df.display()
-
-# COMMAND ----------
-
 @dlt.table(
   name="save_json_to_blob",
   comment="upload JSON content to blob storage",
-  path=f"{silver_mnt}/save_json_to_blob",
+  path=f"{silver_base_path}/save_json_to_blob",
 )
 def save_json_to_blob():
   df_with_json = dlt.read("gold_bails_HTML_JSON_a360")
@@ -3999,7 +3984,7 @@ def save_json_to_blob():
 
 @dlt.table(name="gold_bails_a360", 
            comment="A360 content for bails",
-           path=f"{gold_mnt}/Data/batched_A360_save_status")
+           path=f"{gold_base_path}/Data/batched_A360_save_status")
 
 def gold_bails_with_a360():
     """

@@ -2,6 +2,7 @@ resources:
   pipelines:
     pipeline_joh_test_pipeline_ara:
       name: JOH_test_pipeline_ara
+      allow_duplicate_names: true
       clusters:
         - label: default
           autoscale:
@@ -13,4 +14,3 @@ resources:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       schema: ariadm_arm_joh
       development: true
-      data_sampling: false

@@ -6,7 +6,7 @@ include:
   - "resources/workflows/*.yml"
 
 workspace: &sandbox
-  host: ${{DATABRICKS_HOST}}
+  host: $(DATABRICKS_HOST)
   
 targets:
   sandbox:

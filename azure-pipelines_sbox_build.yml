@@ -18,21 +18,21 @@ parameters:
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
-            databricks_token: "$(DATABIRKCS_PAT_SBOX00)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN00)"
+            databricks_token: "$(DATABRICKS_PAT_SBOX00)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN00)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
-            databricks_token: "$(DATABIRKCS_PAT_SBOX01)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
+            databricks_token: "$(DATABRICKS_PAT_SBOX01)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN01)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
-            databricks_token: "$(DATABIRKCS_PAT_SBOX02)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
+            databricks_token: "$(DATABRICKS_PAT_SBOX02)" #"$(DATABRICKS_TOKEN_WORKSPACE_MAIN02)"
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'

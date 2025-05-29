@@ -357,37 +357,8 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al 
 
-                ENVIRONMENT = ${{ deployment.environment }}
-                echo "Environment: $ENVIRONMENT"
-
-                if [ $ENVIRONMENT == "sbox" ]; then
-                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
-
-                  databricks bundle destroy -t sandbox00 
-                  databricks bundle validate -t sandbox00 --debug
-                  databricks bundle deploy -t sandbox00 --debug
-
-                  databricks bundle destroy -t sandbox01 
-                  databricks bundle validate -t sandbox01 --debug
-                  databricks bundle deploy -t sandbox01 --debug
-
-                  databricks bundle destroy -t sandbox02 
-                  databricks bundle validate -t sandbox02 --debug
-                  databricks bundle deploy -t sandbox02 --debug
-                
-                elseif [ $ENVIRONMENT == "stg" ]; then
-                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
-
-                  databricks bundle destroy -t staging
-                  databricks bundle validate -t staging --debug
-                  databricks bundle deploy -t staging --debug
-
-                else [ $ENVIRONMENT == "prod" ]; then
-                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
-
-                  databricks bundle destroy -t production
-                  databricks bundle validate -t production --debug
-                  databricks bundle deploy -t production --debug
-                fi
+                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
+                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
           

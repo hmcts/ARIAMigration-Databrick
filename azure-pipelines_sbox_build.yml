@@ -351,8 +351,7 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al /home/vsts/work/1/s
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                export DATABRICKS_HOST="${{ lz.databricks_host }}"
-                export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
+                export BUNDLE_VAR_host="${{ lz.databricks_host }}"
 
                 cd ARIA_DABs
 

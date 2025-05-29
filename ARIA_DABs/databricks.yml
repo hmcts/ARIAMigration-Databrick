@@ -5,11 +5,28 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
+variables:
+  host:
+    description: "Databricks host to deploy to"
+
 workspace: &sandbox
-  host: $DATABRICKS_HOST
-  
+  host: ${var.host}
+
 targets:
   sandbox:
-      workspace: *sandbox
-      mode : development
-      default : true
+    workspace: *sandbox
+    mode: development
+    default: true
+    
+      
+# targets:
+#   sandbox00:
+#       workspace: *sandbox
+#       mode : development
+#       default : true
+#       variables: DATABRICKS_HOST
+#   sandbox01:
+
+
+#   sandbox02:
+

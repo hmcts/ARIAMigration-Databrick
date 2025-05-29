@@ -5,28 +5,37 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-variables:
-  host:
-    description: "Databricks host to deploy to"
+# variables:
+#   host:
+#     description: "Databricks host to deploy to"
 
-workspace: &sandbox
-  host: ${var.host}
+# workspace: &sandbox
+#   host: ${var.host}
+
+# targets:
+#   sandbox:
+#     workspace: *sandbox
+#     mode: development
+#     default: true
+
 
 targets:
-  sandbox:
-    workspace: *sandbox
-    mode: development
-    default: true
-    
-      
-# targets:
-#   sandbox00:
-#       workspace: *sandbox
-#       mode : development
-#       default : true
-#       variables: DATABRICKS_HOST
-#   sandbox01:
+  sandbox00:
+      workspace:
+        host: https://adb-3635282203417052.12.azuredatabricks.net
+      mode : development
+      default : true
+
+  sandbox01:
+      workspace: 
+        host: https://adb-376876256300083.3.azuredatabricks.net
+      mode : development
+      default : true
 
 
-#   sandbox02:
+  sandbox02:
+      workspace: 
+        host: https://adb-1879076228317698.18.azuredatabricks.net
+      mode : development
+      default : true
 

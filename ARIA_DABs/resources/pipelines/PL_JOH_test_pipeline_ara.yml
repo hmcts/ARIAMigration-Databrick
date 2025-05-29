@@ -14,4 +14,3 @@ resources:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       schema: ariadm_arm_joh
       development: true
-      data_sampling: false

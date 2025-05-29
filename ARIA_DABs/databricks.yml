@@ -5,20 +5,6 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-# variables:
-#   host:
-#     description: "Databricks host to deploy to"
-
-# workspace: &sandbox
-#   host: ${var.host}
-
-# targets:
-#   sandbox:
-#     workspace: *sandbox
-#     mode: development
-#     default: true
-
-
 targets:
   sbox00:
       workspace:
@@ -26,7 +12,7 @@ targets:
 #      mode : development
       default : true
       presets:
-        name_prefix: "Sandbox00"
+        name_prefix: "[Sandbox00] "
 
   sbox01:
       workspace: 
@@ -34,7 +20,7 @@ targets:
  #     mode : development
       default : true
       presets:
-        name_prefix: "Sandbox01"
+        name_prefix: "[Sandbox01] "
 
 
   sbox02:
@@ -43,5 +29,5 @@ targets:
 #      mode : development
       default : true
       presets:
-        name_prefix: "Sandbox02"
+        name_prefix: "[Sandbox02] "
 

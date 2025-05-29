@@ -16,4 +16,3 @@ resources:
             path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_TD"
       target: ariadm_arm_td
       development: true
-      data_sampling: false

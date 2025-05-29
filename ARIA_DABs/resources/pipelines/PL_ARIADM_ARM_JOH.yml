@@ -16,4 +16,3 @@ resources:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       target: ARIADM_ARM_JOH
       development: true
-      data_sampling: false

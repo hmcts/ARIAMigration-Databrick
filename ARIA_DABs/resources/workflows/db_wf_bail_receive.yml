@@ -60,7 +60,7 @@ resources:
             - task_key: run-my-wheel
           job_cluster_key: db_wf_bail_receive_job
           notebook_task: 
-            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/ARIAMigration-Databrick/Databricks/ARCHIVE/test-packages-wheel"
             source: WORKSPACE
 
         - task_key: collect_responses

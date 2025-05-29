@@ -1,15 +1,15 @@
 bundle:
-  name: ARIA_DAB_INGEST02
+  name: ARIA_AssetBundle_Deployment
 
 include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-# workspace: &sandbox
-#   host: https://adb-1879076228317698.18.azuredatabricks.net
+workspace: &sandbox
+  host: ${DATABRICKS_HOST}
   
 targets:
   sandbox:
-      # workspace: *ingest02_workspace
+      workspace: *sandbox
       mode : development
       default : true

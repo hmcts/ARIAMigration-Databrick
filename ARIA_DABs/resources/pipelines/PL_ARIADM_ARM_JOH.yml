@@ -2,6 +2,7 @@ resources:
   pipelines:
     pipeline_pl_ariadm_arm_joh:
       name: PL_ARIADM_ARM_JOH
+      allow_duplicate_names: true
       clusters:
         - label: default
           node_type_id: Standard_DS4_v2

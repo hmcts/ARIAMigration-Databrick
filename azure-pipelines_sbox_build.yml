@@ -351,15 +351,43 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al /home/vsts/work/1/s
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                export BUNDLE_VAR_host="${{ lz.databricks_host }}"
 
                 cd ARIA_DABs
 
                 echo "Current dir: $(pwd)"
-                ls -al  
+                ls -al 
 
-                databricks bundle destroy -t sandbox 
-                databricks bundle validate -t sandbox --debug
-                databricks bundle deploy -t sandbox --debug
+                ENVIRONMENT = ${{ deployment.environment }}
+                echo "Environment: $ENVIRONMENT"
+
+                if [ $ENVIRONMENT == "sbox" ]; then
+                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
+
+                  databricks bundle destroy -t sandbox00 
+                  databricks bundle validate -t sandbox00 --debug
+                  databricks bundle deploy -t sandbox00 --debug
+
+                  databricks bundle destroy -t sandbox01 
+                  databricks bundle validate -t sandbox01 --debug
+                  databricks bundle deploy -t sandbox01 --debug
+
+                  databricks bundle destroy -t sandbox02 
+                  databricks bundle validate -t sandbox02 --debug
+                  databricks bundle deploy -t sandbox02 --debug
+                
+                elseif [ $ENVIRONMENT == "stg" ]; then
+                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
+
+                  databricks bundle destroy -t staging
+                  databricks bundle validate -t staging --debug
+                  databricks bundle deploy -t staging --debug
+
+                else [ $ENVIRONMENT == "prod" ]; then
+                  echo "Deploying Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }}"
+
+                  databricks bundle destroy -t production
+                  databricks bundle validate -t production --debug
+                  databricks bundle deploy -t production --debug
+                fi
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
           

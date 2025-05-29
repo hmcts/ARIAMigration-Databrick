@@ -23,7 +23,7 @@ targets:
   sbox00:
       workspace:
         host: https://adb-3635282203417052.12.azuredatabricks.net
-      mode : development
+#      mode : development
       default : true
       presets:
         name_prefix: "Sandbox00"
@@ -31,7 +31,7 @@ targets:
   sbox01:
       workspace: 
         host: https://adb-376876256300083.3.azuredatabricks.net
-      mode : development
+ #     mode : development
       default : true
       presets:
         name_prefix: "Sandbox01"
@@ -40,7 +40,7 @@ targets:
   sbox02:
       workspace: 
         host: https://adb-1879076228317698.18.azuredatabricks.net
-      mode : development
+#      mode : development
       default : true
       presets:
         name_prefix: "Sandbox02"

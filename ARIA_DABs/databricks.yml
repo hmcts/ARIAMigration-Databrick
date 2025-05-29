@@ -5,11 +5,11 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-workspace: &ingest02_workspace
-  host: https://adb-1879076228317698.18.azuredatabricks.net
+# workspace: &sandbox
+#   host: https://adb-1879076228317698.18.azuredatabricks.net
   
 targets:
   sandbox:
-      workspace: *ingest02_workspace
+      # workspace: *ingest02_workspace
       mode : development
       default : true

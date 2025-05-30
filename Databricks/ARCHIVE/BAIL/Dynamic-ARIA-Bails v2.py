@@ -303,7 +303,7 @@ external_base_path = f"abfss://{external_storage_container}@{external_storage_ac
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 
-landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/bailsv3"
+landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/BAILS"
 
 
 gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'

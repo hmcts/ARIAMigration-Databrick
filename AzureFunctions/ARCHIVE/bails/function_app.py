@@ -18,9 +18,9 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-segment = "bl"
-ARIA_SEGMENT = "BDEV"
-eventhub_name = f"evh-{segment}-pub-{lz_key}-uks-dlrm-01"
+ARIA_SEGMENT = "bl"
+ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
+eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
@@ -46,28 +46,28 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     try:
         # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{segment}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{segment}-ack-{lz_key}-uks-dlrm-01-key")).value
+        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
+        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
 
 
         # Blob Storage credentials
 
-        account_url = "https://ingest00curatedsbox.blob.core.windows.net"
-        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        #account_url = "https://ingest00curatedsbox.blob.core.windows.net"
+        account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        # container_secret = kv_client.get_secret("ARIAB-SAS-TOKEN").value
+        container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
         # container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
 
-        full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
-        if "SharedAccessSignature=" in full_secret:
-            # Remove the prefix if it's a connection string
-            container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
-        else:
-            container_secret = full_secret.lstrip('?')  # fallback
+        # # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        # if "SharedAccessSignature=" in full_secret:
+        #     # Remove the prefix if it's a connection string
+        #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
+        # else:
+        #     container_secret = full_secret.lstrip('?')  # fallback
         container_url = f"{account_url}/{container_name}?{container_secret}"
 
-        sub_dir = "ARIA{ARIA_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARIA_SEGMENT}/submission"
+        sub_dir = "ARIA{ARM_SEGMENT}/submission"
 
         container_service_client = ContainerClient.from_container_url(container_url)
         try:

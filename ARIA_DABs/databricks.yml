@@ -21,6 +21,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox00] "
+      variables:
+        environment: "sbox"
+        landing_zone: "00"
 
   sbox01:
       workspace: 
@@ -28,6 +31,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox01] "
+      variables:
+        environment: "sbox"
+        landing_zone: "01"
 
   sbox02:
       workspace: 
@@ -35,6 +41,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox02] "
+      variables:
+        environment: "sbox"
+        landing_zone: "02"
 
   stg00:
       workspace: 
@@ -42,5 +51,8 @@ targets:
       default : true
       presets:
         name_prefix: "[Staging00] "
+      variables:
+        environment: "stg"
+        landing_zone: "00"
 
 

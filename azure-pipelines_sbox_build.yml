@@ -303,7 +303,11 @@ stages:
             displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
             pool: 
               vmImage: 'ubuntu-latest'
-                
+            
+            variables:
+              ENVIRONMENT: ${{ deployment.environment }}
+              LANDING_ZONE: ${{ lz.landing_zone }}
+
             steps:
             - task: DownloadBuildArtifacts@1
               inputs:
@@ -343,7 +347,6 @@ stages:
                 cat ~/.databrickscfg  # Print the contents for debugging
               displayName: 'Configure Databricks CLI'
 
-#rm rf 
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
@@ -387,7 +390,14 @@ stages:
                 cd ARIA_DABs
 
                 echo "Current dir: $(pwd)"
-                ls -al 
+                ls -al
+
+                # set-up ENV variables for OAuth in DABs
+                export ENV=$(ENVIRONMENT)
+                export LZ=$(LANDING_ZONE)
+
+                echo "Environment: $ENV"
+                echo "Landing Zone: $LZ"
 
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug

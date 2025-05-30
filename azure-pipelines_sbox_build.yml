@@ -112,10 +112,22 @@ stages:
                 pip install --upgrade pip
                 pip install build
                 pip install databricks-cli
+
+                echo "Listing dist contents:"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
+                echo "removing files in dist/"
                 rm -rf $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
 
+                echo "Listing dist contents after deletion:"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
+                echo "Building wheel"
                 python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
                   $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+
+                echo "Listing dist contents after building the wheel"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
               displayName: 'Build Shared Python Wheel'
 
             - task: PublishBuildArtifacts@1
@@ -323,7 +335,7 @@ stages:
                 echo "Searching for wheel files in: $(Pipeline.Workspace)"
                 find '$(Pipeline.Workspace)' -name "*.whl"
 
-                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | tail -n 5)
+                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | tail -n 1)
 
                 if [ -n "$WHEEL_FILE" ]; then
                   echo "Found wheel file: $WHEEL_FILE"

@@ -392,15 +392,20 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al
 
-                # set-up ENV variables for OAuth in DABs
-                export ENV=$(ENVIRONMENT)
-                export LZ=$(LANDING_ZONE)
+                echo "Environment: $(ENVIRONMENT)"
+                echo "Landing Zone: $(LANDING_ZONE)"
 
-                echo "Environment: $ENV"
-                echo "Landing Zone: $LZ"
+                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }} \
+                --var="environment=$(ENVIRONMENT)" \
+                --var="landing_zone=$(LANDING_ZONE)" --debug
 
-                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
-                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} \
+                --var="environment=$(ENVIRONMENT)" \
+                --var="landing_zone=$(LANDING_ZONE)" --debug
+
+                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} \
+                --var="environment=$(ENVIRONMENT)" \
+                --var="landing_zone=$(LANDING_ZONE)" --debug
+                
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
           

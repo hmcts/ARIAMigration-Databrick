@@ -1,3 +1,12 @@
+variables:
+  environment:
+    description: "Deployment environment (e.g., sbox, prod)"
+    type: string
+  
+  landing_zone:
+    description: "Landing zone identifier (e.g., 00, 01)"
+    type: string
+
 resources:
   jobs:
     db_wf_apl_fta_send_job:

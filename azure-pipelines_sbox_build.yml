@@ -321,6 +321,9 @@ stages:
                 echo "Searching for wheel files in: $(Pipeline.Workspace)"
                 find '$(Pipeline.Workspace)' -name "*.whl"
 
+                echo "Searching for wheel files in /home/vsts/work/1/s/Databricks/SharedFunctionsLib/dist/.tmp-c_r_7qpo/shared_functions-0.0.2-py3-none-any.whl"
+                find "/home/vsts/work/1/s/Databricks/SharedFunctionsLib/dist/.tmp-c_r_7qpo/shared_functions-0.0.2-py3-none-any.whl"
+
                 echo "Pipeline.Workspace: $(Pipeline.Workspace)"
                 echo "Full directory structure:"
                 ls -R '$(Pipeline.Workspace)'

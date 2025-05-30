@@ -18,9 +18,9 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-segment = "bl"
-ARIA_SEGMENT = "BDEV"
-eventhub_name = f"evh-{segment}-pub-{lz_key}-uks-dlrm-01"
+ARIA_SEGMENT = "bl"
+ARM_SEGMENT = "BDEV"
+eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
@@ -46,8 +46,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     try:
         # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{segment}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{segment}-ack-{lz_key}-uks-dlrm-01-key")).value
+        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
+        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
 
 
         # Blob Storage credentials
@@ -67,7 +67,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             container_secret = full_secret.lstrip('?')  # fallback
         container_url = f"{account_url}/{container_name}?{container_secret}"
 
-        sub_dir = "ARIA{ARIA_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARIA_SEGMENT}/submission"
+        sub_dir = "ARIA{ARM_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARM_SEGMENT}/submission"
 
         container_service_client = ContainerClient.from_container_url(container_url)
         try:

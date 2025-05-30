@@ -112,6 +112,8 @@ stages:
                 pip install --upgrade pip
                 pip install build
                 pip install databricks-cli
+                rm -rf $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
                 python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
                   $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
               displayName: 'Build Shared Python Wheel'

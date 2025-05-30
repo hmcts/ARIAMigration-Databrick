@@ -52,7 +52,7 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.-py3-none-any.whl"
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
 
         - task_key: validate_packages
           depends_on:

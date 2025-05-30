@@ -27,3 +27,11 @@ targets:
       presets:
         name_prefix: "[Sandbox02] "
 
+  stg00:
+      workspace: 
+        host: https://adb-1879076228317698.18.azuredatabricks.net
+      default : true
+      presets:
+        name_prefix: "[Staging00] "
+
+

@@ -112,14 +112,28 @@ stages:
                 pip install --upgrade pip
                 pip install build
                 pip install databricks-cli
+
+                echo "Listing dist contents:"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
+                echo "removing files in dist/"
+                rm -rf $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
+                echo "Listing dist contents after deletion:"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
+
+                echo "Building wheel"
                 python -m build --wheel --outdir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
                   $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
+
+                echo "Listing dist contents after building the wheel"
+                ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
               displayName: 'Build Shared Python Wheel'
 
             - task: PublishBuildArtifacts@1
               inputs:
                 PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
-                ArtifactName: 'ariafunction'
+                ArtifactName: 'ariafunctionv2'
                 publishLocation: 'Container'
               displayName: 'Publish Shared Wheel Artifact'
 
@@ -157,13 +171,17 @@ stages:
               - job: Deploy_Function_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                 steps:
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'ariafunction'
-                      downloadPath: '$(Pipeline.Workspace)'
-                    displayName: 'Download Wheel Artifact'
+                  # - task: DownloadBuildArtifacts@1
+                  #   inputs:
+                  #     buildType: 'current'
+                  #     downloadType: 'single'
+                  #     artifactName: 'ariafunctionv2'
+                  #     downloadPath: '$(Pipeline.Workspace)'
+                  #   displayName: 'Download Wheel Artifact'
+                  
+                  # - script: |
+                  #     echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+                  #     ls -al $(Pipeline.Workspace)
 
                   - task: DownloadBuildArtifacts@1
                     inputs:
@@ -287,6 +305,18 @@ stages:
               vmImage: 'ubuntu-latest'
                 
             steps:
+            - task: DownloadBuildArtifacts@1
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'ariafunctionv2'
+                downloadPath: '$(Pipeline.Workspace)'
+              displayName: 'Download Wheel Artifact'
+            
+            - script: |
+                echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+                ls -al $(Pipeline.Workspace)
+
             - task: UsePythonVersion@0
               displayName: 'Use Python 3.x'
               inputs:
@@ -313,14 +343,16 @@ stages:
                 cat ~/.databrickscfg  # Print the contents for debugging
               displayName: 'Configure Databricks CLI'
 
+#rm rf 
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                export DATABRICKS_HOST="${{ lz.databricks_host }}"
-                export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
 
                 set -e 
 
-                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | sort -V | tail -n 1)
+                echo "Searching for wheel files in: $(Pipeline.Workspace)" 
+                find '$(Pipeline.Workspace)' -type f -name "*.whl"
+
+                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
 
                 if [ -n "$WHEEL_FILE" ]; then
                   echo "Found wheel file: $WHEEL_FILE"

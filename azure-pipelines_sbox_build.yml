@@ -321,16 +321,11 @@ stages:
                 echo "Searching for wheel files in: $(Pipeline.Workspace)"
                 find '$(Pipeline.Workspace)' -name "*.whl"
 
-                echo "Searching for wheel files in: $(Pipeline.Workspace)/ariafunction"
-                find '$(Pipeline.Workspace)/ariafunction' -name "*.whl"
+                echo "Pipeline.Workspace: $(Pipeline.Workspace)"
+                echo "Full directory structure:"
+                ls -R '$(Pipeline.Workspace)'
 
-                echo "Sorted wheel files by version:"
-                find '$(Pipeline.Workspace)' -name "*.whl" | sort -V
-
-                echo "Sorted wheel files by version: "
-                find '$(Pipeline.Workspace)/ariafunction' -name "*.whl" | sort -V
-
-                WHEEL_FILE=$(find '$(Pipeline.Workspace)/ariafunction' -name "*.whl" | sort -V | tail -n 1)
+                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | tail -n 1)
 
                 if [ -n "$WHEEL_FILE" ]; then
                   echo "Found wheel file: $WHEEL_FILE"

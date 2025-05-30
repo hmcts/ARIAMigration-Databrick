@@ -52,14 +52,14 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
 
         - task_key: validate_packages
           depends_on:
             - task_key: run-my-wheel
           job_cluster_key: db_wf_td_send_job
           notebook_task: 
-            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
             source: WORKSPACE
 
         - task_key: create_td_content

@@ -1,4 +1,8 @@
 # Databricks notebook source
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -60,6 +64,8 @@ from pyspark.sql import DataFrame
 import logging
 from pyspark.sql.window import Window
 from pyspark.sql.types import  StringType, IntegerType
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+import os
 
 
 # COMMAND ----------
@@ -312,7 +318,7 @@ gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get(keyvault_name, f"curated{env}-connection-string-{env}")
+secret = dbutils.secrets.get(keyvault_name, f"CURATED-{env}-SAS-TOKEN")
  
  
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient

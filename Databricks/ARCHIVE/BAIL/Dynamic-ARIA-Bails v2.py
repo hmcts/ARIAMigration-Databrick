@@ -2516,7 +2516,7 @@ fcs_template = dbutils.fs.head(fcs_template_path, 100000)
 
 # File paths ofr status HTML templates
 bail_Application_path = f"{landing_html_tmpl_base_path}/bail_applicaiton.html"
-bail_Variation_path = f"{landing_html_tmpl_base_path}/bail _variation.html"
+bail_Variation_path = f"{landing_html_tmpl_base_path}/bail_variation.html"
 bail_Renewal_path = f"{landing_html_tmpl_base_path}/bail_renewal.html"
 bail_Payment_path = f"{landing_html_tmpl_base_path}/bail_payment_liability.html"
 bail_Scottish_Payment_Liability_path = f"{landing_html_tmpl_base_path}/bail_scottish_payment_liability.html"

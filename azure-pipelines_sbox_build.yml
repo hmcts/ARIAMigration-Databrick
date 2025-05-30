@@ -171,17 +171,17 @@ stages:
               - job: Deploy_Function_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
                 steps:
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'ariafunctionv2'
-                      downloadPath: '$(Pipeline.Workspace)'
-                    displayName: 'Download Wheel Artifact'
+                  # - task: DownloadBuildArtifacts@1
+                  #   inputs:
+                  #     buildType: 'current'
+                  #     downloadType: 'single'
+                  #     artifactName: 'ariafunctionv2'
+                  #     downloadPath: '$(Pipeline.Workspace)'
+                  #   displayName: 'Download Wheel Artifact'
                   
-                  - script: |
-                      echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
-                      ls -al $(Pipeline.Workspace)
+                  # - script: |
+                  #     echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+                  #     ls -al $(Pipeline.Workspace)
 
                   - task: DownloadBuildArtifacts@1
                     inputs:
@@ -305,6 +305,18 @@ stages:
               vmImage: 'ubuntu-latest'
                 
             steps:
+            - task: DownloadBuildArtifacts@1
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'ariafunctionv2'
+                downloadPath: '$(Pipeline.Workspace)'
+              displayName: 'Download Wheel Artifact'
+            
+            - script: |
+                echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+                ls -al $(Pipeline.Workspace)
+
             - task: UsePythonVersion@0
               displayName: 'Use Python 3.x'
               inputs:

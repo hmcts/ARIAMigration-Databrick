@@ -395,17 +395,14 @@ stages:
                 echo "Environment: $(ENVIRONMENT)"
                 echo "Landing Zone: $(LANDING_ZONE)"
 
-                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }} \
-                --var="environment=$(ENVIRONMENT)" \
-                --var="landing_zone=$(LANDING_ZONE)" --debug
+                # export BUNDLE_VAR_LANDING_ZONE=$(LANDING_ZONE)
+                # export BUNDLE_VAR_ENVIRONMENT=$(ENVIRONMENT)
 
-                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} \
-                --var="environment=$(ENVIRONMENT)" \
-                --var="landing_zone=$(LANDING_ZONE)" --debug
+                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
 
-                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} \
-                --var="environment=$(ENVIRONMENT)" \
-                --var="landing_zone=$(LANDING_ZONE)" --debug
-                
+                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+
+                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
           

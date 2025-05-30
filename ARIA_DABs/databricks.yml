@@ -5,14 +5,14 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-variables:
-  environment:
-    description: "Deployment environment (e.g., sbox, prod)"
-    type: string
+# variables:
+#   environment:
+#     description: "Deployment environment (e.g., sbox, prod)"
+#     type: string
   
-  landing_zone:
-    description: "Landing zone identifier (e.g., 00, 01)"
-    type: string
+#   landing_zone:
+#     description: "Landing zone identifier (e.g., 00, 01)"
+#     type: string
 
 targets:
   sbox00:

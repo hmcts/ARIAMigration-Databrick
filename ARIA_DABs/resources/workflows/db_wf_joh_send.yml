@@ -45,6 +45,8 @@ resources:
               fs.azure.account.oauth2.client.secret.ingest${var.landing_zone}landing${var.environment}.dfs.core.windows.net: "{{secrets/ingest${var.landing_zone}-meta002-${var.environment}/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
               fs.azure.account.oauth2.client.endpoint.ingest${var.landing_zone}landing${var.environment}.dfs.core.windows.net: "{{secrets/ingest${var.landing_zone}-meta002-${var.environment}/SERVICE-PRINCIPLE-TENANT-URL}}"
 
+
+
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_joh_send_job

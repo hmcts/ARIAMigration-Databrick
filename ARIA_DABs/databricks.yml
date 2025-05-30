@@ -5,6 +5,15 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
+variables:
+  environment:
+    description: "Deployment environment (e.g., sbox, prod)"
+    type: string
+  
+  landing_zone:
+    description: "Landing zone identifier (e.g., 00, 01)"
+    type: string
+
 targets:
   sbox00:
       workspace:
@@ -12,6 +21,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox00] "
+      variables:
+        environment: "sbox"
+        landing_zone: "00"
 
   sbox01:
       workspace: 
@@ -19,6 +31,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox01] "
+      variables:
+        environment: "sbox"
+        landing_zone: "01"
 
   sbox02:
       workspace: 
@@ -26,6 +41,9 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox02] "
+      variables:
+        environment: "sbox"
+        landing_zone: "02"
 
   stg00:
       workspace: 
@@ -33,5 +51,8 @@ targets:
       default : true
       presets:
         name_prefix: "[Staging00] "
+      variables:
+        environment: "stg"
+        landing_zone: "00"
 
 

@@ -320,7 +320,7 @@ stages:
 
                 set -e 
 
-                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | tail -n 1)
+                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | sort -V | tail -n 1)
 
                 if [ -n "$WHEEL_FILE" ]; then
                   echo "Found wheel file: $WHEEL_FILE"

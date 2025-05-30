@@ -343,12 +343,13 @@ stages:
                 cat ~/.databrickscfg  # Print the contents for debugging
               displayName: 'Configure Databricks CLI'
 
+#rm rf 
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
                 set -e 
 
-                echo "Searching for wheel files in: $(Pipeline.Workspace)"
+                echo "Searching for wheel files in: $(Pipeline.Workspace)" 
                 find '$(Pipeline.Workspace)' -type f -name "*.whl"
 
                 WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)

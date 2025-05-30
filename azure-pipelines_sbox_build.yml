@@ -315,10 +315,14 @@ stages:
 
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                export DATABRICKS_HOST="${{ lz.databricks_host }}"
-                export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
 
                 set -e 
+
+                echo "Searching for wheel files in: $(Pipeline.Workspace)"
+                find '$(Pipeline.Workspace)' -name "*.whl"
+
+                echo "Sorted wheel files by version:"
+                find '$(Pipeline.Workspace)' -name "*.whl" | sort -V
 
                 WHEEL_FILE=$(find '$(Pipeline.Workspace)' -name "*.whl" | sort -V | tail -n 1)
 

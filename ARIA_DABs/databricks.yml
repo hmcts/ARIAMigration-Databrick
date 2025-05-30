@@ -5,13 +5,6 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-variables:
-  environment:
-    default: "${var.ENV}"
-  
-  landing_zone:
-    default: "${var.LZ}"
-
 targets:
   sbox00:
       workspace:

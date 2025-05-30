@@ -133,7 +133,7 @@ stages:
             - task: PublishBuildArtifacts@1
               inputs:
                 PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
-                ArtifactName: 'ariafunction'
+                ArtifactName: 'ariafunctionv2'
                 publishLocation: 'Container'
               displayName: 'Publish Shared Wheel Artifact'
 
@@ -175,7 +175,7 @@ stages:
                     inputs:
                       buildType: 'current'
                       downloadType: 'single'
-                      artifactName: 'ariafunction'
+                      artifactName: 'ariafunctionv2'
                       downloadPath: '$(Pipeline.Workspace)'
                     displayName: 'Download Wheel Artifact'
 

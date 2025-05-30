@@ -337,7 +337,7 @@ stages:
                 set -e 
 
                 echo "Searching for wheel files in: $(Pipeline.Workspace)"
-                find '$(Pipeline.Workspace)' -name "*.whl"
+                find '$(Pipeline.Workspace)' -type f -name "*.whl"
 
                 WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
 

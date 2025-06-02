@@ -265,14 +265,14 @@ stages:
                       --resource-group ${{ lz.Resource_Group }} \
                       --account-name ${{ lz.HTML_StorageAccount }} \
                       --query '[0].value' -o tsv)
-                    echo "Success! $(HTML_StorageAccount) is $storage_account_key"
+                    echo "Success! ${{ lz.HTML_StorageAccount }} is $storage_account_key"
 
                     echo "Retrieving Blob Endpoint"
                     blob_endpoint=$(az storage account show \
                       --resource-group ${{ lz.Resource_Group }} \
                       --name ${{ lz.HTML_StorageAccount }} \
                       --query "primaryEndpoints.blob" -o tsv)
-                    echo "Success! $(HTML_StorageAccount) is $blob_endpoint"
+                    echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
 
                     echo "Creating html-template container if not exists"
                     az storage container create \
@@ -290,7 +290,7 @@ stages:
                       --source '$(Build.SourcesDirectory)/HTML_Templates/' \
                       --pattern '*.html' \
                       --overwrite true
-                    echo "Success! HTML templates imported to $(HTML_StorageAccount)/html-template"
+                    echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
   
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
@@ -343,7 +343,6 @@ stages:
                 cat ~/.databrickscfg  # Print the contents for debugging
               displayName: 'Configure Databricks CLI'
 
-#rm rf 
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 

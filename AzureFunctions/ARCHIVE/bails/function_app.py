@@ -57,7 +57,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         container_name = "dropzone"
 
         #container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
-        container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
@@ -65,7 +65,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
         # else:
         #     container_secret = full_secret.lstrip('?')  # fallback
-        # container_url = f"{account_url}/{container_name}?{container_secret}"
+        container_url = f"{account_url}/{container_name}?{container_secret}"
 
         sub_dir = "ARIA{ARM_SEGMENT}/submission"
 

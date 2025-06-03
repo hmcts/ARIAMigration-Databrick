@@ -57,7 +57,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         container_name = "dropzone"
 
         #container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
-        container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
 
         full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         if "SharedAccessSignature=" in full_secret:

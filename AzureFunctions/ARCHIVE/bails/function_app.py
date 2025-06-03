@@ -52,7 +52,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
         # Blob Storage credentials
 
-        account_url = "https://ingest00curatedsbox.blob.core.windows.net"
+        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         #account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 

@@ -295,7 +295,7 @@ stages:
                     ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
                     
                     STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
-                    KEYVAULT_NAME="ingest-${LZ}-meta002-${ENVIRONMENT}"
+                    KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
                     
                     echo "=== DEBUG INFORMATION ==="
                     echo "Environment: $ENVIRONMENT"

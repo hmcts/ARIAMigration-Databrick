@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Active CCD MVP Base Build (State: PaymentPending)
+# MAGIC # Active Appeals CCD MVP Base Build (State: PaymentPending)
 # MAGIC <table style='float:left;'>
 # MAGIC    <tbody>
 # MAGIC       <tr>
@@ -113,11 +113,11 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # read_hive = False
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
 landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
-bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
-silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
-gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/CCD/APPEALS"
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
+silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
+gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
 gold_outputs = "ARIADM/CCD/APPEALS"
 hive_schema = "ariadm_ccd_apl"
 # key_vault = "ingest00-keyvault-sbox"
@@ -382,6 +382,66 @@ def raw_DocumentsReceived():
 )
 def raw_History():
      return read_latest_parquet("History", "tv_History", "ARIA_ACTIVE_APPEALS")
+ 
+
+@dlt.table(
+    name="raw_caselist",
+    comment="Delta Live Table ARIA CaseList.",
+    path=f"{raw_mnt}/Raw_CaseList"
+)
+def raw_CaseList():
+     return read_latest_parquet("CaseList", "tv_CaseList", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_status",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/Raw_Status"
+)
+def raw_Status():
+     return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_APPEALS") 
+ 
+@dlt.table(
+    name="raw_list",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/raw_list"
+)
+def raw_list():
+     return read_latest_parquet("List", "tv_List", "ARIA_ACTIVE_APPEALS") 
+ 
+
+@dlt.table(
+    name="raw_listtype",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/raw_listtype"
+)
+def raw_listtype():
+     return read_latest_parquet("ListType", "tv_ListType", "ARIA_ACTIVE_APPEALS") 
+ 
+@dlt.table(
+    name="raw_hearingtype",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/raw_hearingtype"
+)
+def raw_hearingtype():
+     return read_latest_parquet("HearingType", "tv_HearingType", "ARIA_ACTIVE_APPEALS") 
+ 
+@dlt.table(
+    name="raw_court",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/raw_court"
+)
+def raw_court():
+     return read_latest_parquet("Court", "tv_Court", "ARIA_ACTIVE_APPEALS")
+
+
+@dlt.table(
+    name="raw_listsitting",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/raw_listsitting"
+)
+def raw_listsitting():
+     return read_latest_parquet("ListSitting", "tv_ListSitting", "ARIA_ACTIVE_APPEALS") 
+ 
 
 # COMMAND ----------
 
@@ -705,7 +765,7 @@ def bronze_appealcase_caseappellant_appellant():
 
 # COMMAND ----------
 
-dlt.table(
+@dlt.table(
     name="bronze_status_htype_clist_list_ltype_court_lsitting_adj",
     comment="DLT table joining Status with hearing types, court listings, adjudicators, and associated metadata.",
     path=f"{bronze_mnt}/bronze_status_htype_clist_list_ltype_court_lsitting_adj"
@@ -720,7 +780,6 @@ def bronze_status_htype_clist_list_ltype_court_lsitting_adj():
         .join(dlt.read("raw_listtype").alias("lt"), col("l.ListTypeId") == col("lt.ListTypeId"), "left_outer")
         .join(dlt.read("raw_court").alias("c"), col("l.CourtId") == col("c.CourtId"), "left_outer")
         .join(dlt.read("raw_appealcase").alias("ac"), col("s.CaseNo") == col("ac.CaseNo"), "left_outer")
-        # Judges & Clerks by Position in ListSitting
         .join(dlt.read("raw_listsitting").alias("LS1"), (col("l.ListId") == col("LS1.ListId")) & (col("LS1.Position") == 10) & (col("LS1.Cancelled") == 0), "left_outer")
         .join(dlt.read("raw_adjudicator").alias("adjLS1"), col("LS1.AdjudicatorId") == col("adjLS1.AdjudicatorId"), "left_outer")
         .join(dlt.read("raw_listsitting").alias("LS2"), (col("l.ListId") == col("LS2.ListId")) & (col("LS2.Position") == 11) & (col("LS2.Cancelled") == 0), "left_outer")
@@ -754,7 +813,6 @@ def bronze_status_htype_clist_list_ltype_court_lsitting_adj():
             col("ht.Description").alias("HearingType"),
             col("cl.StartTime"),
             col("cl.TimeEstimate"),
-            # Assigned Judges & Clerk
             col("adjLS1.Surname").alias("Judge1FTSurname"),
             col("adjLS1.Forenames").alias("Judge1FTForenames"),
             col("adjLS1.Title").alias("Judge1FTTitle"),
@@ -772,7 +830,6 @@ def bronze_status_htype_clist_list_ltype_court_lsitting_adj():
     )
 
     return df
-
 
 # COMMAND ----------
 
@@ -987,8 +1044,495 @@ def bronze_history():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## INDEV: Segmentation DLT Tables Creation - stg_filtered_segmentation_states 
+# MAGIC ## INDEV: Segmentation DLT Tables Creation - stg_segmentation_states 
 # MAGIC
+
+# COMMAND ----------
+
+# DBTITLE 1,stg_balance_due
+# @dlt.table(
+#     name="stg_balance_due",
+#     comment="DLT table for balance due per CaseNo based on specific transaction rules.",
+#     path=f"{silver_mnt}/stg_balance_due"
+# )
+# def stg_balance_due():
+#     # Read transaction and transaction type data
+#     tx = dlt.read("bronze_appealcase_transaction_transactiontype")
+    
+#     # Filter for balance-related transactions
+#     filtered_tx = (
+#         tx.filter((col("SumBalance") == 1) & (~col("TransactionId").isin(
+#             dlt.read("bronze_appealcase_transaction_transactiontype")
+#                 .filter(col("TransactionTypeId").isin([6, 19]))
+#                 .select("ReferringTransactionId")
+#                 .rdd.flatMap(lambda x: x).collect()
+#         )))
+#     )
+
+#     # Aggregate by CaseNo
+#     return (
+#         filtered_tx
+#             .groupBy("CaseNo")
+#             .agg(sum("Amount").alias("BalanceDue"))
+#     )
+
+
+# COMMAND ----------
+
+# DBTITLE 1,stg_representation
+# @dlt.table(
+#     name="stg_representation",
+#     comment="DLT table to determine if each case is AIP or LR based on CaseRep information.",
+#     path=f"{silver_mnt}/stg_representation"
+# )
+# def stg_representation():
+#     # Read the AppealCase and CaseRep DLT tables
+#     appeal_case = dlt.read("raw_appealcase").filter(col("CaseType") == 1)
+#     case_rep = dlt.read("raw_caserep")
+
+#     # Join AppealCase and CaseRep
+#     df = appeal_case.join(case_rep, on="CaseNo", how="left")
+
+#     # Clean logic for determining Representation
+#     aip_conditions = (
+#         (col("RepresentativeID") == 957) |  # RepresentativeID is 957
+#         (col("RepresentativeID").isNull()) |  # RepresentativeID is NULL
+#         lower(col("Name")).rlike(".*no\\s+rep.*") |  # Name contains 'no rep'
+#         lower(col("Name")).rlike(".*none.*") |  # Name contains 'none'
+#         lower(col("Name")).rlike(".*unrepresented.*") |  # Name contains 'unrepresented'
+#         lower(col("Name")).rlike(".*self.*") |  # Name contains 'self'
+#         lower(col("Name")).rlike(".*not\\s+rep.*") |  # Name contains 'not rep'
+#         (col("Name") == "-") |  # Name is '-'
+#         lower(col("Name")).rlike(".*\\(spo.*") |  # Name contains '(spo'
+#         lower(col("Name")).rlike(".*spons.*")  # Name contains 'spons'
+#     )
+
+#     return df.select(
+#         col("CaseNo"),
+#         when(aip_conditions, "AIP").otherwise("LR").alias("Representation")
+#     )
+
+# COMMAND ----------
+
+# spark.sql("select * from ariadm_active_appeals.raw_status").printSchema()
+
+# COMMAND ----------
+
+# from pyspark.sql.functions import when, max as spark_max, add_months
+# from pyspark.sql import functions as F
+
+# # from pyspark.sql.functions import col, current_date, add_months, add_years
+
+# @dlt.table(
+#     name="stg_segmentation_states",
+#     comment="Bronze DLT table replicating the AppealCase join logic.",
+#     path=f"{silver_mnt}/stg_segmentation_states"
+# )
+# def stg_segmentation_states():
+#     # Base tables
+#     appealcase = dlt.read("raw_appealcase")
+#     status = dlt.read("raw_status")
+#     caselist = dlt.read("raw_caselist")
+#     documentsreceived = dlt.read("raw_documentsreceived")
+#     filelocation = dlt.read("raw_filelocation")
+#     balancedue = dlt.read("stg_balance_due")
+#     representation = dlt.read("stg_representation")
+                  
+#     s_subquery01 = (
+#         status.filter(((~col("outcome").isin([38, 111]))) &
+#                   ((~col("casestatus").isin(['17']))))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("max_ID"))
+#     )
+                  
+#     # Previous status logic
+#     prev_subquery02 = (
+#         status.filter((col("casestatus").isNull()) | (~col("casestatus").isin(['50', '52', '36'])))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("Prev_ID"))
+#     )
+
+#     # UT status
+#     ut_subquery03 = (
+#         status.filter(col("CaseStatus").isin(['40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33']))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("UT_ID"))
+#     )
+
+#     # Latest document received
+#     docreceived_subquery04 = (
+#         documentsreceived.groupBy("CaseNo")
+#           .agg(spark_max("ReceivedDocumentId").alias("max_ReceivedDocumentId"))
+#     )
+
+#     # SA previous status
+#     sa_prev_subquery05 = (
+#         status.filter((col("casestatus").isNull()) | (col("casestatus") != '46'))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("Prev_ID"))
+#     )
+
+#     # Final join
+#     result = (
+#         appealcase.alias("ac")
+#         .join(s_subquery01.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left")
+#         .join(status.alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left")
+#         .join(caselist.alias("cl"), col("t.StatusId") == col("cl.StatusId"), "left")
+#         .join(prev_subquery02.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left")
+#         .join(status.alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left")
+#         .join(ut_subquery03.alias("ut"), col("ac.CaseNo") == col("ut.CaseNo"), "left")
+#         .join(status.alias("us"), (col("us.CaseNo") == col("ut.CaseNo")) & (col("us.StatusId") == col("ut.UT_ID")), "left")
+#         .join(docreceived_subquery04.alias("doc_received"), col("ac.CaseNo") == col("doc_received.CaseNo"), "left")
+#         .join(documentsreceived.alias("dr"), (col("dr.CaseNo") == col("doc_received.CaseNo")) & (col("dr.ReceivedDocumentId") == col("doc_received.max_ReceivedDocumentId")), "left")
+#         .join(sa_prev_subquery05.alias("sa_prev"), col("ac.CaseNo") == col("sa_prev.CaseNo"), "left")
+#         .join(status.alias("sa"), (col("sa.CaseNo") == col("sa_prev.CaseNo")) & (col("sa.StatusId") == col("sa_prev.Prev_ID")), "left")
+#         .join(filelocation.alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left")
+#         .join(balancedue.alias("bd"), col("ac.CaseNo") == col("bd.CaseNo"), "left")
+#         .join(representation.alias("r"), col("ac.CaseNo") == col("r.CaseNo"), "left")
+#         .filter((col("ac.CaseType") == 1) & (~col("fl.DeptId").isin(519, 520)))
+#         .select(
+#             "ac.CaseNo", 
+#             # "ac.CasePrefix",
+#             when(
+#                 (col("ac.CasePrefix").isin("EA", "HU")) &
+#                 ((col("t.CaseStatus").isNull()) |
+#                  ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("0", "109", "99", "104", "82", "121")) |
+#                  ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 1) & (col("sa.CaseStatus") == '10'))) &
+#                 ((col("dr.ReceivedDocumentId") <= 2) | col("dr.ReceivedDocumentId").isNull()) &
+#                 (col("bd.BalanceDue") > 0), "paymentPending"
+#             ).when(
+#                 (col("ac.CasePrefix").isin("EA", "HU")) &
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '10') & (col("st.Outcome") == 0) | col("st.CaseStatus").isNull()) &
+#                 ((col("dr.ReceivedDocumentId") <= 2) | col("dr.ReceivedDocumentId").isNull()) &
+#                 (col("bd.BalanceDue") > 0), "paymentPending"
+#             ).when(
+#                 ((col("ac.CasePrefix").isin("EA", "HU") & ((col("bd.BalanceDue") <= 0) | col("bd.BalanceDue").isNull())) |
+#                  col("ac.CasePrefix").isin("PA", "DC", "RP", "DA", "IA", "LE", "LP", "LR", "LD", "LH")) &
+#                 ((col("t.CaseStatus").isNull()) |
+#                  ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("0", "109", "99", "104", "82", "121")) |
+#                  ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 1) & (col("sa.CaseStatus") == '10'))) &
+#                 ((col("dr.ReceivedDocumentId") <= 2) | col("dr.ReceivedDocumentId").isNull()), "appealSubmitted"
+#             ).when(
+#                 ((col("ac.CasePrefix").isin("EA", "HU") & ((col("bd.BalanceDue") <= 0) | col("bd.BalanceDue").isNull())) |
+#                  col("ac.CasePrefix").isin("PA", "DC", "RP", "DA", "IA", "LE", "LP", "LR", "LD", "LH")) &
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '10') & (col("st.Outcome") == 0) | col("st.CaseStatus").isNull()) &
+#                 ((col("dr.ReceivedDocumentId") <= 2) | col("dr.ReceivedDocumentId").isNull()), "appealSubmitted"
+#             ).when(
+#                 ((col("t.CaseStatus").isNull()) |
+#                  ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("0", "109", "99", "121", "82", "104")) |
+#                  ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 1) & (col("sa.CaseStatus") == '10'))) &
+#                 (col("dr.ReceivedDocumentId") == 3) &
+#                 col("dr.DateReceived").isNull(), "awaitingRespondentEvidence(a)"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '10') & (col("st.Outcome") == 0) | col("st.CaseStatus").isNull()) &
+#                 (col("dr.ReceivedDocumentId") == 3) &
+#                 col("dr.DateReceived").isNull(), "awaitingRespondentEvidence(a)"
+#             ).when(
+#                 ((col("t.CaseStatus").isNull()) |
+#                  ((col("t.CaseStatus") == '10') & (col("t.Outcome") == 0)) |
+#                  ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 1) & (col("sa.CaseStatus") == '10'))) &
+#                 (col("dr.ReceivedDocumentId") == 3) &
+#                 col("dr.DateReceived").isNotNull(), "awaitingRespondentEvidence(b)"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '10') & (col("st.Outcome") == 0) | col("st.CaseStatus").isNull()) &
+#                 (col("dr.ReceivedDocumentId") == 3) &
+#                 col("dr.DateReceived").isNotNull(), "awaitingRespondentEvidence(b)"
+#             ).when(
+#                 ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("121", "109", "99", "82", "104") &
+#                  (col("dr.ReceivedDocumentId") == 3) & col("dr.DateReceived").isNotNull()) |
+#                 ((col("t.CaseStatus") == '26') & col("t.Outcome").isin("0", "27", "39", "50", "89")) &
+#                 (col("r.Representation") == "LR"), "caseUnderReview"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '26') & col("st.Outcome").isin("0", "27", "39", "50", "89")) &
+#                 (col("r.Representation") == "LR"), "caseUnderReview"
+#             ).when(
+#                 ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("121", "109", "99", "82", "104") &
+#                  (col("dr.ReceivedDocumentId") == 3) & col("dr.DateReceived").isNotNull()) |
+#                 ((col("t.CaseStatus") == '26') & col("t.Outcome").isin("0", "27", "39", "50", "89")) &
+#                 (col("r.Representation") == "AIP"), "reasonsForAppealSubmitted"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '26') & col("st.Outcome").isin("0", "27", "39", "50", "89")) &
+#                 (col("r.Representation") == "AIP"), "reasonsForAppealSubmitted"
+#             ).when(
+#                 ((col("t.CaseStatus") == '26') & col("t.Outcome").isin("40", "52")) |
+#                 ((col("t.CaseStatus").isin("37", "38")) & col("t.Outcome").isin("39", "40", "37", "50", "27", "5")) |
+#                 ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome") == 0) & col("t.KeyDate").isNull()), "listing"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '26') & col("st.Outcome").isin("40", "52")), "listing"
+#             ).when(
+#                 ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome") == 0) &
+#                  (col("t.KeyDate") > current_date()) & (col("t.DecisionReserved") != 1) &
+#                  col("cl.ListId").isNotNull()), "prepareForHearing"
+#             ).when(
+#                 ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome") == 0) &
+#                  col("t.KeyDate").isNotNull() & (col("t.DecisionReserved") == 1)), "decision"
+#             ).when(
+#                 ((col("t.CaseStatus").isin("46", "39")) & (col("t.Outcome") == 86)) |
+#                 ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 1) & (col("sa.CaseStatus") != 10)), "decided(b)"
+#             ).when(
+#                 ((col("t.CaseStatus") == '39') & (col("t.Outcome") == 0) & (col("t.AdjudicatorId") == 0)), "fptaSubmitted(a)"
+#             ).when(
+#                 ((col("t.CaseStatus") == '39') & (col("t.Outcome") == 0) & (col("t.AdjudicatorId") != 0)), "ftpaSubmitted(b)"
+#             ).when(
+#                 ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 31) & col("sa.CaseStatus").isin("37", "38")) |
+#                 ((col("t.CaseStatus") == '26') & col("t.Outcome").isin("1", "2")) |
+#                 ((col("t.CaseStatus").isin("37", "38")) & col("t.Outcome").isin("1", "2")) |
+#                 ((col("t.CaseStatus") == '52') & col("t.Outcome").isin("91", "95") & col("st.CaseStatus").isin("37", "38", "17")) |
+#                 ((col("t.CaseStatus") == '36') & col("t.Outcome").isin("1", "2", "25") & col("st.CaseStatus").isin("37", "38", "17")), "decided(a)"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus").isin("37", "38")) & col("st.Outcome").isin("1", "2") | (col("st.CaseStatus") == 17)), "decided(a)"
+#             ).when(
+#                 ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == 39)) |
+#                 ((col("t.CaseStatus") == '39') & col("t.Outcome").isin("30", "31", "14")) |
+#                 ((col("t.CaseStatus") == '52') & col("t.Outcome").isin("91", "95") & (col("st.CaseStatus") == 39)) |
+#                 ((col("t.CaseStatus") == '36') & col("t.Outcome").isin("1", "2", "25") & (col("st.CaseStatus") == 39)), "ftpaDecided"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus") == '39') & col("st.Outcome").isin("31", "30", "14")), "ftpaDecided"
+#             ).when(
+#                 ((col("t.CaseStatus") == '10') & col("t.Outcome").isin("80", "122", "25", "120", "2", "105", "13")) |
+#                 ((col("t.CaseStatus") == '46') & (col("t.Outcome") == 31) & col("sa.CaseStatus").isin("10", "51", "52")) |
+#                 ((col("t.CaseStatus") == '26') & col("t.Outcome").isin("80", "13", "25")) |
+#                 ((col("t.CaseStatus").isin("37", "38")) & col("t.Outcome").isin("80", "13", "25", "72", "125")) |
+#                 ((col("t.CaseStatus") == '39') & (col("t.Outcome") == 25)) |
+#                 ((col("t.CaseStatus") == '51') & col("t.Outcome").isin("94", "93")) |
+#                 ((col("t.CaseStatus") == '52') & col("t.Outcome").isin("91", "95") & (~col("st.CaseStatus").isin("37", "38", "39", "17") | col("st.CaseStatus").isNull())) |
+#                 ((col("t.CaseStatus") == '36') & col("t.Outcome").isin("1", "2", "25") & (~col("st.CaseStatus").isin("37", "38", "39", "17"))), "ended"
+#             ).when(
+#                 (col("t.CaseStatus").isin("50", "52", "36")) & (col("t.Outcome") == 0) &
+#                 ((col("st.CaseStatus").isin("10", "26")) & col("st.Outcome").isin("80", "122", "2", "105", "120", "25") | (col("st.CaseStatus") == '51')), "ended"
+#             ).when(
+#                 (col("t.CaseStatus").isin("40", "41", "42", "43", "44", "53")) & (col("t.Outcome") == 86), "remitted"
+#             ).otherwise("Not Sure").alias("TargetState"),
+
+
+#             when(
+#             (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')) & (col("t.Outcome") == '86'),
+#             'CCD'
+#             ).when(
+#                 (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')) & (col("t.Outcome") == '0'),
+#                 'UT Active'
+#             ).when(
+#                 (col("ac.CasePrefix").isin('VA','AA','AS','CC','HR','HX','IM','NS','OA','OC','RD','TH','XX')) &
+#                 (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')),
+#                 'UT Overdue'
+#             ).when(
+#                 col("ac.CasePrefix").isin('VA','AA','AS','CC','HR','HX','IM','NS','OA','OC','RD','TH','XX'),
+#                 'FT Overdue'
+#             ).when(
+#                 col("us.CaseStatus").isNotNull() & (
+#                     col("t.CaseStatus").isNull() |
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('0','109','104','82','99','121','27','39')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('1','86')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('0','27','39','50','40','52','89')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('39','40','37','50','27','0','5','52')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('0','86')) |
+#                     ((col("t.CaseStatus") == '50') & (col("t.Outcome") == '0')) |
+#                     ((col("t.CaseStatus").isin('52','36')) & (col("t.Outcome") == '0') & col("st.DecisionDate").isNull())
+#                 ),
+#                 'FT - CCD'
+#             ).when(
+#                 (
+#                     col("ac.CasePrefix").isin('DA','DC','EA','HU','PA','RP') |
+#                     (col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNull())
+#                 ) & (
+#                     col("t.CaseStatus").isNull() |
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('0','109','104','82','99','121','27','39')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('1','86')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('0','27','39','50','40','52','89')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('39','40','37','50','27','0','5','52')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('0','86')) |
+#                     ((col("t.CaseStatus") == '50') & (col("t.Outcome") == '0')) |
+#                     ((col("t.CaseStatus").isin('52','36')) & (col("t.Outcome") == '0') & col("st.DecisionDate").isNull())
+#                 ),
+#                 'CCD'
+#             ).when(
+#                 (
+#                     (col("ac.CasePrefix").isin('DA','DC','EA','HU','PA','RP') & col("us.CaseStatus").isNull()) |
+#                     (col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNull()) |
+#                     (
+#                         col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNotNull() &
+#                         col("us.CaseStatus").isNotNull() &
+#                         (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+#                     )
+#                 ) & (
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('13','80','122','25','120','2','105','119')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('31','2','50')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('80','13','25','1','2')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('1','2','80','13','25','72','14','125')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('30','31','25','14','80')) |
+#                     ((col("t.CaseStatus") == '51') & col("t.Outcome").isin('94','93')) |
+#                     ((col("t.CaseStatus") == '52') & col("t.Outcome").isin('91','95') &
+#                     (~col("st.CaseStatus").isin('37','38','39','17','40','41','42','43','44','45','53','27','28','29','34','32','33')) | col("st.CaseStatus").isNull()) |
+#                     ((col("t.CaseStatus") == '36') & (col("t.Outcome") == '25') &
+#                     (~col("st.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')))
+#                 ),
+#                 'FT - CCD'
+#             ).otherwise("Other").alias("CaseType")
+#         )
+#     )
+
+#     result = result.filter(col('CaseType') != 'Other')
+
+#     return result
+
+# COMMAND ----------
+
+# spark.sql("select * from ariadm_active_appeals.raw_status").printSchema()
+
+# COMMAND ----------
+
+# DBTITLE 1,stg_segmentation_states
+# from pyspark.sql.functions import when, max as spark_max, add_months
+# from pyspark.sql import functions as F
+
+# # from pyspark.sql.functions import col, current_date, add_months, add_years
+
+# @dlt.table(
+#     name="stg_segmentation_states",
+#     comment="Bronze DLT table replicating the AppealCase join logic.",
+#     path=f"{silver_mnt}/stg_segmentation_states"
+# )
+# def stg_segmentation_states():
+#     # Base tables
+#     appealcase = dlt.read("raw_appealcase")
+#     status = dlt.read("raw_status")
+#     caselist = dlt.read("raw_caselist")
+#     documentsreceived = dlt.read("raw_documentsreceived")
+#     filelocation = dlt.read("raw_filelocation")
+#     balancedue = dlt.read("stg_balance_due")
+#     representation = dlt.read("stg_representation")
+                  
+#     s_subquery01 = (
+#         status.filter(((~col("outcome").isin([38, 111]))) &
+#                   ((~col("casestatus").isin(['17']))))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("max_ID"))
+#     )
+                  
+#     # Previous status logic
+#     prev_subquery02 = (
+#         status.filter((col("casestatus").isNull()) | (~col("casestatus").isin(['50', '52', '36'])))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("Prev_ID"))
+#     )
+
+#     # UT status
+#     ut_subquery03 = (
+#         status.filter(col("CaseStatus").isin(['40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33']))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("UT_ID"))
+#     )
+
+#     # Latest document received
+#     docreceived_subquery04 = (
+#         documentsreceived.groupBy("CaseNo")
+#           .agg(spark_max("ReceivedDocumentId").alias("max_ReceivedDocumentId"))
+#     )
+
+#     # SA previous status
+#     sa_prev_subquery05 = (
+#         status.filter((col("casestatus").isNull()) | (col("casestatus") != '46'))
+#           .groupBy("CaseNo")
+#           .agg(spark_max("StatusId").alias("Prev_ID"))
+#     )
+
+#     # Final join
+#     result = (
+#         appealcase.alias("ac")
+#         .join(s_subquery01.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left")
+#         .join(status.alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left")
+#         .join(caselist.alias("cl"), col("t.StatusId") == col("cl.StatusId"), "left")
+#         .join(prev_subquery02.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left")
+#         .join(status.alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left")
+#         .join(ut_subquery03.alias("ut"), col("ac.CaseNo") == col("ut.CaseNo"), "left")
+#         .join(status.alias("us"), (col("us.CaseNo") == col("ut.CaseNo")) & (col("us.StatusId") == col("ut.UT_ID")), "left")
+#         .join(docreceived_subquery04.alias("doc_received"), col("ac.CaseNo") == col("doc_received.CaseNo"), "left")
+#         .join(documentsreceived.alias("dr"), (col("dr.CaseNo") == col("doc_received.CaseNo")) & (col("dr.ReceivedDocumentId") == col("doc_received.max_ReceivedDocumentId")), "left")
+#         .join(sa_prev_subquery05.alias("sa_prev"), col("ac.CaseNo") == col("sa_prev.CaseNo"), "left")
+#         .join(status.alias("sa"), (col("sa.CaseNo") == col("sa_prev.CaseNo")) & (col("sa.StatusId") == col("sa_prev.Prev_ID")), "left")
+#         .join(filelocation.alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left")
+#         .join(balancedue.alias("bd"), col("ac.CaseNo") == col("bd.CaseNo"), "left")
+#         .join(representation.alias("r"), col("ac.CaseNo") == col("r.CaseNo"), "left")
+#         .select(
+#             "ac.CaseNo", 
+#             # "ac.CasePrefix",
+        
+#             when(
+#             (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')) & (col("t.Outcome") == '86'),
+#             'CCD'
+#             ).when(
+#                 (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')) & (col("t.Outcome") == '0'),
+#                 'UT Active'
+#             ).when(
+#                 (col("ac.CasePrefix").isin('VA','AA','AS','CC','HR','HX','IM','NS','OA','OC','RD','TH','XX')) &
+#                 (col("t.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')),
+#                 'UT Overdue'
+#             ).when(
+#                 col("ac.CasePrefix").isin('VA','AA','AS','CC','HR','HX','IM','NS','OA','OC','RD','TH','XX'),
+#                 'FT Overdue'
+#             ).when(
+#                 col("us.CaseStatus").isNotNull() & (
+#                     col("t.CaseStatus").isNull() |
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('0','109','104','82','99','121','27','39')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('1','86')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('0','27','39','50','40','52','89')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('39','40','37','50','27','0','5','52')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('0','86')) |
+#                     ((col("t.CaseStatus") == '50') & (col("t.Outcome") == '0')) |
+#                     ((col("t.CaseStatus").isin('52','36')) & (col("t.Outcome") == '0') & col("st.DecisionDate").isNull())
+#                 ),
+#                 'FT - CCD'
+#             ).when(
+#                 (
+#                     col("ac.CasePrefix").isin('DA','DC','EA','HU','PA','RP') |
+#                     (col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNull())
+#                 ) & (
+#                     col("t.CaseStatus").isNull() |
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('0','109','104','82','99','121','27','39')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('1','86')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('0','27','39','50','40','52','89')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('39','40','37','50','27','0','5','52')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('0','86')) |
+#                     ((col("t.CaseStatus") == '50') & (col("t.Outcome") == '0')) |
+#                     ((col("t.CaseStatus").isin('52','36')) & (col("t.Outcome") == '0') & col("st.DecisionDate").isNull())
+#                 ),
+#                 'CCD'
+#             ).when(
+#                 (
+#                     (col("ac.CasePrefix").isin('DA','DC','EA','HU','PA','RP') & col("us.CaseStatus").isNull()) |
+#                     (col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNull()) |
+#                     (
+#                         col("ac.CasePrefix").isin('LP','LR','LD','LH','LE','IA') & col("ac.HOANRef").isNotNull() &
+#                         col("us.CaseStatus").isNotNull() &
+#                         (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+#                     )
+#                 ) & (
+#                     ((col("t.CaseStatus") == '10') & col("t.Outcome").isin('13','80','122','25','120','2','105','119')) |
+#                     ((col("t.CaseStatus") == '46') & col("t.Outcome").isin('31','2','50')) |
+#                     ((col("t.CaseStatus") == '26') & col("t.Outcome").isin('80','13','25','1','2')) |
+#                     ((col("t.CaseStatus").isin('37','38')) & col("t.Outcome").isin('1','2','80','13','25','72','14','125')) |
+#                     ((col("t.CaseStatus") == '39') & col("t.Outcome").isin('30','31','25','14','80')) |
+#                     ((col("t.CaseStatus") == '51') & col("t.Outcome").isin('94','93')) |
+#                     ((col("t.CaseStatus") == '52') & col("t.Outcome").isin('91','95') &
+#                     (~col("st.CaseStatus").isin('37','38','39','17','40','41','42','43','44','45','53','27','28','29','34','32','33')) | col("st.CaseStatus").isNull()) |
+#                     ((col("t.CaseStatus") == '36') & (col("t.Outcome") == '25') &
+#                     (~col("st.CaseStatus").isin('40','41','42','43','44','45','53','27','28','29','34','32','33')))
+#                 ),
+#                 'FT - CCD'
+#             ).otherwise("Unknown").alias("CaseType") 
+#         )
+#     )
+
+#     return result
 
 # COMMAND ----------
 
@@ -1005,3 +1549,8 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # MAGIC %md
 # MAGIC ### Appendix
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from ariadm_active_appeals.bronze_appealcase_crep_rep_floc_cspon_cfs

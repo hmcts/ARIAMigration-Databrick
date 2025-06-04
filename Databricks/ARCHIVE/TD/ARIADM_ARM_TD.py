@@ -1,4 +1,8 @@
 # Databricks notebook source
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Tribunal Decision Archive
 # MAGIC <table style = 'float:left;'>

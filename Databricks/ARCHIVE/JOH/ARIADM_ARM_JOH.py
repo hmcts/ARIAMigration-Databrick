@@ -1,4 +1,8 @@
 # Databricks notebook source
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Judicial Office Holder Archive
 # MAGIC <table style = 'float:left;'>

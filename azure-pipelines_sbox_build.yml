@@ -412,7 +412,6 @@ stages:
                   databricks --version
               displayName: 'Install Databricks CLI'
 
-              #Ensure databrcks CLI is available in current session (loading homebrew shell)
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                 export DATABRICKS_HOST="${{ lz.databricks_host }}"

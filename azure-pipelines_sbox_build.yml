@@ -279,7 +279,37 @@ stages:
                       --pattern '*.html' \
                       --overwrite true
                     echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
-  
+              
+              - task: AzureCLI@2
+                displayName: Configure Storage and Upload HTML Templates
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    ENVIRONMENT="${{ deployment.environment }}"
+                    LZ="${{ lz.landing_zone }}"
+                    ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+
+                    echo "Generating SAS token for ingest${LZ}curated${ENVIRONMENT}/curated"
+                    curated_sas_token=$(az storage container generate-sas \
+                      --account-name "ingest${LZ}curated${ENVIRONMENT}" \
+                      --name "curated" \
+                      --permissions rwdlacd \
+                      --expiry 2026-03-21T00:00:00Z \
+                      --start 2025-03-21T00:00:00Z \
+                      --https-only \
+                      --auth-mode key \
+                      --output tsv)
+                  
+                    # Store SAS token in KV per env
+                    echo "Creating SAS token..."
+                    az keyvault secret set \
+                      --vault-name "ingest-${LZ}-meta002-${ENVIRONMENT}" \
+                      --name "CURATED-$ENV_UPPER-SAS-TOKEN-TEST" \
+                      --value "$curated_sas_token"
+                    echo "Generated SAS token for ingest${LZ}curated${ENVIRONMENT}/curated"
+
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones }}:

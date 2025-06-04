@@ -291,10 +291,10 @@ stages:
                     LZ="${{ lz.landing_zone }}"
                     ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
 
-                    echo "Generating SAS token for ingest${LZ}curated${ENVIRONMENT}/curated"
+                    echo "Generating SAS token for ingest${LZ}curated${ENVIRONMENT}/dropzone"
                     curated_sas_token=$(az storage container generate-sas \
                       --account-name "ingest${LZ}curated${ENVIRONMENT}" \
-                      --name "curated" \
+                      --name "dropzone" \
                       --permissions rwdlacd \
                       --expiry 2026-03-21T00:00:00Z \
                       --start 2025-03-21T00:00:00Z \
@@ -308,7 +308,7 @@ stages:
                       --vault-name "ingest-${LZ}-meta002-${ENVIRONMENT}" \
                       --name "CURATED-$ENV_UPPER-SAS-TOKEN-TEST" \
                       --value "$curated_sas_token"
-                    echo "Generated SAS token for ingest${LZ}curated${ENVIRONMENT}/curated"
+                    echo "Generated SAS token for ingest${LZ}curated${ENVIRONMENT}/dropzone"
 
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:

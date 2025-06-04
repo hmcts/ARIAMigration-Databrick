@@ -23,6 +23,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
+            Key_Vault_Name: 'ingest00-meta002-sbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
@@ -30,6 +31,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
+            Key_Vault_Name: 'ingest01-meta002-sbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_PAT_SBOX02)" 
@@ -37,6 +39,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
+            Key_Vault_Name: 'ingest02-meta002-sbox'
 
       # - deployment: stg_aria
       #   environment: stg
@@ -300,6 +303,19 @@ stages:
                     echo "Storage Account Name: $STORAGE_ACCOUNT"
                     echo "Key Vault Name: $KEYVAULT_NAME"
                     echo "=========================="
+
+                    echo "Assigning SP Key Vault Secrets Officer Access"
+                    az role assignment create \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Key Vault Secrets Officer" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
+                    echo "Role Assigned"
+
+                    echo "Listing Key Vault Officer role assignments"
+                    az role assignment list \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}" \
+                      --output table
                     
                     # Test if storage account exists
                     echo "Checking if storage account exists..."
@@ -357,7 +373,7 @@ stages:
                     echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
                     echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"
                     echo "=================="
-                    
+
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones }}:

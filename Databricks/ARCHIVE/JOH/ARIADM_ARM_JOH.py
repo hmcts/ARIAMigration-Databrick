@@ -1161,7 +1161,7 @@ def silver_archive_metadata():
 
 # COMMAND ----------
 
-secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "CURATED-sbox-SAS-TOKEN")
 
 # COMMAND ----------
 

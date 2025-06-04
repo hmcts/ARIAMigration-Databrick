@@ -281,7 +281,7 @@ stages:
                     echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
               
               - task: AzureCLI@2
-                displayName: Configure Storage and Upload HTML Templates
+                displayName: Configure SAS Token generation for ${{ deployment.environment }}${{ lz.landing_zone }}
                 inputs:
                   azureSubscription: ${{ deployment.service_connection }}
                   scriptType: 'bash'

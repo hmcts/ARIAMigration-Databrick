@@ -67,7 +67,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         #     container_secret = full_secret.lstrip('?')  # fallback
         container_url = f"{account_url}/{container_name}?{container_secret}"
 
-        sub_dir = "ARIA{ARM_SEGMENT}/submission"
+        sub_dir = f"ARIA{ARM_SEGMENT}/submission"
 
         container_service_client = ContainerClient.from_container_url(container_url)
         try:

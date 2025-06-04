@@ -23,6 +23,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
             Resource_Group: 'ingest00-main-sbox'
+            Key_Vault_Name: 'ingest00-meta002-sbox'
           - landing_zone: '01'
             databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
@@ -30,6 +31,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
             Resource_Group: 'ingest01-main-sbox'
+            Key_Vault_Name: 'ingest01-meta002-sbox'
           - landing_zone: '02'
             databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
             databricks_token: "$(DATABRICKS_PAT_SBOX02)" 
@@ -37,6 +39,7 @@ parameters:
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
             Resource_Group: 'ingest02-main-sbox'
+            Key_Vault_Name: 'ingest02-meta002-sbox'
 
       # - deployment: stg_aria
       #   environment: stg
@@ -279,7 +282,98 @@ stages:
                       --pattern '*.html' \
                       --overwrite true
                     echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
-  
+              
+              - task: AzureCLI@2
+                displayName: Configure SAS Token generation for ${{ deployment.environment }}${{ lz.landing_zone }}
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    ENVIRONMENT="${{ deployment.environment }}"
+                    LZ="${{ lz.landing_zone }}"
+                    ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+                    
+                    STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
+                    KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
+                    
+                    echo "=== DEBUG INFORMATION ==="
+                    echo "Environment: $ENVIRONMENT"
+                    echo "Landing Zone: $LZ"
+                    echo "Storage Account Name: $STORAGE_ACCOUNT"
+                    echo "Key Vault Name: $KEYVAULT_NAME"
+                    echo "=========================="
+
+                    echo "Assigning SP Key Vault Secrets Officer Access"
+                    az role assignment create \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Key Vault Secrets Officer" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
+                    echo "Role Assigned"
+
+                    echo "Listing Key Vault Officer role assignments"
+                    az role assignment list \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}" \
+                      --output table
+                    
+                    # Test if storage account exists
+                    echo "Checking if storage account exists..."
+                    if az storage account show --name "$STORAGE_ACCOUNT" --output table; then
+                      echo "✓ Storage account found"
+                    else
+                      echo "✗ Storage account not found or no access"
+                      exit 1
+                    fi
+                    
+                    # Test if container exists
+                    echo "Checking if container 'dropzone' exists..."
+                    if az storage container show --name "dropzone" --account-name "$STORAGE_ACCOUNT" --auth-mode login --output table; then
+                      echo "✓ Container 'dropzone' found"
+                    else
+                      echo "✗ Container 'dropzone' not found"
+                      exit 1
+                    fi
+                    
+                    echo "Generating SAS token for ${STORAGE_ACCOUNT}/dropzone"
+                    
+                    curated_sas_token=$(az storage container generate-sas \
+                      --account-name "$STORAGE_ACCOUNT" \
+                      --name "dropzone" \
+                      --permissions rwdlacd \
+                      --expiry 2026-03-21T00:00:00Z \
+                      --start 2025-03-21T00:00:00Z \
+                      --https-only \
+                      --auth-mode key \
+                      --output tsv)
+                    
+                    if [ -z "$curated_sas_token" ]; then
+                      echo "✗ Failed to generate SAS token"
+                      exit 1
+                    else
+                      echo "✓ SAS token generated successfully"
+                      echo "Token length: ${#curated_sas_token} characters"
+                    fi
+                    
+                    # Store SAS token in Key Vault
+                    echo "Storing SAS token in Key Vault: $KEYVAULT_NAME"
+                    
+                    if az keyvault secret set \
+                      --vault-name "$KEYVAULT_NAME" \
+                      --name "CURATED-${ENV_UPPER}-SAS-TOKEN-TEST" \
+                      --value "$curated_sas_token" \
+                      --output table; then
+                      echo "✓ SAS token stored successfully in Key Vault"
+                    else
+                      echo "✗ Failed to store SAS token in Key Vault"
+                      exit 1
+                    fi
+                    
+                    echo "=== COMPLETION ==="
+                    echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
+                    echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"
+                    echo "=================="
+
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones }}:
@@ -318,7 +412,6 @@ stages:
                   databricks --version
               displayName: 'Install Databricks CLI'
 
-              #Ensure databrcks CLI is available in current session (loading homebrew shell)
             - script: |
                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                 export DATABRICKS_HOST="${{ lz.databricks_host }}"
@@ -380,4 +473,3 @@ stages:
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
                 databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
-          

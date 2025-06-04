@@ -1,4 +1,8 @@
 # Databricks notebook source
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Appeals Archive
 # MAGIC <table style = 'float:left;'>
@@ -70,10 +74,6 @@
 
 # MAGIC %md
 # MAGIC ### Import packages
-
-# COMMAND ----------
-
-# MAGIC %pip install pyspark azure-storage-blob
 
 # COMMAND ----------
 

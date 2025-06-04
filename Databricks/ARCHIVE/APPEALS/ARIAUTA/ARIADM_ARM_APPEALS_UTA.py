@@ -73,6 +73,10 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # run custom functions
 import sys
 import os
@@ -89,11 +93,6 @@ from datetime import datetime
 from pyspark.sql.window import Window
 # from pyspark.sql.functions import row_number
 from delta.tables import DeltaTable
-
-# COMMAND ----------
-
-pip install azure-storage-blob
-
 
 # COMMAND ----------
 

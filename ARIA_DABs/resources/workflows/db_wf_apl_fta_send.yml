@@ -9,7 +9,7 @@ resources:
             node_type_id: Standard_D8ds_v5
             num_workers: 2
             spark_conf:
-              fs.azure.account.auth.type.ingest00rawsbox.dfs.core.windows.net: "OAuth"
+              fs.azure.account.auth.type.ingest{lz}raw{env}.dfs.core.windows.net: "OAuth"
               fs.azure.account.oauth.provider.type.ingest00rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
               fs.azure.account.oauth2.client.id.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
               fs.azure.account.oauth2.client.secret.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
@@ -74,7 +74,7 @@ resources:
             - task_key: DLT_creation_of_content
           job_cluster_key: db_wf_apl_fta_send_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
             source: WORKSPACE
 
         - task_key: publish_HTML_JSON_to_eh
@@ -82,7 +82,7 @@ resources:
           depends_on:
             - task_key: audit_processing_uta
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
             base_parameters: 
               file_types: html,json
             source: WORKSPACE
@@ -92,7 +92,7 @@ resources:
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
             base_parameters: 
               file_types: a360
             source: WORKSPACE

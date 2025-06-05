@@ -75,10 +75,7 @@ resources:
             - task_key: DLT_creation_of_content
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
-            base_parameters: #Will we remove these mounts and use SP once up and running? or do we need tf to provision
-              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
-              topic: evh-apl-pub-dev-uks-dlrm-01
-              dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
+            base_parameters: 
               file_types: html,json
             source: WORKSPACE
           
@@ -88,10 +85,7 @@ resources:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
-            base_parameters: #Will we remove these mounts and use SP once up and running? or do we need tf to provision
-              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAFTA/
-              topic: evh-apl-pub-dev-uks-dlrm-01
-              dropzone_mount: /mnt/dropzoneariafta/APPEALS/ARIAFTA/
+            base_parameters: 
               file_types: a360
             source: WORKSPACE
 

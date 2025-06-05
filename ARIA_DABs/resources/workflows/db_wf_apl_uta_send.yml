@@ -53,7 +53,7 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
 
         - task_key: validate_packages
           depends_on:
@@ -106,12 +106,12 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ACK_AUTOLOADER_UTA"
             source: WORKSPACE
         
-        # - task_key: appeal_uta_send_dashboard
-        #   depends_on:
-        #     - task_key: uta_ack
-        #   job_cluster_key: db_wf_apl_uta_send_job
-        #   notebook_task:
-        #     notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/UTA_Send_Audit_Dashboard"
-        #     source: WORKSPACE
+        - task_key: appeal_uta_send_dashboard
+          depends_on:
+            - task_key: uta_ack
+          job_cluster_key: db_wf_apl_uta_send_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/AUDIT/UTA_Send_Audit_Dashboard"
+            source: WORKSPACE
       queue:
         enabled: true

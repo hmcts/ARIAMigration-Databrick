@@ -68,13 +68,21 @@ resources:
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
             full_refresh: false
-
-        - task_key: publish_HTML_JSON_to_eh
-          job_cluster_key: db_wf_apl_fta_send_job
+        
+        - task_key: audit_processing_uta
           depends_on:
             - task_key: DLT_creation_of_content
+          job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
+            source: WORKSPACE
+
+        - task_key: publish_HTML_JSON_to_eh
+          job_cluster_key: db_wf_apl_uta_send_job
+          depends_on:
+            - task_key: audit_processing_uta
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
             base_parameters: 
               file_types: html,json
             source: WORKSPACE
@@ -84,7 +92,7 @@ resources:
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
             base_parameters: 
               file_types: a360
             source: WORKSPACE

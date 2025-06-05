@@ -19,7 +19,7 @@ env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
  
 segment = "apluta"
-ARIA_SEGMENT = "uta"
+ARIA_SEGMENT = "UTA"
 eventhub_name = f"evh-{segment}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
  

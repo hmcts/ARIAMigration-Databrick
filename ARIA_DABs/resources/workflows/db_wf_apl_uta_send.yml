@@ -83,13 +83,9 @@ resources:
             - task_key: audit_processing_uta
           job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_UTA"
             base_parameters:
-              audit_path: /mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_pub_audit_db_eh
-              dropzone_mount: /mnt/dropzoneariauta/APPEALS/ARIAUTA/
               file_types: html,json
-              topic: evh-apl-uta-pub-dev-uks-dlrm-01
-              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAUTA/
             source: WORKSPACE
 
         - task_key: publish_a360_eh
@@ -97,13 +93,9 @@ resources:
             - task_key: publish_html_json_eh
           job_cluster_key: db_wf_apl_uta_send_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIA_ADLS_TO_EVENTHUBS_GENRIC"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_UTA"
             base_parameters:
-              audit_path: /mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAUTA/apl_uta_pub_audit_db_eh
-              dropzone_mount: /mnt/dropzoneariauta/APPEALS/ARIAUTA/
               file_types: a360
-              topic: evh-apl-uta-pub-dev-uks-dlrm-01
-              gold_mount: /mnt/ingest00curatedsboxgold/ARIADM/ARM/APPEALS/ARIAUTA/
             source: WORKSPACE
 
         - task_key: uta_ack

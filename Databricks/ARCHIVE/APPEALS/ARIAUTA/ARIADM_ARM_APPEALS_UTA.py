@@ -1,4 +1,8 @@
 # Databricks notebook source
+# MAGIC %pip install pyspark azure-storage-blob
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Appeals Archive
 # MAGIC <table style = 'float:left;'>
@@ -89,11 +93,6 @@ from datetime import datetime
 from pyspark.sql.window import Window
 # from pyspark.sql.functions import row_number
 from delta.tables import DeltaTable
-
-# COMMAND ----------
-
-pip install azure-storage-blob
-
 
 # COMMAND ----------
 
@@ -4474,7 +4473,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(KeyVault_name, "curated-connection-string")
+secret = dbutils.secrets.get(KeyVault_name, "CURATED-sbox-SAS-TOKEN")
 
 # COMMAND ----------
 
@@ -4594,35 +4593,35 @@ def format_date(date_value):
     
 # Load templates
 template_paths_and_names = [
-    (f"{html_mnt}/appeals/appeals-no-js-v5-template.html", "html_template"),
-    (f"{html_mnt}/appeals/dependentsdetails/Dependentsdetailstemplate.html", "Dependentsdetailstemplate"),
-    (f"{html_mnt}/appeals/paymentdetails/PaymentDetailstemplate.html", "PaymentDetailstemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailPreliminaryIssueTemplate.html", "StatusDetailPreliminaryIssueTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailCaseManagementReviewTemplate.html", "StatusDetailCaseManagementReviewTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailAppellateCourtTemplate.html", "StatusDetailAppellateCourtTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewTemplate.html", "StatusDetailHighCourtReviewTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewFilterTemplate.html", "StatusDetailHighCourtReviewFilterTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html", "StatusDetailImmigrationJudgeHearingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html", "StatusDetailPanelHearingLegalTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailPermissiontoAppealTemplate.html", "StatusDetailPermissiontoAppealTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailReviewofCostOrderTemplate.html", "StatusDetailReviewOfCostOrderTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierHearingTemplate.html", "StatusDetailFirstTierHearingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPaperTemplate.html", "StatusDetailFirstTierPaperTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPermissionApplicationTemplate.html", "StatusDetailFirstTierPermissionApplicationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalPermissionApplicationTemplate.html", "StatusDetailUpperTribunalPermissionApplicationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html", "StatusDetailUpperTribunalOralPermissionApplicationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingTemplate.html", "StatusDetailUpperTribunalHearingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingContinuanceTemplate.html", "StatusDetailUpperTribunalHearingContinuanceTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionHearingTemplate.html", "StatusDetailUpperTribunalOralPermissionHearingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailPTADirecttoAppellateCourtTemplate.html", "StatusDetailPTADirecttoAppellateCourtTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailSetAsideApplicationTemplate.html", "StatusDetailSetAsideApplicationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewPermissionApplicationTemplate.html", "StatusDetailJudicialReviewPermissionApplicationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html", "StatusDetailJudicialReviewHearingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html", "StatusDetailOnHoldChargebackTakenTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html", "StatusDetailClosedFeeNotPaidTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html", "StatusDetailCaseClosedFeeOutstandingTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/StatusDetailMigrationTemplate.html", "StatusDetailMigrationTemplate"),
-    (f"{html_mnt}/appeals/statusdetail/DefaultStatusDetail.html", "DefaultStatusDetail")  
+    (f"{html_mnt}/Appeals/appeals-no-js-v5-template.html", "html_template"),
+    (f"{html_mnt}/Appeals/dependentsdetails/Dependentsdetailstemplate.html", "Dependentsdetailstemplate"),
+    (f"{html_mnt}/Appeals/paymentdetails/PaymentDetailstemplate.html", "PaymentDetailstemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailPreliminaryIssueTemplate.html", "StatusDetailPreliminaryIssueTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailCaseManagementReviewTemplate.html", "StatusDetailCaseManagementReviewTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailAppellateCourtTemplate.html", "StatusDetailAppellateCourtTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailHighCourtReviewTemplate.html", "StatusDetailHighCourtReviewTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailHighCourtReviewFilterTemplate.html", "StatusDetailHighCourtReviewFilterTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailImmigrationJudgeHearingTemplate.html", "StatusDetailImmigrationJudgeHearingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailPanelHearingLegalTemplate.html", "StatusDetailPanelHearingLegalTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailPermissiontoAppealTemplate.html", "StatusDetailPermissiontoAppealTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailReviewofCostOrderTemplate.html", "StatusDetailReviewOfCostOrderTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierHearingTemplate.html", "StatusDetailFirstTierHearingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierPaperTemplate.html", "StatusDetailFirstTierPaperTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierPermissionApplicationTemplate.html", "StatusDetailFirstTierPermissionApplicationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalPermissionApplicationTemplate.html", "StatusDetailUpperTribunalPermissionApplicationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html", "StatusDetailUpperTribunalOralPermissionApplicationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalHearingTemplate.html", "StatusDetailUpperTribunalHearingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalHearingContinuanceTemplate.html", "StatusDetailUpperTribunalHearingContinuanceTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalOralPermissionHearingTemplate.html", "StatusDetailUpperTribunalOralPermissionHearingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailPTADirecttoAppellateCourtTemplate.html", "StatusDetailPTADirecttoAppellateCourtTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailSetAsideApplicationTemplate.html", "StatusDetailSetAsideApplicationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailJudicialReviewPermissionApplicationTemplate.html", "StatusDetailJudicialReviewPermissionApplicationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailJudicialReviewHearingTemplate.html", "StatusDetailJudicialReviewHearingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailOnHoldChargebackTakenTemplate.html", "StatusDetailOnHoldChargebackTakenTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailClosedFeeNotPaidTemplate.html", "StatusDetailClosedFeeNotPaidTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailCaseClosedFeeOutstandingTemplate.html", "StatusDetailCaseClosedFeeOutstandingTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/StatusDetailMigrationTemplate.html", "StatusDetailMigrationTemplate"),
+    (f"{html_mnt}/Appeals/statusdetails/DefaultStatusDetail.html", "DefaultStatusDetail")  
 
 ]
 
@@ -5020,7 +5019,7 @@ data = [
     (7, "Permission to Divisional Court", None, None),
     (8, "Lodgement", None, None),
     (9, "Paper Case", None, None),
-    (10, "Preliminary Issue", "StatusDetailPreliminaryIssueTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPreliminaryIssueTemplate.html"),
+    (10, "Preliminary Issue", "StatusDetailPreliminaryIssueTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailPreliminaryIssueTemplate.html"),
     (11, "Scottish Forfeiture", None, None),
     (12, "Tribunal Appeal", None, None),
     (13, "Tribunal Application", None, None),
@@ -5036,34 +5035,34 @@ data = [
     (23, "Record Hearing Outcome – Case", None, None),
     (24, "Record Hearing Outcome – Visit Visa", None, None),
     (25, "Statutory Review", None, None),
-    (26, "Case Management Review", "StatusDetailCaseManagementReviewTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailCaseManagementReviewTemplate.html"),
-    (27, "Court of Appeal", "StatusDetailAppellateCourtTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailAppellateCourtTemplate.html"),
-    (28, "High Court Review", "StatusDetailHighCourtReviewTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewTemplate.html"),
-    (29, "High Court Review (Filter)", "StatusDetailHighCourtReviewFilterTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailHighCourtReviewFilterTemplate.html"),
-    (30, "Immigration Judge – Hearing", "StatusDetailImmigrationJudgeHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
-    (31, "Immigration Judge – Paper", "StatusDetailImmigrationJudgeHearingTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailImmigrationJudgeHearingTemplate.html"),
-    (32, "Panel Hearing (Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
-    (33, "Panel Hearing (Legal/Non Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPanelHearingLegalTemplate.html"),
-    (34, "Permission to Appeal", "StatusDetailPermissiontoAppealTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPermissiontoAppealTemplate.html"),
-    (35, "Migration", "StatusDetailMigrationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailMigrationTemplate.html"),
-    (36, "Review of Cost Order", "StatusDetailReviewOfCostOrderTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailReviewofCostOrderTemplate.html"),
-    (37, "First Tier – Hearing", "StatusDetailFirstTierHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierHearingTemplate.html"),
-    (38, "First Tier – Paper", "StatusDetailFirstTierPaperTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPaperTemplate.html"),
-    (39, "First Tier Permission Application", "StatusDetailFirstTierPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailFirstTierPermissionApplicationTemplate.html"),
-    (40, "Upper Tribunal Permission Application", "StatusDetailUpperTribunalPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalPermissionApplicationTemplate.html"),
-    (41, "Upper Tribunal Oral Permission Application", "StatusDetailUpperTribunalOralPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html"),
-    (42, "Upper Tribunal Hearing", "StatusDetailUpperTribunalHearingTemplate",f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingTemplate.html"),
-    (43, "Upper Tribunal Hearing – Continuance", "StatusDetailUpperTribunalHearingContinuanceTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalHearingContinuanceTemplate.html"),
-    (44, "Upper Tribunal Oral Permission Hearing", "StatusDetailUpperTribunalOralPermissionHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailUpperTribunalOralPermissionHearingTemplate.html"),
-    (45, "PTA Direct to Appellate Court", "StatusDetailPTADirecttoAppellateCourtTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailPTADirecttoAppellateCourtTemplate.html"),
-    (46, "Set Aside Application", "StatusDetailSetAsideApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailSetAsideApplicationTemplate.html"),
-    (47, "Judicial Review Permission Application", "StatusDetailJudicialReviewPermissionApplicationTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewPermissionApplicationTemplate.html"),
-    (48, "Judicial Review Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
-    (49, "Judicial Review Oral Permission Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailJudicialReviewHearingTemplate.html"),
-    (50, "On Hold – Chargeback Taken", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
-    (51, "Closed – Fee Not Paid", "StatusDetailClosedFeeNotPaidTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailClosedFeeNotPaidTemplate.html"),
-    (52, "Case closed fee outstanding", "StatusDetailCaseClosedFeeOutstandingTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailCaseClosedFeeOutstandingTemplate.html"),
-    (53, "Upper Trib Case On Hold – Fee Not Paid", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/appeals/statusdetail/StatusDetailOnHoldChargebackTakenTemplate.html"),
+    (26, "Case Management Review", "StatusDetailCaseManagementReviewTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailCaseManagementReviewTemplate.html"),
+    (27, "Court of Appeal", "StatusDetailAppellateCourtTemplate",f"{html_mnt}/Appeals/statusdetails/StatusDetailAppellateCourtTemplate.html"),
+    (28, "High Court Review", "StatusDetailHighCourtReviewTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailHighCourtReviewTemplate.html"),
+    (29, "High Court Review (Filter)", "StatusDetailHighCourtReviewFilterTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailHighCourtReviewFilterTemplate.html"),
+    (30, "Immigration Judge – Hearing", "StatusDetailImmigrationJudgeHearingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailImmigrationJudgeHearingTemplate.html"),
+    (31, "Immigration Judge – Paper", "StatusDetailImmigrationJudgeHearingTemplate",f"{html_mnt}/Appeals/statusdetails/StatusDetailImmigrationJudgeHearingTemplate.html"),
+    (32, "Panel Hearing (Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailPanelHearingLegalTemplate.html"),
+    (33, "Panel Hearing (Legal/Non Legal)", "StatusDetailPanelHearingLegalTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailPanelHearingLegalTemplate.html"),
+    (34, "Permission to Appeal", "StatusDetailPermissiontoAppealTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailPermissiontoAppealTemplate.html"),
+    (35, "Migration", "StatusDetailMigrationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailMigrationTemplate.html"),
+    (36, "Review of Cost Order", "StatusDetailReviewOfCostOrderTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailReviewofCostOrderTemplate.html"),
+    (37, "First Tier – Hearing", "StatusDetailFirstTierHearingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierHearingTemplate.html"),
+    (38, "First Tier – Paper", "StatusDetailFirstTierPaperTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierPaperTemplate.html"),
+    (39, "First Tier Permission Application", "StatusDetailFirstTierPermissionApplicationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailFirstTierPermissionApplicationTemplate.html"),
+    (40, "Upper Tribunal Permission Application", "StatusDetailUpperTribunalPermissionApplicationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalPermissionApplicationTemplate.html"),
+    (41, "Upper Tribunal Oral Permission Application", "StatusDetailUpperTribunalOralPermissionApplicationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalOralPermissionApplicationTemplate.html"),
+    (42, "Upper Tribunal Hearing", "StatusDetailUpperTribunalHearingTemplate",f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalHearingTemplate.html"),
+    (43, "Upper Tribunal Hearing – Continuance", "StatusDetailUpperTribunalHearingContinuanceTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalHearingContinuanceTemplate.html"),
+    (44, "Upper Tribunal Oral Permission Hearing", "StatusDetailUpperTribunalOralPermissionHearingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailUpperTribunalOralPermissionHearingTemplate.html"),
+    (45, "PTA Direct to Appellate Court", "StatusDetailPTADirecttoAppellateCourtTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailPTADirecttoAppellateCourtTemplate.html"),
+    (46, "Set Aside Application", "StatusDetailSetAsideApplicationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailSetAsideApplicationTemplate.html"),
+    (47, "Judicial Review Permission Application", "StatusDetailJudicialReviewPermissionApplicationTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailJudicialReviewPermissionApplicationTemplate.html"),
+    (48, "Judicial Review Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailJudicialReviewHearingTemplate.html"),
+    (49, "Judicial Review Oral Permission Hearing", "StatusDetailJudicialReviewHearingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailJudicialReviewHearingTemplate.html"),
+    (50, "On Hold – Chargeback Taken", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailOnHoldChargebackTakenTemplate.html"),
+    (51, "Closed – Fee Not Paid", "StatusDetailClosedFeeNotPaidTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailClosedFeeNotPaidTemplate.html"),
+    (52, "Case closed fee outstanding", "StatusDetailCaseClosedFeeOutstandingTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailCaseClosedFeeOutstandingTemplate.html"),
+    (53, "Upper Trib Case On Hold – Fee Not Paid", "StatusDetailOnHoldChargebackTakenTemplate", f"{html_mnt}/Appeals/statusdetails/StatusDetailOnHoldChargebackTakenTemplate.html"),
     (54, "Ork", None, None)
 ]
 

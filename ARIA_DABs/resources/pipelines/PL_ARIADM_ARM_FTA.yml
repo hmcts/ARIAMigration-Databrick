@@ -2,6 +2,7 @@ resources:
   pipelines:
     pipeline_pl_ariadm_arm_fta:
       name: PL_ARIADM_ARM_FTA
+      allow_duplicate_names: true
       clusters:
         - label: default
           node_type_id: Standard_D4ads_v5
@@ -15,4 +16,3 @@ resources:
             path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_APPEALS_FTA"
       schema: ariadm_arm_fta
       development: true
-      data_sampling: false

@@ -60,7 +60,7 @@ resources:
             - task_key: run-my-wheel
           job_cluster_key: db_wf_bail_send_job
           notebook_task: 
-            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
             source: WORKSPACE
 
         - task_key: DLT_creation_of_content_bails
@@ -69,10 +69,18 @@ resources:
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_aria_archive_bails.id}
             full_refresh: true
+        
+        - task_key: cr_audit_creation
+          depends_on:
+            - task_key: DLT_creation_of_content_bails
+          job_cluster_key: db_wf_bail_send_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/BAIL/audit_processing_bails"
+            source: WORKSPACE
 
         - task_key: publish_HTML_JSON_to_eh
           depends_on:
-            - task_key: DLT_creation_of_content_bails
+            - task_key: cr_audit_creation
           job_cluster_key: db_wf_bail_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/BAIL/bails_to_eventhubs"

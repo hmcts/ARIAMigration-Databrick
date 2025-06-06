@@ -59,7 +59,7 @@ resources:
             - task_key: run-my-wheel
           job_cluster_key: db_wf_td_receive_job
           notebook_task: 
-            notebook_path: "/Workspace/Users/andrew.mcdevitt@hmcts.net/test-packages-wheel"
+            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
             source: WORKSPACE
 
         - task_key: db_wf_ariatd_receive

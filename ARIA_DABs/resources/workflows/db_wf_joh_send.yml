@@ -68,10 +68,18 @@ resources:
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_joh.id}
 
+        - task_key: audit_processing_joh
+          depends_on:
+            - task_key: create_joh_content
+          job_cluster_key: db_wf_joh_send_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_AUDIT_DATA_PROCESSING_JOH"
+            source: WORKSPACE
+
         - task_key: publish_html_json_eh
           job_cluster_key: db_wf_joh_send_job
           depends_on:
-            - task_key: create_joh_content
+            - task_key: audit_processing_joh
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/JOH/JOH_to_eventhubs_html_json"
             source: WORKSPACE

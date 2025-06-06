@@ -1,117 +1,117 @@
-resources:
-  jobs:
-    db_wf_apl_fta_send_job:
-      name: db_wf_apl_fta_send_job
-      job_clusters:
-        - job_cluster_key: db_wf_apl_fta_send_job
-          new_cluster:
-            spark_version: 14.3.x-scala2.12
-            node_type_id: Standard_D8ds_v5
-            num_workers: 2
-            spark_conf:
-              fs.azure.account.auth.type.ingest{lz}raw{env}.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+# resources:
+#   jobs:
+#     db_wf_apl_fta_send_job:
+#       name: db_wf_apl_fta_send_job
+#       job_clusters:
+#         - job_cluster_key: db_wf_apl_fta_send_job
+#           new_cluster:
+#             spark_version: 14.3.x-scala2.12
+#             node_type_id: Standard_D8ds_v5
+#             num_workers: 2
+#             spark_conf:
+#               fs.azure.account.auth.type.ingest00rawsbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-              fs.azure.account.auth.type.ingest00curatedsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00curatedsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+#               fs.azure.account.auth.type.ingest00curatedsbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00curatedsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-              fs.azure.account.auth.type.ingest00externalsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00externalsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+#               fs.azure.account.auth.type.ingest00externalsbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00externalsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-              fs.azure.account.auth.type.ingest00workspacesbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00workspacesbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+#               fs.azure.account.auth.type.ingest00workspacesbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00workspacesbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-              fs.azure.account.auth.type.ingest00xcuttingsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00xcuttingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+#               fs.azure.account.auth.type.ingest00xcuttingsbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00xcuttingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-              fs.azure.account.auth.type.ingest00landingsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00landingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
+#               fs.azure.account.auth.type.ingest00landingsbox.dfs.core.windows.net: "OAuth"
+#               fs.azure.account.oauth.provider.type.ingest00landingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+#               fs.azure.account.oauth2.client.id.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
+#               fs.azure.account.oauth2.client.secret.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
+#               fs.azure.account.oauth2.client.endpoint.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
 
-      tasks:
-        - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fta_send_job
-          python_wheel_task:
-            entry_point: main
-            package_name: shared_functions
-          libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
+#       tasks:
+#         - task_key: run-my-wheel
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           python_wheel_task:
+#             entry_point: main
+#             package_name: shared_functions
+#           libraries: 
+#             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.1-py3-none-any.whl"
 
-        - task_key: validate_packages
-          depends_on:
-            - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fta_send_job
-          notebook_task: 
-            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
-            source: WORKSPACE
+#         - task_key: validate_packages
+#           depends_on:
+#             - task_key: run-my-wheel
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           notebook_task: 
+#             notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
+#             source: WORKSPACE
 
-        - task_key: DLT_creation_of_content
-          depends_on:
-            - task_key: validate_packages
-          pipeline_task:
-            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
-            full_refresh: false
+#         - task_key: DLT_creation_of_content
+#           depends_on:
+#             - task_key: validate_packages
+#           pipeline_task:
+#             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
+#             full_refresh: false
         
-        - task_key: audit_processing_fta
-          depends_on:
-            - task_key: DLT_creation_of_content
-          job_cluster_key: db_wf_apl_fta_send_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
-            source: WORKSPACE
+#         - task_key: audit_processing_fta
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           depends_on:
+#             - task_key: DLT_creation_of_content
+#           notebook_task:
+#             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
+#             source: WORKSPACE
 
-        - task_key: publish_HTML_JSON_to_eh
-          job_cluster_key: db_wf_apl_fta_send_job
-          depends_on:
-            - task_key: audit_processing_fta
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
-            base_parameters: 
-              file_types: html,json
-            source: WORKSPACE
+#         - task_key: publish_HTML_JSON_to_eh
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           depends_on:
+#             - task_key: audit_processing_fta
+#           notebook_task:
+#             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+#             base_parameters: 
+#               file_types: html,json
+#             source: WORKSPACE
           
-        - task_key: publish_A360_to_eh
-          job_cluster_key: db_wf_apl_fta_send_job
-          depends_on:
-            - task_key: publish_HTML_JSON_to_eh
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
-            base_parameters: 
-              file_types: a360
-            source: WORKSPACE
+#         - task_key: publish_A360_to_eh
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           depends_on:
+#             - task_key: publish_HTML_JSON_to_eh
+#           notebook_task:
+#             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+#             base_parameters: 
+#               file_types: a360
+#             source: WORKSPACE
 
-        - task_key: ARM_ack
-          job_cluster_key: db_wf_apl_fta_send_job
-          depends_on:
-            - task_key: publish_HTML_JSON_to_eh
-            - task_key: publish_A360_to_eh
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
-            source: WORKSPACE
+#         - task_key: ARM_ack
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           depends_on:
+#             - task_key: publish_HTML_JSON_to_eh
+#             - task_key: publish_A360_to_eh
+#           notebook_task:
+#             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
+#             source: WORKSPACE
           
-        - task_key: appeal_fta_send_dashboard
-          job_cluster_key: db_wf_apl_fta_send_job
-          depends_on:
-            - task_key: ARM_ack
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA_Send_Audit_Dashboard"
-            source: WORKSPACE
-      queue:
-        enabled: true   
+#         - task_key: appeal_fta_send_dashboard
+#           job_cluster_key: db_wf_apl_fta_send_job
+#           depends_on:
+#             - task_key: ARM_ack
+#           notebook_task:
+#             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA_Send_Audit_Dashboard"
+#             source: WORKSPACE
+#       queue:
+#         enabled: true   

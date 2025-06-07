@@ -523,6 +523,15 @@ def Raw_Users():
 
 # COMMAND ----------
 
+# from pyspark.sql.functions import regexp_replace
+
+# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_joh.bronze_adjudicator_et_hc_dnur")
+# df.display()
+# df = df.withColumn("contactDetails", regexp_replace("contactDetails", "\n", " "))
+# display(df.select("contactDetails", "*"))
+
+# COMMAND ----------
+
 from pyspark.sql.functions import col
 
 @dlt.table(
@@ -1241,7 +1250,7 @@ def generate_html(row, html_template=html_template):
             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
             "{{Telephone}}": row.ContactTelephone or "",
-            "{{ContactDetails}}": row.ContactDetails or "",
+            "{{ContactDetails}}": (row.ContactDetails or "").replace("\n", " "),
             "{{DesignatedCentre}}": row.DesignatedCentre or "",
             "{{EmploymentTerm}}": row.EmploymentTerm or "",
             "{{FullTime}}": row.FullTime or "",

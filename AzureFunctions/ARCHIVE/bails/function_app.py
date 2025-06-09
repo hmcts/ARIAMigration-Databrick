@@ -20,6 +20,8 @@ lz_key = os.environ["LZ_KEY"]
 
 ARIA_SEGMENT = "bl"
 ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
+
+logging.info
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
@@ -127,6 +129,7 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             
             logging.info(f"Processing message for {key} file")
             if not key:
+                logging.error('Key Was Empty')
                 raise ValueError("Key not found in the message")
             
             full_blob_name = f"{subdirectory}/{key}"

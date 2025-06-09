@@ -1242,7 +1242,7 @@ def generate_html(row, html_template=html_template):
             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
             "{{Telephone}}": row.ContactTelephone or "",
             # "{{ContactDetails}}": row.ContactDetails or "",
-            "{{ContactDetails}}": (row.ContactDetails or "").replace("\n", " "),
+            "{{ContactDetails}}": (row.ContactDetails or "").replace("\n", ", "),
             "{{DesignatedCentre}}": row.DesignatedCentre or "",
             "{{EmploymentTerm}}": row.EmploymentTerm or "",
             "{{FullTime}}": row.FullTime or "",

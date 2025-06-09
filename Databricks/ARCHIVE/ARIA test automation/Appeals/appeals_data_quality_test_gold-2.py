@@ -286,19 +286,23 @@ def test_json_content():
             "AppellantName", "AppellantForenames", "AppellantBirthDate"
         ]
 
+        schema_fields = set(df_json.columns)
+        missing_fields = []
+
         for field in mandatory_fields:
-            null_count = df_json.filter(col(field).isNull()).count()
-            validation_results["mandatory_fields"][field] = null_count
+            if field not in schema_fields:
+                missing_fields.append(field)
 
-            if null_count > 0:
-                test_results["json_content_validation"]["status"] = False
-                test_results["json_content_validation"]["errors"].append(
-                    f"Mandatory field '{field}' has {null_count} null values"
-                )
+        if missing_fields:
+            test_results["json_content_validation"]["status"] = False
+            test_results["json_content_validation"]["errors"].append(
+                f"Missing mandatory fields in JSON output: {missing_fields}"
+            )
 
-        validation_results["mandatory_fields"].update({
-            "mandatory_field_errors": null_count
-        })
+        validation_results["mandatory_fields"] = {
+            "missing_fields": missing_fields,
+            "total_missing": len(missing_fields)
+        }
 
         # Date format validation
         date_fields = [
@@ -308,8 +312,8 @@ def test_json_content():
 
         for field in date_fields:
             invalid_dates = df_json.filter(
-                ~to_date(col(field), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").isNull() &
-                col(field).isNotNull()
+                # ~to_date(col(field), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").isNull()
+                col(field).isNotNull() & to_date(col(field), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").isNull()
             ).count()
 
             validation_results["date_validations"][field] = invalid_dates

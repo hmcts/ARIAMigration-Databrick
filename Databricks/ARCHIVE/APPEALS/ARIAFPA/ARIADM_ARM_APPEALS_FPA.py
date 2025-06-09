@@ -3588,7 +3588,10 @@ def silver_status_detail():
                               "st.CaseStatus",
                               "st.DateReceived",
                               "st.StatusDetailAdjudicatorId",
-                              "st.Allegation",
+                              #   "st.Allegation",
+                               when(col("st.Allegation") == 1, "No right of appeal")
+                              .when(col("st.Allegation") == 2, "Out of time")
+                              .alias("Allegation"),
                               "st.KeyDate",
                               "st.MiscDate1",
                               "st.Notes1",
@@ -5457,6 +5460,7 @@ def stg_statusdetail_data():
             & (col("casestatus.CaseNo") == col("adjj.CaseNo"))
             & (col("casestatus.CaseStatus") == col("adjj.CaseStatus"))), 'left')\
                 .join(lookup_df.alias("lookup"), col("casestatus.CaseStatus") == col("lookup.id")) \
+                .orderBy(col("casestatus.StatusId").desc()) \
             .groupBy("casestatus.CaseNo").agg(collect_list(struct( "casestatus.CaseStatus", "casestatus.StatusId", "CaseStatusAdjudicatorDetails",'casestatus.CaseStatusDescription',  'casestatus.InterpreterRequired',  'casestatus.MiscDate2', 'casestatus.VideoLink', 'casestatus.RemittalOutcome', 'casestatus.UpperTribunalAppellant', 'casestatus.DecisionSentToHO', 
             'casestatus.InitialHearingPoints', 'casestatus.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'casestatus.CostOrderAppliedFor', 'casestatus.DecisionDate', 
             'casestatus.DeterminationByJudgeSurname', 'casestatus.DeterminationByJudgeForenames', 'casestatus.DeterminationByJudgeTitle', 'casestatus.MethodOfTyping', 

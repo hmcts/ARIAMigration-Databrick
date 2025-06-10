@@ -239,6 +239,7 @@ print(keyvault_name)
 client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
 tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
 client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
+tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
 
 
 # COMMAND ----------
@@ -274,8 +275,7 @@ for storage_account in storage_accounts:
             "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
         f"fs.azure.account.oauth2.client.id.{storage_account}.dfs.core.windows.net": client_id,
         f"fs.azure.account.oauth2.client.secret.{storage_account}.dfs.core.windows.net": client_secret,
-        f"fs.azure.account.oauth2.client.endpoint.{storage_account}.dfs.core.windows.net":
-            f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+        f"fs.azure.account.oauth2.client.endpoint.{storage_account}.dfs.core.windows.net": tenant_url
     }
 
     for key,val in configs.items():

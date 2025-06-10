@@ -52,7 +52,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
 
 
-        # Blob Storage credentials #
+        # Blob Storage credentials 
         account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         #account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"

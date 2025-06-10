@@ -1,0 +1,211 @@
+NationalityId,Description,countryCode,appellantNationalitiesDescription
+0,No Nationality,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+1,Afghan,AF,Afghanistan
+2,Albanian,AL,Albania
+3,Algerian,DZ,Algeria
+4,Andorran,AD,Andorra
+5,Angolan,AO,Angola
+6,Antiguan And Barbudan,AG,Antigua and Barbuda
+7,Argentine,AR,Argentina
+8,Armenian,AM,Armenia
+9,Australian,AU,Australia
+10,Austrian,AT,Austria
+11,Azerbaijani,AZ,Azerbaijan
+12,Bahamian,BS,Bahamas
+13,Bangladeshi,BD,Bangladesh
+14,Barbadian,BB,Barbados
+15,Belorussian,BY,Belarus
+16,Belgian,BE,Belgium
+17,Belizean,BZ,Belize
+18,Beninese,BJ,Benin
+19,Bolivian,BO,Bolivia
+20,Bosnia And Herzegovinian,BA,Bosnia and Herzegovina
+21,Botswanan,BW,Botswana
+22,Brazilian,BR,Brazil
+23,Bruneian,BN,Brunei Darussalam
+24,Bulgarian,BG,Bulgaria
+25,Burkinan,BF,Burkina Faso
+26,Burmese/Myanmar,MM,Myanmar
+27,Burundi,BI,Burundi
+28,Cameroonian,CM,Cameroon
+29,Canadian,CA,Canada
+30,Cape Verdean,CV,Cape Verde
+31,Citizen Of Central African Republic,CF,Central African Republic
+32,Chadian,TD,Chad
+33,Chilean,CL,Chile
+34,Chinese,CN,China
+35,Colombian,CO,Colombia
+36,Comoran,KM,Comoros
+37,Congolese,CG,Congo (Brazzaville)
+38,Costa Rican,CR,Costa Rica
+40,Croatian,HR,Croatia
+41,Cuban,CU,Cuba
+42,Cypriot,CY,Cyprus
+43,Czech,CZ,Czech Republic
+44,Danish,DK,Denmark
+45,Djiboutian,DJ,Djibouti
+46,Dominican,DM,Dominica
+47,Citizen Of Dominican Republic,DO,Dominican Republic
+48,Ecuadorean,EC,Ecuador
+49,Egyptian,EG,Egypt
+50,Salvadorean,SV,El Salvador
+51,Equatorial Guinean,GQ,Equatorial Guinea
+52,Eritrean,ER,Eritrea
+53,Estonian,EE,Estonia
+54,Ethiopian,ET,Ethiopia
+55,Citizen Of Fiji,FJ,Fiji
+56,Finnish,FI,Finland
+57,French,FR,France
+58,Gabonese,GA,Gabon
+59,Gambian,GM,Gambia
+60,Georgian,GE,Georgia
+61,German,DE,Germany
+62,Ghanaian,GH,Ghana
+63,Greek,GR,Greece
+64,Grenadian,GD,Grenada
+65,Guatemalan,GT,Guatemala
+66,Guinean,GN,Guinea
+67,Citizen Of Guinea Bissau,GW,Guinea-Bissau
+68,Guyanese,GY,Guyana
+69,Haitian,HT,Haiti
+70,Vatican Citizen,VA,Holy See (Vatican City State)
+71,Honduran,HN,Honduras
+72,Hungarian,HU,Hungary
+73,Icelandic,IS,Iceland
+74,Indian,IN,India
+75,Indonesian,ID,Indonesia
+76,Iranian,IR,"Iran, Islamic Republic of"
+77,Citizen Of The Irish Republic,IE,Ireland
+78,Israeli,IL,Israel
+79,Italian,IT,Italy
+80,Jamaican,JM,Jamaica
+81,Japanese,JP,Japan
+82,Palestinian (use other listing),PS,"Palestinian Territory, Occupied"
+83,Jordanian,JO,Jordan
+84,Kazakh,KZ,Kazakhstan
+85,Kenyan,KE,Kenya
+86,Citizen Of Kiribati,KI,Kiribati
+87,South Korean,KR,"Korea, Republic of"
+88,Kuwaiti,KW,Kuwait
+89,Kyrgyz,KG,Kyrgyzstan
+90,Laotian,LA,Lao PDR
+91,Latvian,LV,Latvia
+92,Lebanese,LB,Lebanon
+93,Citizen Of Lesotho,LS,Lesotho
+94,Liberian,LR,Liberia
+95,Libyan,LY,Libya
+97,Lithuanian,LT,Lithuania
+98,Luxambourger,LU,Luxembourg
+99,NULL,MK,"Macedonia, Republic of"
+100,Citizen Of Madagascar,MG,Madagascar
+101,Malawian,MW,Malawi
+102,Malaysian,MY,Malaysia
+103,Maldivian,MV,Maldives
+104,Malian,ML,Mali
+105,Maltese,MT,Malta
+106,Marshall Islander,MH,Marshall Islands
+107,Mauritanian,MR,Mauritania
+108,Mauritian,MU,Mauritius
+109,Mexican,MX,Mexico
+110,Micronesian,FM,"Micronesia, Federated States of"
+111,Moldavian,MD,Moldova
+112,Monegasque,MC,Monaco
+113,Mongolian,MN,Mongolia
+114,Moroccan,MA,Morocco
+115,Mozambican,MZ,Mozambique
+116,Namibian,NA,Namibia
+117,Nauruan,NR,Nauru
+118,Nepalese,NP,Nepal
+119,Dutch,NL,Netherlands
+120,New Zealander,NZ,New Zealand
+121,Nicaraguan,NI,Nicaragua
+122,Citizen Of Niger,NE,Niger
+123,Nigerian,NG,Nigeria
+124,Norwegian,NO,Norway
+125,Omani,OM,Oman
+126,Pakistani,PK,Pakistan
+127,Palauan,PW,Palau
+128,Panamanian,PA,Panama
+129,Papua New Guinean,PG,Papua New Guinea
+130,Paraguaran,PY,Paraguay
+131,Peruvian,PE,Peru
+132,Philippine,PH,Philippines
+133,Polish,PL,Poland
+134,Portuguese,PT,Portugal
+135,Qatari,QA,Qatar
+136,Romanian,RO,Romania
+137,Russian,RU,Russian Federation
+138,Rwandan,RW,Rwanda
+139,Citizen Of St Kitts And Nevis,KN,Saint Kitts and Nevis
+140,St Lucian,LC,Saint Lucia
+141,Vincentian,VC,Saint Vincent and Grenadines
+142,Citizen Of San Marino,SM,San Marino
+143,Citizen Of Sao Tome And Principe,ST,Sao Tome and Principe
+144,Saudi Arabian,SA,Saudi Arabia
+145,Senegalese,SN,Senegal
+146,"Seychelles, Citizen Of",SC,Seychelles
+147,Sierra Leonean,SL,Sierra Leone
+148,Singaporean,SG,Singapore
+149,Slovak,SK,Slovakia
+150,Slovenian,SI,Slovenia
+152,Somali,SO,Somalia
+153,South African,ZA,South Africa
+154,Spanish,ES,Spain
+155,Sri Lankan,LK,Sri Lanka
+156,Sudanese,SD,Sudan
+157,Surinamese,SR,Suriname *
+158,Swazi,SZ,Swaziland
+159,Swedish,SE,Sweden
+160,Swiss,CH,Switzerland
+161,Syrian,SY,Syrian Arab Republic (Syria)
+162,Tajik,TJ,Tajikistan
+163,Tanzanian,TZ,"Tanzania *, United Republic of"
+164,Thai,TH,Thailand
+165,Togolese,TG,Togo
+166,Tongan,TO,Tonga
+167,Trinidad And Tobago Citizen,TT,Trinidad and Tobago
+168,Tunisian,TN,Tunisia
+169,Turkish,TR,Turkey
+170,Turkmen,TM,Turkmenistan
+171,Tuvaluan,TV,Tuvalu
+172,Ugandan,UG,Uganda
+173,Ukrainian,UA,Ukraine
+174,Citizen Of The United Arab Emirates,AE,United Arab Emirates
+175,United States Citizen,US,United States of America
+176,Uruguayan,UY,Uruguay
+177,Uzbek,UZ,Uzbekistan
+178,Citizen Of Vanuatu,VU,Vanuatu
+179,Venezuelan,VE,Venezuela (Bolivarian Republic of)
+180,Vietnamese,VN,Viet Nam
+181,Samoan,WS,Samoa
+182,Yemeni,YE,Yemen
+183,"Yugoslavia, Citizen Of Fed Republic",ME,Montenegro
+184,Zairean,CD,"Congo, Democratic Republic of the"
+185,Zambian,ZM,Zambia
+186,Zimbabwean,ZW,Zimbabwe
+187,Ivorian,CI,C“te d'Ivoire
+188,British,GB,United Kingdom
+189,Bahraini,BH,Bahrain
+190,Cambodian,KH,Cambodia
+191,Iraqi,IQ,Iraq
+192,Macedonian,MK,"Macedonia, Republic of"
+193,Bhutanese,BT,Bhutan
+194,Puerto Rican,PR,Puerto Rico
+195,"Hong Kong, Inhabitant Of",HK,"Hong Kong, Special Administrative Region of China"
+196,British Overseas Citizen,BC,British Overseas Citizen
+197,Irish,IE,Ireland
+198,Palestinian,PS,"Palestinian Territory, Occupied"
+199,DRC National,CD,"Congo, Democratic Republic of the"
+200,Taiwanese,TW,Taiwan
+201,Citizen of Serbia and Montenegro,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+202,Saharan,EH,Western Sahara
+203,NULL,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+204,East Timorese,TL,Timor-Leste
+205,Moldovan,MD,Moldova
+206,North Korean,KP,"Korea, Democratic People's Republic of"
+207,British National (Overseas),NO MAPPING REQUIRED,NO MAPPING REQUIRED
+208,Serb,RS,Serbia
+209,Montenegrin,ME,Montenegro
+211,Stateless,ZZ,Stateless
+212,Taiwanese,TW,Taiwan
+213,Kosovan,KO,Kosovo

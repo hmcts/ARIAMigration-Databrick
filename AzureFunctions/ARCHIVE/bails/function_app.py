@@ -19,8 +19,8 @@ env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
 ARIA_SEGMENT = "bl"
-#ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
-ARM_SEGMENT = "B"
+ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
+#ARM_SEGMENT = "B"
 
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
@@ -53,12 +53,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
 
         # Blob Storage credentials #
-        #account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        #account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
-        #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
+        #container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
+        container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:

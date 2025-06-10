@@ -70,7 +70,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
         sub_dir = f"ARIA{ARM_SEGMENT}/submission"
 
-        container_service_client = ContainerClient.from_container_url(container_url)
+        try:
+            container_service_client = ContainerClient.from_container_url(container_url)
+        
+        except Exception as e:
+            logging.error(f"Failed to connect to ARM Container Client {e}")
+            
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:

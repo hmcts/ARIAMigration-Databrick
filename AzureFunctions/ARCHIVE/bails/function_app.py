@@ -43,13 +43,16 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     # Retrieve credentials
     credential = DefaultAzureCredential()
+    logging.info('Connected to Azure Credentials')
     kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
+    logging.info('Connected to KeyVault')
 
 
     try:
         # Retrieve Event Hub secrets
         ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
+        logging.info('Acquired KV secrets for Dl and ACK')
 
 
         # Blob Storage credentials 
@@ -57,7 +60,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        container_secret = kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN").value
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        logging.info('Assigned container secret value')
         #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
@@ -67,11 +71,14 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         # else:
         #     container_secret = full_secret.lstrip('?')  # fallbak
         container_url = f"{account_url}/{container_name}?{container_secret}"
+        logging.info(f'Created container URL: {container_url}')
 
         sub_dir = f"ARIA{ARM_SEGMENT}/submission"
+        logging.info(f'Creaed sub_dir: {sub_dir}')
 
         try:
             container_service_client = ContainerClient.from_container_url(container_url)
+            logging.info('Created container service client')
         
         except Exception as e:
             logging.error(f"Failed to connect to ARM Container Client {e}")
@@ -79,12 +86,14 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
-
+                    
+                logging.info('Processing messages')
                 tasks = [
                     process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
                     for event in azeventhub
                 ]
                 await asyncio.gather(*tasks)
+                logging.info('Finished processing messages')
         finally:
             container_service_client.close() 
     finally:
@@ -101,6 +110,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             )
           )
 async def upload_blob_with_retry(blob_client,message,capture_response):
+    logging.info(f'Uploading blob')
     await blob_client.upload_blob(message,overwrite=True,raw_response_hook=capture_response)
 
 
@@ -144,6 +154,7 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             #upload message to blob with partition key as file name
 
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
+            logging.info(f'Acquired Blob Client: {full_blob_name}')
 
 
             await upload_blob_with_retry(blob_client, message, capture_response)

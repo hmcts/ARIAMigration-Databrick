@@ -197,6 +197,29 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # Return the DataFrame
     return df
 
+# COMMAND ---------
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+env = config.first()["env"].strip().lower()
+lz_key = config.first()["lz_key"].strip().lower()
+
+
+
+# COMMAND ----------
+
+print(f"lz_key: {lz_key} and env: {env}")
+
+# COMMAND ----------
+
+keyvault_name = f"ingest{lz_key}-meta002-{env}"
+print(keyvault_name)
+
+# COMMAND ----------
+
+# Access the Service Principle secrets from keyvaults
+client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
+tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
+client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
+tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
 
 
 
@@ -2239,9 +2262,21 @@ def silver_meta_data():
                    coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
-                 F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB")
-                  .otherwise("ARIAB")
-                  .alias("record_class"),
+                F.when(
+                    (col("m2.BaseBailType") == "ScottishBailsFunds") & (env == "sbox"),
+                    "ARIASBDEV"
+                        ).when(
+                            (col("m2.BaseBailType") == "ScottishBailsFunds") & (env != "sbox"),
+                            "ARIASB"
+                        ).when(
+                            (env == "sbox"),
+                            "ARIABDEV"
+                        ).otherwise("ARIAB")
+                    ).alias("record_class"),
+
+                #  F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB")
+                #   .otherwise("ARIAB")
+                #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
                  F.col("HoRef").alias("bf_001"),
                  F.col("Forename").alias("bf_002"),

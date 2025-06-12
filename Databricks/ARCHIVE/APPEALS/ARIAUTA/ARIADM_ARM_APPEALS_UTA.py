@@ -4460,7 +4460,7 @@ def silver_archive_metadata():
             env_name == lit('sbox'),
             concat(col('flt.Segment'), lit("DEV"))
             ).otherwise(col('flt.Segment')).alias("record_class"),
-        col('flt.Segment').alias("record_class"),
+       # col('flt.Segment').alias("record_class"),
         lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),

@@ -1,4 +1,4 @@
-NationalityId,Description,countryCode,appellantNationalitiesDescription
+﻿NationalityId,Description,countryCode,appellantNationalitiesDescription
 0,No Nationality,NO MAPPING REQUIRED,NO MAPPING REQUIRED
 1,Afghan,AF,Afghanistan
 2,Albanian,AL,Albania
@@ -183,7 +183,7 @@ NationalityId,Description,countryCode,appellantNationalitiesDescription
 184,Zairean,CD,"Congo, Democratic Republic of the"
 185,Zambian,ZM,Zambia
 186,Zimbabwean,ZW,Zimbabwe
-187,Ivorian,CI,C�te d'Ivoire
+187,Ivorian,CI,C“te d'Ivoire
 188,British,GB,United Kingdom
 189,Bahraini,BH,Bahrain
 190,Cambodian,KH,Cambodia

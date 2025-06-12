@@ -4456,6 +4456,10 @@ def silver_archive_metadata():
         # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
         # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
         # .alias("record_class"),
+        when(
+            env_name == lit('sbox'),
+            concat(col('flt.Segment'), lit("DEV"))
+            ).otherwise(col('flt.Segment')).alias("record_class")
         col('flt.Segment').alias("record_class"),
         lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),

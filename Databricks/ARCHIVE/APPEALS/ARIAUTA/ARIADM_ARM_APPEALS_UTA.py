@@ -4516,8 +4516,8 @@ def generate_a360(row):
                 "region": row.region,
                 "recordDate": str(row.recordDate),
                 "event_date": str(row.event_date),
-                "client_identifier": row.client_identifier,
-                "entitlement_tag": row.entitlement_tag
+                "client_identifier": row.client_identifier
+                #"entitlement_tag": row.entitlement_tag
             }
         }
 

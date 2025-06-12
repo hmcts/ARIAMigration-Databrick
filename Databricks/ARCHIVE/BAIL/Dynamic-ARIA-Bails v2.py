@@ -2126,9 +2126,20 @@ def silver_meta_data():
                    coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
-                 F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB")
-                  .otherwise("ARIAB")
-                  .alias("record_class"),
+                 F.when(
+                    (col("m1.BaseBailType") == "ScottishBailsFunds") & (env == "sbox"),
+                    "ARIASBDEV"
+                        ).when(
+                            (col("m1.BaseBailType") == "ScottishBailsFunds") & (env != "sbox"),
+                            "ARIASB"
+                        ).when(
+                            (env == "sbox"),
+                            "ARIABDEV"
+                        ).otherwise("ARIAB")
+                    ).alias("record_class")
+                #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
+                #   .otherwise("ARIAB")
+                #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
                  F.col("HoRef").alias("bf_001"),
                  F.col("Forename").alias("bf_002"),

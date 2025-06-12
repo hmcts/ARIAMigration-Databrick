@@ -2274,7 +2274,7 @@ def silver_meta_data():
                         ).otherwise("ARIAB")
                     .alias("record_class"),
 
-                #  F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB")
+                #  F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB") 
                 #   .otherwise("ARIAB")
                 #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),

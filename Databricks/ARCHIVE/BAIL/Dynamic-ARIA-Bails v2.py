@@ -2136,7 +2136,7 @@ def silver_meta_data():
                             (env == "sbox"),
                             "ARIABDEV"
                         ).otherwise("ARIAB")
-                    ).alias("record_class")
+                    .alias("record_class")
                 #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
                 #   .otherwise("ARIAB")
                 #   .alias("record_class"),

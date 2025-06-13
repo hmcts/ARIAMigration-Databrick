@@ -98,6 +98,7 @@ from delta.tables import DeltaTable
 
 spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
 
+
 # COMMAND ----------
 
 # MAGIC %md

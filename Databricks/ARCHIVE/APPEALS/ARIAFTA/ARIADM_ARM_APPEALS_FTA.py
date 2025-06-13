@@ -96,7 +96,7 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-pip install azure-storage-blob
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
 
 
 # COMMAND ----------

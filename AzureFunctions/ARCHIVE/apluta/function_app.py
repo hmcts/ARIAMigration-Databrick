@@ -69,7 +69,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         #     # Remove the prefix if it's a connection string
         #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
         # else:
-        #     container_secret = full_secret.lstrip('?')  # fallbak
+        #     container_secret = full_secret.lstrip('?')  # fallbak n
         container_url = f"{account_url}/{container_name}?{container_secret}"
         logging.info(f'Created container URL: {container_url}')
 

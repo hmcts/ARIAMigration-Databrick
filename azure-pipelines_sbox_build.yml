@@ -318,7 +318,7 @@ stages:
               #         --output table
                     
               #       # Test if storage account exists
-              #       echo "Checking if storage account exists..."
+              #       echo "Checking if storage account exists..." 
               #       if az storage account show --name "$STORAGE_ACCOUNT" --output table; then
               #         echo "✓ Storage account found"
               #       else

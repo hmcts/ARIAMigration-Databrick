@@ -2127,16 +2127,15 @@ def silver_meta_data():
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
                  F.when(
-                    (col("m1.BaseBailType") == "ScottishBailsFunds") & (env == lit("sbox")),
-                    "ARIASBDEV"
-                        ).when(
-                            (col("m1.BaseBailType") == "ScottishBailsFunds") & (env != lit("sbox")),
-                            lit("ARIASB")
-                        ).when(
-                            col("m1.BaseBailType") != "ScottishBailsFunds") & (env == lit("sbox")),
-                            lit("ARIABDEV")
-                        ).otherwise(lit("ARIAB"))
-                    .alias("record_class")
+                        (col("m1.BaseBailType") == "ScottishBailsFunds") & (env == lit("sbox")),
+                        "ARIASBDEV"
+                    ).when(
+                        (col("m1.BaseBailType") == "ScottishBailsFunds") & (env != lit("sbox")),
+                        lit("ARIASB")
+                    ).when(
+                        (col("m1.BaseBailType") != "ScottishBailsFunds") & (env == lit("sbox")),
+                        lit("ARIABDEV")
+                        ).otherwise(lit("ARIAB")).alias("record_class")
                 #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
                 #   .otherwise("ARIAB")
                 #   .alias("record_class"),

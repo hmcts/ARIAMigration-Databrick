@@ -293,10 +293,28 @@ stages:
               #       ENVIRONMENT="${{ deployment.environment }}"
               #       LZ="${{ lz.landing_zone }}"
               #       ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+              # - task: AzureCLI@2
+              #   displayName: Configure SAS Token generation for ${{ deployment.environment }}${{ lz.landing_zone }}
+              #   inputs:
+              #     azureSubscription: ${{ deployment.service_connection }}
+              #     scriptType: 'bash'
+              #     scriptLocation: 'inlineScript'
+              #     inlineScript: |
+              #       ENVIRONMENT="${{ deployment.environment }}"
+              #       LZ="${{ lz.landing_zone }}"
+              #       ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
                     
               #       STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
               #       KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
+              #       STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
+              #       KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
                     
+              #       echo "=== DEBUG INFORMATION ==="
+              #       echo "Environment: $ENVIRONMENT"
+              #       echo "Landing Zone: $LZ"
+              #       echo "Storage Account Name: $STORAGE_ACCOUNT"
+              #       echo "Key Vault Name: $KEYVAULT_NAME"
+              #       echo "=========================="
               #       echo "=== DEBUG INFORMATION ==="
               #       echo "Environment: $ENVIRONMENT"
               #       echo "Landing Zone: $LZ"
@@ -310,7 +328,18 @@ stages:
               #         --role "Key Vault Secrets Officer" \
               #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
               #       echo "Role Assigned"
+              #       echo "Assigning SP Key Vault Secrets Officer Access"
+              #       az role assignment create \
+              #         --assignee "${{ lz.Client_ID }}" \
+              #         --role "Key Vault Secrets Officer" \
+              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
+              #       echo "Role Assigned"
 
+              #       echo "Listing Key Vault Officer role assignments"
+              #       az role assignment list \
+              #         --assignee "${{ lz.Client_ID }}" \
+              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}" \
+              #         --output table
               #       echo "Listing Key Vault Officer role assignments"
               #       az role assignment list \
               #         --assignee "${{ lz.Client_ID }}" \
@@ -334,9 +363,27 @@ stages:
               #         echo "✗ Container 'dropzone' not found"
               #         exit 1
               #       fi
+              #       # Test if container exists
+              #       echo "Checking if container 'dropzone' exists..."
+              #       if az storage container show --name "dropzone" --account-name "$STORAGE_ACCOUNT" --auth-mode login --output table; then
+              #         echo "✓ Container 'dropzone' found"
+              #       else
+              #         echo "✗ Container 'dropzone' not found"
+              #         exit 1
+              #       fi
                     
               #       echo "Generating SAS token for ${STORAGE_ACCOUNT}/dropzone"
+              #       echo "Generating SAS token for ${STORAGE_ACCOUNT}/dropzone"
                     
+              #       curated_sas_token=$(az storage container generate-sas \
+              #         --account-name "$STORAGE_ACCOUNT" \
+              #         --name "dropzone" \
+              #         --permissions rwdlacd \
+              #         --expiry 2026-03-21T00:00:00Z \
+              #         --start 2025-03-21T00:00:00Z \
+              #         --https-only \
+              #         --auth-mode key \
+              #         --output tsv)
               #       curated_sas_token=$(az storage container generate-sas \
               #         --account-name "$STORAGE_ACCOUNT" \
               #         --name "dropzone" \
@@ -354,7 +401,16 @@ stages:
               #         echo "✓ SAS token generated successfully"
               #         echo "Token length: ${#curated_sas_token} characters"
               #       fi
+              #       if [ -z "$curated_sas_token" ]; then
+              #         echo "✗ Failed to generate SAS token"
+              #         exit 1
+              #       else
+              #         echo "✓ SAS token generated successfully"
+              #         echo "Token length: ${#curated_sas_token} characters"
+              #       fi
                     
+              #       # Store SAS token in Key Vault
+              #       echo "Storing SAS token in Key Vault: $KEYVAULT_NAME"
               #       # Store SAS token in Key Vault
               #       echo "Storing SAS token in Key Vault: $KEYVAULT_NAME"
                     
@@ -368,7 +424,21 @@ stages:
               #         echo "✗ Failed to store SAS token in Key Vault"
               #         exit 1
               #       fi
+              #       if az keyvault secret set \
+              #         --vault-name "$KEYVAULT_NAME" \
+              #         --name "CURATED-${ENV_UPPER}-SAS-TOKEN-TEST" \
+              #         --value "$curated_sas_token" \
+              #         --output table; then
+              #         echo "✓ SAS token stored successfully in Key Vault"
+              #       else
+              #         echo "✗ Failed to store SAS token in Key Vault"
+              #         exit 1
+              #       fi
                     
+              #       echo "=== COMPLETION ==="
+              #       echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
+              #       echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"
+              #       echo "=================="
               #       echo "=== COMPLETION ==="
               #       echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
               #       echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"

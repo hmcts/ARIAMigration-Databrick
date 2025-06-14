@@ -1,0 +1,210 @@
+﻿AppellantCountryId,Description,countryGovUkOocAdminJ
+1,Afghan,AF
+2,Albanian,AL
+3,Algerian,DZ
+4,Andorran,AD
+5,Angolan,AO
+6,Antiguan And Barbudan,AG
+7,Argentine,AR
+8,Armenian,AM
+9,Australian,AU
+10,Austrian,AT
+11,Azerbaijani,AZ
+12,Bahamian,BS
+13,Bangladeshi,BD
+14,Barbadian,BB
+15,Belorussian,BY
+16,Belgian,BE
+17,Belizean,BZ
+18,Beninese,BJ
+19,Bolivian,BO
+20,Bosnia And Herzegovinian,BA
+21,Botswanan,BW
+22,Brazilian,BR
+23,Bruneian,BN
+24,Bulgarian,BG
+25,Burkinan,BF
+26,Burmese/Myanmar,MM
+27,Burundi,BI
+28,Cameroonian,CM
+29,Canadian,CA
+30,Cape Verdean,CV
+31,Citizen Of Central African Republic,CF
+32,Chadian,TD
+33,Chilean,CL
+34,Chinese,CN
+35,Colombian,CO
+36,Comoran,KM
+37,Congolese,CG
+38,Costa Rican,CR
+40,Croatian,HR
+41,Cuban,CU
+42,Cypriot,CY
+43,Czech,CZ
+44,Danish,DK
+45,Djiboutian,DJ
+46,Dominican,DM
+47,Citizen Of Dominican Republic,DO
+48,Ecuadorean,EC
+49,Egyptian,EG
+50,Salvadorean,SV
+51,Equatorial Guinean,GQ
+52,Eritrean,ER
+53,Estonian,EE
+54,Ethiopian,ET
+55,Citizen Of Fiji,FJ
+56,Finnish,FI
+57,French,FR
+58,Gabonese,GA
+59,Gambian,GM
+60,Georgian,GE
+61,German,DE
+62,Ghanaian,GH
+63,Greek,GR
+64,Grenadian,GD
+65,Guatemalan,GT
+66,Guinean,GN
+67,Citizen Of Guinea Bissau,GW
+68,Guyanese,GY
+69,Haitian,HT
+70,Vatican Citizen,VA
+71,Honduran,HN
+72,Hungarian,HU
+73,Icelandic,IS
+74,Indian,IN
+75,Indonesian,ID
+76,Iranian,IR
+77,Citizen Of The Irish Republic,IE
+78,Israeli,IL
+79,Italian,IT
+80,Jamaican,JM
+81,Japanese,JP
+82,Palestinian (use other listing),PS
+83,Jordanian,JO
+84,Kazakh,KZ
+85,Kenyan,KE
+86,Citizen Of Kiribati,KI
+87,South Korean,KR
+88,Kuwaiti,KW
+89,Kyrgyz,KG
+90,Laotian,LA
+91,Latvian,LV
+92,Lebanese,LB
+93,Citizen Of Lesotho,LS
+94,Liberian,LR
+95,Libyan,LY
+97,Lithuanian,LT
+98,Luxambourger,LU
+99,NULL,MK
+100,Citizen Of Madagascar,MG
+101,Malawian,MW
+102,Malaysian,MY
+103,Maldivian,MV
+104,Malian,ML
+105,Maltese,MT
+106,Marshall Islander,MH
+107,Mauritanian,MR
+108,Mauritian,MU
+109,Mexican,MX
+110,Micronesian,FM
+111,Moldavian,MD
+112,Monegasque,MC
+113,Mongolian,MN
+114,Moroccan,MA
+115,Mozambican,MZ
+116,Namibian,NA
+117,Nauruan,NR
+118,Nepalese,NP
+119,Dutch,NL
+120,New Zealander,NZ
+121,Nicaraguan,NI
+122,Citizen Of Niger,NE
+123,Nigerian,NG
+124,Norwegian,NO
+125,Omani,OM
+126,Pakistani,PK
+127,Palauan,PW
+128,Panamanian,PA
+129,Papua New Guinean,PG
+130,Paraguaran,PY
+131,Peruvian,PE
+132,Philippine,PH
+133,Polish,PL
+134,Portuguese,PT
+135,Qatari,QA
+136,Romanian,RO
+137,Russian,RU
+138,Rwandan,RW
+139,Citizen Of St Kitts And Nevis,KN
+140,St Lucian,LC
+141,Vincentian,VC
+142,Citizen Of San Marino,SM
+143,Citizen Of Sao Tome And Principe,ST
+144,Saudi Arabian,SA
+145,Senegalese,SN
+146,"Seychelles, Citizen Of",SC
+147,Sierra Leonean,SL
+148,Singaporean,SG
+149,Slovak,SK
+150,Slovenian,SI
+152,Somali,SO
+153,South African,ZA
+154,Spanish,ES
+155,Sri Lankan,LK
+156,Sudanese,SD
+157,Surinamese,SR
+158,Swazi,SZ
+159,Swedish,SE
+160,Swiss,CH
+161,Syrian,SY
+162,Tajik,TJ
+163,Tanzanian,TZ
+164,Thai,TH
+165,Togolese,TG
+166,Tongan,TO
+167,Trinidad And Tobago Citizen,TT
+168,Tunisian,TN
+169,Turkish,TR
+170,Turkmen,TM
+171,Tuvaluan,TV
+172,Ugandan,UG
+173,Ukrainian,UA
+174,Citizen Of The United Arab Emirates,AE
+175,United States Citizen,US
+176,Uruguayan,UY
+177,Uzbek,UZ
+178,Citizen Of Vanuatu,VU
+179,Venezuelan,VE
+180,Vietnamese,VN
+181,Samoan,WS
+182,Yemeni,YE
+183,"Yugoslavia, Citizen Of Fed Republic",ME
+184,Zairean,CD
+185,Zambian,ZM
+186,Zimbabwean,ZW
+187,Ivorian,CI
+188,British,GB
+189,Bahraini,BH
+190,Cambodian,KH
+191,Iraqi,IQ
+192,Macedonian,MK
+193,Bhutanese,BT
+194,Puerto Rican,PR
+195,"Hong Kong, Inhabitant Of",HK
+196,British Overseas Citizen,BC
+197,Irish,IE
+198,Palestinian,PS
+199,DRC National,CD
+200,Taiwanese,TW
+201,Citizen of Serbia and Montenegro,NO MAPPING REQUIRED
+202,Saharan,EH
+203,NULL,NO MAPPING REQUIRED
+204,East Timorese,TL
+205,Moldovan,MD
+206,North Korean,KP
+207,British National (Overseas),NO MAPPING REQUIRED
+208,Serb,RS
+209,Montenegrin,ME
+211,Stateless,ZZ
+212,Taiwanese,TW
+213,Kosovan,KO

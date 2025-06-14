@@ -1,0 +1,113 @@
+﻿CentreId,prevFileLocation,hearingCentre,staffLocation,caseManagementLocation,locationCode,locationLabel,selectedHearingCentreRefData,listCaseHearingCentre,applicationChangeDesignatedHearingCentre
+540,Alloa Sheriff Court,glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,alloaSherrif,glasgow
+77,Arnhem House,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
+476,Arnhem House (Exceptions),tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
+7,Belfast,glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
+421,Belfast - Laganside,glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
+520,Birmingham IAC (Priory Courts),birmingham,birmingham,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""231596""
+  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+444,Birmingham Magistrates Court (VLC),birmingham,birmingham,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""231596""
+  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+86,Bradford,bradford,bradford,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""698118""
+  },",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford,bradford
+12,Cardinal Tower,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+101,Castle Park Storage,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+55,Field House,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+296,Field House (TH),map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+48,Glasgow (Eagle Building),glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
+537,Glasgow (Tribunals Centre),glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
+104,Harmondsworth,hattonCross,hattonCross,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""386417""
+  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,harmondsworth,hattonCross
+2,Hatton Cross,hattonCross,hattonCross,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""386417""
+  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+96,Hatton Cross (Fast Track),hattonCross,hattonCross,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""386417""
+  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+501,Hendon Magistrates Court (HX),hattonCross,hattonCross,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""386417""
+  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hendon,hattonCross
+13,Loughborough,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
+19,Maidstone Crown Court,hattonCross,hattonCross,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""386417""
+  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+539,Manchester (The Lowry),manchester,manchester,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""512401""
+  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+95,Manchester (Piccadilly),manchester,manchester,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""512401""
+  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+532,Newcastle CFCTC,newcastle,newcastle,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366796""
+  },",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle,newcastle
+78,Newport (Columbus House),newport,newport,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""227101""
+  },",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport,newport
+79,North Shields (Kings Court),tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
+43,Nottingham Justice Centre,birmingham,birmingham,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""231596""
+  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,nottingham,birmingham
+59,Tameside Magistartes Court,manchester,manchester,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""512401""
+  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+1,Taylor House,taylorHouse,taylorHouse,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""765324""
+  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+331,Taylor House (Field House),taylorHouse,taylorHouse,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""765324""
+  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+51,Taylor House (HX),taylorHouse,taylorHouse,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""765324""
+  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+478,UT (IAC) Birmingham CJC,birmingham,birmingham,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""231596""
+  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+522,UT (IAC) Cardiff CJC,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+406,UT (IAC) Hearing in Field House,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+517,UT (IAC) Hearing in Man CJC,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+106,Yarl's Wood,taylorHouse,taylorHouse,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""765324""
+  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,yarlsWood,taylorHouse
+3,ZZ(DNU)Birmingham IAC Sheldon Court,birmingham,birmingham,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""231596""
+  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+37,Not known at this time,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG

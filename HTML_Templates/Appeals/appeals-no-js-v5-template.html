@@ -1681,139 +1681,130 @@
                                 </td>
                             </tr>
                             <tr>
-                                <td style="vertical-align: top;" colspan="2">
-                                    <table id="table7" style="vertical-align: top;">
-                                        <tbody><tr>
-                                            <td id="labels"><label for="paymentRemissionRequested">Payment Remission Requested : </label></td>
-                                            <!-- <td><select id="paymentRemissionGranted" name="paymentRemissionGranted" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="yes">Yes</option>
-                                                <option value="no">No</option>
-                                            </select></td> -->
-
-                                            <td><input type="text" id="paymentRemissionRequested" value="{{PaymentRemissionrequested}}" readonly></td>
-
-
-                                            <td id="labels"><label for="asfRef">ASF Ref. :</label></td>
-                                            <td><input type="text" id="asfRef" name="asfRef" value="{{ASFReferenceNo}}"readonly></td>
-                                        </tr>
-                                        <tr>
-                                            <td id="labels"><label for="paymentRemissionGranted">Payment Remission Granted : </label></td>
-                                            <!-- <td><select id="paymentRemissionGranted" name="paymentRemissionGranted" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="yes">Yes</option>
-                                                <option value="no">No</option>
-                                            </select></td> -->
-
-                                            <td><input type="text" id="paymentRemissionGranted" value="{{PaymentRemissionGranted}}" readonly></td>
-
-
-                                            <td id="labels"><label for="asfRefStatus">ASF Ref. Status : </label></td>
-                                            <!-- <td><select id="asfRefStatus" name="asfRefStatus" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Invalid">Invalid</option>
-                                                <option value="Unverified">Unverified</option>
-                                                <option value="Verified">Verified</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="asfRefStatus" name="asfRefStatus" value="{{ASFReferenceNoStatus}}"readonly></td>
-
-
-                                        </tr>
-                                        <tr>
-                                            <td id="labels"><label for="paymentRemissionReason">Payment Remission Reason :</label></td>
-                                            <!-- <td><select id="paymentRemissionReason" name="paymentRemissionReason" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Asylum Support">Asylum Support</option>
-                                                <option value="Convention Case">Convention Case</option>
-                                                <option value="Help with Fees">Help with Fees</option>
-                                                <option value="Home Office Waiver">Home Office Waiver</option>
-                                                <option value="LAA Funded">LAA Funded</option>
-                                                <option value="Oral Hearing Direction">Oral Hearing Direction</option>
-                                                <option value="Other">Other</option>
-                                                <option value="S17 Childrens Act">S17 Childrens Act</option>
-                                                <option value="S20 Childrens Act">S20 Childrens Act</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="paymentRemissionReason" value="{{PaymentRemissionReasonDescription}}" readonly></td>
-                                            <td id="labels"><label for="s17Ref">s17 Ref. :</label></td>
-                                            <td><input type="text" id="s17Ref" name="s17Ref" value="{{S17Reference}}" readonly></td>
-                                        </tr>
-                                        <tr>
-                                            <td id="labels" style="vertical-align: top;"><label for="paymentRemissionReasonNotes">Payment Remission Reason Notes :</label></td>
-                                            <td><textarea id="paymentRemissionReasonNotes" name="paymentRemissionReasonNotes" readonly>{{PaymentRemissionReasonNote}}</textarea></td>
-                                            
-                                            
-                                            <td id="labels" style="vertical-align: top;"><label for="s17RefStatus">s17 Ref. Status : </label><br><label for="s20Ref">s20 Ref. :</label></td>
-                                            
-                                            
-                                            <!-- <td style="vertical-align: top;"><select id="s17RefStatus" name="s17RefStatus" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Invalid">Invalid</option>
-                                                <option value="Unverified">Unverified</option>
-                                                <option value="Verified">Verified</option>
-                                            </select><br> -->
-                                            <td><input type="text" id="s17RefStatus" name="s17RefStatus" value="{{S17ReferenceStatus}}" readonly><br><input type="text" id="S20Ref" name="S20Ref" value="{{S20Reference}}" readonly></td>
-
-                                            <!-- <td></td> -->
-                                        </tr>
-                                        <tr>
-                                            <td id="labels"><label for="lcpRequested">LCP Requested : </label></td>
-                                            <!-- <td><select id="lcpRequested" name="lcpRequested" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="yes">Yes</option>
-                                                <option value="no">No</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="lcpRequested" value="{{LCPRequested}}" readonly></td>
-                                            <td id="labels"><label for="s20RefStatus">s20 Ref. Status : </label></td>
-                                            <!-- <td><select id="s20RefStatus" name="s20RefStatus" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Invalid">Invalid</option>
-                                                <option value="Unverified">Unverified</option>
-                                                <option value="Verified">Verified</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="s20RefStatus" name="s20RefStatus" value="{{S20ReferenceStatus}}"readonly></td>
-                                            
-                                        </tr>
-                                        <tr>
-                                            <td id="labels"><label for="lcpOutcome">LCP Outcome :</label></td>
-                                            <td><input type="text" id="lcpOutcome" value="{{LCPOutcome}}" readonly></td>
-                                            <!-- <td><select id="lcpOutcome" name="lcpOutcome" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Information Requested">Information Requested</option>
-                                                <option value="Refused">Refused</option>
-                                                <option value="Full Remission">Full Remission</option>
-                                                <option value="Part Remission">Part Remission</option>
-                                                <option value="Part Remission Deferred">Part Remission Deferred</option>
-                                                <option value="Deferred">Deferred</option>
-                                            </select></td> -->
-                                            <td id="labels"><label for="hoWavierStatus">HO Wavier Status : </label></td>
-                                            <!-- <td><select id="hoWavierStatus" name="hoWavierStatus" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Invalid">Invalid</option>
-                                                <option value="Unverified">Unverified</option>
-                                                <option value="Verified">Verified</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="hoWavierStatus" name="hoWavierStatus" value="{{HomeOfficeWaiverStatus}}"readonly></td>
-                                            
-                                        </tr>
-                                        <tr>
-                                            <td></td><td></td>
-                                            <td id="labels"><label for="laaRef">LAA Ref. :</label></td>
-                                            <td><input type="text" id="laaRef" name="laaRef" value="{{LSCReference}}" readonly></td>
-                                        </tr>
-                                        <tr>
-                                            <td></td><td></td>
-                                            <td id="labels"><label for="laaRefStatus">LAA Ref. Status : </label></td>
-                                            <!-- <td><select id="laaRefStatus" name="laaRefStatus" disabled>
-                                                <option value="" selected=""></option>
-                                                <option value="Invalid">Invalid</option>
-                                                <option value="Unverified">Unverified</option>
-                                                <option value="Verified">Verified</option>
-                                            </select></td> -->
-                                            <td><input type="text" id="laaRefStatus" name="laaRefStatus" value="{{LSCStatus}}"readonly></td>
-                                        </tr>
-                                    </tbody></table>
-                                </td>
-
+                            <td valign="top" style="padding-left:100px">
+                                <table>
+                                <tr>
+                                    <td id="labels"><label for="paymentRemissionRequested">Payment Remission Requested :</label></td>
+                                    <td><input type="text" id="paymentRemissionRequested" value="{{PaymentRemissionrequested}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="paymentRemissionGranted">Payment Remission Granted :</label></td>
+                                    <td><input type="text" id="paymentRemissionGranted" value="{{PaymentRemissionGranted}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="paymentRemissionReason">Payment Remission Reason :</label></td>
+                                    <td><input id="paymentRemissionReason" value="{{PaymentRemissionReason}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Asylum Support">Asylum Support</option>
+                                    <option value="Convention Case">Convention Case</option>
+                                    <option value="Help with Fees">Help with Fees</option>
+                                    <option value="Home Office Waiver">Home Office Waiver</option>
+                                    <option value="LAA Funded">LAA Funded</option>
+                                    <option value="Oral Hearing Direction">Oral Hearing Direction</option>
+                                    <option value="Other">Other</option>
+                                    <option value="S17 Childrens Act">S17 Childrens Act</option>
+                                    <option value="S20 Childrens Act">S20 Childrens Act</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels" style="vertical-align: top;"><label for="paymentRemissionReasonNotes">Payment Remission Reason Notes :</label></td>
+                                    <td><textarea id="paymentRemissionReasonNotes" name="paymentRemissionReasonNotes" readonly>{{PaymentRemissionReasonNote}}</textarea></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="lcpRequested">LCP Requested :</label></td>
+                                    <td><input type="text" id="lcpRequested" value="{{LCPRequested}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="lcpOutcome">LCP Outcome :</label></td>
+                                    <td><input type="text" id="lcpOutcome" value="{{LCPOutcome}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Information Requested">Information Requested</option>
+                                    <option value="Refused">Refused</option>
+                                    <option value="Full Remission">Full Remission</option>
+                                    <option value="Part Remission">Part Remission</option>
+                                    <option value="Part Remission Deferred">Part Remission Deferred</option>
+                                    <option value="Deferred">Deferred</option>
+                                    </select></td> -->
+                                </tr>
+                                </table>
+                            </td>
+                            <td valign="top">
+                                <table>
+                                <tr>
+                                    <td id="labels"><label for="asfRef">ASF Ref. :</label></td>
+                                    <td><input type="text" id="asfRef" name="asfRef" value="{{ASFReferenceNo}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="asfRefStatus">ASF Ref. Status :</label></td>
+                                    <td><input type="text" id="asfRefStatus" name="asfRefStatus" value="{{ASFReferenceNoStatus}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Invalid">Invalid</option>
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="s17Ref">s17 Ref. :</label></td>
+                                    <td><input type="text" id="s17Ref" name="s17Ref" value="{{S17Reference}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="s17RefStatus">s17 Ref. Status :</label></td>
+                                    <td><input id="s17RefStatus" name="s17RefStatus" value="{{S17ReferenceStatus}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Invalid">Invalid</option>
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="s20Ref">s20 Ref. :</label></td>
+                                    <td><input type="text" id="s20Ref" name="s20Ref" value="{{S20Reference}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="s20RefStatus">s20 Ref. Status :</label></td>
+                                    <td><input id="s20RefStatus" name="s20RefStatus" value="{{S20ReferenceStatus}}">
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Invalid">Invalid</option>
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="hoWavierStatus">HO Wavier Status :</label></td>
+                                    <td><input type="text" id="hoWavierStatus" name="hoWavierStatus" value="{{HomeOfficeWaiverStatus}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Invalid">Invalid</option>
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                    </select></td> -->
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="laaRef">LAA Ref. :</label></td>
+                                    <td><input type="text" id="laaRef" name="laaRef" value="{{LSCReference}}" readonly></td>
+                                </tr>
+                                <tr>
+                                    <td id="labels"><label for="laaRefStatus">LAA Ref. Status :</label></td>
+                                    <td><input type="text" id="laaRefStatus" name="laaRefStatus" value="{{LSCStatus}}" readonly>
+                                    <!-- <option value="" selected=""></option>
+                                    <option value="Invalid">Invalid</option>
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                    </select></td> -->
+                                </tr>
+                                </table>
+                            </td>
                             </tr>
                             <tr>
                                 <td colspan="2">

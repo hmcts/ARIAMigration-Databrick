@@ -19,8 +19,9 @@ env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
  
 ARM_SEGMENT = "TDDEV" if env == "sbox" else "TD"
-ARIA_SEGMENT = "TD"
-eventhub_name = f"evh-{ARM_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
+ARIA_SEGMENT = "td"
+
+eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
  
 app = func.FunctionApp()
@@ -46,8 +47,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
  
     try:
         # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{ARM_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{ARM_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
+        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
+        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
  
  
         # Blob Storage credentials
@@ -67,7 +68,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         #     container_secret = full_secret.lstrip('?')  # fallback
         container_url = f"{account_url}/{container_name}?{container_secret}"
  
-        sub_dir = f"ARIA{ARIA_SEGMENT}DEV/submission" if env == "sbox" else f"ARIA{ARIA_SEGMENT}/submission"
+        sub_dir = f"ARIA{ARM_SEGMENT}DEV/submission" if env == "sbox" else f"ARIA{ARM_SEGMENT}/submission"
         # if os.environ["ENVIRONMENT"] == "sbox":
         #     sub_dir = "ARIABDEV/submission"
         # else:

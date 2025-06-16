@@ -75,7 +75,7 @@ resources:
             - task_key: fta_response_autoloader
           job_cluster_key: db_wf_apl_fta_receive_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA Receive Audit Dashboard"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA_Receive_Audit_Dashboard"
             source: WORKSPACE
       queue:
         enabled: true

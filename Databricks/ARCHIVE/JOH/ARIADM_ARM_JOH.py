@@ -1139,7 +1139,7 @@ def silver_archive_metadata():
             date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             lit("GBR").alias("region"),
             lit("ARIA").alias("publisher"),
-            when(env == "sbox", lit("ARIAJRDEV")).otherwise(lit("ARIAJR")).alias("record_class"),
+            when(env_name == lit("sbox"), lit("ARIAJRDEV")).otherwise(lit("ARIAJR")).alias("record_class"),
             # lit("ARIAJR").alias("record_class"),
             lit("IA_Judicial_Office").alias("entitlement_tag"),
             col("adj.Title").alias("bf_001"),

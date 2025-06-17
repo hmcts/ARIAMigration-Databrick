@@ -12,20 +12,20 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
- 
- 
- 
+
+
+
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
- 
+
 ARM_SEGMENT = "TDDEV" if env == "sbox" else "TD"
 ARIA_SEGMENT = "td"
 
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
- 
+
 app = func.FunctionApp()
- 
+
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
     arg_name="azeventhub",
@@ -39,60 +39,67 @@ app = func.FunctionApp()
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
- 
+
     # Retrieve credentials
     credential = DefaultAzureCredential()
+    logging.info('Connected to Azure Credentials')
     kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
- 
- 
+    logging.info('Connected to KeyVault')
+
+
     try:
         # Retrieve Event Hub secrets
         ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
- 
- 
+        logging.info('Acquired KV secrets for Dl and ACK')
+
+
         # Blob Storage credentials
- 
-        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        #account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
- 
-        # container_secret = kv_client.get_secret("ARIAB-SAS-TOKEN").value
-        container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value # SAS token
- 
+
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        logging.info('Assigned container secret value')
+        #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
+
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
         #     # Remove the prefix if it's a connection string
         #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
         # else:
-        #     container_secret = full_secret.lstrip('?')  # fallback
+        #     container_secret = full_secret.lstrip('?')  # fallbak
         container_url = f"{account_url}/{container_name}?{container_secret}"
- 
+        logging.info(f'Created container URL: {container_url}')
+
         sub_dir = f"ARIA{ARM_SEGMENT}/submission"
-        logging.info(f'Print sub_directory {sub_dir}')
-        # if os.environ["ENVIRONMENT"] == "sbox":
-        #     sub_dir = "ARIABDEV/submission"
-        # else:
-        #     sub_dir = "ARIAB/submission"
- 
-        # Use async with to properly close clients
-        container_service_client = ContainerClient.from_container_url(container_url)
+        logging.info(f'Creaed sub_dir: {sub_dir}')
+
+        try:
+            container_service_client = ContainerClient.from_container_url(container_url)
+            logging.info('Created container service client')
+        
+        except Exception as e:
+            logging.error(f"Failed to connect to ARM Container Client {e}")
+            
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
- 
+                    
+                logging.info('Processing messages')
                 tasks = [
                     process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
                     for event in azeventhub
                 ]
                 await asyncio.gather(*tasks)
+                logging.info('Finished processing messages')
         finally:
-             await container_service_client.close()
+            container_service_client.close() 
     finally:
         # Explicitly close SecretClient to avoid session leaks
         await kv_client.close()
         await credential.close()
- 
+
 @retry(wait=wait_exponential(multiplier=1, min=4, max=10),
           stop=stop_after_attempt(5),
           retry=retry_if_exception_type(Exception),
@@ -102,9 +109,10 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             )
           )
 async def upload_blob_with_retry(blob_client,message,capture_response):
+    logging.info(f'Uploading blob')
     await blob_client.upload_blob(message,overwrite=True,raw_response_hook=capture_response)
- 
- 
+
+
 async def process_messages(event,container_service_client,subdirectory,dl_producer_client,ack_producer_client):
         ## set up results logging
         results: dict[str, any] = {
@@ -126,36 +134,38 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
         # set the key and message to none at the start of each event
         key = None
         message = None
+
  
- 
- 
+
         try:
             message = event.get_body().decode('utf-8')
             key = event.partition_key
             
             logging.info(f"Processing message for {key} file")
             if not key:
+                logging.error('Key Was Empty')
                 raise ValueError("Key not found in the message")
             
             full_blob_name = f"{subdirectory}/{key}"
             results["filename"] = key
- 
+
             
             #upload message to blob with partition key as file name
- 
+
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
- 
- 
+            logging.info(f'Acquired Blob Client: {full_blob_name}')
+
+
             await upload_blob_with_retry(blob_client, message, capture_response)
- 
+
             results["timestamp"] = datetime.datetime.utcnow().isoformat()
             logging.info("Uploaded blob:%s",key)
- 
- 
+
+
         except Exception as e:
             logging.error(f"Failed to process event with key '{key}': {e}")
             results["http_message"] = str(e)
- 
+
             if message is not None and key is not None:
                     await send_to_eventhub(dl_producer_client,message,key)
             else:
@@ -164,8 +174,8 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
         await send_to_eventhub(ack_producer_client,json.dumps(results),key)
         logging.info(f"{key}: Ack stored succesfully")
         return results
- 
- 
+
+
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
     """Sends messages to an Event Hub."""
     try:

@@ -2128,7 +2128,7 @@ def silver_meta_data():
                  F.lit("ARIA").alias("publisher"),
                  F.when(
                         (col("m1.BaseBailType") == "ScottishBailsFunds") & (env == lit("sbox")),
-                        "ARIASBDEV"
+                        lit("ARIASBDEV")
                     ).when(
                         (col("m1.BaseBailType") == "ScottishBailsFunds") & (env != lit("sbox")),
                         lit("ARIASB")

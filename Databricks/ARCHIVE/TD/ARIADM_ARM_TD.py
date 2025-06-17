@@ -1007,7 +1007,7 @@ def silver_archive_metadata():
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
-        when(env_name == lit('sbox'), lit("ARIATDDEV")).otherwise("ARIATD").alias("record_class"),
+        when(env_name == lit('sbox'), lit("ARIATDDEV")).otherwise(lit("ARIATD")).alias("record_class"),
         #lit("ARIATDDEV" if env_name == "sbox" else "ARIATD").alias("record_class"),
         # lit("ARIATD").alias("record_class"),
         # lit('IA_Tribunal').alias("entitlement_tag"),

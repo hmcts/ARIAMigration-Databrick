@@ -2149,6 +2149,7 @@ def silver_meta_data():
                  F.when(
                         (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
                         "ARIASBDEV"
+
                     ).when(
                         (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
                         lit("ARIASB")

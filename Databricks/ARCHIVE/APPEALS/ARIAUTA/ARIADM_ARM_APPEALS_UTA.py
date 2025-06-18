@@ -96,6 +96,10 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Set Variables
 
@@ -3373,7 +3377,8 @@ def silver_list_detail():
                               "ca.ListAdjudicatorNote",
                               "ca.ListAdjudicatorTitle",
                               "ca.ListName",
-                              "ca.ListStartTime",
+                            #   "ca.ListStartTime",
+                              date_format(col("ca.ListStartTime"), 'h:mm a').alias("ListStartTime"),
                               "ca.ListTypeDesc",
                               "ca.ListType",
                               "ca.DoNotUseListType",

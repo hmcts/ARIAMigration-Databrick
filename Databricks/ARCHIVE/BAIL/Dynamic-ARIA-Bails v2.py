@@ -49,6 +49,12 @@
 
 # COMMAND ----------
 
+# Set the configuration to allow the table to be managed by multiple pipelines
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Import Packages
 
@@ -57,7 +63,7 @@
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -103,6 +109,14 @@ def format_date_iso(date_value):
         if isinstance(date_value, str):
             date_value = datetime.strptime(date_value, "%Y-%m-%d")
         return date_value.strftime("%Y-%m-%d")
+    except Exception:
+        return ""
+    
+def simple_date_format(date_value):
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%d-%m-%Y")
     except Exception:
         return ""
 
@@ -1110,6 +1124,7 @@ def bronze_bail_ac_bfdiary_bftype():
             col("bfd.CaseNo"),
             col("bfd.BFDate"),
             col("bfd.Entry") ,
+            col("bfd.EntryDate"),
             col("bfd.DateCompleted"),
             # -- bF Type Fields
             col("bft.Description").alias("BFTypeDescription")
@@ -1857,6 +1872,7 @@ def silver_m1():
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
     
     df = joined_df.select("m1.CaseNo", *selected_columns,
+                        col("bs.BaseBailType"),
                         when(col("BailType") == 1,"Bail")
                         .when(col("BailType") == 2,"Scottish Bail")
                         .otherwise("Other").alias("BailTypeDesc"),
@@ -1884,7 +1900,7 @@ def silver_m1():
                         .when(col("CostsAwardDecision") == 2,"Refused")
                         .when(col("CostsAwardDecision") == 3,"Interim field")
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
-                        "BaseBailType"
+                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc")
                             
     )
 
@@ -2005,7 +2021,7 @@ def silver_m5():
     df = joined_df.select("m5.CaseNo", *selected_columns)
 
 
-    return df
+    return df.orderBy(col("HistDate"))
 
 
 # COMMAND ----------
@@ -2046,7 +2062,9 @@ def silver_m6():
 def silver_m7():
     m7_df = dlt.read("bronze_bail_status_sc_ra_cs").alias("m7")
 
-    m7_ref_df = m7_df.select("*",
+    m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
+
+    m7_ref_df = m7_df.select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),
@@ -2069,6 +2087,8 @@ def silver_m7():
                         when(col("StatusParty") == 1,"Appellant")
                         .when(col("StatusParty") == 2,"Respondent")
                         .otherwise("Unknown").alias("StatusPartyDesc"),
+                        round(col("TotalAmountOfFinancialCondition"),2).alias("TotalAmountOfFinancialCondition"),
+                        round(col("TotalSecurity"),2).alias("TotalSecurity")
 
     )
 
@@ -2127,13 +2147,14 @@ def silver_meta_data():
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
                  F.when(
-                        (col("m1.BaseBailType") == "ScottishBailsFunds") & (env == lit("sbox")),
-                        lit("ARIASBDEV")
+                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
+                        "ARIASBDEV"
+
                     ).when(
-                        (col("m1.BaseBailType") == "ScottishBailsFunds") & (env != lit("sbox")),
+                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
                         lit("ARIASB")
                     ).when(
-                        (col("m1.BaseBailType") != "ScottishBailsFunds") & (env == lit("sbox")),
+                        (col("m1.BailTypeDesc") != "Scottish Bail") & (env == lit("sbox")),
                         lit("ARIABDEV")
                         ).otherwise(lit("ARIAB")).alias("record_class"),
                 #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
@@ -2240,7 +2261,7 @@ case_status_mappings = {
         "{{BailApplicationResidenceOrderMade}}": "ResidenceOrderDesc",
         "{{BailApplicationReportingOrderMade}}": "ReportingOrderDesc",
         "{{BailApplicationBailedTimePlace}}": "BailedTimePlaceDesc",
-        "{{BailApplicationBailedDateOfHearing}}": "BaileddateHearing",
+        "{{BailApplicationBailedDateOfHearing}}": "BaileddateHearingDesc",
         "{{BailApplicationDateOfDecision}}": "DecisionDate",
         "{{BailApplicationOutcome}}": "OutcomeDescription",
         "{{BailApplicationHOConsentDate}}": "DecisionSentToHODate",
@@ -2254,7 +2275,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2307,7 +2328,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2358,7 +2379,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2403,7 +2424,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2448,7 +2469,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2462,7 +2483,7 @@ case_status_mappings = {
         "{{MigrationJudiciary1}}": "Judiciary1Name",
         "{{MigrationJudiciary2}}": "Judiciary2Name",
         "{{MigrationJudiciary3}}": "Judiciary3Name",
-        "{{MigrationPartyMakingApplication}}": "StatusParty",
+        "{{MigrationPartyMakingApplication}}": "StatusPartyDesc",
         "{{MigrationDateOfDecision}}": "DecisionDate",
         "{{MigrationOutcome}}": "OutcomeDescription",
         "{{MigrationDateOfPromulgation}}": "StatusPromulgated",
@@ -2491,7 +2512,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2720,7 +2741,8 @@ stg_m1_m2_struct = struct(
     col("DetentionCentrePostcode"),
     col("DetentionCentreFax"),
     col("DoNotUseNationality"),
-    col("AppellantDetainedDesc")
+    col("AppellantDetainedDesc"),
+    col("AppealCategoriesDesc")
 )
 
 
@@ -3333,11 +3355,11 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{ hoRef }}": cd_row.HORef,
             "{{ lastName }}": cd_row.AppellantName,
             "{{ firstName }}": cd_row.AppellantForenames,
-            "{{ birthDate }}": format_date_iso(cd_row.AppellantBirthDate),
+            "{{ birthDate }}": simple_date_format(cd_row.AppellantBirthDate),
             "{{ portRef }}": cd_row.PortReference,
             "{{AppellantTitle}}": cd_row.AppellantTitle,
             "{{BailType}}": cd_row.BailTypeDesc,
-            "{{AppealCategoriesField}}": str(cd_row.AppealCategories),
+            "{{AppealCategoriesField}}": str(cd_row.AppealCategoriesDesc),
             "{{Nationality}}": cd_row.Nationality,
             "{{TravelOrigin}}": cd_row.CountryOfTravelOrigin,
             "{{Port}}": cd_row.PortOfEntry,
@@ -3373,7 +3395,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
             "{{language}}": cd_row.Language,
-            "{{required}}": "1" if cd_row.InterpreterRequirementsLanguage is not None else "0",
+            "{{required}}": "YES" if cd_row.InterpreterRequirementsLanguage is not None else "NO",
 
             # Misc Tab
             "{{Notes}}": cd_row.AppealCaseNote,
@@ -3421,7 +3443,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         bf_diary_code = ""
         if row.bfdiary_details is not None:
             for bfdiary in row.bfdiary_details or []:
-                bf_line = f"<tr><td id=\"midpadding\">{bfdiary.BFDate}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{bfdiary.DateCompleted}</td></tr>"
+                bf_line = f"<tr><td id=\"midpadding\">{simple_date_format(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{bfdiary.DateCompleted}</td></tr>"
                 bf_diary_code += bf_line + "\n"
             html = html.replace("{{bfdiaryPlaceholder}}", bf_diary_code)
         else:
@@ -3431,7 +3453,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         history_code = ''
         if row.m5_history_details is not None:
             for history in row.m5_history_details:
-                history_line = f"<tr><td id='midpadding'>{history.HistDate}</td><td id='midpadding'>{history.HistType}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
+                history_line = f"<tr><td id='midpadding'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistType}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
                 history_code += history_line + "\n"
             html = html.replace("{{HistoryPlaceholder}}", history_code)
         else:
@@ -3895,6 +3917,13 @@ def gold_bails_with_a360():
 
 # MAGIC %md
 # MAGIC # Final Unified Table
+
+# COMMAND ----------
+
+html = spark.table("aria_bails.create_bails_html_content").filter(col("CaseNo") == "ZY/00003     ")
+html.select("Case_detail.AppellantTitle").show()
+
+html
 
 # COMMAND ----------
 

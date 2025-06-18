@@ -2000,7 +2000,7 @@ def silver_m4():
     df = joined_df.select("m4.CaseNo", *selected_columns)
 
 
-    return df
+    return df.orderBy(col("BFDate").desc())
 
 # COMMAND ----------
 
@@ -2018,11 +2018,61 @@ def silver_m5():
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     joined_df = m5_df.join(segmentation_df.alias("bs"), col("m5.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m5_df.columns if c != "CaseNo"]
-    df = joined_df.select("m5.CaseNo", *selected_columns)
+    df = joined_df.select("m5.CaseNo", *selected_columns,
+                          when(col("HistType") == 1, "Adjournment")
+                          .when(col("HistType") == 2, "Adjudicator Process")
+                          .when(col("HistType") == 3, "Bail Process")
+                          .when(col("HistType") == 4, "Change of Address")
+                          .when(col("HistType") == 5, "Decisions")
+                          .when(col("HistType") == 6, "File Location")
+                          .when(col("HistType") == 7, "Interpreters")
+                          .when(col("HistType") == 8, "Issue")
+                          .when(col("HistType") == 9, "Links")
+                          .when(col("HistType") == 10, "Listing")
+                          .when(col("HistType") == 11, "SIAC Process")
+                          .when(col("HistType") == 12, "Superior Court")
+                          .when(col("HistType") == 13, "Tribunal Process")
+                          .when(col("HistType") == 14, "Typing")
+                          .when(col("HistType") == 15, "Parties edited")
+                          .when(col("HistType") == 16, "Document")
+                          .when(col("HistType") == 17, "Document Received")
+                          .when(col("HistType") == 18, "Manual Entry")
+                          .when(col("HistType") == 19, "Interpreter")
+                          .when(col("HistType") == 20, "File Detail Changed")
+                          .when(col("HistType") == 21, "Dedicated hearing centre changed")
+                          .when(col("HistType") == 22, "File Linking")
+                          .when(col("HistType") == 23, "Details")
+                          .when(col("HistType") == 24, "Availability")
+                          .when(col("HistType") == 25, "Cancel")
+                          .when(col("HistType") == 26, "De-allocation")
+                          .when(col("HistType") == 27, "Work Pattern")
+                          .when(col("HistType") == 28, "Allocation")
+                          .when(col("HistType") == 29, "De-Listing")
+                          .when(col("HistType") == 30, "Statutory Closure")
+                          .when(col("HistType") == 31, "Provisional Destruction Date")
+                          .when(col("HistType") == 32, "Destruction Date")
+                          .when(col("HistType") == 33, "Date of Service")
+                          .when(col("HistType") == 34, "IND Interface")
+                          .when(col("HistType") == 35, "Address Changed")
+                          .when(col("HistType") == 36, "Contact Details")
+                          .when(col("HistType") == 37, "Effective Date")
+                          .when(col("HistType") == 38, "Centre Changed")
+                          .when(col("HistType") == 39, "Appraisal Added")
+                          .when(col("HistType") == 40, "Appraisal Removed")
+                          .when(col("HistType") == 41, "Costs Deleted")
+                          .when(col("HistType") == 42, "Credit/Debit Card Payment received")
+                          .when(col("HistType") == 43, "Bank Transfer Payment received")
+                          .when(col("HistType") == 44, "Chargeback Taken")
+                          .when(col("HistType") == 45, "Remission request Rejected")
+                          .when(col("HistType") == 46, "Refund Event Added")
+                          .when(col("HistType") == 47, "Write Off, Strikeout Write-Off or Threshold Write-off Event Added")
+                          .when(col("HistType") == 48, "Aggregated Payment Taken")
+                          .when(col("HistType") == 49, "Case Created")
+                          .when(col("HistType") == 50, "Tracked Document")
+                          .otherwise("Unknown").alias("HistTypeDesc")
+    )
 
-
-    return df.orderBy(col("HistDate"))
-
+    return df.orderBy(col("HistDate").desc())
 
 # COMMAND ----------
 
@@ -2933,6 +2983,7 @@ def stg_m1_m2_m3_m5_m7():
             col("HistoryId"),
             col("HistDate"),
             col("HistType"),
+            col("HistTypeDesc"),
             col("HistoryComment"),
             col("UserFullname"),
             col("DeletedBy")
@@ -3453,7 +3504,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         history_code = ''
         if row.m5_history_details is not None:
             for history in row.m5_history_details:
-                history_line = f"<tr><td id='midpadding'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistType}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
+                history_line = f"<tr><td id='midpadding'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistTypeDesc}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
                 history_code += history_line + "\n"
             html = html.replace("{{HistoryPlaceholder}}", history_code)
         else:
@@ -3920,10 +3971,10 @@ def gold_bails_with_a360():
 
 # COMMAND ----------
 
-html = spark.table("aria_bails.create_bails_html_content").filter(col("CaseNo") == "ZY/00003     ")
-html.select("Case_detail.AppellantTitle").show()
+# html = spark.table("aria_bails.create_bails_html_content").filter(col("CaseNo") == "ZY/00003     ")
+# html.select("Case_detail.AppellantTitle").show()
 
-html
+# html
 
 # COMMAND ----------
 

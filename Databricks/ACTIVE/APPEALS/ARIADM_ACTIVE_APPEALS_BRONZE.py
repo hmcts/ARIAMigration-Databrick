@@ -28,6 +28,10 @@
 
 # COMMAND ----------
 
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Import packages
 
@@ -73,6 +77,8 @@ curated_storage = f"ingest{lz_key}curated{env_name}"
 checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
 raw_storage = f"ingest{lz_key}raw{env_name}"
 landing_storage = f"ingest{lz_key}landing{env_name}"
+external_storage = f"ingest{lz_key}external{env_name}"
+
 
 # Spark config for curated storage (Delta table)
 spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
@@ -102,6 +108,14 @@ spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.wi
 spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
 spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
 
+
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{external_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{external_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{external_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{external_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{external_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
 # COMMAND ----------
 
 # DBTITLE 1,Set Paths and Hive Schema Variables
@@ -113,6 +127,7 @@ landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows
 bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
 silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
 gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/CCD/APPEALS"
+external_mnt = f"abfss:///external-csv@ingest{lz_key}external{env_name}.dfs.core.windows.net/"
 gold_outputs = "ARIADM/CCD/APPEALS"
 hive_schema = "ariadm_ccd_apl"
 # key_vault = "ingest00-keyvault-sbox"
@@ -1039,6 +1054,123 @@ def bronze_history():
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### Transformation bronze_countries_nationality
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_countries_nationality",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_countries_nationality"
+)
+def bronze_countries_nationality():
+    return (
+        spark.read.format("csv")
+            .option("header", "true")
+            .option("inferSchema", "true")
+            .option("encoding", "UTF-8")
+            .load(f"abfss://external-csv@{external_storage}.dfs.core.windows.net/ReferenceData/countries_nationality.csv")
+            .select("*")
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_countries_postal
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_countries_postal",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_countries_postal"
+)
+def bronze_countries_postal():
+    return (
+        spark.read.format("csv")
+            .option("header", "true")
+            .option("inferSchema", "true")
+            .option("encoding", "UTF-8")
+            .load(f"abfss://external-csv@{external_storage}.dfs.core.windows.net/ReferenceData/countries_postal.csv")
+            .select("*")
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_countries_countryFromAddress
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_countries_countryFromAddress",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_countries_countryFromAddress"
+)
+def bronze_countries_countryFromAddress():
+    return (
+        spark.read.format("csv")
+            .option("header", "true")
+            .option("inferSchema", "true")
+            .option("encoding", "UTF-8")
+            .load(f"abfss://external-csv@{external_storage}.dfs.core.windows.net/ReferenceData/countries_countryFromAddress.csv")
+            .select("*"
+            )
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_hearing_centres
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_hearing_centres",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_hearing_centres"
+)
+def bronze_hearing_centres():
+    return (
+        spark.read.format("csv")
+            .option("header", "true")
+            .option("inferSchema", "true")
+            .option("encoding", "UTF-8")
+            .option("multiline", "true")
+            .option("escape", "\"")
+            .load(f"abfss://external-csv@{external_storage}.dfs.core.windows.net/ReferenceData/hearing_centres.csv")
+            .withColumn("caseManagementLocation", regexp_replace(trim(regexp_replace(col("caseManagementLocation"), ",$", "")), "^\\s+|\\s+$", "")) # Remove trailing commas and leading/trailing whitespace
+            .select("*")
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Transformation bronze_remissions
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_remissions",
+    comment="DLT table for History; may contain multiple rows per CaseNo.",
+    path=f"{bronze_mnt}/bronze_remissions"
+)
+def bronze_remissions():
+    return (
+          spark.read.format("csv")
+            .option("header", "true")
+            .option("inferSchema", "true")
+            .option("encoding", "UTF-8")
+            .option("multiline", "true")
+            .option("escape", "\"")
+            .load(f"abfss://external-csv@{external_storage}.dfs.core.windows.net/ReferenceData/remissions.csv")
+            .withColumnRenamed("Reason Description", "ReasonDescription")
+            .select("*")
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Exit Notebook with Success Message
 
 # COMMAND ----------
@@ -1054,3 +1186,70 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # MAGIC %sql
 # MAGIC select * from ariadm_active_appeals.bronze_appealcase_crep_rep_floc_cspon_cfs
+
+# COMMAND ----------
+
+config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
+
+env = config.first()["env"].strip().lower()
+
+lz_key = config.first()["lz_key"].strip().lower()
+ 
+keyvault_name = f"ingest00-meta002-{env}"
+ 
+# Access the Service Principle secrets from keyvaults
+
+client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
+
+tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
+
+client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
+ 
+storage_accounts = ["external"]
+ 
+for storage_account in storage_accounts:
+
+    spark.conf.set(
+
+        f'fs.azure.account.auth.type.ingest00{storage_account}{env}.dfs.core.windows.net', 'OAuth')
+    spark.conf.set(
+        f'fs.azure.account.oauth.provider.type.ingest00{storage_account}{env}.dfs.core.windows.net', 'org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider')
+    spark.conf.set(
+        f'fs.azure.account.oauth2.client.id.ingest00{storage_account}{env}.dfs.core.windows.net', client_id)
+    spark.conf.set(
+        f'fs.azure.account.oauth2.client.secret.ingest00{storage_account}{env}.dfs.core.windows.net', client_secret)
+    spark.conf.set(
+
+        f'fs.azure.account.oauth2.client.endpoint.ingest00{storage_account}{env}.dfs.core.windows.net', f'https://login.microsoftonline.com/{tenant_id}/oauth2/token')
+ 
+curated_storage_account = f"ingest00external{env}"
+
+silver_container = "external-csv"
+ 
+dbutils.fs.ls(f"abfss://{silver_container}@{curated_storage_account}.dfs.core.windows.net/ReferenceData/")
+ 
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select *, size(tempCaseStatusDetails) as tempCaseStatusDetails_length from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
+# MAGIC -- where CaseNo = 'CC/00009/2005'
+# MAGIC order by tempCaseStatusDetails_length desc
+# MAGIC limit 10
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_fta.silver_list_detail
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_fta.silver_transaction_detail
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select currentStatus, KeyDate, * from hive_metastore.ariadm_arm_uta.silver_status_detail
+# MAGIC where CaseNo = 'CC/00009/2005'
+# MAGIC order by statusId desc

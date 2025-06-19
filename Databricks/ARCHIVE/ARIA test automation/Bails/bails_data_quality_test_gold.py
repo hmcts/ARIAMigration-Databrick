@@ -75,7 +75,6 @@ expected_m4_columns = [
     "CaseNo",
     "BFDate",
     "Entry",
-    "EntryDate",
     "DateCompleted",
     "BFTypeDescription"
 ]
@@ -94,7 +93,12 @@ expected_m7_columns = [
     "InterpreterRequired",
 ]
 
-expected_m8_columns = ["CaseNo", "CategoryDescription", "InBail"]
+expected_m8_columns = [
+    "CaseNo", 
+    "CategoryDescription", 
+    "Flag", 
+    "Priority"
+]
 
 # Test M1-M8 transformations
 try:

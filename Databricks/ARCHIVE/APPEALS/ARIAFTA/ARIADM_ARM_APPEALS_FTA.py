@@ -7242,15 +7242,15 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-temp = spark.sql("""
-    SELECT TempCaseStatusDetails 
-    FROM hive_metastore.ariadm_arm_fta.stg_statusdetail_data 
-    WHERE CaseNo = 'AA/00029/2014'
-""").collect()[0][0]
+# temp = spark.sql("""
+#     SELECT TempCaseStatusDetails 
+#     FROM hive_metastore.ariadm_arm_fta.stg_statusdetail_data 
+#     WHERE CaseNo = 'AA/00029/2014'
+# """).collect()[0][0]
 
-# Order by StatusId descending
-# ordered_temp = sorted(temp, key=lambda x: x['StatusId'], reverse=True)
-ordered_temp = temp
+# # Order by StatusId descending
+# # ordered_temp = sorted(temp, key=lambda x: x['StatusId'], reverse=True)
+# ordered_temp = temp
 
-for status in ordered_temp:
-    print(status['StatusId'])
+# for status in ordered_temp:
+#     print(status['StatusId'])

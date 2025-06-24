@@ -1205,11 +1205,6 @@ def bronze_appealcase_ca_apt_country_detc():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj
-
-# COMMAND ----------
-
 @dlt.table(
     name="bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj",
     comment="Delta Live Table combining Status, Case List, Hearing Type, Adjudicator, Court, and other related details.",

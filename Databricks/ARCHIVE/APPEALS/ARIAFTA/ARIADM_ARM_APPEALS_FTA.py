@@ -4875,6 +4875,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{AdjudicatorSurname}}", str(SDP.LatestAdjudicatorSurname or '')) \
                                         .replace("{{AdjudicatorForenames}}", str(SDP.LatestAdjudicatorForenames or ''))  \
                                         .replace("{{AdjudicatorTitle}}", str(SDP.LatestAdjudicatorTitle or '')) \
+                                        .replace("{{AdjudicatorFullName}}", str(SDP.LatestAdjudicatorFullName or '')) \
                                         .replace("{{MiscDate2}}", format_date_iso(SDP.MiscDate2 or '')) \
                                         .replace("{{VideoLink}}", str(SDP.VideoLink or '')) \
                                         .replace("{{RemittalOutcome}}", str(SDP.RemittalOutcome or '')) \
@@ -4899,6 +4900,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{DeterminationByJudgeSurname}}", format_date_iso(SDP.DeterminationByJudgeSurname or '')) \
                                         .replace("{{DeterminationByJudgeForenames}}", format_date_iso(SDP.DeterminationByJudgeForenames or '')) \
                                         .replace("{{DeterminationByJudgeTitle}}", format_date_iso(SDP.DeterminationByJudgeTitle or '')) \
+                                        .replace("{{DeterminationByJudgeFullName}}", str(SDP.DeterminationByJudgeFullName or '')) \
                                         .replace("{{MethodOfTyping}}", str(SDP.MethodOfTyping or '')) \
                                         .replace("{{adjournDecisionTypeDescription}}", str(SDP.adjournDecisionTypeDescription or '')) \
                                         .replace("{{DecisionTypeDescription}}", str(SDP.DecisionTypeDescription or '')) \
@@ -4950,6 +4952,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{adjournAdjudicatorSurname}}", str(SDP.adjournAdjudicatorSurname or '')) \
                                         .replace("{{adjournAdjudicatorForenames}}", str(SDP.adjournAdjudicatorForenames or '')) \
                                         .replace("{{adjournAdjudicatorTitle}}", str(SDP.adjournAdjudicatorTitle or '')) \
+                                        .replace("{{adjournAdjudicatorFullName}}", str(SDP.adjournAdjudicatorFullName or '')) \
                                         .replace("{{adjournNotes1}}", str(SDP.adjournNotes1 or '')) \
                                         .replace("{{adjournDecisionDate}}", format_date_iso(SDP.adjournDecisionDate or '')) \
                                         .replace("{{adjournPromulgated}}", format_date_iso(SDP.adjournPromulgated or '')) \
@@ -5454,7 +5457,7 @@ def stg_statusdetail_data():
             'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
             'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
-            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
+            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle',  'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails').distinct()
 
@@ -5467,7 +5470,7 @@ def stg_statusdetail_data():
                 .orderBy(col("casestatus.StatusId").desc()) \
             .groupBy("casestatus.CaseNo").agg(collect_list(struct( "casestatus.CaseStatus", "casestatus.StatusId", "CaseStatusAdjudicatorDetails",'casestatus.CaseStatusDescription',  'casestatus.InterpreterRequired',  'casestatus.MiscDate2', 'casestatus.VideoLink', 'casestatus.RemittalOutcome', 'casestatus.UpperTribunalAppellant', 'casestatus.DecisionSentToHO', 
             'casestatus.InitialHearingPoints', 'casestatus.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'casestatus.CostOrderAppliedFor', 'casestatus.DecisionDate', 
-            'casestatus.DeterminationByJudgeSurname', 'casestatus.DeterminationByJudgeForenames', 'casestatus.DeterminationByJudgeTitle', 'casestatus.MethodOfTyping', 
+            'casestatus.DeterminationByJudgeSurname', 'casestatus.DeterminationByJudgeForenames', 'casestatus.DeterminationByJudgeTitle', concat_ws(" ", concat_ws(", ", col("casestatus.DeterminationByJudgeSurname"), col("casestatus.DeterminationByJudgeForenames")), when(col("casestatus.DeterminationByJudgeTitle").isNotNull(), concat(lit("("), col("casestatus.DeterminationByJudgeTitle"), lit(")")))).alias("DeterminationByJudgeFullName"), 'casestatus.MethodOfTyping', 
             'adjournDecisionTypeDescription', 'casestatus.Promulgated', 'casestatus.UKAITNo', 'casestatus.Extempore', 'casestatus.WrittenReasonsRequestedDate', 
             'casestatus.TypistSentDate', 'casestatus.ExtemporeMethodOfTyping', 'casestatus.TypistReceivedDate', 'casestatus.WrittenReasonsSentDate', 'casestatus.DecisionSentToHODate', 
             'casestatus.DecisionTypeDescription', 'casestatus.DateReceived', 'casestatus.Party', 'casestatus.OutOfTime', 'casestatus.MiscDate1', 
@@ -5478,11 +5481,10 @@ def stg_statusdetail_data():
             'casestatus.HighCourtReference', 'casestatus.AdminCourtReference', 'casestatus.HearingCourt', 'casestatus.ApplicationType',  
             'IRISStatusOfCase','ListTypeDescription','HearingTypeDescription','Judiciary1Name','Judiciary2Name','Judiciary3Name','ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
-            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
+            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("adjournAdjudicatorSurname"), col("adjournAdjudicatorForenames")), when(col("adjournAdjudicatorTitle").isNotNull(), concat(lit("("), col("adjournAdjudicatorTitle"), lit(")")))).alias("adjournAdjudicatorFullName"), 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle','JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
     
-
     return df_final
 
 # COMMAND ----------

@@ -22,6 +22,7 @@ parameters:
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest00landingsbox'
+            RefData_StorageAccount: 'ingest00externalsbox'
             Resource_Group: 'ingest00-main-sbox'
             Key_Vault_Name: 'ingest00-meta002-sbox'
           - landing_zone: '01'
@@ -30,6 +31,7 @@ parameters:
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest01landingsbox'
+            RefData_StorageAccount: 'ingest01externalsbox'
             Resource_Group: 'ingest01-main-sbox'
             Key_Vault_Name: 'ingest01-meta002-sbox'
           - landing_zone: '02'
@@ -38,17 +40,20 @@ parameters:
             Client_ID: $(SBOX_CLIENT_ID)
             Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
             HTML_StorageAccount: 'ingest02landingsbox'
+            RefData_StorageAccount: 'ingest02externalsbox'
             Resource_Group: 'ingest02-main-sbox'
             Key_Vault_Name: 'ingest02-meta002-sbox'
 
-      # - deployment: stg_aria
+      # - deployment: stg_aria this needs to be indented properly
       #   environment: stg
       #   service_connection: DTS-DATAINGEST-STG
       #   dependsOn: sbox_aria
       #   pool_name: 'hmcts-sds-ptl'
+      #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
       #   landing_zones:
       #     - landing_zone: '00'
       #       HTML_StorageAccount: 'ingest00landingstg'
+      #       RefData_StorageAccount: 'ingest00externalstg'
       #       Resource_Group: 'ingest00-main-stg'
       #       Client_ID: $(STG_CLIENT_ID)
       #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
@@ -60,9 +65,11 @@ parameters:
       #   service_connection: DTS-DATAINGEST-PROD
       #   dependsOn: stg_aria
       #   pool_name: 'hmcts-sds-ptl'
+      #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
       #   landing_zones: 
       #     - landing_zone: '00'
       #       HTML_StorageAccount: 'ingest00landingprod'
+      #       RefData_StorageAccount: 'ingest00externalprod'
       #       Resource_Group: 'ingest00-main-prod'
       #       Client_ID: $(PROD_CLIENT_ID)
       #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
@@ -206,7 +213,7 @@ stages:
           - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
         jobs:
-          - job: Deploy_Databricks_HTML_${{ deployment.environment }}_${{ lz.landing_zone }}
+          - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
             pool:
               vmImage: 'ubuntu-latest'
@@ -232,7 +239,58 @@ stages:
                   databricks workspace mkdirs /live
                   databricks workspace import_dir Databricks /live --overwrite
                 displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
-            
+          
+          - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+            displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
+            pool: 
+              name: ${{ deployment.pool_name }}
+            steps:
+              - task: AzureCLI@2
+                displayName: Configure RefData Storage
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    echo "Assigning SP Blob Contributor Access"
+                    az role assignment create \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Storage Blob Data Contributor" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
+
+                    echo "Retrieving Storage Account Key"
+                    storage_account_key=$(az storage account keys list \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --query '[0].value' -o tsv)
+                    echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+
+                    echo "Retrieving Blob Endpoint"
+                    blob_endpoint=$(az storage account show \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --name ${{ lz.RefData_StorageAccount }} \
+                      --query "primaryEndpoints.blob" -o tsv)
+                    echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
+
+                    echo "Creating external-csv container if not exists"
+                    az storage container create \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --name external-csv \
+                      --account-key $storage_account_key \
+                      --blob-endpoint $blob_endpoint
+                    echo "Success! external-csv container created!"
+
+                    echo "Uploading CSVs"
+                    az storage blob upload-batch \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --account-key $storage_account_key \
+                      --destination external-csv \
+                      --destination-path ReferenceData \
+                      --source '$(Build.SourcesDirectory)/ReferenceData/' \
+                      --pattern '*.csv' \
+                      --overwrite true
+                    echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
+
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool: 
@@ -282,167 +340,6 @@ stages:
                       --pattern '*.html' \
                       --overwrite true
                     echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
-              
-              # - task: AzureCLI@2
-              #   displayName: Configure SAS Token generation for ${{ deployment.environment }}${{ lz.landing_zone }}
-              #   inputs:
-              #     azureSubscription: ${{ deployment.service_connection }}
-              #     scriptType: 'bash'
-              #     scriptLocation: 'inlineScript'
-              #     inlineScript: |
-              #       ENVIRONMENT="${{ deployment.environment }}"
-              #       LZ="${{ lz.landing_zone }}"
-              #       ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
-              # - task: AzureCLI@2
-              #   displayName: Configure SAS Token generation for ${{ deployment.environment }}${{ lz.landing_zone }}
-              #   inputs:
-              #     azureSubscription: ${{ deployment.service_connection }}
-              #     scriptType: 'bash'
-              #     scriptLocation: 'inlineScript'
-              #     inlineScript: |
-              #       ENVIRONMENT="${{ deployment.environment }}"
-              #       LZ="${{ lz.landing_zone }}"
-              #       ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
-                    
-              #       STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
-              #       KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
-              #       STORAGE_ACCOUNT="ingest${LZ}curated${ENVIRONMENT}"
-              #       KEYVAULT_NAME="ingest${LZ}-meta002-${ENVIRONMENT}"
-                    
-              #       echo "=== DEBUG INFORMATION ==="
-              #       echo "Environment: $ENVIRONMENT"
-              #       echo "Landing Zone: $LZ"
-              #       echo "Storage Account Name: $STORAGE_ACCOUNT"
-              #       echo "Key Vault Name: $KEYVAULT_NAME"
-              #       echo "=========================="
-              #       echo "=== DEBUG INFORMATION ==="
-              #       echo "Environment: $ENVIRONMENT"
-              #       echo "Landing Zone: $LZ"
-              #       echo "Storage Account Name: $STORAGE_ACCOUNT"
-              #       echo "Key Vault Name: $KEYVAULT_NAME"
-              #       echo "=========================="
-
-              #       echo "Assigning SP Key Vault Secrets Officer Access"
-              #       az role assignment create \
-              #         --assignee "${{ lz.Client_ID }}" \
-              #         --role "Key Vault Secrets Officer" \
-              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
-              #       echo "Role Assigned"
-              #       echo "Assigning SP Key Vault Secrets Officer Access"
-              #       az role assignment create \
-              #         --assignee "${{ lz.Client_ID }}" \
-              #         --role "Key Vault Secrets Officer" \
-              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}"
-              #       echo "Role Assigned"
-
-              #       echo "Listing Key Vault Officer role assignments"
-              #       az role assignment list \
-              #         --assignee "${{ lz.Client_ID }}" \
-              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}" \
-              #         --output table
-              #       echo "Listing Key Vault Officer role assignments"
-              #       az role assignment list \
-              #         --assignee "${{ lz.Client_ID }}" \
-              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.KeyVault/vaults/${{ lz.Key_Vault_Name }}" \
-              #         --output table
-                    
-              #       # Test if storage account exists
-              #       echo "Checking if storage account exists..." 
-              #       if az storage account show --name "$STORAGE_ACCOUNT" --output table; then
-              #         echo "✓ Storage account found"
-              #       else
-              #         echo "✗ Storage account not found or no access"
-              #         exit 1
-              #       fi
-                    
-              #       # Test if container exists
-              #       echo "Checking if container 'dropzone' exists..."
-              #       if az storage container show --name "dropzone" --account-name "$STORAGE_ACCOUNT" --auth-mode login --output table; then
-              #         echo "✓ Container 'dropzone' found"
-              #       else
-              #         echo "✗ Container 'dropzone' not found"
-              #         exit 1
-              #       fi
-              #       # Test if container exists
-              #       echo "Checking if container 'dropzone' exists..."
-              #       if az storage container show --name "dropzone" --account-name "$STORAGE_ACCOUNT" --auth-mode login --output table; then
-              #         echo "✓ Container 'dropzone' found"
-              #       else
-              #         echo "✗ Container 'dropzone' not found"
-              #         exit 1
-              #       fi
-                    
-              #       echo "Generating SAS token for ${STORAGE_ACCOUNT}/dropzone"
-              #       echo "Generating SAS token for ${STORAGE_ACCOUNT}/dropzone"
-                    
-              #       curated_sas_token=$(az storage container generate-sas \
-              #         --account-name "$STORAGE_ACCOUNT" \
-              #         --name "dropzone" \
-              #         --permissions rwdlacd \
-              #         --expiry 2026-03-21T00:00:00Z \
-              #         --start 2025-03-21T00:00:00Z \
-              #         --https-only \
-              #         --auth-mode key \
-              #         --output tsv)
-              #       curated_sas_token=$(az storage container generate-sas \
-              #         --account-name "$STORAGE_ACCOUNT" \
-              #         --name "dropzone" \
-              #         --permissions rwdlacd \
-              #         --expiry 2026-03-21T00:00:00Z \
-              #         --start 2025-03-21T00:00:00Z \
-              #         --https-only \
-              #         --auth-mode key \
-              #         --output tsv)
-                    
-              #       if [ -z "$curated_sas_token" ]; then
-              #         echo "✗ Failed to generate SAS token"
-              #         exit 1
-              #       else
-              #         echo "✓ SAS token generated successfully"
-              #         echo "Token length: ${#curated_sas_token} characters"
-              #       fi
-              #       if [ -z "$curated_sas_token" ]; then
-              #         echo "✗ Failed to generate SAS token"
-              #         exit 1
-              #       else
-              #         echo "✓ SAS token generated successfully"
-              #         echo "Token length: ${#curated_sas_token} characters"
-              #       fi
-                    
-              #       # Store SAS token in Key Vault
-              #       echo "Storing SAS token in Key Vault: $KEYVAULT_NAME"
-              #       # Store SAS token in Key Vault
-              #       echo "Storing SAS token in Key Vault: $KEYVAULT_NAME"
-                    
-              #       if az keyvault secret set \
-              #         --vault-name "$KEYVAULT_NAME" \
-              #         --name "CURATED-${ENV_UPPER}-SAS-TOKEN-TEST" \
-              #         --value "$curated_sas_token" \
-              #         --output table; then
-              #         echo "✓ SAS token stored successfully in Key Vault"
-              #       else
-              #         echo "✗ Failed to store SAS token in Key Vault"
-              #         exit 1
-              #       fi
-              #       if az keyvault secret set \
-              #         --vault-name "$KEYVAULT_NAME" \
-              #         --name "CURATED-${ENV_UPPER}-SAS-TOKEN-TEST" \
-              #         --value "$curated_sas_token" \
-              #         --output table; then
-              #         echo "✓ SAS token stored successfully in Key Vault"
-              #       else
-              #         echo "✗ Failed to store SAS token in Key Vault"
-              #         exit 1
-              #       fi
-                    
-              #       echo "=== COMPLETION ==="
-              #       echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
-              #       echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"
-              #       echo "=================="
-              #       echo "=== COMPLETION ==="
-              #       echo "✓ Generated SAS token for ${STORAGE_ACCOUNT}/dropzone"
-              #       echo "✓ Stored as: CURATED-${ENV_UPPER}-SAS-TOKEN-TEST"
-              #       echo "=================="
 
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:

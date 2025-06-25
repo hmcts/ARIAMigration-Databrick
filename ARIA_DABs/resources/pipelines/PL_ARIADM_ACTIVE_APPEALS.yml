@@ -14,7 +14,7 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/BRONZE_ACTIVE_APPEALS"
         - notebook:
-            path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS
+            path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS"
       target: ariadm_arm_appeals
       development: true
       data_sampling: false

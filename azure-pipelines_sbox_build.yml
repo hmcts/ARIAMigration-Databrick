@@ -287,7 +287,7 @@ stages:
                       --destination external-csv \
                       --destination-path ReferenceData \
                       --source '$(Build.SourcesDirectory)/ReferenceData/' \
-                      --pattern '*.html' \
+                      --pattern '*.csv' \
                       --overwrite true
                     echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
 

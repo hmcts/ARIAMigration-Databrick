@@ -8,43 +8,6 @@ resources:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 8
-            spark_conf:
-              fs.azure.account.auth.type.ingest00rawsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00rawsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00rawsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
-              fs.azure.account.auth.type.ingest00curatedsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00curatedsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00curatedsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
-              fs.azure.account.auth.type.ingest00externalsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00externalsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00externalsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
-              fs.azure.account.auth.type.ingest00workspacesbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00workspacesbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00workspacesbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
-              fs.azure.account.auth.type.ingest00xcuttingsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00xcuttingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00xcuttingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
-              fs.azure.account.auth.type.ingest00landingsbox.dfs.core.windows.net: "OAuth"
-              fs.azure.account.oauth.provider.type.ingest00landingsbox.dfs.core.windows.net: "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
-              fs.azure.account.oauth2.client.id.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-ID}}"
-              fs.azure.account.oauth2.client.secret.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-CLIENT-SECRET}}"
-              fs.azure.account.oauth2.client.endpoint.ingest00landingsbox.dfs.core.windows.net: "{{secrets/ingest00-meta002-sbox/SERVICE-PRINCIPLE-TENANT-URL}}"
-
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_td_receive_job

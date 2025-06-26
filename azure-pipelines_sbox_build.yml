@@ -198,6 +198,10 @@ stages:
                       package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+                
+                  - task: Delay@1
+                    inputs:
+                      delayForMinutes: '1'
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:

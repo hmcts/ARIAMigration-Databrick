@@ -41,7 +41,8 @@
                                 </tr>
                                 <tr>
                                     <td id="labels"><label for="nameOfJO">Judicial officer name : </label></td>
-                                    <td colspan="2"><input type="text" id="nameOfJO" name="nameOfJO" value="{{AdjudicatorSurname}}  {{AdjudicatorForenames}} ({{AdjudicatorTitle}})"readonly></td>
+                                    <!-- <td colspan="2"><input type="text" id="nameOfJO" name="nameOfJO" value="{{AdjudicatorSurname}}  {{AdjudicatorForenames}} ({{AdjudicatorTitle}})"readonly></td> -->
+                                    <td colspan="2"><input type="text" id="judgeFT" name="judgeFT"value ="{{AdjudicatorFullName}}"></td>
                                 </tr>
                                 <tr>
                                     <td id="labels"><label for="partyMakingApp">Party making application : </label></td>
@@ -88,7 +89,8 @@
                                             </tr>
                                             <tr>
                                                 <td id="labels"><label for="decisionBy">Decision by : </label></td>
-                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{{{DeterminationByJudgeSurname}}, {{DeterminationByJudgeForenames}} ({{DeterminationByJudgeTitle}})}}" readonly></td>
+                                                <!-- <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{{{DeterminationByJudgeSurname}}, {{DeterminationByJudgeForenames}} ({{DeterminationByJudgeTitle}})}}" readonly></td> -->
+                                                <td colspan="2"><input type="text" id="decisionBy" name="decisionBy" value ="{{DeterminationByJudgeFullName}}" readonly></td>
                                             </tr>
                                             <tr>
                                                 <td id="labels"><label for="methodOfTyping">Method of typing : </label></td>
@@ -168,7 +170,8 @@
                                 </tr>
                                 <tr>
                                     <td id="labels"><label for="judicialOfficer">Judicial officer : </label></td>
-                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{adjournAdjudicatorSurname}},{{adjournAdjudicatorForenames}} ({{adjournAdjudicatorTitle}}) " readonly></td>
+                                    <!-- <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{adjournAdjudicatorSurname}},{{adjournAdjudicatorForenames}} ({{adjournAdjudicatorTitle}}) " readonly></td> -->
+                                    <td colspan="2"><input type="text" id="judicialOfficer" name="judicialOfficer" value="{{adjournAdjudicatorFullName}}" readonly></td>
                                 </tr>
                                 <tr>
                                     <td id="labels" style="vertical-align: top;"><label for="reason">Reason : </label></td>

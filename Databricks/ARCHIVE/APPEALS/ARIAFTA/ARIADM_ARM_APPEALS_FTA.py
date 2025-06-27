@@ -7063,11 +7063,6 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_fta.silver_appealcategory_detail
-
-# COMMAND ----------
-
 # DBTITLE 1,Red Text sql
 # %sql
 # WITH CTE AS (

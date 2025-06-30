@@ -204,13 +204,14 @@ stages:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
         displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
         dependsOn:
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
+          ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
         jobs:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}

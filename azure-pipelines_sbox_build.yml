@@ -170,47 +170,47 @@ stages:
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'
   
-  # Loop through for LZ 02 to deploy artifacts first
-  - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each lz in deployment.landing_zones}}:
-      - ${{ each segment in deployment.segments}}:
-          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
-            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
-            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-            jobs:
-              - job: Deploy_Function_${{ lz.landing_zone }}
-                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-                steps:
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'functionapp-${{ segment }}'
-                      downloadPath: '$(Pipeline.Workspace)'
-                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
+  # # Loop through for LZ 02 to deploy artifacts first
+  # - ${{ each deployment in parameters.environment_components }}:
+  #   - ${{ each lz in deployment.landing_zones}}:
+  #     - ${{ each segment in deployment.segments}}:
+  #         - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
+  #           displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
+  #           dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+  #           jobs:
+  #             - job: Deploy_Function_${{ lz.landing_zone }}
+  #               displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+  #               steps:
+  #                 - task: DownloadBuildArtifacts@1
+  #                   inputs:
+  #                     buildType: 'current'
+  #                     downloadType: 'single'
+  #                     artifactName: 'functionapp-${{ segment }}'
+  #                     downloadPath: '$(Pipeline.Workspace)'
+  #                   displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-                  - task: AzureFunctionApp@2
-                    inputs:
-                      connectedServiceNameARM: ${{ deployment.service_connection }}
-                      appType: 'functionAppLinux'
-                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
-                      deploymentMethod: 'zipDeploy'
-                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+  #                 - task: AzureFunctionApp@2
+  #                   inputs:
+  #                     connectedServiceNameARM: ${{ deployment.service_connection }}
+  #                     appType: 'functionAppLinux'
+  #                     appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+  #                     package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
+  #                     deploymentMethod: 'zipDeploy'
+  #                   displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
         displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-        dependsOn:
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
-          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
+        # dependsOn:
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
         jobs:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}

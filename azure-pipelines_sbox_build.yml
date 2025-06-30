@@ -203,7 +203,7 @@ stages:
     - ${{ each lz in deployment.landing_zones}}:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
         displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-        dependsOn:${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+        # dependsOn:
           # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
           # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
           # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td

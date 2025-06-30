@@ -7200,6 +7200,7 @@ case_no = 'IM/00023/2003' # dependents
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").count())
 
+
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").count())

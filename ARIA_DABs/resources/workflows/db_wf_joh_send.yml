@@ -105,7 +105,7 @@ resources:
           depends_on:
             - task_key: joh_ack
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH Send Audit Dashboard"
+            notebook_path: "/Workspace/live/ARCHIVE/JOH/AUDIT/JOH_Send_Audit_Dashboard"
             source: WORKSPACE
       queue:
         enabled: true

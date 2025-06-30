@@ -12,9 +12,9 @@ resources:
             mode: ENHANCED
       libraries:
         - notebook:
-            path: "/Workspace/live/ACTIVE/APPEALS/ARIADM_ACTIVE_APPEALS_BRONZE"
+            path: "/Workspace/live/ACTIVE/APPEALS/BRONZE_ACTIVE_APPEALS"
         - notebook:
-            path: "/Workspace/live/ACTIVE/APPEALS/ARIADM_ACTIVE_APPEALS_SILVER"
+            path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS"
       target: ariadm_arm_appeals
       development: true
       data_sampling: false

@@ -96,6 +96,10 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+# COMMAND ----------
+
 pip install azure-storage-blob
 
 
@@ -3378,7 +3382,8 @@ def silver_list_detail():
                               "ca.ListAdjudicatorNote",
                               "ca.ListAdjudicatorTitle",
                               "ca.ListName",
-                              "ca.ListStartTime",
+                            #   "ca.ListStartTime",
+                              date_format(col("ca.ListStartTime"), 'h:mm a').alias("ListStartTime"),
                               "ca.ListTypeDesc",
                               "ca.ListType",
                               "ca.DoNotUseListType",
@@ -4724,7 +4729,7 @@ def generate_html(row, templates=templates):
             ),
             "{{StatusPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{status.CaseStatusDescription}</td><td id=\"midpadding\">{format_date(status.LatestKeyDate)}</td><td id=\"midpadding\">{status.InterpreterRequired}</td><td id=\"midpadding\">{format_date(status.DecisionDate)}</td><td id=\"midpadding\">{status.DecisionTypeDescription}</td><td id=\"midpadding\">{format_date(status.Promulgated)}</td></tr>"
-                for i, status in enumerate(row.TempCaseStatusDetails or [])
+                for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.UserName}</td><td id=\"midpadding\">{history.HistoryComment}</td></tr>"
@@ -4857,7 +4862,8 @@ def generate_html(row, templates=templates):
         nested_tab_group_number = 999
         # for count in range(statuscount):
         if row.TempCaseStatusDetails:   
-            for index, SDP in enumerate(row.TempCaseStatusDetails, start=1):
+            # for index, SDP in enumerate(row.TempCaseStatusDetails, start=1):
+            for index, SDP in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1):
                 
                 #Read relevent template
                 casestatusTemplate = templates[SDP.HTMLName]

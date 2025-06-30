@@ -6435,9 +6435,19 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC select * from ariadm_arm_fta.stg_statusdetail_data
+# MAGIC -- where cast(TempCaseStatusDetails as string) like '37'
+
+# COMMAND ----------
+
+display(df)
+
+# COMMAND ----------
+
 # DBTITLE 1,Display HTML Content
 # # case_no = 'HR/00014/2004'
-# case_no = 'AA/00001/2015'
+# case_no = 'AA/00002/2012'
 # df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
 
 # # display(df)

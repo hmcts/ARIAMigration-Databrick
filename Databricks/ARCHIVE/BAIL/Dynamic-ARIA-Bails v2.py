@@ -3446,7 +3446,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
             "{{language}}": cd_row.Language,
-            "{{required}}": "YES" if cd_row.InterpreterRequirementsLanguage is not None else "NO",
+            "{{required}}":  cd_row.InterpreterDesc,
 
             # Misc Tab
             "{{Notes}}": cd_row.AppealCaseNote,

@@ -253,7 +253,11 @@ print(keyvault_name)
 client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
 tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
 client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
-tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
+# tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
+tenant_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+
+# COMMAND ----------
+
 
 
 # COMMAND ----------
@@ -317,7 +321,7 @@ external_base_path = f"abfss://{external_storage_container}@{external_storage_ac
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 
-landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/Bails"
+landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/bailsv3"
 
 
 gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'

@@ -44,7 +44,7 @@ parameters:
             Resource_Group: 'ingest02-main-sbox'
             Key_Vault_Name: 'ingest02-meta002-sbox'
 
-      - deployment:
+      - deployment: stg_aria
         environment: stg
         service_connection: DTS-DATAINGEST-STG
         dependsOn: sbox_aria
@@ -90,8 +90,8 @@ stages:
 
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
-      - stage: Manual_Approval_${{ deployment.environment }}
-        displayName: 'Manual Approval for ${{ deployment.environment }}'
+      - stage: Manual_Approval_${{ deployment.deployment }} #env
+        displayName: 'Manual Approval for ${{ deployment.deployment }}'
         dependsOn: ${{ deployment.dependsOn }} #Init
         jobs:
           - job: waitForValidation
@@ -110,8 +110,8 @@ stages:
       displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
       ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
         dependsOn: Manual_Approval_${{ deployment.deployment }}
-      # ${{ else }}:
-      #   dependsOn: Init
+      ${{ else }}:
+        dependsOn: Init
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'

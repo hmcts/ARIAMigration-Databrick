@@ -392,7 +392,7 @@ stages:
                 databricks --version  
                 echo "[DEFAULT]" > $(HOME)/.databrickscfg
                 echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
-                echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+                echo "auth_type = azure-cli" >> $(HOME)/.databrickscfg
                 cat ~/.databrickscfg  # Print the contents for debugging
               displayName: 'Configure Databricks CLI'
 

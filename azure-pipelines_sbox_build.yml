@@ -44,7 +44,7 @@ parameters:
             Resource_Group: 'ingest02-main-sbox'
             Key_Vault_Name: 'ingest02-meta002-sbox'
 
-      - deployment: stg_aria this needs to be indented properly
+      - deployment:
         environment: stg
         service_connection: DTS-DATAINGEST-STG
         dependsOn: sbox_aria

@@ -10,39 +10,39 @@ parameters:
   - name: environment_components
     type: object
     default:
-      # - deployment: sbox_aria
-      #   environment: sbox
-      #   service_connection: DTS-DATAINGEST-SBOX
-      #   pool_name: 'hmcts-sds-ptlsbox'
-      #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-      #   landing_zones: 
-      #     - landing_zone: '00'
-      #       databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
-      #       databricks_token: "$(DATABRICKS_PAT_SBOX00)" 
-      #       Client_ID: $(SBOX_CLIENT_ID)
-      #       Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
-      #       HTML_StorageAccount: 'ingest00landingsbox'
-      #       RefData_StorageAccount: 'ingest00externalsbox'
-      #       Resource_Group: 'ingest00-main-sbox'
-      #       Key_Vault_Name: 'ingest00-meta002-sbox'
-      #     - landing_zone: '01'
-      #       databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
-      #       databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
-      #       Client_ID: $(SBOX_CLIENT_ID)
-      #       Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
-      #       HTML_StorageAccount: 'ingest01landingsbox'
-      #       RefData_StorageAccount: 'ingest01externalsbox'
-      #       Resource_Group: 'ingest01-main-sbox'
-      #       Key_Vault_Name: 'ingest01-meta002-sbox'
-      #     - landing_zone: '02'
-      #       databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
-      #       databricks_token: "$(DATABRICKS_PAT_SBOX02)" 
-      #       Client_ID: $(SBOX_CLIENT_ID)
-      #       Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
-      #       HTML_StorageAccount: 'ingest02landingsbox'
-      #       RefData_StorageAccount: 'ingest02externalsbox'
-      #       Resource_Group: 'ingest02-main-sbox'
-      #       Key_Vault_Name: 'ingest02-meta002-sbox'
+      - deployment: sbox_aria
+        environment: sbox
+        service_connection: DTS-DATAINGEST-SBOX
+        pool_name: 'hmcts-sds-ptlsbox'
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
+        landing_zones: 
+          - landing_zone: '00'
+            databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_PAT_SBOX00)" 
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest00landingsbox'
+            RefData_StorageAccount: 'ingest00externalsbox'
+            Resource_Group: 'ingest00-main-sbox'
+            Key_Vault_Name: 'ingest00-meta002-sbox'
+          - landing_zone: '01'
+            databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest01landingsbox'
+            RefData_StorageAccount: 'ingest01externalsbox'
+            Resource_Group: 'ingest01-main-sbox'
+            Key_Vault_Name: 'ingest01-meta002-sbox'
+          - landing_zone: '02'
+            databricks_host: 'https://adb-1879076228317698.18.azuredatabricks.net'
+            databricks_token: "$(DATABRICKS_PAT_SBOX02)" 
+            Client_ID: $(SBOX_CLIENT_ID)
+            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest02landingsbox'
+            RefData_StorageAccount: 'ingest02externalsbox'
+            Resource_Group: 'ingest02-main-sbox'
+            Key_Vault_Name: 'ingest02-meta002-sbox'
 
       - deployment: stg_aria
         environment: stg

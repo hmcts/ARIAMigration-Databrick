@@ -44,21 +44,22 @@ parameters:
             Resource_Group: 'ingest02-main-sbox'
             Key_Vault_Name: 'ingest02-meta002-sbox'
 
-      # - deployment: stg_aria this needs to be indented properly
-      #   environment: stg
-      #   service_connection: DTS-DATAINGEST-STG
-      #   dependsOn: sbox_aria
-      #   pool_name: 'hmcts-sds-ptl'
-      #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-      #   landing_zones:
-      #     - landing_zone: '00'
-      #       HTML_StorageAccount: 'ingest00landingstg'
-      #       RefData_StorageAccount: 'ingest00externalstg'
-      #       Resource_Group: 'ingest00-main-stg'
-      #       Client_ID: $(STG_CLIENT_ID)
-      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
-      #       databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
-      #       databricks_token: "$(STG_DATABRICKS_TOKEN_WORKSPACE)"
+      - deployment: stg_aria
+        environment: stg
+        service_connection: DTS-DATAINGEST-STG
+        dependsOn: sbox_aria
+        pool_name: 'hmcts-sds-ptl'
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
+        landing_zones:
+          - landing_zone: '00'
+            databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
+            databricks_token: "$(STG_DATABRICKS_TOKEN_WORKSPACE)"
+            Client_ID: $(STG_CLIENT_ID)
+            Subscription_ID: $(STG_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest00landingstg'
+            RefData_StorageAccount: 'ingest00externalstg'
+            Resource_Group: 'ingest00-main-stg'
+            Key_Vault_Name: 'ingest00-meta002-stg'
 
       # - deployment: prod_aria
       #   environment: prod
@@ -68,11 +69,14 @@ parameters:
       #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
       #   landing_zones: 
       #     - landing_zone: '00'
+      #       databricks_host:
+      #       databricks_token:
+      #       Client_ID: $(PROD_CLIENT_ID)
+      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
       #       HTML_StorageAccount: 'ingest00landingprod'
       #       RefData_StorageAccount: 'ingest00externalprod'
       #       Resource_Group: 'ingest00-main-prod'
-      #       Client_ID: $(PROD_CLIENT_ID)
-      #       Subscription_ID: $(PROD_SUBSCRIPTION_ID)
+      #       Key_Vault_Name: 'ingest00-meta002-prod'
   
 stages:
   - stage: Init
@@ -170,47 +174,48 @@ stages:
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'
   
-  # # Loop through for LZ 02 to deploy artifacts first
-  # - ${{ each deployment in parameters.environment_components }}:
-  #   - ${{ each lz in deployment.landing_zones}}:
-  #     - ${{ each segment in deployment.segments}}:
-  #         - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
-  #           displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
-  #           dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-  #           jobs:
-  #             - job: Deploy_Function_${{ lz.landing_zone }}
-  #               displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-  #               steps:
-  #                 - task: DownloadBuildArtifacts@1
-  #                   inputs:
-  #                     buildType: 'current'
-  #                     downloadType: 'single'
-  #                     artifactName: 'functionapp-${{ segment }}'
-  #                     downloadPath: '$(Pipeline.Workspace)'
-  #                   displayName: 'Download Azure Function Artifact for ${{ segment }}'
+  # Loop through for LZ 02 to deploy artifacts first
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones}}:
+      - ${{ each segment in deployment.segments}}:
+          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
+            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
+            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+            jobs:
+              - job: Deploy_Function_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
 
-  #                 - task: AzureFunctionApp@2
-  #                   inputs:
-  #                     connectedServiceNameARM: ${{ deployment.service_connection }}
-  #                     appType: 'functionAppLinux'
-  #                     appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-  #                     package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
-  #                     deploymentMethod: 'zipDeploy'
-  #                   displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
+                      deploymentMethod: 'zipDeploy'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+                
 
   # Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
         displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-        # dependsOn:
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
-          # - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
+        dependsOn:
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
 
         jobs:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}

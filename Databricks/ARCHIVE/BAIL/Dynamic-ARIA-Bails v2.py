@@ -255,6 +255,8 @@ tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENA
 client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
 # tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
 
+tenant_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+
 
 # COMMAND ----------
 
@@ -317,7 +319,7 @@ external_base_path = f"abfss://{external_storage_container}@{external_storage_ac
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 
-landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/Bails"
+landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/bailsv3"
 
 
 gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'
@@ -3446,7 +3448,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
             "{{language}}": cd_row.Language,
-            "{{required}}": "YES" if cd_row.InterpreterRequirementsLanguage is not None else "NO",
+            "{{required}}":  cd_row.InterpreterDesc,
 
             # Misc Tab
             "{{Notes}}": cd_row.AppealCaseNote,

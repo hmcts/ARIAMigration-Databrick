@@ -44,22 +44,22 @@ parameters:
             Resource_Group: 'ingest02-main-sbox'
             Key_Vault_Name: 'ingest02-meta002-sbox'
 
-      # - deployment: stg_aria
-      #   environment: stg
-      #   service_connection: DTS-DATAINGEST-STG
-      #   dependsOn: sbox_aria
-      #   pool_name: 'hmcts-sds-ptl'
-      #   segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-      #   landing_zones:
-      #     - landing_zone: '00'
-      #       databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
-      #       databricks_token: "$(STG_DATABRICKS_TOKEN_WORKSPACE)"
-      #       Client_ID: $(STG_CLIENT_ID)
-      #       Subscription_ID: $(STG_SUBSCRIPTION_ID)
-      #       HTML_StorageAccount: 'ingest00landingstg'
-      #       RefData_StorageAccount: 'ingest00externalstg'
-      #       Resource_Group: 'ingest00-main-stg'
-      #       Key_Vault_Name: 'ingest00-meta002-stg'
+      - deployment: stg_aria
+        environment: stg
+        service_connection: DTS-DATAINGEST-STG
+        dependsOn: sbox_aria
+        pool_name: 'hmcts-sds-ptl'
+        segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
+        landing_zones:
+          - landing_zone: '00'
+            databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
+            databricks_token: "$(STG_DATABRICKS_TOKEN_WORKSPACE)"
+            Client_ID: $(STG_CLIENT_ID)
+            Subscription_ID: $(STG_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest00landingstg'
+            RefData_StorageAccount: 'ingest00externalstg'
+            Resource_Group: 'ingest00-main-stg'
+            Key_Vault_Name: 'ingest00-meta002-stg'
 
       # - deployment: prod_aria
       #   environment: prod
@@ -101,7 +101,7 @@ stages:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160
                 inputs:
-                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET
                   instructions: Please validate the build configuration and resume
 
   # Build shared wheel first as a single operation per environment

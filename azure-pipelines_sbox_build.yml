@@ -101,7 +101,7 @@ stages:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160
                 inputs:
-                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET
                   instructions: Please validate the build configuration and resume
 
   # Build shared wheel first as a single operation per environment

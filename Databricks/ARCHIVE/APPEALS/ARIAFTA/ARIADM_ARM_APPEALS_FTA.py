@@ -6443,10 +6443,6 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-display(df)
-
-# COMMAND ----------
-
 # DBTITLE 1,Display HTML Content
 # # case_no = 'HR/00014/2004'
 # case_no = 'AA/00002/2012'

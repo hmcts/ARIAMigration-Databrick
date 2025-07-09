@@ -87,6 +87,10 @@ pip install azure-storage-blob
 
 # COMMAND ----------
 
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+# COMMAND ----------
+
 # run custom functions
 import sys
 import os

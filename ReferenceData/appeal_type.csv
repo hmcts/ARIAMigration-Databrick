@@ -1,0 +1,157 @@
+CCD Appeal Type (Conditions - Column H),appealType,hmctsCaseCategory,appealTypeDescription,caseManagementCategory,appealReferenceNumber,isAppealReferenceNumberAvailable,ccdReferenceNumberForDisplay
+EA,refusalOfEu,EEA,Refusal of application under the EEA regulations,"{
+    ""value"": {
+      ""code"": ""refusalOfEu"",
+      ""label"": ""Refusal of application under the EEA regulations""
+    },
+    ""list_items"": [
+      {
+        ""code"": ""refusalOfEu"",
+        ""label"": ""Refusal of application under the EEA regulations""
+      }
+    ]
+  }",,Yes,  
+DC,deprivation,DoC,Deprivation of citizenship,"{
+    ""value"": {
+      ""code"": ""deprivation"",
+      ""label"": ""Deprivation of citizenship""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""deprivation"",
+        ""label"": ""Deprivation of citizenship""
+      }
+    ]
+  }",,Yes,  
+EA,refusalOfEu,EEA,Refusal of application under the EEA regulations,"{
+    ""value"": {
+      ""code"": ""refusalOfEu"",
+      ""label"": ""Refusal of application under the EEA regulations""
+    },
+    ""list_items"": [
+      {
+        ""code"": ""refusalOfEu"",
+        ""label"": ""Refusal of application under the EEA regulations""
+      }
+    ]
+  }",,Yes,  
+EU,euSettlementScheme,EU Settlement Scheme,EU Settlement Scheme,"{
+    ""value"": {
+      ""code"": ""euSettlementScheme"",
+      ""label"": ""EU Settlement Scheme""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""euSettlementScheme"",
+        ""label"": ""EU Settlement Scheme""
+      }
+    ]
+  }",,Yes,  
+HU,refusalOfHumanRights,Human rights,Refusal of a human rights claim,"{
+    ""value"": {
+      ""code"": ""refusalOfHumanRights"",
+      ""label"": ""Refusal of a human rights claim""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""refusalOfHumanRights"",
+        ""label"": ""Refusal of a human rights claim""
+      }
+    ]
+  }",,Yes,  
+HU,refusalOfHumanRights,Human rights,Refusal of a human rights claim,"{
+    ""value"": {
+      ""code"": ""refusalOfHumanRights"",
+      ""label"": ""Refusal of a human rights claim""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""refusalOfHumanRights"",
+        ""label"": ""Refusal of a human rights claim""
+      }
+    ]
+  }",,Yes,  
+DC,deprivation,DoC,Deprivation of citizenship,"{
+    ""value"": {
+      ""code"": ""deprivation"",
+      ""label"": ""Deprivation of citizenship""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""deprivation"",
+        ""label"": ""Deprivation of citizenship""
+      }
+    ]
+  }",,Yes,  
+EA,refusalOfEu,EEA,Refusal of application under the EEA regulations,"{
+    ""value"": {
+      ""code"": ""refusalOfEu"",
+      ""label"": ""Refusal of application under the EEA regulations""
+    },
+    ""list_items"": [
+      {
+        ""code"": ""refusalOfEu"",
+        ""label"": ""Refusal of application under the EEA regulations""
+      }
+    ]
+  }",,Yes,  
+HU,refusalOfHumanRights,Human rights,Refusal of a human rights claim,"{
+    ""value"": {
+      ""code"": ""refusalOfHumanRights"",
+      ""label"": ""Refusal of a human rights claim""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""refusalOfHumanRights"",
+        ""label"": ""Refusal of a human rights claim""
+      }
+    ]
+  }",,Yes,  
+PA,protection,Protection,Refusal of protection claim,"{
+    ""value"": {
+      ""code"": ""protection"",
+      ""label"": ""Refusal of protection claim""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""protection"",
+        ""label"": ""Refusal of protection claim""
+      }
+    ]
+  }",,Yes,  
+RP,revocationOfProtection,Revocation,Revocation of a protection status,"{
+    ""value"": {
+      ""code"": ""revocationOfProtection"",
+      ""label"": ""Revocation of a protection status""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""revocationOfProtection"",
+        ""label"": ""Revocation of a protection status""
+      }
+    ]
+  }",,Yes,  
+PA,protection,Protection,Refusal of protection claim,"{
+    ""value"": {
+      ""code"": ""protection"",
+      ""label"": ""Refusal of protection claim""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""protection"",
+        ""label"": ""Refusal of protection claim""
+      }
+    ]
+  }",,Yes,  
+RP,revocationOfProtection,Revocation,Revocation of a protection status,"{
+    ""value"": {
+      ""code"": ""revocationOfProtection"",
+      ""label"": ""Revocation of a protection status""
+    },
+    ""list_items"": [
+      {
+       ""code"": ""revocationOfProtection"",
+        ""label"": ""Revocation of a protection status""
+      }
+    ]
+  }",,Yes,  

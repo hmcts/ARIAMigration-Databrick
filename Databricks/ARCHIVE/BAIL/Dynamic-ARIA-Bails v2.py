@@ -1875,8 +1875,9 @@ def silver_m1():
     
     df = joined_df.select("m1.CaseNo", *selected_columns,
                         col("bs.BaseBailType"),
-                        when(col("BailType") == 1,"Bail")
-                        .when(col("BailType") == 2,"Scottish Bail")
+                        when(col("BaseBailType") == "Normal Bail","Bail").
+                        when(col("BaseBailType") == "BailLegalHold","Bail").
+                        when(col("BailType") == "ScottishBailsFunds" ,"Scottish Bail")
                         .otherwise("Other").alias("BailTypeDesc"),
                         when(col("CourtPreference") == 1,"All Male,")
                         .when(col("CourtPreference") == 2,"All Female,")
@@ -2907,7 +2908,7 @@ def final_m7_m3_statuses():
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("status.StatusId").desc())
 
-    ordered_rank = exploded.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.StatusId").alias("MaxCaseStatusDescription"))
+    ordered_rank = exploded.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.CaseStatusDescription").alias("MaxCaseStatusDescription"))
 
     w_non_null_lang = Window.partitionBy("CaseNo").orderBy(col("status.LanguageDescription").desc())
 

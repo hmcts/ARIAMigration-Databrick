@@ -6,7 +6,7 @@
 pr:
   branches:
     include:
-      -main
+      - master
 
 pool:
   vmImage: 'ubuntu-latest'

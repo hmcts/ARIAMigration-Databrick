@@ -1,9 +1,12 @@
-trigger:
+# trigger:
+#   branches:
+#     include:
+#       - main
+
+pr:
   branches:
     include:
-      - main
-
-pr: none
+      -main
 
 pool:
   vmImage: 'ubuntu-latest'

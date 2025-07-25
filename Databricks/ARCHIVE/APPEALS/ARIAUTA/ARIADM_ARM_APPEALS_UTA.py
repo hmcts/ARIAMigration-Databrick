@@ -3580,6 +3580,8 @@ def silver_status_detail():
     df_currentstatus = appeals_df.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
     .select(col("a.CaseStatus"), col("CaseStatusDescription"), col("a.CaseNo"))
 
+    
+
     joined_df = appeals_df.join(flt_df, col("st.CaseNo") == col("flt.CaseNo"), "inner") \
                           .join(df_currentstatus.alias("mx"), (col("st.CaseNo") == col("mx.CaseNo")), "left") \
                           .select(
@@ -3588,8 +3590,8 @@ def silver_status_detail():
                               "st.CaseStatus",
                               "st.DateReceived",
                               "st.StatusDetailAdjudicatorId",
-                              #   "st.Allegation",
-                               when(col("st.Allegation") == 1, "No right of appeal")
+                              #"st.Allegation",
+                              when(col("st.Allegation") == 1, "No right of appeal")
                               .when(col("st.Allegation") == 2, "Out of time")
                               .alias("Allegation"),
                               "st.KeyDate",
@@ -3632,8 +3634,17 @@ def silver_status_detail():
                               "st.CourtSelection",
                               "st.DecidingCentre",
                               "st.Tier",
-                              "st.RemittalOutcome",
-                              "st.UpperTribunalAppellant",
+                            #   "st.RemittalOutcome",
+                               when(col("st.RemittalOutcome").isNull(), "")
+                              .when(col("st.RemittalOutcome") == 0, "")
+                              .when(col("st.RemittalOutcome") == 1, "YES")
+                              .when(col("st.RemittalOutcome") == 2, "NO")
+                              .alias("RemittalOutcome"),
+                               when(col("st.UpperTribunalAppellant").isNull(), "")
+                              .when(col("st.UpperTribunalAppellant") == 0, "")
+                              .when(col("st.UpperTribunalAppellant") == 1, "Appellant")
+                              .when(col("st.UpperTribunalAppellant") == 2, "Respondent")
+                              .alias("UpperTribunalAppellant"),
                               "st.ListRequirementTypeId",
                               "st.UpperTribunalHearingDirectionId",
                               "st.ApplicationType",
@@ -3721,7 +3732,7 @@ def silver_status_detail():
                               col("st.Judiciary2Name"),
                               col("st.Judiciary3Id"),
                               col("st.Judiciary3Name")
-                          )
+                          )            
 
     return joined_df
 

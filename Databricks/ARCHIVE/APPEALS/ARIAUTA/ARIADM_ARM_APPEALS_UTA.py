@@ -67,6 +67,14 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
 # MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
 # MAGIC       </tr>
+# MAGIC         <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-643">ARIADM-643</a>/NSA/25-JULY-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Remittal Outcome Boolean Transformation issue </td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 
@@ -3580,6 +3588,8 @@ def silver_status_detail():
     df_currentstatus = appeals_df.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
     .select(col("a.CaseStatus"), col("CaseStatusDescription"), col("a.CaseNo"))
 
+    
+
     joined_df = appeals_df.join(flt_df, col("st.CaseNo") == col("flt.CaseNo"), "inner") \
                           .join(df_currentstatus.alias("mx"), (col("st.CaseNo") == col("mx.CaseNo")), "left") \
                           .select(
@@ -3588,8 +3598,8 @@ def silver_status_detail():
                               "st.CaseStatus",
                               "st.DateReceived",
                               "st.StatusDetailAdjudicatorId",
-                              #   "st.Allegation",
-                               when(col("st.Allegation") == 1, "No right of appeal")
+                              #"st.Allegation",
+                              when(col("st.Allegation") == 1, "No right of appeal")
                               .when(col("st.Allegation") == 2, "Out of time")
                               .alias("Allegation"),
                               "st.KeyDate",
@@ -3632,8 +3642,17 @@ def silver_status_detail():
                               "st.CourtSelection",
                               "st.DecidingCentre",
                               "st.Tier",
-                              "st.RemittalOutcome",
-                              "st.UpperTribunalAppellant",
+                            #   "st.RemittalOutcome",
+                               when(col("st.RemittalOutcome").isNull(), "")
+                              .when(col("st.RemittalOutcome") == 0, "")
+                              .when(col("st.RemittalOutcome") == 1, "YES")
+                              .when(col("st.RemittalOutcome") == 2, "NO")
+                              .alias("RemittalOutcome"),
+                               when(col("st.UpperTribunalAppellant").isNull(), "")
+                              .when(col("st.UpperTribunalAppellant") == 0, "")
+                              .when(col("st.UpperTribunalAppellant") == 1, "Appellant")
+                              .when(col("st.UpperTribunalAppellant") == 2, "Respondent")
+                              .alias("UpperTribunalAppellant"),
                               "st.ListRequirementTypeId",
                               "st.UpperTribunalHearingDirectionId",
                               "st.ApplicationType",
@@ -3721,7 +3740,7 @@ def silver_status_detail():
                               col("st.Judiciary2Name"),
                               col("st.Judiciary3Id"),
                               col("st.Judiciary3Name")
-                          )
+                          )            
 
     return joined_df
 

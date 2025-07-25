@@ -67,6 +67,14 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
 # MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
 # MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-643">ARIADM-643</a>/NSA/25-JULY-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Remittal Outcome Boolean Transformation issue </td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 

@@ -1836,7 +1836,7 @@ def bronze_status_decisiontype():
 
 @dlt.table(
     name="bronze_appealcase_t_tt_ts_tm",
-    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, and TransactionMethod tables to retrieve transaction details.",
+    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, TransactionMethod, and Users tables to retrieve transaction details.",
     path=f"{bronze_mnt}/bronze_appealcase_t_tt_ts_tm"
 )
 def bronze_appealcase_t_tt_ts_tm():
@@ -1852,6 +1852,14 @@ def bronze_appealcase_t_tt_ts_tm():
             ).join(
                 dlt.read("raw_transactionmethod").alias("tm"),
                 col("t.TransactionMethodId") == col("tm.TransactionMethodID"),
+                "left_outer"
+            ).join(
+                dlt.read("raw_users").alias("u1"),
+                col("u1.UserId") == col("t.CreateUserId"),
+                "left_outer"
+            ).join(
+                dlt.read("raw_users").alias("u2"),
+                col("u2.UserId") == col("t.LastEditUserId"),
                 "left_outer"
             ).select(
                 # Transaction fields
@@ -1875,8 +1883,10 @@ def bronze_appealcase_t_tt_ts_tm():
                 col("t.Notes").alias("TransactionNotes"),
                 col("t.ExpectedDate"),
                 col("t.ReferringTransactionId"),
-                col("t.CreateUserId"),
-                col("t.LastEditUserId"),
+                # col("t.CreateUserId"),
+                # col("t.LastEditUserId"),
+                col("u1.Name").alias("CreateUserId"), 
+                col("u2.Name").alias("LastEditUserID"), 
                 
                 # TransactionType fields
                 col("tt.Description").alias("TransactionDescription"),
@@ -1900,11 +1910,11 @@ def bronze_appealcase_t_tt_ts_tm():
                 # TransactionMethod fields
                 col("tm.Description").alias("TransactionMethodDesc"),
                 col("tm.InterfaceDescription").alias("TransactionMethodIntDesc"),
-                col("tm.DoNotUse").alias("DoNotUseTransactionMethod")
+                col("tm.DoNotUse").alias("DoNotUseTransactionMethod"),
+
             )
         
-    return df      
-
+    return df
 
 # COMMAND ----------
 
@@ -3575,17 +3585,6 @@ def silver_link_detail():
 
 # COMMAND ----------
 
-# %sql
-# select CreateUserId,LastEditUserId from ariadm_arm_fta.silver_transaction_detail
-
-# COMMAND ----------
-
-# %sql
-# select ExtemporeMethodOfTyping, count(*) from ariadm_arm_fta.silver_status_detail 
-# GROUP BY ExtemporeMethodOfTyping
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_status_detail",
     comment="Delta Live silver Table for status detail.",
@@ -3600,8 +3599,6 @@ def silver_status_detail():
     df_currentstatus = appeals_df.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
     .select(col("a.CaseStatus"), col("CaseStatusDescription"), col("a.CaseNo"))
 
-    
-
     joined_df = appeals_df.join(flt_df, col("st.CaseNo") == col("flt.CaseNo"), "inner") \
                           .join(df_currentstatus.alias("mx"), (col("st.CaseNo") == col("mx.CaseNo")), "left") \
                           .select(
@@ -3610,7 +3607,6 @@ def silver_status_detail():
                               "st.CaseStatus",
                               "st.DateReceived",
                               "st.StatusDetailAdjudicatorId",
-                              #"st.Allegation",
                               when(col("st.Allegation") == 1, "No right of appeal")
                               .when(col("st.Allegation") == 2, "Out of time")
                               .alias("Allegation"),
@@ -3654,13 +3650,12 @@ def silver_status_detail():
                               "st.CourtSelection",
                               "st.DecidingCentre",
                               "st.Tier",
-                            #   "st.RemittalOutcome",
-                               when(col("st.RemittalOutcome").isNull(), "")
+                              when(col("st.RemittalOutcome").isNull(), "")
                               .when(col("st.RemittalOutcome") == 0, "")
                               .when(col("st.RemittalOutcome") == 1, "YES")
                               .when(col("st.RemittalOutcome") == 2, "NO")
                               .alias("RemittalOutcome"),
-                               when(col("st.UpperTribunalAppellant").isNull(), "")
+                              when(col("st.UpperTribunalAppellant").isNull(), "")
                               .when(col("st.UpperTribunalAppellant") == 0, "")
                               .when(col("st.UpperTribunalAppellant") == 1, "Appellant")
                               .when(col("st.UpperTribunalAppellant") == 2, "Respondent")
@@ -3683,7 +3678,19 @@ def silver_status_detail():
                               "st.TypistSentDate",
                               "st.TypistReceivedDate",
                               "st.WrittenReasonsSentDate",
-                              "st.ExtemporeMethodOfTyping",
+                              when(
+                                  col("st.ExtemporeMethodOfTyping").isNull(), ""
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "0", ""
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "1", "IA typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "2", "Self typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "3", "3rd party typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "4", "Unknown"
+                              ).otherwise(col("st.ExtemporeMethodOfTyping")).alias("ExtemporeMethodOfTyping"),
                               when(col("st.Extempore") == True, "enabled").otherwise("disabled").alias("Extempore"),
                               when(col("st.DecisionByTCW") == True, "enabled").otherwise("disabled").alias("DecisionByTCW"),
                               "st.InitialHearingPoints",
@@ -3728,18 +3735,18 @@ def silver_status_detail():
                               col("st.CaseStatusDescription").alias("CurrentStatus"),
                               col("st.AdjournmentParentStatusId"),
                               when(col("st.IRISStatusOfCase") == 1, "Adjudicator Appeal")
-                            .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
-                            .when(col("st.IRISStatusOfCase") == 11, "Scottish Forfeiture")
-                            .when(col("st.IRISStatusOfCase") == 12, "Tribunal Appeal")
-                            .when(col("st.IRISStatusOfCase") == 14, "Tribunal Direct")
-                            .when(col("st.IRISStatusOfCase") == 18, "Bail Renewal")
-                            .when(col("st.IRISStatusOfCase") == 19, "Bail Variation")
-                            .when(col("st.IRISStatusOfCase") == 21, "Tribunal Review")
-                            .when(col("st.IRISStatusOfCase") == 4, "Bail Application")
-                            .when(col("st.IRISStatusOfCase") == 5, "Direct to Divisional Court")
-                            .when(col("st.IRISStatusOfCase") == 6, "Forfeiture")
-                            .when(col("st.IRISStatusOfCase") == 9, "Paper Case")
-                            .otherwise(None)
+                              .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
+                              .when(col("st.IRISStatusOfCase") == 11, "Scottish Forfeiture")
+                              .when(col("st.IRISStatusOfCase") == 12, "Tribunal Appeal")
+                              .when(col("st.IRISStatusOfCase") == 14, "Tribunal Direct")
+                              .when(col("st.IRISStatusOfCase") == 18, "Bail Renewal")
+                              .when(col("st.IRISStatusOfCase") == 19, "Bail Variation")
+                              .when(col("st.IRISStatusOfCase") == 21, "Tribunal Review")
+                              .when(col("st.IRISStatusOfCase") == 4, "Bail Application")
+                              .when(col("st.IRISStatusOfCase") == 5, "Direct to Divisional Court")
+                              .when(col("st.IRISStatusOfCase") == 6, "Forfeiture")
+                              .when(col("st.IRISStatusOfCase") == 9, "Paper Case")
+                              .otherwise(None)
                               .alias("IRISStatusOfCase"),
                               col("HearingCentre"),
                               col("st.ListTypeId"),

@@ -83,6 +83,14 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
 # MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
 # MAGIC       </tr>
+# MAGIC         <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-646">ARIADM-646</a>/NSA/28-JULY-2025</td>
+# MAGIC          <td>Upper Tier Appeals HTML - 'Create User ID' and 'Last Edit User ID' lookup transformation issue</td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-647">ARIADM-647</a>/NSA/28-JUL-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Status > Status Details Tab - 'ExtemporeMethodOfTyping' field transformation</td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 

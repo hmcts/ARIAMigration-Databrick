@@ -1,22 +1,25 @@
-import json
 from datetime import datetime
-from pyspark.sql.functions import col, when, lit, array, struct, collect_list, max as spark_max, date_format, row_number, expr, current_timestamp, collect_set, first, array_contains, size
-from pyspark.sql.window import Window
-from pyspark.sql import functions as F
 import re
-from pyspark.sql.functions import udf, coalesce, col
-from pyspark.sql.types import StringType
-import re
-from pyspark.sql.functions import udf, coalesce, col
-from pyspark.sql.types import StringType
-from pyspark.sql.functions import col, udf, concat_ws
-from pyspark.sql.types import StringType
+import string
 import pycountry
-import re, string
-from uk_postcodes_parsing import fix, postcode_utils
-from pyspark.sql.functions import col, year, when, lit, concat, trim
-from pyspark.sql.functions import when, lit, col, expr, struct, current_timestamp, date_format, array, collect_set, first, array_contains, size
+
+from datetime import datetime
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+from pyspark.sql.types import StringType
+
+from pyspark.sql.functions import (
+    col, when, lit, array, struct, collect_list, 
+    max as spark_max, date_format, row_number, expr, 
+    current_timestamp, collect_set, first, array_contains, 
+    size, udf, coalesce, concat_ws, concat, trim, year
+)
+
+from uk_postcodes_parsing import fix, postcode_utils
+
+################################################################
+##########              appealType grouping          ###########
+################################################################
 
 
 # AppealType grouping
@@ -108,7 +111,9 @@ def appealType(silver_m1):
 
     return df, df_audit
 
-######-----##### caseData grouping  ######-----#####
+################################################################
+##########              caseData grouping            ###########
+################################################################
 
 def caseData(silver_m1, silver_m3):
     # Filter silver_m3 to get rows with max StatusId and Outcome is not null
@@ -281,6 +286,10 @@ def caseData(silver_m1, silver_m3):
     )
 
     return df, df_audit
+
+################################################################
+##########           flagsLabels grouping            ###########
+################################################################
 
 ## flagsLabels function
 def flagsLabels(silver_m1, silver_m2, silver_c):
@@ -480,7 +489,9 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                         
     return df, df_audit
     
-#####-----######
+################################################################
+##########           cleanEmail Function             ###########
+################################################################
 
 
 def cleanEmail(email):
@@ -510,7 +521,9 @@ def cleanEmail(email):
 # Register the UDF
 cleanEmailUDF = udf(cleanEmail, StringType())
 
-
+################################################################
+##########           cleanPhoneNumber Function       ###########
+################################################################
 
 def cleanPhoneNumber(PhoneNumber):
     if PhoneNumber is None:
@@ -546,7 +559,9 @@ def cleanPhoneNumber(PhoneNumber):
 phoneNumberUDF = udf(cleanPhoneNumber, StringType())
 
 
-######------###### 
+################################################################
+##########           legalRepDetails Function        ###########
+################################################################
 
 ##Create legalRepDetails fields
 
@@ -732,9 +747,10 @@ def legalRepDetails(silver_m1):
 
     return df, df_audit
 
-##########################################################################
-# General Address
-##############################################################################
+################################################################
+##########           generalAddress Function         ###########
+################################################################
+
 # Step 1: list of countries
 all_countries = pycountry.countries
 lower_countries = [country.name.lower() for country in all_countries]
@@ -856,197 +872,9 @@ def getCountryLR(full_address):
 
 getCountryLRUDF = udf(getCountryLR, StringType())
 
-##########################################################################
-# Legal rep details 
-##############################################################################
-
-##Create legalRepDetails fields
-
-def legalRepDetails(silver_m1):
-    conditions_legalRepDetails = (col("dv_representation") == 'LR') & (col("lu_appealType").isNotNull())
-
-    df = silver_m1.alias("m1").filter(conditions_legalRepDetails).withColumn(
-        "legalRepGivenName",
-        coalesce(col("Contact"), col("Rep_Name"), col("CaseRep_Name"))   #If contact is null use RepName, if RepName null use CaseRepName
-    ).withColumn(
-        "legalRepFamilyNamePaperJ",
-        coalesce(col("Rep_Name"), col("CaseRep_Name"))                     #If RepName is null use CaseRepName
-    ).withColumn(
-        "legalRepCompanyPaperJ",
-        coalesce(col("Rep_Name"), col("CaseRep_Name"))                     #If RepName is null use CaseRepName
-    ).withColumn(
-        "localAuthorityPolicy",
-        lit("""{
-            "Organisation": {},
-            "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
-        }""")
-    ).withColumn(
-    "legalRepEmail",
-    cleanEmailUDF(
-        coalesce(col("Rep_Email"), col("CaseRep_Email"), col("CaseRep_FileSpecific_Email")))
-    ).withColumn(
-        "legalRepAddressUK",               
-        when(col("RepresentativeId") == 0, concat_ws(" ",      #If Representiative (solicitor) lives outside UK
-        col("CaseRep_Address1"), col("CaseRep_Address2"),         #Concat non-null fields by space
-        col("CaseRep_Address3"), col("CaseRep_Address4"),
-        col("CaseRep_Address5"), col("CaseRep_Postcode")
-        
-        )).otherwise(concat_ws(" ",                              #If representative lives inside UK
-        col("Rep_Address1"), col("Rep_Address2"),                   #Concat non-null fields by space
-        col("Rep_Address3"), col("Rep_Address4"),
-        col("Rep_Address5"), col("Rep_Postcode")
-    ))
-
-    ## Apply UDFs to determine if the legalRep has a UK address - 1. pull postcode. UK postcode? 
-    ).withColumn(
-    "ukPostcode",
-    getUkPostcodeUDF(col("CaseRep_Postcode"))
-
-    ## Apply UDFs to determine if the legalRep has a UK address - 2. Pull country. Is the country United Kingdom?
-    ).withColumn(
-    "countryFromAddress",
-    getCountryFromAddressUDF(col("legalRepAddressUK"))
-
-    ## Apply UDFs to determine if the legalRep has a UK address - 3. Is the Postcode or country from the UK?
-    ).withColumn(
-    "legalRepHasAddress",
-    legalRepHasAddressUDF(
-        col("RepresentativeId"),
-        col("ukPostcode"),
-        "countryFromAddress"
-    )
-                                                                             
-    ).withColumn("legalRepAddressUK", col("legalRepAddressUK")
-
-    ).withColumn("oocAddressLine1",                                            #If Address1 is null use 2. If 1,2 null use 3
-                when((col("CaseRep_Address1").isNotNull()), col("CaseRep_Address1")
-                      ).otherwise(coalesce(col("CaseRep_Address2"),
-                          col("CaseRep_Address3"), col("CaseRep_Address4"),
-                          col("CaseRep_Address5"))
-                          )
-                 
-    ).withColumn("oocAddressLine2", 
-                when((col("CaseRep_Address2").isNotNull()), col("CaseRep_Address2")
-                      ).otherwise(coalesce(col("CaseRep_Address3"),
-                          col("CaseRep_Address4"), col("CaseRep_Address5"))
-                )
-                 
-    ).withColumn("oocAddressLine3",
-                when((col("CaseRep_Address3").isNotNull()), concat(col("CaseRep_Address3"), lit(", "), col("CaseRep_Address4"))
-                      ).otherwise(col("CaseRep_Address4")
-                )
-    
-    ).withColumn("oocAddressLine4",
-                when((col("CaseRep_Address5").isNotNull()), concat(col("CaseRep_Address5"), lit(", "), col("CaseRep_Postcode"))
-                      ).otherwise(col("CaseRep_Postcode")
-                )
-                 
-    ).withColumn(
-        "oocLrCountryGovUkAdminJ",
-        getCountryLRUDF(col("legalRepAddressUK"))     #Use UDF getCountryLR(). Sample data indicates function works.
-                 
-    ).select(
-        col("CaseNo"),
-        "legalRepGivenName",
-        "legalRepFamilyNamePaperJ",
-        "legalRepCompanyPaperJ",
-        "localAuthorityPolicy",
-        "legalRepEmail",
-        "legalRepAddressUK",         
-        "legalRepHasAddress",
-        "oocAddressLine1",
-        "oocAddressLine2",
-        "oocAddressLine3",
-        "oocAddressLine4",
-        "oocLrCountryGovUkAdminJ"
-    )
-
-    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
-    common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]
-
-    df_audit = silver_m1.alias("m1_audit").join(df.alias("content"), on = ["CaseNo"], how = "left").filter(conditions_legalRepDetails).select(
-        col("CaseNo"),
-
-        ## legalRepGivenName - ARIADM-767
-        array(struct(*common_inputFields ,lit("m1_audit.Contact"), lit("m1_audit.Rep_Name"), lit("m1_audit.CaseRep_Name"))).alias("legalRepGivenName_inputFields"),
-        array(struct(*common_inputValues ,col("m1_audit.Contact"), col("m1_audit.Rep_Name"), col("m1_audit.CaseRep_Name"))).alias("legalRepGivenName_inputValues"),
-        col("content.legalRepGivenName"),
-        lit("yes").alias("legalRepGivenName_Transformed"),
-
-        # ## legalRepFamilyNamePaperJ - ARIADM-767
-        array(struct(*common_inputFields ,lit("m1_audit.Rep_Name"), lit("m1_audit.CaseRep_Name"))).alias("legalRepFamilyNamePaperJ_inputFields"),
-        array(struct(*common_inputValues ,col("m1_audit.Rep_Name"), col("m1_audit.CaseRep_Name"))).alias("legalRepFamilyNamePaperJ_inputValues"),
-        col("content.legalRepFamilyNamePaperJ"),
-        lit("yes").alias("legalRepFamilyNamePaperJ_Transformed"),
-
-        # ## legalRepCompanyPaperJ - ARIADM-767
-        array(struct(*common_inputFields ,lit("m1_audit.Rep_Name"), lit("m1_audit.CaseRep_Name"))).alias("legalRepCompanyPaperJ_inputFields"),
-        array(struct(*common_inputValues ,col("m1_audit.Rep_Name"), col("m1_audit.CaseRep_Name"))).alias("legalRepCompanyPaperJ_inputValues"),
-        col("content.legalRepCompanyPaperJ"),
-        lit("yes").alias("legalRepCompanyPaperJ_Transformed"),
-
-        # ## localAuthorityPolicy - ARIADM-767
-        array(struct(*common_inputFields)).alias("localAuthorityPolicy_inputFields"),
-        array(struct(*common_inputValues)).alias("localAuthorityPolicy_inputValues"),
-        col("content.localAuthorityPolicy"),
-        lit("no").alias("localAuthorityPolicy_Transformed"),
-
-        # ## legalRepEmail - ARIADM-771
-        array(struct(*common_inputFields, lit("m1_audit.Rep_Email"), lit("m1_audit.CaseRep_Email"), lit("m1_audit.CaseRep_FileSpecific_Email"))).alias("legalRepEmail_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.Rep_Email"), col("m1_audit.CaseRep_Email"), col("m1_audit.CaseRep_FileSpecific_Email"))).alias("legalRepEmail_inputValues"),
-        col("content.legalRepEmail"), 
-        lit("yes").alias("legalRepEmail_Transformed"),
-
-        ## legalRepAddressUK - ARIADM-769 - Check both CaseRepAddress and RepAddress
-        array(struct(*common_inputFields, lit("m1_audit.Rep_Address1"), lit("m1_audit.Rep_Address2"), lit("m1_audit.Rep_Address3"),lit("m1_audit.Rep_Address4"),lit("m1_audit.Rep_Address5"),lit("m1_audit.Rep_Postcode"),lit("m1_audit.CaseRep_Address1"), lit("m1_audit.CaseRep_Address2"), lit("m1_audit.CaseRep_Address3"),lit("m1_audit.CaseRep_Address4"),lit("m1_audit.CaseRep_Address5"),lit("m1_audit.CaseRep_Postcode") )).alias("legalRepAddressUK_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.Rep_Address1"), col("m1_audit.Rep_Address2"), col("m1_audit.Rep_Address3"),col("m1_audit.Rep_Address4"),col("m1_audit.Rep_Address5"),col("m1_audit.Rep_Postcode"), col("m1_audit.CaseRep_Address1"), col("m1_audit.CaseRep_Address2"), col("m1_audit.CaseRep_Address3"),col("m1_audit.CaseRep_Address4"),col("m1_audit.CaseRep_Address5"),col("m1_audit.CaseRep_Postcode"))).alias("legalRepAddressUK_inputValues"),
-        col("content.legalRepAddressUK"), 
-        lit("yes").alias("legalRepAddressUK_Transformed"),
-
-        ## legalRepHasAddress - ARIADM-769
-        array(struct(*common_inputFields, lit("m1_audit.CaseRep_Postcode"), lit("content.legalRepAddressUK"), lit("m1_audit.RepresentativeId"))).alias("legalRepHasAddress_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.CaseRep_Postcode"), col("content.legalRepAddressUK"), col("m1_audit.RepresentativeId"))).alias("legalRepHasAddress_inputValues"),
-        col("content.legalRepHasAddress"), 
-        lit("yes").alias("legalRepHasAddress_Transformed"),
-
-        ## oocAddressLine1 - ARIADM-769
-        array(struct(*common_inputFields, lit("m1_audit.CaseRep_Address1"), lit("m1_audit.CaseRep_Address2"), lit("m1_audit.CaseRep_Address3"),lit("m1_audit.CaseRep_Address4"),lit("m1_audit.CaseRep_Address5"),lit("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine1_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.CaseRep_Address1"), col("m1_audit.CaseRep_Address2"), col("m1_audit.CaseRep_Address3"),col("m1_audit.CaseRep_Address4"),col("m1_audit.CaseRep_Address5"),col("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine1_inputValues"),
-        col("content.oocAddressLine1"), 
-        lit("yes").alias("oocAddressLine1_Transformed"),
-
-        ## oocAddressLine2 - ARIADM-769
-        array(struct(*common_inputFields, lit("m1_audit.CaseRep_Address2"), lit("m1_audit.CaseRep_Address3"),lit("m1_audit.CaseRep_Address4"),lit("m1_audit.CaseRep_Address5"),lit("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine2_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.CaseRep_Address2"), col("m1_audit.CaseRep_Address3"),col("m1_audit.CaseRep_Address4"),col("m1_audit.CaseRep_Address5"),col("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine2_inputValues"),
-        col("content.oocAddressLine2"), 
-        lit("yes").alias("oocAddressLine2_Transformed"),
-
-        ## oocAddressLine3 - ARIADM-769
-        array(struct(*common_inputFields, lit("m1_audit.CaseRep_Address3"),lit("m1_audit.CaseRep_Address4"),lit("m1_audit.CaseRep_Address5"),lit("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine3_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.CaseRep_Address3"),col("m1_audit.CaseRep_Address4"),col("m1_audit.CaseRep_Address5"),col("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine3_inputValues"),
-        col("content.oocAddressLine3"), 
-        lit("yes").alias("oocAddressLine3_Transformed"),
-
-        ## oocAddressLine4 - ARIADM-769
-        array(struct(*common_inputFields, lit("m1_audit.CaseRep_Address4"),lit("m1_audit.CaseRep_Address5"),lit("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine4_inputFields"),
-        array(struct(*common_inputValues, col("m1_audit.CaseRep_Address4"),col("m1_audit.CaseRep_Address5"),col("m1_audit.CaseRep_Postcode"))).alias("oocAddressLine4_inputValues"),
-        col("content.oocAddressLine4"), 
-        lit("yes").alias("oocAddressLine4_Transformed"),
-
-        ## oocLrCountryGovUkAdminJ - ARIADM-769
-        array(struct(*common_inputFields, lit("content.oocAddressLine1"),lit("content.oocAddressLine2"),
-        lit("content.oocAddressLine3"),lit("content.oocAddressLine4"), lit("m1_audit.CaseRep_Postcode"))).alias("oocLrCountryGovUkAdminJ_inputFields"),
-        array(struct(*common_inputValues, col("content.oocAddressLine1"),col("content.oocAddressLine2"),
-        col("content.oocAddressLine3"),col("content.oocAddressLine4"), col("m1_audit.CaseRep_Postcode"))).alias("oocLrCountryGovUkAdminJ_inputValues"),
-        col("content.oocLrCountryGovUkAdminJ"), 
-        lit("yes").alias("oocLrCountryGovUkAdminJ_Transformed"),
-    )
-
-    return df, df_audit
-
-##########################################################################
-# appellant details
-##############################################################################
+################################################################
+##########         appellantDetails Function         ###########
+################################################################
 
 def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_Postcode):
     countryFromAddress = []
@@ -1579,9 +1407,9 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress):
     
     return df, df_audit
 
-##########################################
-#### Home Office
-##########################################
+################################################################
+##########            homeOffice Function            ###########
+################################################################
 
 # Function to clean reference numbers (HORef, FCONumber) according to business rules
 def cleanReferenceNumber(ref):
@@ -1828,9 +1656,9 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
 
     return df, df_audit
 
-####################################
-#### Payment
-####################################
+################################################################
+##########         paymentType Function              ###########
+################################################################
 
 
 def paymentType(silver_m1):
@@ -1932,9 +1760,9 @@ def paymentType(silver_m1):
     return payment_content, payment_audit
 
 
-###################################
-##### Party ID
-###################################
+################################################################
+##########            partyID Function               ###########
+################################################################
 
 
 # Create UDF to generate UUID for relevant field as a string type
@@ -2012,9 +1840,9 @@ def partyID(silver_m1, silver_m3,silver_c):
     return df, df_audit
 
 
-###################################
-#### Remissions
-###################################
+################################################################
+##########        remissionTypes Function            ###########
+################################################################
 
 
 def remissionTypes(silver_m1, bronze_remission_lookup_df):
@@ -2122,9 +1950,9 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df):
 
     return df, df_audit
 
-##########################################
-##### Sponsor details
-##########################################
+################################################################
+##########        sponsorDetails Function            ###########
+################################################################
 
 
 def sponsorDetails(silver_m1, silver_c):
@@ -2285,9 +2113,9 @@ def sponsorDetails(silver_m1, silver_c):
 
     return df, df_audit
 
-###################################
-### General Function
-####################################
+################################################################
+##########             General Function              ###########
+################################################################
 
 def general(silver_m1):
     conditions_general = (col("dv_representation").isin('LR','AIP')) & (col("lu_appealType").isNotNull())
@@ -2327,9 +2155,9 @@ def general(silver_m1):
 
 
 
-#############################
-### General Default
-############################
+################################################################
+##########         General Default Function          ###########
+################################################################
 
 
 def generalDefault(silver_m1):
@@ -2569,9 +2397,9 @@ def generalDefault(silver_m1):
 
     return df, df_audit
 
-##################################
-### Documents
-##################################
+################################################################
+##########              Documents Function           ###########
+################################################################
 
 def documents(silver_m1):
 
@@ -2617,9 +2445,9 @@ def documents(silver_m1):
 
     return documents_content, documents_audit
 
-##################################
-### Case state
-##################################
+################################################################
+##########             Case State Function           ###########
+################################################################
 
 def caseState(silver_m1):
 

@@ -2,11 +2,13 @@ from datetime import datetime
 import re
 import string
 import pycountry
+import pandas as pd
 
 from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
+import pandas as pd
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
@@ -1075,10 +1077,6 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ################################################################
 ##########         appellantDetails Function         ###########
 ################################################################
-
-from pyspark.sql.functions import udf, col
-from pyspark.sql.types import StringType
-import pandas as pd
 
 def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_Postcode):
     countryFromAddress = []

@@ -116,12 +116,12 @@ def appealType(silver_m1):
 ################################################################
 
 # caseData grouping
-def caseData(silver_m1, silver_m2, silver_m3, history_df, bronze_hearing_centres, bronze_derive_hearing_centres):
+def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
     # Define the window specification
     window_spec = Window.partitionBy("CaseNo").orderBy(col("HistoryId").desc())
 
     # Define the base DataFrame
-    history_df = history_df.filter(col("HistType") == 6)
+    silver_h = silver_h.filter(col("HistType") == 6)
 
     # Define the common filter condition
     common_filter = ~col("Comment").like("%Castle Park Storage%") & ~col("Comment").like("%Field House%") & ~col("Comment").like("%UT (IAC)%")
@@ -135,7 +135,7 @@ def caseData(silver_m1, silver_m2, silver_m3, history_df, bronze_hearing_centres
         )
 
     # Create DataFrames for each location
-    derived_history_df = get_latest_history(history_df, common_filter)
+    derived_history_df = get_latest_history(silver_h, common_filter)
 
     # Define common columns for hearingCentreDynamicList and caseManagementLocationRefData
     common_columns = {
@@ -1076,6 +1076,10 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ##########         appellantDetails Function         ###########
 ################################################################
 
+from pyspark.sql.functions import udf, col
+from pyspark.sql.types import StringType
+import pandas as pd
+
 def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_Postcode):
     countryFromAddress = []
     try:
@@ -1313,29 +1317,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         
         , lit("entryClearanceDecision")).otherwise(lit("none"))
     ).otherwise(None)
-
-    # countryGovUkOocAdminJ logic
-    # IF CategoryId IN [38] = Include; ELSE OMIT
-    # If AppellantCountryId is present and not 0, use as string
-    # If ukPostcodeAppellant is True, use 'United Kingdom'
-    # If ukPostcodeAppellant is False, use appellantFullAddress (not implemented, fallback to empty string)
-    # Final fallback: empty string
-    # country_gov_uk_ooc_adminj_expr = when(
-    #     conditions & expr("array_contains(CategoryIdList, 38)"),
-    #     getCountryApp_udf(
-    #         col("AppellantCountryId"),
-    #         getUkPostcodeUDF(col("Appellant_Postcode")),
-    #         makeFullAddressUDF(
-    #             col("Appellant_Address1"),
-    #             col("Appellant_Address2"),
-    #             col("Appellant_Address3"),
-    #             col("Appellant_Address4"),
-    #             col("Appellant_Address5"),
-    #             col("Appellant_Postcode")
-    #         ),
-    #         col("Appellant_Postcode")
-    #     )
-    # ).otherwise(None)
 
     silver_m2_derived = silver_m2.withColumn(
                                         "appellantFullAddress",
@@ -1629,6 +1610,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     return df, df_audit
 
 
+
 ################################################################
 ##########            homeOffice Function            ###########
 ################################################################
@@ -1893,6 +1875,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     )
 
     return df, df_audit
+
 
 ################################################################
 ##########         paymentType Function              ###########

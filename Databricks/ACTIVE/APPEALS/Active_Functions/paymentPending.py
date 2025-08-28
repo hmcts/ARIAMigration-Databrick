@@ -8,7 +8,6 @@ from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
-import pandas as pd
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 

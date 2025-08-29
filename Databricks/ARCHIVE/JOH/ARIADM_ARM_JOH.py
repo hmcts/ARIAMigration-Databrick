@@ -409,7 +409,10 @@ def Raw_Adjudicator():
     path=f"{raw_mnt}/Raw_EmploymentTerm"
 )
 def Raw_EmploymentTerm():
-     return read_latest_parquet("ARIAEmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
+    if env_name == "sbox":
+        return read_latest_parquet("ARIAEmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
+    else:
+        return read_latest_parquet("EmploymentTerm", "tv_EmploymentTerm", "ARIA_ARM_JOH_ARA")
 
 
 @dlt.table(
@@ -445,7 +448,10 @@ def Raw_OtherCentre():
     path=f"{raw_mnt}/Raw_HearingCentre"
 )
 def Raw_HearingCentre():
-    return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
+    if env_name == 'sbox':
+        return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
+    else:
+        return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH_ARA")
 
 
 @dlt.table(

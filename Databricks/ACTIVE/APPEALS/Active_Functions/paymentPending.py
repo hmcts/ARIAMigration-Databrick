@@ -1228,9 +1228,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     ).otherwise(None)
 
     # addressLine2AdminJ: mandatory for OOC, fallback through address fields (skip the one used for addressLine1AdminJ)
-    lr_condition = (col("dv_representation") == "LR") & (col("lu_appealType").isNotNull())
     address_line2_adminj_expr = when(
-        lr_condition & expr("array_contains(CategoryIdList, 38)"),
+        conditions & expr("array_contains(CategoryIdList, 38)"),
         coalesce(
             # Exclude the value used for addressLine1AdminJ
             when(col("Appellant_Address1").isNull(), None).otherwise(
@@ -1292,11 +1291,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         )
     ).otherwise(None)
 
-    # IF CategoryId IN [38] = Include; ELSE OMIT;
-    # IF CleansedHORef LIKE '%GWF%' = 'entryClearanceDecision';
-    # IF M1.HORef LIKE '%GWF%' = 'entryClearanceDecision';
-    # IF M2.FCONumber LIKE '%GWF%' = 'entryClearanceDecision';
-    # ELSE 'none'
     
     # Join bronze_HORef_cleansing to get CleansedHORef using CaseNo and coalesce(HORef, FCONumber)
     bronze_cleansing = bronze_HORef_cleansing.select(
@@ -1314,6 +1308,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         
         , lit("entryClearanceDecision")).otherwise(lit("none"))
     ).otherwise(None)
+
 
     silver_m2_derived = silver_m2.withColumn(
                                         "appellantFullAddress",
@@ -1342,7 +1337,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ",col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
 
     silver_m2_derived = silver_m2_derived.alias('main').join(bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left").select("main.*",  when( col("lu_cfa_contryFromAddress").isNotNull(),col("lu_cfa_countryGovUkOocAdminJ"))
-          .otherwise(col("countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
+          .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
     
     country_gov_uk_ooc_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
@@ -1899,7 +1894,7 @@ def paymentType(silver_m1):
         when(col("VisitVisatype") == 1, "Appeal determined without a hearing")
             .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
             .otherwise("unknown").alias("paymentDescription"),
-        lit("yes").alias("feePaymentAppealType"),
+        lit("Yes").alias("feePaymentAppealType"),
         lit("Payment Pending").alias("paymentStatus"),
         lit(2).alias("feeVersion"),
         when(col("VisitVisatype") == 1, "decisionWithoutHearing")

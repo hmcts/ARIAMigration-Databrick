@@ -17,7 +17,8 @@ from pyspark.sql.functions import (
 )
 
 from uk_postcodes_parsing import fix, postcode_utils
-import paymentPending
+
+from Active_Functions import paymentPending
 
 
 ###############################################################
@@ -72,7 +73,7 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         "paymentDescription"
     )
 
-    payment_audit = payment_audit.join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select(
+    payment_audit = payment_audit.alias("audit").join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select( "audit.*",
         # paAppealTypePaymentOption
         array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias("paAppealTypePaymentOption_inputFields"),
         array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias("paAppealTypePaymentOption_inputValues"),
@@ -115,7 +116,7 @@ original_remissionTypes = paymentPending.remissionTypes
 
 def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
-    df_final, df_audit = paymentPending.remissionTypes(silver_m1, bronze_remission_lookup_df)
+    df_final, df_audit = original_remissionTypes(silver_m1, bronze_remission_lookup_df)
 
     conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
@@ -188,38 +189,6 @@ def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver
 
     return df_final, df_audit
 
-################################################################
-##########             Case State Function           ###########
-################################################################
-
-def caseState(silver_m1):
-
-    df = silver_m1.select(
-        "CaseNo", 
-        lit("paymentPending").alias("ariaDesiredState"),
-        lit("14").alias("ariaMigrationTaskDueDays")
-    )
-
-    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
-    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
-
-    df_audit = silver_m1.alias("audit").join(df.alias("content"), on = ["CaseNo"], how = "left").select(col("CaseNo"),
-  
-    #ariaDesiredState - ARIADM-797
-    array(struct(*common_inputFields, lit("ariaDesiredState"))).alias("ariaDesiredState_inputFields"),
-    array(struct(*common_inputValues, lit("null"))).alias("ariaDesiredState_inputValues"),
-    col("content.ariaDesiredState"),
-    lit("no").alias("ariaDesiredState_Transformation"),
-
-    #ariaMigrationTaskDueDays - ARIADM-797
-    array(struct(*common_inputFields, lit("ariaMigrationTaskDueDays"))).alias("ariaMigrationTaskDueDays_inputFields"),
-    array(struct(*common_inputValues, lit("null"))).alias("ariaMigrationTaskDueDays_inputValues"),
-    col("content.ariaMigrationTaskDueDays"),
-    lit("no").alias("ariaMigrationTaskDueDays_Transformation")
-
-    )
-
-    return df,df_audit
 
 ################################################################
 ##########        Import all Functions            ###########

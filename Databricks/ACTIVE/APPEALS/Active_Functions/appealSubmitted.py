@@ -69,8 +69,7 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         "rpDcAppealHearingOption",
         "paidDate",
         "paidAmount",
-        "additionalPaymentInfo",
-        "paymentDescription"
+        "additionalPaymentInfo"
     )
 
     payment_audit_final = payment_audit.alias("audit").join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select( "audit.*",

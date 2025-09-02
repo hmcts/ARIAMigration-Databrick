@@ -49,9 +49,9 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 1), "decisionWithoutHearing")
             .when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 2), "decisionWithHearing")
             .otherwise("unknown").alias("rpDcAppealHearingOption"),
-        date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd").alias("paidDate"),
-        col("paidAmount"),
-        lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.").alias("additionalPaymentInfo")
+        when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).otherwise("unknown").alias("paidDate"),
+        when(conditions_all, col("paidAmount")).otherwise("unknown").alias("paidAmount"),
+        when(conditions_all,lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise("unknown").alias("additionalPaymentInfo")
     ).select(
         "CaseNo",
         "feeAmountGbp",
@@ -73,7 +73,7 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         "paymentDescription"
     )
 
-    payment_audit = payment_audit.alias("audit").join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select( "audit.*",
+    payment_audit_final = payment_audit.alias("audit").join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select( "audit.*",
         # paAppealTypePaymentOption
         array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias("paAppealTypePaymentOption_inputFields"),
         array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias("paAppealTypePaymentOption_inputValues"),
@@ -105,8 +105,7 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         lit("yes").alias("paidAmount_Transformation")
     )
 
-    return payment_content, payment_audit
-
+    return payment_content_final, payment_audit_final
 
 ################################################################
 ##########        remissionTypes Function            ###########
@@ -145,12 +144,12 @@ def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver
         "remissionDecision",
         when(col("PaymentRemissionGranted") == 1, "approved")
         .when(col("PaymentRemissionGranted") == 2, "rejected")
-        .otherwise("OMIT")
+        .otherwise(None)
     ).withColumn(
         "remissionDecisionReason",
         when(col("PaymentRemissionGranted") == 1, "This is a migrated case. The remission was granted.")
         .when(col("PaymentRemissionGranted") == 2, "This is a migrated case. The remission was rejected.")
-        .otherwise("OMIT")
+        .otherwise(None)
     ).withColumn(
         "amountRemitted",
         when(col("PaymentRemissionGranted") == 1, col("amountRemitted"))

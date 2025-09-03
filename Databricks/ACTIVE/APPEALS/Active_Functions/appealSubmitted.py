@@ -69,8 +69,7 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
         "rpDcAppealHearingOption",
         "paidDate",
         "paidAmount",
-        "additionalPaymentInfo",
-        "paymentDescription"
+        "additionalPaymentInfo"
     )
 
     payment_audit_final = payment_audit.alias("audit").join(paid_amount.alias("paid_amount"), ["CaseNo"], "left").join(payment_content_final.alias("payment_content"), ["CaseNo"], "left").join(silver_m1, ["CaseNo"], "left").select( "audit.*",
@@ -188,6 +187,22 @@ def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver
 
     return df_final, df_audit
 
+################################################################
+##########        caseState Function            ###########
+################################################################
+
+# df, df_audit = paymentPending.caseState(silver_m1)
+
+##### To update the changeDirectionDueDateActionAvailable to Yes #####
+original_caseState = paymentPending.caseState 
+
+def appealSubmitted_caseState(silver_m1): 
+    df_appealSubmitted, df_audit_appealSubmitted = original_caseState(silver_m1) 
+    
+    # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
+    df_appealSubmitted = df_appealSubmitted.withColumn("ariaDesiredState", lit("appealSubmitted"))
+    
+    return df_appealSubmitted, df_audit_appealSubmitted
 
 ################################################################
 ##########        Import all Functions            ###########

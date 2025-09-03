@@ -1148,8 +1148,13 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     silver_m1_country_grouped = silver_m1.groupBy("CaseNo").agg(collect_list(col("lu_countryCode")).alias("lu_countryCodeList"))
 
     # isAppellantMinor: BirthDate > (DateLodged - 18 years) using year subtraction
+    # is_minor_expr = when(
+    #     conditions & ((year(col("BirthDate")) > (year(col("DateLodged")) - 18))),
+    #     lit("Yes")
+    # ).when(conditions, lit("No")).otherwise(None)
+
     is_minor_expr = when(
-        conditions & ((year(col("BirthDate")) > (year(col("DateLodged")) - 18))),
+        conditions & ((datediff(col("DateLodged"), col("BirthDate")) / 365.25) < 18),
         lit("Yes")
     ).when(conditions, lit("No")).otherwise(None)
 

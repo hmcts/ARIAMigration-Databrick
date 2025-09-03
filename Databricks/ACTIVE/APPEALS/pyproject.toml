@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "Shared-functions"
+version = "0.1.0"
+description = "Shared functions for ARIA ACTIVE cases"
+requires-python = ">=3.9"
+dependencies = ["pycountry","uk_postcodes_parsing"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["Active_Functions*"]     
+exclude = ["Images*"]  

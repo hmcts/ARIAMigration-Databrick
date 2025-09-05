@@ -3,8 +3,6 @@ from pyspark.sql.functions import col, struct, lit, concat, array
 from . import paymentPending as PP
 from . import AwaitingEvidenceRespondant_a as AERa
 
-
-
 def generalDefault(silver_m1): 
     paymentPending_generalDefault_content, paymentPending_generalDefault_audit = AERa.generalDefault(silver_m1) 
     

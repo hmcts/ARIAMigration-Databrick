@@ -18,7 +18,7 @@ from pyspark.sql.functions import (
 
 from uk_postcodes_parsing import fix, postcode_utils
 
-from Active_Functions import paymentPending
+from . import paymentPending as PP
 
 
 ###############################################################
@@ -27,8 +27,8 @@ from Active_Functions import paymentPending
 
 original_paymentType = paymentPending.paymentType 
 
-def appealSubmitted_paymentType(silver_m1, silver_m4):
-    payment_content, payment_audit = original_paymentType(silver_m1)
+def paymentType(silver_m1, silver_m4):
+    payment_content, payment_audit = PP.paymentType(silver_m1)
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
@@ -112,9 +112,9 @@ def appealSubmitted_paymentType(silver_m1, silver_m4):
 
 original_remissionTypes = paymentPending.remissionTypes 
 
-def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
+def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
-    df_final, df_audit = original_remissionTypes(silver_m1, bronze_remission_lookup_df)
+    df_final, df_audit = PP.remissionTypes(silver_m1, bronze_remission_lookup_df)
 
     conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
@@ -194,19 +194,16 @@ def appealSubmitted_remissionTypes(silver_m1, bronze_remission_lookup_df, silver
 # df, df_audit = paymentPending.caseState(silver_m1)
 
 ##### To update the changeDirectionDueDateActionAvailable to Yes #####
-original_caseState = paymentPending.caseState 
+# original_caseState = paymentPending.caseState 
 
-def appealSubmitted_caseState(silver_m1): 
-    df_appealSubmitted, df_audit_appealSubmitted = original_caseState(silver_m1) 
+# def appealSubmitted_caseState(silver_m1): 
+#     df_appealSubmitted, df_audit_appealSubmitted = original_caseState(silver_m1) 
     
-    # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
-    df_appealSubmitted = df_appealSubmitted.withColumn("ariaDesiredState", lit("appealSubmitted"))
+#     # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
+#     df_appealSubmitted = df_appealSubmitted.withColumn("ariaDesiredState", lit("appealSubmitted"))
     
-    return df_appealSubmitted, df_audit_appealSubmitted
+#     return df_appealSubmitted, df_audit_appealSubmitted
 
-################################################################
-##########        Import all Functions            ###########
-################################################################
 
 
 if __name__ == "__main__":

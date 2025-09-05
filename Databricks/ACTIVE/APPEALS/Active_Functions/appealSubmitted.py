@@ -25,7 +25,7 @@ from . import paymentPending as PP
 #########         paymentType Function              ###########
 ###############################################################
 
-original_paymentType = paymentPending.paymentType 
+# original_paymentType = paymentPending.paymentType 
 
 def paymentType(silver_m1, silver_m4):
     payment_content, payment_audit = PP.paymentType(silver_m1)
@@ -110,7 +110,7 @@ def paymentType(silver_m1, silver_m4):
 ##########        remissionTypes Function            ###########
 ################################################################
 
-original_remissionTypes = paymentPending.remissionTypes 
+# original_remissionTypes = paymentPending.remissionTypes 
 
 def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 

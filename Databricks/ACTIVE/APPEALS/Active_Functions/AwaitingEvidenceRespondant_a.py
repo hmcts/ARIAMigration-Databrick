@@ -17,8 +17,8 @@ from . import paymentPending as PP
 # Appellant Details
 ##########################
 
-def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress): 
-    df_awaitingEvidenceRespondent_a, df_audit_awaitingEvidenceRespondent_a = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress) 
+def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,bronze_HORef_cleansing): 
+    df_awaitingEvidenceRespondent_a, df_audit_awaitingEvidenceRespondent_a = PP.appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,bronze_HORef_cleansing)
     
     # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
     df_awaitingEvidenceRespondent_a = df_awaitingEvidenceRespondent_a.withColumn("appellantFullName", concat(col("appellantGivenNames"), lit(" "), col("appellantFamilyName")))

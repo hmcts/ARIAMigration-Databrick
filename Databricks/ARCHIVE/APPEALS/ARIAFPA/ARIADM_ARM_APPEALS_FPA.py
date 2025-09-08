@@ -5730,7 +5730,7 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_combined
+# DBTITLE 1,Transformation: stg_apl_combined
 @dlt.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.",
@@ -5913,7 +5913,7 @@ def stg_apl_combined():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_json_content
+# DBTITLE 1,Transformation: stg_apl_create_json_content
 @dlt.table(
     name="stg_apl_create_json_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -5934,7 +5934,7 @@ def stg_apl_create_json_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_html_content
+# DBTITLE 1,Transformation: stg_apl_create_html_content
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -5958,7 +5958,7 @@ def stg_apl_create_html_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_a360_content
+# DBTITLE 1,Transformation: stg_apl_create_a360_content
 @dlt.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",

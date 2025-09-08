@@ -67,7 +67,7 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
 # MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
 # MAGIC       </tr>
-# MAGIC         <tr>
+# MAGIC       <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-643">ARIADM-643</a>/NSA/25-JULY-2025</td>
 # MAGIC          <td>Upper Tier Appeal HTML - Remittal Outcome Boolean Transformation issue </td>
 # MAGIC       </tr>
@@ -75,15 +75,7 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
 # MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
 # MAGIC       </tr>
-# MAGIC         <tr>
-# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-643">ARIADM-643</a>/NSA/25-JULY-2025</td>
-# MAGIC          <td>Upper Tier Appeal HTML - Remittal Outcome Boolean Transformation issue </td>
-# MAGIC       </tr>
 # MAGIC       <tr>
-# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
-# MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
-# MAGIC       </tr>
-# MAGIC         <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-646">ARIADM-646</a>/NSA/28-JULY-2025</td>
 # MAGIC          <td>Upper Tier Appeals HTML - 'Create User ID' and 'Last Edit User ID' lookup transformation issue</td>
 # MAGIC       </tr>
@@ -121,10 +113,6 @@ from delta.tables import DeltaTable
 # COMMAND ----------
 
 spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
-
-# COMMAND ----------
-
-pip install azure-storage-blob
 
 
 # COMMAND ----------
@@ -5516,7 +5504,7 @@ def stg_statusdetail_data():
             'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
             'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
-            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', 'adjournNotes1', 
+            'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle',  'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails').distinct()
 
@@ -5542,7 +5530,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("adjournAdjudicatorSurname"), col("adjournAdjudicatorForenames")), when(col("adjournAdjudicatorTitle").isNotNull(), concat(lit("("), col("adjournAdjudicatorTitle"), lit(")")))).alias("adjournAdjudicatorFullName"), 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(" ")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
     
     return df_final
 
@@ -5970,7 +5958,7 @@ def stg_apl_create_html_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fpl_create_a360_content
+# DBTITLE 1,Transformation: stg_apl_create_a360_content
 @dlt.table(
     name="stg_apl_create_a360_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -6076,6 +6064,10 @@ def gold_appeals_with_json():
     df_unified = dlt.read("stg_appeals_unified")
     
 
+    # Optionally load data from Hive if needed
+    # if read_hive:
+    #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+
     # Repartition to optimize parallelism
     repartitioned_df = df_unified.repartition(64)
 
@@ -6104,6 +6096,10 @@ def gold_appeals_with_html():
     # Load source data
     df_combined = dlt.read("stg_appeals_unified")
 
+    # # Optional: Load from Hive if not an initial load
+    # if read_hive:
+    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64)
 
@@ -6131,6 +6127,9 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 def gold_appeals_with_a360():
     df_a360 = dlt.read("stg_appeals_unified")
 
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
@@ -6159,15 +6158,6 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # MAGIC %md
 # MAGIC ## Appendix
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariafta/ARIAFTA/submission/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
 
 # COMMAND ----------
 
@@ -6483,9 +6473,15 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC select * from ariadm_arm_fta.stg_statusdetail_data
+# MAGIC -- where cast(TempCaseStatusDetails as string) like '37'
+
+# COMMAND ----------
+
 # DBTITLE 1,Display HTML Content
 # # case_no = 'HR/00014/2004'
-# case_no = 'AA/00001/2015'
+# case_no = 'AA/00002/2012'
 # df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
 
 # # display(df)
@@ -7111,11 +7107,6 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_fta.silver_appealcategory_detail
-
-# COMMAND ----------
-
 # DBTITLE 1,Red Text sql
 # %sql
 # WITH CTE AS (
@@ -7253,6 +7244,7 @@ case_no = 'IM/00023/2003' # dependents
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").count())
 
+
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").count())
@@ -7264,3 +7256,41 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/APPEALS/ARIAFTA/apl_fta_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").count())
+
+# COMMAND ----------
+
+# DBTITLE 1,art
+# MAGIC %sql
+# MAGIC select --distinct date_format(ListStartTime, 'h:mm a') as ListStartTime, 
+# MAGIC distinct ListStartTime from hive_metastore.ariadm_arm_fta.silver_list_detail
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select Statusid, CaseStatusDescription  from hive_metastore.ariadm_arm_fta.silver_status_detail
+# MAGIC where CaseNo = 'AA/00029/2014'
+# MAGIC -- group by CaseNo
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
+# MAGIC where CaseNo = 'AA/00029/2014'
+# MAGIC
+# MAGIC
+
+# COMMAND ----------
+
+# temp = spark.sql("""
+#     SELECT TempCaseStatusDetails 
+#     FROM hive_metastore.ariadm_arm_fta.stg_statusdetail_data 
+#     WHERE CaseNo = 'AA/00029/2014'
+# """).collect()[0][0]
+
+# # Order by StatusId descending
+# # ordered_temp = sorted(temp, key=lambda x: x['StatusId'], reverse=True)
+# ordered_temp = temp
+
+# for status in ordered_temp:
+#     print(status['StatusId'])

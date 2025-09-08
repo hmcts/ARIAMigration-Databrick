@@ -1,10 +1,5 @@
 # Databricks notebook source
-# # Use the dbutils.library.install function
-# # Use pip to install the library
-# %pip install /Workspace/Repos/ara.islam1@hmcts.net/ARIAMigration-Databrick/Databricks/SharedFunctionsLib/dist/ARIAFUNCITONS-0.0.1-py3-none-any.whl
-
-
-# dbutils.library.restartPython()  # Restart the Python process to pick up the new library
+# MAGIC %pip install pyspark azure-storage-blob
 
 # COMMAND ----------
 
@@ -54,6 +49,12 @@
 
 # COMMAND ----------
 
+# Set the configuration to allow the table to be managed by multiple pipelines
+spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false")
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Import Packages
 
@@ -62,13 +63,16 @@
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round
 from pyspark.sql.types import *
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql import DataFrame
 import logging
 from pyspark.sql.window import Window
+from pyspark.sql.types import  StringType, IntegerType
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+import os
+
 
 # COMMAND ----------
 
@@ -105,6 +109,14 @@ def format_date_iso(date_value):
         if isinstance(date_value, str):
             date_value = datetime.strptime(date_value, "%Y-%m-%d")
         return date_value.strftime("%Y-%m-%d")
+    except Exception:
+        return ""
+    
+def simple_date_format(date_value):
+    try:
+        if isinstance(date_value, str):
+            date_value = datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value.strftime("%d-%m-%Y")
     except Exception:
         return ""
 
@@ -150,7 +162,7 @@ def extract_timestamp(file_path):
     return timestamp_str
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
-def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str = "/mnt/ingest00landingsboxlanding/") -> "DataFrame":
+def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str ) -> "DataFrame":
     """
     Reads the latest .parquet file from a specified folder, adds audit columns, creates a temporary Spark view, and returns the DataFrame.
     
@@ -197,7 +209,29 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # Return the DataFrame
     return df
 
-# COMMAND ---------
+
+
+
+# COMMAND ----------
+
+## Function to formate the date values
+def format_date(date_value):
+    if date_value:
+        return datetime.strftime(date_value, "%Y-%m-%d")
+    return ""  # Return empty string if date_value is None
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Configure OAuth
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Define local variables
+
+# COMMAND ----------
+
 config = spark.read.option("multiline", "true").json("dbfs:/configs/config.json")
 env = config.first()["env"].strip().lower()
 lz_key = config.first()["lz_key"].strip().lower()
@@ -219,30 +253,79 @@ print(keyvault_name)
 client_secret = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-SECRET')
 tenant_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-ID')
 client_id = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-CLIENT-ID')
-tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
+# tenant_url = dbutils.secrets.get(scope=keyvault_name, key='SERVICE-PRINCIPLE-TENANT-URL')
 
+tenant_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
 
 
 # COMMAND ----------
 
-## Function to formate the date values
-def format_date(date_value):
-    if date_value:
-        return datetime.strftime(date_value, "%Y-%m-%d")
-    return ""  # Return empty string if date_value is None
+# Storage account and containers to authenticate
+raw_storage_account = f"ingest{lz_key}raw{env}"
+raw_storage_container = "raw"
+
+external_storage_account = f"ingest{lz_key}external{env}"
+external_storage_container = "external-csv"
+
+landing_storage_account = f"ingest{lz_key}landing{env}"
+landing_storage_container = "landing"
+landing_html_storage_container = "html-template"
+
+curated_storage_account = f"ingest{lz_key}curated{env}"
+bronze_storage_container = "bronze"
+silver_storage_container = "silver"
+gold_storage_container = "gold"
+
+
+# COMMAND ----------
+
+## Set up OAuth 
+### config for Landing zone
+
+storage_accounts = [raw_storage_account,external_storage_account,landing_storage_account,curated_storage_account]
+
+for storage_account in storage_accounts:
+    configs = {
+        f"fs.azure.account.auth.type.{storage_account}.dfs.core.windows.net": "OAuth",
+        f"fs.azure.account.oauth.provider.type.{storage_account}.dfs.core.windows.net":
+            "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
+        f"fs.azure.account.oauth2.client.id.{storage_account}.dfs.core.windows.net": client_id,
+        f"fs.azure.account.oauth2.client.secret.{storage_account}.dfs.core.windows.net": client_secret,
+        f"fs.azure.account.oauth2.client.endpoint.{storage_account}.dfs.core.windows.net": f'https://login.microsoftonline.com/{tenant_id}/oauth2/token'
+    }
+
+    for key,val in configs.items():
+        spark.conf.set(key,val)
+
+# COMMAND ----------
+
+# Print out the auth config for each storage account to confirm
+for storage_account in storage_accounts:
+    key = f"fs.azure.account.auth.type.{storage_account}.dfs.core.windows.net"
+    print(f"{key}: {spark.conf.get(key, 'MISSING')}")
 
 # COMMAND ----------
 
 # Setting variables for use in subsequent cells
-raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/BAILS"
-external_mnt = "/mnt/ingest00externalsboxexternal-csv"
-landing_mnt = "/mnt/ingest00landingsboxlanding/"
-bronze_mnt = "/mnt/ingest00curatedsboxbronze/ARIADM/ARM/BAILS"
-silver_mnt = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/BAILS"
-gold_mnt = "/mnt/ingest00curatedsboxgold/ARIADM/ARM/BAILS"
+raw_base_path = f"abfss://{raw_storage_container}@{raw_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+bronze_base_path = f"abfss://{bronze_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+
+external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net"
+
+landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
+
+landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/Bails/"
+
+
 gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'
 gold_json_outputs = 'ARIADM/ARM/BAILS/JSON/'
 gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
+
 
 # COMMAND ----------
 
@@ -251,26 +334,19 @@ gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
 
 # COMMAND ----------
 
-secret = secret = dbutils.secrets.get("ingest00-keyvault-sbox", "curatedsbox-connection-string-sbox")
+secret = dbutils.secrets.get(keyvault_name, f"CURATED-{env}-SAS-TOKEN")
  
  
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
  
-# Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
+# Set up the BlobServiceClient with the connection string
  
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+blob_service_client = BlobServiceClient.from_connection_string(secret)
  
 # Specify the container name
 container_name = "gold"
 container_client = blob_service_client.get_container_client(container_name)
-
-audit_container_client = blob_service_client.get_container_client("silver")
-
-# COMMAND ----------
-
-
 
 
 # COMMAND ----------
@@ -292,165 +368,165 @@ audit_container_client = blob_service_client.get_container_client("silver")
 
 # load in all the raw tables
 
-@dlt.table(name="raw_appeal_cases", comment="Raw Appeal Cases",path=f"{raw_mnt}/raw_appeal_cases")
+@dlt.table(name="raw_appeal_cases", comment="Raw Appeal Cases",path=f"{raw_base_path}/raw_appeal_cases")
 def bail_raw_appeal_cases():
-    return read_latest_parquet("AppealCase","tv_AppealCase","ARIA_ARM_BAIL")
+    return read_latest_parquet("AppealCase","tv_AppealCase","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_respondents", comment="Raw Case Respondents",path=f"{raw_mnt}/raw_case_respondents")
+@dlt.table(name="raw_case_respondents", comment="Raw Case Respondents",path=f"{raw_base_path}/raw_case_respondents")
 def bail_raw_case_respondents():
-    return read_latest_parquet("CaseRespondent","tv_CaseRespondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseRespondent","tv_CaseRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_respondent", comment="Raw Respondents",path=f"{raw_mnt}/raw_respondents")
+@dlt.table(name="raw_respondent", comment="Raw Respondents",path=f"{raw_base_path}/raw_respondents")
 def bail_raw_respondent():
-    return read_latest_parquet("Respondent","tv_Respondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("Respondent","tv_Respondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_main_respondent", comment="Raw Main Respondent",path=f"{raw_mnt}/raw_main_respondent")
+@dlt.table(name="raw_main_respondent", comment="Raw Main Respondent",path=f"{raw_base_path}/raw_main_respondent")
 def bail_raw_main_respondent():
-    return read_latest_parquet("MainRespondent","tv_MainRespondent","ARIA_ARM_BAIL")
+    return read_latest_parquet("MainRespondent","tv_MainRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_pou", comment="Raw Pou",path=f"{raw_mnt}/raw_pou")
+@dlt.table(name="raw_pou", comment="Raw Pou",path=f"{raw_base_path}/raw_pou")
 def bail_raw_pou():
-    return read_latest_parquet("Pou","tv_Pou","ARIA_ARM_BAIL")
+    return read_latest_parquet("Pou","tv_Pou","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_file_location", comment="Raw File Location",path=f"{raw_mnt}/raw_file_location")
+@dlt.table(name="raw_file_location", comment="Raw File Location",path=f"{raw_base_path}/raw_file_location")
 def bail_raw_file_location():
-    return read_latest_parquet("FileLocation","tv_FileLocation","ARIA_ARM_BAIL")
+    return read_latest_parquet("FileLocation","tv_FileLocation","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_rep", comment="Raw Case Rep",path=f"{raw_mnt}/raw_case_rep")
+@dlt.table(name="raw_case_rep", comment="Raw Case Rep",path=f"{raw_base_path}/raw_case_rep")
 def bail_raw_case_rep():
-    return read_latest_parquet("CaseRep","tv_CaseRep","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseRep","tv_CaseRep","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_representative", comment="Raw Representative",path=f"{raw_mnt}/raw_Representative")
+@dlt.table(name="raw_representative", comment="Raw Representative",path=f"{raw_base_path}/raw_Representative")
 def bail_raw_Representative():
-    return read_latest_parquet("Representative","tv_Representative","ARIA_ARM_BAIL")
+    return read_latest_parquet("Representative","tv_Representative","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_language", comment="Raw Language",path=f"{raw_mnt}/raw_language")
+@dlt.table(name="raw_language", comment="Raw Language",path=f"{raw_base_path}/raw_language")
 def bail_raw_language():
-    return read_latest_parquet("Language","tv_Language","ARIA_ARM_BAIL")
+    return read_latest_parquet("Language","tv_Language","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_cost_award", comment="Raw Cost Award",path=f"{raw_mnt}/raw_cost_award")
+@dlt.table(name="raw_cost_award", comment="Raw Cost Award",path=f"{raw_base_path}/raw_cost_award")
 def bail_raw_cost_award():
-    return read_latest_parquet("CostAward","tv_CostAward","ARIA_ARM_BAIL") 
+    return read_latest_parquet("CostAward","tv_CostAward","ARIA_ARM_BAIL",landing_base_path) 
 
-@dlt.table(name='raw_case_list', comment='Raw Case List',path=f"{raw_mnt}/raw_case_list")
+@dlt.table(name='raw_case_list', comment='Raw Case List',path=f"{raw_base_path}/raw_case_list")
 def bail_case_list():
-    return read_latest_parquet("CaseList","tv_CaseList","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseList","tv_CaseList","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_type', comment='Raw Hearing Type',path=f"{raw_mnt}/raw_hearing_type")
+@dlt.table(name='raw_hearing_type', comment='Raw Hearing Type',path=f"{raw_base_path}/raw_hearing_type")
 def bail_hearing_type():
-    return read_latest_parquet("HearingType","tv_HearingType","ARIA_ARM_BAIL")
+    return read_latest_parquet("HearingType","tv_HearingType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list',comment='Raw List',path=f"{raw_mnt}/raw_list")
+@dlt.table(name='raw_list',comment='Raw List',path=f"{raw_base_path}/raw_list")
 def bail_list():
-    return read_latest_parquet("List","tv_List","ARIA_ARM_BAIL")
+    return read_latest_parquet("List","tv_List","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_type',comment='Raw List Type',path=f"{raw_mnt}/raw_list_type")
+@dlt.table(name='raw_list_type',comment='Raw List Type',path=f"{raw_base_path}/raw_list_type")
 def bail_list_type():
-    return read_latest_parquet("ListType","tv_ListType","ARIA_ARM_BAIL")
+    return read_latest_parquet("ListType","tv_ListType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_court',comment='Raw Bail Court',path=f"{raw_mnt}/raw_court")
+@dlt.table(name='raw_court',comment='Raw Bail Court',path=f"{raw_base_path}/raw_court")
 def bail_court():
-    return read_latest_parquet("Court","tv_Court","ARIA_ARM_BAIL")
+    return read_latest_parquet("Court","tv_Court","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_centre',comment='Raw  Hearing Centre',path=f"{raw_mnt}/raw_hearing_centre")
+@dlt.table(name='raw_hearing_centre',comment='Raw  Hearing Centre',path=f"{raw_base_path}/raw_hearing_centre")
 def bail_hearing_centre():
-    return read_latest_parquet("HearingCentre","tv_HearingCentre","ARIA_ARM_BAIL")
+    return read_latest_parquet("HearingCentre","tv_HearingCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_sitting',comment='Raw List Sitting',path=f"{raw_mnt}/raw_list_sitting")
+@dlt.table(name='raw_list_sitting',comment='Raw List Sitting',path=f"{raw_base_path}/raw_list_sitting")
 def bail_list_sitting():
-    return read_latest_parquet("ListSitting","tv_ListSitting","ARIA_ARM_BAIL")
+    return read_latest_parquet("ListSitting","tv_ListSitting","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_adjudicator',comment='Raw Adjudicator',path=f"{raw_mnt}/raw_adjudicator")
+@dlt.table(name='raw_adjudicator',comment='Raw Adjudicator',path=f"{raw_base_path}/raw_adjudicator")
 def bail_adjudicator():
-    return read_latest_parquet("Adjudicator","tv_Adjudicator","ARIA_ARM_BAIL")
+    return read_latest_parquet("Adjudicator","tv_Adjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appellant',comment='Raw Bail Appellant',path=f"{raw_mnt}/raw_appellant")
+@dlt.table(name='raw_appellant',comment='Raw Bail Appellant',path=f"{raw_base_path}/raw_appellant")
 def bail_appellant():
-    return read_latest_parquet("Appellant","tv_Appellant","ARIA_ARM_BAIL")
+    return read_latest_parquet("Appellant","tv_Appellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_appellant',comment='Raw Bail Case Appellant',path=f"{raw_mnt}/raw_case_appellant")
+@dlt.table(name='raw_case_appellant',comment='Raw Bail Case Appellant',path=f"{raw_base_path}/raw_case_appellant")
 def bail_case_appellant():
-    return read_latest_parquet("CaseAppellant","tv_CaseAppellant","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseAppellant","tv_CaseAppellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_detention_centre',comment='Raw Nail Detention Centre',path=f"{raw_mnt}/raw_detention_centre")
+@dlt.table(name='raw_detention_centre',comment='Raw Nail Detention Centre',path=f"{raw_base_path}/raw_detention_centre")
 def bail_detention_centre():
-    return read_latest_parquet("DetentionCentre","tv_DetentionCentre","ARIA_ARM_BAIL")
+    return read_latest_parquet("DetentionCentre","tv_DetentionCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_country',comment='Raw Bail Country',path=f"{raw_mnt}/raw_country")
+@dlt.table(name='raw_country',comment='Raw Bail Country',path=f"{raw_base_path}/raw_country")
 def bail_country():
-    return read_latest_parquet("Country","tv_Country","ARIA_ARM_BAIL")
+    return read_latest_parquet("Country","tv_Country","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_diary',comment='Raw Bail BF Diary',path=f"{raw_mnt}/raw_bf_diary")
+@dlt.table(name='raw_bf_diary',comment='Raw Bail BF Diary',path=f"{raw_base_path}/raw_bf_diary")
 def bail_bf_diary():
-    return read_latest_parquet("BFDiary","tv_BFDiary","ARIA_ARM_BAIL")
+    return read_latest_parquet("BFDiary","tv_BFDiary","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_type',comment='Raw Bail BF Type',path=f"{raw_mnt}/raw_bf_type")
+@dlt.table(name='raw_bf_type',comment='Raw Bail BF Type',path=f"{raw_base_path}/raw_bf_type")
 def bail_bf_type():
-    return read_latest_parquet("BFType","tv_BFType","ARIA_ARM_BAIL")
+    return read_latest_parquet("BFType","tv_BFType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_history',comment='Raw Bail History',path=f"{raw_mnt}/raw_history")
+@dlt.table(name='raw_history',comment='Raw Bail History',path=f"{raw_base_path}/raw_history")
 def bail_history():
-    return read_latest_parquet("History","tv_History","ARIA_ARM_BAIL")
+    return read_latest_parquet("History","tv_History","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_users',comment='Raw Bail Users',path=f"{raw_mnt}/raw_users")
+@dlt.table(name='raw_users',comment='Raw Bail Users',path=f"{raw_base_path}/raw_users")
 def bail_users():
-    return read_latest_parquet("Users","tv_Users","ARIA_ARM_BAIL")
+    return read_latest_parquet("Users","tv_Users","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link',comment='Raw Bail Link',path=f"{raw_mnt}/raw_link")
+@dlt.table(name='raw_link',comment='Raw Bail Link',path=f"{raw_base_path}/raw_link")
 def bail_link():
-    return read_latest_parquet("Link","tv_Link","ARIA_ARM_BAIL")
+    return read_latest_parquet("Link","tv_Link","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link_detail',comment='Raw Bail Link Detail',path=f"{raw_mnt}/raw_link_detail")
+@dlt.table(name='raw_link_detail',comment='Raw Bail Link Detail',path=f"{raw_base_path}/raw_link_detail")
 def bail_link_detail():
-    return read_latest_parquet("LinkDetail","tv_LinkDetail","ARIA_ARM_BAIL")
+    return read_latest_parquet("LinkDetail","tv_LinkDetail","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status',comment='Raw Bail Status',path=f"{raw_mnt}/raw_status")
+@dlt.table(name='raw_status',comment='Raw Bail Status',path=f"{raw_base_path}/raw_status")
 def bail_status():
-    return read_latest_parquet("Status","tv_Status","ARIA_ARM_BAIL")
+    return read_latest_parquet("Status","tv_Status","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_status',comment='Raw Bail Case Status',path=f"{raw_mnt}/raw_case_status")
+@dlt.table(name='raw_case_status',comment='Raw Bail Case Status',path=f"{raw_base_path}/raw_case_status")
 def bail_case_status():
-    return read_latest_parquet("CaseStatus","tv_CaseStatus","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseStatus","tv_CaseStatus","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status_contact',comment='Raw Bail Status Contact',path=f"{raw_mnt}/raw_status_contact")
+@dlt.table(name='raw_status_contact',comment='Raw Bail Status Contact',path=f"{raw_base_path}/raw_status_contact")
 def bail_status_contact():
-    return read_latest_parquet("StatusContact","tv_StatusContact","ARIA_ARM_BAIL")
+    return read_latest_parquet("StatusContact","tv_StatusContact","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn',path=f"{raw_mnt}/raw_reason_adjourn")
+@dlt.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn',path=f"{raw_base_path}/raw_reason_adjourn")
 def bail_reason_adjourn():
-    return read_latest_parquet("ReasonAdjourn","tv_ReasonAdjourn","ARIA_ARM_BAIL")
+    return read_latest_parquet("ReasonAdjourn","tv_ReasonAdjourn","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appeal_category',comment='Raw Bail Appeal Category',path=f"{raw_mnt}/raw_appeal_category")
+@dlt.table(name='raw_appeal_category',comment='Raw Bail Appeal Category',path=f"{raw_base_path}/raw_appeal_category")
 def bail_appeal_category():
-    return read_latest_parquet("AppealCategory","tv_AppealCategory","ARIA_ARM_BAIL")
+    return read_latest_parquet("AppealCategory","tv_AppealCategory","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_category',comment='Raw Bail Category',path=f"{raw_mnt}/raw_category")
+@dlt.table(name='raw_category',comment='Raw Bail Category',path=f"{raw_base_path}/raw_category")
 def bail_category():
-    return read_latest_parquet("Category","tv_Category","ARIA_ARM_BAIL")
+    return read_latest_parquet("Category","tv_Category","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_surety",comment="Raw Bail Surety",path=f"{raw_mnt}/raw_case_surety")
+@dlt.table(name="raw_case_surety",comment="Raw Bail Surety",path=f"{raw_base_path}/raw_case_surety")
 def bail_case_surety():
-    return read_latest_parquet("CaseSurety","tv_CaseSurety","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseSurety","tv_CaseSurety","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_port",comment="Raw Bail Port",path=f"{raw_mnt}/raw_port")
+@dlt.table(name="raw_port",comment="Raw Bail Port",path=f"{raw_base_path}/raw_port")
 def bail_port():
-    return read_latest_parquet("Port","tv_Port","ARIA_ARM_BAIL")
+    return read_latest_parquet("Port","tv_Port","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decisiontype",comment="Raw Bail Decision Type",path=f"{raw_mnt}/raw_decisiontype")
+@dlt.table(name="raw_decisiontype",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decisiontype")
 def bail_decisiontype():
-    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL")
+    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator",path=f"{raw_mnt}/raw_case_adjudicator")
+@dlt.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator",path=f"{raw_base_path}/raw_case_adjudicator")
 def bail_case_adjudictor():
-    return read_latest_parquet("CaseAdjudicator","tv_CaseAdjudicator","ARIA_ARM_BAIL")
+    return read_latest_parquet("CaseAdjudicator","tv_CaseAdjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_embassy",comment="Raw Bail Embassy",path=f"{raw_mnt}/raw_embassy")
+@dlt.table(name="raw_embassy",comment="Raw Bail Embassy",path=f"{raw_base_path}/raw_embassy")
 def bail_embassy():
-    return read_latest_parquet("Embassy","tv_Embassy","ARIA_ARM_BAIL")
+    return read_latest_parquet("Embassy","tv_Embassy","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decision_type",comment="Raw Bail Decision Type",path=f"{raw_mnt}/raw_decision_type")
+@dlt.table(name="raw_decision_type",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decision_type")
 def bail_decision_type():
-    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL")
+    return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
 
 
@@ -459,109 +535,9 @@ def bail_decision_type():
 
 # COMMAND ----------
 
-@dlt.table(name="raw_stm_cases", comment="Raw Bail STM Cases",path=f"{raw_mnt}/raw_stm_cases")
+@dlt.table(name="raw_stm_cases", comment="Raw Bail STM Cases",path=f"{raw_base_path}/raw_stm_cases")
 def raw_stm_cases():
-    return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Audit Log function
-
-# COMMAND ----------
-
-from pyspark.sql.types import StructType, StructField, LongType, StringType, IntegerType
-from delta.tables import DeltaTable
-
-
-
-# COMMAND ----------
-
-audit_schema = StructType([
-    StructField("Runid", StringType(), True),
-    StructField("Unique_identifier_desc", StringType(), True),
-    StructField("Unique_identifier", StringType(), True),
-    StructField("Table_name", StringType(), True),
-    StructField("Stage_name", StringType(), True),
-    StructField("Record_count", IntegerType(), True),
-    StructField("Run_dt",TimestampType(), True),
-    StructField("Batch_id", StringType(), True),
-    StructField("Description", StringType(), True),
-    StructField("File_name", StringType(), True),
-    StructField("Status", StringType(), True)
-])
-
-# Define Delta Table Path in Azure Storage
-audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-    print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-    # Create an empty DataFrame
-    empty_df = spark.createDataFrame([], audit_schema)
-
-    # Write the empty DataFrame in Delta format to create the table
-    empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-    print("✅ Empty Delta table successfully created in Azure Storage.")
-else:
-    print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-
-# COMMAND ----------
-
-def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-    """
-    Creates an audit DataFrame and writes it to Delta format.
-
-    :param df: Input DataFrame from which unique identifiers are extracted.
-    :param unique_identifier_desc: Column name that acts as a unique identifier.
-    :param table_name: Name of the source table.
-    :param stage_name: Name of the data processing stage.
-    :param description: Description of the table.
-    :param additional_columns: List of additional columns to include in the audit DataFrame.
-    """
-
-    dt_desc = datetime.utcnow()
-
-    additional_columns = additional_columns or []  # Default to an empty list if None   
-    additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-    audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-    .withColumn("Runid", lit(run_id_value))\
-        .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-            .withColumn("Stage_name", lit(stage_name))\
-                .withColumn("Table_name", lit(table_name))\
-                    .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-                        .withColumn("Description", lit(description))
-
-    list_cols = audit_df.columns
-
-    final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-    final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
-audit = spark.read.format("delta").load(audit_delta_path)
-
-audit.display()
-
-# COMMAND ----------
-
-
-import uuid
-
-
-def datetime_uuid():
-    dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-run_id_value = datetime_uuid()
-
+    return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL",landing_base_path)
 
 # COMMAND ----------
 
@@ -729,7 +705,7 @@ run_id_value = datetime_uuid()
     name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
     comment='ARIA Migration Archive Bails cases bronze table',
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
+    path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
@@ -838,7 +814,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("crep.LSCCommission").alias("CaseRepLSCCommission"),
         col("crep.Contact").alias("FileSpecifcContact"),
         col("crep.Telephone").alias("FileSpecificPhone"),
-        col("crep.RepresentativeRef").alias("CaseRepRepresentativeRef"),
+        col("crep.RepresentativeRef").alias("FileSpecificReference"),
         col("crep.FileSpecificFax"),
         col("crep.FileSpecificEmail"),
         # Representative Fields
@@ -867,16 +843,6 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("ca.AppealStage")
     )
     )
-
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang table consolidates key details of appeal cases, including case numbers, court preferences, hearing dates, language requirements, and respondents, alongside associated embassy, representative, and cost award information. It joins multiple tables to provide a comprehensive dataset for tracking legal proceedings and related entities"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
 
 
@@ -937,7 +903,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     name='bronze_bail_ac_ca_apt_country_detc',
     comment='ARIA Migration Archive Bails cases bronze table',
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_ca_apt_country_detc")
+    path=f"{bronze_base_path}/bronze_bail_ac_ca_apt_country_detc")
 def bronze_bail_ac_ca_apt_country_detc():
     df =  (
         dlt.read("raw_case_appellant").alias("ca")
@@ -980,15 +946,6 @@ def bronze_bail_ac_ca_apt_country_detc():
     )
     )
 
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_ca_apt_country_detc"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_ca_apt_country_detc table consolidates key details related to appellants in bail cases. It joins data from multiple sources, including case appellant records, appellant personal details, detention centre information, and country data. The table provides a comprehensive view of the appellant’s identity, detention status, and nationality, linking them to their respective case numbers. Key attributes include appellant name, birth date, address, telephone, email, detention centre details, and country information, ensuring a structured dataset for tracking individuals involved in bail proceedings."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1001,70 +958,70 @@ def bronze_bail_ac_ca_apt_country_detc():
 # MAGIC
 # MAGIC SELECT 
 # MAGIC
+# MAGIC
 # MAGIC     -- Status
 # MAGIC     s.CaseNo,
 # MAGIC     s.StatusId,
 # MAGIC     s.Outcome,
-# MAGIC     
 # MAGIC     -- CaseList
 # MAGIC     cl.TimeEstimate AS CaseListTimeEstimate,
+# MAGIC     cl.ListNumber AS CaseListNumber,
+# MAGIC     cl.HearingDuration AS CaseListHearingDuration,
 # MAGIC     cl.StartTime AS CaseListStartTime,
-# MAGIC     
-# MAGIC     -- HearingType
+# MAGIC     --HearingType
 # MAGIC     ht.Description AS HearingTypeDesc,
-# MAGIC
-# MAGIC     
-# MAGIC     -- List
+# MAGIC     ht.TimeEstimate AS HearingTypeEst,
+# MAGIC     ht.DoNotUse,
+# MAGIC     --List
 # MAGIC     l.ListName,
+# MAGIC     l.StartDate AS HearingDate,
 # MAGIC     l.StartTime AS ListStartTime,
-# MAGIC     
-# MAGIC     -- ListType
+# MAGIC     l.NumReqSeniorImmigrationJudge AS UpperTribJudge,
+# MAGIC     l.NumReqDesignatedImmigrationJudge AS DesJudgeFirstTier,
+# MAGIC     l.NumReqImmigrationJudge AS JudgeFirstTier,
+# MAGIC     l.NumReqNonLegalMember AS NonLegalMember,
+# MAGIC     --ListType
 # MAGIC     lt.Description AS ListTypeDesc,
 # MAGIC     lt.ListType,
-# MAGIC     
-# MAGIC     -- Court
+# MAGIC     lt.DoNotUse AS DoNotUseListType,
+# MAGIC     --Court
 # MAGIC     c.CourtName,
-# MAGIC     
-# MAGIC     -- HearingCentre
+# MAGIC     c.DoNotUse AS DoNotUseCourt,
+# MAGIC     --HearingCentre
 # MAGIC     hc.Description AS HearingCentreDesc,
-# MAGIC     
 # MAGIC     -- ListSitting
 # MAGIC     ls.Chairman,
-# MAGIC     
+# MAGIC     Ls.Position,
 # MAGIC     -- Adjudicator
 # MAGIC     a.Surname AS AdjudicatorSurname,
 # MAGIC     a.Forenames AS AdjudicatorForenames,
-# MAGIC     a.Title AS AdjudicatorTitle
-# MAGIC
-# MAGIC     --DecisionType
-# MAGIC     dt.Description AS OutcomeDescription,
-# MAGIC     --AppealCase
+# MAGIC     a.Title AS AdjudicatorTitle,
+# MAGIC     a.Notes AS AdjudicatorNote,
+# MAGIC     --DecisionType 
+# MAGIC     dt.Description AS OutcomeDescription, 
+# MAGIC     --AppealCase 
 # MAGIC     ac.Notes
-# MAGIC
-# MAGIC FROM [ARIAREPORTS].[dbo].[Status] s
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[CaseList] cl ON s.StatusId = cl.StatusId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingType] ht ON cl.HearingTypeId = ht.HearingTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[List] l ON cl.ListId = l.ListId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListType] lt ON l.ListTypeId = lt.ListTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Court] c ON l.CourtId = c.CourtId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc ON l.CentreId = hc.CentreId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListSitting] ls ON l.ListId = ls.ListId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Adjudicator] a ON ls.AdjudicatorId = a.AdjudicatorId;
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[DecisionType] dt
-# MAGIC ON s.Outcome = dt.DecisionTypeId
-# MAGIC
-# MAGIC LEFT OUTER JOIN [ARIAREPORTS].[dbo].[AppealCase] ac
-# MAGIC ON s.CaseNo = ac.CaseNo
-# MAGIC
+# MAGIC     FROM [ARIAREPORTS].[dbo].[Status] s
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[CaseList] cl
+# MAGIC     ON s.StatusId = cl.StatusId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingType] ht
+# MAGIC     ON cl.HearingTypeId = ht.HearingTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[List] l
+# MAGIC     ON cl.ListId = l.ListId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListType] lt
+# MAGIC     ON l.ListTypeId = lt.ListTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Court] c
+# MAGIC     ON l.CourtId = c.CourtId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[HearingCentre] hc
+# MAGIC     ON l.CentreId = hc.CentreId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[ListSitting] ls
+# MAGIC     ON l.ListId = ls.ListId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[Adjudicator] a
+# MAGIC     ON ls.AdjudicatorId = a.AdjudicatorId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[DecisionType] dt
+# MAGIC     ON s.Outcome = dt.DecisionTypeId
+# MAGIC     LEFT OUTER JOIN [ARIAREPORTS].[dbo].[AppealCase] ac
+# MAGIC     ON s.CaseNo = ac.CaseNo
 
 # COMMAND ----------
 
@@ -1072,7 +1029,7 @@ def bronze_bail_ac_ca_apt_country_detc():
     name="bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj",
     comment="ARIA Migration Archive Bails cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
+    path=f"{bronze_base_path}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     df =  (
@@ -1101,6 +1058,10 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("l.ListName"),
             col("l.StartDate").alias("HearingDate"),
             col("l.StartTime").alias("ListStartTime"),
+            col("l.NumReqSeniorImmigrationJudge").alias("UpperTribJudge"),
+            col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
+            col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
+            col("l.NumReqNonLegalMember").alias("NonLegalMember"),
             # ListType
             col("lt.Description").alias("ListTypeDesc"),
             col("lt.ListType"),
@@ -1110,6 +1071,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("hc.Description").alias("HearingCentreDesc"),
             # ListSitting
             col("ls.Chairman"),
+            col("ls.Position"),
             # Adjudicator
             col("adj.Surname").alias("AdjudicatorSurname"),
             col("adj.Forenames").alias("AdjudicatorForenames"),
@@ -1122,15 +1084,6 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
         )
         )
     
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj table consolidates information on case statuses, hearings, listings, courts, adjudicators, and appeal outcomes in bail cases. It integrates data from multiple sources, including case lists, hearing types, list types, courts, hearing centres, list sittings, adjudicators, and decision types, providing a structured view of legal proceedings. Key attributes include case status, hearing date, list type, court name, hearing centre, adjudicator details, and appeal case notes, enabling efficient tracking of hearing schedules and case outcomes"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1164,7 +1117,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     name="bronze_bail_ac_bfdiary_bftype", 
     comment="ARIA Migration Archive Bails cases bronze table", 
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_bfdiary_bftype")
+    path=f"{bronze_base_path}/bronze_bail_ac_bfdiary_bftype")
 def bronze_bail_ac_bfdiary_bftype():
     df = (
         dlt.read("raw_bf_diary").alias("bfd")
@@ -1173,20 +1126,12 @@ def bronze_bail_ac_bfdiary_bftype():
             col("bfd.CaseNo"),
             col("bfd.BFDate"),
             col("bfd.Entry") ,
+            col("bfd.EntryDate"),
             col("bfd.DateCompleted"),
             # -- bF Type Fields
             col("bft.Description").alias("BFTypeDescription")
         )
         )
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_bfdiary_bftype"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_bfdiary_bftype table consolidates information on BF (Bring Forward) diary entries related to bail cases. It links BF diary records with their corresponding BF types, providing a structured overview of case follow-ups and deadlines. Key attributes include case number, BF date, entry details, completion date, and BF type description, enabling efficient tracking of pending and completed case actions."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1217,7 +1162,7 @@ def bronze_bail_ac_bfdiary_bftype():
     name="bronze_bail_ac_history_users", 
     comment="ARIA Migration Archive Bails cases bronze table", 
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_history_users")
+    path=f"{bronze_base_path}/bronze_bail_ac_history_users")
 def bronze_bail_ac_history_users():
     df = (
         dlt.read("raw_history").alias("h")
@@ -1234,16 +1179,6 @@ def bronze_bail_ac_history_users():
             col("u.Fullname").alias("UserFullname")
         )
     )
-
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_history_users"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_history_users table captures a detailed history of actions taken on bail cases, linking historical records with user information. It integrates data from the history and users tables, providing insights into case modifications, timestamps, action types, and user activity. Key attributes include case number, history ID, action date, history type, comments, deleted by information, and the full name of the user responsible for the action, ensuring a transparent audit trail of case updates"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1287,7 +1222,7 @@ def bronze_bail_ac_history_users():
   name="bronze_bail_ac_link_linkdetail", 
   comment="ARIA Migration Archive Bails cases bronze table", 
   partition_cols=["CaseNo"],
-  path=f"{bronze_mnt}/bronze_bail_ac_link_linkdetail")
+  path=f"{bronze_base_path}/bronze_bail_ac_link_linkdetail")
 def bronze_bail_ac_link_linkdetail():
     df = (
         dlt.read("raw_link").alias("l")
@@ -1303,15 +1238,6 @@ def bronze_bail_ac_link_linkdetail():
           col("ld.Comment").alias("LinkDetailComment")
           )
         )
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_link_linkdetail"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_link_linkdetail table captures case linkages and related appellant details within bail cases. It integrates data from case links, link details, and appellant records, providing insights into case associations and relevant individuals. Key attributes include link number, case number, appellant’s name, title, and any associated comments from link details, facilitating the tracking of case relationships and appellant connections"
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
     
@@ -1397,7 +1323,7 @@ def bronze_bail_ac_link_linkdetail():
     name="bronze_bail_status_sc_ra_cs",
     comment="ARIA Migration Archive Bails Status cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_status_sc_ra_cs"
+    path=f"{bronze_base_path}/bronze_bail_status_sc_ra_cs"
 )
 def bronze_bail_status_sc_ra_cs():
     df = (
@@ -1541,30 +1467,10 @@ def bronze_bail_status_sc_ra_cs():
         )
     )
 
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_status_sc_ra_cs"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_status_sc_ra_cs table consolidates information related to case statuses, contacts, adjournment reasons, language preferences, list types, hearing types, and judiciary assignments."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df, unique_identifier_desc, table_name, stage_name, description)
 
     return df
 
 
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_status_sc_ra_cs"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_status_sc_ra_cs table consolidates information related to case statuses, status contacts, adjournment reasons, and language preferences in bail cases. It integrates data from multiple sources, including case status records, decision outcomes, adjournment reasons, and interpreter requirements, providing a structured view of the legal progression of bail cases. Key attributes include case number, case status description, outcome details, financial conditions, bail conditions, hearing dates, reporting orders, status contacts (including court and address details), and language requirements. This table ensures comprehensive tracking of case progress, decisions, and associated conditions."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
 
 
 # COMMAND ----------
@@ -1591,7 +1497,7 @@ def bronze_bail_status_sc_ra_cs():
     name="bronze_bail_ac_appealcategory_category",
     comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
     partition_cols=["CaseNo"],
-    path=f"{bronze_mnt}/bronze_bail_ac_appealcategory_category"
+    path=f"{bronze_base_path}/bronze_bail_ac_appealcategory_category"
 )
 def bronze_bail_ac_appealcategory_category():
     df = (
@@ -1607,16 +1513,6 @@ def bronze_bail_ac_appealcategory_category():
         )
     )
 
-    ## Create and save audit log for this table
-    table_name = "bronze_bail_ac_appealcategory_category"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_bail_ac_appealcategory_category table records appeal categories and their associated details for bail cases. It integrates data from appeal category records and general category descriptions, allowing for a structured view of case classifications. Key attributes include case number, category description, and category flag, enabling efficient tracking of case types and appeal classifications for auditing purposes."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
     return df.orderBy("Priority")
 
 
@@ -1630,7 +1526,7 @@ def bronze_bail_ac_appealcategory_category():
 @dlt.table(
     name="bronze_case_surety_query",
     comment="ARIA Migration Archive Case Surety cases bronze table",
-    path=f"{bronze_mnt}/bronze_case_surety_query"
+    path=f"{bronze_base_path}/bronze_case_surety_query"
 )
 def bronze_case_surety_query():
     df = (
@@ -1657,16 +1553,6 @@ def bronze_case_surety_query():
             col("Telephone").alias("CaseSuretyTelephone")
         )
     )
-
-    ## Create and save audit log for this table
-    table_name = "bronze_case_surety_query"
-    stage_name = "bronze_stage"
-
-    description = "The bronze_case_surety_query table captures surety details related to bail cases, providing insights into individuals or entities offering financial guarantees for an appellant's release. It includes surety identity, contact details, financial commitments (recognizance and security amounts), lodging dates, solicitor involvement, and communication details. This table ensures comprehensive tracking of surety obligations and case associations, supporting case management and auditing processes."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1698,7 +1584,7 @@ def bronze_case_surety_query():
 @dlt.table(
     name="judicial_requirement",
     comment="ARIA Migration Archive Judicial Requirements cases table",
-    path=f"{bronze_mnt}/judicial_requirement"
+    path=f"{bronze_base_path}/judicial_requirement"
 )
 
 def judicial_requirement():
@@ -1713,15 +1599,6 @@ def judicial_requirement():
                 col("adj.Title").alias("JudgeTitle")
         )
     )
-    ## Create and save audit log for this table
-    table_name = "judicial_requirement"
-    stage_name = "bronze_stage"
-
-    description = "The judicial_requirement table tracks judicial assignments and requirements for bail cases. It links case adjudicators to their assigned judges, providing a structured view of judicial oversight in legal proceedings. Key attributes include case number, adjudicator requirements, and judge details (surname, forenames, and title), ensuring visibility into judicial involvement and case management."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -1769,7 +1646,7 @@ def judicial_requirement():
 @dlt.table(
     name="linked_cases_cost_award",
     comment="Linked Cases Cost Award cases table",
-    path=f"{bronze_mnt}/linked_cases_cost_award"
+    path=f"{bronze_base_path}/linked_cases_cost_award"
 )
 def linked_cases_cost_award():
     df =  (
@@ -1800,16 +1677,6 @@ def linked_cases_cost_award():
         )
     )
 
-    ## Create and save audit log for this table
-    table_name = "linked_cases_cost_award"
-    stage_name = "bronze_stage"
-
-    description = "The linked_cases_cost_award table consolidates cost awards and their associations with linked cases, appellants, and appeal stages. It provides a structured overview of financial awards in legal proceedings, linking them to case numbers, appellants, appeal stages, and case statuses. Key attributes include cost award details (application date, type, applying and paying parties, decision outcomes, and amounts), linked case numbers, appellant details (name, forenames, title), and appeal stage descriptions, ensuring a comprehensive record of financial decisions within bail cases."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
     return df
 
 # COMMAND ----------
@@ -1826,22 +1693,13 @@ def linked_cases_cost_award():
 
 @dlt.table(name="silver_scottish_bails_funds",
            comment="Silver table for Scottish Bails Funds cases",
-           path=f"{silver_mnt}/silver_scottish_bails_funds")
+           path=f"{silver_base_path}/silver_scottish_bails_funds")
 def silver_scottish_bails_funds():
-    df = spark.read.format("csv").option("header", "true").load(f"{external_mnt}/Scottish__Bailsfile.csv").select(
+    df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
         col("Caseno/ Bail Ref no").alias("CaseNo"),
         lit("ScottishBailsFunds").alias("BaseBailType")
         )
-    
-    ## Create and save audit log for this table
-    table_name = "silver_scottish_bails_funds"
-    stage_name = "segmentation_stage"
 
-    description = "The silver_scottish_bails_funds table processes Scottish Bails Funds cases from an external CSV file. It extracts case numbers (or bail reference numbers) and categorizes them under the ScottishBailsFunds bail type. This table ensures structured integration of external Scottish bail data into the silver layer for further analysis and reporting."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
     
@@ -1850,28 +1708,6 @@ def silver_scottish_bails_funds():
 
 # MAGIC %md
 # MAGIC ## Combined Segmentaiton query
-
-# COMMAND ----------
-
-@dlt.table(name="silver_bail_combined_segmentation_nb_lhnb_sbhf",
-           comment="Silver table for combined segmentation Normal bails, legal hold normal bail cases and Scottish Bails Holding Funds",
-           path=f"{silver_mnt}/silver_bail_combined_segmentation_nb_lhnb_sbhf")
-def silver_bail_combined_segmentation_nb_lhnb_sbhf():
-    sbhf = dlt.read("silver_scottish_bails_funds").select("CaseNo", "BaseBailType")
-    df =  sbhf
-
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_combined_segmentation_nb_lhnb_sbhf"
-    stage_name = "segmentation_stage"
-
-    description = "The silver_bail_combined_segmentation_nb_lhnb_sbhf table consolidates normal bail cases, legal hold normal bail cases, and Scottish Bails Holding Funds into a single dataset. It integrates data from the silver_scottish_bails_funds tables, ensuring a unified view of bail case classifications. Key attributes include case numbers and corresponding bail types, providing a structured dataset for further analysis and decision-making."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
 
 # COMMAND ----------
 
@@ -1888,19 +1724,21 @@ def silver_bail_combined_segmentation_nb_lhnb_sbhf():
 @dlt.table(name="silver_bail_m1_case_details",
            comment="ARIA Migration Archive Bails m1 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m1")
+           path=f"{silver_base_path}/silver_bail_m1")
 def silver_m1():
     m1_df = dlt.read("bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
     
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     
     joined_df = m1_df.join(segmentation_df.alias("bs"), col("m1.CaseNo") == col("bs.CaseNo"), "inner")
 
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
     
     df = joined_df.select("m1.CaseNo", *selected_columns,
-                        when(col("BailType") == 1,"Bail")
-                        .when(col("BailType") == 2,"Scottish Bail")
+                        col("bs.BaseBailType"),
+                        when(col("BaseBailType") == "Normal Bail","Bail").
+                        when(col("BaseBailType") == "BailLegalHold","Bail").
+                        when(col("BailType") == "ScottishBailsFunds" ,"Scottish Bail")
                         .otherwise("Other").alias("BailTypeDesc"),
                         when(col("CourtPreference") == 1,"All Male,")
                         .when(col("CourtPreference") == 2,"All Female,")
@@ -1926,20 +1764,11 @@ def silver_m1():
                         .when(col("CostsAwardDecision") == 2,"Refused")
                         .when(col("CostsAwardDecision") == 3,"Interim field")
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
-                        "BaseBailType"
+                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc")
                             
     )
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m1_case_details"
-    stage_name = "silver_stage"
 
-    description = "The silver_bail_m1_case_details table refines and enriches bail case details by integrating segmentation data and bronze-level case records. It links bail cases with their segmentation type (Normal Bail, Legal Hold, or Scottish Bail) while applying meaningful descriptions to key categorical fields, such as Bail Type, Court Preference, Interpreter Requirement, Cost Award Types, and Paying Party Details. The result is a well-structured dataset that enables clear classification and analysis of bail cases based on their characteristics and financial/legal implications."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
+    return df.dropDuplicates(["CaseNo"])
 
 # COMMAND ----------
 
@@ -1951,10 +1780,10 @@ def silver_m1():
 @dlt.table(name="silver_bail_m2_case_appellant",
            comment="ARIA Migration Archive Bails m2 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m2_case_appellant")
+           path=f"{silver_base_path}/silver_bail_m2_case_appellant")
 def silver_m2():
     m2_df = dlt.read("bronze_bail_ac_ca_apt_country_detc").alias("m2")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
 
     joined_df = m2_df.join(segmentation_df.alias("bs"), col("m2.CaseNo") == col("bs.CaseNo"), "inner")
 
@@ -1967,15 +1796,6 @@ def silver_m2():
                         .when(col("AppellantDetained") == 4,"Other")
                         .otherwise("Unknown").alias("AppellantDetainedDesc"),"BaseBailType")
     
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m2_case_appellant"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m2_case_appellant table refines and enriches appellant-related details in bail cases by integrating segmentation data and bronze-level case appellant records. It links appellants to their bail case type while applying meaningful descriptions to the detention status of appellants. The result is a structured dataset that facilitates better analysis of appellant demographics, detention conditions, and case classifications within the bail system."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -2009,42 +1829,17 @@ m3_grouped_cols = [
 @dlt.table(name="silver_bail_m3_hearing_details", 
            comment="ARIA Migration Archive Bails m3 silver table", 
            partition_cols=["CaseNo"], 
-           path=f"{silver_mnt}/silver_bail_m3")
+           path=f"{silver_base_path}/silver_bail_m3")
 
 def silver_m3():
     # 1. Read from the existing Hive table
     m3_df = dlt.read("bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
-
-    grouped_m3 = m3_df.groupBy(m3_grouped_cols).agg(
-    concat_ws(" ",
-    first(when(col("Chairman") == True, col("AdjudicatorTitle"))),
-     first(when(col("Chairman") == True, col("AdjudicatorForenames"))),
-     first(when(col("Chairman") == True, col("AdjudicatorSurname")))).alias("JudgeFT"),
     
-    concat_ws(" ",
-     first(when(col("Chairman") == False, col("AdjudicatorTitle"))),
-     first(when(col("Chairman") == False, col("AdjudicatorForenames"))),
-     first(when(col("Chairman") == False, col("AdjudicatorSurname")))).alias("CourtClerkUsher"),
-     
-     
-     )
-    
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
-    joined_df = grouped_m3.join(segmentation_df.alias("bs"), col("m3.CaseNo") == col("bs.CaseNo"), "inner")
 
-    selected_columns = [col(c) for c in grouped_m3.columns if c != "CaseNo"]
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
+    joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
 
-    df = joined_df.select("m3.CaseNo", *selected_columns)
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m3_hearing_details"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m3_hearing_details table refines and consolidates hearing-related details for bail cases by grouping and aggregating key court and hearing attributes. It integrates bronze-level hearing records and bail segmentation data, providing structured insights into case status, hearing schedules, court locations, and adjudicator assignments. The table distinguishes between the presiding judge (JudgeFT) and court clerk/usher (CourtClerkUsher) based on their role in the proceedings. This dataset enables efficient tracking of hearing events, adjudicator assignments, and court proceedings within bail case management."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
+    df = joined_df.drop("BaseBailType")
 
     return df
 
@@ -2060,27 +1855,16 @@ def silver_m3():
 @dlt.table(name="silver_bail_m4_bf_diary",
            comment="ARIA Migration Archive Bails m4 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m4_bf_diary")
+           path=f"{silver_base_path}/silver_bail_m4_bf_diary")
 def silver_m4():
     m4_df = dlt.read("bronze_bail_ac_bfdiary_bftype").alias("m4")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     joined_df = m4_df.join(segmentation_df.alias("bs"), col("m4.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m4_df.columns if c != "CaseNo"]
     df = joined_df.select("m4.CaseNo", *selected_columns)
 
 
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m4_bf_diary"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m4_bf_diary table refines and consolidates BF (Bring Forward) diary records related to bail cases. It integrates bronze-level BF diary data with bail segmentation classifications, ensuring that each case is categorized under Normal Bail, Legal Hold, or Scottish Bail Funds. This table provides structured insights into BF dates, diary entries, completion statuses, and BF types, enabling effective tracking of pending actions and case follow-ups within the bail process."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
+    return df.orderBy(col("BFDate").desc())
 
 # COMMAND ----------
 
@@ -2092,26 +1876,67 @@ def silver_m4():
 @dlt.table(name="silver_bail_m5_history",
            comment="ARIA Migration Archive Bails m5 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m5_history")
+           path=f"{silver_base_path}/silver_bail_m5_history")
 def silver_m5():
     m5_df = dlt.read("bronze_bail_ac_history_users").alias("m5")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     joined_df = m5_df.join(segmentation_df.alias("bs"), col("m5.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m5_df.columns if c != "CaseNo"]
-    df = joined_df.select("m5.CaseNo", *selected_columns)
+    df = joined_df.select("m5.CaseNo", *selected_columns,
+                          when(col("HistType") == 1, "Adjournment")
+                          .when(col("HistType") == 2, "Adjudicator Process")
+                          .when(col("HistType") == 3, "Bail Process")
+                          .when(col("HistType") == 4, "Change of Address")
+                          .when(col("HistType") == 5, "Decisions")
+                          .when(col("HistType") == 6, "File Location")
+                          .when(col("HistType") == 7, "Interpreters")
+                          .when(col("HistType") == 8, "Issue")
+                          .when(col("HistType") == 9, "Links")
+                          .when(col("HistType") == 10, "Listing")
+                          .when(col("HistType") == 11, "SIAC Process")
+                          .when(col("HistType") == 12, "Superior Court")
+                          .when(col("HistType") == 13, "Tribunal Process")
+                          .when(col("HistType") == 14, "Typing")
+                          .when(col("HistType") == 15, "Parties edited")
+                          .when(col("HistType") == 16, "Document")
+                          .when(col("HistType") == 17, "Document Received")
+                          .when(col("HistType") == 18, "Manual Entry")
+                          .when(col("HistType") == 19, "Interpreter")
+                          .when(col("HistType") == 20, "File Detail Changed")
+                          .when(col("HistType") == 21, "Dedicated hearing centre changed")
+                          .when(col("HistType") == 22, "File Linking")
+                          .when(col("HistType") == 23, "Details")
+                          .when(col("HistType") == 24, "Availability")
+                          .when(col("HistType") == 25, "Cancel")
+                          .when(col("HistType") == 26, "De-allocation")
+                          .when(col("HistType") == 27, "Work Pattern")
+                          .when(col("HistType") == 28, "Allocation")
+                          .when(col("HistType") == 29, "De-Listing")
+                          .when(col("HistType") == 30, "Statutory Closure")
+                          .when(col("HistType") == 31, "Provisional Destruction Date")
+                          .when(col("HistType") == 32, "Destruction Date")
+                          .when(col("HistType") == 33, "Date of Service")
+                          .when(col("HistType") == 34, "IND Interface")
+                          .when(col("HistType") == 35, "Address Changed")
+                          .when(col("HistType") == 36, "Contact Details")
+                          .when(col("HistType") == 37, "Effective Date")
+                          .when(col("HistType") == 38, "Centre Changed")
+                          .when(col("HistType") == 39, "Appraisal Added")
+                          .when(col("HistType") == 40, "Appraisal Removed")
+                          .when(col("HistType") == 41, "Costs Deleted")
+                          .when(col("HistType") == 42, "Credit/Debit Card Payment received")
+                          .when(col("HistType") == 43, "Bank Transfer Payment received")
+                          .when(col("HistType") == 44, "Chargeback Taken")
+                          .when(col("HistType") == 45, "Remission request Rejected")
+                          .when(col("HistType") == 46, "Refund Event Added")
+                          .when(col("HistType") == 47, "Write Off, Strikeout Write-Off or Threshold Write-off Event Added")
+                          .when(col("HistType") == 48, "Aggregated Payment Taken")
+                          .when(col("HistType") == 49, "Case Created")
+                          .when(col("HistType") == 50, "Tracked Document")
+                          .otherwise("Unknown").alias("HistTypeDesc")
+    )
 
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m5_history"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m5_history table consolidates historical actions and user activity related to bail cases. It integrates bronze-level case history records with bail segmentation classifications, ensuring that each case is categorized under Normal Bail and Legal Hold. Key attributes include historical changes, timestamps, action types, user activity, and related case updates, providing a transparent and structured audit trail for case modifications and decision-making processes."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
-
-    return df
-
+    return df.orderBy(col("HistDate").desc())
 
 # COMMAND ----------
 
@@ -2123,10 +1948,10 @@ def silver_m5():
 @dlt.table(name="silver_bail_m6_link",
            comment="ARIA Migration Archive Bails m6 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m6_link")
+           path=f"{silver_base_path}/silver_bail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_bail_ac_link_linkdetail").alias("m6")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
 
@@ -2134,16 +1959,6 @@ def silver_m6():
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
 
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m6_link"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m6_link table consolidates case linkages and related details for bail cases. It integrates bronze-level case link data with bail segmentation classifications, ensuring that each case is categorized under Normal Bail or Legal Hold. Key attributes include case number, link number, link detail comments, and a concatenated full name (title, forenames, and name), providing a structured overview of case relationships and associated appellants for efficient case tracking and analysis."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -2157,11 +1972,13 @@ def silver_m6():
 @dlt.table(name="silver_bail_m7_status",
            comment="ARIA Migration Archive Bails m7 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m7_status")
+           path=f"{silver_base_path}/silver_bail_m7_status")
 def silver_m7():
     m7_df = dlt.read("bronze_bail_status_sc_ra_cs").alias("m7")
 
-    m7_ref_df = m7_df.select("*",
+    m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
+
+    m7_ref_df = m7_df.select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),
@@ -2184,24 +2001,16 @@ def silver_m7():
                         when(col("StatusParty") == 1,"Appellant")
                         .when(col("StatusParty") == 2,"Respondent")
                         .otherwise("Unknown").alias("StatusPartyDesc"),
+                        round(col("TotalAmountOfFinancialCondition"),2).alias("TotalAmountOfFinancialCondition"),
+                        round(col("TotalSecurity"),2).alias("TotalSecurity")
 
     )
 
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     joined_df = m7_ref_df.join(segmentation_df.alias("bs"), col("m7.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m7_ref_df.columns if c != "CaseNo"]
     df = joined_df.select("m7.CaseNo", *selected_columns)
 
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m7_status"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m7_status table refines bail status details by integrating bronze-level status records with bail segmentation classifications, ensuring each case is categorized under Normal Bail or Legal Hold. It enhances categorical fields by providing descriptive labels for bail conditions, interpreter requirements, residence orders, reporting orders, and status parties. This structured dataset facilitates clearer analysis of case statuses, bail conditions, and legal requirements for improved decision-making and case management."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -2216,24 +2025,13 @@ def silver_m7():
 @dlt.table(name="silver_bail_m8",
            comment="ARIA Migration Archive Bails m8 silver table",
            partition_cols=["CaseNo"],
-           path=f"{silver_mnt}/silver_bail_m8")
+           path=f"{silver_base_path}/silver_bail_m8")
 def silver_m8():
     m8_df = dlt.read("bronze_bail_ac_appealcategory_category").alias("m8")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb_sbhf").alias("bs")
+    segmentation_df = dlt.read("silver_scottish_bails_funds").alias("bs")
     joined_df = m8_df.join(segmentation_df.alias("bs"), col("m8.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m8_df.columns if c != "CaseNo"]
     df = joined_df.select("m8.CaseNo", *selected_columns)
-
-
-    ## Create and save audit log for this table
-    table_name = "silver_bail_m8"
-    stage_name = "silver_stage"
-
-    description = "The silver_bail_m8 table refines appeal category details by integrating bronze-level appeal category records with bail segmentation classifications, ensuring each case is categorized under Normal Bail or Legal Hold. It provides structured insights into case numbers, appeal categories, and associated classifications, enabling clearer tracking and analysis of case types and their legal classifications within the bail system."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description)
 
     return df
 
@@ -2244,10 +2042,12 @@ def silver_m8():
 
 # COMMAND ----------
 
+from pyspark.sql import functions as F
+
 @dlt.table(
-  name="silver_bail_meta_data",
+  name="silver_s_bail_meta_data",
   comment="ARIA Migration Archive Bails meta data table",
-  path=f"{silver_mnt}/silver_bail_meta_data"
+  path=f"{silver_base_path}/silver_s_bail_meta_data"
 )
 def silver_meta_data():
   m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
@@ -2262,19 +2062,18 @@ def silver_meta_data():
                    coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
-                F.when(
-                    (col("m2.BaseBailType") == "ScottishBailsFunds") & (env == "sbox"),
-                    "ARIASBDEV"
-                        ).when(
-                            (col("m2.BaseBailType") == "ScottishBailsFunds") & (env != "sbox"),
-                            "ARIASB"
-                        ).when(
-                            (env == "sbox"),
-                            "ARIABDEV"
-                        ).otherwise("ARIAB")
-                    .alias("record_class"),
+                 F.when(
+                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
+                        "ARIASBDEV"
 
-                #  F.when(F.col("m2.BaseBailType") == "ScottishBailsFunds", "ARIASB") 
+                    ).when(
+                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
+                        lit("ARIASB")
+                    ).when(
+                        (col("m1.BailTypeDesc") != "Scottish Bail") & (env == lit("sbox")),
+                        lit("ARIABDEV")
+                        ).otherwise(lit("ARIAB")).alias("record_class"),
+                #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
                 #   .otherwise("ARIAB")
                 #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
@@ -2283,7 +2082,8 @@ def silver_meta_data():
                  F.col("Surname").alias("bf_003"),
                  date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
                  F.col("PortReference").alias("bf_005"),
-                 F.col("RepPostcode").alias("bf_006")
+                 F.col("RepPostcode").alias("bf_006"),
+                 F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007")
              )
     )
     
@@ -2292,16 +2092,6 @@ def silver_meta_data():
   final_df = base_df
     
 
-
-  ## Create and save audit log for this table
-  table_name = "silver_bail_meta_data"
-  stage_name = "silver_stage"
-
-  description = "The silver_bail_meta_data table consolidates key metadata from bail case details and appellant records, creating a structured dataset for tracking and categorizing bail cases. It assigns client identifiers, event dates, region, publisher, and record classifications while standardizing date formats and ensuring each case is assigned to a batch ID for processing. The table provides essential attributes to cteate the manifest file."
-
-  unique_identifier_desc = "client_identifier"
-
-  create_audit_df(final_df,unique_identifier_desc,table_name,stage_name,description)
 
   return final_df
 
@@ -2322,7 +2112,7 @@ def silver_meta_data():
 
 # COMMAND ----------
 
-
+#
 # Case status Mapping
 case_status_mappings = {
     11: {  # Scottish Payment Liability
@@ -2387,7 +2177,7 @@ case_status_mappings = {
         "{{BailApplicationResidenceOrderMade}}": "ResidenceOrderDesc",
         "{{BailApplicationReportingOrderMade}}": "ReportingOrderDesc",
         "{{BailApplicationBailedTimePlace}}": "BailedTimePlaceDesc",
-        "{{BailApplicationBailedDateOfHearing}}": "BaileddateHearing",
+        "{{BailApplicationBailedDateOfHearing}}": "BaileddateHearingDesc",
         "{{BailApplicationDateOfDecision}}": "DecisionDate",
         "{{BailApplicationOutcome}}": "OutcomeDescription",
         "{{BailApplicationHOConsentDate}}": "DecisionSentToHODate",
@@ -2401,7 +2191,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2454,7 +2244,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2505,7 +2295,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2550,7 +2340,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2595,7 +2385,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2609,7 +2399,7 @@ case_status_mappings = {
         "{{MigrationJudiciary1}}": "Judiciary1Name",
         "{{MigrationJudiciary2}}": "Judiciary2Name",
         "{{MigrationJudiciary3}}": "Judiciary3Name",
-        "{{MigrationPartyMakingApplication}}": "StatusParty",
+        "{{MigrationPartyMakingApplication}}": "StatusPartyDesc",
         "{{MigrationDateOfDecision}}": "DecisionDate",
         "{{MigrationOutcome}}": "OutcomeDescription",
         "{{MigrationDateOfPromulgation}}": "StatusPromulgated",
@@ -2638,7 +2428,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusParty",
+        "{{adjPartyMakingApp}}":"StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2665,52 +2455,57 @@ date_fields = {
 
 # COMMAND ----------
 
-fcs_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/Bails/fcs_template.html"
-with open (fcs_template_path, "r") as f:
-    fcs_template = f.read()
+fcs_template_path = f"{landing_html_tmpl_base_path}/fcs_template.html"
+fcs_template = dbutils.fs.head(fcs_template_path, 100000)
+
 
 # COMMAND ----------
 
 # File paths ofr status HTML templates
-bail_Application_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_applicaiton.html"
-bail_Variation_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail _variation.html"
-bail_Renewal_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_renewal.html"
-bail_Payment_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_payment_liability.html"
-bail_Scottish_Payment_Liability_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_scottish_payment_liability.html"
-bail_Lodgement_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_lodgement.html"
-migration_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bail_migration.html"
+bail_Application_path = f"{landing_html_tmpl_base_path}/bail_applicaiton.html"
+bail_Variation_path = f"{landing_html_tmpl_base_path}/bail_variation.html"
+bail_Renewal_path = f"{landing_html_tmpl_base_path}/bail_renewal.html"
+bail_Payment_path = f"{landing_html_tmpl_base_path}/bail_payment_liability.html"
+bail_Scottish_Payment_Liability_path = f"{landing_html_tmpl_base_path}/bail_scottish_payment_liability.html"
+bail_Lodgement_path = f"{landing_html_tmpl_base_path}/bail_lodgement.html"
+migration_path = f"{landing_html_tmpl_base_path}/bail_migration.html"
 
 # Path of the  bail HTML template
-bails_html_path = "/dbfs/mnt/ingest00landingsboxhtml-template/bailsv3/bails-no-js-v3.html"
+bails_html_path = f"{landing_html_tmpl_base_path}/bails-no-js-v3.html"
 
 
 # read in the different templates
-with open(bails_html_path, "r") as f:
-    bails_html_dyn = f.read()
+bails_html_dyn = dbutils.fs.head(bails_html_path, 100000)
 
-with open(bail_Application_path, "r") as f:
-    bail_Application = f.read()
 
-with open(bail_Payment_path, "r") as f:
-    bail_Payment = f.read()
+bail_Application = dbutils.fs.head(bail_Application_path, 100000)
+    
 
-with open(bail_Variation_path, "r") as f:
-    bail_Variation = f.read()
+bail_Payment = dbutils.fs.head(bail_Payment_path, 100000)
+    
 
-with open(bail_Renewal_path, "r") as f:
-    bail_Renewal = f.read()
+bail_Variation = dbutils.fs.head(bail_Variation_path, 100000)
+    
 
-with open(bail_Scottish_Payment_Liability_path, "r") as f:
-    bail_Scottish_Payment_Liability = f.read()
+bail_Renewal = dbutils.fs.head(bail_Renewal_path, 100000)
+    
 
-with open(bail_Lodgement_path, "r") as f:
-    bail_Lodgement = f.read()
+bail_Scottish_Payment_Liability = dbutils.fs.head(bail_Scottish_Payment_Liability_path, 100000)
+    
 
-with open(migration_path, "r") as f:
-    migration = f.read()
+bail_Lodgement = dbutils.fs.head(bail_Lodgement_path, 100000)
+    
+
+migration = dbutils.fs.head(migration_path, 100000)
+    
 
 
 # displayHTML(bails_html_dyn)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Creating Master Table
 
 # COMMAND ----------
 
@@ -2802,7 +2597,7 @@ stg_m1_m2_struct = struct(
     col("CaseRepLSCCommission"),
     col("FileSpecifcContact"),
     col("FileSpecificPhone"),
-    col("CaseRepRepresentativeRef"),
+    col("FileSpecificReference"),
     col("FileSpecificFax"),
     col("FileSpecificEmail"),
     col("RepAddress1"),
@@ -2862,7 +2657,8 @@ stg_m1_m2_struct = struct(
     col("DetentionCentrePostcode"),
     col("DetentionCentreFax"),
     col("DoNotUseNationality"),
-    col("AppellantDetainedDesc")
+    col("AppellantDetainedDesc"),
+    col("AppealCategoriesDesc")
 )
 
 
@@ -2910,101 +2706,51 @@ def stg_m3_m7():
 
     m3 = dlt.read("silver_bail_m3_hearing_details")
 
+    columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
+
+    df_named = m3.withColumn(
+        "FullName",
+        concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
+    )
+    pivoted_df = df_named.groupBy(*columns_to_group_by) \
+        .pivot("Position",["3","10","11","12"]) \
+        .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher").withColumnRenamed("null", "NoPossition")
+
+
+    for c in pivoted_df.columns:
+        if c == "null":
+            new_col = "NoPosition"
+        elif c.isdigit():
+            if c == "3":
+                new_col = "CourtClerkUsher"
+            else:
+                new_col = f"Position{c}"
+        else:
+            new_col = c
+        pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
+
+
+
+
     m7 = dlt.read("silver_bail_m7_status")
 
 
     # Get all columns in m3 not in m7
-    m3_new_columns = [col_name for col_name in m3.columns if col_name not in m7.columns]
+    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in m7.columns]
 
     status_tab = m7.alias("m7").join(
-        m3.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        (col("m7.CaseNo") == col("m3.CaseNo")) & (col("m7.StatusId") == col("m3.StatusId")),
+        pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
+        on= ["CaseNo","StatusId"] ,how=
         "left"
     )
 
 
     # create a nested list for the stausus table (m7_m3 tables)
 
-    status_tab_struct = struct(
-        col("m7.CaseNo"),
-        col("m7.StatusId"),
-        col("CaseStatus"),
-        col("DateReceived"),
-        col("StatusNotes1"),
-        col("Keydate"),
-        col("MiscDate1"),
-        col("MiscDate2"),
-        col("MiscDate3"),
-        col("TotalAmountOfFinancialCondition"),
-        col("TotalSecurity"),
-        col("StatusNotes2"),
-        col("DecisionDate"),
-        col("Outcome"),
-        col("OutcomeDescription"),
-        col("StatusPromulgated"),
-        col("StatusParty"),
-        col("ResidenceOrder"),
-        col("ReportingOrder"),
-        col("BailedTimePlace"),
-        col("BaileddateHearing"),
-        col("InterpreterRequired"),
-        col("BailConditions"),
-        col("LivesAndSleepsAt"),
-        col("AppearBefore"),
-        col("ReportTo"),
-        col("AdjournmentParentStatusId"),
-        col("HearingCentre"),
-        col("DecisionSentToHO"),
-        col("DecisionSentToHODate"),
-        col("VideoLink"),
-        col("WorkAndStudyRestriction"),
-        col("StatusBailConditionTagging"),
-        col("OtherCondition"),
-        col("OutcomeReasons"),
-        col("FC"),
-        col("CaseStatusDescription"),
-        col("ContactStatus"),
-        col("SCCourtName"),
-        col("SCAddress1"),
-        col("SCAddress2"),
-        col("SCAddress3"),
-        col("SCAddress4"),
-        col("SCAddress5"),
-        col("SCPostcode"),
-        col("SCTelephone"),
-        col("LanguageDescription"),
-        col("ListTypeId"),
-        col("ListType"),
-        col("HearingTypeId"),
-        col("HearingType"),
-        col("Judiciary1Id"),
-        col("Judiciary1Name"),
-        col("Judiciary2Id"),
-        col("Judiciary2Name"),
-        col("Judiciary3Id"),
-        col("Judiciary3Name"),
-        col("BailConditionsDesc"),
-        col("InterpreterRequiredDesc"),
-        col("ResidenceOrderDesc"),
-        col("ReportingOrderDesc"),
-        col("BailedTimePlaceDesc"),
-        col("BaileddateHearingDesc"),
-        col("StatusPartyDesc"),
-        col("CaseListTimeEstimate"),
-        col("CaseListStartTime"),
-        col("HearingTypeDesc"),
-        col("ListName"),
-        col("HearingDate"),
-        col("ListStartTime"),
-        col("ListTypeDesc"),
-        col("CourtName"),
-        col("HearingCentreDesc"),
-        col("JudgeFT"),
-        col("CourtClerkUsher")
-    )
+    status_tab_struct = struct(*[col(c) for c in status_tab.columns])
     m7_m3_statuses = (
         status_tab
-        .groupBy(col("m7.CaseNo"))
+        .groupBy(col("CaseNo"))
         .agg(
             collect_list(
                 # Collect each record's columns as a struct
@@ -3016,135 +2762,26 @@ def stg_m3_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
-def stg_statuses():
-
-    m7_m3_statuses = dlt.read("stg_m3_m7")
-
-    # Logic to add the max status for each caseno
-
-    # Create a SQL-compatible named_struct that matches the schema of all_status_objects
-    status_tab_struct_sql = """
-        named_struct(
-            'CaseNo', '',
-            'StatusId', 0,
-            'CaseStatus', '',
-            'DateReceived', cast(null as timestamp),
-            'StatusNotes1', '',
-            'Keydate', cast(null as timestamp),
-            'MiscDate1', cast(null as timestamp),
-            'MiscDate2', cast(null as timestamp),
-            'MiscDate3', cast(null as timestamp),
-            'TotalAmountOfFinancialCondition', cast(0.0 as decimal(19,4)),
-            'TotalSecurity', cast(0.0 as decimal(19,4)),
-            'StatusNotes2', '',
-            'DecisionDate', cast(null as timestamp),
-            'Outcome', 0,
-            'OutcomeDescription', '',
-            'StatusPromulgated', cast(null as timestamp),
-            'StatusParty', 0,
-            'ResidenceOrder', 0,
-            'ReportingOrder', 0,
-            'BailedTimePlace', 0,
-            'BaileddateHearing', 0,
-            'InterpreterRequired', 0,
-            'BailConditions', 0,
-            'LivesAndSleepsAt', '',
-            'AppearBefore', '',
-            'ReportTo', '',
-            'AdjournmentParentStatusId', 0,
-            'HearingCentre', '',
-            'DecisionSentToHO', 0,
-            'DecisionSentToHODate', cast(null as timestamp),
-            'VideoLink', false,
-            'WorkAndStudyRestriction', '',
-            'StatusBailConditionTagging', '',
-            'OtherCondition', '',
-            'OutcomeReasons', '',
-            'FC', false,
-            'CaseStatusDescription', '',
-            'ContactStatus', '',
-            'SCCourtName', '',
-            'SCAddress1', '',
-            'SCAddress2', '',
-            'SCAddress3', '',
-            'SCAddress4', '',
-            'SCAddress5', '',
-            'SCPostcode', '',
-            'SCTelephone', '',
-            'LanguageDescription', '',
-            'ListTypeId', 0,
-            'ListType', '',
-            'HearingTypeId', 0,
-            'HearingType', '',
-            'Judiciary1Id', 0,
-            'Judiciary1Name', '',
-            'Judiciary2Id', 0,
-            'Judiciary2Name', '',
-            'Judiciary3Id', 0,
-            'Judiciary3Name', '',
-            'BailConditionsDesc', '',
-            'InterpreterRequiredDesc', '',
-            'ResidenceOrderDesc', '',
-            'ReportingOrderDesc', '',
-            'BailedTimePlaceDesc', '',
-            'BaileddateHearingDesc', '',
-            'StatusPartyDesc', '',
-            'CaseListTimeEstimate', 0,
-            'CaseListStartTime', cast(null as timestamp),
-            'HearingTypeDesc', '',
-            'ListName', '',
-            'HearingDate', cast(null as timestamp),
-            'ListStartTime', cast(null as timestamp),
-            'ListTypeDesc', '',
-            'CourtName', '',
-            'HearingCentreDesc', '',
-            'JudgeFT', '',
-            'CourtClerkUsher', ''
-        )
-    """
-
-    final_m7_m3_df = m7_m3_statuses.select(
-        col("CaseNo"),
-        expr(f"""
-            aggregate(
-                all_status_objects,
-                {status_tab_struct_sql},
-                (acc, x) -> 
-                    CASE 
-                        WHEN x.StatusId > acc.StatusId THEN x 
-                        ELSE acc 
-                    END
-            ).CaseStatusDescription
-        """).alias("MaxCaseStatusDescription"),
-        expr(f"""
-            aggregate(
-                all_status_objects,
-                {status_tab_struct_sql},
-                (acc, x) -> 
-                    CASE 
-                        WHEN x.LanguageDescription is not null THEN x 
-                        ELSE acc 
-                    END
-            ).LanguageDescription
-        """).alias("SecondaryLanguage")
-    )
-    return final_m7_m3_df
-
-# COMMAND ----------
-
-@dlt.table(name="stg_m7_m3_statuses", comment="Final Bail Status Table")
+@dlt.table(name="stg_m7_m3_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
 def final_m7_m3_statuses():
 
-    final_m7_m3_df = dlt.read("stg_statuses")
-
     m7_m3_statuses = dlt.read("stg_m3_m7")
 
+    exploded = m7_m3_statuses.select(col("CaseNo"), explode("all_status_objects").alias("status"))
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("status.StatusId").desc())
+
+    ordered_rank = exploded.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.CaseStatusDescription").alias("MaxCaseStatusDescription"))
+
+    w_non_null_lang = Window.partitionBy("CaseNo").orderBy(col("status.LanguageDescription").desc())
+
+    top_non_null_lang = exploded.filter(col("status.LanguageDescription").isNotNull()).withColumn("rank", row_number().over(w_non_null_lang)).filter(col("rank") == 1).drop("rank").select(col("CaseNo"), col("status.LanguageDescription").alias("SecondaryLanguage"))
+
+    m3_m7_final = m7_m3_statuses.join(ordered_rank, on="CaseNo", how="left").join(top_non_null_lang, on="CaseNo", how="left")
+    m3_m7_final
 
 
-    final_m7_m3_statuses = m7_m3_statuses.join(final_m7_m3_df, "CaseNo", "left_outer")
-
-    return final_m7_m3_statuses
+    return m3_m7_final
 
 # COMMAND ----------
 
@@ -3164,6 +2801,11 @@ def m1_m2_m3_m7():
 
 
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Status Mapping dictionary
 
 # COMMAND ----------
 
@@ -3207,6 +2849,7 @@ def stg_m1_m2_m3_m5_m7():
             col("HistoryId"),
             col("HistDate"),
             col("HistType"),
+            col("HistTypeDesc"),
             col("HistoryComment"),
             col("UserFullname"),
             col("DeletedBy")
@@ -3561,47 +3204,6 @@ def final_staging_bails():
 
 # COMMAND ----------
 
-# html = bails_html_dyn
-
-# flag_list = []
-# flag_dict = {}
-
-# row = df.limit(1).collect()[0]
-# print(row.CaseNo)
-# if row.Case_detail is not None:
-#     for casedetail in row.Case_detail:
-#         if casedetail.AppellantDetainedDesc == "HMP" or casedetail.AppellantDetainedDesc == "IRC" or casedetail.AppellantDetainedDesc == "Others":
-#             flag_list.append("DET")
-#         if casedetail.InCamera == 1:
-#             flag_list.append("CAM")
-#         else:
-#             pass
-
-# if row.all_status_objects is not None:
-#     for statusdetails in row.all_status_objects:
-#         if statusdetails.CaseStatusDescription == "35":
-#             flag_list.append("MIG")
-#         else:
-#             pass
-
-# if row.appeal_category_details is not None:
-#     for appealcategorydetails in row.appeal_category_details:
-#         flag_list.append(appealcategorydetails.Flag)
-
-# for i in range(1, 4):
-#     flag_dict[f"flag_{i}"] = flag_list[i] if flag_list[i] is not None else ""
-
-# for i,(key,flag) in enumerate(flag_dict.items(),start=1):
-#     # print(i,flag)
-#     placeholder = f"{{{{flag{i}Placeholder}}}}"
-#     html = html.replace(placeholder, flag)
-
-
-
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Functions Diagram
 
@@ -3639,309 +3241,6 @@ def final_staging_bails():
 
 # COMMAND ----------
 
-
-
-# # display(m1_m2)
-
-# def create_html(rows_iter):
-#     """
-#     For a given a single row, this funciton will return the final HTML string
-#     """
-#     results = []
-#     for row in rows_iter:
-#         try:
-
-#             # initialise html template
-#             html = bails_html_dyn
-            
-#             # maintain cost award tab
-#             main_cost_award_code = f"<tr><td id='midpadding'>{row['CaseNo']}</td><td id='midpadding'>{row['AppellantName']}</td><td id='midpadding'>{row['AppealStage']}</td><td id='midpadding'>{row['DateOfApplication']}</td><td id='midpadding'>{row['TypeOfCostAward']}</td><td id='midpadding'>{row['ApplyingParty']}</td><td id='midpadding'>{row['PayingParty']}</td><td id='midpadding'>{row['MindedToAward']}</td><td id='midpadding'>{row['ObjectionToMindedToAward']}</td><td id='midpadding'>{row['CostsAwardDecision']}</td><td id='midpadding'></td><td id='midpadding'>{row['CostsAmount']}</td></tr>"
-
-#             # Linked Cases
-
-#             linked_cases_code = ""
-
-#             for linked_cases_row in row["linked_cases_aggregated"] or []:
-#                 linked_cases_code += f"<tr><td id='midpadding'>{linked_cases_row['CaseNo']}</td><td id='midpadding'>{linked_cases_row['Forenames']}</td><td id='midpadding'>{linked_cases_row['AppealStage']}</td><td id='midpadding'>{linked_cases_row['DateOfApplication']}</td><td id='midpadding'>{linked_cases_row['TypeOfCostAward']}</td><td id='midpadding'>{linked_cases_row['ApplyingParty']}</td><td id='midpadding'>{linked_cases_row['PayingParty']}</td><td id='midpadding'>{linked_cases_row['MindedToAward']}</td><td id='midpadding'>{linked_cases_row['ObjectionToMindedToAward']}</td><td id='midpadding'>{linked_cases_row['CostsAwardDecision']}</td><td id='midpadding'></td><td id='midpadding'>{linked_cases_row['CostsAmount']}</td></tr>"
-#             html = html.replace("{{linked_cases_replacement}}", linked_cases_code)
-
-
-#             m1_replacement = {
-#                 "{{ bailCaseNo }}":row["CaseNo"] ,
-#                 "{{ hoRef }}": row["HORef"] ,
-#                 "{{ lastName }}": row["AppellantName"],
-#                 "{{ firstName }}" : row["AppellantForenames"],
-#                 "{{ birthDate }}": format_date(row["AppellantBirthDate"]),
-#                 "{{ portRef }}": row["PortReference"],
-#                 "{{AppellantTitle}}": row["AppellantTitle"],
-#                 ## Main section
-#                 "{{BailType}}": row["BailTypeDesc"],
-#                 "{{AppealCategoriesField}}": row["AppealCategories"],
-#                 "{{Nationality}}":row["Nationality"],
-#                 "{{TravelOrigin}}":row["CountryOfTravelOrigin"],
-#                 "{{Port}}":row["PortOfEntry"],
-#                 "{{DateOfReceipt}}":format_date(row["DateReceived"]),
-#                 "{{DedicatedHearingCentre}}":row["DedicatedHearingCentre"],
-#                 "{{DateNoticeServed}}":format_date(row["DateServed"]) ,
-#                 "{{CurrentStatus}}": row["MaxCaseStatusDescription"],
-#                 "{{ConnectedFiles}}":"",
-#                 "{{DateOfIssue}}":format_date(row["DateOfIssue"]),
-#                 # "{{NextHearingDate}}":row["DateOfNextListedHearing"],
-#                 "{{LastDocument}}": row["last_document"],
-#                 "{{FileLocation}}": row["file_location"],
-#                 "{{BFEntry}}":"",
-#                 "{{ProvisionalDestructionDate}}":format_date(row["ProvisionalDestructionDate"]),
-
-#                 # Parties Tab - Applicant Section
-#                 "{{Centre}}": row["DetentionCentre"],
-#                 "{{AddressLine1}}": row["DetentionCentreAddress1"],
-#                 "{{AddressLine2}}": row["DetentionCentreAddress2"],
-#                 "{{AddressLine3}}": row["DetentionCentreAddress3"],
-#                 "{{AddressLine4}}": row["DetentionCentreAddress4"],
-#                 "{{AddressLine5}}": row["DetentionCentreAddress5"],
-#                 "{{Postcode}}": row["DetentionCentrePostcode"],
-#                 "{{Country}}": row["CountryOfTravelOrigin"],
-#                 "{{phone}}": row["AppellantTelephone"],
-#                 "{{email}}": row["AppellantEmail"],
-#                 "{{PrisonRef}}": row["AppellantPrisonRef"],
-                
-                
-#                 # Respondent Section
-#                 "{{Detained}}":row["AppellantDetainedDesc"],
-#                 "{{RespondentName}}":row["MainRespondentName"],
-#                 "{{repName}}":row["CaseRepName"],
-#                 "{{InterpreterRequirementsLanguage}}" : row["InterpreterRequirementsLanguage"],
-#                 "{{HOInterpreter}}" : row["HOInterpreter"],
-#                 "{{CourtPreference}}" : row["CourtPreferenceDesc"],
-#                 "{{language}}": row["Language"],
-#                 "{{required}}": 1 if row["InterpreterRequirementsLanguage"] is not None else 0,
-
-#                 # Misc Tab
-#                 "{{Notes}}" : row["AppealCaseNote"],
-
-#                 # Maintain cost awards Tab
-
-#                 # Representative Tab
-#                 "{{RepName}}":row["CaseRepName"],
-#                 "{{CaseRepAddress1}}": row["CaseRepAddress1"],
-#                 "{{CaseRepAddress2}}": row["CaseRepAddress2"],
-#                 "{{CaseRepAddress3}}": row["CaseRepAddress3"],
-#                 "{{CaseRepAddress4}}": row["CaseRepAddress4"],
-#                 "{{CaseRepAddress5}}": row["CaseRepAddress5"],
-#                 "{{CaseRepPostcode}}": row["CaseRepPostcode"],
-#                 "{{CaseRepTelephone}}": row["CaseRepPhone"],
-#                 "{{CaseRepFAX}}": row["CaseRepFax"],
-#                 "{{CaseRepEmail}}": row["CaseRepEmail"],
-#                 "{{RepDxNo1}}": row["RepDxNo1"],
-#                 "{{RepDxNo2}}": row["RepDxNo2"],
-#                 "{{RepLAARefNo}}": "",
-#                 "{{RepLAACommission}}":row["CaseRepLSCCommission"],
-#                 #File specific contact
-
-
-
-
-
-#                 # Status Tab - Additional Language
-#                 "{{PrimaryLanguage}}":row["Language"],
-#                 "{{SecondaryLanguage}}":row["SecondaryLanguage"],
-
-#                 # Parties Tab
-#                 # "{{Detained}}": row[""]
-#                 "{{Centre}}":row["DetentionCentre"],
-
-
-
-#                 # Financial Condition supporter
-#                 # which case surty do we use
-
-                
-#                 } 
-            
-
-#             # BF diary 
-#             bf_diary_code = ""
-#             for bfdiary in row["bfdiary_details"] or []:
-#                 bf_line = f"<tr><td id=\"midpadding\">{bfdiary['BFDate']}</td><td id=\"midpadding\">{bfdiary['BFTypeDescription']}</td><td id=\"midpadding\">{bfdiary['Entry']}</td><td id=\"midpadding\">{bfdiary['DateCompleted']}</td></tr>"
-#                 bf_diary_code += bf_line + "\n"
-            
-#             # History 
-#             history_code = ''
-#             for history in row["m5_history_details"] or []:
-#                 history_line = f"<tr><td id='midpadding'>{history['HistDate']}</td><td id='midpadding'>{history['HistType']}</td><td id='midpadding'>{history['UserFullname']}</td><td id='midpadding'>{history['HistoryComment']}</td></tr>"
-#                 history_code += history_line + "\n"
-
-#             # # Linked Files
-#             linked_files_code = ''
-#             for likedfile in row["linked_files_details"] or []:
-#                 linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile['LinkNo']}</td><td id='midpadding'>{likedfile['FullName']}</td><td id='midpadding'>{likedfile['LinkDetailComment']}</td></tr>"
-#                 linked_files_code += linked_files_line + "\n"
-
-#             # main typing - has no mapping
-
-#             # Appeal Category
-#             appeal_category_code = ""
-#             for appeal_category in row["appeal_category_details"] or []:
-#                 appeal_line = f"<tr><td id='midpadding'>{appeal_category['CategoryDescription']}</td><td id='midpadding'>{appeal_category['Flag']}</td><td id='midpadding'></td></tr>"
-#                 appeal_category_code += appeal_line + " \n"
-
-#             # Case Respondent
-#             if row["CaseRespondent"] in respondent_mapping:
-#                 current_respondent_mapping = respondent_mapping[row["CaseRespondent"]]
-
-#                 for resp_placeholder, resp_field_name in current_respondent_mapping.items():
-#                     if resp_field_name:
-#                         value = row[resp_field_name]
-#                     else:
-#                         value = ""
-#                     html = html.replace(resp_placeholder,str(value))
-#             else:
-#                 # logger.warn(f'Mapping not found for CaseRespondent: {row["CaseRespondent"]}, CaseNo: {row["m7.CaseNo"]}')
-#                 current_respondent_mapping = {
-#                     "{{RespondentName}}": "",
-#                     "{{CaseRespondentAddress1}}": "",
-#                     "{{CaseRespondentAddress2}}": "",
-#                     "{{CaseRespondentAddress3}}": "",
-#                     "{{CaseRespondentAddress4}}": "",
-#                     "{{CaseRespondentAddress5}}": "",
-#                     "{{CaseRespondentPostcode}}": "",
-#                     "{{CaseRespondentTelephone}}": "",
-#                     "{{CaseRespondentFAX}}": "",
-#                     "{{CaseRespondentEmail}}": "",
-#                     "{{CaseRespondentRef}}": "",
-#                     "{{CaseRespondentContact}}": "",
-#                     "{{POU}}":"",
-#                     "{{RRrespondent}}":""
-#                 }
-#                 for resp_placeholder, resp_value in current_respondent_mapping.items():
-#                     html = html.replace(resp_placeholder,str(resp_value))
-
-
-
-
-
-#             # status
-#             code = ""
-
-
-
-#             for index,status in enumerate(row["all_status_objects"] or [],start=1):
-#                 ## get the case status in the list
-#                 case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
-
-#                 ## set the margin and id counter
-#                 if index == 1:
-#                     margin = "10px"
-#                 else:
-#                     margin = "600px"
-
-#                 counter = 30+index
-
-#                 if case_status in case_status_mappings:
-#                     template = template_for_status[case_status]
-#                     template = template.replace("{{margin_placeholder}}",str(margin))
-#                     template = template.replace("{{index}}",str(counter))
-#                     status_mapping = case_status_mappings[case_status]
-
-
-
-#                     for placeholder,field_name in status_mapping.items():
-#                         if field_name in date_fields:
-#                             raw_value = status[field_name] if field_name in status else None
-#                             value = format_date(raw_value)
-#                         else:
-#                             value = status[field_name] if field_name in status else None
-#                         template = template.replace(placeholder,str(value))
-#                     code += template + "\n"
-                    
-                        
-#                 else:
-#                     # logger.info(f"Mapping not found for CaseStatus: {case_status}, CaseNo: {row['m7.CaseNo']}")
-#                     continue
-
-#             html = html.replace("{{statusplaceholder}}",code)
-            
-            
-#             # Financial supporter
-
-#             sponsor_name = "Financial Condiiton Suportor details entered" if row["financial_condition_details"] else "Financial Condiiton Suportor details not entered"
-
-#             case_surety_replacement = {
-#             "{{SponsorName}}":"CaseSuretyName",
-#             "{{SponsorForename}}":"CaseSuretyForenames",
-#             "{{SponsorTitle}}":"CaseSuretyTitle",
-#             "{{SponsorAddress1}}":"CaseSuretyAddress1",
-#             "{{SponsorAddress2}}":"CaseSuretyAddress2",
-#             "{{SponsorAddress3}}":"CaseSuretyAddress3",
-#             "{{SponsorAddress4}}":"CaseSuretyAddress4",
-#             "{{SponsorAddress5}}":"CaseSuretyAddress5",
-#             "{{SponsorPostcode}}":"CaseSuretyPostcode",
-#             "{{SponsorPhone}}":"CaseSuretyTelephone",
-#             "{{SponsorEmail}}":"CaseSuretyEmail",
-#             "{{AmountOfFinancialCondition}}":"AmountOfFinancialCondition",
-#             "{{SponsorSolicitor}}":"Solicitor",
-#             "{{SponserDateLodged}}":"CaseSuretyDateLodged",
-#             "{{SponsorLocation}}":"Location",
-#             "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
-            
-
-#         }
-
-#             financial_condition_code = ""
-#             details = row["financial_condition_details"] or []
-
-#             # Iterate over each record in financial_condition_details array
-#             for index, casesurety in enumerate(details, start=10):
-#                 current_code = fcs_template  # Use the defined HTML template
-#                 current_code = current_code.replace("{{Index}}", str(index))
-
-#                 # Loop over each placeholder in the dictionary and replace with corresponding values
-#                 for placeholder, col_name in case_surety_replacement.items():
-#                     # Check if the field exists in the current struct; fallback to empty string if not
-#                     value = casesurety[col_name] if col_name in casesurety and casesurety[col_name] is not None else ""
-#                     current_code = current_code.replace(placeholder, str(value))
-
-#                 financial_condition_code += current_code + "\n"
-
-#             # Replace the placeholder in the HTML template with the generated code
-#             html = html.replace('{{financial_condition_code}}',financial_condition_code)
-#             # is there a financial condition suporter
-#             html = html.replace("{{sponsorName}}",str(sponsor_name))
-#             # add multiple lines of code for bf diary
-#             html = html.replace("{{bfdiaryPlaceholder}}",bf_diary_code)
-#             # add multiple lines of code for history
-#             html = html.replace("{{HistoryPlaceholder}}",history_code)
-#             # add multiple lines of code for linked details
-#             html = html.replace("{{LinkedFilesPlaceholder}}",linked_files_code)
-#             # add multiple lines of maintain cost awards
-#             html = html.replace("{{MaintainCostAward}}",main_cost_award_code)
-#             # add multiple line for appeal
-#             html = html.replace("{{AppealPlaceholder}}",appeal_category_code)
-#             for key, value in m1_replacement.items():
-#                 html = html.replace(str(key), str(value))
-
-#             results.append((row["CaseNo"], html))
-
-            
-#         except Exception as e:
-#             logger.error(f"Error processing row: {row['CaseNo']}. Error: {e}")
-
-        
-#          # Create schema for the output DataFrame
-#     schema = StructType([
-#         StructField("CaseNo", StringType(), True),
-#         StructField("HtmlContent", StringType(), True)
-#     ])
-
-#     # Convert results into a DataFrame
-#     return spark.createDataFrame(results, schema)
-
-
-
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### UDF Create HTML
 
@@ -3963,7 +3262,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{CurrentStatus}}": row.MaxCaseStatusDescription,
         }
         for key, value in replacements.items():
-            html = html.replace(key, value if value is not None else "")
+            html = html.replace(key, str(value) if value is not None else "")
 
 
         # Replace placeholders with actual values
@@ -3973,11 +3272,11 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{ hoRef }}": cd_row.HORef,
             "{{ lastName }}": cd_row.AppellantName,
             "{{ firstName }}": cd_row.AppellantForenames,
-            "{{ birthDate }}": format_date_iso(cd_row.AppellantBirthDate),
+            "{{ birthDate }}": simple_date_format(cd_row.AppellantBirthDate),
             "{{ portRef }}": cd_row.PortReference,
             "{{AppellantTitle}}": cd_row.AppellantTitle,
             "{{BailType}}": cd_row.BailTypeDesc,
-            "{{AppealCategoriesField}}": str(cd_row.AppealCategories),
+            "{{AppealCategoriesField}}": str(cd_row.AppealCategoriesDesc),
             "{{Nationality}}": cd_row.Nationality,
             "{{TravelOrigin}}": cd_row.CountryOfTravelOrigin,
             "{{Port}}": cd_row.PortOfEntry,
@@ -4013,7 +3312,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
             "{{language}}": cd_row.Language,
-            "{{required}}": "1" if cd_row.InterpreterRequirementsLanguage is not None else "0",
+            "{{required}}":  cd_row.InterpreterDesc,
 
             # Misc Tab
             "{{Notes}}": cd_row.AppealCaseNote,
@@ -4061,7 +3360,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         bf_diary_code = ""
         if row.bfdiary_details is not None:
             for bfdiary in row.bfdiary_details or []:
-                bf_line = f"<tr><td id=\"midpadding\">{bfdiary.BFDate}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{bfdiary.DateCompleted}</td></tr>"
+                bf_line = f"<tr><td id=\"midpadding\">{simple_date_format(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{bfdiary.DateCompleted}</td></tr>"
                 bf_diary_code += bf_line + "\n"
             html = html.replace("{{bfdiaryPlaceholder}}", bf_diary_code)
         else:
@@ -4071,7 +3370,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         history_code = ''
         if row.m5_history_details is not None:
             for history in row.m5_history_details:
-                history_line = f"<tr><td id='midpadding'>{history.HistDate}</td><td id='midpadding'>{history.HistType}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
+                history_line = f"<tr><td id='midpadding'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistTypeDesc}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
                 history_code += history_line + "\n"
             html = html.replace("{{HistoryPlaceholder}}", history_code)
         else:
@@ -4165,6 +3464,53 @@ def create_html_column(row, html_template=bails_html_dyn):
                         else:
                             value = status[field_name] if field_name in status else None
                         template = template.replace(placeholder,str(value))
+                    
+
+                    labels = []
+
+                    label_fields = ["UpperTribJudge", "DesJudgeFirstTier", "JudgeFirstTier", "NonLegalMember"]
+
+                    for label in label_fields:
+                        count = status[label] if status[label] is not None else 0
+                        for i in range(count):
+                            labels.append(f"{label}_{i+1}")
+
+                    possitions = ["Position10","Position11","Position12"]
+
+                    possitions_labelled = dict(zip(possitions,labels))
+
+                    possitions_keys = list(possitions_labelled.keys())
+                    possitions_values = list(possitions_labelled.values())
+
+
+                    for i in range(1, 4):
+                        label_placeholder = f"{{{{Label{i}}}}}"
+                        value_placeholder = f"{{{{Label{i}value}}}}"
+
+                        if i <= len(possitions_labelled):
+                            label_value = possitions_values[i-1]
+                            name_col = possitions_keys[i-1]
+                            name_value = status[name_col] if status[name_col] is not None else ""
+                            name_value = name_value if name_value else ""
+                        else:
+                            label_value = ""
+                            name_value = ""
+
+                        template = template.replace(label_placeholder, str(label_value))
+                        template = template.replace(value_placeholder, str(name_value))
+
+
+
+                            
+                    if status["CourtClerkUsher"]:
+                        template = template.replace("{{courtclerkusherplaceholder}}",status["CourtClerkUsher"])
+
+                    else:
+                        template = template.replace("{{courtclerkusherplaceholder}}",'N/A')
+
+
+
+
                     code += template + "\n"
                     
                         
@@ -4172,40 +3518,41 @@ def create_html_column(row, html_template=bails_html_dyn):
                     # logger.info(f"Mapping not found for CaseStatus: {case_status}, CaseNo: {row['m7.CaseNo']}")
                     continue
 
+        if code:
             html = html.replace("{{statusplaceholder}}",code)
         else:
             html = html.replace("{{statusplaceholder}}","")
+
 
         ## Add in Flag logic
         flag_list = []
         flag_dict = {}
 
         if row.Case_detail is not None:
+            flag_1 = ""
+            flag_2 = "" 
             for casedetail in row.Case_detail:
                 if casedetail.AppellantDetainedDesc == "HMP" or casedetail.AppellantDetainedDesc == "IRC" or casedetail.AppellantDetainedDesc == "Others":
                     flag_1 = "DET"
-                    html = html.replace("{{flag1Placeholder}}", flag_1)
+                    # html = html.replace("{{flag1Placeholder}}", str(flag_1))
                 if casedetail.InCamera == 1:
                     flag_2 = "CAM"
-                    html = html.replace("{{flag2Placeholder}}", flag_2)
-                else:
-                    flag_1 = ""
-                    flag_2 = ""
-                    html = html.replace("{{flag1Placeholder}}", flag_1)
-                    html = html.replace("{{flag2Placeholder}}", flag_2)
+                    # html = html.replace("{{flag2Placeholder}}", str(flag_2))
+                html = html.replace("{{flag1Placeholder}}", str(flag_1))
+                html = html.replace("{{flag2Placeholder}}", str(flag_2))
 
         if row.appeal_category_details is not None:
             for appealcategorydetails in row.appeal_category_details:
                 flag_list.append(appealcategorydetails.Flag)
 
         flag_3 = " ".join(flag_list[:3])
-        html = html.replace("{{flag3Placeholder}}", flag_3)
+        html = html.replace("{{flag3Placeholder}}", str(flag_3))
 
         # Financial supporter
 
         sponsor_name = "Financial Condiiton Suportor details entered" if row.financial_condition_details else "Financial Condiiton Suportor details not entered"
 
-        html = html.replace("{{sponsorName}}",sponsor_name)
+        html = html.replace("{{sponsorName}}",str(sponsor_name))
 
         case_surety_replacement = {
         "{{SponsorName}}":"CaseSuretyName",
@@ -4251,6 +3598,10 @@ def create_html_column(row, html_template=bails_html_dyn):
 
         html = html.replace("{{SecondaryLanguage}}",str(row.SecondaryLanguage))
 
+        for cd_row in row.Case_detail:
+            html = html.replace("{{HearingNotes}}",str(cd_row.AppealCaseNote))
+
+
 
         return html
     
@@ -4264,40 +3615,48 @@ create_html_udf = udf(create_html_column, StringType())
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Create HTML Content
 
-# # Pass columns as a struct
-# html_mc = df.withColumn("content", create_html_udf(struct(*df.columns)))
+# COMMAND ----------
 
-# html_mc.display()
 
+@dlt.table(
+    name="create_s_bail_html_content",
+    comment="create the HTML content for bails and add a fail name",
+    path=f"{silver_base_path}/s_bail_html_content")
+# 
+def create_bails_html_content():
+    df = dlt.read("final_staging_bails")
+
+    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}s_bail_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
+
+    results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
+    .otherwise("Successful creating HTML Content") )
+
+
+    ## Create and save audit log for this table
+    df = results_df.withColumn("File_name", col("HTML_File_path"))
+    df = df.withColumnRenamed("HTML_Status","Status")
+
+
+    return df
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Setting up 'Write' Funciton
+# MAGIC ## Setting up 'Write' Funciton
 
 # COMMAND ----------
 
-secret = secret = dbutils.secrets.get("ingest00-keyvault-sbox", "curatedsbox-connection-string-sbox")
- 
- 
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-import os
- 
-# Set up the BlobServiceClient with your connection string
-connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
- 
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
- 
-# Specify the container name
-container_name = "gold"
-container_client = blob_service_client.get_container_client(container_name)
+# MAGIC %md
+# MAGIC ### Upload to blob UDF
+# MAGIC
 
 # COMMAND ----------
 
 def upload_to_blob(file_name, file_content):
     try:
-        # blob_client = container_client.get_blob_client(f"{gold_outputs}/HTML/{file_name}")
         blob_client = container_client.get_blob_client(f"{file_name}")
         blob_client.upload_blob(file_content, overwrite=True)
         return "success"
@@ -4307,48 +3666,6 @@ def upload_to_blob(file_name, file_content):
 
 
 upload_to_blob_udf = udf(upload_to_blob, StringType())
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Create HTML Content
-
-# COMMAND ----------
-
-
-@dlt.table(
-    name="create_bails_html_content",
-    comment="create the HTML content for bails and add a fail name",
-    path=f"{silver_mnt}/bail_html_content",
-)
-def create_bails_html_content():
-    df = dlt.read("final_staging_bails")
-
-    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
-
-    results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
-    .otherwise("Successful creating HTML Content") )
-
-
-    ## Create and save audit log for this table
-    df = results_df.withColumn("File_name", col("HTML_File_path"))
-    df = df.withColumnRenamed("HTML_Status","Status")
-    table_name = "create_bails_html_content"
-    stage_name = "staging_stage"
-
-    description = "The create_bails_html_content table generates HTML content for bail cases, transforming structured case data into formatted HTML outputs. It reads from final_staging_bails, processes the data using the create_html function, and assigns a unique file name for each case, ensuring proper formatting by replacing special characters in case numbers. This table supports automated document generation for bail case summaries, facilitating downstream reporting, storage, and retrieval."
-
-    unique_identifier_desc = "CaseNo"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
-
-
-    return results_df
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## END
 
 # COMMAND ----------
 
@@ -4366,15 +3683,15 @@ from pyspark.sql.functions import to_json,struct
 
 
 @dlt.table(
-    name="create_bails_json_content",
+    name="create_s_bail_json_content",
     comment="create the JSON content for bails and add a fail name",
-    path=f"{silver_mnt}/bail_json_content",
+    path=f"{silver_base_path}/s_bail_json_content",
 )
 def create_bails_json_content():
     try:
         m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df = dlt.read("final_staging_bails")
 
-        df_with_json = m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df.withColumn("JSONContent", to_json(struct("*"))).withColumn("JSON_File_path", concat(lit(f"{gold_json_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".json")))
+        df_with_json = m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df.withColumn("JSONContent", to_json(struct("*"))).withColumn("JSON_File_path", concat(lit(f"{gold_json_outputs}s_bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".json")))
 
         df_with_json = df_with_json.withColumn("JSON_status",when(col("JSONContent").contains("Error"), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 
@@ -4382,18 +3699,8 @@ def create_bails_json_content():
 
         df = df_with_json.withColumn("File_name",col("JSON_File_path")).withColumnRenamed("JSON_Status","Status")
 
-        ## Create and save audit log for this table
-        table_name = "create_bails_json_content"
-        stage_name = "gold_stage"
 
-        description = "The create_bails_json_content table generates JSON content for bail cases, transforming structured case data into serialized JSON format. It reads from final_staging_bails, converts all fields into a nested JSON structure, and assigns a unique file name for each case by replacing special characters in case numbers. This table facilitates automated JSON document generation, enabling structured data storage, retrieval, and downstream processing for bail case management and reporting."
-
-        unique_identifier_desc = "CaseNo"
-
-        create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
-
-
-        return df_with_json
+        return df
     except Exception as e:
         return f"Failure error: {str(e)}"
 
@@ -4471,9 +3778,9 @@ generate_a360_udf = udf(generate_a360, StringType())
 
 # COMMAND ----------
 
-@dlt.table(name="create_bails_a360_content", 
+@dlt.table(name="create_s_bails_a360_content", 
            comment="A360 content for bails",
-           path=f"{gold_mnt}/Data/create_bails_a360_content")
+           path=f"{gold_base_path}/Data/create_s_bails_a360_content")
 
 def gold_bails_with_a360():
     """
@@ -4481,17 +3788,17 @@ def gold_bails_with_a360():
     """
     ## Load in the metadata table adding in the file names and construct an a360 content string for each unique id
     metadata_df = (
-        dlt.read("silver_bail_meta_data").withColumn(
+        dlt.read("silver_s_bail_meta_data").withColumn(
             "JSONFileName",
             concat(
-                lit("bails_"),
+                lit("s_bails_"),
                 regexp_replace(trim(col("client_identifier")), "/", "_"),
                 lit(".json")
             )
         ).withColumn(
             "HTMLFileName",
             concat(
-                lit("bails_"),
+                lit("s_bails_"),
                 regexp_replace(trim(col("client_identifier")), "/", "_"),
                 lit(".html")
             )
@@ -4503,18 +3810,8 @@ def gold_bails_with_a360():
 
     df = metadata_df.withColumnRenamed("A360_Status", "Status")
 
-    ## Create and save audit log for this table
-    table_name = "create_bails_a360_content"
-    stage_name = "gold_stage"
 
-    description = "The create_bails_json_content table generates JSON content for bail cases, transforming structured case data into serialized JSON format. It reads from final_staging_bails, converts all fields into a nested JSON structure, and assigns a unique file name for each case by replacing special characters in case numbers. This table facilitates automated JSON document generation, enabling structured data storage, retrieval, and downstream processing for bail case management and reporting."
-
-    unique_identifier_desc = "client_identifier"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["Status"])
-
-
-    return metadata_df
+    return df
 
 # COMMAND ----------
 
@@ -4523,17 +3820,24 @@ def gold_bails_with_a360():
 
 # COMMAND ----------
 
+# html = spark.table("aria_bails.create_bails_html_content").filter(col("CaseNo") == "ZY/00003     ")
+# html.select("Case_detail.AppellantTitle").show()
 
-@dlt.table(name="gold_bails_HTML_JSON_a360", comment="A360 content for bails", path=f"{gold_mnt}/Data/gold_bails_HTML_JSON_a360")
+# html
+
+# COMMAND ----------
+
+
+@dlt.table(name="gold_s_bail_HTML_JSON_a360", comment="A360 content for bails", path=f"{gold_base_path}/Data/gold_s_bail_HTML_JSON_a360")
 @dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE '%failure%')")
 @dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE '%failure%')")
 @dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE '%failure%')")
 
 
 def gold_bails_HTML_JSON_with_a360():
-    a360_df = dlt.read("create_bails_a360_content").alias("a360")
-    html_df = dlt.read("create_bails_html_content").alias("html")
-    json_df = dlt.read("create_bails_json_content").alias("json")
+    a360_df = dlt.read("create_s_bails_a360_content").alias("a360").withColumnRenamed("Status","HTML_Status")
+    html_df = dlt.read("create_s_bail_html_content").alias("html").withColumnRenamed("Status","JSON_Status")
+    json_df = dlt.read("create_s_bail_json_content").alias("json").withColumnRenamed("Status","A360_Status")
 
     # Rename CaseNo to match client_identifier for correct joins
     json_df = json_df.withColumnRenamed("CaseNo", "client_identifier")
@@ -4554,16 +3858,6 @@ def gold_bails_HTML_JSON_with_a360():
 
     df = unified_df.withColumn("batchid", col("batchid2"))
 
-    ## Create and save audit log for this table
-    table_name = "gold_bails_HTML_JSON_a360"
-    stage_name = "gold_stage"
-
-    description = "The gold_bails_HTML_JSON_a360 table consolidates structured bail case content, integrating HTML, JSON, and A360 formats for A360 processing. It ensures data integrity by enforcing quality checks to exclude records containing errors in any content format and organizes cases into batches for streamlined processing."
-
-    unique_identifier_desc = "client_identifier"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["batchid"])
-
 
 
     return unified_df
@@ -4575,13 +3869,19 @@ def gold_bails_HTML_JSON_with_a360():
 
 # COMMAND ----------
 
+# results_df_dev = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
+
+# results_df_dev.display()
+
+# COMMAND ----------
+
 @dlt.table(
     name="save_html_to_blob",
     comment="upload HTML content to blob storage",
-    path=f"{silver_mnt}/save_html_to_blob",
+    path=f"{silver_base_path}/save_html_to_blob",
 )
 def save_html_to_blob():
-    results_df = dlt.read("gold_bails_HTML_JSON_a360")
+    results_df = dlt.read("gold_s_bail_HTML_JSON_a360")
 
     repartioned_df = results_df.repartition(64)
 
@@ -4591,17 +3891,10 @@ def save_html_to_blob():
 
     ## Create and save audit log for this table
     df = df_html_with_status.withColumn("File_name", col("HTMLFileName"))
-    table_name = "save_html_to_blob"
-    stage_name = "gold_stage"
-
-    description = "The save_html_to_blob table is responsible for uploading generated HTML content for bail cases to blob storage. It reads from create_bails_html_content, repartitions the data for optimized parallel processing, and applies the upload_to_blob_udf function to transfer each HTML file to blob storage. A new column, HTMLTransferStatus, is added to track the status of each upload, ensuring visibility into successful and failed transfers. This table facilitates automated storage and retrieval of bail case HTML documents for further processing and access."
-
-    unique_identifier_desc = "client_identifier"
-
-    create_audit_df(df,unique_identifier_desc,table_name,stage_name,description,["File_name","Status"])
 
 
-    return df_html_with_status.withColumnRenamed("Status", "HTMLSaveStatus").select("HTMLFileName","HTMLContent","HTMLSaveStatus")
+
+    return df_html_with_status.select("HTMLFileName","HTMLContent","Status")
 
 
 # COMMAND ----------
@@ -4611,35 +3904,19 @@ def save_html_to_blob():
 
 # COMMAND ----------
 
-df = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
-
-df.display()
-
-# COMMAND ----------
-
 @dlt.table(
   name="save_json_to_blob",
   comment="upload JSON content to blob storage",
-  path=f"{silver_mnt}/save_json_to_blob",
+  path=f"{silver_base_path}/save_json_to_blob",
 )
 def save_json_to_blob():
-  df_with_json = dlt.read("gold_bails_HTML_JSON_a360")
+  df_with_json = dlt.read("gold_s_bail_HTML_JSON_a360")
   json_repartioned_df = df_with_json.repartition(64)
 
   df_json_with_status = json_repartioned_df.withColumn("Status", upload_to_blob_udf(col("JSON_File_path"), col("JSONContent")))
 
-  ## Create and save audit log for this table
-  df = df_json_with_status
-  table_name = "save_json_to_blob"
-  stage_name = "gold_stage"
 
-  description = "The save_json_to_blob table is responsible for uploading generated JSON content for bail cases to blob storage. It reads from create_bails_json_content, repartitions the data for optimized parallel processing, and applies the upload_to_blob_udf function to transfer each JSON file to blob storage. A new column, Status, is added to track the upload status of each JSON file, ensuring visibility into successful and failed transfers. This table facilitates automated storage and retrieval of structured JSON case data for further processing and access."
-
-  unique_identifier_desc = "client_identifier"
-
-  create_audit_df(df, unique_identifier_desc, table_name, stage_name, description, ["JSONFileName", "Status"])
-
-  return df_json_with_status.withColumnRenamed("Status", "JSONSaveStatus").select("JSONFileName", "JSONContent", "JSONSaveStatus")
+  return df_json_with_status.select("JSONFileName", "JSONContent", "Status")
 
 # COMMAND ----------
 
@@ -4650,9 +3927,9 @@ def save_json_to_blob():
 
 # COMMAND ----------
 
-@dlt.table(name="gold_bails_a360", 
+@dlt.table(name="gold_s_bail_a360", 
            comment="A360 content for bails",
-           path=f"{gold_mnt}/Data/batched_A360_save_status")
+           path=f"{gold_base_path}/Data/batched_A360_save_status")
 
 def gold_bails_with_a360():
     """
@@ -4670,16 +3947,6 @@ def gold_bails_with_a360():
     a360_result_df = a360_result_df.withColumnRenamed("batchid2", "a360batchid")
     a360_result_df = a360_result_df.withColumn("batchid", col("a360batchid").cast("string"))
 
-
-    ## Create and save audit log for this table
-    table_name = "gold_bails_with_a360"
-    stage_name = "gold_stage"
-
-    description = "The gold_bails_a360 table takes A360 content for bail cases, batches them into groups of 250 unique IDs, and uploads them to blob storage. It constructs JSON and HTML file names for each case, generates A360-formatted content using the generate_a360_udf function, and consolidates records into batched files. The batched content is then uploaded to blob storage, with a status column tracking the success or failure of each upload. This table facilitates efficient processing, storage, and retrieval of A360-formatted bail case data for further use in legal and administrative workflows."
-
-    unique_identifier_desc = "batchid"
-
-    create_audit_df(a360_result_df, unique_identifier_desc, table_name, stage_name, description, ["File_name", "Status"])
 
     return a360_result_df
 

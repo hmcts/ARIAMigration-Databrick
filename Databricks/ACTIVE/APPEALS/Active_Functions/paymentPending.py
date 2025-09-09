@@ -1077,6 +1077,10 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ##########         appellantDetails Function         ###########
 ################################################################
 
+from pyspark.sql.functions import udf, col
+from pyspark.sql.types import StringType
+import pandas as pd
+
 def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_Postcode):
     countryFromAddress = []
     try:
@@ -1101,41 +1105,6 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_
 
 getCountryApp_udf = udf(getCountryApp, StringType())
 
-# df = spark.table("ariadm_active_appeals.silver_caseapplicant_detail").filter(col("dv_targetState") == lit(AppealState)).distinct()
-
-# df = df.withColumn(
-#     "appellantFullAddress",
-#     makeFullAddressUDF(
-#         col("Appellant_Address1"),
-#         col("Appellant_Address2"),
-#         col("Appellant_Address3"),
-#         col("Appellant_Address4"),
-#         col("Appellant_Address5"),
-#         col("Appellant_Postcode")
-#     )
-# ).withColumn(
-#     "ukPostcodeAppellant",
-#     getUkPostcodeUDF(col("Appellant_Postcode"))
-# ).withColumn(
-#     "countryGovUkOocAdminJ",
-#     getCountryApp_udf(
-#         col("lu_countryGovUkOocAdminJ").alias("country"),
-#         col("ukPostcodeAppellant"),
-#         col("appellantFullAddress"),
-#         col("Appellant_Postcode")
-#     )
-# ).select("CaseNo", col("countryGovUkOocAdminJ"),col("appellantFullAddress"),col("ukPostcodeAppellant"))
-
-# bronze_countries_countryFromAddress = spark.table("ariadm_active_appeals.bronze_countries_countryFromAddress").withColumn("lu_cfa_countryGovUkOocAdminJ",col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
-
-# df = df.alias('main').join(bronze_countries_countryFromAddress.alias('cfa'), col("main.countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left").select("main.CaseNo", "appellantFullAddress", "ukPostcodeAppellant", col("cfa.lu_cfa_contryFromAddress"), col("cfa.lu_cfa_countryGovUkOocAdminJ"), col("main.countryGovUkOocAdminJ").alias("countryGovUkOocAdminJ"))
-
-# # display(df)
-
-# df.select("CaseNo", "appellantFullAddress", "ukPostcodeAppellant", 
-#           when( col("lu_cfa_contryFromAddress").isNotNull(),col("lu_cfa_countryGovUkOocAdminJ"))
-#           .otherwise(col("countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ")
-#           ).display()
 
 # AppealType grouping
 def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,bronze_HORef_cleansing):
@@ -1193,7 +1162,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
 
     # appellantAddress logic
     # Only include if CategoryIdList contains 37 and conditions
-    include_appellant_address = conditions & expr("array_contains(CategoryIdList, 37)")
+    include_appellant_address = (conditions & expr("array_contains(CategoryIdList, 37)") & 
+                                    (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))
     appellant_address_struct = when(
         include_appellant_address,
         struct(
@@ -1291,6 +1261,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         )
     ).otherwise(None)
 
+
     
     # Join bronze_HORef_cleansing to get CleansedHORef using CaseNo and coalesce(HORef, FCONumber)
     bronze_cleansing = bronze_HORef_cleansing.select(
@@ -1312,7 +1283,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
 
     silver_m2_derived = silver_m2.withColumn(
                                         "appellantFullAddress",
-                                        makeFullAddressUDF(
+                                        concat_ws(",",
                                             col("Appellant_Address1"),
                                             col("Appellant_Address2"),
                                             col("Appellant_Address3"),

@@ -26,7 +26,7 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
             source: WORKSPACE
 
-        - task_key: DLT_creation_of_content_sbails
+        - task_key: DLT_creation_of_content_sbail
           depends_on:
             - task_key: validate_packages
           pipeline_task:
@@ -69,7 +69,7 @@ resources:
         - task_key: Bails_Send_Dashboard
           depends_on:
             - task_key: sbails_ARM_ack
-            - task_key: DLT_creation_of_content_sbails
+            - task_key: DLT_creation_of_content_sbail
           job_cluster_key: db_wf_sbail_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/SBAIL/AUDIT/Bails_Send_Audit_Dashboard"

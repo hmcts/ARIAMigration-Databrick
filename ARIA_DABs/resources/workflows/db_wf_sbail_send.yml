@@ -1,6 +1,6 @@
 resources:
   jobs:
-    db_wf_bail_send_job:
+    db_wf_sbail_send_job:
       name: db_wf_sbail_send_job
       job_clusters:
         - job_cluster_key: db_wf_sbail_send_job

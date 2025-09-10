@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    pipeline_aria_archive_sbails:
+      name: ARIA_ARCHIVE_SBAIL
+      allow_duplicate_names: true
+      configuration:
+        pipeline.reset: "true"
+      clusters:
+        - label: default
+          node_type_id: Standard_DS4_v2
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ARCHIVE/SBAIL/Dynamic-ARIA-Scottish-Bails v2"
+      target: aria_s_bails
+      development: true

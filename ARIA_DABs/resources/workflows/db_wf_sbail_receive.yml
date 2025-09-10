@@ -1,0 +1,45 @@
+resources:
+  jobs:
+    db_wf_sbail_receive_job:
+      name: db_wf_sbail_receive_job
+      job_clusters:
+        - job_cluster_key: db_wf_sbail_receive_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 8
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: run-my-wheel
+          job_cluster_key: db_wf_sbail_receive_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
+
+        - task_key: validate_packages
+          depends_on:
+            - task_key: run-my-wheel
+          job_cluster_key: db_wf_sbail_receive_job
+          notebook_task: 
+            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
+            source: WORKSPACE
+
+        - task_key: collect_responses
+          depends_on:
+            - task_key: validate_packages
+          job_cluster_key: db_wf_sbail_receive_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/SBAIL/bails_resp_autoloader"
+            source: WORKSPACE
+
+        - task_key: sbails_receive_dashboard
+          depends_on:
+            - task_key: collect_responses
+          job_cluster_key: db_wf_sbail_receive_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/SBAIL/AUDIT/Bails_Receive_Audit_Dashboard"
+            source: WORKSPACE
+      queue:
+        enabled: true

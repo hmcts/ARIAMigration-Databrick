@@ -343,7 +343,7 @@ def Raw_AppealCase():
     path=f"{raw_mnt}/Raw_CaseAppellant"
 )
 def Raw_CaseAppellant():
-    return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_JOH")
+    return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_appellant",
@@ -351,7 +351,7 @@ def Raw_CaseAppellant():
     path=f"{raw_mnt}/Raw_Appellant"
 )
 def raw_Appellant():
-     return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_JOH")
+     return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_filelocation",
@@ -359,7 +359,7 @@ def raw_Appellant():
     path=f"{raw_mnt}/Raw_FileLocation"
 )
 def Raw_FileLocation():
-    return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_JOH")
+    return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_department",
@@ -367,7 +367,7 @@ def Raw_FileLocation():
     path=f"{raw_mnt}/Raw_Department"
 )
 def Raw_Department():
-    return read_latest_parquet("Department", "tv_Department", "ARIA_ARM_JOH")
+    return read_latest_parquet("Department", "tv_Department", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_hearingcentre",
@@ -375,7 +375,10 @@ def Raw_Department():
     path=f"{raw_mnt}/Raw_HearingCentre"
 )
 def Raw_HearingCentre():
-    return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
+    if env_name == "sbox":
+     return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
+    else:
+     return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_status",
@@ -383,7 +386,7 @@ def Raw_HearingCentre():
     path=f"{raw_mnt}/Raw_Status"
 )
 def Raw_Status():
-    return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
+    return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_TD")
 
 # COMMAND ----------
 

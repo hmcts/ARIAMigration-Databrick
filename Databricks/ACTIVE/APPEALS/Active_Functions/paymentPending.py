@@ -2058,14 +2058,14 @@ def partyID(silver_m1, silver_m3,silver_c):
 ################################################################
 
 
-def remissionTypes(silver_m1, bronze_remission_lookup_df):
+def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
     #Including conditions specified in mapping document (column H)
-    conditions_remissionTypes = col("CasePrefix").isin("EA", "EU", "HU", "PA")
+    conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
     # No need for all logic in ticket. The remission table exists in bronze. Left join on the unique field. Rename "Omit" to null. Results are correct from the samples I can see below.
-    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason"], how="left"
+    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason"], how="left").join(silver_m4, on=["CaseNo"], how="left"
         ).withColumn(
         "remissionType",
         col("remissionType")
@@ -2083,21 +2083,21 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df):
         "legalAidAccountNumber",
         when(col("legalAidAccountNumber") == lit("OMIT"), None                               #When set to OMIT, replace with NULL
         ).when(col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),    #If record matches the string
-        when(col("LSCReference").isNotNull(), col("LSCReference")).otherwise(lit("Unknown")) #Perform logic in the string
+        when(col("m1.LSCReference").isNotNull(), col("m1.LSCReference")).otherwise(lit("Unknown")) #Perform logic in the string
     ).otherwise(col("legalAidAccountNumber"))
 
     ).withColumn(
         "asylumSupportReference",
         when(col("asylumSupportReference") == lit("OMIT"), None                                  #When set to OMIT, replace with NULL
         ).when(col("asylumSupportReference") == lit("M1.ASFReferenceNo ELSE IF NULL 'Unknown'"),      #If record matches the string
-        when(col("ASFReferenceNo").isNotNull(), col("ASFReferenceNo")).otherwise(lit("Unknown")) #Perform logic in the string
+        when(col("m1.ASFReferenceNo").isNotNull(), col("m1.ASFReferenceNo")).otherwise(lit("Unknown")) #Perform logic in the string
     ).otherwise(col("asylumSupportReference"))
-
+        
     ).withColumn(
         "helpWithFeesReferenceNumber",
         when(col("helpWithFeesReferenceNumber") == lit("OMIT"), None                             #As above
         ).when(col("helpWithFeesReferenceNumber") == lit("M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'"),
-        when(col("PaymentRemissionReasonNote").isNotNull(), col("PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
+        when(col("m1.PaymentRemissionReasonNote").isNotNull(), col("m1.PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
         ).otherwise(col("helpWithFeesReferenceNumber"))
 
     ).select(
@@ -2162,7 +2162,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df):
     )
 
     return df, df_audit
-
+    
 ################################################################
 ##########        sponsorDetails Function            ###########
 ################################################################
@@ -2444,171 +2444,7 @@ def generalDefault(silver_m1):
         "uploadAdditionalEvidenceHomeOfficeActionAvailable"
     )
 
-    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
-    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
-
-    df_audit = silver_m1.alias("audit").join(df.alias("content"), ["CaseNo"],"left").select(
-        col("CaseNo"),
-
-        #notificationsSent - ARIADM-797
-        array(struct(*common_inputFields, lit("notificationsSent"))).alias("notificationsSent_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("notificationsSent_inputValues"),
-        col("content.notificationsSent"),
-        lit("no").alias("notificationsSent_Transformation"),
-
-        #submitNotificationStatus - ARIADM-797
-        array(struct(*common_inputFields, lit("submitNotificationStatus"))).alias("submitNotificationStatus_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("submitNotificationStatus_inputValues"),
-        col("content.submitNotificationStatus"),
-        lit("no").alias("submitNotificationStatus_Transformation"),
-
-        #isFeePaymentEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isFeePaymentEnabled"))).alias("isFeePaymentEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isFeePaymentEnabled_inputValues"),
-        col("content.isFeePaymentEnabled"),
-        lit("no").alias("isFeePaymentEnabled_Transformation"),
-
-        #isRemissionsEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isRemissionsEnabled"))).alias("isRemissionsEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isRemissionsEnabled_inputValues"),
-        col("content.isRemissionsEnabled"),
-        lit("no").alias("isRemissionsEnabled_Transformation"),
-
-        #isOutOfCountryEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isOutOfCountryEnabled"))).alias("isOutOfCountryEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isOutOfCountryEnabled_inputValues"),
-        col("content.isOutOfCountryEnabled"),
-        lit("no").alias("isOutOfCountryEnabled_Transformation"),
-
-        #isIntegrated - ARIADM-797
-        array(struct(*common_inputFields, lit("isIntegrated"))).alias("isIntegrated_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isIntegrated_inputValues"),
-        col("content.isIntegrated"),
-        lit("no").alias("isIntegrated_Transformation"),
-
-        #isNabaEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isNabaEnabled"))).alias("isNabaEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isNabaEnabled_inputValues"),
-        col("content.isNabaEnabled"),
-        lit("no").alias("isNabaEnabled_Transformation"),
-
-        #isNabaAdaEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isNabaAdaEnabled"))).alias("isNabaAdaEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isNabaAdaEnabled_inputValues"),
-        col("content.isNabaAdaEnabled"),
-        lit("no").alias("isNabaAdaEnabled_Transformation"),
-
-        #isNabaEnabledOoc - ARIADM-797
-        array(struct(*common_inputFields, lit("isNabaEnabledOoc"))).alias("isNabaEnabledOoc_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isNabaEnabledOoc_inputValues"),
-        col("content.isNabaEnabledOoc"),
-        lit("no").alias("isNabaEnabledOoc_Transformation"),
-
-        #isCaseUsingLocationRefData - ARIADM-797
-        array(struct(*common_inputFields, lit("isCaseUsingLocationRefData"))).alias("isCaseUsingLocationRefData_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isCaseUsingLocationRefData_inputValues"),
-        col("content.isCaseUsingLocationRefData"),
-        lit("no").alias("isCaseUsingLocationRefData_Transformation"),
-
-        #hasAddedLegalRepDetails - ARIADM-797
-        array(struct(*common_inputFields, lit("hasAddedLegalRepDetails"))).alias("hasAddedLegalRepDetails_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("hasAddedLegalRepDetails_inputValues"),
-        col("content.hasAddedLegalRepDetails"),
-        lit("no").alias("hasAddedLegalRepDetails_Transformation"),
-
-        #autoHearingRequestEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("autoHearingRequestEnabled"))).alias("autoHearingRequestEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("autoHearingRequestEnabled_inputValues"),
-        col("content.autoHearingRequestEnabled"),
-        lit("no").alias("autoHearingRequestEnabled_Transformation"),
-
-        #isDlrmFeeRemissionEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isDlrmFeeRemissionEnabled"))).alias("isDlrmFeeRemissionEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isDlrmFeeRemissionEnabled_inputValues"),
-        col("content.isDlrmFeeRemissionEnabled"),
-        lit("no").alias("isDlrmFeeRemissionEnabled_Transformation"),
-
-        #isDlrmFeeRefundEnabled - ARIADM-797
-        array(struct(*common_inputFields, lit("isDlrmFeeRefundEnabled"))).alias("isDlrmFeeRefundEnabled_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("isDlrmFeeRefundEnabled_inputValues"),
-        col("content.isDlrmFeeRefundEnabled"),
-        lit("no").alias("isDlrmFeeRefundEnabled_Transformation"),
-
-        #sendDirectionActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("sendDirectionActionAvailable"))).alias("sendDirectionActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("sendDirectionActionAvailable_inputValues"),
-        col("content.sendDirectionActionAvailable"),
-        lit("no").alias("sendDirectionActionAvailable_Transformation"),
-
-        #changeDirectionDueDateActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("changeDirectionDueDateActionAvailable"))).alias("changeDirectionDueDateActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("changeDirectionDueDateActionAvailable_inputValues"),
-        col("content.changeDirectionDueDateActionAvailable"),
-        lit("no").alias("changeDirectionDueDateActionAvailable_Transformation"),
-
-        #markEvidenceAsReviewedActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("markEvidenceAsReviewedActionAvailable"))).alias("markEvidenceAsReviewedActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("markEvidenceAsReviewedActionAvailable_inputValues"),
-        col("content.markEvidenceAsReviewedActionAvailable"),
-        lit("no").alias("markEvidenceAsReviewedActionAvailable_Transformation"),
-
-        #uploadAddendumEvidenceActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAddendumEvidenceActionAvailable"))).alias("uploadAddendumEvidenceActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAddendumEvidenceActionAvailable_inputValues"),
-        col("content.uploadAddendumEvidenceActionAvailable"),
-        lit("no").alias("uploadAddendumEvidenceActionAvailable_Transformation"),
-
-        #uploadAdditionalEvidenceActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAdditionalEvidenceActionAvailable"))).alias("uploadAdditionalEvidenceActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAdditionalEvidenceActionAvailable_inputValues"),
-        col("content.uploadAdditionalEvidenceActionAvailable"),
-        lit("no").alias("uploadAdditionalEvidenceActionAvailable_Transformation"),
-
-        #displayMarkAsPaidEventForPartialRemission - ARIADM-797
-        array(struct(*common_inputFields, lit("displayMarkAsPaidEventForPartialRemission"))).alias("displayMarkAsPaidEventForPartialRemission_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("displayMarkAsPaidEventForPartialRemission_inputValues"),
-        col("content.displayMarkAsPaidEventForPartialRemission"),
-        lit("no").alias("displayMarkAsPaidEventForPartialRemission_Transformation"),
-
-        #haveHearingAttendeesAndDurationBeenRecorded - ARIADM-797
-        array(struct(*common_inputFields, lit("haveHearingAttendeesAndDurationBeenRecorded"))).alias("haveHearingAttendeesAndDurationBeenRecorded_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("haveHearingAttendeesAndDurationBeenRecorded_inputValues"),
-        col("content.haveHearingAttendeesAndDurationBeenRecorded"),
-        lit("no").alias("haveHearingAttendeesAndDurationBeenRecorded_Transformation"),
-
-        #markAddendumEvidenceAsReviewedActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("markAddendumEvidenceAsReviewedActionAvailable"))).alias("markAddendumEvidenceAsReviewedActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("markAddendumEvidenceAsReviewedActionAvailable_inputValues"),
-        col("content.markAddendumEvidenceAsReviewedActionAvailable"),
-        lit("no").alias("markAddendumEvidenceAsReviewedActionAvailable_Transformation"),
-
-        #uploadAddendumEvidenceLegalRepActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAddendumEvidenceLegalRepActionAvailable"))).alias("uploadAddendumEvidenceLegalRepActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAddendumEvidenceLegalRepActionAvailable_inputValues"),
-        col("content.uploadAddendumEvidenceLegalRepActionAvailable"),
-        lit("no").alias("uploadAddendumEvidenceLegalRepActionAvailable_Transformation"),
-
-        #uploadAddendumEvidenceHomeOfficeActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAddendumEvidenceHomeOfficeActionAvailable"))).alias("uploadAddendumEvidenceHomeOfficeActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAddendumEvidenceHomeOfficeActionAvailable_inputValues"),
-        col("content.uploadAddendumEvidenceHomeOfficeActionAvailable"),
-        lit("no").alias("uploadAddendumEvidenceHomeOfficeActionAvailable_Transformation"),
-
-        #uploadAddendumEvidenceAdminOfficerActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAddendumEvidenceAdminOfficerActionAvailable"))).alias("uploadAddendumEvidenceAdminOfficerActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAddendumEvidenceAdminOfficerActionAvailable_inputValues"),
-        col("content.uploadAddendumEvidenceAdminOfficerActionAvailable"),
-        lit("no").alias("uploadAddendumEvidenceAdminOfficerActionAvailable_Transformation"),
-
-        #uploadAdditionalEvidenceHomeOfficeActionAvailable - ARIADM-797
-        array(struct(*common_inputFields, lit("uploadAdditionalEvidenceHomeOfficeActionAvailable"))).alias("uploadAdditionalEvidenceHomeOfficeActionAvailable_inputFields"),
-        array(struct(*common_inputValues, lit("null"))).alias("uploadAdditionalEvidenceHomeOfficeActionAvailable_inputValues"),
-        col("content.uploadAdditionalEvidenceHomeOfficeActionAvailable"),
-        lit("no").alias("uploadAdditionalEvidenceHomeOfficeActionAvailable_Transformation")
-
-    )
-
-    return df, df_audit
+    return df
 
 ################################################################
 ##########              Documents Function           ###########

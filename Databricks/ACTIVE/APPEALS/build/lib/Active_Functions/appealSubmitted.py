@@ -25,8 +25,6 @@ from . import paymentPending as PP
 #########         paymentType Function              ###########
 ###############################################################
 
-# original_paymentType = paymentPending.paymentType 
-
 def paymentType(silver_m1, silver_m4):
     payment_content, payment_audit = PP.paymentType(silver_m1)
 
@@ -110,11 +108,9 @@ def paymentType(silver_m1, silver_m4):
 ##########        remissionTypes Function            ###########
 ################################################################
 
-# original_remissionTypes = paymentPending.remissionTypes 
-
 def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
-    df_final, df_audit = PP.remissionTypes(silver_m1, bronze_remission_lookup_df)
+    df_final, df_audit = PP.remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4)
 
     conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
@@ -186,25 +182,6 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     )
 
     return df_final, df_audit
-
-################################################################
-##########        caseState Function            ###########
-################################################################
-
-# df, df_audit = paymentPending.caseState(silver_m1)
-
-##### To update the changeDirectionDueDateActionAvailable to Yes #####
-# original_caseState = paymentPending.caseState 
-
-# def appealSubmitted_caseState(silver_m1): 
-#     df_appealSubmitted, df_audit_appealSubmitted = original_caseState(silver_m1) 
-    
-#     # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
-#     df_appealSubmitted = df_appealSubmitted.withColumn("ariaDesiredState", lit("appealSubmitted"))
-    
-#     return df_appealSubmitted, df_audit_appealSubmitted
-
-
 
 if __name__ == "__main__":
     pass

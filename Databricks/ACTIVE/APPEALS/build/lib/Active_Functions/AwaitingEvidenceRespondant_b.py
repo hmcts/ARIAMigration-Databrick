@@ -4,24 +4,25 @@ from . import paymentPending as PP
 from . import AwaitingEvidenceRespondant_a as AERa
 
 def generalDefault(silver_m1): 
-    paymentPending_generalDefault_content, paymentPending_generalDefault_audit = AERa.generalDefault(silver_m1) 
+    df_generalDefault = AERa.generalDefault(silver_m1)
     
-    # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
-    df_awaitingEvidenceRespondent_b = (
-        paymentPending_generalDefault_content
-        .withColumn("uploadHomeOfficeBundleActionAvailable",lit("No"))
+    df_generalDefault = (
+        df_generalDefault
+        .select("*",
+                lit("No").alias("uploadHomeOfficeBundleActionAvailable"))
     )
             
-    return paymentPending_generalDefault_content, paymentPending_generalDefault_audit
+    return df_generalDefault
 
 def documents(silver_m1): 
-    documents_content, documents_audit = PP.documents(silver_m1)
+    documents_df, documents_audit = PP.documents(silver_m1)
 
-    awaitingEvidenceRespondent_b_documents_content = (
-        documents_content
-        .withColumn("respondentDocuments",array())
+    documents_df = (
+        documents_df
+        .select("*",
+                lit([]).cast("array<string>").alias("respondentDocuments"))
     )
-    return awaitingEvidenceRespondent_b_documents_content, documents_audit
+    return documents_df, documents_audit
 
 if __name__ == "__main__":
     pass

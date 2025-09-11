@@ -375,7 +375,10 @@ def Raw_Department():
     path=f"{raw_mnt}/Raw_HearingCentre"
 )
 def Raw_HearingCentre():
-    return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
+    if env_name == "sbox":
+     return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
+    else:
+     return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
 
 @dlt.table(
     name="raw_status",

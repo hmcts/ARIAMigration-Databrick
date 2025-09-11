@@ -907,7 +907,10 @@ def raw_AppealTypeCategory():
     path=f"{raw_mnt}/raw_pou"
 )
 def raw_pou():
+    if env_name == "sbox":
      return read_latest_parquet("ARIAPou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
+    else:
+      return read_latest_parquet("Pou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
  
 @dlt.table(
     name="raw_caseadjudicator",
@@ -4531,7 +4534,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(KeyVault_name, "CURATED-sbox-SAS-TOKEN")
+secret = dbutils.secrets.get(KeyVault_name, f"CURATED-{env_name}-SAS-TOKEN")
 
 # COMMAND ----------
 

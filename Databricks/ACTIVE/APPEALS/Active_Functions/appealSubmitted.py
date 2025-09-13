@@ -43,15 +43,15 @@ def paymentType(silver_m1, silver_m4):
     payment_content_final = payment_content.alias("payment_content").join(silver_m1, ["CaseNo"], "left").join(paid_amount, ["CaseNo"], "left").select(
         "payment_content.*",
         when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"), "payLater")
-            .otherwise("unknown").alias("paAppealTypePaymentOption"),
+            .otherwise(lit(None)).alias("paAppealTypePaymentOption"),
         when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "AIP"), "payLater")
-            .otherwise("unknown").alias("paAppealTypeAipPaymentOption"),
+            .otherwise(lit(None)).alias("paAppealTypeAipPaymentOption"),
         when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 1), "decisionWithoutHearing")
             .when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 2), "decisionWithHearing")
-            .otherwise("unknown").alias("rpDcAppealHearingOption"),
-        when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).otherwise("unknown").alias("paidDate"),
-        when(conditions_all, col("paidAmount")).otherwise("unknown").alias("paidAmount"),
-        when(conditions_all,lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise("unknown").alias("additionalPaymentInfo")
+            .otherwise(lit(None)).alias("rpDcAppealHearingOption"),
+        when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).otherwise(lit(None)).alias("paidDate"),
+        when(conditions_all, col("paidAmount")).otherwise(lit(None)).alias("paidAmount"),
+        when(conditions_all,lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise(lit(None)).alias("additionalPaymentInfo")
     ).select(
         "CaseNo",
         "feeAmountGbp",

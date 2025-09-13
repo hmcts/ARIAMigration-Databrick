@@ -277,32 +277,32 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         col("bhc3.selectedHearingCentreRefData").alias("dv_dhc3_selectedHearingCentreRefData"),
         col("map_postcode_to_hearing_centre"),
         when(col('bhc.Conditions').isNull(), col('bhc.hearingCentre'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("map_postcode_to_hearing_centre"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()) ,col("map_postcode_to_hearing_centre"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.hearingCentre"))
         .alias("hearingCentre"),
 
         when(col('bhc.Conditions').isNull(), col('bhc.staffLocation'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.staffLocation"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time")| col("h.der_prevFileLocation").isNull()),col("bhc3.staffLocation"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.staffLocation"))
         .alias("staffLocation"),
 
          when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocation'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.caseManagementLocation"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocation"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.caseManagementLocation"))
         .alias("caseManagementLocation"),
 
         when(col('bhc.Conditions').isNull(), col('bhc.hearingCentreDynamicList'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.hearingCentreDynamicList"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.hearingCentreDynamicList"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.hearingCentreDynamicList"))
         .alias("hearingCentreDynamicList"),
 
         when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocationRefData'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.caseManagementLocationRefData"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocationRefData"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.caseManagementLocationRefData"))
         .alias("caseManagementLocationRefData"),
 
          when(col('bhc.Conditions').isNull(), col('bhc.selectedHearingCentreRefData'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.selectedHearingCentreRefData"))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.selectedHearingCentreRefData"))
         .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.selectedHearingCentreRefData"))
         .alias("selectedHearingCentreRefData")
     )

@@ -33,12 +33,37 @@ def paymentType(silver_m1, silver_m4):
     payment_common_inputFields = [lit("VisitVisatype")]
     payment_common_inputValues = [col("VisitVisatype")]
 
-    paid_amount = silver_m4.groupBy("CaseNo").agg(
+    ##########################
+    #ARIADM-908 (paymentStatus)
+    ##########################
+    # Subquery with ReferringTransactionId
+    ref_txn_df = silver_m4.filter(
+        col("TransactionTypeId").isin(6, 19)
+    ).select("ReferringTransactionId").distinct()
+
+    # Use left anti join to remove matches
+    filtered_df = silver_m4.filter(col("SumBalance") == 1) \
+        .join(ref_txn_df, silver_m4.TransactionTypeId == ref_txn_df.ReferringTransactionId, "left_anti") \
+        .select("TransactionTypeId", "CaseNo", "Amount", "TransactionId")
+
+    # Aggregate and determine payment status
+    payment_status = filtered_df.groupBy("CaseNo").agg(
+        F_sum("Amount").alias("SumAmount"),
+        spark_max(when(col("TransactionTypeId") == 19, col("TransactionId"))).alias("MaxTransactionId")
+    ).withColumn(
+        "paymentStatus",
+        when(col("SumAmount") > 0, "Payment Pending")
+        .when((col("SumAmount") == 0) & (col("MaxTransactionId").isNotNull()), "Payment Pending")
+        .otherwise("Paid")
+    ).select("CaseNo", "paymentStatus")
+    #########################################################################################
+
+    paid_amount = filtered_df.groupBy("CaseNo").agg(
         abs(F_sum(col("Amount"))).alias("paidAmount"),
         collect_list(col("Amount")).alias("amountList")
     )
 
-    payment_content_final = payment_content.alias("payment_content").join(silver_m1, ["CaseNo"], "left").join(paid_amount, ["CaseNo"], "left").select(
+    payment_content_final = payment_content.alias("payment_content").join(silver_m1, ["CaseNo"], "left").join(paid_amount, ["CaseNo"], "left").join(payment_status.alias("payment_status"), ["CaseNo"], "left").select(
         "payment_content.*",
         when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"), "payLater")
             .otherwise("unknown").alias("paAppealTypePaymentOption"),
@@ -49,7 +74,9 @@ def paymentType(silver_m1, silver_m4):
             .otherwise("unknown").alias("rpDcAppealHearingOption"),
         when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).otherwise("unknown").alias("paidDate"),
         when(conditions_all, col("paidAmount")).otherwise("unknown").alias("paidAmount"),
-        when(conditions_all,lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise("unknown").alias("additionalPaymentInfo")
+        when(conditions_all,lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise("unknown").alias("additionalPaymentInfo"),
+        col("payment_status.paymentStatus").alias("dv_paymentStatus")
+
     ).select(
         "CaseNo",
         "feeAmountGbp",
@@ -58,7 +85,7 @@ def paymentType(silver_m1, silver_m4):
         "feeWithoutHearing",
         "paymentDescription",
         "feePaymentAppealType",
-        "paymentStatus",
+        col("dv_paymentStatus").alias("paymentStatus"),
         "feeVersion",
         "decisionHearingFeeOption",
         "hasServiceRequestAlready",
@@ -104,6 +131,8 @@ def paymentType(silver_m1, silver_m4):
 
     return payment_content_final, payment_audit_final
 
+    
+
 ################################################################
 ##########        remissionTypes Function            ###########
 ################################################################
@@ -117,9 +146,21 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
     amount_remitted = silver_m4.filter((col("TransactionTypeId") == 5) & (col("Status") != 3)).groupBy("CaseNo").agg(abs(F_sum(col("Amount"))).alias("amountRemitted"),collect_list(col("Amount")).alias("amountRemittedList"))
 
-    referring_transactions = silver_m4.filter(col("TransactionTypeId").isin(6, 19)).select("ReferringTransactionId").distinct()
-    referring_transaction_ids = [row.ReferringTransactionId for row in referring_transactions.collect()]
-    amount_left_to_pay = silver_m4.filter((col("SumTotalFee") == 1) & (~col("TransactionID").isin(referring_transaction_ids))).groupBy("CaseNo").agg(F_sum(col("Amount")).alias("amountLeftToPay"),collect_list(col("Amount")).alias("amountLeftToPayList"))
+    ######################################################################
+    ref_txn_df = silver_m4.filter(
+    col("TransactionTypeId").isin(6, 19)
+    ).select("ReferringTransactionId").distinct()
+
+        # Use left anti join to remove matches
+    filtered_df = silver_m4.filter(col("SumBalance") == 1) \
+            .join(ref_txn_df, silver_m4.TransactionTypeId == ref_txn_df.ReferringTransactionId, "left_anti") \
+            .select("TransactionTypeId", "CaseNo", "Amount", "TransactionId")
+
+    amount_left_to_pay = filtered_df.groupBy("CaseNo").agg(F_sum(col("Amount")).alias("amountLeftToPay"),collect_list(col("Amount")).alias("amountLeftToPayList"))
+    #################################################################
+    # referring_transactions = silver_m4.filter(col("TransactionTypeId").isin(6, 19)).select("ReferringTransactionId").distinct()
+    # referring_transaction_ids = [row.ReferringTransactionId for row in referring_transactions.collect()]
+    # amount_left_to_pay = silver_m4.filter((col("SumTotalFee") == 1) & (~col("TransactionID").isin(referring_transaction_ids))).groupBy("CaseNo").agg(F_sum(col("Amount")).alias("amountLeftToPay"),collect_list(col("Amount")).alias("amountLeftToPayList"))
 
     fields_list = [
     "source.remissionType",
@@ -182,6 +223,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     )
 
     return df_final, df_audit
+
 
 if __name__ == "__main__":
     pass

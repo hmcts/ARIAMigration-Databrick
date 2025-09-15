@@ -6072,7 +6072,7 @@ def gold_appeals_with_json():
     #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_unified.repartition(64)
+    repartitioned_df = df_unified.repartition(200)
 
     df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
             "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
@@ -6104,7 +6104,7 @@ def gold_appeals_with_html():
     #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(64)
+    repartitioned_df = df_combined.repartition(200)
 
     # Trigger upload logic for each row
     df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
@@ -6140,7 +6140,7 @@ def gold_appeals_with_a360():
             .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(64)
+    repartitioned_df = df_agg.repartition(200)
 
     # Remove existing files
     dbutils.fs.rm(f"{gold_outputs}/A360", True)

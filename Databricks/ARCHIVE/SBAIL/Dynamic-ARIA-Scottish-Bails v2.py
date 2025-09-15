@@ -315,7 +315,7 @@ silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account
 
 gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
 
-external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net"
+external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net/ReferenceData/"
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 

@@ -315,7 +315,7 @@ silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account
 
 gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
 
-external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net"
+external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net/ReferenceData"
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 
@@ -1817,17 +1817,17 @@ def silver_legal_hold_normal_bail():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_scottish_bails_funds",
-           comment="Silver table for Scottish Bails Funds cases",
-           path=f"{silver_base_path}/silver_scottish_bails_funds")
-def silver_scottish_bails_funds():
-    df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
-        col("Caseno/ Bail Ref no").alias("CaseNo"),
-        lit("ScottishBailsFunds").alias("BaseBailType")
-        )
+# @dlt.table(name="silver_scottish_bails_funds",
+#            comment="Silver table for Scottish Bails Funds cases",
+#            path=f"{silver_base_path}/silver_scottish_bails_funds")
+# def silver_scottish_bails_funds():
+#     df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
+#         col("Caseno/ Bail Ref no").alias("CaseNo"),
+#         lit("ScottishBailsFunds").alias("BaseBailType")
+#         )
 
 
-    return df
+#     return df
     
 
 # COMMAND ----------

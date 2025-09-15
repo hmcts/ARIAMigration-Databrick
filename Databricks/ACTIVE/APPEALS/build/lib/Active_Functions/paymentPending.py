@@ -18,7 +18,6 @@ from pyspark.sql.functions import (
 
 from uk_postcodes_parsing import fix, postcode_utils
 
-
 ################################################################
 ##########              appealType grouping          ###########
 ################################################################
@@ -116,10 +115,6 @@ def appealType(silver_m1):
 ################################################################
 ##########              caseData grouping            ###########
 ################################################################
-
-# caseData grouping
-from pyspark.sql.functions import collect_list, struct, when, lit, col, max as spark_max, date_format, row_number, split, coalesce
-from pyspark.sql.window import Window
 
 # caseData grouping
 def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):

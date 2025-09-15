@@ -158,9 +158,6 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
     amount_left_to_pay = filtered_df.groupBy("CaseNo").agg(F_sum(col("Amount")).alias("amountLeftToPay"),collect_list(col("Amount")).alias("amountLeftToPayList"))
     #################################################################
-    # referring_transactions = silver_m4.filter(col("TransactionTypeId").isin(6, 19)).select("ReferringTransactionId").distinct()
-    # referring_transaction_ids = [row.ReferringTransactionId for row in referring_transactions.collect()]
-    # amount_left_to_pay = silver_m4.filter((col("SumTotalFee") == 1) & (~col("TransactionID").isin(referring_transaction_ids))).groupBy("CaseNo").agg(F_sum(col("Amount")).alias("amountLeftToPay"),collect_list(col("Amount")).alias("amountLeftToPayList"))
 
     fields_list = [
     "source.remissionType",

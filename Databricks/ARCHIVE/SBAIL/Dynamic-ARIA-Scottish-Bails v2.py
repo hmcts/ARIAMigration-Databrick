@@ -726,7 +726,7 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
     .select(
         # AppealCase Fields
-        col("ac.CaseNo"),
+        trim(col("ac.CaseNo")).alias("CaseNo"),
         col("ac.HORef"),
         col("ac.BailType"),
         col("ac.CourtPreference"),
@@ -913,7 +913,7 @@ def bronze_sbail_ac_ca_apt_country_detc():
         .select(
             # CaseAppellant Fields
             col("ca.AppellantId"),
-            col("ca.CaseNo"),
+            trim(col("ca.CaseNo")).alias("CaseNo"),
             col("ca.Relationship"),
             # Appellant Fields
             col("a.PortReference"),
@@ -1046,7 +1046,7 @@ def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
         .join(dlt.read("raw_appeal_cases").alias("ac"), col("s.CaseNo") == col("ac.CaseNo"))
         .select(
             # Status
-            col("s.CaseNo"),
+            trim(col("s.CaseNo")).alias("CaseNo"),
             col("s.StatusId"),
             col("s.Outcome"),
             # CaseList
@@ -1123,7 +1123,7 @@ def bronze_sbail_ac_bfdiary_bftype():
         dlt.read("raw_bf_diary").alias("bfd")
         .join(dlt.read("raw_bf_type").alias("bft"), col("bfd.BFTypeId") == col("bft.BFTypeId"), "left_outer")
         .select(
-            col("bfd.CaseNo"),
+            trim(col("bfd.CaseNo")).alias("CaseNo"),
             col("bfd.BFDate"),
             col("bfd.Entry") ,
             col("bfd.EntryDate"),
@@ -1169,7 +1169,7 @@ def bronze_sbail_ac_history_users():
         .join(dlt.read("raw_users").alias("u"), col("h.UserId") == col("u.UserId"), "left_outer")
         .select(
             # History table fields
-            col("h.CaseNo"),
+            trim(col("h.CaseNo")).alias("CaseNo"),
             col("h.HistoryId"),
             col("h.HistDate"),
             col("h.HistType"),
@@ -1234,7 +1234,7 @@ def bronze_sbail_ac_link_linkdetail():
           col("a.Name"),
           col("a.Forenames"),
           col("a.Title"),
-          col("l.CaseNo"),
+          trim(col("l.CaseNo")).alias("CaseNo"),
           col("ld.Comment").alias("LinkDetailComment")
           )
         )
@@ -1388,7 +1388,7 @@ def bronze_sbail_status_sc_ra_cs():
             # STATUS fields (s)
             # -------------------------
             col("s.StatusId"),
-            col("s.CaseNo"),
+            trim(col("s.CaseNo")).alias("CaseNo"),
             col("s.CaseStatus"),
             col("s.DateReceived"),
             col("s.Notes1").alias("StatusNotes1"),
@@ -1505,7 +1505,7 @@ def bronze_sbail_ac_appealcategory_category():
         .join(dlt.read("raw_category").alias("c"), col("ap.CategoryId") == col("c.CategoryId"), "left_outer")
         .select(
             # AppealCategory fields
-            col("ap.CaseNo"),
+            trim(col("ap.CaseNo")).alias("CaseNo"),
             # Category fields
             col("c.Description").alias("CategoryDescription"),
             col("c.Flag"),
@@ -1534,7 +1534,7 @@ def bronze_case_surety_query():
         .select(
             # CaseSurety fields
             col("SuretyId"),
-            col("CaseNo"),
+            trim(col("CaseNo")).alias("CaseNo"),
             col("Name").alias("CaseSuretyName"),
             col("Forenames").alias("CaseSuretyForenames"),
             col("Title").alias("CaseSuretyTitle"),
@@ -1592,7 +1592,7 @@ def judicial_requirement():
         dlt.read("raw_case_adjudicator").alias("ca")
         .join(dlt.read("raw_adjudicator").alias("adj"), col("ca.AdjudicatorId") == col("adj.AdjudicatorId"), "inner")
         .select(
-                col("ca.CaseNo"),
+                trim(col("ca.CaseNo")).alias("CaseNo"),
                 col("ca.required"),
                 col("adj.Surname").alias("JudgeSurname"),
                 col("adj.Forenames").alias("JudgeForenames"),
@@ -1658,7 +1658,7 @@ def linked_cases_cost_award():
         .select(
             col("ca.CostAwardId").alias("CostAwardId"),
             col("l.LinkNo").alias("LinkNo"),
-            col("ca.CaseNo").alias("CaseNo"),
+            trim(col("ca.CaseNo")).alias("CaseNo"),
             col("a.Name").alias("Name"),
             col("a.Forenames").alias("Forenames"),
             col("a.Title").alias("Title"),
@@ -1698,16 +1698,11 @@ def silver_scottish_sbails_funds():
     df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
         col("Caseno/ Bail Ref no").alias("CaseNo"),
         lit("ScottishBailsFunds").alias("BaseBailType")
-        )
+        ).na.drop(subset=["CaseNo"])
 
 
     return df
     
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Combined Segmentaiton query
 
 # COMMAND ----------
 

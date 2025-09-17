@@ -316,9 +316,9 @@ landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_accou
 landing_html_tmpl_base_path = f"abfss://{landing_html_storage_container}@{landing_storage_account}.dfs.core.windows.net/Bails/"
 
 
-gold_html_outputs = 'ARIADM/ARM/BAILS/HTML/'
-gold_json_outputs = 'ARIADM/ARM/BAILS/JSON/'
-gold_a360_outputs = 'ARIADM/ARM/BAILS/A360/'
+gold_html_outputs = 'ARIADM/ARM/SBAILS/HTML/'
+gold_json_outputs = 'ARIADM/ARM/SBAILS/JSON/'
+gold_a360_outputs = 'ARIADM/ARM/SBAILS/A360/'
 
 
 # COMMAND ----------
@@ -697,7 +697,7 @@ def raw_stm_cases():
 
 @dlt.table(
     name='bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang',
-    comment='ARIA Migration Archive Bails cases bronze table',
+    comment='ARIA Migration Archive SBails cases bronze table',
     path=f"{bronze_base_path}/bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
@@ -894,7 +894,7 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
 @dlt.table(
     name='bronze_sbail_ac_ca_apt_country_detc',
-    comment='ARIA Migration Archive Bails cases bronze table',
+    comment='ARIA Migration Archive SBails cases bronze table',
     path=f"{bronze_base_path}/bronze_sbail_ac_ca_apt_country_detc")
 def bronze_sbail_ac_ca_apt_country_detc():
     df =  (
@@ -1019,7 +1019,7 @@ def bronze_sbail_ac_ca_apt_country_detc():
 
 @dlt.table(
     name="bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj",
-    comment="ARIA Migration Archive Bails cases bronze table",
+    comment="ARIA Migration Archive SBails cases bronze table",
     path=f"{bronze_base_path}/bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
@@ -1106,7 +1106,7 @@ def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
 
 @dlt.table(
     name="bronze_sbail_ac_bfdiary_bftype", 
-    comment="ARIA Migration Archive Bails cases bronze table", 
+    comment="ARIA Migration Archive SBails cases bronze table", 
     path=f"{bronze_base_path}/bronze_sbail_ac_bfdiary_bftype")
 def bronze_sbail_ac_bfdiary_bftype():
     df = (
@@ -1150,7 +1150,7 @@ def bronze_sbail_ac_bfdiary_bftype():
 
 @dlt.table(
     name="bronze_sbail_ac_history_users", 
-    comment="ARIA Migration Archive Bails cases bronze table", 
+    comment="ARIA Migration Archive SBails cases bronze table", 
     path=f"{bronze_base_path}/bronze_sbail_ac_history_users")
 def bronze_sbail_ac_history_users():
     df = (
@@ -1209,7 +1209,7 @@ def bronze_sbail_ac_history_users():
 
 @dlt.table(
   name="bronze_sbail_ac_link_linkdetail", 
-  comment="ARIA Migration Archive Bails cases bronze table", 
+  comment="ARIA Migration Archive SBails cases bronze table", 
   path=f"{bronze_base_path}/bronze_sbail_ac_link_linkdetail")
 def bronze_sbail_ac_link_linkdetail():
     df = (
@@ -1309,7 +1309,7 @@ def bronze_sbail_ac_link_linkdetail():
 
 @dlt.table(
     name="bronze_sbail_status_sc_ra_cs",
-    comment="ARIA Migration Archive Bails Status cases bronze table",
+    comment="ARIA Migration Archive SBails Status cases bronze table",
     path=f"{bronze_base_path}/bronze_sbail_status_sc_ra_cs"
 )
 def bronze_sbail_status_sc_ra_cs():
@@ -1482,7 +1482,7 @@ def bronze_sbail_status_sc_ra_cs():
 
 @dlt.table(
     name="bronze_sbail_ac_appealcategory_category",
-    comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
+    comment="ARIA Migration Archive SBails Appeal Category cases bronze table",
     path=f"{bronze_base_path}/bronze_sbail_ac_appealcategory_category"
 )
 def bronze_sbail_ac_appealcategory_category():

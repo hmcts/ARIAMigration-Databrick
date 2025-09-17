@@ -301,13 +301,13 @@ for storage_account in storage_accounts:
 # COMMAND ----------
 
 # Setting variables for use in subsequent cells
-raw_base_path = f"abfss://{raw_storage_container}@{raw_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+raw_base_path = f"abfss://{raw_storage_container}@{raw_storage_account}.dfs.core.windows.net/ARIADM/ARM/SBAILS"
 
-bronze_base_path = f"abfss://{bronze_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+bronze_base_path = f"abfss://{bronze_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/SBAILS"
 
-silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/SBAILS"
 
-gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
+gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/SBAILS"
 
 external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net/ReferenceData/"
 

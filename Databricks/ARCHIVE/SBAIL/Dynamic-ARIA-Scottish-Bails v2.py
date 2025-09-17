@@ -63,7 +63,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, regexp_extract, max
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -123,8 +123,6 @@ def simple_date_format(date_value):
 # COMMAND ----------
 
 
-# from pyspark.sql.functions import current_timestamp, lit
-
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
@@ -133,7 +131,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
     output = set()  # Using a set to avoid duplicates
     if depth > max_depth:
-        return output
+        return list(output)
 
     try:
         children = dbutils.fs.ls(path)
@@ -142,24 +140,12 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
                 output.add(child.path.strip())  # Add only .parquet files to the set
 
             if child.isDir:
-                # Recursively explore directories
                 output.update(deep_ls(child.path, depth=depth + 1, max_depth=max_depth))
 
     except Exception as e:
         print(f"Error accessing {path}: {e}")
 
-    return list(output)  # Convert the set back to a list before returning
-
-# Function to extract timestamp from the file path
-def extract_timestamp(file_path):
-    """
-    Extracts timestamp from the parquet file name based on an assumed naming convention.
-    """
-    # Split the path and get the filename part
-    filename = file_path.split('/')[-1]
-    # Extract the timestamp part from the filename
-    timestamp_str = filename.split('_')[-1].replace('.parquet', '')
-    return timestamp_str
+    return list(output)
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
 def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str ) -> "DataFrame":
@@ -181,16 +167,26 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # List all .parquet files in the folder
     all_files = deep_ls(folder_path)
     
-    # Ensure that files were found
+    # Check if files were found
     if not all_files:
         print(f"No .parquet files found in {folder_path}")
         return None
+
+    # Create a DataFrame from the file paths
+    file_df = spark.createDataFrame([(f,) for f in all_files], ["file_path"])
     
-    # Find the latest .parquet file
-    latest_file = max(all_files, key=extract_timestamp)
+    # Extract timestamp from the file name using a regex pattern (assuming it's the last underscore-separated part before ".parquet")
+    file_df = file_df.withColumn("timestamp", regexp_extract("file_path", r"_(\d+)\.parquet$", 1).cast("long"))
+    
+    # Find the maximum timestamp
+    max_timestamp = file_df.agg(max("timestamp")).collect()[0][0]
+    
+    # Filter to get the file with the maximum timestamp
+    latest_file_df = file_df.filter(col("timestamp") == max_timestamp)
+    latest_file = latest_file_df.first()["file_path"]
     
     # Print the latest file being loaded for logging purposes
-    print(f"Reading latest file: {latest_file}")
+    # print(f"Reading latest file: {latest_file}")
     
     # Read the latest .parquet file into a DataFrame
     df = spark.read.option("inferSchema", "true").parquet(latest_file)
@@ -208,8 +204,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     
     # Return the DataFrame
     return df
-
-
 
 
 # COMMAND ----------
@@ -704,7 +698,6 @@ def raw_stm_cases():
 @dlt.table(
     name='bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang',
     comment='ARIA Migration Archive Bails cases bronze table',
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
@@ -713,7 +706,7 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
     .join(dlt.read("raw_respondent").alias("r"), col("cr.RespondentId") == col("r.RespondentId"), 'left_outer')
     .join(dlt.read("raw_pou").alias("p"), col("cr.RespondentId") == col("p.PouId"), 'left_outer')
-    .join(dlt.read("raw_main_respondent").alias("mr"), col("cr.MainrespondentId") == col("mr.MainRespondentId"), 'left_outer')
+    .join(dlt.read("raw_main_respondent").alias("mr"), col("cr.MainRespondentId") == col("mr.MainRespondentId"), 'left_outer')
     .join(dlt.read("raw_file_location").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
     .join(dlt.read("raw_case_rep").alias("crep"), col("ac.CaseNo") == col("crep.CaseNo"), "left_outer")
     .join(dlt.read("raw_representative").alias("rep"), col("crep.RepresentativeId") == col("rep.RepresentativeId"), "left_outer")
@@ -902,7 +895,6 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 @dlt.table(
     name='bronze_sbail_ac_ca_apt_country_detc',
     comment='ARIA Migration Archive Bails cases bronze table',
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_ca_apt_country_detc")
 def bronze_sbail_ac_ca_apt_country_detc():
     df =  (
@@ -1028,7 +1020,6 @@ def bronze_sbail_ac_ca_apt_country_detc():
 @dlt.table(
     name="bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj",
     comment="ARIA Migration Archive Bails cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
@@ -1116,7 +1107,6 @@ def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
 @dlt.table(
     name="bronze_sbail_ac_bfdiary_bftype", 
     comment="ARIA Migration Archive Bails cases bronze table", 
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_bfdiary_bftype")
 def bronze_sbail_ac_bfdiary_bftype():
     df = (
@@ -1161,7 +1151,6 @@ def bronze_sbail_ac_bfdiary_bftype():
 @dlt.table(
     name="bronze_sbail_ac_history_users", 
     comment="ARIA Migration Archive Bails cases bronze table", 
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_history_users")
 def bronze_sbail_ac_history_users():
     df = (
@@ -1221,7 +1210,6 @@ def bronze_sbail_ac_history_users():
 @dlt.table(
   name="bronze_sbail_ac_link_linkdetail", 
   comment="ARIA Migration Archive Bails cases bronze table", 
-  partition_cols=["CaseNo"],
   path=f"{bronze_base_path}/bronze_sbail_ac_link_linkdetail")
 def bronze_sbail_ac_link_linkdetail():
     df = (
@@ -1322,7 +1310,6 @@ def bronze_sbail_ac_link_linkdetail():
 @dlt.table(
     name="bronze_sbail_status_sc_ra_cs",
     comment="ARIA Migration Archive Bails Status cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_status_sc_ra_cs"
 )
 def bronze_sbail_status_sc_ra_cs():
@@ -1496,7 +1483,6 @@ def bronze_sbail_status_sc_ra_cs():
 @dlt.table(
     name="bronze_sbail_ac_appealcategory_category",
     comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_sbail_ac_appealcategory_category"
 )
 def bronze_sbail_ac_appealcategory_category():
@@ -1718,7 +1704,6 @@ def silver_scottish_sbails_funds():
 
 @dlt.table(name="silver_sbail_m1_case_details",
            comment="ARIA Migration Archive Bails m1 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m1")
 def silver_m1():
     m1_df = dlt.read("bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
@@ -1774,7 +1759,6 @@ def silver_m1():
 
 @dlt.table(name="silver_sbail_m2_case_appellant",
            comment="ARIA Migration Archive Bails m2 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m2_case_appellant")
 def silver_m2():
     m2_df = dlt.read("bronze_sbail_ac_ca_apt_country_detc").alias("m2")
@@ -1823,7 +1807,6 @@ m3_grouped_cols = [
 
 @dlt.table(name="silver_sbail_m3_hearing_details", 
            comment="ARIA Migration Archive Bails m3 silver table", 
-           partition_cols=["CaseNo"], 
            path=f"{silver_base_path}/silver_sbail_m3")
 
 def silver_m3():
@@ -1849,7 +1832,6 @@ def silver_m3():
 
 @dlt.table(name="silver_sbail_m4_bf_diary",
            comment="ARIA Migration Archive Bails m4 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m4_bf_diary")
 def silver_m4():
     m4_df = dlt.read("bronze_sbail_ac_bfdiary_bftype").alias("m4")
@@ -1870,7 +1852,6 @@ def silver_m4():
 
 @dlt.table(name="silver_sbail_m5_history",
            comment="ARIA Migration Archive Bails m5 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m5_history")
 def silver_m5():
     m5_df = dlt.read("bronze_sbail_ac_history_users").alias("m5")
@@ -1942,7 +1923,6 @@ def silver_m5():
 
 @dlt.table(name="silver_sbail_m6_link",
            comment="ARIA Migration Archive Bails m6 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_sbail_ac_link_linkdetail").alias("m6")
@@ -1966,7 +1946,6 @@ def silver_m6():
 
 @dlt.table(name="silver_sbail_m7_status",
            comment="ARIA Migration Archive Bails m7 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m7_status")
 def silver_m7():
     m7_df = dlt.read("bronze_sbail_status_sc_ra_cs").alias("m7")
@@ -2019,7 +1998,6 @@ def silver_m7():
 
 @dlt.table(name="silver_sbail_m8",
            comment="ARIA Migration Archive Bails m8 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_sbail_m8")
 def silver_m8():
     m8_df = dlt.read("bronze_sbail_ac_appealcategory_category").alias("m8")
@@ -2757,7 +2735,8 @@ def stg_m3_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m7_m3_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
+@dlt.table(name="stg_m7_m3_statuses", 
+           comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
 def final_m7_m3_statuses():
 
     m7_m3_statuses = dlt.read("stg_m3_m7")
@@ -2921,7 +2900,8 @@ def stg_m1_m2_m3_m5_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m4_m5_m7", comment="Silver Bail M4 Table")
+@dlt.table(name="stg_m1_m2_m3_m4_m5_m7", 
+           comment="Silver Bail M4 Table")
 def stg_m1_m2_m3_m4_m5_m7_df():
 
     m1_m2_m3_m5_m7_df = dlt.read("stg_m1_m2_m3_m5_m7")

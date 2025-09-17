@@ -1,9 +1,9 @@
 ﻿hearingCentre,staffLocation,caseManagementLocation,locationCode,locationLabel,selectedHearingCentreRefData,applicationChangeDesignatedHearingCentre
-bradford,Bradford,"{     ""region"": ""1"",     ""baseLocation"": ""698118""   }",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford
-manchester,Manchester,"{     ""region"": ""1"",     ""baseLocation"": ""512401""   }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester
-newport,Newport,"{     ""region"": ""1"",     ""baseLocation"": ""227101""   }",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport
-taylorHouse,Taylor House,"{     ""region"": ""1"",     ""baseLocation"": ""765324""   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse
-newcastle,Newcastle,"{     ""region"": ""1"",     ""baseLocation"": ""366796""   }",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle
-birmingham,Birmingham,"{     ""region"": ""1"",     ""baseLocation"": ""231596""   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham
-hattonCross,Hatton Cross,"{     ""region"": ""1"",     ""baseLocation"": ""386417""   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross
-glasgow,Glasgow,"{     ""region"": ""1"",     ""baseLocation"": ""366559""   }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgow
+bradford,Bradford,"{""region"": ""1"", ""baseLocation"": ""698118""}",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford
+manchester,Manchester,"{""region"": ""1"", ""baseLocation"": ""512401""}",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester
+newport,Newport,"{""region"": ""1"",""baseLocation"": ""227101""}",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport
+taylorHouse,Taylor House,"{ ""region"": ""1"",""baseLocation"": ""765324""}",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse
+newcastle,Newcastle,"{""region"": ""1"",""baseLocation"": ""366796""}",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle
+birmingham,Birmingham,"{""region"": ""1"",""baseLocation"": ""231596""}",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham
+hattonCross,Hatton Cross,"{""region"": ""1"",""baseLocation"": ""386417""}",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross
+glasgow,Glasgow,"{""region"": ""1"", ""baseLocation"": ""366559""}",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgow

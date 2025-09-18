@@ -107,7 +107,6 @@ from datetime import datetime
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -650,32 +649,42 @@ def bronze_ac_ca_ant_fl_dt_hc():
     path=f"{bronze_mnt}/bronze_iris_extract"
 )
 def bronze_iris_extract():
-    df_iris = spark.read.option("header", "true") \
-    .option("inferSchema", "true") \
-    .csv(file_path) \
-    .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp()) \
-    .withColumn("AdtclmnModifiedDatetime", current_timestamp()) \
-    .withColumn("SourceFileName", lit(file_path)) \
-    .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD')) \
-    .select(
-        col('AppCaseNo').alias('CaseNo'),
-        col('Fornames').alias('Forenames'),
-        col('Name'),
-        col('BirthDate').cast("timestamp"),
-        col('DestructionDate').cast("timestamp"),
-        col('HORef'),
-        col('PortReference'),
-        col('File_Location').alias('HearingCentreDescription'),
-        col('Description').alias('DepartmentDescription'),
-        col('Note'),
-        lit(None).alias("RelationShip").cast("string"),
-        col('AdtclmnFirstCreatedDatetime'),
-        col('AdtclmnModifiedDatetime'),
-        col('SourceFileName'),
-        col('InsertedByProcessName')
-    )
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("Forenames").asc())
 
-    return df_iris
+    df_iris = spark.read.option("header", "true") \
+        .option("inferSchema", "true") \
+        .csv(file_path) \
+        .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp()) \
+        .withColumn("AdtclmnModifiedDatetime", current_timestamp()) \
+        .withColumn("SourceFileName", lit(file_path)) \
+        .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD')) \
+        .select(
+            col('AppCaseNo').alias('CaseNo'),
+            col('Fornames').alias('Forenames'),
+            col('Name'),
+            col('BirthDate').cast("timestamp"),
+            col('DestructionDate').cast("timestamp"),
+            col('HORef'),
+            col('PortReference'),
+            col('File_Location').alias('HearingCentreDescription'),
+            col('Description').alias('DepartmentDescription'),
+            col('Note'),
+            lit(None).alias("RelationShip").cast("string"),
+            col('AdtclmnFirstCreatedDatetime'),
+            col('AdtclmnModifiedDatetime'),
+            col('SourceFileName'),
+            col('InsertedByProcessName')
+        ) \
+        .withColumn("row_num", row_number().over(window_spec)) \
+        .filter(col("row_num") == 1) \
+        .drop("row_num")
+
+    # ARIADM-1071 Deduplicate IRIS synthetic data and also avoiding dup in raw data using row_num    
+    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
+
+    df_iris_filtered = df_iris.alias("iris").join(td_df.alias("aria"), col("iris.CaseNo") == col("aria.CaseNo"),"left").filter(col("aria.CaseNo").isNull()).select("iris.*")
+
+    return df_iris_filtered
 
 # COMMAND ----------
 

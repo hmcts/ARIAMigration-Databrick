@@ -1,138 +1,100 @@
-import unittest
-import logging
-from Test_Active_Publish_Functions import validate_state, process_partition, read_from_storage, retry_on_exception
+import pytest
+from unittest.mock import Mock, patch
+from test_active_publish_functions import process_partition, read_from_storage, validate_state
 
-# -----------------------
-# Helpers for Testing
-# -----------------------
-class MockRow:
-    def __init__(self, file_path, state, content_str):
-        self.file_path = file_path
-        self.state = state
-        self.content_str = content_str
+# --- process_partition with successful retry ---
+def test_buffer_error_retry():
+    """Test that BufferError triggers retry logic and succeeds on retry"""
 
-class MockProducer:
-    def __init__(self, fail=False):
-        self.fail = fail
-        self.messages = []
+    # Create a mock row
+    mock_row = Mock()
+    mock_row.file_path = "test_file.json"
+    mock_row.content_str = "test content"
+    mock_row.state = "test_state"
 
-    def produce(self, topic, key, value, callback=None):
-        if self.fail:
-            if callback:
-                callback(Exception("Kafka error"), None)
-            raise Exception("Kafka error")
-        self.messages.append((topic, key, value))
-        if callback:
-            class DummyMsg:
-                def key(self): return key
-            callback(None, DummyMsg())
+    # Mock Kafka message for callback
+    mock_msg = Mock()
+    mock_msg.key.return_value = b"test_file.json"
 
-    def flush(self):
-        return 0
+    with patch("confluent_kafka.Producer") as MockProducer:
+        mock_producer = Mock()
+        MockProducer.return_value = mock_producer
 
-class MockLogger:
-    def __init__(self):
-        self.errors = []
-        self.warnings = []
-        self.infos = []
+        # Define produce side effect
+        def produce_side_effect(*args, **kwargs):
+            if produce_side_effect.counter == 0:
+                produce_side_effect.counter += 1
+                raise BufferError()  # first call fails
+            else:
+                # simulate successful delivery via callback
+                if 'callback' in kwargs and kwargs['callback']:
+                    kwargs['callback'](None, mock_msg)
 
-    def error(self, msg):
-        self.errors.append(msg)
+        produce_side_effect.counter = 0
+        mock_producer.produce.side_effect = produce_side_effect
+        mock_producer.poll = Mock()
+        mock_producer.flush = Mock()
 
-    def warning(self, msg):
-        self.warnings.append(msg)
+        # Run function
+        results = process_partition([mock_row])
 
-    def info(self, msg):
-        self.infos.append(msg)
+        # Assertions
+        assert mock_producer.produce.call_count == 2         #Producer should be called twice
+        mock_producer.poll.assert_called_once_with(1)        #poll(1) called once after first failure (retry)
+        assert any(r[2] == "success" for r in results)       #Contain at least 1 success in row
+        assert not any(r[2] == "failure" for r in results)   #Contain zero failure in row
 
-class MockBlob:
-    def download_blob(self): return self
-    def readall(self): return b"test data"
-
-class MockStorageClient:
-    def get_blob_client(self, container, blob): return MockBlob()
-
-class RetryMockProducer:
-    def __init__(self, fail_times=2):
-        self.fail_times = fail_times
-        self.attempts = 0
-        self.messages = []
-
-    def produce(self, topic, key, value, callback=None):
-        self.attempts += 1
-        if self.attempts <= self.fail_times:
-            raise BufferError("Simulated buffer full")
-        # Success callback
-        if callback:
-            class DummyMsg:
-                def key(self): return key
-            callback(None, DummyMsg())
-        self.messages.append((topic, key, value))
-
-
-# -----------------------
-# Unit Tests
-# -----------------------
-class TestFunctions(unittest.TestCase):
-
-    # --- validate_state ---
-    def test_valid_state(self):
-        DEFAULT_STATES = [ "paymentPending", "appealSubmitted", "awaitingRespondentEvidence(a)", "awaitingRespondentEvidence(b)", "caseUnderReview", "reasonForAppealSubmitted", "listing", "PrepareForHearing", "Decision", "FTPA Submitted (a)", "FTPA Submitted (b)", "Decided (b)", "Decided (a)", "FTPA Decided", "Ended", "Remitted" ]
-
-        for state in DEFAULT_STATES:
-            self.assertTrue(validate_state(state))
-
-    # --- process_partition ---
-    # All inputs are valid, return success from the result tuple
-    def test_process_partition_success(self):
-        row = MockRow("file1", "paymentPending", "content")
-        producer = MockProducer()
-        logger = MockLogger()
-        result = process_partition([row], producer, "test-topic", logger)
-        self.assertEqual(result[0][2], "success")
-        self.assertEqual(len(producer.messages), 1)
-
-    # If filepath or content is null, return failure from the result tuple
-    def test_process_partition_failure_missing(self):
-        row = MockRow(None, "appealSubmitted", None)
-        producer = MockProducer()
-        logger = MockLogger()
-        result = process_partition([row], producer, "test-topic", logger)
-        self.assertEqual(result[0][2], "failure")
-
-    # If kafka fails (fail=True), return failure from the result tuple and that the logger produces errors
-    def test_process_partition_kafka_error(self):
-        row = MockRow("file1", "paymentPending", "content")
-        producer = MockProducer(fail=True)
-        logger = MockLogger()
-        result = process_partition([row], producer, "test-topic", logger)
-        self.assertEqual(result[0][2], "failure")
-        self.assertTrue(logger.errors)
+# --- process_partition with failed retry ---
+def test_buffer_error_retry_fails():
+    """Test when retry also fails"""
     
-    #
-    def test_kafka_retry_success(self):
-        producer = RetryMockProducer(fail_times=2)
-        results = []
+    # Create mock row
+    mock_row = Mock()
+    mock_row.file_path = "test_file.json"
+    mock_row.content_str = "test content"
+    mock_row.state = "test_state"
+    
+    with patch('confluent_kafka.Producer') as MockProducer:
+        
+        mock_producer = Mock()
+        MockProducer.return_value = mock_producer
+        
+        # Both calls fail
+        mock_producer.produce.side_effect = [BufferError(), BufferError()]
+        
+        # Call your actual function
+        results = process_partition([mock_row])
+        
+        # Verify retry was attempted
+        assert mock_producer.produce.call_count == 2                        # Producer should be called twice
+        mock_producer.poll.assert_called_once_with(1)                       # poll(1) called once after first failure (retry)
+        assert any("Buffer error retry failed" in r[3] for r in results)    # assert buffer error from failure_list was produced at least once (failure before retry)
 
-        def dummy_callback(err, msg):
-            results.append("success")
+# --- read_from_storage ---
+def test_read_from_storage():
+    # Create a mock blob with a readall method
+    mock_blob = Mock()
+    mock_blob.download_blob.return_value = mock_blob
+    mock_blob.readall.return_value = b"test data"
 
-        # Wrap producer.produce with retry decorator
-        @retry_on_exception(max_retries=5, delay=0.1)
-        def produce_with_retry():
-            producer.produce("topic", b"key", b"value", callback=dummy_callback)
+    # Create a mock storage client that returns the mock blob
+    mock_storage_client = Mock()
+    mock_storage_client.get_blob_client.return_value = mock_blob
 
-        produce_with_retry()
+    # Call the function
+    data = read_from_storage(mock_storage_client, "container", "blob.txt")
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(producer.attempts, 3)
+    # Assert the result
+    assert data == b"test data"
 
-    # --- read_from_storage ---
-    # return sample data assuming connection has been established with Mock Azure Storage Account
-    def test_read_from_storage(self):
-        client = MockStorageClient()
-        data = read_from_storage(client, "container", "blob.txt")
-        self.assertEqual(data, b"test data")
+    # Optional: check that get_blob_client was called with correct args
+    mock_storage_client.get_blob_client.assert_called_once_with(container="container", blob="blob.txt")
 
-if __name__ == "__main__":
-    unittest.main(argv=[''], verbosity=2, exit=False)
+
+# --- validate_state ---
+def test_valid_state():
+    default_states = [ "paymentPending", "appealSubmitted", "awaitingRespondentEvidence(a)", "awaitingRespondentEvidence(b)", "caseUnderReview", "reasonsForAppealSubmitted", "listing", "PrepareForHearing", "Decision", "FTPA Submitted (a)", "FTPA Submitted (b)", "Decided (b)", "Decided (a)", "FTPA Decided", "Ended", "Remitted" ]
+
+    for state in default_states:
+        assert validate_state(state) is True
+

@@ -679,6 +679,7 @@ def bronze_iris_extract():
         .filter(col("row_num") == 1) \
         .drop("row_num")
 
+    # ARIADM-1071 Deduplicate IRIS synthetic data and also avoiding dup in raw data using row_num    
     td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
 
     df_iris_filtered = df_iris.alias("iris").join(td_df.alias("aria"), col("iris.CaseNo") == col("aria.CaseNo"),"left").filter(col("aria.CaseNo").isNull()).select("iris.*")

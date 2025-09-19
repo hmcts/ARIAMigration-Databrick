@@ -1936,3 +1936,15 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # MAGIC %sql
 # MAGIC select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+dbutils.fs.ls("dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl")
+
+# COMMAND ----------
+
+# MAGIC %pip install /dbfs/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl

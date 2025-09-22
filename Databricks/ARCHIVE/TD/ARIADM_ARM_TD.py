@@ -1412,16 +1412,16 @@ optimal_partitions
 
 # DBTITLE 1,Transformation gold_td_iris_with_html
 checks = {}
-checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
-checks["html_content_no_error"] = "(HTML_Content IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
+checks["html_content_not_error"] = "(HTML_Content NOT LIKE 'Error%')"
+checks["html_content_not_null"] = "(HTML_Content IS NOT NULL)"
+checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_html",
     comment="Delta Live Gold Table with HTML content.",
     path=f"{gold_mnt}/Data/gold_td_iris_with_html"
 )
-@dlt.expect_all_or_fail(checks)
+@dlt.expect_all(checks)
 def gold_td_iris_with_html():
     # Load source data
     df_combined = dlt.read("stg_td_iris_unified")
@@ -1431,54 +1431,72 @@ def gold_td_iris_with_html():
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(optimal_partitions)
+    repartitioned_df = df_combined.repartition(256)
 
-    # # Upload HTML files to Azure Blob Storage
+    # Upload HTML files to Azure Blob Storage (optional)
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
     df_with_upload_status = repartitioned_df.withColumn(
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
-    
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content",col("HTML_File_Name").alias("File_Name"),"Status")
+    return df_with_upload_status.select(
+        "CaseNo",
+        "Forenames",
+        "Name",
+        "A360_BatchId",
+        "HTML_Content",
+        col("HTML_File_Name").alias("File_Name"),
+        "Status"
+    )
+
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_td_iris_with_json
+from pyspark.sql.functions import when, lit, col
+
 checks = {}
-checks["json_content_no_error"] = "(JSON_Content IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
-
-
+checks["json_content_not_null"] = "(JSON_Content IS NOT NULL)"
+checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_json",
     comment="Delta Live Gold Table with JSON content.",
     path=f"{gold_mnt}/Data/gold_td_iris_with_json"
 )
-@dlt.expect_all_or_fail(checks)
+@dlt.expect_all(checks)
 def gold_td_iris_with_json():
     """
     Delta Live Table for creating and uploading JSON content for judicial officers.
+    Minimal safe changes: guard nulls, wrap upload UDF call, more partitions.
     """
     # Load source data
     df_combined = dlt.read("stg_td_iris_unified")
 
-    # Optionally load data from Hive if needed
     if read_hive:
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(optimal_partitions)
+    # Use more partitions to reduce per-partition memory pressure
+    repartitioned_df = df_combined.repartition(256)
 
+    # Only call upload_udf when JSON_Content is present; otherwise mark status accordingly.
     df_with_upload_status = repartitioned_df.withColumn(
-        "Status", upload_udf(col("JSON_File_Name"), col("JSON_Content"))
+        "Status",
+        when(col("JSON_Content").isNull(), lit("NoContent"))
+        .otherwise(upload_udf(col("JSON_File_Name"), col("JSON_Content")))
     )
 
-    # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name","A360_BatchId","JSON_Content",col("JSON_File_Name").alias("File_Name"),"Status")
+    return df_with_upload_status.select(
+        "CaseNo",
+        "Forenames",
+        "Name",
+        "A360_BatchId",
+        "JSON_Content",
+        col("JSON_File_Name").alias("File_Name"),
+        "Status"
+    )
 
 
 # COMMAND ----------

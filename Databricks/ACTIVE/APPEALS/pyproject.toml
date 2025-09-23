@@ -3,10 +3,10 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "Shared-functions"
-version = "0.5.1"
+version = "0.5.2"
 description = "Shared functions for ARIA ACTIVE cases"
 requires-python = ">=3.9"
-dependencies = ["pycountry","uk_postcodes_parsing"]
+dependencies = ["pycountry","uk_postcodes_parsing", "confluent-kafka"]
 
 [tool.setuptools.packages.find]
 where = ["."]

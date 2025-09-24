@@ -39,15 +39,15 @@
     ""region"": ""1"",
     ""baseLocation"": ""366559""
   }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
-520,Birmingham IAC (Priory Courts),,birmingham,birmingham,"{
+520,Birmingham IAC (Priory Courts),,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-444,Birmingham Magistrates Court (VLC),,birmingham,birmingham,"{
+444,Birmingham Magistrates Court (VLC),,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-86,Bradford,,bradford,bradford,"{
+86,Bradford,,bradford,Bradford,"{
     ""region"": ""1"",
     ""baseLocation"": ""698118""
   }",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford,bradford
@@ -102,19 +102,19 @@
     ""region"": ""1"",
     ""baseLocation"": ""366559""
   }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
-104,Harmondsworth,,hattonCross,hattonCross,"{
+104,Harmondsworth,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,harmondsworth,hattonCross
-2,Hatton Cross,,hattonCross,hattonCross,"{
+2,Hatton Cross,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-96,Hatton Cross (Fast Track),,hattonCross,hattonCross,"{
+96,Hatton Cross (Fast Track),,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-501,Hendon Magistrates Court (HX),,hattonCross,hattonCross,"{
+501,Hendon Magistrates Court (HX),,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hendon,hattonCross
@@ -132,23 +132,23 @@
      %% python
      split_comment = Comment.split(',')
      prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
-19,Maidstone Crown Court,,hattonCross,hattonCross,"{
+19,Maidstone Crown Court,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
   }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-539,Manchester (The Lowry),,manchester,manchester,"{
+539,Manchester (The Lowry),,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
   }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-95,Manchester (Piccadilly),,manchester,manchester,"{
+95,Manchester (Piccadilly),,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
   }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-532,Newcastle CFCTC,,newcastle,newcastle,"{
+532,Newcastle CFCTC,,newcastle,Newcastle,"{
     ""region"": ""1"",
     ""baseLocation"": ""366796""
   }",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle,newcastle
-78,Newport (Columbus House),,newport,newport,"{
+78,Newport (Columbus House),,newport,Newport,"{
     ""region"": ""1"",
     ""baseLocation"": ""227101""
   }",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport,newport
@@ -166,27 +166,27 @@
      %% python
      split_comment = Comment.split(',')
      prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
-43,Nottingham Justice Centre,,birmingham,birmingham,"{
+43,Nottingham Justice Centre,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,nottingham,birmingham
-59,Tameside Magistartes Court,,manchester,manchester,"{
+59,Tameside Magistartes Court,,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
   }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-1,Taylor House,,taylorHouse,taylorHouse,"{
+1,Taylor House,,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-331,Taylor House (Field House),,taylorHouse,taylorHouse,"{
+331,Taylor House (Field House),,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-51,Taylor House (HX),,taylorHouse,taylorHouse,"{
+51,Taylor House (HX),,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-478,UT (IAC) Birmingham CJC,,birmingham,birmingham,"{
+478,UT (IAC) Birmingham CJC,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
@@ -232,11 +232,11 @@
      %% python
      split_comment = Comment.split(',')
      prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-106,Yarl's Wood,,taylorHouse,taylorHouse,"{
+106,Yarl's Wood,,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,yarlsWood,taylorHouse
-3,ZZ(DNU)Birmingham IAC Sheldon Court,,birmingham,birmingham,"{
+3,ZZ(DNU)Birmingham IAC Sheldon Court,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
   }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham

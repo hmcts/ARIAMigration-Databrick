@@ -229,8 +229,16 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     def map_postcode_to_hearing_centre(postcode):
         if postcode is None:
             return None
+        postcode = postcode.replace(" ", "").upper()
+        first2 = postcode[:2]
+        first1 = postcode[:1]
         for centre, codes in postcode_mappings.items():
-            if any(postcode.startswith(code) for code in codes):
+            # Try 2-char match first
+            if any(first2 == code for code in codes if len(code) == 2):
+                return centre
+        for centre, codes in postcode_mappings.items():
+            # Then try 1-char match
+            if any(first1 == code for code in codes if len(code) == 1):
                 return centre
         return None
 
@@ -250,7 +258,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
                                 (col("h.der_prevFileLocation") == col("bhc2.prevFileLocation")),
                                  how="left").join(silver_m2.alias("m2"), col("m1.CaseNo") == col("m2.CaseNo"), how="left") \
                                 .withColumn("map_postcode_to_hearing_centre", 
-                                           when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),
+                                           when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),
                                            map_postcode_to_hearing_centre_udf(coalesce(col('m1.Rep_Postcode'),col('m1.CaseRep_Postcode'),('m2.Appellant_Postcode')))).otherwise(None)) \
                                 .join(bronze_derive_hearing_centres.alias("bhc3"), col("map_postcode_to_hearing_centre") == col("bhc3.hearingCentre"), how="left") \
                                 .select(
@@ -276,34 +284,36 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         col("bhc2.selectedHearingCentreRefData").alias("dv_dhc2_selectedHearingCentreRefData"),
         col("bhc3.selectedHearingCentreRefData").alias("dv_dhc3_selectedHearingCentreRefData"),
         col("map_postcode_to_hearing_centre"),
-        when(col('bhc.Conditions').isNull(), col('bhc.hearingCentre'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("map_postcode_to_hearing_centre"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.hearingCentre"))
-        .alias("hearingCentre"),
+        
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.hearingCentre'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()) ,col("map_postcode_to_hearing_centre"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.hearingCentre")).alias("hearingCentre"),
 
-        when(col('bhc.Conditions').isNull(), col('bhc.staffLocation'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.staffLocation"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.staffLocation"))
-        .alias("staffLocation"),
 
-         when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocation'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.caseManagementLocation"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.caseManagementLocation"))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.staffLocation'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time")| col("h.der_prevFileLocation").isNull()),col("bhc3.staffLocation"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.staffLocation"))
+         .alias("staffLocation"),
+
+
+         when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.caseManagementLocation'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocation"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.caseManagementLocation"))
         .alias("caseManagementLocation"),
 
-        when(col('bhc.Conditions').isNull(), col('bhc.hearingCentreDynamicList'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.hearingCentreDynamicList"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.hearingCentreDynamicList"))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.hearingCentreDynamicList'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.hearingCentreDynamicList"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.hearingCentreDynamicList"))
         .alias("hearingCentreDynamicList"),
 
-        when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocationRefData'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.caseManagementLocationRefData"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.caseManagementLocationRefData"))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.caseManagementLocationRefData'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocationRefData"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.caseManagementLocationRefData"))
         .alias("caseManagementLocationRefData"),
 
-         when(col('bhc.Conditions').isNull(), col('bhc.selectedHearingCentreRefData'))
-        .when(col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time"),col("bhc3.selectedHearingCentreRefData"))
-        .when(col("m1.CentreId").isin(77, 476, 101, 55, 296, 13, 79, 522, 406, 517, 37), col("bhc2.selectedHearingCentreRefData"))
+         when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.selectedHearingCentreRefData'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.selectedHearingCentreRefData"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.selectedHearingCentreRefData"))
         .alias("selectedHearingCentreRefData")
     )
 
@@ -367,8 +377,6 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         when(conditions, col("tribunalReceivedDate")).otherwise(None).alias("tribunalReceivedDate"),
         when(conditions, lit([]).cast("array<int>")).otherwise(None).alias("caseLinks"), 
         when(conditions, lit("NotSure")).otherwise(None).alias("hasOtherAppeals")
-        # when(conditions, lit("paymentPending")).alias("ariaDesiredState"),
-        # when(conditions, lit("14")).alias("ariaMigrationTaskDueDays")
     )
 
 
@@ -418,6 +426,8 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     array(struct(*common_inputValues,col("audit.lu_staffLocation"),col("hearing.lu_conditions"),col("hearing.dv_prevFileLocation"),col("hearing.Rep_Postcode"),col("hearing.CaseRep_Postcode"),col("hearing.Appellant_Postcode"),col("hearing.CentreId"),col("hearing.dv_dhc2_staffLocation"),lit("hearing.dv_dhc3_staffLocation"))).alias("staffLocation_inputValues"),
     col("content.staffLocation"),
     lit("yes").alias("staffLocation_Transformation"),
+
+
 
     #Audit caseManagementLocation
     array(struct(*common_inputFields,lit("lu_hearingCentre"),lit("lu_conditions"),lit("dv_prevFileLocation"),lit("Rep_Postcode"),lit("CaseRep_Postcode"),lit("Appellant_Postcode"),lit("CentreId"),lit("dv_dhc2_caseManagementLocation"),lit("dv_dhc3_caseManagementLocation"))).alias("caseManagementLocation_inputFields"),
@@ -484,6 +494,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     array(struct(*common_inputValues)).alias("hasOtherAppeals_inputValues"),
     col("content.hasOtherAppeals"),
     lit("yes").alias("hasOtherAppeals_Transformation")
+
     )
 
     return df, df_audit

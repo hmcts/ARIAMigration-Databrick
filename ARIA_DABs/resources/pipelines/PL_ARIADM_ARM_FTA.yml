@@ -5,8 +5,8 @@ resources:
       allow_duplicate_names: true
       clusters:
         - label: default
-          node_type_id: Standard_D4ads_v5
-          driver_node_type_id: Standard_D4ads_v5
+          node_type_id: Standard_E8_v3
+          driver_node_type_id: Standard_E8_v3
           autoscale:
             min_workers: 1
             max_workers: 5

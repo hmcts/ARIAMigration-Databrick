@@ -49,3 +49,6 @@ resources:
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_CCD_call_result_EH"
             source: WORKSPACE
+        
+      queue:
+        enabled: true

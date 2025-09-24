@@ -30,9 +30,9 @@ resources:
           job_cluster_key: db_wf_active_paymentPending_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PAYMENT_PENDING_JSON"
+            source: WORKSPACE
             base_parameters:
               current_state: paymentPending
-            source: WORKSPACE
 
         - task_key: active_publish_EH_HTML_JSON
           depends_on: 
@@ -40,7 +40,7 @@ resources:
           job_cluster_key: db_wf_active_paymentPending_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_Publish_EH_HTML_JSON"
-          source: WORKSPACE
+            source: WORKSPACE
 
         - task_key: active_CCD_call_result_EH
           depends_on: 
@@ -48,4 +48,7 @@ resources:
           job_cluster_key: db_wf_active_paymentPending_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_CCD_call_result_EH"
-          source: WORKSPACE
+            source: WORKSPACE
+        
+      queue:
+        enabled: true

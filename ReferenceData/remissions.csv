@@ -1,6 +1,5 @@
-﻿PaymentRemissionRequested,PaymentRemissionReason,Reason Description,remissionType,remissionClaim,feeRemissionType,exceptionalCircumstances,legalAidAccountNumber,asylumSupportReference,helpWithFeesReferenceNumber
-NULL,NULL,NULL,noRemission,OMIT,OMIT,OMIT,OMIT,OMIT,OMIT
-2,NULL,NULL,noRemission,OMIT,OMIT,OMIT,OMIT,OMIT,OMIT
+﻿PaymentRemissionRequested,PaymentRemissionReason,ReasonDescription,remissionType,remissionClaim,feeRemissionType,exceptionalCircumstances,legalAidAccountNumber,asylumSupportReference,helpWithFeesReferenceNumber
+0,0,NULL,noRemission,OMIT,OMIT,OMIT,OMIT,OMIT,OMIT
 2,0,NULL,noRemission,OMIT,OMIT,OMIT,OMIT,OMIT,OMIT
 1,1,Asylum Support,hoWaiverRemission,asylumSupport,Asylum Support,OMIT,OMIT,M1.ASFReferenceNo ELSE IF NULL 'Unknown',OMIT
 1,2,Oral Hearing Direction,exceptionalCircumstancesRemission,OMIT,OMIT,"""This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.""",OMIT,OMIT,OMIT

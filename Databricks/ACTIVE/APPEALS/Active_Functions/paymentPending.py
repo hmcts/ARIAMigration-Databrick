@@ -2047,7 +2047,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
     # No need for all logic in ticket. The remission table exists in bronze. Left join on the unique field. Rename "Omit" to null. Results are correct from the samples I can see below.
-    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason"], how="left").join(silver_m4, on=["CaseNo"], how="left"
+    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason","PaymentRemissionRequested"], how="left").join(silver_m4, on=["CaseNo"], how="left"
         ).withColumn(
         "remissionType",
         col("remissionType")

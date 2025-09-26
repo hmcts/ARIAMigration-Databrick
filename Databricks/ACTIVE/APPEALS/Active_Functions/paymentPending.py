@@ -1252,23 +1252,19 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     ).otherwise(None)
 
     address_line3_adminj_expr = when(
-            conditions & expr("array_contains(CategoryIdList, 38)"),
-            concat(
-                coalesce(col("Appellant_Address3"), lit("")),
-                lit(", "),
-                coalesce(col("Appellant_Address4"), lit(""))
-            )
-        ).otherwise(None)
+    conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address3").isNotNull() | col("Appellant_Address4").isNotNull()),
+    concat_ws(
+        ", ",
+        col("Appellant_Address3"), col("Appellant_Address4")
+    )).otherwise(None)
 
     # addressLine4AdminJ logic
     # IF CategoryId IN [38] = Include; ELSE OMIT
     # AppellantAddress5 + ', ' + AppellantPostcode
     address_line4_adminj_expr = when(
-        conditions & expr("array_contains(CategoryIdList, 38)"),
-        concat(
-            coalesce(col("Appellant_Address5"), lit("")),
-            lit(", "),
-            coalesce(col("Appellant_Postcode"), lit(""))
+        conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address5").isNotNull() | col("Appellant_Postcode").isNotNull()),
+        concat_ws(",",
+            col("Appellant_Address5"), col("Appellant_Postcode")
         )
     ).otherwise(None)
 
@@ -2047,7 +2043,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
     # No need for all logic in ticket. The remission table exists in bronze. Left join on the unique field. Rename "Omit" to null. Results are correct from the samples I can see below.
-    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason"], how="left").join(silver_m4, on=["CaseNo"], how="left"
+    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason","PaymentRemissionRequested"], how="left").join(silver_m4, on=["CaseNo"], how="left"
         ).withColumn(
         "remissionType",
         col("remissionType")

@@ -17,4 +17,3 @@ resources:
             path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS"
       target: ariadm_active_appeals_bronze_silver
       development: true
-      data_sampling: false

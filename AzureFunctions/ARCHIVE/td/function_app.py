@@ -26,6 +26,24 @@ eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
 
+# ---------- Move secret initialization outside trigger ----------
+credential = DefaultAzureCredential()
+kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
+
+# Retrieve secrets once at cold start
+logging.info("Fetching secrets from KeyVault at cold start")
+ev_dl_key = asyncio.get_event_loop().run_until_complete(
+    kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")
+).value
+ev_ack_key = asyncio.get_event_loop().run_until_complete(
+    kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")
+).value
+container_secret = asyncio.get_event_loop().run_until_complete(
+    kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")
+).value
+# --------------------------------------------------------------
+
+
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
     arg_name="azeventhub",
@@ -40,29 +58,14 @@ app = func.FunctionApp()
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
 
-    # Retrieve credentials
-    credential = DefaultAzureCredential()
-    logging.info('Connected to Azure Credentials')
-    kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
-    logging.info('Connected to KeyVault')
-
-
     try:
-        # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
-        logging.info('Acquired KV secrets for Dl and ACK')
-
-
         # Blob Storage credentials
         account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         # account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
         # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
-        logging.info('Assigned container secret value')
-        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
-
+        logging.info('Assigned container secret value (cached from cold start)')
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
         #     # Remove the prefix if it's a connection string
@@ -87,18 +90,17 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
                     
                 logging.info('Processing messages')
-                tasks = [
-                    process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
-                    for event in azeventhub
-                ]
-                await asyncio.gather(*tasks)
+
+                # Minimal change: process sequentially instead of per-event tasks
+                for event in azeventhub:
+                    await process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
+
                 logging.info('Finished processing messages')
         finally:
             container_service_client.close() 
     finally:
         # Explicitly close SecretClient to avoid session leaks
-        await kv_client.close()
-        await credential.close()
+        pass  # not closing kv_client/credential here since reused globally
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=10),
           stop=stop_after_attempt(5),

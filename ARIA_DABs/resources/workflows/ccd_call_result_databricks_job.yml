@@ -11,8 +11,6 @@ resources:
 
       tasks:
         - task_key: active_CCD_call_result_EH
-          depends_on: 
-            - task_key: active_publish_EH_HTML_JSON
           job_cluster_key: ccd_call_result_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_CCD_call_result_EH"

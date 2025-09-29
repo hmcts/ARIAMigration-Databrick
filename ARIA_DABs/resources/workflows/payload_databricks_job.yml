@@ -19,7 +19,7 @@ resources:
                 
         - task_key: paymentPending
           depends_on: 
-            - task_key: DLT_creation_of_content
+            - task_key: run-my-wheel
           job_cluster_key: payload_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PAYMENT_PENDING_JSON"

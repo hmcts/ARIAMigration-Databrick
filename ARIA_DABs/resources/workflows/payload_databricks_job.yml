@@ -37,6 +37,5 @@ resources:
             base_parameters:
               state: paymentPending
 
-        
       queue:
         enabled: true

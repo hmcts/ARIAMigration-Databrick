@@ -229,8 +229,16 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     def map_postcode_to_hearing_centre(postcode):
         if postcode is None:
             return None
+        postcode = postcode.replace(" ", "").upper()
+        first2 = postcode[:2]
+        first1 = postcode[:1]
         for centre, codes in postcode_mappings.items():
-            if any(postcode.startswith(code) for code in codes):
+            # Try 2-char match first
+            if any(first2 == code for code in codes if len(code) == 2):
+                return centre
+        for centre, codes in postcode_mappings.items():
+            # Then try 1-char match
+            if any(first1 == code for code in codes if len(code) == 1):
                 return centre
         return None
 
@@ -277,33 +285,33 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         col("bhc3.selectedHearingCentreRefData").alias("dv_dhc3_selectedHearingCentreRefData"),
         col("map_postcode_to_hearing_centre"),
         
-        when(col('bhc.Conditions').isNull(), col('bhc.hearingCentre'))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.hearingCentre'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()) ,col("map_postcode_to_hearing_centre"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.hearingCentre")).alias("hearingCentre"),
 
 
-        when(col('bhc.Conditions').isNull(), col('bhc.staffLocation'))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.staffLocation'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time")| col("h.der_prevFileLocation").isNull()),col("bhc3.staffLocation"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.staffLocation"))
          .alias("staffLocation"),
 
 
-         when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocation'))
+         when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.caseManagementLocation'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocation"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.caseManagementLocation"))
         .alias("caseManagementLocation"),
 
-        when(col('bhc.Conditions').isNull(), col('bhc.hearingCentreDynamicList'))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.hearingCentreDynamicList'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.hearingCentreDynamicList"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.hearingCentreDynamicList"))
         .alias("hearingCentreDynamicList"),
 
-        when(col('bhc.Conditions').isNull(), col('bhc.caseManagementLocationRefData'))
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.caseManagementLocationRefData'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.caseManagementLocationRefData"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.caseManagementLocationRefData"))
         .alias("caseManagementLocationRefData"),
 
-         when(col('bhc.Conditions').isNull(), col('bhc.selectedHearingCentreRefData'))
+         when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.selectedHearingCentreRefData'))
         .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),col("bhc3.selectedHearingCentreRefData"))
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.selectedHearingCentreRefData"))
         .alias("selectedHearingCentreRefData")
@@ -418,6 +426,8 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     array(struct(*common_inputValues,col("audit.lu_staffLocation"),col("hearing.lu_conditions"),col("hearing.dv_prevFileLocation"),col("hearing.Rep_Postcode"),col("hearing.CaseRep_Postcode"),col("hearing.Appellant_Postcode"),col("hearing.CentreId"),col("hearing.dv_dhc2_staffLocation"),lit("hearing.dv_dhc3_staffLocation"))).alias("staffLocation_inputValues"),
     col("content.staffLocation"),
     lit("yes").alias("staffLocation_Transformation"),
+
+
 
     #Audit caseManagementLocation
     array(struct(*common_inputFields,lit("lu_hearingCentre"),lit("lu_conditions"),lit("dv_prevFileLocation"),lit("Rep_Postcode"),lit("CaseRep_Postcode"),lit("Appellant_Postcode"),lit("CentreId"),lit("dv_dhc2_caseManagementLocation"),lit("dv_dhc3_caseManagementLocation"))).alias("caseManagementLocation_inputFields"),
@@ -1242,23 +1252,19 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     ).otherwise(None)
 
     address_line3_adminj_expr = when(
-            conditions & expr("array_contains(CategoryIdList, 38)"),
-            concat(
-                coalesce(col("Appellant_Address3"), lit("")),
-                lit(", "),
-                coalesce(col("Appellant_Address4"), lit(""))
-            )
-        ).otherwise(None)
+    conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address3").isNotNull() | col("Appellant_Address4").isNotNull()),
+    concat_ws(
+        ", ",
+        col("Appellant_Address3"), col("Appellant_Address4")
+    )).otherwise(None)
 
     # addressLine4AdminJ logic
     # IF CategoryId IN [38] = Include; ELSE OMIT
     # AppellantAddress5 + ', ' + AppellantPostcode
     address_line4_adminj_expr = when(
-        conditions & expr("array_contains(CategoryIdList, 38)"),
-        concat(
-            coalesce(col("Appellant_Address5"), lit("")),
-            lit(", "),
-            coalesce(col("Appellant_Postcode"), lit(""))
+        conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address5").isNotNull() | col("Appellant_Postcode").isNotNull()),
+        concat_ws(",",
+            col("Appellant_Address5"), col("Appellant_Postcode")
         )
     ).otherwise(None)
 
@@ -2037,7 +2043,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
     # No need for all logic in ticket. The remission table exists in bronze. Left join on the unique field. Rename "Omit" to null. Results are correct from the samples I can see below.
-    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason"], how="left").join(silver_m4, on=["CaseNo"], how="left"
+    df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason","PaymentRemissionRequested"], how="left").join(silver_m4, on=["CaseNo"], how="left"
         ).withColumn(
         "remissionType",
         col("remissionType")

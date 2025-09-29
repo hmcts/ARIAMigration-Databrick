@@ -12,4 +12,4 @@ resources:
         - task_key: DLT_creation_of_content
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_active_appeals_bronze_silver.id}
-            full_refresh: false
+            full_refresh: true

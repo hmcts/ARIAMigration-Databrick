@@ -87,11 +87,11 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
                     
                 logging.info('Processing messages')
-
-                # Minimal change: process sequentially instead of per-event tasks
-                for event in azeventhub:
-                    await process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
-
+                tasks = [
+                    process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
+                    for event in azeventhub
+                ]
+                await asyncio.gather(*tasks)
                 logging.info('Finished processing messages')
         finally:
             container_service_client.close() 

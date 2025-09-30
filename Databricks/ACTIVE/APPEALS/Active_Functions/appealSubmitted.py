@@ -139,6 +139,14 @@ def paymentType(silver_m1, silver_m4):
 
 def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("TransactionId").desc())
+    silver_m4 = (
+        silver_m4
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
     df_final, df_audit = PP.remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4)
 
     conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")

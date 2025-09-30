@@ -528,6 +528,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         19: {"name": "Foreign national offender", "code": "PF0012", "comment": None, "hearing": "Yes"}
     }
 
+    silver_m2 = silver_m2.filter(col("Relationship").isNull())
+
     ## aliases for input tables- silver_m1, silver_m2, silver_c variables created in Transformation: stg_payment_pending_ccd_json_generator
     m1 = silver_m1.alias("m1")
     m2 = silver_m2.alias("m2")
@@ -1287,6 +1289,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         , lit("entryClearanceDecision")).otherwise(lit("none"))
     ).otherwise(None)
 
+    silver_m2 = silver_m2.filter(col("Relationship").isNull())
 
     silver_m2_derived = silver_m2.withColumn(
                                         "appellantFullAddress",
@@ -1772,6 +1775,8 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         lit(None)
     )
 
+    silver_m2 = silver_m2.filter(col("Relationship").isNull())
+
     df = (
         silver_m1
         .join(silver_c_grouped, ["CaseNo"], "left")
@@ -2041,6 +2046,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     #Including conditions specified in mapping document (column H)
     conditions_remissionTypes = col("dv_CCDAppealType").isin("EA", "EU", "HU", "PA")
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
+    
 
     # No need for all logic in ticket. The remission table exists in bronze. Left join on the unique field. Rename "Omit" to null. Results are correct from the samples I can see below.
     df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason","PaymentRemissionRequested"], how="left").join(silver_m4, on=["CaseNo"], how="left"
@@ -2511,5 +2517,4 @@ def caseState(silver_m1,desiredState):
 
 if __name__ == "__main__":
     pass
-
 

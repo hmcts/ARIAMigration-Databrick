@@ -10,7 +10,7 @@ from . import AwaitingEvidenceRespondant_b as AERb
 def generalDefault(silver_m1):
     df = AERb.generalDefault(silver_m1)
 
-    df.select(
+    df = df.select(
         "*",
         lit("Yes").alias("caseArgumentAvailable")
     )
@@ -32,7 +32,7 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
     stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
 
 
-    final_df = m3_df.join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
+    final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre", 
                                 when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre")) #ListedCentre
                     ).withColumn("Hearing Date",
@@ -119,7 +119,7 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
 
     content_df = final_df.select(
         col("CaseNo"),
-        col("additionalInstructionsTribunalResponse"))
+        col("additionalInstructionsTribunalResponse")).where(col('dv_representation') == 'LR')
 
     df_audit = final_df.alias("f").join(silver_m1.alias("m1"), col("m1.CaseNo") == col("f.CaseNo"), "left").select(
         col("f.CaseNo"),

@@ -11,6 +11,7 @@ from . import paymentPending as PP
 from . import appealSubmitted as APS
 from . import AwaitingEvidenceRespondant_a as AERa
 from . import AwaitingEvidenceRespondant_a as AERb
+from . import caseUnderReview as CUR
 
 
 def appealType(silver_m1): 
@@ -100,7 +101,7 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
     stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
  
  
-    final_df = m3_df.join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
+    final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",
                                 when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre")) #ListedCentre
                     ).withColumn("Hearing Date",
@@ -187,7 +188,7 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
  
     content_df = final_df.select(
         col("CaseNo"),
-        col("additionalInstructionsTribunalResponse"))
+        col("additionalInstructionsTribunalResponse")).where(col('dv_representation') == 'AIP')
  
     df_audit = final_df.alias("f").join(silver_m1.alias("m1"), col("m1.CaseNo") == col("f.CaseNo"), "left").select(
         col("f.CaseNo"),
@@ -281,7 +282,7 @@ def general(silver_m1):
     return df_general, df_audit_general
 
 def generalDefault(silver_m1): 
-    df_generalDefault = AERb.generalDefault(silver_m1)
+    df_generalDefault = CUR.generalDefault(silver_m1)
     
     df_generalDefault = df_generalDefault.withColumn("changeDirectionDueDateActionAvailable", lit("Yes")
                                         ).withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes")
@@ -290,7 +291,7 @@ def generalDefault(silver_m1):
                                         ).withColumn("uploadHomeOfficeBundleAvailable", lit("Yes")
                                 
                 ).select('*',
-                lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
+                # lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
                 lit("This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.").alias("reasonsForAppealDecision")
                 ).where(col("dv_representation") == 'AIP').distinct()
 
@@ -304,12 +305,5 @@ def documents(silver_m1):
     
     return df_documents, df_audit_documents
 
-def caseState(silver_m1): 
-    df_caseState, df_audit_caseState = original_caseState(silver_m1, "reasonForAppealSubmitted")
-    
-    df_caseState = df_caseState.select(*df_caseState.columns).where(col("dv_representation") == 'AIP').distinct()
-    
-    return df_caseState, df_audit_caseState
-
-
-
+if __name__ == "__main__":
+    pass

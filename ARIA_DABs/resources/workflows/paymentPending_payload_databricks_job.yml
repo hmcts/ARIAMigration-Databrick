@@ -16,20 +16,15 @@ resources:
             package_name: shared_functions
           libraries: 
             - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
-                
-        - task_key: paymentPending
-          depends_on: 
-            - task_key: run-my-wheel
-          job_cluster_key: paymentPending_payload_databricks_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PAYMENT_PENDING_JSON"
-            source: WORKSPACE
-            base_parameters:
-              state: paymentPending
 
+        - task_key: DLT_paymentPending
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.pipeline_pl_paymentPending_gold.id}
+            full_refresh: true
+                
         - task_key: active_publish_EH_HTML_JSON
           depends_on: 
-            - task_key: paymentPending
+            - task_key: DLT_paymentPending
           job_cluster_key: paymentPending_payload_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_Publish_EH_HTML_JSON"

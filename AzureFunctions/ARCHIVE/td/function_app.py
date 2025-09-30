@@ -34,11 +34,13 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=500,
+    max_batch_size=2000,          # Increased from 500 → 2000
+    prefetch_count=2000,          # Added to optimize prefetch from Event Hub
     data_type='binary'
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
+
 
     # Retrieve credentials
     credential = DefaultAzureCredential()

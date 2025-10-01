@@ -2297,13 +2297,13 @@ def sponsorDetails(silver_m1, silver_c):
 
         #audit sponsorEmailAdminJ
         array(struct(*common_inputFields, lit("audit.Sponsor_Email"), lit("grp.CategoryId"))).alias("sponsorEmailAdminJ_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Email"), col("grp.CategoryId"))).alias("sponsorEmailAdminJ.inputValues"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Email"), col("grp.CategoryId"))).alias("sponsorEmailAdminJ_inputValues"),
         col("content.sponsorEmailAdminJ"),
         lit("yes").alias("sponsorEmailAdminJ_Transformation"),
 
         #audit sponsorMobileNumberAdminJ
         array(struct(*common_inputFields, lit("audit.Sponsor_Telephone"), lit("grp.CategoryId"))).alias("sponsorMobileNumberAdminJ_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryId"))).alias("sponsorMobileNumberAdminJ.inputValues"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryId"))).alias("sponsorMobileNumberAdminJ_inputValues"),
         col("content.sponsorMobileNumberAdminJ"),
         lit("yes").alias("sponsorMobileNumberAdminJ_Transformation")
     )

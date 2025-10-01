@@ -34,7 +34,8 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=500,
+    max_batch_size=2000,    # Increased batch size for better throughput
+    prefetch_count=2000,    # Prefetch to improve batch fetch
     data_type='binary'
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):

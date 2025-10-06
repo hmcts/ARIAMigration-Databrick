@@ -274,8 +274,8 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
     )
     return content_df, df_audit
 
-def general(silver_m1): 
-    df_general, df_audit_general = PP.general(silver_m1)
+def general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres): 
+    df_general, df_audit_general = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres)
     
     df_general = df_general.select('*').where(col("dv_representation") == 'AIP').distinct()
     

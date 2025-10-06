@@ -34,7 +34,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=2000,
+    max_batch_size=500,
     data_type='binary'
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
@@ -55,13 +55,13 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
 
         # Blob Storage credentials
-        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
         logging.info('Assigned container secret value')
-        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
+        # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:

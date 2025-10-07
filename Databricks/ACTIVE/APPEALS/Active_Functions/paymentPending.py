@@ -12,8 +12,8 @@ from pyspark.sql.types import StringType
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
-    current_timestamp, collect_set, first, array_contains, 
-    size, udf, coalesce, concat_ws, concat, trim, year,split,datediff
+    size, udf, coalesce, concat_ws, concat, trim, year,split,datediff,
+    collect_set, current_timestamp
 )
 
 from uk_postcodes_parsing import fix, postcode_utils
@@ -765,6 +765,7 @@ def cleanPhoneNumber(PhoneNumber):
     PhoneNumber = re.sub(r"\(0\)", "", PhoneNumber)           #19. Remove (0) if +44 or 44 exists in the number
     PhoneNumber = re.sub(r"^44", "+44", PhoneNumber)          #20. Add missing + if number starts with 44 (but not already +)
     PhoneNumber = PhoneNumber.strip()                         #21. Trim spaces
+    PhoneNumber = re.sub(r"[)]", "", PhoneNumber)               # Removing closing parenthesis 
 
     return PhoneNumber
 
@@ -2152,6 +2153,8 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 ################################################################
 
 
+from pyspark.sql.functions import when, col, first, lit, concat_ws, trim, collect_list, array_contains
+
 def sponsorDetails(silver_m1, silver_c):
     m1 = silver_m1.alias("m1")
     c = silver_c.alias("c")
@@ -2159,7 +2162,7 @@ def sponsorDetails(silver_m1, silver_c):
     joined = m1.join(c, on='CaseNo', how="left")
 
     grouped = joined.groupBy("CaseNo").agg(
-        first("CategoryId", ignorenulls=True).alias("CategoryId"),
+        collect_list("CategoryId").alias("CategoryIdList"),
         first("Sponsor_Name", ignorenulls=True).alias("Sponsor_Name"),
         first("Sponsor_Forenames", ignorenulls=True).alias("Sponsor_Forenames"),
         first("Sponsor_Address1", ignorenulls=True).alias("Sponsor_Address1"),
@@ -2173,39 +2176,25 @@ def sponsorDetails(silver_m1, silver_c):
         first("Sponsor_Telephone", ignorenulls=True).alias("Sponsor_Telephone")
     )
 
-    # Sponsor category ID condition CategoryId=38 - only out of country cases can have a sponsor
-    sponsor_condition = col("CategoryId") == 38
-
-    ############# ARIADM- 773 ################
-    grouped = grouped.withColumn(
-        "hasSponsor",
-        when(sponsor_condition, when(col("Sponsor_Name").isNotNull(), lit("Yes")).otherwise(lit("No")))
-    )
+    sponsor_condition = array_contains(col("CategoryIdList"), 38)
 
     grouped = grouped.withColumn(
+    "hasSponsor",
+        when(col("Sponsor_Name").isNotNull(), lit("Yes")).otherwise(lit("No"))
+    ).withColumn(
         "sponsorGivenNames",
-        when(sponsor_condition & (col("hasSponsor") == "Yes"), col("Sponsor_Forenames"))
-    )
-
-    grouped = grouped.withColumn(
+        when((col("hasSponsor") == "No"), lit(None)).otherwise(col("Sponsor_Forenames"))
+    ).withColumn(
         "sponsorFamilyName",
-        when(sponsor_condition & (col("hasSponsor") == "Yes"), col("Sponsor_Name"))
-    )
-
-    grouped = grouped.withColumn(
+        when((col("hasSponsor") == "No"), lit(None)).otherwise(col("Sponsor_Name"))
+    ).withColumn(
         "sponsorAuthorisation",
-        when(
-            sponsor_condition & (col("hasSponsor") == "Yes"),
-            when(col("Sponsor_Authorisation") == 1, lit("Yes")).otherwise(lit("No"))
-        )
-    )
-    ##########################################
-
-    ############# ARIADM- 775 ################
-    grouped = grouped.withColumn(
+        when(col("hasSponsor") == lit("No"), lit(None))
+        .when(col("Sponsor_Authorisation") == lit("true"), lit("Yes")).otherwise(lit("No"))
+    ).withColumn(
         "sponsorAddress",
         when(
-            sponsor_condition & (col("hasSponsor") == "Yes"),
+            (col("hasSponsor") == "Yes"),
             trim(
                 concat_ws(
                     " ",
@@ -2218,45 +2207,26 @@ def sponsorDetails(silver_m1, silver_c):
                 )
             )
         )
-    )
-    ###########################################
-
-    ############# ARIADM- 777 #################
-    grouped = grouped.withColumn(
+    ).withColumn(
         "sponsorEmailAdminJ",
-        when(sponsor_condition & (col("hasSponsor") == "Yes"),
+        when((col("hasSponsor") == "Yes"),
              cleanEmailUDF(col("Sponsor_Email")))
     ).withColumn(
         "sponsorMobileNumberAdminJ",
-        when(sponsor_condition & (col("hasSponsor") == "Yes"),
+        when((col("hasSponsor") == "Yes"),
              phoneNumberUDF(col("Sponsor_Telephone")))
     )
-    ##############################################
 
     df = grouped.select(
         "CaseNo",
-        # "CategoryId",
-        ######### ARIA sponsor fields for verification- uncomment ########
-        # "Sponsor_Name",
-        # "Sponsor_Forenames",
-        # "Sponsor_Address1",
-        # "Sponsor_Address2",
-        # "Sponsor_Address3",
-        # "Sponsor_Address4",
-        # "Sponsor_Address5",
-        # "Sponsor_Postcode",
-        # "Sponsor_Authorisation",
-        # "Sponsor_Email",
-        # "Sponsor_Telephone",
-        #######################################
         "hasSponsor",
         "sponsorGivenNames",
         "sponsorFamilyName",
         "sponsorAddress",
         "sponsorEmailAdminJ",
         "sponsorMobileNumberAdminJ",
-        "sponsorAuthorisation"
-    )
+        "sponsorAuthorisation",
+    ).where((sponsor_condition) & (col("hasSponsor") == lit("Yes")))
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
@@ -2266,44 +2236,44 @@ def sponsorDetails(silver_m1, silver_c):
         col("CaseNo"),
         
         #audit hasSponsor
-        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryId"))).alias("hasSponsor_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryId"))).alias("hasSponsor_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryIdList"))).alias("hasSponsor_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryIdList"))).alias("hasSponsor_inputValues"),
         col("content.hasSponsor"),
         lit("yes").alias("hasSponsor_Transformation"),
 
         #audit sponsorGivenNames
-        array(struct(*common_inputFields, lit("audit.Sponsor_Forenames"), lit("grp.CategoryId"))).alias("sponsorGivenName_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Forenames"), col("grp.CategoryId"))).alias("sponsorGivenName_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Forenames"), lit("grp.CategoryIdList"))).alias("sponsorGivenName_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Forenames"), col("grp.CategoryIdList"))).alias("sponsorGivenName_inputValues"),
         col("content.sponsorGivenNames"),
         lit("yes").alias("sponsorGivenNames_Transformation"),
 
         #audit sponsorFamilyName
-        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryId"))).alias("sponsorFamilyName_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryId"))).alias("sponsorFamilyName_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryIdList"))).alias("sponsorFamilyName_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryIdList"))).alias("sponsorFamilyName_inputValues"),
         col("content.sponsorFamilyName"),
         lit("yes").alias("sponsorFamilyName_Transformation"),
 
         #audit sponsorAddress
-        array(struct(*common_inputFields, lit("audit.Sponsor_Address1"), lit("audit.Sponsor_Address2"), lit("audit.Sponsor_Address3"), lit("audit.Sponsor_Address4"), lit("audit.Sponsor_Address5"), lit("audit.Sponsor_Postcode"), lit("grp.CategoryId"))).alias("sponsorAddress.inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Address1"), col("audit.Sponsor_Address2"), col("audit.Sponsor_Address3"), col("audit.Sponsor_Address4"), col("audit.Sponsor_Address5"), col("audit.Sponsor_Postcode"), col("grp.CategoryId"))).alias("sponsorAddress.inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Address1"), lit("audit.Sponsor_Address2"), lit("audit.Sponsor_Address3"), lit("audit.Sponsor_Address4"), lit("audit.Sponsor_Address5"), lit("audit.Sponsor_Postcode"), lit("grp.CategoryIdList"))).alias("sponsorAddress.inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Address1"), col("audit.Sponsor_Address2"), col("audit.Sponsor_Address3"), col("audit.Sponsor_Address4"), col("audit.Sponsor_Address5"), col("audit.Sponsor_Postcode"), col("grp.CategoryIdList"))).alias("sponsorAddress.inputValues"),
         col("content.sponsorAddress"),
         lit("yes").alias("sponsorAddress_Transformation"),
 
         #audit sponsorAuthorisation
-        array(struct(*common_inputFields, lit("audit.Sponsor_Authorisation"), lit("grp.CategoryId"))).alias("sponsorAuthorisation_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Authorisation"), col("grp.CategoryId"))).alias("sponsorAuthorisation_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Authorisation"), lit("grp.CategoryIdList"))).alias("sponsorAuthorisation_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Authorisation"), col("grp.CategoryIdList"))).alias("sponsorAuthorisation_inputValues"),
         col("content.sponsorAuthorisation"),
         lit("yes").alias("sponsorAuthorisation_Transformation"),
 
         #audit sponsorEmailAdminJ
-        array(struct(*common_inputFields, lit("audit.Sponsor_Email"), lit("grp.CategoryId"))).alias("sponsorEmailAdminJ_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Email"), col("grp.CategoryId"))).alias("sponsorEmailAdminJ_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Email"), lit("grp.CategoryIdList"))).alias("sponsorEmailAdminJ_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Email"), col("grp.CategoryIdList"))).alias("sponsorEmailAdminJ_inputValues"),
         col("content.sponsorEmailAdminJ"),
         lit("yes").alias("sponsorEmailAdminJ_Transformation"),
 
         #audit sponsorMobileNumberAdminJ
-        array(struct(*common_inputFields, lit("audit.Sponsor_Telephone"), lit("grp.CategoryId"))).alias("sponsorMobileNumberAdminJ_inputFields"),
-        array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryId"))).alias("sponsorMobileNumberAdminJ_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Telephone"), lit("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputValues"),
         col("content.sponsorMobileNumberAdminJ"),
         lit("yes").alias("sponsorMobileNumberAdminJ_Transformation")
     )
@@ -2314,48 +2284,256 @@ def sponsorDetails(silver_m1, silver_c):
 ##########             General Function              ###########
 ################################################################
 
-def general(silver_m1):
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
     conditions_general = (col("dv_representation").isin('LR','AIP')) & (col("lu_appealType").isNotNull())
 
-    df = silver_m1.filter(conditions_general).withColumn(
+        # Define the window specification
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("HistoryId").desc())
+
+    # Define the base DataFrame
+    silver_h = silver_h.filter(col("HistType") == 6)
+
+    # Define the common filter condition
+    common_filter = ~col("Comment").like("%Castle Park Storage%") & ~col("Comment").like("%Field House%") & ~col("Comment").like("%UT (IAC)%")
+
+    # Define the function to get the latest history record based on the filter
+    def get_latest_history(df, filter_condition):
+        return df.filter(filter_condition).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).select(
+            col("CaseNo"),
+            col("Comment"),
+            split(col("Comment"), ',')[0].alias("der_prevFileLocation")
+        )
+
+    # Create DataFrames for each location
+    derived_history_df = get_latest_history(silver_h, common_filter)
+
+    # Define common columns for hearingCentreDynamicList and caseManagementLocationRefData
+    common_columns = {
+        "hearingCentreDynamicList": struct(
+            struct(
+                col("locationCode").alias("code"),
+                col("locationLabel").alias("label")
+            ).alias("value"),
+            array(
+                struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+            ).alias("list_items")
+        ),
+        "caseManagementLocationRefData": struct(
+            lit("1").alias("region"),
+            struct(
+                struct(
+                    col("locationCode").alias("code"),
+                    col("locationLabel").alias("label")
+                ).alias("value"),
+                array(
+                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+                ).alias("list_items")
+            ).alias("baseLocation")
+        )
+    }
+
+    # Join result_df with bronze_derive_hearing_centres to derive derive_hearing_centres
+    bronze_derive_hearing_centres = bronze_derive_hearing_centres.withColumn(
+        "hearingCentreDynamicList",
+        when(
+            col("locationCode").isNotNull() & col("locationLabel").isNotNull(),
+            common_columns["hearingCentreDynamicList"]
+        ).otherwise(None)
+    ).withColumn(
+        "caseManagementLocationRefData",
+        when(
+            col("locationCode").isNotNull() & col("locationLabel").isNotNull(),
+            common_columns["caseManagementLocationRefData"]
+        ).otherwise(None)
+    )
+
+    # Join result_df with bronze_hearing_centres to derive hearingCentre
+    bronze_hearing_centres = bronze_hearing_centres.withColumn(
+        "hearingCentreDynamicList",
+        when(
+            col("locationCode").isNotNull() & col("locationLabel").isNotNull(),
+            common_columns["hearingCentreDynamicList"]
+        ).otherwise(None)
+    ).withColumn(
+        "caseManagementLocationRefData",
+        when(
+            col("locationCode").isNotNull() & col("locationLabel").isNotNull(),
+            common_columns["caseManagementLocationRefData"]
+        ).otherwise(None)
+    )
+
+    silver_m2 = silver_m2.filter(col("Relationship").isNull())
+
+    # Define postcode mappings
+    postcode_mappings = {
+        "bradford": ["BD", "DN", "HD", "HG", "HU", "HX", "LS", "S", "WF", "YO"],
+        "manchester": ["BB", "BL", "CH", "CW", "FY", "LL", "ST", "L", "LA", "M", "OL", "PR", "SK", "WA", "WN"],
+        "newport": ["BA", "BS", "CF", "DT", "EX", "HR", "LD", "NP", "PL", "SA", "SN", "SP", "TA", "TQ", "TR"],
+        "taylorHouse": ["AL", "BN", "BR", "CB", "CM", "CO", "CR", "CT", "DA", "E", "EC", "EN", "IG", "IP", "ME", "N", "NR", "NW", "RH", "RM", "SE", "SG", "SS", "TN", "W", "WC"],
+        "newcastle": ["CA", "DH", "DL", "NE", "SR", "TS"],
+        "birmingham": ["B", "CV", "DE", "DY", "GL", "HP", "LE", "LN", "LU", "MK", "NG", "NN", "OX", "PE", "RG", "SY", "TF", "WD", "WR", "WS", "WV"],
+        "hattonCross": ["BH", "GU", "HA", "KT", "PO", "SL", "SM", "SO", "SW", "TW", "UB"],
+        "glasgow": ["AB", "DD", "DG", "EH", "FK", "G", "HS", "IV", "KA", "KW", "KY", "ML", "PA", "PH", "TD", "ZE", "BT"]
+    }
+
+    # Function to map postcodes to hearing centres
+    def map_postcode_to_hearing_centre(postcode):
+        if postcode is None:
+            return None
+        postcode = postcode.replace(" ", "").upper()
+        first2 = postcode[:2]
+        first1 = postcode[:1]
+        for centre, codes in postcode_mappings.items():
+            # Try 2-char match first
+            if any(first2 == code for code in codes if len(code) == 2):
+                return centre
+        for centre, codes in postcode_mappings.items():
+            # Then try 1-char match
+            if any(first1 == code for code in codes if len(code) == 1):
+                return centre
+        return None
+
+    # Register the UDF
+    map_postcode_to_hearing_centre_udf = udf(map_postcode_to_hearing_centre, StringType())
+
+    ##################################################################################################
+
+    result_with_hearing_centre_df = silver_m1.alias("m1").join(
+            bronze_hearing_centres.alias("bhc"),
+            col("m1.CentreId") == col("bhc.CentreId"),
+            how="left").join(derived_history_df.alias("h"),
+                                ((col("m1.CaseNo") == col("h.CaseNo")) &
+                                (col("m1.CentreId").isin(77,476,101,55,296,13,79,522,406,517,37))),
+                                how="left") \
+                                .join(bronze_hearing_centres.alias("bhc2"),
+                                (col("h.der_prevFileLocation") == col("bhc2.prevFileLocation")),
+                                 how="left").join(silver_m2.alias("m2"), col("m1.CaseNo") == col("m2.CaseNo"), how="left") \
+                                .withColumn("map_postcode_to_hearing_centre", 
+                                           when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),
+                                           map_postcode_to_hearing_centre_udf(coalesce(col('m1.Rep_Postcode'),col('m1.CaseRep_Postcode'),('m2.Appellant_Postcode')))).otherwise(None)) \
+                                .join(bronze_derive_hearing_centres.alias("bhc3"), col("map_postcode_to_hearing_centre") == col("bhc3.hearingCentre"), how="left") \
+                                .withColumn("isServiceRequestTabVisibleConsideringRemissions",
+        when(
+            (col("PaymentRemissionRequested").isNull()) | (col("PaymentRemissionRequested") == lit('2')),
+            "Yes"
+        ).otherwise("No")
+        ).select(
+        col("m1.CaseNo"),
+        # "isServiceRequestTabVisibleConsideringRemissions",
+        col('bhc.Conditions').alias("lu_conditions"),
+        col('bhc.hearingCentre').alias("dv_dhc_hearingCentre"),
+        col("h.der_prevFileLocation").alias("dv_prevFileLocation"),
+        col('m1.Rep_Postcode'),
+        col('m1.CaseRep_Postcode'),
+        col("m2.Appellant_Postcode"),
+        col("m1.CentreId"),
+        col("bhc.prevFileLocation").alias("dv_dhc_prevFileLocation"),
+        col("bhc2.hearingCentre").alias("dv_dhc2_hearingCentre"),
+
+        col("bhc2.applicationChangeDesignatedHearingCentre").alias("dv_dhc2_applicationChangeDesignatedHearingCentre"),
+        col("bhc3.applicationChangeDesignatedHearingCentre").alias("dv_dhc3_applicationChangeDesignatedHearingCentre"),
+
+        when(((col('bhc.Conditions').isNull()) | (col('bhc.Conditions') == 'NO MAPPING REQUIRED')), col('bhc.applicationChangeDesignatedHearingCentre'))
+        .when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time")| col("h.der_prevFileLocation").isNull()),col("bhc3.applicationChangeDesignatedHearingCentre"))
+        .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.applicationChangeDesignatedHearingCentre"))
+         .alias("applicationChangeDesignatedHearingCentre")
+        )
+        
+    df = silver_m1.join(result_with_hearing_centre_df, ["CaseNo"], "left").filter(conditions_general).withColumn(
         "isServiceRequestTabVisibleConsideringRemissions",
         when(
             (col("PaymentRemissionRequested").isNull()) | (col("PaymentRemissionRequested") == lit('2')),
             "Yes"
         ).otherwise("No")
-    ).select(
-        col("CaseNo"),
-        "isServiceRequestTabVisibleConsideringRemissions",
-        col("lu_applicationChangeDesignatedHearingCentre"),
-    )
+        ).select(
+            col("CaseNo"),
+            "isServiceRequestTabVisibleConsideringRemissions",
+            "applicationChangeDesignatedHearingCentre"
+        )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]
 
-    df_audit = silver_m1.alias("m1_audit").join(df.alias("content"), ["CaseNo"], "left").select(
-        col("CaseNo"),
-
-        ## isServiceRequestTabVisibleConsideringRemissions - ARIADM-767
-        array(struct(*common_inputFields ,lit("m1_audit.PaymentRemissionRequested"), lit("content.isServiceRequestTabVisibleConsideringRemissions"))).alias("isServiceRequestTabVisibleConsideringRemissions_inputFields"),
-        array(struct(*common_inputValues ,col("m1_audit.PaymentRemissionRequested"), col("content.isServiceRequestTabVisibleConsideringRemissions"))).alias("isServiceRequestTabVisibleConsideringRemissions_inputValues"),
-        col("content.isServiceRequestTabVisibleConsideringRemissions"),
-        lit("yes").alias("isServiceRequestTabVisibleConsideringRemissions_Transformed"),
-
-        # ## lu_applicationChangeDesignatedHearingCentre - ARIADM-767
-       array(struct(*common_inputFields ,lit("m1_audit.lu_applicationChangeDesignatedHearingCentre"))).alias("lu_applicationChangeDesignatedHearingCentre_inputFields"),
-        array(struct(*common_inputValues ,col("m1_audit.lu_applicationChangeDesignatedHearingCentre"))).alias("lu_applicationChangeDesignatedHearingCentre_inputValues"),
-        col("content.lu_applicationChangeDesignatedHearingCentre"),
-        lit("yes").alias("lu_applicationChangeDesignatedHearingCentre_Transformed")
+    df_audit = (
+        silver_m1.alias("m1_audit")
+        .join(df.alias("content"), ["CaseNo"], "left"
+        ).join(result_with_hearing_centre_df.alias("hearing"), ["CaseNo"], "left")
+        .select(
+            col("CaseNo"),
+            # isServiceRequestTabVisibleConsideringRemissions - ARIADM-767
+            array(
+                struct(
+                    *common_inputFields,
+                    lit("m1_audit.PaymentRemissionRequested"),
+                    lit("content.isServiceRequestTabVisibleConsideringRemissions")
+                )
+            ).alias("isServiceRequestTabVisibleConsideringRemissions_inputFields"),
+            array(
+                struct(
+                    *common_inputValues,
+                    col("m1_audit.PaymentRemissionRequested"),
+                    col("content.isServiceRequestTabVisibleConsideringRemissions")
+                )
+            ).alias("isServiceRequestTabVisibleConsideringRemissions_inputValues"),
+            col("content.isServiceRequestTabVisibleConsideringRemissions"),
+            lit("yes").alias("isServiceRequestTabVisibleConsideringRemissions_Transformed"),
+            # Audit staffLocation
+            array(
+                struct(
+                    *common_inputFields,
+                    lit("lu_applicationChangeDesignatedHearingCentre"),
+                    lit("lu_conditions"),
+                    lit("dv_prevFileLocation"),
+                    lit("Rep_Postcode"),
+                    lit("CaseRep_Postcode"),
+                    lit("Appellant_Postcode"),
+                    lit("CentreId"),
+                    lit("dv_dhc2_applicationChangeDesignatedHearingCentre"),
+                    lit("dv_dhc3_applicationChangeDesignatedHearingCentre")
+                )
+            ).alias("applicationChangeDesignatedHearingCentre_inputFields"),
+            array(
+                struct(
+                    *common_inputValues,
+                    col("m1_audit.lu_applicationChangeDesignatedHearingCentre"),
+                    col("hearing.lu_conditions"),
+                    col("hearing.dv_prevFileLocation"),
+                    col("hearing.Rep_Postcode"),
+                    col("hearing.CaseRep_Postcode"),
+                    col("hearing.Appellant_Postcode"),
+                    col("hearing.CentreId"),
+                    col("hearing.dv_dhc2_applicationChangeDesignatedHearingCentre"),
+                    lit("hearing.dv_dhc3_applicationChangeDesignatedHearingCentre")
+                )
+            ).alias("applicationChangeDesignatedHearingCentre_inputValues"),
+            col("content.applicationChangeDesignatedHearingCentre"),
+            lit("yes").alias("applicationChangeDesignatedHearingCentre_Transformation"),
+        )
     )
 
     return df, df_audit
 
-
-
 ################################################################
 ##########         General Default Function          ###########
 ################################################################
-
 
 def generalDefault(silver_m1):
 
@@ -2482,7 +2660,7 @@ def documents(silver_m1):
 ##########             Case State Function           ###########
 ################################################################
 
-def caseState(silver_m1,desiredState):
+def caseState(silver_m1, desiredState):
     """
     desiredState = is the current state of the case, e.g. 'Awaiting Appeal Lodgement'
     

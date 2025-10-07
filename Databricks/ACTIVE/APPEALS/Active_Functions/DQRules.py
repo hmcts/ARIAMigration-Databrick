@@ -642,7 +642,7 @@ def base_DQRules():
     checks["valid_decisionLetterReceivedDate_format"] = (
         "( (decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$' "
         "AND array_contains(valid_categoryIdList, 38) "
-        "AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')) "
+        "AND (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')) "
         "OR (decisionLetterReceivedDate IS NULL) )"
     )
 

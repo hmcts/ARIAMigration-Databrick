@@ -8,6 +8,6 @@
 1,5,Convention Case,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED
 1,6,Other,exceptionalCircumstancesRemission,OMIT,OMIT,"""This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.""",OMIT,OMIT,OMIT
 1,7,S20 Childrens Act,hoWaiverRemission,section20,Section 20,OMIT,OMIT,OMIT,OMIT
-1,8,Home Office Waiver,hoWaiverRemission,hoWaiverRemission,Home Office fee waiver,OMIT,OMIT,OMIT,OMIT
+1,8,Home Office Waiver,hoWaiverRemission,homeOfficeWavier,Home Office fee waiver,OMIT,OMIT,OMIT,OMIT
 1,9,Help with Fees,helpWithFees,OMIT,OMIT,OMIT,OMIT,OMIT,M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'
 1,10,Paid on CCD,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED

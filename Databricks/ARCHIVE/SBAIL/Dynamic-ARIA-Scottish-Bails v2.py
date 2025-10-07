@@ -3908,7 +3908,7 @@ def gold_sbails_with_a360():
     metadata_df = dlt.read("gold_sbail_HTML_JSON_a360")
 
     ## Group by batchid and concat all the A360 content into a single string
-    batched_a360_df = metadata_df.groupBy("batchid2").agg(concat_ws("\n", collect_list(col("A360Content"))).alias("A360Content")).withColumn("File_name", concat(lit(f"{gold_a360_outputs}bails_"), col("batchid2"), lit(".a360")))
+    batched_a360_df = metadata_df.groupBy("batchid2").agg(concat_ws("\n", collect_list(col("A360Content"))).alias("A360Content")).withColumn("File_name", concat(lit(f"{gold_a360_outputs}s_bails_"), col("batchid2"), lit(".a360")))
 
     ## Publish these a360 files to the blob storage
     a360_result_df = batched_a360_df.withColumn("Status", upload_to_blob_udf(col("File_name"), col("A360Content")))

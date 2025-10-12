@@ -1865,25 +1865,25 @@ def paymentType(silver_m1):
         col("CaseNo"),
         when(col("VisitVisatype") == 1, 8000)
             .when(col("VisitVisatype") == 2, 14000)
-            .otherwise("unknown").alias("feeAmountGbp"),
+            .otherwise(None).alias("feeAmountGbp"),
         when(col("VisitVisatype") == 1, "Notice of Appeal - appellant consents without hearing A")
             .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
-            .otherwise("unknown").alias("feeDescription"),
+            .otherwise(None).alias("feeDescription"),
         when(col("VisitVisatype") == 1, None)
             .when(col("VisitVisatype") == 2, 140)
-            .otherwise("unknown").alias("feeWithHearing"),
+            .otherwise(None).alias("feeWithHearing"),
         when(col("VisitVisatype") == 1, 80)
             .when(col("VisitVisatype") == 2, None)
-            .otherwise("unknown").alias("feeWithoutHearing"),
+            .otherwise(None).alias("feeWithoutHearing"),
         when(col("VisitVisatype") == 1, "Appeal determined without a hearing")
             .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
-            .otherwise("unknown").alias("paymentDescription"),
+            .otherwise(None).alias("paymentDescription"),
         lit("Yes").alias("feePaymentAppealType"),
         lit("Payment Pending").alias("paymentStatus"),
         lit(2).alias("feeVersion"),
         when(col("VisitVisatype") == 1, "decisionWithoutHearing")
             .when(col("VisitVisatype") == 2, "decisionWithHearing")
-            .otherwise("unknown").alias("decisionHearingFeeOption"),
+            .otherwise(None).alias("decisionHearingFeeOption"),
         lit("No").alias("hasServiceRequestAlready")
     )
 

@@ -5,6 +5,12 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
+artifacts:
+  default:
+    type: whl
+    build: poetry build --format wheel
+    path: .
+
 targets:
   sbox00:
       workspace:

@@ -5,12 +5,6 @@ include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
 
-# artifacts:
-#   default:
-#     type: whl
-#     build: uv build --wheel
-#     path: .
-
 targets:
   sbox00:
       workspace:

@@ -382,14 +382,6 @@ stages:
                 downloadPath: '$(Pipeline.Workspace)'
               displayName: 'Download Wheel Artifact'
             
-            - task: DownloadBuildArtifacts@1
-              inputs:
-                buildType: 'current'
-                downloadType: 'single'
-                artifactName: 'activeariafunction'
-                downloadPath: '$(Pipeline.Workspace)'
-              displayName: 'Download Wheel Artifact 2'
-            
             - script: |
                 echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
                 ls -al $(Pipeline.Workspace)
@@ -463,7 +455,7 @@ stages:
 
                 echo "Current dir: $(pwd)"
                 ls -al 
-                
+
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
                 databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug

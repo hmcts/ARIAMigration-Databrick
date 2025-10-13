@@ -10,7 +10,17 @@ resources:
             num_workers: 8
 
       tasks:
+        - task_key: run-my-wheel
+          job_cluster_key: db_wf_apl_fpa_receive_job
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/packages/shared_functions-0.5.2-py3-none-any.whl"
+
         - task_key: active_CCD_call_result_EH
+          depends_on:
+            - task_key: run-my-wheel       
           job_cluster_key: ccd_call_result_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/Active_CCD_call_result_EH"

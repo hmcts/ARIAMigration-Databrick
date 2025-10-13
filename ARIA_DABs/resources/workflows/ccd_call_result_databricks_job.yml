@@ -11,7 +11,7 @@ resources:
 
       tasks:
         - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fpa_receive_job
+          job_cluster_key: ccd_call_result_databricks_job
           python_wheel_task:
             entry_point: main
             package_name: shared_functions

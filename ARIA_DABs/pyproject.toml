@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-main = "my_package.main:main"
+main = "shared_functions.main:main"
 
 [build-system]
 requires = ["hatchling"]

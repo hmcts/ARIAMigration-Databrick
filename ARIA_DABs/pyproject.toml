@@ -1,21 +1,25 @@
-toml[tool.poetry]
+[project]
 name = "shared-functions"
 version = "0.5.2"
 description = "Shared functions for ARIA ACTIVE cases"
-authors = ["Andrew McDevitt, Ara Islam, Naveen Sriram"]
+authors = [
+    {name = "Andrew McDevitt"},
+    {name = "Ara Islam"},
+    {name = "Naveen Sriram"}
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pycountry",
+    "uk-postcodes-parsing",
+    "confluent-kafka",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-pycountry = "*"
-uk_postcodes_parsing = "*"
-confluent-kafka = "*"
-
-[tool.poetry.packages]
-[{include = "shared_functions"}]
+[project.scripts]
+main = "my_package.main:main"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.scripts]
-main = "my_package.main:main"
+[tool.hatch.build.targets.wheel]
+packages = ["shared_functions"]

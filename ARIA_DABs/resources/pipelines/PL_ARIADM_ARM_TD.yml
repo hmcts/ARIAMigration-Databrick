@@ -12,6 +12,8 @@ resources:
             max_workers: 8
             mode: ENHANCED
       libraries:
+        - pypi: 
+          package: shared-functions==0.5.2
         - notebook:
             path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_TD"
       target: ariadm_arm_td

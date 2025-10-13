@@ -12,6 +12,8 @@ resources:
             max_workers: 8
             mode: ENHANCED
       libraries:
+        - pypi: 
+          package: shared-functions==0.5.2
         - notebook:
             path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ARM_APPEALS_UTA"
       schema: ariadm_arm_uta

@@ -8,7 +8,7 @@ include:
 artifacts:
   default:
     type: whl
-    build: poetry build --format wheel
+    build: uv build --wheel
     path: .
 
 targets:

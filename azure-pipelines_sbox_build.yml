@@ -433,6 +433,8 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al 
 
+                pip install uv
+                uv --version
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
                 databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug

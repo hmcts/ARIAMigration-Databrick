@@ -11,6 +11,7 @@ resources:
             max_workers: 8
             mode: ENHANCED
       libraries:
+        - whl: "./dist/*.whl"
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PAYMENT_PENDING_JSON"
       target: paymentPending_gold

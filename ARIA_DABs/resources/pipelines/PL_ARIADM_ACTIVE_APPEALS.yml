@@ -11,6 +11,7 @@ resources:
             max_workers: 5
             mode: ENHANCED
       libraries:
+        - whl: "./dist/*.whl"
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/BRONZE_ACTIVE_APPEALS"
         - notebook:

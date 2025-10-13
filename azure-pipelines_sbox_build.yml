@@ -435,8 +435,9 @@ stages:
 
                 pip install uv
                 uv --version
+                echo "uv Installed. Building wheel"
+                uv build --wheel
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
                 databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                databricks fs cp dist/shared_functions-0.5.2-py3-none-any.whl dbfs:/FileStore/packages/shared_functions-0.5.2-py3-none-any.whl
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"

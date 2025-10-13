@@ -143,6 +143,37 @@ stages:
                 ArtifactName: 'ariafunctionv2'
                 publishLocation: 'Container'
               displayName: 'Publish Shared Wheel Artifact'
+            
+            # - script: |
+            #     python --version
+            #     pip install --upgrade pip
+            #     pip install uv
+            #     pip install databricks-cli
+
+            #     echo "Listing dist contents:"
+            #     ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+            #     echo "removing files in dist/"
+            #     rm -rf $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+            #     echo "Listing dist contents after deletion:"
+            #     ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+            #     echo "Building wheel"
+            #     uv build --wheel --outdir "$(Build.SourcesDirectory)/ARIA_DABs/dist" \
+            #       $(Build.SourcesDirectory)/ARIA_DABs
+
+            #     echo "Listing dist contents after building the wheel"
+            #     ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+            #   displayName: 'Build Active Python Wheel'
+
+            # - task: PublishBuildArtifacts@1
+            #   inputs:
+            #     PathtoPublish: '$(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist'
+            #     ArtifactName: 'ariafunctionv2'
+            #     publishLocation: 'Container'
+            #   displayName: 'Publish Shared Wheel Artifact'              
+            
 
   # Build function app package for each segment
   - ${{ each deployment in parameters.environment_components }}:
@@ -433,13 +464,31 @@ stages:
                 echo "Current dir: $(pwd)"
                 ls -al 
 
+                pip install --upgrade pip
                 pip install uv
+                pip install databricks-cli
                 uv --version
-                echo "uv Installed. Building wheel"
-                uv build --wheel
-                databricks fs cp "$(pwd)/dist/shared_functions-0.5.2-py3-none-any.whl" dbfs:/FileStore/packages/shared_functions-0.5.2-py3-none-any.whl --overwrite --debug
-                databricks fs ls dbfs:/FileStore/packages
 
+                echo "uv Installed. Building wheel"
+
+                echo "Listing dist contents:"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "removing files in dist/"
+                rm -rf $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "Listing dist contents after deletion:"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "Building wheel"
+                uv build --wheel --outdir "$(Build.SourcesDirectory)/ARIA_DABs/dist" \
+                  $(Build.SourcesDirectory)/ARIA_DABs
+
+                echo "Listing dist contents after building the wheel"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                databricks fs cp ./dist/shared_functions-0.5.2-py3-none-any.whl dbfs:/FileStore/packages/shared_functions-0.5.2-py3-none-any.whl --overwrite --debug
+                databricks fs ls dbfs:/FileStore/packages
 
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug

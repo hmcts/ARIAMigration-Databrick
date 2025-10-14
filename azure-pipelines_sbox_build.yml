@@ -117,29 +117,6 @@ stages:
               inputs:
                 versionSpec: '3.x'
 
-            # - script: |
-            #     python --version
-            #     pip install --upgrade pip
-            #     pip install uv
-            #     pip install databricks-cli
-
-            #     echo "Listing dist contents:"
-            #     ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-
-            #     echo "removing files in dist/"
-            #     rm -rf $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-
-            #     echo "Listing dist contents after deletion:"
-            #     ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-
-            #     echo "Building wheel"
-            #     uv build --wheel --out-dir $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist \
-            #       $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib
-
-            #     echo "Listing dist contents after building the wheel"
-            #     ls -al $(Build.SourcesDirectory)/Databricks/SharedFunctionsLib/dist
-            #   displayName: 'Build Shared Python Wheel'
-
             - script: |
                 python --version
                 pip install --upgrade pip
@@ -170,8 +147,7 @@ stages:
                 publishLocation: 'Container'
               displayName: 'Publish Shared Wheel Artifact'   
 
-  #af-active-ccd-sbox00-uks-dlrm-01 & af-td-sbox00-uks-dlrm-01  
-  # Build Active function app package
+  # Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each state in deployment.states }}:
       - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
@@ -315,106 +291,106 @@ stages:
                   databricks workspace import_dir Databricks /live --overwrite
                 displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
           
-          - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
-            displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
-            pool: 
-              name: ${{ deployment.pool_name }}
-            steps:
-              - task: AzureCLI@2
-                displayName: Configure RefData Storage
-                inputs:
-                  azureSubscription: ${{ deployment.service_connection }}
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    echo "Assigning SP Blob Contributor Access"
-                    az role assignment create \
-                      --assignee "${{ lz.Client_ID }}" \
-                      --role "Storage Blob Data Contributor" \
-                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
+          # - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+          #   displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
+          #   pool: 
+          #     name: ${{ deployment.pool_name }}
+          #   steps:
+          #     - task: AzureCLI@2
+          #       displayName: Configure RefData Storage
+          #       inputs:
+          #         azureSubscription: ${{ deployment.service_connection }}
+          #         scriptType: 'bash'
+          #         scriptLocation: 'inlineScript'
+          #         inlineScript: |
+          #           echo "Assigning SP Blob Contributor Access"
+          #           az role assignment create \
+          #             --assignee "${{ lz.Client_ID }}" \
+          #             --role "Storage Blob Data Contributor" \
+          #             --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
 
-                    echo "Retrieving Storage Account Key"
-                    storage_account_key=$(az storage account keys list \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --query '[0].value' -o tsv)
-                    echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+          #           echo "Retrieving Storage Account Key"
+          #           storage_account_key=$(az storage account keys list \
+          #             --resource-group ${{ lz.Resource_Group }} \
+          #             --account-name ${{ lz.RefData_StorageAccount }} \
+          #             --query '[0].value' -o tsv)
+          #           echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
 
-                    echo "Retrieving Blob Endpoint"
-                    blob_endpoint=$(az storage account show \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --name ${{ lz.RefData_StorageAccount }} \
-                      --query "primaryEndpoints.blob" -o tsv)
-                    echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
+          #           echo "Retrieving Blob Endpoint"
+          #           blob_endpoint=$(az storage account show \
+          #             --resource-group ${{ lz.Resource_Group }} \
+          #             --name ${{ lz.RefData_StorageAccount }} \
+          #             --query "primaryEndpoints.blob" -o tsv)
+          #           echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
 
-                    echo "Creating external-csv container if not exists"
-                    az storage container create \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --name external-csv \
-                      --account-key $storage_account_key \
-                      --blob-endpoint $blob_endpoint
-                    echo "Success! external-csv container created!"
+          #           echo "Creating external-csv container if not exists"
+          #           az storage container create \
+          #             --account-name ${{ lz.RefData_StorageAccount }} \
+          #             --name external-csv \
+          #             --account-key $storage_account_key \
+          #             --blob-endpoint $blob_endpoint
+          #           echo "Success! external-csv container created!"
 
-                    echo "Uploading CSVs"
-                    az storage blob upload-batch \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --account-key $storage_account_key \
-                      --destination external-csv \
-                      --destination-path ReferenceData \
-                      --source '$(Build.SourcesDirectory)/ReferenceData/' \
-                      --pattern '*.csv' \
-                      --overwrite true
-                    echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
+          #           echo "Uploading CSVs"
+          #           az storage blob upload-batch \
+          #             --account-name ${{ lz.RefData_StorageAccount }} \
+          #             --account-key $storage_account_key \
+          #             --destination external-csv \
+          #             --destination-path ReferenceData \
+          #             --source '$(Build.SourcesDirectory)/ReferenceData/' \
+          #             --pattern '*.csv' \
+          #             --overwrite true
+          #           echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
 
-          - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
-            displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
-            pool: 
-              name: ${{ deployment.pool_name }}
-            steps:
-              - task: AzureCLI@2
-                displayName: Configure Storage and Upload HTML Templates
-                inputs:
-                  azureSubscription: ${{ deployment.service_connection }}
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    echo "Assigning SP Blob Contributor Access"
-                    az role assignment create \
-                      --assignee "${{ lz.Client_ID }}" \
-                      --role "Storage Blob Data Contributor" \
-                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
+          # - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+          #   displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
+          #   pool: 
+          #     name: ${{ deployment.pool_name }}
+          #   steps:
+          #     - task: AzureCLI@2
+          #       displayName: Configure Storage and Upload HTML Templates
+          #       inputs:
+          #         azureSubscription: ${{ deployment.service_connection }}
+          #         scriptType: 'bash'
+          #         scriptLocation: 'inlineScript'
+          #         inlineScript: |
+          #           echo "Assigning SP Blob Contributor Access"
+          #           az role assignment create \
+          #             --assignee "${{ lz.Client_ID }}" \
+          #             --role "Storage Blob Data Contributor" \
+          #             --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
 
-                    echo "Retrieving Storage Account Key"
-                    storage_account_key=$(az storage account keys list \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --account-name ${{ lz.HTML_StorageAccount }} \
-                      --query '[0].value' -o tsv)
-                    echo "Success! ${{ lz.HTML_StorageAccount }} is $storage_account_key"
+          #           echo "Retrieving Storage Account Key"
+          #           storage_account_key=$(az storage account keys list \
+          #             --resource-group ${{ lz.Resource_Group }} \
+          #             --account-name ${{ lz.HTML_StorageAccount }} \
+          #             --query '[0].value' -o tsv)
+          #           echo "Success! ${{ lz.HTML_StorageAccount }} is $storage_account_key"
 
-                    echo "Retrieving Blob Endpoint"
-                    blob_endpoint=$(az storage account show \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --name ${{ lz.HTML_StorageAccount }} \
-                      --query "primaryEndpoints.blob" -o tsv)
-                    echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
+          #           echo "Retrieving Blob Endpoint"
+          #           blob_endpoint=$(az storage account show \
+          #             --resource-group ${{ lz.Resource_Group }} \
+          #             --name ${{ lz.HTML_StorageAccount }} \
+          #             --query "primaryEndpoints.blob" -o tsv)
+          #           echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
 
-                    echo "Creating html-template container if not exists"
-                    az storage container create \
-                      --account-name ${{ lz.HTML_StorageAccount }} \
-                      --name html-template \
-                      --account-key $storage_account_key \
-                      --blob-endpoint $blob_endpoint
-                    echo "Success! html-template container created!"
+          #           echo "Creating html-template container if not exists"
+          #           az storage container create \
+          #             --account-name ${{ lz.HTML_StorageAccount }} \
+          #             --name html-template \
+          #             --account-key $storage_account_key \
+          #             --blob-endpoint $blob_endpoint
+          #           echo "Success! html-template container created!"
 
-                    echo "Uploading HTML Templates"
-                    az storage blob upload-batch \
-                      --account-name ${{ lz.HTML_StorageAccount }} \
-                      --account-key $storage_account_key \
-                      --destination html-template \
-                      --source '$(Build.SourcesDirectory)/HTML_Templates/' \
-                      --pattern '*.html' \
-                      --overwrite true
-                    echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
+          #           echo "Uploading HTML Templates"
+          #           az storage blob upload-batch \
+          #             --account-name ${{ lz.HTML_StorageAccount }} \
+          #             --account-key $storage_account_key \
+          #             --destination html-template \
+          #             --source '$(Build.SourcesDirectory)/HTML_Templates/' \
+          #             --pattern '*.html' \
+          #             --overwrite true
+          #           echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
 
   # Deploy Python wheel to Databricks as final stage
   - ${{ each deployment in parameters.environment_components }}:

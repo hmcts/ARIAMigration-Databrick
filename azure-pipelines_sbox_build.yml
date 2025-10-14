@@ -323,6 +323,10 @@ stages:
                       --query "primaryEndpoints.blob" -o tsv)
                     echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
 
+                    echo "Testing connectivity to Blob endpoint..."
+                    nslookup https://${{ lz.RefData_StorageAccount }}.blob.core.windows.net || true
+                    curl -I https://${{ lz.RefData_StorageAccount }}.blob.core.windows.net || true
+
                     echo "Creating external-csv container if not exists"
                     az storage container create \
                       --account-name ${{ lz.RefData_StorageAccount }} \
@@ -373,6 +377,10 @@ stages:
                       --name ${{ lz.HTML_StorageAccount }} \
                       --query "primaryEndpoints.blob" -o tsv)
                     echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
+
+                    echo "Testing connectivity to Blob endpoint..."
+                    nslookup https://${{ lz.RefData_StorageAccount }}.blob.core.windows.net || true
+                    curl -I https://${{ lz.RefData_StorageAccount }}.blob.core.windows.net || true
 
                     echo "Creating html-template container if not exists"
                     az storage container create \

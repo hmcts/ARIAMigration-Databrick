@@ -12,8 +12,6 @@ resources:
             max_workers: 5
             mode: ENHANCED
       libraries:
-        - pypi: 
-          package: shared-functions==0.5.2
         - notebook:
             path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ARIADM_ARM_APPEALS_FPA"
       schema: ariadm_arm_fpa

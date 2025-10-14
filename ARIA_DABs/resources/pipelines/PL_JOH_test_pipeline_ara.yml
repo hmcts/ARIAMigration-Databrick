@@ -10,8 +10,6 @@ resources:
             max_workers: 5
             mode: ENHANCED
       libraries:
-        - pypi: 
-          package: shared-functions==0.5.2
         - notebook:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       schema: ariadm_arm_joh

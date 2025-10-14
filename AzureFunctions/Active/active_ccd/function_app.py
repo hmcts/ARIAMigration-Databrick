@@ -59,7 +59,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
         # optional: raise here if you want to stop execution
     # --- END TEST ---
 
-    kv_url_CCD = f"ia-aat" if env == "sbox" else "ia-perftest"
+    kv_url_CCD = f"https://ia-aat.vault.azure.net" if env == "sbox" else "https://ia-perftest.vault.azure.net"
     kv_client_CCD = SecretClient(vault_url=kv_url_CCD, credential=credential)
     logging.info(f'Connected to KeyVault: {kv_url_CCD}')
 

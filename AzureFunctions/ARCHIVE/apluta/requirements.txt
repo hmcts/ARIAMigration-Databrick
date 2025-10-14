@@ -13,7 +13,7 @@ azure-functions==1.23.0
 azure-identity==1.16.0
 azure-keyvault-secrets==4.8.0
 azure-storage-blob==12.20.0
-certifi==2025.4.26
+certifi==2025.10.5
 cffi==1.17.1
 charset-normalizer==3.4.2
 cryptography==44.0.3

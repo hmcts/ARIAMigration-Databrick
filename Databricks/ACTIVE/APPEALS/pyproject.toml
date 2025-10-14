@@ -1,6 +1,6 @@
 [project]
 name = "shared-functions"
-version = "0.5.2"
+version = "0.6.3"
 description = "Shared functions for ARIA ACTIVE cases"
 authors = [
     {name = "Andrew McDevitt"},

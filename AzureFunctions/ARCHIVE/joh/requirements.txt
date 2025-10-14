@@ -27,7 +27,7 @@ multidict==6.4.4
 propcache==0.3.1
 pycparser==2.22
 PyJWT==2.10.1
-requests==2.32.3
+requests==2.32.4
 six==1.17.0
 tenacity==9.1.2
 typing_extensions==4.13.2

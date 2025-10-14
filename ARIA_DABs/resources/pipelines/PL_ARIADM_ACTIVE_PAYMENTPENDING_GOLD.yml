@@ -4,7 +4,6 @@ resources:
       name: PL_paymentPending_gold
       configuration:
         pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
-      channel: "15.4"
       clusters:
         - label: default
           node_type_id: Standard_D4ads_v5

@@ -2,6 +2,7 @@ resources:
   pipelines:
     pipeline_pl_ariadm_active_appeals:
       name: PL_ARIADM_ACTIVE_APPEALS
+      channel: "15.4"      
       clusters:
         - label: default
           node_type_id: Standard_D4ads_v5

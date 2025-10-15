@@ -1,7 +1,7 @@
 [project]
 name = "shared-functions"
 version = "0.6.4"
-description = "Shared functions for ARIA ACTIVE cases"
+description = "Shared functions for ARIA ARCHIVE + ACTIVE cases"
 authors = [
     {name = "Andrew McDevitt"},
     {name = "Ara Islam"},
@@ -13,11 +13,9 @@ dependencies = [
     "uk-postcodes-parsing",
     "confluent-kafka",
     "azure-eventhub",
-    "setuptools",
     "azure-storage-blob",
     "aiohttp",
-    "pyspark",
-    "logging"
+    "pyspark"
 ]
 
 [project.scripts]

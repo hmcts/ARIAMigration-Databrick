@@ -2430,7 +2430,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                                 .withColumn("map_postcode_to_hearing_centre", 
                                            when((col("h.der_prevFileLocation").isin("Arnhem House","Arnhem House (Exceptions)","Loughborough","North Shields (Kings Court)","Not known at this time") | col("h.der_prevFileLocation").isNull()),
                                            coalesce(map_postcode_to_hearing_centre_udf(coalesce(col('m1.Rep_Postcode'),col('m1.CaseRep_Postcode'),('m2.Appellant_Postcode')))
-                                           ,lit("taylorHouse"))).otherwise(lit("taylorHouse")) \
+                                           ,lit("taylorHouse"))).otherwise(lit("taylorHouse"))) \
                                 .join(bronze_derive_hearing_centres.alias("bhc3"), col("map_postcode_to_hearing_centre") == col("bhc3.hearingCentre"), how="left") \
                                 .withColumn("isServiceRequestTabVisibleConsideringRemissions",
         when(

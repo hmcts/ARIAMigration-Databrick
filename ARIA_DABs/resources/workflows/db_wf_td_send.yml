@@ -15,11 +15,11 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.3-py3-none-any.whl"
+            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.3-py3-none-any.whl" 
 
-        - task_key: run-my-wheel
+        - task_key: create_td_content
           depends_on:
-            - task_key: validate_packages
+            - task_key: run-my-wheel
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_td.id}
             full_refresh: false

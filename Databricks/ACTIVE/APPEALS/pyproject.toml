@@ -1,6 +1,6 @@
 [project]
 name = "shared-functions"
-version = "0.6.3"
+version = "0.6.4"
 description = "Shared functions for ARIA ACTIVE cases"
 authors = [
     {name = "Andrew McDevitt"},
@@ -12,6 +12,12 @@ dependencies = [
     "pycountry",
     "uk-postcodes-parsing",
     "confluent-kafka",
+    "azure-eventhub",
+    "setuptools",
+    "azure-storage-blob",
+    "aiohttp",
+    "pyspark",
+    "logging"
 ]
 
 [project.scripts]

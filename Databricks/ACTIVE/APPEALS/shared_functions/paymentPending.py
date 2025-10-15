@@ -2198,7 +2198,7 @@ def sponsorDetails(silver_m1, silver_c):
             (col("hasSponsor") == "Yes"),
             trim(
                 concat_ws(
-                    " ",
+                    ", ",
                     col("Sponsor_Address1"),
                     col("Sponsor_Address2"),
                     col("Sponsor_Address3"),

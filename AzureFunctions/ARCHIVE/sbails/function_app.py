@@ -17,8 +17,6 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
-logging.info(f"environments = " {env})
-logging.info(f"landing zone = " {lz_key})
 
 ARM_SEGMENT = "SBDEV" if env == "sbox" else "SB"
 ARIA_SEGMENT = "sbl"

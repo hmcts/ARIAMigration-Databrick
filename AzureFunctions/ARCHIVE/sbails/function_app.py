@@ -17,10 +17,13 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
+logging.info(f"environments = " {env})
+logging.info(f"landing zone = " {lz_key})
 
-segment = "sbl"
-ARIA_SEGMENT = "SB"
-eventhub_name = f"evh-{segment}-pub-{lz_key}-uks-dlrm-01"
+ARM_SEGMENT = "SBDEV" if env == "sbox" else "SB"
+ARIA_SEGMENT = "sbl"
+
+eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
@@ -46,8 +49,9 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     try:
         # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{segment}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{segment}-ack-{lz_key}-uks-dlrm-01-key")).value
+        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
+        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
+        logging.info('Acquired KV secrets for Dl and ACK')
 
 
         # Blob Storage credentials
@@ -56,8 +60,9 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        container_secret = (await kv_client.get_secret("ARIAB-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
         # container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        logging.info('Assigned container secret value')
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
@@ -66,10 +71,19 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         # else:
         #     container_secret = full_secret.lstrip('?')  # fallback
         container_url = f"{account_url}/{container_name}?{container_secret}"
+        logging.info(f'Created container URL: {container_url}')
 
-        sub_dir = "ARIA{ARIA_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARIA_SEGMENT}/submission"
+        sub_dir = f"ARIA{ARM_SEGMENT}/submission"
+        logging.info(f'Creaed sub_dir: {sub_dir}')
+        # sub_dir = "ARIA{ARM_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARM_SEGMENT}/submission"
 
-        container_service_client = ContainerClient.from_container_url(container_url)
+        try: 
+            container_service_client = ContainerClient.from_container_url(container_url)
+            logging.info('Created container service client')
+        
+        except Exception as e:
+            logging.error(f"Failed to connect to ARM Container Client {e}")
+
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:

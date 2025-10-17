@@ -17,7 +17,7 @@ env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
 ARM_SEGMENT = "SBDEV" if env == "sbox" else "SB"
-ARIA_SEGMENT = "sbails"
+ARIA_SEGMENT = "sbl"
 
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
@@ -44,13 +44,11 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
     logging.info('Connected to KeyVault')
 
-
     try:
         # Retrieve Event Hub secrets
         ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
         logging.info('Acquired KV secrets for Dl and ACK')
-
 
         # Blob Storage credentials
         # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"

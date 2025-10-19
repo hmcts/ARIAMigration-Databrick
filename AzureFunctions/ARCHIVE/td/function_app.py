@@ -147,10 +147,22 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             # If this is the last chunk, check for all chunks and reassemble
             if chunk_idx == total_chunks:
                 # List all chunk blobs for this file
-                prefix = f"{subdirectory}/{base_name}__chunk"
-                chunk_blobs = []
-                async for blob in container_service_client.list_blobs(name_starts_with=prefix):
-                    chunk_blobs.append(blob.name)
+                prefix = f"{subdirectory}/{base_name}"
+                logging.info(f"Checking for all chunks for {base_name}")
+                
+                # 🔁 NEW LOGIC: retry waiting for all chunks to arrive
+                for attempt in range(5):
+                    chunk_blobs = []
+                    async for blob in container_service_client.list_blobs(name_starts_with=f"{prefix}__chunk"):
+                        chunk_blobs.append(blob.name)
+                    if len(chunk_blobs) == total_chunks:
+                        logging.info(f"All {total_chunks} chunks found for {base_name}")
+                        break
+                    else:
+                        missing = total_chunks - len(chunk_blobs)
+                        logging.info(f"Attempt {attempt+1}: Found {len(chunk_blobs)}/{total_chunks} chunks for {base_name}, waiting for {missing} more...")
+                        await asyncio.sleep(5)  # wait 5 seconds before retry
+
                 if len(chunk_blobs) == total_chunks:
                     # All chunks present, reassemble
                     chunk_blobs.sort(key=lambda x: int(re.search(r'__chunk(\d+)_of_', x).group(1)))
@@ -166,6 +178,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                     for blob_name in chunk_blobs:
                         await container_service_client.delete_blob(blob=blob_name)
                     results["filename"] = final_blob_name
+                    logging.info(f"Successfully reassembled file {final_blob_name}")
+                else:
+                    logging.warning(f"Still missing chunks for {base_name}, skipping reassembly for now")
+
         else:
             # Not chunked, upload directly
             full_blob_name = f"{subdirectory}/{key}"

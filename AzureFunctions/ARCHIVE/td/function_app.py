@@ -122,6 +122,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         "http_message": None
     }
 
+    ## call back function to capture responses
     def capture_response(response):
         http_response = response.http_response
         results["http_response"] = http_response.status_code
@@ -144,48 +145,49 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             await upload_blob_with_retry(blob_client, message, capture_response)
             results["filename"] = chunk_blob_name
 
-            # If this is the last chunk, check for all chunks and reassemble
-            if chunk_idx == total_chunks:
-                # List all chunk blobs for this file
-                prefix = f"{subdirectory}/{base_name}"
-                logging.info(f"Checking for all chunks for {base_name}")
-                
-                # 🔁 NEW LOGIC: retry waiting for all chunks to arrive
-                for attempt in range(5):
-                    chunk_blobs = []
-                    async for blob in container_service_client.list_blobs(name_starts_with=f"{prefix}__chunk"):
-                        chunk_blobs.append(blob.name)
-                    if len(chunk_blobs) == total_chunks:
-                        logging.info(f"All {total_chunks} chunks found for {base_name}")
-                        break
-                    else:
-                        missing = total_chunks - len(chunk_blobs)
-                        logging.info(f"Attempt {attempt+1}: Found {len(chunk_blobs)}/{total_chunks} chunks for {base_name}, waiting for {missing} more...")
-                        await asyncio.sleep(5)  # wait 5 seconds before retry
+            #  NEW LOGIC: check for reassembly after every chunk upload
+            prefix = f"{subdirectory}/{base_name}"
+            logging.info(f"Checking available chunks for {base_name} (uploaded chunk {chunk_idx}/{total_chunks})")
+
+            for attempt in range(5):
+                chunk_blobs = []
+                async for blob in container_service_client.list_blobs(name_starts_with=f"{prefix}__chunk"):
+                    chunk_blobs.append(blob.name)
 
                 if len(chunk_blobs) == total_chunks:
-                    # All chunks present, reassemble
+                    logging.info(f"All {total_chunks} chunks present for {base_name}, starting reassembly")
+                    # sort chunks by index and reassemble
                     chunk_blobs.sort(key=lambda x: int(re.search(r'__chunk(\d+)_of_', x).group(1)))
                     full_content = b''
                     for blob_name in chunk_blobs:
                         chunk_data = await container_service_client.get_blob_client(blob=blob_name).download_blob()
                         full_content += await chunk_data.readall()
+
                     # Upload the reassembled file
                     final_blob_name = f"{subdirectory}/{base_name}"
                     final_blob_client = container_service_client.get_blob_client(blob=final_blob_name)
                     await upload_blob_with_retry(final_blob_client, full_content, capture_response)
+
                     # Optionally, delete chunk blobs
                     for blob_name in chunk_blobs:
                         await container_service_client.delete_blob(blob=blob_name)
+
                     results["filename"] = final_blob_name
-                    logging.info(f"Successfully reassembled file {final_blob_name}")
+                    logging.info(f"Successfully reassembled {final_blob_name}")
+                    break
                 else:
-                    logging.warning(f"Still missing chunks for {base_name}, skipping reassembly for now")
+                    missing = total_chunks - len(chunk_blobs)
+                    logging.info(f"Attempt {attempt+1}: Found {len(chunk_blobs)}/{total_chunks} chunks for {base_name}, waiting for {missing} more...")
+                    await asyncio.sleep(5)  # wait before re-check
+            else:
+                logging.warning(f"Reassembly skipped for {base_name}: not all chunks found after retries")
 
         else:
             # Not chunked, upload directly
             full_blob_name = f"{subdirectory}/{key}"
+            #upload message to blob with partition key as file name
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
+            logging.info(f'Acquired Blob Client: {full_blob_name}')
             await upload_blob_with_retry(blob_client, message, capture_response)
             results["filename"] = full_blob_name
 

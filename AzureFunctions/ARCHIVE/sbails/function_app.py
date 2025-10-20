@@ -13,14 +13,13 @@ import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
-
-
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-segment = "sbl"
-ARIA_SEGMENT = "SB"
-eventhub_name = f"evh-{segment}-pub-{lz_key}-uks-dlrm-01"
+ARM_SEGMENT = "SBDEV" if env == "sbox" else "SB"
+ARIA_SEGMENT = "sbl"
+
+eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
@@ -41,46 +40,57 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     # Retrieve credentials
     credential = DefaultAzureCredential()
+    logging.info('Connected to Azure Credentials')
     kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
-
+    logging.info('Connected to KeyVault')
 
     try:
         # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{segment}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{segment}-ack-{lz_key}-uks-dlrm-01-key")).value
-
+        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
+        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
+        logging.info('Acquired KV secrets for Dl and ACK')
 
         # Blob Storage credentials
-
         # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        container_secret = (await kv_client.get_secret("ARIAB-SAS-TOKEN")).value
-        # container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
+        logging.info('Assigned container secret value')
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
         #     # Remove the prefix if it's a connection string
         #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
         # else:
-        #     container_secret = full_secret.lstrip('?')  # fallback
+        #     container_secret = full_secret.lstrip('?')  # fallbak
         container_url = f"{account_url}/{container_name}?{container_secret}"
+        logging.info(f'Created container URL: {container_url}')
 
-        sub_dir = "ARIA{ARIA_SEGMENT}DEV/submission" if env == "sbox" else "ARIA{ARIA_SEGMENT}/submission"
+        sub_dir = f"ARIA{ARM_SEGMENT}/submission"
+        logging.info(f'Creaed sub_dir: {sub_dir}')
 
-        container_service_client = ContainerClient.from_container_url(container_url)
+        try:
+            container_service_client = ContainerClient.from_container_url(container_url)
+            logging.info('Created container service client')
+        
+        except Exception as e:
+            logging.error(f"Failed to connect to ARM Container Client {e}")
+            
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                     EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
-
+                    
+                logging.info('Processing messages')
                 tasks = [
                     process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
                     for event in azeventhub
                 ]
                 await asyncio.gather(*tasks)
+                logging.info('Finished processing messages')
         finally:
-             await container_service_client.close() 
+            container_service_client.close() 
     finally:
         # Explicitly close SecretClient to avoid session leaks
         await kv_client.close()
@@ -95,6 +105,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             )
           )
 async def upload_blob_with_retry(blob_client,message,capture_response):
+    logging.info(f'Uploading blob')
     await blob_client.upload_blob(message,overwrite=True,raw_response_hook=capture_response)
 
 
@@ -113,14 +124,9 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             results["http_response"] = http_response.status_code
             results["http_message"] = getattr(http_response,"reason", "No reason provided")
  
- 
- 
- 
         # set the key and message to none at the start of each event
         key = None
         message = None
-
- 
 
         try:
             message = event.get_body().decode('utf-8')
@@ -128,15 +134,16 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             
             logging.info(f"Processing message for {key} file")
             if not key:
+                logging.error('Key Was Empty')
                 raise ValueError("Key not found in the message")
             
             full_blob_name = f"{subdirectory}/{key}"
             results["filename"] = key
 
-            
             #upload message to blob with partition key as file name
 
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
+            logging.info(f'Acquired Blob Client: {full_blob_name}')
 
 
             await upload_blob_with_retry(blob_client, message, capture_response)
@@ -157,7 +164,6 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
         await send_to_eventhub(ack_producer_client,json.dumps(results),key)
         logging.info(f"{key}: Ack stored succesfully")
         return results
-
 
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
     """Sends messages to an Event Hub."""

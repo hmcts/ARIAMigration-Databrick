@@ -274,16 +274,23 @@ def base_DQRules():
 
     # ##############################
     # # ARIADM-712 (flagsLabel)- caseFlags
-    # ##############################
-    checks["valid_caseFlags_name_in_list"] = """
-    (
-      caseFlags.details IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseFlags.details, x -> x.value.name),
-        caseFlags.details[0].value.name
-      )
-    )
-    """
+    # ############################## #if (catId = 7,25 and flagcomment IS NULL) or (details IS NULL) or (catID != 7,25 and value provided for name)
+    checks["valid_caseFlags_name_in_list"] = """((
+      EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)) 
+      OR (caseFlags.details IS NULL)
+      OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
+      (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
+        caseFlags.details[0].value.name))))"""
+
+    # checks["valid_caseFlags_name_in_list"] = """
+    # (
+    #   (array_contains(valid_categoryIdList, (7, 25)) OR caseFlags.details IS NULL OR
+    #   ARRAY_CONTAINS(
+    #     TRANSFORM(caseFlags.details, x -> x.value.name),
+    #     caseFlags.details[0].value.name
+    #   )
+    # )
+    # """
     checks["valid_caseFlags_pathId_in_list"] = """
     (
       caseFlags.details IS NULL OR

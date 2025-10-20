@@ -553,7 +553,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
     ## Building caseFlags struct based off format shown in the mapping document in APPENDIX-Categories sheet
     def make_flag_struct(name, code, comment, hearing):
         return struct(
-            lit("").alias("id"),
+            lit(expr("uuid()")).alias("id"),
             struct(
                 lit(name).alias("name"),
                 array(struct(expr("uuid()").alias("id"), lit("Case").alias("value"))).alias("path"),
@@ -562,13 +562,13 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                 lit(comment).cast("string").alias("flagComment"),
                 date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("dateTimeCreated"),
                 lit(hearing).alias("hearingRelevant")
-            ).alias("value")
+                ).alias("value")
         )
     
     ## Building appellantLevelFlags struct based off format shown in the mapping document in APPENDIX-Categories sheet
     def make_appellant_flag_struct(name, code, comment, hearing):
         return struct(
-            lit("").alias("id"),
+            lit(expr("uuid()")).alias("id"),
             struct(
                 lit(name).alias("name"),
                 array(struct(expr("uuid()").alias("id"), lit("Party").alias("value"))).alias("path"),
@@ -577,7 +577,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                 lit(comment).cast("string").alias("flagComment"),
                 date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("dateTimeCreated"),
                 lit(hearing).alias("hearingRelevant")
-            ).alias("value")
+                ).alias("value")
         )
 
     ## Creating list of caseFlags for each row based on the conditions in the caseFlags lookup and the extra condition where the field 'HORef' (from silver_m1) is used

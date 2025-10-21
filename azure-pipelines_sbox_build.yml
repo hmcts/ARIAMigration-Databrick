@@ -294,7 +294,8 @@ stages:
           - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool: 
-              name: ${{ deployment.pool_name }}
+              vmImage: 'ubuntu-latest'
+              # name: ${{ deployment.pool_name }}
             steps:
               - task: AzureCLI@2
                 displayName: Configure RefData Storage
@@ -345,7 +346,7 @@ stages:
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool: 
-              name: ${{ deployment.pool_name }}
+              vmImage: 'ubuntu-latest'
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

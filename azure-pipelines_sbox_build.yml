@@ -310,10 +310,17 @@ stages:
                       -u $AZURE_CLIENT_ID \
                       -p $AZURE_CLIENT_SECRET \
                       --tenant $AZURE_TENANT_ID
-                    
+                    az account set --subscription $SUB_DTS_DATAINGEST_SBOX
                     echo "✅ Login successful!"
                     az account show
-
+                    echo "Creating a container"
+                    echo "Step 4"
+                    az storage container create \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --name external-csvxx \
+                      --auth-mode login \
+                      --public-access off
+                    echo "Success! container created !"
 
 
 

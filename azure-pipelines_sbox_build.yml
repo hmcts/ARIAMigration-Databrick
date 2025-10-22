@@ -315,12 +315,17 @@ stages:
                     az account show
                     echo "Creating a container"
                     echo "Step 4"
-                    az storage container create \
+                    storage_account_key=$(az storage account keys list \
+                      --resource-group ${{ lz.Resource_Group }} \
                       --account-name ${{ lz.RefData_StorageAccount }} \
-                      --name external-csvxx \
-                      --auth-mode login \
-                      --public-access off
-                    echo "Success! container created !"
+                      --query '[0].value' -o tsv)
+                    echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+                    # az storage container create \
+                    #   --account-name ${{ lz.RefData_StorageAccount }} \
+                    #   --name external-csvxx \
+                    #   --auth-mode login \
+                    #   --public-access off
+                    # echo "Success! container created !"
 
 
 

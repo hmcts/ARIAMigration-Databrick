@@ -5,10 +5,8 @@ trigger:
 
 pr: none
 
-
-
 pool:
-  vmImage: 'ubuntu-latest'
+  name: 'Azure Pipelines'
 
 parameters:
   - name: environment_components
@@ -94,7 +92,8 @@ stages:
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation
-            pool: server
+            pool:
+              name: 'Azure Pipelines'
             steps:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160
@@ -269,7 +268,7 @@ stages:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
             pool:
-              vmImage: 'ubuntu-latest'
+              name: 'Azure Pipelines'
             steps:
               - task: UsePythonVersion@0
                 displayName: 'Use Python 3.x'
@@ -295,9 +294,8 @@ stages:
           
           - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
-            pool: 
-              vmImage: 'ubuntu-latest'
-              # name: ${{ deployment.pool_name }}
+            pool:
+              name: 'hmcts-sds-ptlsbox'
             steps:
               - task: AzureCLI@2
                 displayName: Configure RefData Storage
@@ -307,12 +305,14 @@ stages:
                   scriptLocation: 'inlineScript'
                   inlineScript: |
                     echo "Assigning SP Blob Contributor Access"
+                    echo "Step 1"
                     az role assignment create \
                       --assignee "${{ lz.Client_ID }}" \
                       --role "Storage Blob Data Contributor" \
                       --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
 
                     echo "Retrieving Storage Account Key"
+                    echo "Step 2"
                     storage_account_key=$(az storage account keys list \
                       --resource-group ${{ lz.Resource_Group }} \
                       --account-name ${{ lz.RefData_StorageAccount }} \
@@ -320,6 +320,7 @@ stages:
                     echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
 
                     echo "Retrieving Blob Endpoint"
+                    echo "Step 3"
                     blob_endpoint=$(az storage account show \
                       --resource-group ${{ lz.Resource_Group }} \
                       --name ${{ lz.RefData_StorageAccount }} \
@@ -327,6 +328,7 @@ stages:
                     echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
 
                     echo "Creating external-csv container if not exists"
+                    echo "Step 4"
                     az storage container create \
                       --account-name ${{ lz.RefData_StorageAccount }} \
                       --name external-csv \
@@ -335,6 +337,7 @@ stages:
                     echo "Success! external-csv container created!"
 
                     echo "Uploading CSVs"
+                    echo "Step 5"
                     az storage blob upload-batch \
                       --account-name ${{ lz.RefData_StorageAccount }} \
                       --account-key $storage_account_key \
@@ -347,8 +350,8 @@ stages:
 
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
-            pool: 
-              vmImage: 'ubuntu-latest'
+            pool:
+              name: 'hmcts-sds-ptlsbox'
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates
@@ -404,8 +407,8 @@ stages:
         jobs:
           - job:
             displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
-            pool: 
-              vmImage: 'ubuntu-latest'
+            pool:
+              name: 'Azure Pipelines'
                 
             steps:
             - task: DownloadBuildArtifacts@1

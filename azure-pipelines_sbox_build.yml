@@ -85,7 +85,7 @@ stages:
             displayName: 'Initial stage set-up'
 
   - ${{ each deployment in parameters.environment_components }}:
-    - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+    #- ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
       - stage: Manual_Approval_${{ deployment.environment }}
         displayName: 'Manual Approval for ${{ deployment.environment }}'
         dependsOn: Init

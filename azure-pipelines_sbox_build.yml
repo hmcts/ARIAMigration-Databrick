@@ -92,8 +92,7 @@ stages:
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation
-            pool:
-              name: 'Azure Pipelines'
+            pool: server
             steps:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160

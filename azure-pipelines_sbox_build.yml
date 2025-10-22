@@ -314,6 +314,10 @@ stages:
                     echo "✅ Login successful!"
                     az account show
                     echo "Creating a container"
+                    echo "##### HOSTNAME #####"
+                    hostname
+                    echo "##### HOSTNAME IP #####"
+                    hostname -i
                     echo "Step 4"
                     storage_account_key=$(az storage account keys list \
                       --resource-group ${{ lz.Resource_Group }} \

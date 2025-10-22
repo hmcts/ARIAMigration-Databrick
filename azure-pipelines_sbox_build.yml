@@ -332,7 +332,7 @@ stages:
                       --account-name ${{ lz.RefData_StorageAccount }} \
                       --name external-csvxx \
                       --account-key $STORAGE_KEY \
-                      --public-access off
+                      --blob-endpoint $blob_endpoint
                     echo "Success! container created !"
 
 

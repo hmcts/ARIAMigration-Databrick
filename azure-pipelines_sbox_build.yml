@@ -438,103 +438,103 @@ stages:
                       --overwrite true
                     echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
 
-  # Deploy Python wheel to Databricks as final stage
-  - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each lz in deployment.landing_zones }}:
-      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
-        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
-        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
-        jobs:
-          - job:
-            displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
-            pool:
-              name: 'Azure Pipelines'
+  # # Deploy Python wheel to Databricks as final stage
+  # - ${{ each deployment in parameters.environment_components }}:
+  #   - ${{ each lz in deployment.landing_zones }}:
+  #     - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
+  #       displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
+  #       dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+  #       jobs:
+  #         - job:
+  #           displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
+  #           pool:
+  #             name: 'Azure Pipelines'
                 
-            steps:
-            - task: DownloadBuildArtifacts@1
-              inputs:
-                buildType: 'current'
-                downloadType: 'single'
-                artifactName: 'ariafunctionv2'
-                downloadPath: '$(Pipeline.Workspace)'
-              displayName: 'Download Wheel Artifact'
+  #           steps:
+  #           - task: DownloadBuildArtifacts@1
+  #             inputs:
+  #               buildType: 'current'
+  #               downloadType: 'single'
+  #               artifactName: 'ariafunctionv2'
+  #               downloadPath: '$(Pipeline.Workspace)'
+  #             displayName: 'Download Wheel Artifact'
             
-            - script: |
-                echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
-                ls -al $(Pipeline.Workspace)
+  #           - script: |
+  #               echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+  #               ls -al $(Pipeline.Workspace)
 
-            - task: UsePythonVersion@0
-              displayName: 'Use Python 3.x'
-              inputs:
-                versionSpec: '3.x'
+  #           - task: UsePythonVersion@0
+  #             displayName: 'Use Python 3.x'
+  #             inputs:
+  #               versionSpec: '3.x'
 
-            - script: |
-                  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  #           - script: |
+  #                 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  #                 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   
-                  brew install databricks/tap/databricks
-                  databricks --version
-              displayName: 'Install Databricks CLI'
+  #                 brew install databricks/tap/databricks
+  #                 databricks --version
+  #             displayName: 'Install Databricks CLI'
 
-            - script: |
-                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                export DATABRICKS_HOST="${{ lz.databricks_host }}"
-                export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
+  #           - script: |
+  #               eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  #               export DATABRICKS_HOST="${{ lz.databricks_host }}"
+  #               export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
 
-                databricks --version  
-                echo "[DEFAULT]" > $(HOME)/.databrickscfg
-                echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
-                echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
-                cat ~/.databrickscfg  # Print the contents for debugging
-              displayName: 'Configure Databricks CLI'
+  #               databricks --version  
+  #               echo "[DEFAULT]" > $(HOME)/.databrickscfg
+  #               echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
+  #               echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+  #               cat ~/.databrickscfg  # Print the contents for debugging
+  #             displayName: 'Configure Databricks CLI'
 
-            - script: |
-                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  #           - script: |
+  #               eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
-                set -e 
+  #               set -e 
 
-                echo "Searching for wheel files in: $(Pipeline.Workspace)" 
-                find '$(Pipeline.Workspace)' -type f -name "*.whl"
+  #               echo "Searching for wheel files in: $(Pipeline.Workspace)" 
+  #               find '$(Pipeline.Workspace)' -type f -name "*.whl"
 
-                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
+  #               WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
 
-                if [ -n "$WHEEL_FILE" ]; then
-                  echo "Found wheel file: $WHEEL_FILE"
+  #               if [ -n "$WHEEL_FILE" ]; then
+  #                 echo "Found wheel file: $WHEEL_FILE"
 
-                  FILENAME=$(basename "$WHEEL_FILE")
-                  echo "Extracted filename: $FILENAME"
+  #                 FILENAME=$(basename "$WHEEL_FILE")
+  #                 echo "Extracted filename: $FILENAME"
 
-                  DEST_PATH="dbfs:/FileStore/packages/$FILENAME"
-                  echo "Destination path: $DEST_PATH"
+  #                 DEST_PATH="dbfs:/FileStore/packages/$FILENAME"
+  #                 echo "Destination path: $DEST_PATH"
 
-                  echo "creating directory dbfs:/FileStore/packages"
-                  databricks fs mkdirs dbfs:/FileStore/packages    
+  #                 echo "creating directory dbfs:/FileStore/packages"
+  #                 databricks fs mkdirs dbfs:/FileStore/packages    
 
-                  echo "copying wheel file to DBFS..."
-                  echo "copying $WHEEL_FILE to $DEST_PATH"
-                  databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+  #                 echo "copying wheel file to DBFS..."
+  #                 echo "copying $WHEEL_FILE to $DEST_PATH"
+  #                 databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
 
-                  echo "Displaying content of dbfs:/FileStore/packages"
-                  databricks fs ls dbfs:/FileStore/packages
+  #                 echo "Displaying content of dbfs:/FileStore/packages"
+  #                 databricks fs ls dbfs:/FileStore/packages
 
-                else
-                  echo "No wheel file found"
-                  exit 1
-                fi
-              displayName: 'Upload Wheel to Databricks DBFS'
+  #               else
+  #                 echo "No wheel file found"
+  #                 exit 1
+  #               fi
+  #             displayName: 'Upload Wheel to Databricks DBFS'
                 
-            - script: |
-                echo "Current dir: $(pwd)"
-                ls -al /home/vsts/work/1/s
-                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  #           - script: |
+  #               echo "Current dir: $(pwd)"
+  #               ls -al /home/vsts/work/1/s
+  #               eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
-                cd ARIA_DABs
+  #               cd ARIA_DABs
 
-                echo "Current dir: $(pwd)"
-                ls -al 
+  #               echo "Current dir: $(pwd)"
+  #               ls -al 
 
-                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
-                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-              displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
+  #               databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
+  #               databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+  #               databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+  #             displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
               

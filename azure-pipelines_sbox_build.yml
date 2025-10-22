@@ -297,55 +297,72 @@ stages:
               name: 'hmcts-sds-ptlsbox'
             steps:
               - task: AzureCLI@2
-                displayName: Configure RefData Storage
+                displayName: 'Create blob container (external-csv)'
                 inputs:
-                  azureSubscription: ${{ deployment.service_connection }}
+                  azureSubscription: 'DTS-DATAINGEST-SBOX'  # e.g. HMCTS-Prod-Connection
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
-                    echo "Assigning SP Blob Contributor Access"
-                    echo "Step 1"
-                    az role assignment create \
-                      --assignee "${{ lz.Client_ID }}" \
-                      --role "Storage Blob Data Contributor" \
-                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
-
-                    echo "Retrieving Storage Account Key"
-                    echo "Step 2"
-                    storage_account_key=$(az storage account keys list \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --query '[0].value' -o tsv)
-                    echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
-
-                    echo "Retrieving Blob Endpoint"
-                    echo "Step 3"
-                    blob_endpoint=$(az storage account show \
-                      --resource-group ${{ lz.Resource_Group }} \
-                      --name ${{ lz.RefData_StorageAccount }} \
-                      --query "primaryEndpoints.blob" -o tsv)
-                    echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
-
-                    echo "Creating external-csv container if not exists"
-                    echo "Step 4"
+                    echo "Creating external-csv container in ingest01externalsbox"
                     az storage container create \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --name external-csv \
-                      --account-key $storage_account_key \
-                      --blob-endpoint $blob_endpoint
-                    echo "Success! external-csv container created!"
+                      --account-name ingest01externalsbox \
+                      --name external-csvss \
+                      --auth-mode login
+                    echo "✅ Success! external-csv container created!"
 
-                    echo "Uploading CSVs"
-                    echo "Step 5"
-                    az storage blob upload-batch \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --account-key $storage_account_key \
-                      --destination external-csv \
-                      --destination-path ReferenceData \
-                      --source '$(Build.SourcesDirectory)/ReferenceData/' \
-                      --pattern '*.csv' \
-                      --overwrite true
-                    echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
+
+
+
+              # - task: AzureCLI@2
+              #   displayName: Configure RefData Storage
+              #   inputs:
+              #     azureSubscription: ${{ deployment.service_connection }}
+              #     scriptType: 'bash'
+              #     scriptLocation: 'inlineScript'
+              #     inlineScript: |
+              #       echo "Assigning SP Blob Contributor Access"
+              #       echo "Step 1"
+              #       az role assignment create \
+              #         --assignee "${{ lz.Client_ID }}" \
+              #         --role "Storage Blob Data Contributor" \
+              #         --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
+
+              #       echo "Retrieving Storage Account Key"
+              #       echo "Step 2"
+              #       storage_account_key=$(az storage account keys list \
+              #         --resource-group ${{ lz.Resource_Group }} \
+              #         --account-name ${{ lz.RefData_StorageAccount }} \
+              #         --query '[0].value' -o tsv)
+              #       echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+
+              #       echo "Retrieving Blob Endpoint"
+              #       echo "Step 3"
+              #       blob_endpoint=$(az storage account show \
+              #         --resource-group ${{ lz.Resource_Group }} \
+              #         --name ${{ lz.RefData_StorageAccount }} \
+              #         --query "primaryEndpoints.blob" -o tsv)
+              #       echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
+
+              #       echo "Creating external-csv container if not exists"
+              #       echo "Step 4"
+              #       az storage container create \
+              #         --account-name ${{ lz.RefData_StorageAccount }} \
+              #         --name external-csv \
+              #         --account-key $storage_account_key \
+              #         --blob-endpoint $blob_endpoint
+              #       echo "Success! external-csv container created!"
+
+              #       echo "Uploading CSVs"
+              #       echo "Step 5"
+              #       az storage blob upload-batch \
+              #         --account-name ${{ lz.RefData_StorageAccount }} \
+              #         --account-key $storage_account_key \
+              #         --destination external-csv \
+              #         --destination-path ReferenceData \
+              #         --source '$(Build.SourcesDirectory)/ReferenceData/' \
+              #         --pattern '*.csv' \
+              #         --overwrite true
+              #       echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
 
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'

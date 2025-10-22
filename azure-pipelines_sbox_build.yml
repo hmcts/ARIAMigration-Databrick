@@ -324,6 +324,10 @@ stages:
                     #   --account-name ${{ lz.RefData_StorageAccount }} \
                     #   --query '[0].value' -o tsv)
                     # echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+                    az storage account show \
+                    --name ${{ lz.RefData_StorageAccount }} \
+                    --query networkRuleSet
+
                     az storage container create \
                       --account-name ${{ lz.RefData_StorageAccount }} \
                       --name external-csvxx \

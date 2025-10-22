@@ -3,6 +3,10 @@ trigger:
     include:
       - master
 
+variables:
+  - group : var-testing
+
+
 pr: none
 
 pool:
@@ -296,19 +300,19 @@ stages:
             pool:
               name: 'hmcts-sds-ptlsbox'
             steps:
-              - task: AzureCLI@2
-                displayName: 'Create blob container (external-csv)'
+              - task: Bash@3
+                displayName: 'Login to Azure via Service Principal'
                 inputs:
-                  azureSubscription: 'DTS-DATAINGEST-SBOX'  # e.g. HMCTS-Prod-Connection
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    echo "Creating external-csv container in ingest01externalsbox"
-                    az storage container create \
-                      --account-name ingest01externalsbox \
-                      --name external-csvss \
-                      --auth-mode login
-                    echo "✅ Success! external-csv container created!"
+                  targetType: 'inline'
+                  script: |
+                    echo "Logging into Azure with Service Principal..."
+                    az login --service-principal \
+                      -u $AZURE_CLIENT_ID \
+                      -p $AZURE_CLIENT_SECRET \
+                      --tenant $AZURE_TENANT_ID
+                    
+                    echo "✅ Login successful!"
+                    az account show
 
 
 

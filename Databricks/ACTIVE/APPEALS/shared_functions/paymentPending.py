@@ -1716,22 +1716,27 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber NOT LIKE '%GWF%' = Include; ELSE OMIT | ISO 8601 Standard
     # decisionLetterReceivedDate
     decision_letter_received_date_expr = when(
+    (col("lu_HORef").like("%GWF%")) |
+    (col("HORef").like("%GWF%")) |
+    (col("FCONumber").like("%GWF%")),
+    lit(None)
+    ).when(
         (expr("array_contains(CategoryIdList, 38)")) &
-        (~col("lu_HORef").like("%GWF%")) &
-        (~col("HORef").like("%GWF%")) &
-        (~col("FCONumber").like("%GWF%")) &
         (col("DateOfApplicationDecision").isNotNull()),
         date_format(col("DateOfApplicationDecision"), "yyyy-MM-dd")
     ).otherwise(None)
+
 
 
     # IF CategoryId IN [38] AND  IF lu_HORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include;; ELSE OMIT | ISO 8601 Standard
     # dateEntryClearanceDecision
     date_entry_clearance_decision_expr = when(
         (expr("array_contains(CategoryIdList, 38)")) &
-        (col("lu_HORef").like("%GWF%")) &
-        (col("HORef").like("%GWF%")) &
-        (col("FCONumber").like("%GWF%")) &
+       (
+           (col("lu_HORef").like("%GWF%")) |
+            (col("HORef").like("%GWF%")) |
+            (col("FCONumber").like("%GWF%")) 
+        ) &
         (col("DateOfApplicationDecision").isNotNull()),
         date_format(col("DateOfApplicationDecision"), "yyyy-MM-dd")
     ).otherwise(None)
@@ -1740,7 +1745,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
     
     # homeOfficeReferenceNumber
-    # IF CategoryId IN [38] AND IF lu_HORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = OMIT; ELSE Include
+    # IF CategoryId IN [38] AND IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = OMIT; ELSE Include
     # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
     # homeOfficeReferenceNumber logic
     home_office_reference_number_expr = when(
@@ -1757,6 +1762,24 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             cleanReferenceNumberUDF(col("HORef")),
             cleanReferenceNumberUDF(col("FCONumber"))
         )
+    )
+
+    # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
+    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
+
+    # gwfReferenceNumber logic
+    gwf_reference_number_expr = when(
+        expr("array_contains(CategoryIdList, 38)") 
+        & ( col("lu_HORef").like("%GWF%") |
+            col("HORef").like("%GWF%") |
+            col("FCONumber").like("%GWF%")),
+        coalesce(
+            cleanReferenceNumberUDF(col("lu_HORef")),
+            cleanReferenceNumberUDF(col("HORef")),
+            cleanReferenceNumberUDF(col("FCONumber"))
+        )
+    ).otherwise(
+        lit(None)
     )
 
     # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
@@ -2095,7 +2118,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         "legalAidAccountNumber",
         "asylumSupportReference",
         "helpWithFeesReferenceNumber"
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]
@@ -2145,7 +2168,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         array(struct(*common_inputValues ,col("content.helpWithFeesReferenceNumber"), col("PaymentRemissionReasonNote"))).alias("helpWithFeesReferenceNumber_inputValues"),
         col("content.helpWithFeesReferenceNumber"),
         lit("yes").alias("helpWithFeesReferenceNumber_Transformed")
-    )
+    ).distinct()
 
     return df, df_audit
     

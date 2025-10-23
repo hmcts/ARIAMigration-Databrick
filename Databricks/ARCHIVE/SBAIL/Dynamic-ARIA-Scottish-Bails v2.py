@@ -3604,7 +3604,7 @@ create_html_udf = udf(create_html_column, StringType())
 def create_sbails_html_content():
     df = dlt.read("final_staging_sbails")
 
-    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}s_sbail_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
+    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}s_sbails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
 
     results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
     .otherwise("Successful creating HTML Content") )

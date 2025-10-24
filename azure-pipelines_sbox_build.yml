@@ -330,6 +330,18 @@ stages:
                       --query "primaryEndpoints.blob" -o tsv)
                     echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
 
+                    
+                    echo "############ TESTING ###############"
+                    az storage account show \
+                      --name ingest00landingsbox \
+                      --query networkRuleSet
+                    az storage account update \
+                      --name ingest00landingsbox \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --bypass AzureServices  
+                    echo "############ TESTING ###############"
+
+
                     echo "Creating external-csv container if not exists"
                     az storage container create \
                       --account-name ${{ lz.RefData_StorageAccount }} \

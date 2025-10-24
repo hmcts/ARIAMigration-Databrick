@@ -319,6 +319,13 @@ stages:
                     echo "##### HOSTNAME IP #####"
                     hostname -i
                     echo "Step 4"
+                    echo "Installing AzCopy..."
+                    wget -O azcopy.tar.gz https://aka.ms/downloadazcopy-v10-linux
+                    tar -xvf azcopy.tar.gz
+                    sudo cp ./azcopy_linux_amd64*/azcopy /usr/local/bin/
+                    azcopy --version
+
+                    echo "Logging in with storage key..."
                     azcopy login --account-key $STORAGE_KEY --account-name ${{ lz.RefData_StorageAccount }}
                     # storage_account_key=$(az storage account keys list \
                     #   --resource-group ${{ lz.Resource_Group }} \

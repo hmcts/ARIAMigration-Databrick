@@ -319,11 +319,13 @@ stages:
                     echo "##### HOSTNAME IP #####"
                     hostname -i
                     echo "Step 4"
-                    echo "Installing AzCopy..."
+                    echo "Downloading AzCopy..."
                     wget -O azcopy.tar.gz https://aka.ms/downloadazcopy-v10-linux
                     tar -xvf azcopy.tar.gz
-                    sudo cp ./azcopy_linux_amd64*/azcopy /usr/local/bin/
-                    azcopy --version
+                    AZCOPY_PATH=$(find . -type f -name azcopy | head -n 1)
+                    echo "AzCopy path: $AZCOPY_PATH"
+                    chmod +x $AZCOPY_PATH
+                    $AZCOPY_PATH --version
 
                     echo "Logging in with storage key..."
                     azcopy login --account-key $STORAGE_KEY --account-name ${{ lz.RefData_StorageAccount }}

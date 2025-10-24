@@ -318,11 +318,21 @@ stages:
                     hostname
                     echo "##### HOSTNAME IP #####"
                     hostname -i
-                    az storage account update \
-                        --name ${{ lz.RefData_StorageAccount }} \
-                        --resource-group ${{ lz.Resource_Group }} \
-                        --default-action Allow
                     echo "Step 4"
+
+                    
+                    echo "############ TESTING ###############"
+                    az storage account show \
+                      --name ingest00landingsbox \
+                      --query networkRuleSet
+                    az storage account update \
+                      --name ingest00landingsbox \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --bypass AzureServices  
+                    echo "############ TESTING ###############"
+
+
+
                     az storage container create \
                       --account-name ${{ lz.RefData_StorageAccount }} \
                       --name external-csvxx \

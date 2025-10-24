@@ -271,7 +271,7 @@ stages:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
             pool:
-              vmImage: 'ubuntu-latest'
+              name: 'Azure Pipelines'
             steps:
               - task: UsePythonVersion@0
                 displayName: 'Use Python 3.x'
@@ -298,7 +298,7 @@ stages:
           - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool:
-              vmImage: 'ubuntu-latest'
+              name: 'hmcts-sds-ptlsbox'
             # pool:
             #   name: 'hmcts-sds-ptlsbox'
             steps:
@@ -351,7 +351,7 @@ stages:
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool:
-              vmImage: 'ubuntu-latest'
+              name: 'hmcts-sds-ptlsbox'
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

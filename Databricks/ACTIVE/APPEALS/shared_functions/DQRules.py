@@ -547,9 +547,9 @@ def base_DQRules():
     #     "((array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAddress IS NOT NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor = 'No' AND sponsorAddress IS NULL) OR (hasSponsor IS NULL and sponsorAddress IS NULL and sponsorGivenNames IS NULL AND sponsorFamilyName IS NULL AND sponsorAuthorisation IS NULL AND sponsorEmailAdminJ IS NULL AND sponsorMobileNumberAdminJ IS NULL))"
     # )
 
-      checks["valid_sponsorAddress_not_null"] = (
-          "(array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAddress IS NOT NULL) OR ((hasSponsor = 'No' OR hasSponsor IS NULL) AND sponsorAddress IS NULL)"
-      )
+    checks["valid_sponsorAddress_not_null"] = (
+        "(array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAddress IS NOT NULL) OR ((hasSponsor = 'No' OR hasSponsor IS NULL) AND sponsorAddress IS NULL)"
+    )
     ##############################
     # ARIADM-778 (SponsorDetails)
     ##############################

@@ -326,8 +326,12 @@ stages:
                     echo "✅ Found AzCopy at: $AZCOPY_PATH"
                     chmod +x $AZCOPY_PATH
                     $AZCOPY_PATH --version
-                    echo "Logging in with storage key..."
-                    $AZCOPY_PATH login --account-key $STORAGE_KEY --account-name ${{ lz.RefData_StorageAccount }}
+                    echo "Uploading files..."
+                    $AZCOPY_PATH copy README.md  "https://ingest01landingsbox.blob.core.windows.net/ingest01-landing-sbox" \
+                      --recursive=true \
+                      --from-to=LocalBlob \
+                      --account-name "ingest01landingsbox" \
+                      --account-key $STORAGE_KEY}
                     # storage_account_key=$(az storage account keys list \
                     #   --resource-group ${{ lz.Resource_Group }} \
                     #   --account-name ${{ lz.RefData_StorageAccount }} \

@@ -318,16 +318,17 @@ stages:
                     hostname
                     echo "##### HOSTNAME IP #####"
                     hostname -i
+                    az storage account update \
+                        --name ${{ lz.RefData_StorageAccount }} \
+                        --resource-group ${{ lz.Resource_Group }} \
+                        --default-action Allow
                     echo "Step 4"
-                    echo "Downloading AzCopy..."
-                    wget -O azcopy.tar.gz https://aka.ms/downloadazcopy-v10-linux
-                    tar -xvf azcopy.tar.gz
-                    AZCOPY_PATH=$(find . -type f -name azcopy | head -n 1)
-                    echo "✅ Found AzCopy at: $AZCOPY_PATH"
-                    chmod +x $AZCOPY_PATH
-                    $AZCOPY_PATH --version
-                    echo "Uploading files..."
-                    $AZCOPY_PATH login 
+                    az storage container create \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --name external-csvxx \
+                      --account-key $STORAGE_KEY \
+                      --blob-endpoint $BLOB_ENDPOINT
+                    echo "Success! container created !"
                     
                     # --service-principal \
                     #   --application-id $AZURE_CLIENT_ID \

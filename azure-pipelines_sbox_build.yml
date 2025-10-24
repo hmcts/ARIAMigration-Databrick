@@ -323,7 +323,7 @@ stages:
                     wget -O azcopy.tar.gz https://aka.ms/downloadazcopy-v10-linux
                     tar -xvf azcopy.tar.gz
                     AZCOPY_PATH=$(find . -type f -name azcopy | head -n 1)
-                    echo "AzCopy path: $AZCOPY_PATH"
+                    echo "✅ Found AzCopy at: $AZCOPY_PATH"
                     chmod +x $AZCOPY_PATH
                     $AZCOPY_PATH --version
 

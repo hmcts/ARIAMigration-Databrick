@@ -330,8 +330,9 @@ stages:
                       --query "primaryEndpoints.blob" -o tsv)
                     echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
 
-                    
+
                     echo "############ TESTING ###############"
+                    az account set --subscription df72bb30-d6fb-47bd-82ee-5eb87473ddb3
                     az storage account show \
                       --name ingest00landingsbox \
                       --query networkRuleSet

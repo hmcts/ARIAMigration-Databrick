@@ -89,10 +89,15 @@ stages:
       - stage: Manual_Approval_${{ deployment.environment }}
         displayName: 'Manual Approval for ${{ deployment.environment }}'
         dependsOn: Init
-        #jobs:
-          # - job: waitForValidation
-          #   displayName: Wait for Manual Validation
-          #   pool: server
+        jobs:
+          - job: waitForValidation
+            displayName: Wait for Manual Validation
+            pool:
+              name: 'Azure Pipelines'
+              steps:
+                - script: |
+                    echo "TESTING"
+                  displayName: '######### TESTING ############ '                
           #   steps:
           #     - task: ManualValidation@1
           #       timeoutInMinutes: 23160

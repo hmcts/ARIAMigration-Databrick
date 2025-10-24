@@ -93,7 +93,7 @@ stages:
           - job: waitForValidation
             displayName: Wait for Manual Validation
             pool:
-              name: 'Azure Pipelines'
+              vmImage: 'ubuntu-latest'
               steps:
                 - script: |
                     echo "TESTING"
@@ -272,7 +272,7 @@ stages:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
             pool:
-              name: 'Azure Pipelines'
+              vmImage: 'ubuntu-latest'
             steps:
               - task: UsePythonVersion@0
                 displayName: 'Use Python 3.x'
@@ -407,7 +407,7 @@ stages:
           - job:
             displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
             pool:
-              name: 'Azure Pipelines'
+              vmImage: 'ubuntu-latest'
                 
             steps:
             - task: DownloadBuildArtifacts@1

@@ -92,7 +92,8 @@ stages:
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation
-            pool: server
+            pool:
+              vmImage: 'ubuntu-latest'
             steps:
               - task: CmdLine@2
                 inputs:

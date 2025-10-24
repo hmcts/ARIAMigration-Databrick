@@ -92,8 +92,7 @@ stages:
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation
-            pool:
-              vmImage: 'ubuntu-latest'
+            pool: server
               steps:
                 - script: |
                     echo "TESTING"

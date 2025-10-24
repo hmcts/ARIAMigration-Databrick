@@ -94,9 +94,9 @@ stages:
             displayName: Wait for Manual Validation
             pool: server
             steps:
-              - script: |
-                  echo "TESTING"
-                  displayName: '######### TESTING ############ '                
+              - task: CmdLine@2
+                inputs:
+                  script: echo "Running next deployment steps automatically..."               
           #   steps:
           #     - task: ManualValidation@1
           #       timeoutInMinutes: 23160

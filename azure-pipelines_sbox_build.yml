@@ -93,9 +93,9 @@ stages:
           - job: waitForValidation
             displayName: Wait for Manual Validation
             pool: server
-              steps:
-                - script: |
-                    echo "TESTING"
+            steps:
+              - script: |
+                  echo "TESTING"
                   displayName: '######### TESTING ############ '                
           #   steps:
           #     - task: ManualValidation@1

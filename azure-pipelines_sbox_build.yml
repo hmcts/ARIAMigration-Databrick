@@ -89,7 +89,7 @@ stages:
       - stage: Manual_Approval_${{ deployment.environment }}
         displayName: 'Manual Approval for ${{ deployment.environment }}'
         dependsOn: Init
-        jobs:
+        #jobs:
           # - job: waitForValidation
           #   displayName: Wait for Manual Validation
           #   pool: server

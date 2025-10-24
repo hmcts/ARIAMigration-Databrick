@@ -319,21 +319,22 @@ stages:
                     echo "##### HOSTNAME IP #####"
                     hostname -i
                     echo "Step 4"
+                    azcopy login --account-key $STORAGE_KEY --account-name ${{ lz.RefData_StorageAccount }}
                     # storage_account_key=$(az storage account keys list \
                     #   --resource-group ${{ lz.Resource_Group }} \
                     #   --account-name ${{ lz.RefData_StorageAccount }} \
                     #   --query '[0].value' -o tsv)
                     # echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
-                    az storage account show \
-                    --name ${{ lz.RefData_StorageAccount }} \
-                    --query networkRuleSet
+                    # az storage account show \
+                    # --name ${{ lz.RefData_StorageAccount }} \
+                    # --query networkRuleSet
 
-                    az storage container create \
-                      --account-name ${{ lz.RefData_StorageAccount }} \
-                      --name external-csvxx \
-                      --account-key $STORAGE_KEY \
-                      --blob-endpoint $BLOB_ENDPOINT
-                    echo "Success! container created !"
+                    # az storage container create \
+                    #   --account-name ${{ lz.RefData_StorageAccount }} \
+                    #   --name external-csvxx \
+                    #   --account-key $STORAGE_KEY \
+                    #   --blob-endpoint $BLOB_ENDPOINT
+                    # echo "Success! container created !"
 
 
 

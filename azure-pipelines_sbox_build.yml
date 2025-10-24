@@ -299,7 +299,9 @@ stages:
           - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool:
-              name: 'hmcts-sds-ptlsbox'
+              vmImage: 'ubuntu-latest'
+            # pool:
+            #   name: 'hmcts-sds-ptlsbox'
             steps:
               - task: AzureCLI@2
                 displayName: Configure RefData Storage
@@ -349,8 +351,8 @@ stages:
 
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
-            pool: 
-              vmImage: 'hmcts-sds-ptlsbox'
+            pool:
+              vmImage: 'ubuntu-latest'
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

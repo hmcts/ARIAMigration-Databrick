@@ -5,8 +5,8 @@ trigger:
 
 pr: none
 
-# pool:
-#   vmImage: 'ubuntu-latest'
+pool:
+  vmImage: 'ubuntu-latest'
 
 parameters:
   - name: environment_components
@@ -15,7 +15,7 @@ parameters:
       - deployment: sbox_aria
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
-        # pool_name: 'hmcts-sds-ptlsbox'
+        pool_name: 'hmcts-sds-ptlsbox'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         states: ['active_ccd'] # Active Function State
         landing_zones: 
@@ -42,7 +42,7 @@ parameters:
         environment: stg
         service_connection: DTS-DATAINGEST-STG
         dependsOn: sbox_aria
-        # pool_name: 'hmcts-sds-ptl'
+        pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         states: ['active_ccd'] # Active Function State
         landing_zones:

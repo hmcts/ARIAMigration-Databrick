@@ -327,11 +327,17 @@ stages:
                     chmod +x $AZCOPY_PATH
                     $AZCOPY_PATH --version
                     echo "Uploading files..."
-                    $AZCOPY_PATH copy README.md  "https://ingest01landingsbox.blob.core.windows.net/ingest01-landing-sbox" \
-                      --recursive=true \
-                      --from-to=LocalBlob \
-                      --account-name "ingest01landingsbox" \
-                      --account-key $STORAGE_KEY}
+                    $AZCOPY_PATH login --service-principal \
+                      --application-id $AZURE_CLIENT_ID \
+                      --tenant-id $AZURE_TENANT_ID \
+                      --client-secret $AZURE_CLIENT_SECRET
+
+
+                    # $AZCOPY_PATH copy README.md  "https://ingest01landingsbox.blob.core.windows.net/ingest01-landing-sbox" \
+                    #   --recursive=true \
+                    #   --from-to=LocalBlob \
+                    #   --account-name "ingest01landingsbox" \
+                    #   --account-key $STORAGE_KEY}
                     # storage_account_key=$(az storage account keys list \
                     #   --resource-group ${{ lz.Resource_Group }} \
                     #   --account-name ${{ lz.RefData_StorageAccount }} \

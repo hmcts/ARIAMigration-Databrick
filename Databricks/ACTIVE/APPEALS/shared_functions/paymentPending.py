@@ -1741,8 +1741,6 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         date_format(col("DateOfApplicationDecision"), "yyyy-MM-dd")
     ).otherwise(None)
 
-    # IF CategoryId IN [38] AND MainRespondentId IS 4 = OMIT; ELSE Include
-    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
     
     # homeOfficeReferenceNumber
     # IF CategoryId IN [38] AND IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = OMIT; ELSE Include
@@ -1756,17 +1754,17 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             col("FCONumber").like("%GWF%")
         ),
         lit(None)
-    ).otherwise(
+    ).when(
+        expr("array_contains(CategoryIdList, 38)"),
         coalesce(
             cleanReferenceNumberUDF(col("lu_HORef")),
             cleanReferenceNumberUDF(col("HORef")),
             cleanReferenceNumberUDF(col("FCONumber"))
         )
-    )
+    ).otherwise(lit(None))
 
-    # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
+    # IF CategoryId IN [38] AND  IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
     # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
-
     # gwfReferenceNumber logic
     gwf_reference_number_expr = when(
         expr("array_contains(CategoryIdList, 38)") 
@@ -2200,25 +2198,26 @@ def sponsorDetails(silver_m1, silver_c):
         first("Sponsor_Telephone", ignorenulls=True).alias("Sponsor_Telephone")
     )
 
-    sponsor_condition = array_contains(col("CategoryIdList"), 38)
+    sponsor_condition = (array_contains(col("CategoryIdList"), 38) & col("Sponsor_Name").isNotNull())
+
 
     grouped = grouped.withColumn(
     "hasSponsor",
-        when(col("Sponsor_Name").isNotNull(), lit("Yes")).otherwise(lit("No"))
+        when(sponsor_condition, lit("Yes")).otherwise(lit("No"))
     ).withColumn(
         "sponsorGivenNames",
-        when((col("hasSponsor") == "No"), lit(None)).otherwise(col("Sponsor_Forenames"))
+        when((sponsor_condition), col("Sponsor_Forenames")).otherwise(lit(None))
     ).withColumn(
         "sponsorFamilyName",
-        when((col("hasSponsor") == "No"), lit(None)).otherwise(col("Sponsor_Name"))
+        when((sponsor_condition), col("Sponsor_Name")).otherwise(lit(None))
     ).withColumn(
         "sponsorAuthorisation",
-        when(col("hasSponsor") == lit("No"), lit(None))
-        .when(col("Sponsor_Authorisation") == lit("true"), lit("Yes")).otherwise(lit("No"))
+        when((sponsor_condition) & col("Sponsor_Authorisation") == lit("true"), lit("Yes"))
+        .when((sponsor_condition) & col("Sponsor_Authorisation") != lit("true"), lit("No")).otherwise(lit(None))
     ).withColumn(
         "sponsorAddress",
         when(
-            (col("hasSponsor") == "Yes"),
+            (sponsor_condition),
             trim(
                 concat_ws(
                     ", ",
@@ -2233,11 +2232,11 @@ def sponsorDetails(silver_m1, silver_c):
         )
     ).withColumn(
         "sponsorEmailAdminJ",
-        when((col("hasSponsor") == "Yes"),
+        when((sponsor_condition),
              cleanEmailUDF(col("Sponsor_Email")))
     ).withColumn(
         "sponsorMobileNumberAdminJ",
-        when((col("hasSponsor") == "Yes"),
+        when((sponsor_condition),
              phoneNumberUDF(col("Sponsor_Telephone")))
     )
 
@@ -2250,7 +2249,8 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorEmailAdminJ",
         "sponsorMobileNumberAdminJ",
         "sponsorAuthorisation",
-    ).where((sponsor_condition) & (col("hasSponsor") == lit("Yes")))
+    )
+    # .where((sponsor_condition) & (col("hasSponsor") == lit("Yes")))
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]

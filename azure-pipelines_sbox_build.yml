@@ -15,7 +15,7 @@ parameters:
       - deployment: sbox_aria
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
-        pool_name: 'hmcts-sds-ptlsbox'
+        pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         states: ['active_ccd'] # Active Function State
         landing_zones: 

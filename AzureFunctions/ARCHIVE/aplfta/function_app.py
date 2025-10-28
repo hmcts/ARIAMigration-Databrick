@@ -12,14 +12,16 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
- 
- 
- 
+
+
+
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
- 
+
 ARIA_SEGMENT = "aplfta"
 ARM_SEGMENT = "FTADEV" if env == 'sbox' else "FTA"
+
+
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
@@ -54,13 +56,13 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
 
         # Blob Storage credentials
-        #account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
 
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
         logging.info('Assigned container secret value')
-        #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
+        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
@@ -112,68 +114,98 @@ async def upload_blob_with_retry(blob_client,message,capture_response):
     await blob_client.upload_blob(message,overwrite=True,raw_response_hook=capture_response)
 
 
-async def process_messages(event,container_service_client,subdirectory,dl_producer_client,ack_producer_client):
-        ## set up results logging
-        results: dict[str, any] = {
-            "filename" : None,
-            "http_response" :None,
-            "timestamp": None,
-            "http_message" : None
-        }
- 
-        ## call back function to capture responses
-        def capture_response(response):
-            http_response = response.http_response
-            results["http_response"] = http_response.status_code
-            results["http_message"] = getattr(http_response,"reason", "No reason provided")
- 
- 
- 
- 
-        # set the key and message to none at the start of each event
-        key = None
-        message = None
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client):
+    import re
+    results = {
+        "filename": None,
+        "http_response": None,
+        "timestamp": None,
+        "http_message": None
+    }
 
- 
+    ## call back function to capture responses
+    def capture_response(response):
+        http_response = response.http_response
+        results["http_response"] = http_response.status_code
+        results["http_message"] = getattr(http_response, "reason", "No reason provided")
 
-        try:
-            message = event.get_body().decode('utf-8')
-            key = event.partition_key
-            
-            logging.info(f"Processing message for {key} file")
-            if not key:
-                logging.error('Key Was Empty')
-                raise ValueError("Key not found in the message")
-            
+    key = event.partition_key
+    message = event.get_body()  # keep as bytes for binary
+
+    try:
+        if not key:
+            logging.error('Key Was Empty')
+            raise ValueError("Key not found in the message")
+
+        # If chunked, store as chunk blob and check for reassembly
+        chunk_match = re.match(r"(.+)__chunk(\d+)_of_(\d+)", key)
+        if chunk_match:
+            base_name, chunk_idx, total_chunks = chunk_match.group(1), int(chunk_match.group(2)), int(chunk_match.group(3))
+            chunk_blob_name = f"{subdirectory}/{key}"
+            blob_client = container_service_client.get_blob_client(blob=chunk_blob_name)
+            await upload_blob_with_retry(blob_client, message, capture_response)
+            results["filename"] = chunk_blob_name
+
+            #  NEW LOGIC: check for reassembly after every chunk upload
+            prefix = f"{subdirectory}/{base_name}"
+            logging.info(f"Checking available chunks for {base_name} (uploaded chunk {chunk_idx}/{total_chunks})")
+
+            for attempt in range(5):
+                chunk_blobs = []
+                async for blob in container_service_client.list_blobs(name_starts_with=f"{prefix}__chunk"):
+                    chunk_blobs.append(blob.name)
+
+                if len(chunk_blobs) == total_chunks:
+                    logging.info(f"All {total_chunks} chunks present for {base_name}, starting reassembly")
+                    # sort chunks by index and reassemble
+                    chunk_blobs.sort(key=lambda x: int(re.search(r'__chunk(\d+)_of_', x).group(1)))
+                    full_content = b''
+                    for blob_name in chunk_blobs:
+                        chunk_data = await container_service_client.get_blob_client(blob=blob_name).download_blob()
+                        full_content += await chunk_data.readall()
+
+                    # Upload the reassembled file
+                    final_blob_name = f"{subdirectory}/{base_name}"
+                    final_blob_client = container_service_client.get_blob_client(blob=final_blob_name)
+                    await upload_blob_with_retry(final_blob_client, full_content, capture_response)
+
+                    # Optionally, delete chunk blobs
+                    for blob_name in chunk_blobs:
+                        await container_service_client.delete_blob(blob=blob_name)
+
+                    results["filename"] = final_blob_name
+                    logging.info(f"Successfully reassembled {final_blob_name}")
+                    break
+                else:
+                    missing = total_chunks - len(chunk_blobs)
+                    logging.info(f"Attempt {attempt+1}: Found {len(chunk_blobs)}/{total_chunks} chunks for {base_name}, waiting for {missing} more...")
+                    await asyncio.sleep(5)  # wait before re-check
+            else:
+                logging.warning(f"Reassembly skipped for {base_name}: not all chunks found after retries")
+
+        else:
+            # Not chunked, upload directly
             full_blob_name = f"{subdirectory}/{key}"
-            results["filename"] = key
-
-            
             #upload message to blob with partition key as file name
-
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
             logging.info(f'Acquired Blob Client: {full_blob_name}')
-
-
             await upload_blob_with_retry(blob_client, message, capture_response)
+            results["filename"] = full_blob_name
 
-            results["timestamp"] = datetime.datetime.utcnow().isoformat()
-            logging.info("Uploaded blob:%s",key)
+        results["timestamp"] = datetime.datetime.utcnow().isoformat()
+        logging.info("Uploaded blob: %s", results["filename"])
 
+    except Exception as e:
+        logging.error(f"Failed to process event with key '{key}': {e}")
+        results["http_message"] = str(e)
+        if message is not None and key is not None:
+            await send_to_eventhub(dl_producer_client, message, key)
+        else:
+            logging.error("Cannot send to dead-letter queue because message or key is None.")
 
-        except Exception as e:
-            logging.error(f"Failed to process event with key '{key}': {e}")
-            results["http_message"] = str(e)
-
-            if message is not None and key is not None:
-                    await send_to_eventhub(dl_producer_client,message,key)
-            else:
-                logging.error("Cannot send to dead-letter queue because message or key is None.")
-        
-        await send_to_eventhub(ack_producer_client,json.dumps(results),key)
-        logging.info(f"{key}: Ack stored succesfully")
-        return results
-
+    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+    logging.info(f"{key}: Ack stored successfully")
+    return results
 
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
     """Sends messages to an Event Hub."""

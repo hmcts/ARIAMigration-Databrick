@@ -24,7 +24,7 @@ def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
         print(f"❌ Network error while calling {start_case_creation_url}: {e}")
         return None
     
-def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
+def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token):
 
     validate_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
 
@@ -38,7 +38,7 @@ def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid
 
 
     # json_data = {
-    # "data": payload_data,
+    # "data": payloadData,
     # "event": {"id":"ariaCreateCase"},
     # "event_token": event_token, 
     # "ignore_warning": True
@@ -46,7 +46,7 @@ def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid
 
     try:
         response = requests.post(validate_case_url,headers=headers,json={
-    "data": json.loads(payload_data),
+    "data": json.loads(payloadData),
     "event": {"id":"ariaCreateCase"},
     "event_token": event_token, 
     "ignore_warning": True
@@ -58,7 +58,7 @@ def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid
         return None
 
 
-def submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
+def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token):
 
     submit_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases" 
 
@@ -69,7 +69,7 @@ def submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s
     }
 
 
-    payload_obj = json.loads(payload_data)
+    payload_obj = json.loads(payloadData)
 
     submit_case_url = ccd_base_url + submit_case_endpoint 
     try:
@@ -86,19 +86,19 @@ def submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s
 
 
 
-### caseNo = event.key, payload_data = event.value
+### caseNo = event.key, payloadData = event.value
 
 
-def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
+def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
     try:
         idam_token_mgr = IDAMTokenManager(env="sbox")
         idam_token,uid = idam_token_mgr.get_token()
     except Exception as e:
         result = {
-            "runID": "get run id from event body",
+            "RunID": runId,
             "caseNo": caseNo,
-            "state": "Add state from event body",
+            "State": state,
             "status": "ERROR",
             "error": f"failed to gather IDAM token: {e}",
             "end_date_time": datetime.now(timezone.utc).isoformat()
@@ -109,9 +109,9 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
         s2s_token = s2s_manager.get_token()
     except Exception as e:
         result = {
-            "runID": "get run id from event body",
+            "RunID": runId,
             "caseNo": caseNo,
-            "state": "Add state from event body",
+            "State": state,
             "status": "ERROR",
             "error": f"failed to gather s2s token: {e}",
             "end_date_time": datetime.now(timezone.utc).isoformat()
@@ -145,9 +145,9 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
         print(f"Case creation failed: {status_code} - {text}")
 
         result = {
-        "runID": "get run id from event body",
+        "RunID": runId,
         "caseNo": caseNo,
-        "state": "Add state from event body",
+        "State": state,
         "status": "ERROR",
         "error": f"Case creation failed: {status_code} - {text}",
         "end_date_time": datetime.now(timezone.utc).isoformat()
@@ -160,7 +160,7 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
 
     # validate case
 
-    validate_case_response = validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token)
+    validate_case_response = validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
     print(f"Validation response for case {caseNo}: {validate_case_response.status_code}")
     try:
         print(json.dumps(validate_case_response.json(), indent=2))
@@ -177,9 +177,9 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
         print(f"Case validation failed: {status_code} - {text}")
 
         result = {
-            "runID": "get run id from event body",
+            "RunID": runId,
             "caseNo": caseNo,
-            "state": "Add state from event body",
+            "State": state,
             "status": "EEROR", ### change this to the validate response code
             "error": f"Case validation failed: {status_code} - {text}",
             "end_date_time": datetime.now(timezone.utc).isoformat()
@@ -190,7 +190,7 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
         print(f"Validation passed for case {caseNo}")
 
     ## submit case
-    submit_case_response = submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token)
+    submit_case_response = submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
     if submit_case_response is None or submit_case_response.status_code != 201:
 
         status_code = submit_case_response.status_code if submit_case_response else "N/A"
@@ -199,8 +199,9 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
         print(f"Case submission failed: {status_code} - {text}")
 
         result = {
+            "RunID": runId,
             "caseNo": caseNo,
-            "state": "Add state from event body",
+            "State": state,
             "status": "ERROR",
             "error": f"Case submission failed: {status_code} - {text}",
             "end_date_time": datetime.now(timezone.utc).isoformat()
@@ -210,9 +211,9 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
 
     else:
         result = {
-            "runID": "get run id from event body",
+            "RunID": runId,
             "caseNo": caseNo,
-            "state": "Add state from event body",
+            "state": state,
             "status": "Success",
             "error": None,
             "end_date_time": datetime.now(timezone.utc).isoformat(),
@@ -230,7 +231,7 @@ def process_case(env,caseNo,payload_data,PR_NUMBER=2811):
 
 if __name__ == "__main__":
 
-    payload_data = """
+    payloadData = """
 {
   "email": "example@test.com",
   "isEjp": "No",

@@ -221,7 +221,7 @@ print("Ready to start case creation")
 
 ## process funciton teest
 
-result = process_case(env=env,caseNo=caseNo,payload_data=payload_data)
+result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123)
 
 # ## start case creation
 

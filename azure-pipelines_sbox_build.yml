@@ -15,7 +15,7 @@ parameters:
       - deployment: sbox_aria
         environment: sbox
         service_connection: DTS-DATAINGEST-SBOX
-        pool_name: 'hmcts-sds-ptlsbox'
+        pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
         states: ['active_ccd'] # Active Function State
         landing_zones: 
@@ -97,7 +97,7 @@ stages:
               - task: ManualValidation@1
                 timeoutInMinutes: 23160
                 inputs:
-                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
                   instructions: Please validate the build configuration and resume
 
   # Build shared wheel first as a single operation per environment
@@ -294,7 +294,7 @@ stages:
           - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool: 
-              vmImage: 'ubuntu-latest'
+              name : 'hmcts-sds-ptl'
               # name: ${{ deployment.pool_name }}
             steps:
               - task: AzureCLI@2
@@ -346,7 +346,7 @@ stages:
           - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
             displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
             pool: 
-              vmImage: 'ubuntu-latest'
+              name : 'hmcts-sds-ptl'
             steps:
               - task: AzureCLI@2
                 displayName: Configure Storage and Upload HTML Templates

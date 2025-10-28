@@ -902,20 +902,16 @@ def silver_tribunaldecision_detail():
 
     # Coalesce BirthDate and DestructionDate with formatted defaults
     df = joined_df.unionByName(iris_df) \
-        .withColumn(
-            "BirthDate",
-            date_format(
-                coalesce(col("BirthDate"), lit("1900-01-01 00:00:00.000").cast("timestamp")),
-                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
-            )
-        ) \
-        .withColumn(
-            "DestructionDate",
-            date_format(
-                coalesce(col("DestructionDate"), lit("2000-01-01 00:00:00.000").cast("timestamp")),
-                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
-            )
+    .withColumn(
+        "BirthDate",
+            coalesce(col("BirthDate"), lit("1900-01-01 00:00:00.000").cast("timestamp")
         )
+    ) \
+    .withColumn(
+        "DestructionDate",
+            coalesce(col("DestructionDate"), lit("2000-01-01 00:00:00.000").cast("timestamp")
+        )
+    )
     
     return df
 

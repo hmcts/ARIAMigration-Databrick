@@ -1,5 +1,5 @@
 import requests
-from tokenManager import IDAMTokenManager, S2S_Manager
+from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
 from datetime import datetime, timezone, timedelta
 import json
 
@@ -15,7 +15,7 @@ def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
     "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
-    "Content-Type": "application/json"
+    "Accept": "application/json"
     }
     try:
         response = requests.get(start_case_creation_url,headers=headers)
@@ -33,7 +33,7 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
     "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
-    "Content-Type": "application/json"
+    "Accept": "application/json"
     }
 
 
@@ -46,7 +46,7 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
 
     try:
         response = requests.post(validate_case_url,headers=headers,json={
-    "data": json.loads(payloadData),
+    "data": payloadData,
     "event": {"id":"ariaCreateCase"},
     "event_token": event_token, 
     "ignore_warning": True
@@ -64,17 +64,14 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
 
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Content-Type": "application/json"
+    "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
+    "Accept": "application/json"
     }
-
-
-    payload_obj = json.loads(payloadData)
 
     submit_case_url = ccd_base_url + submit_case_endpoint 
     try:
         response = requests.post(submit_case_url,headers=headers,json={
-    "data": payload_obj,
+    "data": payloadData,
     "event": {"id":"ariaCreateCase"},
     "event_token": event_token, 
     "ignore_warning": True

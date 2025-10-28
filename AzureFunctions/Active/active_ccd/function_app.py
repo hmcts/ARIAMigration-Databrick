@@ -54,7 +54,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
     results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
 
-    results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}_key").value )
+    results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}-key").value )
     logging.info('Acquired KV secret for Results Event Hub')
 
 

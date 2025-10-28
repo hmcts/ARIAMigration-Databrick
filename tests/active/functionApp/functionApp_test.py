@@ -4,80 +4,13 @@ import unittest
 from datetime import datetime,timedelta,timezone
 import requests
 import json
+from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
+from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
 
 
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
-def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
 
-    start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
-
-    start_case_creation_url = f"{ccd_base_url}{start_case_endpoint}"
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-    try:
-        response = requests.get(start_case_creation_url,headers=headers)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {start_case_creation_url}: {e}")
-        return None
-    
-
-def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
-
-    validate_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
-
-    validate_case_url = ccd_base_url + validate_case_endpoint
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-
-
-    json_data = json.dumps({
-    "data": payload_data,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    })
-
-    try:
-        response = requests.post(validate_case_url,headers=headers,json=json_data)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {validate_case_url}: {e}")
-        return None
-
-def submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
-
-    submit_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases" 
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-
-    json_data = json.dumps({
-    "data": payload_data,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    })
-
-    submit_case_url = ccd_base_url + submit_case_endpoint 
-    try:
-        response = requests.post(submit_case_url,headers=headers,json=json_data)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {submit_case_url}: {e}")
-        return None
 
 
 
@@ -105,7 +38,7 @@ def test_start_case_success(mock_get):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         }
     )
@@ -134,7 +67,7 @@ def test_start_case_network_failure(mock_get):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         }
     )
@@ -169,7 +102,7 @@ def test_validate_case_success(mock_post):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         },
         json = ANY
@@ -203,7 +136,7 @@ def test_validate_case_failure(mock_post):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         },
         json = ANY
@@ -244,7 +177,7 @@ def test_submit_case_success(mock_post):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         },
         json=ANY  # ✅ same fix as validate_case
@@ -279,7 +212,7 @@ def test_submit_case_failure(mock_post):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
+            "ServiceAuthorization": f"{s2s_token}",
             "Accept": "application/json"
         },
         json=ANY

@@ -4,80 +4,13 @@ import unittest
 from datetime import datetime,timedelta,timezone
 import requests
 import json
+from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
+from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
 
 
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
-def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
 
-    start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
-
-    start_case_creation_url = f"{ccd_base_url}{start_case_endpoint}"
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-    try:
-        response = requests.get(start_case_creation_url,headers=headers)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {start_case_creation_url}: {e}")
-        return None
-    
-
-def validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
-
-    validate_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
-
-    validate_case_url = ccd_base_url + validate_case_endpoint
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-
-
-    json_data = json.dumps({
-    "data": payload_data,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    })
-
-    try:
-        response = requests.post(validate_case_url,headers=headers,json=json_data)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {validate_case_url}: {e}")
-        return None
-
-def submit_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token):
-
-    submit_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases" 
-
-    headers = {
-    "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
-    "ServiceAuthorization": f"Bearer {s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
-    }
-
-    json_data = json.dumps({
-    "data": payload_data,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    })
-
-    submit_case_url = ccd_base_url + submit_case_endpoint 
-    try:
-        response = requests.post(submit_case_url,headers=headers,json=json_data)
-        return response
-    except Exception as e:
-        print(f"❌ Network error while calling {submit_case_url}: {e}")
-        return None
 
 
 
@@ -105,8 +38,9 @@ def test_start_case_success(mock_get):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         }
     )
     assert response == mock_start_case_response
@@ -134,8 +68,9 @@ def test_start_case_network_failure(mock_get):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         }
     )
 
@@ -169,8 +104,9 @@ def test_validate_case_success(mock_post):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         },
         json = ANY
     )
@@ -203,8 +139,9 @@ def test_validate_case_failure(mock_post):
         expected_url,
         headers = {
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         },
         json = ANY
     )
@@ -244,8 +181,9 @@ def test_submit_case_success(mock_post):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         },
         json=ANY  # ✅ same fix as validate_case
     )
@@ -279,8 +217,9 @@ def test_submit_case_failure(mock_post):
         expected_url,
         headers={
             "Authorization": f"Bearer {idam_token}",
-            "ServiceAuthorization": f"Bearer {s2s_token}",
-            "Accept": "application/json"
+            "ServiceAuthorization": f"{s2s_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         },
         json=ANY
     )
@@ -303,97 +242,99 @@ def test_submit_case_failure(mock_post):
 
 
 
-# # @patch('requests.post')
-# # def test_get_idam_token(self,mock_get):
-# #     mock_response = MagicMock()
-# #     mock_response.status_code = 200
-# #     mock_response.json.return_value = {"access_token": "mocked_token", 'expires_in': 3600}
-# #     mock_response.post.return_value = mock_response 
+# @patch('requests.post')
+# def test_get_idam_token(self,mock_get):
+#     mock_response = MagicMock()
+#     mock_response.status_code = 200
+#     mock_response.json.return_value = {"access_token": "mocked_token", 'expires_in': 3600}
+#     mock_response.post.return_value = mock_response 
 
-# def mock_response(status_code,json_data=None, text=""):
-#     mock = MagicMock()
-#     mock.status_code = status_code
-#     mock.json_data = json_data
-#     mock.text = text
-#     mock.headers = {'Content-Type':"application/json"}
-#     mock.json.return_values = json_data or {}
-#     return mock
+def mock_response(status_code,json_data=None, text=""):
+    mock = MagicMock()
+    mock.status_code = status_code
+    mock.json_data = json_data
+    mock.text = text
+    mock.headers = {'Content-Type':"application/json"}
+    mock.json.return_values = json_data or {}
+    return mock
 
-# ### Succesfully sent a case payload ###
-# ### replace place holder with the module import path ###
-# @patch("PLACEHOLDER.submit_case")
-# @patch("PLACEHOLDER.validate_case")
-# @patch("PLACEHOLDER.start_case")
-# def test_process_funciton_success():
-#     mock_start_case_creation = mock_response(200,{"token":"ABC123"})
-#     mock_validate_case = mock_response(201)
-#     mock_submit_case = mock_response(201,{"id":"1234567891011"})
+### Succesfully sent a case payload ###
+### replace place holder with the module import path ###
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
+def test_process_funciton_success(mock_start_case_creation_response,mock_validate_case_response,mock_submit_case_response):
+    mock_start_case_creation = mock_response(200,{"token":"ABC123"})
+    mock_validate_case = mock_response(201)
+    mock_submit_case = mock_response(201)
+    mock_submit_case.json = lambda: {"id":"1234567891011"}
+    mock_start_case_creation_response.return_value = mock_start_case_creation
+    mock_validate_case_response.return_value = mock_validate_case
+    mock_submit_case_response.return_value = mock_submit_case
 
-#     results = process_case(
-#         env="sbox",
-#         caseNo="CASE123",
-#         payload_data={"key": "value"},
-#         idam_token="token",
-#         uid="user123",
-#         s2s_token="s2s"
-#     )
+    results = process_case(
+        env="sbox",
+        caseNo="CASE123",
+        payloadData={"key": "value"},
+        runId="run123",
+        state="paymentPending"
+    )
 
-#     assert results['status']== "success"
-#     assert results['ccd_case_id']== "1234567891011"
-#     assert results['error'] is None
+    assert results['status']== "Success"
+    assert results['ccd_case_id']== "1234567891011"
+    assert results['error'] is None
 
-#     ### failed to start case creation ###
-# @patch("mymodule.start_case_creation")
-# def test_process_case_start_case_fail():
-#     mock_start_case_response = mock_response(401,{"text":"bad response"})
+    ### failed to start case creation ###
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
+def test_process_case_start_case_fail(mock_start_case_creation):
+    mock_start_case_response = mock_response(401,{"text":"bad response"})
+    mock_start_case_creation.return_value = mock_start_case_response
 
-#     results = process_case(
-#     env="sbox",
-#     caseNo="CASE123",
-#     payload_data={"key": "value"},
-#     idam_token="token",
-#     uid="user123",
-#     s2s_token="s2s"
-# )
+    results = process_case(
+    env="sbox",
+    caseNo="CASE123",
+    payloadData={"key": "value"},
+        runId="run123",
+        state="paymentPending"
+)
     
-#     assert results["status"]=="ERROR"
-#     assert results["error"] is not None
+    assert results["status"]=="ERROR"
+    assert results["error"] is not None
 
-# @patch("mymodule.validate_case")
-# @patch("mymodule.start_case_creation")
-# def test_process_case_validation_fails(mock_start, mock_validate):
-#     mock_start.return_value = mock_response(200, {"token": "abc123"})
-#     mock_validate.return_value = mock_response(400, text="Invalid payload")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
+def test_process_case_validation_fails(mock_start, mock_validate):
+    mock_start.return_value = mock_response(200, {"token": "abc123"})
+    mock_validate.return_value = mock_response(400, text="Invalid payload")
 
-#     result = process_case(
-#         env="sbox",
-#         caseNo="CASE888",
-#         payload_data={},
-#         idam_token="token",
-#         uid="user123",
-#         s2s_token="s2s"
-#     )
+    result = process_case(
+        env="sbox",
+        caseNo="CASE888",
+        payloadData={},
+        runId="run123",
+        state="paymentPending"
+    )
 
-#     assert result["status"] == "ERROR"
-#     assert result["error"] is not None
+    assert result["status"] == "ERROR"
+    assert result["error"] is not None
 
-# @patch("mymodule.submit_case")
-# @patch("mymodule.validate_case")
-# @patch("mymodule.start_case_creation")
-# def test_process_case_submission_fails(mock_start, mock_validate, mock_submit):
-#     mock_start.return_value = mock_response(200, {"token": "abc123"})
-#     mock_validate.return_value = mock_response(201)
-#     mock_submit.return_value = mock_response(500, text="Server error")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
+def test_process_case_submission_fails(mock_start, mock_validate, mock_submit):
+    mock_start.return_value = mock_response(200, {"token": "abc123"})
+    mock_validate.return_value = mock_response(201)
+    mock_submit.return_value = mock_response(500, text="Server error")
 
-#     result = process_case(
-#         env="sbox",
-#         caseNo="CASE777",
-#         payload_data={},
-#         idam_token="token",
-#         uid="user123",
-#         s2s_token="s2s"
-#     )
+    result = process_case(
+        env="sbox",
+        caseNo="CASE777",
+        payloadData={},
+        runId="run123",
+        state="paymentPending"
+    )
 
-#     assert result["status"] == "ERROR"
-#     assert result["error"] is not None
+
+    assert result["status"] == "ERROR"
+    assert result["error"] is not None
 

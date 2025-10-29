@@ -12,18 +12,29 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+try:
+    # When running as a function app the module will be a package. Use a
+    # relative import where possible.
+    from .ccdFunctions import process_case
+except Exception:
+    # Fallback for running the script directly during local debugging.
+    from ccdFunctions import process_case
 
 
-env: str = os.environ["ENVIRONMENT"]
-lz_key = os.environ["LZ_KEY"]
 
-ARM_SEGMENT = "ACTIVEDEV" if env == "sbox" else "TD"
-ARIA_STATE = "active"
+ENV: str = os.environ["ENVIRONMENT"]
+LZ_KEY = os.environ["LZ_KEY"]
 
-eventhub_name = f"evh-{ARIA_STATE}-pub-{lz_key}-uks-dlrm-01"
+
+ARIA_NAME = "active"
+
+eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"
+
+
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
+
 
 
 @app.function_name("eventhub_trigger")
@@ -44,148 +55,59 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     credential = DefaultAzureCredential()
     logging.info('Connected to Azure Credentials')
 
-    kv_url = f"https://ingest{lz_key}-meta002-{env}.vault.azure.net"
+    kv_url = f"https://ingest{LZ_KEY}-meta002-{ENV}.vault.azure.net"
     kv_client = SecretClient(vault_url=kv_url, credential=credential)
     logging.info(f'Connected to KeyVault: {kv_url}')
 
-    # --- TEST: List all Key Vault secret names ---
-    try:
-        logging.info("Listing secrets from Key Vault...")
-        async for secret_prop in kv_client.list_properties_of_secrets():
-            logging.info(f"Found secret: {secret_prop.name}")
-        logging.info("✅ Successfully listed all Key Vault secrets.")
-    except Exception as e:
-        logging.error(f"❌ Failed to list secrets from Key Vault: {e}")
-        # optional: raise here if you want to stop execution
-    # --- END TEST ---
+    results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
 
-    kv_url_CCD = f"https://ia-aat.vault.azure.net" if env == "sbox" else "https://ia-perftest.vault.azure.net"
-    kv_client_CCD = SecretClient(vault_url=kv_url_CCD, credential=credential)
-    logging.info(f'Connected to KeyVault: {kv_url_CCD}')
+    results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}-key") )
 
-    # --- TEST: List all Key Vault secret names ---
-    try:
-        logging.info("Listing secrets from CCD Key Vault...")
-        async for secret_prop in kv_client_CCD.list_properties_of_secrets():
-            logging.info(f"Found secret: {secret_prop.name}")
-        logging.info("✅ Successfully listed CCD all Key Vault secrets.")
-    except Exception as e:
-        logging.error(f"❌ Failed to list CCD secrets from Key Vault: {e}")
-        # optional: raise here if you want to stop execution
-    # --- END TEST ---
-
-    try:
-        # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_STATE}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_STATE}-ack-{lz_key}-uks-dlrm-01-key")).value
-        logging.info('Acquired KV secrets for Dl and ACK')
-
-        # Blob Storage credentials
-        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        container_name = "dropzone"
-
-        logging.info('Assigned container secret value')
-        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
-        container_url = f"{account_url}/{container_name}?{container_secret}"
-        logging.info(f'Created container URL: {container_url}')
-
-        sub_dir = f"ARIA{ARM_SEGMENT}/submission"
-        logging.info(f'Created sub_dir: {sub_dir}')
-
-        try:
-            container_service_client = ContainerClient.from_container_url(container_url)
-            logging.info('Created container service client')
-        except Exception as e:
-            logging.error(f"Failed to connect to ARM Container Client: {e}")
-
-        try:
-            async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
-                    EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
-                logging.info('Processing messages')
-                tasks = [
-                    process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client)
-                    for event in azeventhub
-                ]
-                await asyncio.gather(*tasks)
-                logging.info('Finished processing messages')
-        finally:
-            container_service_client.close()
-    finally:
-        # Explicitly close SecretClient to avoid session leaks
-        await kv_client.close()
-        await credential.close()
+    result_eh_secret_key = results_eh_key.value
+    logging.info('Acquired KV secret for Results Event Hub')
 
 
-@retry(wait=wait_exponential(multiplier=1, min=4, max=10),
-       stop=stop_after_attempt(5),
-       retry=retry_if_exception_type(Exception),
-       reraise=True,
-       before_sleep=lambda r: logging.warning(
-           f"Retrying upload attempt {r.attempt_number} due to: {r.outcome.exception()}"
-       )
-       )
-async def upload_blob_with_retry(blob_client, message, capture_response):
-    logging.info('Uploading blob')
-    await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
+    res_eh_producer = EventHubProducerClient.from_connection_string(
+        conn_str=result_eh_secret_key)
+    
+    async with res_eh_producer:
+        event_data_batch = await res_eh_producer.create_batch()
+
+        for event in azeventhub:
+            try:
+                logging.info(f'Event received with partition key: {event.partition_key}')
+
+                caseNo = event.partition_key
+                payload_str = event.get_body().decode('utf-8')
+                payload = json.loads(payload_str)
+                run_id = payload.get("RunID", None)
+                state = payload.get("State", None)
+                data = payload.get("Content", None)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client):
-    results: dict[str, any] = {
-        "filename": None,
-        "http_response": None,
-        "timestamp": None,
-        "http_message": None
-    }
-    ## call back function to capture responses
-    def capture_response(response):
-        http_response = response.http_response
-        results["http_response"] = http_response.status_code
-        results["http_message"] = getattr(http_response, "reason", "No reason provided")
+                result = await asyncio.to_thread(
+                    process_case,ENV,caseNo,data,state,run_id
+                    )
 
-    # set the key and message to none at the start of each event
-    key = None
-    message = None
+                logging.info(f'Processing result for caseNo {caseNo}')
 
-    try:
-        message = event.get_body().decode('utf-8')
-        key = event.partition_key
-
-        logging.info(f"Processing message for {key} file")
-        if not key:
-            logging.error('Key Was Empty')
-            raise ValueError("Key not found in the message")
-
-        full_blob_name = f"{subdirectory}/{key}"
-        results["filename"] = key
-
-        blob_client = container_service_client.get_blob_client(blob=full_blob_name)
-        logging.info(f'Acquired Blob Client: {full_blob_name}')
-
-        await upload_blob_with_retry(blob_client, message, capture_response)
-
-        results["timestamp"] = datetime.datetime.utcnow().isoformat()
-        logging.info("Uploaded blob:%s", key)
-
-    except Exception as e:
-        logging.error(f"Failed to process event with key '{key}': {e}")
-        results["http_message"] = str(e)
-
-        if message is not None and key is not None:
-            await send_to_eventhub(dl_producer_client, message, key)
-        else:
-            logging.error("Cannot send to dead-letter queue because message or key is None.")
-
-    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-    logging.info(f"{key}: Ack stored successfully")
-    return results
+                result_json = json.dumps(result)
+                try:
+                    event_data_batch.add(EventData(result_json))
+                except ValueError:
+                    # If the batch is full, send it and create a new one
+                    await res_eh_producer.send_batch(event_data_batch)
+                    logging.info(f'Sent a batch of events to Results Event Hub')
+                    event_data_batch = await res_eh_producer.create_batch()
+                    event_data_batch.add(EventData(result_json))
+            except Exception as e:
+                logging.error(f'Error processing event for caseNo {caseNo}: {e}')
+        
+        # Send any remaining events in the batch
+        if len(event_data_batch) > 0:
+            await res_eh_producer.send_batch(event_data_batch)
+            logging.info(f'Sent the final batch of events to Results Event Hub')
 
 
-async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
-    """Sends messages to an Event Hub."""
-    try:
-        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-        event_data_batch.add(EventData(message))
-        await producer_client.send_batch(event_data_batch)
-        logging.info(f"Message added to Event Hub with partition key: {partition_key}")
-    except Exception as e:
-        logging.error(f"Failed to upload {partition_key} to EventHub: {e}")
+
+

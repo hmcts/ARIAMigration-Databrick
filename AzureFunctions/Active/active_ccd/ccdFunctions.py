@@ -116,11 +116,11 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
     except Exception as e:
         result = {
             "RunID": runId,
-            "caseNo": caseNo,
+            "CaseNo": caseNo,
             "State": state,
-            "status": "ERROR",
-            "error": f"failed to gather IDAM token: {e}",
-            "end_date_time": datetime.now(timezone.utc).isoformat()
+            "Status": "ERROR",
+            "Error": f"failed to gather IDAM token: {e}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
             }
         return result
     try:
@@ -129,11 +129,11 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
     except Exception as e:
         result = {
             "RunID": runId,
-            "caseNo": caseNo,
+            "CaseNo": caseNo,
             "State": state,
-            "status": "ERROR",
-            "error": f"failed to gather s2s token: {e}",
-            "end_date_time": datetime.now(timezone.utc).isoformat()
+            "Status": "ERROR",
+            "Error": f"failed to gather s2s token: {e}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
             }
         return result
 
@@ -165,11 +165,11 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
         result = {
         "RunID": runId,
-        "caseNo": caseNo,
+        "CaseNo": caseNo,
         "State": state,
-        "status": "ERROR",
-        "error": f"Case creation failed: {status_code} - {text}",
-        "end_date_time": datetime.now(timezone.utc).isoformat()
+        "Status": "ERROR",
+        "Error": f"Case creation failed: {status_code} - {text}",
+        "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         return result
     else:
@@ -197,11 +197,11 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
         result = {
             "RunID": runId,
-            "caseNo": caseNo,
+            "CaseNo": caseNo,
             "State": state,
-            "status": "ERROR", ### change this to the validate response code
-            "error": f"Case validation failed: {status_code} - {text}",
-            "end_date_time": datetime.now(timezone.utc).isoformat()
+            "Status": "ERROR", ### change this to the validate response code
+            "Error": f"Case validation failed: {status_code} - {text}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         return result
 
@@ -210,7 +210,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
     ## submit case
     submit_case_response = submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
-    print("✅ called the submit case endpoint returned status code:",submit_case_response.text if submit_case_response else "No response")
+
     if submit_case_response is None or submit_case_response.status_code not in {201,200}:
 
         status_code = submit_case_response.status_code if submit_case_response else "N/A"
@@ -220,11 +220,11 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
         result = {
             "RunID": runId,
-            "caseNo": caseNo,
+            "CaseNo": caseNo,
             "State": state,
-            "status": "ERROR",
-            "error": f"Case submission failed: {status_code} - {text}",
-            "end_date_time": datetime.now(timezone.utc).isoformat()
+            "Status": "ERROR",
+            "Error": f"Case submission failed: {status_code} - {text}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         print(f"Case {caseNo} submission failed.")
         return result
@@ -232,12 +232,12 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
     else:
         result = {
             "RunID": runId,
-            "caseNo": caseNo,
-            "state": state,
-            "status": "Success",
-            "error": None,
-            "end_date_time": datetime.now(timezone.utc).isoformat(),
-            "ccd_case_id": submit_case_response.json()["id"]
+            "CaseNo": caseNo,
+            "State": state,
+            "Status": "Success",
+            "Error": None,
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "CCDCaseID": submit_case_response.json()["id"]
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result

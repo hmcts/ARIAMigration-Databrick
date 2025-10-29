@@ -177,6 +177,7 @@ ccd_base_url = f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.p
 try:
     idam_token_mgr = IDAMTokenManager(env="sbox")
     idam_token,uid = idam_token_mgr.get_token()
+    print(f"✅ Successfully Recieved IDAM Token for UID: {uid}")
 except Exception as e:
     result = {
         "runID": "get run id from event body",
@@ -190,6 +191,7 @@ except Exception as e:
 try:
     s2s_manager = S2S_Manager("sbox",21)
     s2s_token = s2s_manager.get_token()
+    print(f"✅ Successfully Recieved S2S Token: {s2s_token}")
 except Exception as e:
     result = {
         "runID": "get run id from event body",
@@ -216,16 +218,18 @@ try:
 except KeyError:
     raise ValueError("Invalid environment")
 
-print("Ready to start case creation")
+# print("Ready to start case creation")
 
 
 ## process funciton teest
 
 result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123)
+print(result)
 
 # ## start case creation
 
 # start_response = start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token)
+# print(f"Start case creation response for case {caseNo}: {start_response.status_code} {start_response.text}")
 
 # if start_response is None or start_response.status_code != 200 :
 

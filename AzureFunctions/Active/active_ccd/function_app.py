@@ -12,7 +12,13 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-from ccdFunctions import process_case
+try:
+    # When running as a function app the module will be a package. Use a
+    # relative import where possible.
+    from .ccdFunctions import process_case
+except Exception:
+    # Fallback for running the script directly during local debugging.
+    from ccdFunctions import process_case
 
 
 
@@ -22,7 +28,8 @@ LZ_KEY = os.environ["LZ_KEY"]
 
 ARIA_NAME = "active"
 
-eventhub_name = f"af-{ARIA_NAME}-ccd-{ENV}{LZ_KEY}-uks-dlrm-01"
+eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"
+
 
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
@@ -54,12 +61,14 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
     results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
 
-    results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}-key").value )
+    results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}-key") )
+
+    result_eh_secret_key = results_eh_key.value
     logging.info('Acquired KV secret for Results Event Hub')
 
 
     res_eh_producer = EventHubProducerClient.from_connection_string(
-        conn_str=results_eh_key)
+        conn_str=result_eh_secret_key)
     
     async with res_eh_producer:
         event_data_batch = await res_eh_producer.create_batch()
@@ -76,7 +85,9 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                 data = payload.get("Content", None)
 
 
-                result = process_case(env=ENV,caseNo=caseNo, payloadData=data,state=state,runId=run_id)
+                result = await asyncio.to_thread(
+                    process_case,ENV,caseNo,data,state,run_id
+                    )
 
                 logging.info(f'Processing result for caseNo {caseNo}')
 

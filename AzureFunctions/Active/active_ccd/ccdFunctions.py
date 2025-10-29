@@ -1,5 +1,15 @@
 import requests
-from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
+import requests
+# tokenManager lives in the same package. When this module is imported by the
+# Functions host the package root will be `AzureFunctions.Active.active_ccd`.
+# Use a robust import that works both when running under the Functions host
+# (package import) and when running the module directly (script import).
+try:
+  # package import when running under Functions host
+  from .tokenManager import IDAMTokenManager, S2S_Manager
+except Exception:
+  # fallback when running as a script in the same folder
+  from tokenManager import IDAMTokenManager, S2S_Manager
 from datetime import datetime, timezone, timedelta
 import json
 
@@ -15,7 +25,8 @@ def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
     "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
+    "Accept": "application/json",
+    "Content-Type": "application/json"
     }
     try:
         response = requests.get(start_case_creation_url,headers=headers)
@@ -33,16 +44,16 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
     "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
+    "Accept": "application/json",
+    "Content-Type": "application/json"
     }
 
 
-    # json_data = {
-    # "data": payloadData,
-    # "event": {"id":"ariaCreateCase"},
-    # "event_token": event_token, 
-    # "ignore_warning": True
-    # }
+    if isinstance(payloadData, str):
+        try:
+            payloadData = json.loads(payloadData)
+        except json.JSONDecodeError as e:
+            print(f"❌ Error decoding payloadData JSON string: {e}")
 
     try:
         response = requests.post(validate_case_url,headers=headers,json={
@@ -65,10 +76,19 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
     headers = {
     "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
     "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
-    "Accept": "application/json"
+    "Accept": "application/json",
+    "Content-Type": "application/json"
     }
 
     submit_case_url = ccd_base_url + submit_case_endpoint 
+
+    if isinstance(payloadData, str) or isinstance(payloadData, bytearray) or isinstance(payloadData, bytes):
+        try:
+            payloadData = json.loads(payloadData)
+        except json.JSONDecodeError as e:
+            print(f"❌ Error decoding payloadData JSON string: {e}")
+
+    print("🎁 payload recieved for submission:",type(payloadData))
     try:
         response = requests.post(submit_case_url,headers=headers,json={
     "data": payloadData,
@@ -76,6 +96,8 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
     "event_token": event_token, 
     "ignore_warning": True
     })
+        print(f"🔢 Response status: {response.status_code}")
+        # print(f"📨 Response text (first 1000 chars):\n{response.text[:1000]}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {submit_case_url}: {e}")
@@ -165,7 +187,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
         print(validate_case_response.text)
 
 
-    if validate_case_response is None or validate_case_response.status_code != 200:
+    if validate_case_response is None or validate_case_response.status_code not in {201,200}:
         
 
         status_code = validate_case_response.status_code if validate_case_response else "N/A"
@@ -177,7 +199,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
             "RunID": runId,
             "caseNo": caseNo,
             "State": state,
-            "status": "EEROR", ### change this to the validate response code
+            "status": "ERROR", ### change this to the validate response code
             "error": f"Case validation failed: {status_code} - {text}",
             "end_date_time": datetime.now(timezone.utc).isoformat()
         }
@@ -188,7 +210,8 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
     ## submit case
     submit_case_response = submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
-    if submit_case_response is None or submit_case_response.status_code != 201:
+    print("✅ called the submit case endpoint returned status code:",submit_case_response.text if submit_case_response else "No response")
+    if submit_case_response is None or submit_case_response.status_code not in {201,200}:
 
         status_code = submit_case_response.status_code if submit_case_response else "N/A"
         text = submit_case_response.text if submit_case_response else "No response from API"
@@ -216,7 +239,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
             "end_date_time": datetime.now(timezone.utc).isoformat(),
             "ccd_case_id": submit_case_response.json()["id"]
         }
-        print(f"Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
+        print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result
 
 

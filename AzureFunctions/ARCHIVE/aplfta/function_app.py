@@ -13,6 +13,7 @@ import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
+
 # Retrieve environment variables
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
@@ -23,6 +24,7 @@ eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
+
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -41,16 +43,18 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     # Retrieve credentials
     credential = DefaultAzureCredential()
     logging.info('Connected to Azure Credentials')
-    kv_client = SecretClient(vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential)
+    kv_client = SecretClient(
+        vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential
+    )
     logging.info('Connected to KeyVault')
 
     try:
         # Retrieve Event Hub secrets
         ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
-        logging.info('Acquired KV secrets for Dl and ACK')
+        logging.info('Acquired KV secrets for DL and ACK')
 
-        # Blob Storage credentials
+         # Blob Storage credentials
         account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         #account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
@@ -64,6 +68,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
         # else:
         #     container_secret = full_secret.lstrip('?')  # fallbak
+
         container_url = f"{account_url}/{container_name}?{container_secret}"
         logging.info(f'Created container URL: {container_url}')
 
@@ -82,7 +87,14 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
                 logging.info('Processing messages')
                 tasks = [
-                    process_messages(event, container_service_client, sub_dir, dl_producer_client, ack_producer_client, container_secret)
+                    process_messages(
+                        event,
+                        container_service_client,
+                        sub_dir,
+                        dl_producer_client,
+                        ack_producer_client,
+                        container_secret
+                    )
                     for event in azeventhub
                 ]
                 await asyncio.gather(*tasks)
@@ -96,13 +108,14 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         await credential.close()
 
 
-@retry(wait=wait_exponential(multiplier=1, min=4, max=10),
-       stop=stop_after_attempt(5),
-       retry=retry_if_exception_type(Exception),
-       reraise=True,
-       before_sleep=lambda r: logging.warning(
-           f"Retrying upload attempt {r.attempt_number} due to: {r.outcome.exception()}"
-       )
+@retry(
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    reraise=True,
+    before_sleep=lambda r: logging.warning(
+        f"Retrying upload attempt {r.attempt_number} due to: {r.outcome.exception()}"
+    ),
 )
 async def upload_blob_with_retry(blob_client, message, capture_response):
     logging.info(f'Uploading blob')
@@ -124,29 +137,37 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_response"] = http_response.status_code
         results["http_message"] = getattr(http_response, "reason", "No reason provided")
 
-    # set the key and message to none at the start of each event
     key = None
     message = None
 
     try:
         # Decode incoming event
-        message = event.get_body().decode('utf-8')
+        message = event.get_body().decode('utf-8').strip()
         key = event.partition_key
         logging.info(f"Processing message for {key} file")
 
         if not key:
-            logging.error('Key Was Empty')
+            logging.error('Key was empty')
             raise ValueError("Key not found in the message")
 
-        # Parse the incoming message which now contains blob_url instead of content
-        payload = json.loads(message)
-        blob_url = payload.get("blob_url")
-        file_name = payload.get("file_name") or key
+        # Attempt to parse JSON payload
+        blob_url = None
+        file_name = key
+        try:
+            payload = json.loads(message)
+            blob_url = payload.get("blob_url")
+            file_name = payload.get("file_name") or key
+            logging.info(f"Parsed JSON message for file {file_name}")
+        except json.JSONDecodeError:
+            # Handle plain URL message
+            blob_url = message
+            logging.info(f"Message was plain blob URL for file {file_name}")
 
         if not blob_url:
             raise ValueError("Missing blob_url in the event message")
 
-        logging.info(f"Downloading file from source blob URL: {blob_url}")
+        # ✅ Print blob_url for debugging
+        logging.info(f"blob_url received: {blob_url}")
 
         # Append SAS token if missing
         if "?" in blob_url:
@@ -154,22 +175,24 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         else:
             source_blob_url_with_sas = f"{blob_url}?{container_secret}"
 
-        # Download file content from source blob
+        logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
+
+        # Download file from source
         source_blob_client = BlobClient.from_blob_url(source_blob_url_with_sas)
         stream = await source_blob_client.download_blob()
         file_content = await stream.readall()
         await source_blob_client.close()
 
-        # Upload the file content to target blob storage
+        # Upload to target
         full_blob_name = f"{subdirectory}/{file_name}"
         results["filename"] = file_name
         blob_client = container_service_client.get_blob_client(blob=full_blob_name)
-        logging.info(f'Acquired Blob Client for upload: {full_blob_name}')
+        logging.info(f'Uploading to target blob: {full_blob_name}')
 
         await upload_blob_with_retry(blob_client, file_content, capture_response)
 
         results["timestamp"] = datetime.datetime.utcnow().isoformat()
-        logging.info("Uploaded blob: %s", key)
+        logging.info("Uploaded blob successfully: %s", key)
 
     except Exception as e:
         logging.error(f"Failed to process event with key '{key}': {e}")

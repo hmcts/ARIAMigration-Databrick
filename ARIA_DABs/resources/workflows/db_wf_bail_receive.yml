@@ -26,12 +26,12 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/BAIL/bails_resp_autoloader"
             source: WORKSPACE
 
-        - task_key: bails_receive_dashboard
-          depends_on:
-            - task_key: collect_responses
-          job_cluster_key: db_wf_bail_receive_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Receive_Audit_Dashboard"
-            source: WORKSPACE
+        # - task_key: bails_receive_dashboard
+        #   depends_on:
+        #     - task_key: collect_responses
+        #   job_cluster_key: db_wf_bail_receive_job
+        #   notebook_task:
+        #     notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Receive_Audit_Dashboard"
+        #     source: WORKSPACE
       queue:
         enabled: true

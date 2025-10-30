@@ -58,13 +58,13 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/BAIL/bails_ack_autoloader"
             source: WORKSPACE
 
-        - task_key: Bails_Send_Dashboard
-          depends_on:
-            - task_key: bails_ARM_ack
-            - task_key: DLT_creation_of_content_bails
-          job_cluster_key: db_wf_bail_send_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Send_Audit_Dashboard"
-            source: WORKSPACE
+        # - task_key: Bails_Send_Dashboard
+        #   depends_on:
+        #     - task_key: bails_ARM_ack
+        #     - task_key: DLT_creation_of_content_bails
+        #   job_cluster_key: db_wf_bail_send_job
+        #   notebook_task:
+        #     notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Send_Audit_Dashboard"
+        #     source: WORKSPACE
       queue:
         enabled: true

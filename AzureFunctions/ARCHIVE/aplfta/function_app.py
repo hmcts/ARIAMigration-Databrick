@@ -54,7 +54,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
         logging.info('Acquired KV secrets for DL and ACK')
 
-         # Blob Storage credentials
+        # Blob Storage credentials
         account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         #account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
@@ -75,32 +75,30 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         sub_dir = f"ARIA{ARM_SEGMENT}/submission"
         logging.info(f'Created sub_dir: {sub_dir}')
 
-        try:
-            container_service_client = ContainerClient.from_container_url(container_url)
+        # Use async with to avoid unclosed client session
+        async with ContainerClient.from_container_url(container_url) as container_service_client:
             logging.info('Created container service client')
-        except Exception as e:
-            logging.error(f"Failed to connect to ARM Container Client {e}")
 
-        try:
-            async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
-                       EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
+            try:
+                async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
+                           EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
 
-                logging.info('Processing messages')
-                tasks = [
-                    process_messages(
-                        event,
-                        container_service_client,
-                        sub_dir,
-                        dl_producer_client,
-                        ack_producer_client,
-                        container_secret
-                    )
-                    for event in azeventhub
-                ]
-                await asyncio.gather(*tasks)
-                logging.info('Finished processing messages')
-        finally:
-            container_service_client.close()
+                    logging.info('Processing messages')
+                    tasks = [
+                        process_messages(
+                            event,
+                            container_service_client,
+                            sub_dir,
+                            dl_producer_client,
+                            ack_producer_client,
+                            container_secret
+                        )
+                        for event in azeventhub
+                    ]
+                    await asyncio.gather(*tasks)
+                    logging.info('Finished processing messages')
+            except Exception as e:
+                logging.error(f"EventHub producer client error: {e}")
 
     finally:
         # Explicitly close SecretClient to avoid session leaks
@@ -177,11 +175,11 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 
-        # Download file from source
-        source_blob_client = BlobClient.from_blob_url(source_blob_url_with_sas)
-        stream = await source_blob_client.download_blob()
-        file_content = await stream.readall()
-        await source_blob_client.close()
+        # Download file from source using async with to auto-close session
+        async with BlobClient.from_blob_url(source_blob_url_with_sas) as source_blob_client:
+            stream = await source_blob_client.download_blob()
+            file_content = await stream.readall()
+            # async with ensures client is closed
 
         # Upload to target
         full_blob_name = f"{subdirectory}/{file_name}"

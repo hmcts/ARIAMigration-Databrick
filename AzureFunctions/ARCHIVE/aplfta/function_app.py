@@ -25,6 +25,10 @@ eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
 
+# ✅ Added concurrency limiter (for unordered, parallel processing)
+MAX_CONCURRENCY = 200
+sem = asyncio.Semaphore(MAX_CONCURRENCY)
+
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -34,7 +38,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=500,
+    max_batch_size=200,  # ✅ reduced batch size for faster checkpointing
     data_type='binary'
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
@@ -83,9 +87,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                 async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                            EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
 
-                    logging.info('Processing messages')
-                    tasks = [
-                        process_messages(
+                logging.info('Processing messages')
+
+                # ✅ Process all events concurrently, ignoring partition order
+                async def limited_process(event):
+                    async with sem:
+                        return await process_messages(
                             event,
                             container_service_client,
                             sub_dir,
@@ -93,12 +100,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                             ack_producer_client,
                             container_secret
                         )
-                        for event in azeventhub
-                    ]
-                    await asyncio.gather(*tasks)
-                    logging.info('Finished processing messages')
-            except Exception as e:
-                logging.error(f"EventHub producer client error: {e}")
+
+                tasks = [limited_process(event) for event in azeventhub]
+                await asyncio.gather(*tasks)
+                logging.info('Finished processing messages')
+        finally:
+            container_service_client.close()
 
     finally:
         # Explicitly close SecretClient to avoid session leaks

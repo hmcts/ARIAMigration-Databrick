@@ -1128,8 +1128,17 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     # Create DataFrame with CaseNo and list of CategoryId
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
-    # Create DataFrame with CaseNo and list of lu_countryCode from silver_m1
-    silver_m1_country_grouped = silver_m1.groupBy("CaseNo").agg(collect_list(col("lu_countryCode")).alias("lu_countryCodeList"))
+    # Create DataFrame with CaseNo and collection of lu_countryCode from silver_m1
+    silver_m1_country_grouped = silver_m1.groupBy("CaseNo").agg(
+    transform(
+        collect_list(col("lu_countryCode")),
+        lambda code: struct(
+            expr("uuid()").alias("id"),
+            struct(code.alias("code")).alias("value")
+        )
+    ).alias("appellantNationalities"),
+    collect_list(col("lu_countryCode")).alias("lu_countryCodeList")
+    )
 
     # isAppellantMinor: BirthDate > (DateLodged - 18 years) using year subtraction
     is_minor_expr = when(
@@ -1395,7 +1404,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
             country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
             appellant_stateless_expr.alias("appellantStateless"),
-            when(conditions, col("lu_countryCodeList")).otherwise(None).alias("appellantNationalities"),
+            when(conditions, when((size(col("appellantNationalities")) == 0), None).otherwise(col("appellantNationalities")).alias("appellantNationalities")).otherwise(None).alias("appellantNationalities"),
             when(conditions, col("lu_appellantNationalitiesDescription")).otherwise(None).alias("appellantNationalitiesDescription"),
             when(conditions & deportation_condition ,
                 lit("Yes")

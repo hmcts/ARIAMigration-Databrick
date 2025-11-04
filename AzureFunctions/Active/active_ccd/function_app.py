@@ -24,6 +24,7 @@ except Exception:
 
 ENV: str = os.environ["ENVIRONMENT"]
 LZ_KEY = os.environ["LZ_KEY"]
+PR_NUMBER = os.environ["PR_NUMBER"]
 
 
 ARIA_NAME = "active"
@@ -86,8 +87,9 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
 
                 result = await asyncio.to_thread(
-                    process_case,ENV,caseNo,data,state,run_id
+                    process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
                     )
+            
 
                 logging.info(f'Processing result for caseNo {caseNo}')
 
@@ -107,6 +109,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
         if len(event_data_batch) > 0:
             await res_eh_producer.send_batch(event_data_batch)
             logging.info(f'Sent the final batch of events to Results Event Hub')
+
 
 
 

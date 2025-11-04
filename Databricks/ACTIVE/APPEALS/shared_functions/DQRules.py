@@ -309,13 +309,56 @@ def base_DQRules():
       )
     )
     """
+    # IF CategoryId not in [7,8,24,25,31,32,41] or valid_categoryIdList is NULL or lu_HOANRef is NULL then caseFlags is NULL
+    # IF CategoryId in [7,8,24,25,31,32,41] and lu_HOANRef is not NULL then caseFlags is not NULL
+    # IF CategoryId in [7,25] and lu_HOANRef is not NULL, then all flagComment are NULL
+    # IF CategoryId in [8,24,31,32,41] and lu_HOANRef is not NULL, then all flagComment are NOT NULL
+
     checks["valid_caseFlags_flagComment_in_list"] = """
     (
-      caseFlags.details IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseFlags.details, x -> x.value.flagComment),
-        caseFlags.details[0].value.flagComment
-      )
+        valid_categoryIdList IS NULL
+        OR lu_HORef IS NULL
+        OR (
+            NOT (
+                array_contains(valid_categoryIdList, 7) OR
+                array_contains(valid_categoryIdList, 8) OR
+                array_contains(valid_categoryIdList, 24) OR
+                array_contains(valid_categoryIdList, 25) OR
+                array_contains(valid_categoryIdList, 31) OR
+                array_contains(valid_categoryIdList, 32) OR
+                array_contains(valid_categoryIdList, 41)
+            )
+            AND caseFlags IS NULL
+        )
+        OR (
+            (
+                array_contains(valid_categoryIdList, 7) OR
+                array_contains(valid_categoryIdList, 8) OR
+                array_contains(valid_categoryIdList, 24) OR
+                array_contains(valid_categoryIdList, 25) OR
+                array_contains(valid_categoryIdList, 31) OR
+                array_contains(valid_categoryIdList, 32) OR
+                array_contains(valid_categoryIdList, 41)
+            )
+            AND lu_HORef IS NOT NULL
+            AND caseFlags IS NOT NULL
+            AND (
+                (
+                    (array_contains(valid_categoryIdList, 7) OR array_contains(valid_categoryIdList, 25))
+                    AND exists(
+                        TRANSFORM(caseFlags.details, x -> x.value.flagComment),
+                        x -> x IS NULL
+                    )
+                )
+                OR (
+                    (array_contains(valid_categoryIdList, 8) OR array_contains(valid_categoryIdList, 24) OR array_contains(valid_categoryIdList, 31) OR array_contains(valid_categoryIdList, 32) OR array_contains(valid_categoryIdList, 41))
+                    AND NOT exists(
+                        TRANSFORM(caseFlags.details, x -> x.value.flagComment),
+                        x -> x IS NULL
+                    )
+                )
+            )
+        )
     )
     """
     checks["valid_caseFlags_hearingRelevant_in_list"] = """

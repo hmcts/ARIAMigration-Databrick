@@ -5035,7 +5035,7 @@ def generate_html(row, templates=templates):
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
                                         .replace("{{SpecificdirectionsPlaceHolder}}", str("\n".join(
-                                                f"<tr><td id=\"midpadding\">{rspecd.reviewspecificdirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
+                                                f"<tr><td id=\"midpadding\">{rspecd.SpecificDirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
                                                 for i, rspecd in enumerate(SDP.ReviewSpecficDirectionDetails or [])
                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
                                         .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(

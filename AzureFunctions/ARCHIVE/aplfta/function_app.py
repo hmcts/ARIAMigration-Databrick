@@ -55,12 +55,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         logging.info('Acquired KV secrets for DL and ACK')
 
          # Blob Storage credentials
-        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        #account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
-        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
-        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
         # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
         # if "SharedAccessSignature=" in full_secret:
@@ -93,7 +93,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                         sub_dir,
                         dl_producer_client,
                         ack_producer_client,
-                        container_secret
+                        source_container_secret
                     )
                     for event in azeventhub
                 ]
@@ -122,7 +122,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, container_secret):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,

@@ -58,7 +58,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
         account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
 
@@ -173,7 +174,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         if "?" in blob_url:
             source_blob_url_with_sas = blob_url
         else:
-            source_blob_url_with_sas = f"{blob_url}?{container_secret}"
+            source_blob_url_with_sas = f"{blob_url}?{source_container_secret}"
 
         logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 

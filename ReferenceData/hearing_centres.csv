@@ -1,113 +1,256 @@
-﻿CentreId,prevFileLocation,hearingCentre,staffLocation,caseManagementLocation,locationCode,locationLabel,selectedHearingCentreRefData,listCaseHearingCentre,applicationChangeDesignatedHearingCentre
-540,Alloa Sheriff Court,glasgow,Glasgow,"{
+﻿CentreId,prevFileLocation,Conditions,hearingCentre,staffLocation,caseManagementLocation,locationCode,locationLabel,selectedHearingCentreRefData,listCaseHearingCentre,applicationChangeDesignatedHearingCentre
+540,Alloa Sheriff Court,,glasgow,Glasgow,"{
     ""region"": ""1"",
     ""baseLocation"": ""366559""
-  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,alloaSherrif,glasgow
-77,Arnhem House,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
-476,Arnhem House (Exceptions),tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
-7,Belfast,glasgow,Glasgow,"{
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,alloaSherrif,glasgow
+77,Arnhem House,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
+476,Arnhem House (Exceptions),"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
+7,Belfast,,glasgow,Glasgow,"{
     ""region"": ""1"",
     ""baseLocation"": ""366559""
-  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
-421,Belfast - Laganside,glasgow,Glasgow,"{
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
+421,Belfast - Laganside,,glasgow,Glasgow,"{
     ""region"": ""1"",
     ""baseLocation"": ""366559""
-  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
-520,Birmingham IAC (Priory Courts),birmingham,birmingham,"{
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,belfast,glasgow
+520,Birmingham IAC (Priory Courts),,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
-  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-444,Birmingham Magistrates Court (VLC),birmingham,birmingham,"{
+  }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+444,Birmingham Magistrates Court (VLC),,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
-  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-86,Bradford,bradford,bradford,"{
+  }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+86,Bradford,,bradford,Bradford,"{
     ""region"": ""1"",
     ""baseLocation"": ""698118""
-  },",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford,bradford
-12,Cardinal Tower,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED
-101,Castle Park Storage,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-55,Field House,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-296,Field House (TH),map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-48,Glasgow (Eagle Building),glasgow,Glasgow,"{
+  }",698118,Bradford Tribunal Hearing Centre,Bradford Tribunal Hearing Centre,bradford,bradford
+12,Cardinal Tower,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+101,Castle Park Storage,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+55,Field House,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+296,Field House (TH),"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+48,Glasgow (Eagle Building),,glasgow,Glasgow,"{
     ""region"": ""1"",
     ""baseLocation"": ""366559""
-  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
-537,Glasgow (Tribunals Centre),glasgow,Glasgow,"{
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
+537,Glasgow (Tribunals Centre),,glasgow,Glasgow,"{
     ""region"": ""1"",
     ""baseLocation"": ""366559""
-  },",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
-104,Harmondsworth,hattonCross,hattonCross,"{
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgowTribunalsCentre,glasgow
+104,Harmondsworth,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
-  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,harmondsworth,hattonCross
-2,Hatton Cross,hattonCross,hattonCross,"{
+  }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,harmondsworth,hattonCross
+2,Hatton Cross,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
-  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-96,Hatton Cross (Fast Track),hattonCross,hattonCross,"{
+  }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+96,Hatton Cross (Fast Track),,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
-  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-501,Hendon Magistrates Court (HX),hattonCross,hattonCross,"{
+  }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+501,Hendon Magistrates Court (HX),,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
-  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hendon,hattonCross
-13,Loughborough,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
-19,Maidstone Crown Court,hattonCross,hattonCross,"{
+  }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hendon,hattonCross
+13,Loughborough,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
+19,Maidstone Crown Court,,hattonCross,Hatton Cross,"{
     ""region"": ""1"",
     ""baseLocation"": ""386417""
-  },",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
-539,Manchester (The Lowry),manchester,manchester,"{
+  }",386417,Hatton Cross Tribunal Hearing Centre,Hatton Cross Tribunal Hearing Centre,hattonCross,hattonCross
+539,Manchester (The Lowry),,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
-  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-95,Manchester (Piccadilly),manchester,manchester,"{
+  }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+95,Manchester (Piccadilly),,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
-  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-532,Newcastle CFCTC,newcastle,newcastle,"{
+  }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+532,Newcastle CFCTC,,newcastle,Newcastle,"{
     ""region"": ""1"",
     ""baseLocation"": ""366796""
-  },",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle,newcastle
-78,Newport (Columbus House),newport,newport,"{
+  }",366796,Newcastle Civil And Family Courts And Tribunals Centre,Newcastle Civil And Family Courts And Tribunals Centre,newcastle,newcastle
+78,Newport (Columbus House),,newport,Newport,"{
     ""region"": ""1"",
     ""baseLocation"": ""227101""
-  },",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport,newport
-79,North Shields (Kings Court),tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
-43,Nottingham Justice Centre,birmingham,birmingham,"{
+  }",227101,Newport Tribunal Centre - Columbus House,Newport Tribunal Centre - Columbus House,newport,newport
+79,North Shields (Kings Court),"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
+43,Nottingham Justice Centre,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
-  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,nottingham,birmingham
-59,Tameside Magistartes Court,manchester,manchester,"{
+  }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,nottingham,birmingham
+59,Tameside Magistartes Court,,manchester,Manchester,"{
     ""region"": ""1"",
     ""baseLocation"": ""512401""
-  },",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
-1,Taylor House,taylorHouse,taylorHouse,"{
+  }",512401,Manchester Tribunal Hearing Centre - Piccadilly Exchange,Manchester Tribunal Hearing Centre - Piccadilly Exchange,manchester,manchester
+1,Taylor House,,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
-  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-331,Taylor House (Field House),taylorHouse,taylorHouse,"{
+  }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+331,Taylor House (Field House),,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
-  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-51,Taylor House (HX),taylorHouse,taylorHouse,"{
+  }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+51,Taylor House (HX),,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
-  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-478,UT (IAC) Birmingham CJC,birmingham,birmingham,"{
+  }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
+478,UT (IAC) Birmingham CJC,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
-  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-522,UT (IAC) Cardiff CJC,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-406,UT (IAC) Hearing in Field House,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-517,UT (IAC) Hearing in Man CJC,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
-106,Yarl's Wood,taylorHouse,taylorHouse,"{
+  }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+522,UT (IAC) Cardiff CJC,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+406,UT (IAC) Hearing in Field House,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+517,UT (IAC) Hearing in Man CJC,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L",map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation,map with fileLocation
+106,Yarl's Wood,,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
-  },",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,yarlsWood,taylorHouse
-3,ZZ(DNU)Birmingham IAC Sheldon Court,birmingham,birmingham,"{
+  }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,yarlsWood,taylorHouse
+3,ZZ(DNU)Birmingham IAC Sheldon Court,,birmingham,Birmingham,"{
     ""region"": ""1"",
     ""baseLocation"": ""231596""
-  },",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
-37,Not known at this time,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG,tbc with DMWG
+  }",231596,Birmingham Civil And Family Justice Centre,Birmingham Civil And Family Justice Centre,birmingham,birmingham
+37,Not known at this time,"FOR caseNo:
+     %% sql
+     SELECT TOP 1 Comment 
+     FROM h.bronze_history 
+     WHERE HistType = 6 AND HistoryId = (SELECT MAX(HistoryId)
+					FROM h.bronze_history 
+					WHERE (Comment NOT LIKE '%Castle Park Storage%' AND Comment NOT LIKE '%Field House%' AND Comment NOT LIKE '%UT (IAC)%' )
+					AND HistType = 6
+                				AND CaseNo = caseNo)    
+     ORDER BY HistoryId DESC
+
+     %% python
+     split_comment = Comment.split(',')
+     prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"

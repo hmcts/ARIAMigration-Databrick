@@ -67,6 +67,22 @@
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-453">ARIADM-453</a>/NSA/01-Mar-2024</td>
 # MAGIC          <td>Appeals StatusDetils: 35 (Migration) need to be included </td>
 # MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-643">ARIADM-643</a>/NSA/25-JULY-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Remittal Outcome Boolean Transformation issue </td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-644">ARIADM-644</a>/NSA/25-JUL-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - 'UpperTribunalAppellant' Transformation issue </td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-646">ARIADM-646</a>/NSA/28-JULY-2025</td>
+# MAGIC          <td>Upper Tier Appeals HTML - 'Create User ID' and 'Last Edit User ID' lookup transformation issue</td>
+# MAGIC       </tr>
+# MAGIC       <tr>
+# MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-647">ARIADM-647</a>/NSA/28-JUL-2025</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Status > Status Details Tab - 'ExtemporeMethodOfTyping' field transformation</td>
+# MAGIC       </tr>
 # MAGIC    </tbody>
 # MAGIC </table>
 
@@ -891,7 +907,10 @@ def raw_AppealTypeCategory():
     path=f"{raw_mnt}/raw_pou"
 )
 def raw_pou():
+    if env_name == "sbox":
      return read_latest_parquet("ARIAPou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
+    else:
+      return read_latest_parquet("Pou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
  
 @dlt.table(
     name="raw_caseadjudicator",
@@ -1828,7 +1847,7 @@ def bronze_status_decisiontype():
 
 @dlt.table(
     name="bronze_appealcase_t_tt_ts_tm",
-    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, and TransactionMethod tables to retrieve transaction details.",
+    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, TransactionMethod, and Users tables to retrieve transaction details.",
     path=f"{bronze_mnt}/bronze_appealcase_t_tt_ts_tm"
 )
 def bronze_appealcase_t_tt_ts_tm():
@@ -1844,6 +1863,14 @@ def bronze_appealcase_t_tt_ts_tm():
             ).join(
                 dlt.read("raw_transactionmethod").alias("tm"),
                 col("t.TransactionMethodId") == col("tm.TransactionMethodID"),
+                "left_outer"
+            ).join(
+                dlt.read("raw_users").alias("u1"),
+                col("u1.UserId") == col("t.CreateUserId"),
+                "left_outer"
+            ).join(
+                dlt.read("raw_users").alias("u2"),
+                col("u2.UserId") == col("t.LastEditUserId"),
                 "left_outer"
             ).select(
                 # Transaction fields
@@ -1867,8 +1894,10 @@ def bronze_appealcase_t_tt_ts_tm():
                 col("t.Notes").alias("TransactionNotes"),
                 col("t.ExpectedDate"),
                 col("t.ReferringTransactionId"),
-                col("t.CreateUserId"),
-                col("t.LastEditUserId"),
+                # col("t.CreateUserId"),
+                # col("t.LastEditUserId"),
+                col("u1.Name").alias("CreateUserId"), 
+                col("u2.Name").alias("LastEditUserID"), 
                 
                 # TransactionType fields
                 col("tt.Description").alias("TransactionDescription"),
@@ -1892,11 +1921,11 @@ def bronze_appealcase_t_tt_ts_tm():
                 # TransactionMethod fields
                 col("tm.Description").alias("TransactionMethodDesc"),
                 col("tm.InterfaceDescription").alias("TransactionMethodIntDesc"),
-                col("tm.DoNotUse").alias("DoNotUseTransactionMethod")
+                col("tm.DoNotUse").alias("DoNotUseTransactionMethod"),
+
             )
         
-    return df      
-
+    return df
 
 # COMMAND ----------
 
@@ -3589,7 +3618,6 @@ def silver_status_detail():
                               "st.CaseStatus",
                               "st.DateReceived",
                               "st.StatusDetailAdjudicatorId",
-                              #"st.Allegation",
                               when(col("st.Allegation") == 1, "No right of appeal")
                               .when(col("st.Allegation") == 2, "Out of time")
                               .alias("Allegation"),
@@ -3633,8 +3661,16 @@ def silver_status_detail():
                               "st.CourtSelection",
                               "st.DecidingCentre",
                               "st.Tier",
-                              "st.RemittalOutcome",
-                              "st.UpperTribunalAppellant",
+                              when(col("st.RemittalOutcome").isNull(), "")
+                              .when(col("st.RemittalOutcome") == 0, "")
+                              .when(col("st.RemittalOutcome") == 1, "YES")
+                              .when(col("st.RemittalOutcome") == 2, "NO")
+                              .alias("RemittalOutcome"),
+                              when(col("st.UpperTribunalAppellant").isNull(), "")
+                              .when(col("st.UpperTribunalAppellant") == 0, "")
+                              .when(col("st.UpperTribunalAppellant") == 1, "Appellant")
+                              .when(col("st.UpperTribunalAppellant") == 2, "Respondent")
+                              .alias("UpperTribunalAppellant"),
                               "st.ListRequirementTypeId",
                               "st.UpperTribunalHearingDirectionId",
                               "st.ApplicationType",
@@ -3653,7 +3689,19 @@ def silver_status_detail():
                               "st.TypistSentDate",
                               "st.TypistReceivedDate",
                               "st.WrittenReasonsSentDate",
-                              "st.ExtemporeMethodOfTyping",
+                              when(
+                                  col("st.ExtemporeMethodOfTyping").isNull(), ""
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "0", ""
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "1", "IA typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "2", "Self typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "3", "3rd party typed"
+                              ).when(
+                                  col("st.ExtemporeMethodOfTyping") == "4", "Unknown"
+                              ).otherwise(col("st.ExtemporeMethodOfTyping")).alias("ExtemporeMethodOfTyping"),
                               when(col("st.Extempore") == True, "enabled").otherwise("disabled").alias("Extempore"),
                               when(col("st.DecisionByTCW") == True, "enabled").otherwise("disabled").alias("DecisionByTCW"),
                               "st.InitialHearingPoints",
@@ -3698,18 +3746,18 @@ def silver_status_detail():
                               col("st.CaseStatusDescription").alias("CurrentStatus"),
                               col("st.AdjournmentParentStatusId"),
                               when(col("st.IRISStatusOfCase") == 1, "Adjudicator Appeal")
-                            .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
-                            .when(col("st.IRISStatusOfCase") == 11, "Scottish Forfeiture")
-                            .when(col("st.IRISStatusOfCase") == 12, "Tribunal Appeal")
-                            .when(col("st.IRISStatusOfCase") == 14, "Tribunal Direct")
-                            .when(col("st.IRISStatusOfCase") == 18, "Bail Renewal")
-                            .when(col("st.IRISStatusOfCase") == 19, "Bail Variation")
-                            .when(col("st.IRISStatusOfCase") == 21, "Tribunal Review")
-                            .when(col("st.IRISStatusOfCase") == 4, "Bail Application")
-                            .when(col("st.IRISStatusOfCase") == 5, "Direct to Divisional Court")
-                            .when(col("st.IRISStatusOfCase") == 6, "Forfeiture")
-                            .when(col("st.IRISStatusOfCase") == 9, "Paper Case")
-                            .otherwise(None)
+                              .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
+                              .when(col("st.IRISStatusOfCase") == 11, "Scottish Forfeiture")
+                              .when(col("st.IRISStatusOfCase") == 12, "Tribunal Appeal")
+                              .when(col("st.IRISStatusOfCase") == 14, "Tribunal Direct")
+                              .when(col("st.IRISStatusOfCase") == 18, "Bail Renewal")
+                              .when(col("st.IRISStatusOfCase") == 19, "Bail Variation")
+                              .when(col("st.IRISStatusOfCase") == 21, "Tribunal Review")
+                              .when(col("st.IRISStatusOfCase") == 4, "Bail Application")
+                              .when(col("st.IRISStatusOfCase") == 5, "Direct to Divisional Court")
+                              .when(col("st.IRISStatusOfCase") == 6, "Forfeiture")
+                              .when(col("st.IRISStatusOfCase") == 9, "Paper Case")
+                              .otherwise(None)
                               .alias("IRISStatusOfCase"),
                               col("HearingCentre"),
                               col("st.ListTypeId"),
@@ -3722,7 +3770,7 @@ def silver_status_detail():
                               col("st.Judiciary2Name"),
                               col("st.Judiciary3Id"),
                               col("st.Judiciary3Name")
-                          )
+                          )            
 
     return joined_df
 
@@ -4486,7 +4534,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(KeyVault_name, "CURATED-sbox-SAS-TOKEN")
+secret = dbutils.secrets.get(KeyVault_name, f"CURATED-{env_name}-SAS-TOKEN")
 
 # COMMAND ----------
 
@@ -6024,7 +6072,7 @@ def gold_appeals_with_json():
     #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_unified.repartition(64)
+    repartitioned_df = df_unified.repartition(200)
 
     df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
             "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
@@ -6056,7 +6104,7 @@ def gold_appeals_with_html():
     #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(64)
+    repartitioned_df = df_combined.repartition(200)
 
     # Trigger upload logic for each row
     df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
@@ -6092,7 +6140,7 @@ def gold_appeals_with_a360():
             .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(64)
+    repartitioned_df = df_agg.repartition(200)
 
     # Remove existing files
     dbutils.fs.rm(f"{gold_outputs}/A360", True)

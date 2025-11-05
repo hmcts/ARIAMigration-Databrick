@@ -1,0 +1,22 @@
+resources:
+  jobs:
+    ccd_call_result_databricks_job:
+      name: ccd_call_result_databricks_job
+      job_clusters:
+        - job_cluster_key: ccd_call_result_databricks_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 8
+
+      tasks:
+        - task_key: active_CCD_call_result_EH
+          job_cluster_key: ccd_call_result_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE/Active_CCD_call_result_EH"
+            source: WORKSPACE
+            base_parameters:
+              state: paymentPending
+        
+      queue:
+        enabled: true

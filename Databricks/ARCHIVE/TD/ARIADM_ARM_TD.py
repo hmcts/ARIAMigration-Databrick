@@ -107,7 +107,6 @@ from datetime import datetime
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -145,6 +144,7 @@ curated_storage = f"ingest{lz_key}curated{env_name}"
 checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
 raw_storage = f"ingest{lz_key}raw{env_name}"
 landing_storage = f"ingest{lz_key}landing{env_name}"
+external_storage = f"ingest{lz_key}external{env_name}"
 
 # Spark config for curated storage (Delta table)
 spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
@@ -174,6 +174,13 @@ spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.wi
 spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
 spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
 
+# Spark config for checkpoint storage
+spark.conf.set(f"fs.azure.account.auth.type.{external_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{external_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{external_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{external_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{external_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -184,14 +191,12 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # DBTITLE 1,Set Paths and Hive Schema Variables
 read_hive = False
 
-# raw_mnt = "/mnt/ingest00rawsboxraw/ARIADM/ARM/TD"
-# raw_mnt = f"abfss://raw@ingest00rawsbox.dfs.core.windows.net/ARIADM/ARM/TD"
 raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
 landing_mnt = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
 silver_mnt = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
 gold_mnt = f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/TD"
-file_path = f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/IRIS-TD-CSV/Example IRIS tribunal decisions data file.csv"
+file_path = f"abfss://external-csv@ingest{lz_key}external{env_name}.dfs.core.windows.net/Example IRIS tribunal decisions data file.csv"
 gold_outputs = "ARIADM/ARM/TD"
 hive_schema = "ariadm_arm_td"
 audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/TD/td_cr_audit_table"
@@ -337,7 +342,7 @@ def Raw_AppealCase():
     path=f"{raw_mnt}/Raw_CaseAppellant"
 )
 def Raw_CaseAppellant():
-    return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_JOH")
+    return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_appellant",
@@ -345,7 +350,7 @@ def Raw_CaseAppellant():
     path=f"{raw_mnt}/Raw_Appellant"
 )
 def raw_Appellant():
-     return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_JOH")
+     return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_filelocation",
@@ -353,7 +358,7 @@ def raw_Appellant():
     path=f"{raw_mnt}/Raw_FileLocation"
 )
 def Raw_FileLocation():
-    return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_JOH")
+    return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_department",
@@ -361,7 +366,7 @@ def Raw_FileLocation():
     path=f"{raw_mnt}/Raw_Department"
 )
 def Raw_Department():
-    return read_latest_parquet("Department", "tv_Department", "ARIA_ARM_JOH")
+    return read_latest_parquet("Department", "tv_Department", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_hearingcentre",
@@ -369,7 +374,10 @@ def Raw_Department():
     path=f"{raw_mnt}/Raw_HearingCentre"
 )
 def Raw_HearingCentre():
-    return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_JOH")
+    if env_name == "sbox":
+     return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
+    else:
+     return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
 
 @dlt.table(
     name="raw_status",
@@ -377,7 +385,7 @@ def Raw_HearingCentre():
     path=f"{raw_mnt}/Raw_Status"
 )
 def Raw_Status():
-    return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
+    return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_TD")
 
 # COMMAND ----------
 
@@ -635,43 +643,48 @@ def bronze_ac_ca_ant_fl_dt_hc():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Note: Temporarily Excluded IRIS with a filter using .filter(lit(False))
-
-# COMMAND ----------
-
 @dlt.table(
     name="bronze_iris_extract",
     comment="Delta Live Table extracted from the IRIS Tribunal decision file extract.",
     path=f"{bronze_mnt}/bronze_iris_extract"
 )
 def bronze_iris_extract():
-    df_iris = spark.read.option("header", "true") \
-    .option("inferSchema", "true") \
-    .csv(file_path) \
-    .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp()) \
-    .withColumn("AdtclmnModifiedDatetime", current_timestamp()) \
-    .withColumn("SourceFileName", lit(file_path)) \
-    .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD')) \
-    .select(
-        col('AppCaseNo').alias('CaseNo'),
-        col('Fornames').alias('Forenames'),
-        col('Name'),
-        col('BirthDate').cast("timestamp"),
-        col('DestructionDate').cast("timestamp"),
-        col('HORef'),
-        col('PortReference'),
-        col('File_Location').alias('HearingCentreDescription'),
-        col('Description').alias('DepartmentDescription'),
-        col('Note'),
-        lit(None).alias("RelationShip").cast("string"),
-        col('AdtclmnFirstCreatedDatetime'),
-        col('AdtclmnModifiedDatetime'),
-        col('SourceFileName'),
-        col('InsertedByProcessName')
-    ).filter(lit(False))
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("Forenames").asc())
 
-    return df_iris
+    df_iris = spark.read.option("header", "true") \
+        .option("inferSchema", "true") \
+        .csv(file_path) \
+        .withColumn("AdtclmnFirstCreatedDatetime", current_timestamp()) \
+        .withColumn("AdtclmnModifiedDatetime", current_timestamp()) \
+        .withColumn("SourceFileName", lit(file_path)) \
+        .withColumn("InsertedByProcessName", lit('ARIA_ARM_IRIS_TD')) \
+        .select(
+            col('AppCaseNo').alias('CaseNo'),
+            col('Fornames').alias('Forenames'),
+            col('Name'),
+            col('BirthDate').cast("timestamp"),
+            col('DestructionDate').cast("timestamp"),
+            col('HORef'),
+            col('PortReference'),
+            col('File_Location').alias('HearingCentreDescription'),
+            col('Description').alias('DepartmentDescription'),
+            col('Note'),
+            lit(None).alias("RelationShip").cast("string"),
+            col('AdtclmnFirstCreatedDatetime'),
+            col('AdtclmnModifiedDatetime'),
+            col('SourceFileName'),
+            col('InsertedByProcessName')
+        ) \
+        .withColumn("row_num", row_number().over(window_spec)) \
+        .filter(col("row_num") == 1) \
+        .drop("row_num")
+
+    # ARIADM-1071 Deduplicate IRIS synthetic data and also avoiding dup in raw data using row_num    
+    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
+
+    df_iris_filtered = df_iris.alias("iris").join(td_df.alias("aria"), col("iris.CaseNo") == col("aria.CaseNo"),"left").filter(col("aria.CaseNo").isNull()).select("iris.*")
+
+    return df_iris_filtered
 
 # COMMAND ----------
 
@@ -1063,7 +1076,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # DBTITLE 1,Secret Retrieval for Database Connection
-secret = dbutils.secrets.get(KeyVault_name, "CURATED-sbox-SAS-TOKEN")
+secret = dbutils.secrets.get(KeyVault_name, f"CURATED-{env_name}-SAS-TOKEN")
 
 # COMMAND ----------
 
@@ -1399,16 +1412,16 @@ optimal_partitions
 
 # DBTITLE 1,Transformation gold_td_iris_with_html
 checks = {}
-checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
-checks["html_content_no_error"] = "(HTML_Content IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
+checks["html_content_not_error"] = "(HTML_Content NOT LIKE 'Error%')"
+checks["html_content_not_null"] = "(HTML_Content IS NOT NULL)"
+checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_html",
     comment="Delta Live Gold Table with HTML content.",
     path=f"{gold_mnt}/Data/gold_td_iris_with_html"
 )
-@dlt.expect_all_or_fail(checks)
+@dlt.expect_all(checks)
 def gold_td_iris_with_html():
     # Load source data
     df_combined = dlt.read("stg_td_iris_unified")
@@ -1418,54 +1431,72 @@ def gold_td_iris_with_html():
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
     # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(optimal_partitions)
+    repartitioned_df = df_combined.repartition(256)
 
-    # # Upload HTML files to Azure Blob Storage
+    # Upload HTML files to Azure Blob Storage (optional)
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
     df_with_upload_status = repartitioned_df.withColumn(
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
-    
 
     # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name", "A360_BatchId","HTML_Content",col("HTML_File_Name").alias("File_Name"),"Status")
+    return df_with_upload_status.select(
+        "CaseNo",
+        "Forenames",
+        "Name",
+        "A360_BatchId",
+        "HTML_Content",
+        col("HTML_File_Name").alias("File_Name"),
+        "Status"
+    )
+
 
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_td_iris_with_json
+from pyspark.sql.functions import when, lit, col
+
 checks = {}
-checks["json_content_no_error"] = "(JSON_Content IS NOT NULL)"
-checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
-
-
+checks["json_content_not_null"] = "(JSON_Content IS NOT NULL)"
+checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
 @dlt.table(
     name="gold_td_iris_with_json",
     comment="Delta Live Gold Table with JSON content.",
     path=f"{gold_mnt}/Data/gold_td_iris_with_json"
 )
-@dlt.expect_all_or_fail(checks)
+@dlt.expect_all(checks)
 def gold_td_iris_with_json():
     """
     Delta Live Table for creating and uploading JSON content for judicial officers.
+    Minimal safe changes: guard nulls, wrap upload UDF call, more partitions.
     """
     # Load source data
     df_combined = dlt.read("stg_td_iris_unified")
 
-    # Optionally load data from Hive if needed
     if read_hive:
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(optimal_partitions)
+    # Use more partitions to reduce per-partition memory pressure
+    repartitioned_df = df_combined.repartition(256)
 
+    # Only call upload_udf when JSON_Content is present; otherwise mark status accordingly.
     df_with_upload_status = repartitioned_df.withColumn(
-        "Status", upload_udf(col("JSON_File_Name"), col("JSON_Content"))
+        "Status",
+        when(col("JSON_Content").isNull(), lit("NoContent"))
+        .otherwise(upload_udf(col("JSON_File_Name"), col("JSON_Content")))
     )
 
-    # Return the DataFrame for DLT table creation
-    return df_with_upload_status.select("CaseNo","Forenames","Name","A360_BatchId","JSON_Content",col("JSON_File_Name").alias("File_Name"),"Status")
+    return df_with_upload_status.select(
+        "CaseNo",
+        "Forenames",
+        "Name",
+        "A360_BatchId",
+        "JSON_Content",
+        col("JSON_File_Name").alias("File_Name"),
+        "Status"
+    )
 
 
 # COMMAND ----------

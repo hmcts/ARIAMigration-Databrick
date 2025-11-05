@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: Shared-functions
+Version: 0.5.2
+Summary: Shared functions for ARIA ACTIVE cases
+Requires-Python: >=3.9
+Requires-Dist: pycountry
+Requires-Dist: uk_postcodes_parsing
+Requires-Dist: confluent-kafka

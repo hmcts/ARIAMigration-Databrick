@@ -5,13 +5,15 @@ resources:
       allow_duplicate_names: true
       clusters:
         - label: default
-          node_type_id: Standard_DS4_v2
-          driver_node_type_id: Standard_DS3_v2
+          node_type_id: Standard_E8_v3
+          driver_node_type_id: Standard_E8_v3
           autoscale:
             min_workers: 8
             max_workers: 8
             mode: ENHANCED
       libraries:
+        - pypi: 
+          package: shared-functions==0.5.2
         - notebook:
             path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_TD"
       target: ariadm_arm_td

@@ -315,7 +315,7 @@ silver_base_path = f"abfss://{silver_storage_container}@{curated_storage_account
 
 gold_base_path = f"abfss://{gold_storage_container}@{curated_storage_account}.dfs.core.windows.net/ARIADM/ARM/BAILS"
 
-external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net"
+external_base_path = f"abfss://{external_storage_container}@{external_storage_account}.dfs.core.windows.net/ReferenceData"
 
 landing_base_path = f"abfss://{landing_storage_container}@{landing_storage_account}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"
 
@@ -704,7 +704,6 @@ def raw_stm_cases():
 @dlt.table(
     name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
     comment='ARIA Migration Archive Bails cases bronze table',
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
 def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
@@ -713,7 +712,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
     .join(dlt.read("raw_respondent").alias("r"), col("cr.RespondentId") == col("r.RespondentId"), 'left_outer')
     .join(dlt.read("raw_pou").alias("p"), col("cr.RespondentId") == col("p.PouId"), 'left_outer')
-    .join(dlt.read("raw_main_respondent").alias("mr"), col("cr.MainrespondentId") == col("mr.MainRespondentId"), 'left_outer')
+    .join(dlt.read("raw_main_respondent").alias("mr"), col("cr.MainRespondentId") == col("mr.MainRespondentId"), 'left_outer')
     .join(dlt.read("raw_file_location").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
     .join(dlt.read("raw_case_rep").alias("crep"), col("ac.CaseNo") == col("crep.CaseNo"), "left_outer")
     .join(dlt.read("raw_representative").alias("rep"), col("crep.RepresentativeId") == col("rep.RepresentativeId"), "left_outer")
@@ -902,7 +901,6 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 @dlt.table(
     name='bronze_bail_ac_ca_apt_country_detc',
     comment='ARIA Migration Archive Bails cases bronze table',
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_ca_apt_country_detc")
 def bronze_bail_ac_ca_apt_country_detc():
     df =  (
@@ -1028,7 +1026,6 @@ def bronze_bail_ac_ca_apt_country_detc():
 @dlt.table(
     name="bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj",
     comment="ARIA Migration Archive Bails cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
 )
 def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
@@ -1116,7 +1113,6 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
 @dlt.table(
     name="bronze_bail_ac_bfdiary_bftype", 
     comment="ARIA Migration Archive Bails cases bronze table", 
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_bfdiary_bftype")
 def bronze_bail_ac_bfdiary_bftype():
     df = (
@@ -1161,7 +1157,6 @@ def bronze_bail_ac_bfdiary_bftype():
 @dlt.table(
     name="bronze_bail_ac_history_users", 
     comment="ARIA Migration Archive Bails cases bronze table", 
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_history_users")
 def bronze_bail_ac_history_users():
     df = (
@@ -1221,7 +1216,6 @@ def bronze_bail_ac_history_users():
 @dlt.table(
   name="bronze_bail_ac_link_linkdetail", 
   comment="ARIA Migration Archive Bails cases bronze table", 
-  partition_cols=["CaseNo"],
   path=f"{bronze_base_path}/bronze_bail_ac_link_linkdetail")
 def bronze_bail_ac_link_linkdetail():
     df = (
@@ -1322,7 +1316,6 @@ def bronze_bail_ac_link_linkdetail():
 @dlt.table(
     name="bronze_bail_status_sc_ra_cs",
     comment="ARIA Migration Archive Bails Status cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_status_sc_ra_cs"
 )
 def bronze_bail_status_sc_ra_cs():
@@ -1496,7 +1489,6 @@ def bronze_bail_status_sc_ra_cs():
 @dlt.table(
     name="bronze_bail_ac_appealcategory_category",
     comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
-    partition_cols=["CaseNo"],
     path=f"{bronze_base_path}/bronze_bail_ac_appealcategory_category"
 )
 def bronze_bail_ac_appealcategory_category():
@@ -1817,17 +1809,17 @@ def silver_legal_hold_normal_bail():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_scottish_bails_funds",
-           comment="Silver table for Scottish Bails Funds cases",
-           path=f"{silver_base_path}/silver_scottish_bails_funds")
-def silver_scottish_bails_funds():
-    df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
-        col("Caseno/ Bail Ref no").alias("CaseNo"),
-        lit("ScottishBailsFunds").alias("BaseBailType")
-        )
+# @dlt.table(name="silver_scottish_bails_funds",
+#            comment="Silver table for Scottish Bails Funds cases",
+#            path=f"{silver_base_path}/silver_scottish_bails_funds")
+# def silver_scottish_bails_funds():
+#     df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
+#         col("Caseno/ Bail Ref no").alias("CaseNo"),
+#         lit("ScottishBailsFunds").alias("BaseBailType")
+#         )
 
 
-    return df
+#     return df
     
 
 # COMMAND ----------
@@ -1862,7 +1854,6 @@ def silver_bail_combined_segmentation_nb_lhnb():
 
 @dlt.table(name="silver_bail_m1_case_details",
            comment="ARIA Migration Archive Bails m1 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m1")
 def silver_m1():
     m1_df = dlt.read("bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
@@ -1918,7 +1909,6 @@ def silver_m1():
 
 @dlt.table(name="silver_bail_m2_case_appellant",
            comment="ARIA Migration Archive Bails m2 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m2_case_appellant")
 def silver_m2():
     m2_df = dlt.read("bronze_bail_ac_ca_apt_country_detc").alias("m2")
@@ -1967,7 +1957,6 @@ m3_grouped_cols = [
 
 @dlt.table(name="silver_bail_m3_hearing_details", 
            comment="ARIA Migration Archive Bails m3 silver table", 
-           partition_cols=["CaseNo"], 
            path=f"{silver_base_path}/silver_bail_m3")
 
 def silver_m3():
@@ -1993,7 +1982,6 @@ def silver_m3():
 
 @dlt.table(name="silver_bail_m4_bf_diary",
            comment="ARIA Migration Archive Bails m4 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m4_bf_diary")
 def silver_m4():
     m4_df = dlt.read("bronze_bail_ac_bfdiary_bftype").alias("m4")
@@ -2014,7 +2002,6 @@ def silver_m4():
 
 @dlt.table(name="silver_bail_m5_history",
            comment="ARIA Migration Archive Bails m5 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m5_history")
 def silver_m5():
     m5_df = dlt.read("bronze_bail_ac_history_users").alias("m5")
@@ -2086,7 +2073,6 @@ def silver_m5():
 
 @dlt.table(name="silver_bail_m6_link",
            comment="ARIA Migration Archive Bails m6 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_bail_ac_link_linkdetail").alias("m6")
@@ -2110,7 +2096,6 @@ def silver_m6():
 
 @dlt.table(name="silver_bail_m7_status",
            comment="ARIA Migration Archive Bails m7 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m7_status")
 def silver_m7():
     m7_df = dlt.read("bronze_bail_status_sc_ra_cs").alias("m7")
@@ -2163,7 +2148,6 @@ def silver_m7():
 
 @dlt.table(name="silver_bail_m8",
            comment="ARIA Migration Archive Bails m8 silver table",
-           partition_cols=["CaseNo"],
            path=f"{silver_base_path}/silver_bail_m8")
 def silver_m8():
     m8_df = dlt.read("bronze_bail_ac_appealcategory_category").alias("m8")

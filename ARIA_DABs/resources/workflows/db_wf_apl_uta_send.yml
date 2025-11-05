@@ -16,19 +16,11 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
-
-        - task_key: validate_packages
-          depends_on:
-            - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_uta_send_job
-          notebook_task: 
-            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
-            source: WORKSPACE
+            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl"
 
         - task_key: create_uta_content
           depends_on:
-            - task_key: validate_packages
+            - task_key: run-my-wheel
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_uta.id}
             full_refresh: false

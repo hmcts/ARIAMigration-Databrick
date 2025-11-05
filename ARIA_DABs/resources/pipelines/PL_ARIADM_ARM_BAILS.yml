@@ -7,7 +7,7 @@ resources:
         pipeline.reset: "true"
       clusters:
         - label: default
-          node_type_id: Standard_DS4_v2
+          node_type_id: Standard_D8ads_v5
           autoscale:
             min_workers: 1
             max_workers: 8

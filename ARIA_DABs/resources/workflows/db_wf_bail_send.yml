@@ -16,19 +16,11 @@ resources:
             entry_point: main
             package_name: shared_functions
           libraries: 
-            - whl: "dbfs:/FileStore/shared_wheels/shared_functions-0.0.2-py3-none-any.whl"
-
-        - task_key: validate_packages
-          depends_on:
-            - task_key: run-my-wheel
-          job_cluster_key: db_wf_bail_send_job
-          notebook_task: 
-            notebook_path: "/Workspace/live/ARCHIVE/test-packages-wheel"
-            source: WORKSPACE
+            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl"
 
         - task_key: DLT_creation_of_content_bails
           depends_on:
-            - task_key: validate_packages
+            - task_key: run-my-wheel
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_aria_archive_bails.id}
             full_refresh: true
@@ -66,13 +58,13 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/BAIL/bails_ack_autoloader"
             source: WORKSPACE
 
-        - task_key: Bails_Send_Dashboard
-          depends_on:
-            - task_key: bails_ARM_ack
-            - task_key: DLT_creation_of_content_bails
-          job_cluster_key: db_wf_bail_send_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Send_Audit_Dashboard"
-            source: WORKSPACE
+        # - task_key: Bails_Send_Dashboard
+        #   depends_on:
+        #     - task_key: bails_ARM_ack
+        #     - task_key: DLT_creation_of_content_bails
+        #   job_cluster_key: db_wf_bail_send_job
+        #   notebook_task:
+        #     notebook_path: "/Workspace/live/ARCHIVE/BAIL/AUDIT/Bails_Send_Audit_Dashboard"
+        #     source: WORKSPACE
       queue:
         enabled: true

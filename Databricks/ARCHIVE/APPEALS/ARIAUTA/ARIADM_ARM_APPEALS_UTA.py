@@ -77,11 +77,11 @@
 # MAGIC       </tr>
 # MAGIC         <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-646">ARIADM-646</a>/NSA/28-JULY-2025</td>
-# MAGIC          <td>Upper Tier Appeals HTML - 'Create User ID' and 'Last Edit User ID' lookup transformation issue</td>
+# MAGIC          <td>Upper Tier Appeals HTML - 'Create User ID' and 'Last Edit User ID' lookup Transformation issue</td>
 # MAGIC       </tr>
 # MAGIC       <tr>
 # MAGIC          <td style='text-align: left; '><a href="https://tools.hmcts.net/jira/browse/ARIADM-647">ARIADM-647</a>/NSA/28-JUL-2025</td>
-# MAGIC          <td>Upper Tier Appeal HTML - Status > Status Details Tab - 'ExtemporeMethodOfTyping' field transformation</td>
+# MAGIC          <td>Upper Tier Appeal HTML - Status > Status Details Tab - 'ExtemporeMethodOfTyping' field Transformation</td>
 # MAGIC       </tr
 # MAGIC    </tbody>
 # MAGIC </table>
@@ -2981,7 +2981,7 @@ def stg_appeals_filtered():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_appealcase_detail
+# MAGIC ### Transformation : silver_appealcase_detail
 
 # COMMAND ----------
 
@@ -3144,7 +3144,7 @@ def silver_appealcase_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_caseapplicant_detail
+# MAGIC ### Transformation : silver_caseapplicant_detail
 
 # COMMAND ----------
 
@@ -3265,7 +3265,7 @@ def silver_dependent_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_list_detail
+# MAGIC ### Transformation : silver_list_detail
 
 # COMMAND ----------
 
@@ -3436,7 +3436,7 @@ def silver_list_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_dfdairy_detail
+# MAGIC ### Transformation : silver_dfdairy_detail
 
 # COMMAND ----------
 
@@ -3456,7 +3456,7 @@ def silver_dfdairy_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_history_detail
+# MAGIC ### Transformation : silver_history_detail
 
 # COMMAND ----------
 
@@ -3564,7 +3564,7 @@ def silver_history_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_link_detail
+# MAGIC ### Transformation : silver_link_detail
 
 # COMMAND ----------
 
@@ -3591,7 +3591,7 @@ def silver_link_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_status_detail
+# MAGIC ### Transformation : silver_status_detail
 
 # COMMAND ----------
 
@@ -3776,7 +3776,7 @@ def silver_status_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_appealcategory_detail
+# MAGIC ### Transformation : silver_appealcategory_detail
 
 # COMMAND ----------
 
@@ -3797,7 +3797,7 @@ def silver_appealcategory_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_case_detail
+# MAGIC ### Transformation : silver_case_detail
 
 # COMMAND ----------
 
@@ -3946,7 +3946,7 @@ def silver_statusdecisiontype_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_transaction_detail
+# MAGIC ### Transformation : silver_transaction_detail
 
 # COMMAND ----------
 
@@ -4065,7 +4065,7 @@ def silver_transaction_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_humanright_detail
+# MAGIC ### Transformation : silver_humanright_detail
 
 # COMMAND ----------
 
@@ -4086,7 +4086,7 @@ def silver_humanright_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_newmatter_detail"
+# MAGIC ### Transformation : silver_newmatter_detail"
 
 # COMMAND ----------
 
@@ -4118,7 +4118,7 @@ def silver_newmatter_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_documents_detail
+# MAGIC ### Transformation : silver_documents_detail
 
 # COMMAND ----------
 
@@ -4139,7 +4139,7 @@ def silver_documents_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : sliver_direction_detail
+# MAGIC ### Transformation : sliver_direction_detail
 
 # COMMAND ----------
 
@@ -4160,7 +4160,7 @@ def sliver_direction_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_reviewspecificdirection_detail
+# MAGIC ### Transformation : silver_reviewspecificdirection_detail
 
 # COMMAND ----------
 
@@ -4181,7 +4181,7 @@ def Silver_reviewspecificdirection_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_costaward_detail
+# MAGIC ### Transformation : silver_costaward_detail
 
 # COMMAND ----------
 
@@ -4291,7 +4291,7 @@ def silver_costaward_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_costorder_detail 
+# MAGIC ### Transformation : silver_costorder_detail 
 
 # COMMAND ----------
 
@@ -4350,7 +4350,7 @@ def silver_costorder_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_hearingpointschange_detail
+# MAGIC ### Transformation : silver_hearingpointschange_detail
 
 # COMMAND ----------
 
@@ -4376,7 +4376,7 @@ def silver_hearingpointschange_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation :silver_hearingpointshistory_detail
+# MAGIC ### Transformation :silver_hearingpointshistory_detail
 
 # COMMAND ----------
 
@@ -4397,7 +4397,7 @@ def silver_hearingpointshistory_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation : silver_appealtypecategory_detail
+# MAGIC ### Transformation : silver_appealtypecategory_detail
 
 # COMMAND ----------
 
@@ -4418,7 +4418,7 @@ def silver_appealtypecategory_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation: silver_appealgrounds_detail
+# MAGIC ### Transformation: silver_appealgrounds_detail
 
 # COMMAND ----------
 
@@ -4439,7 +4439,7 @@ def silver_appealgrounds_detail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation: silver_required_incompatible_adjudicator
+# MAGIC ### Transformation: silver_required_incompatible_adjudicator
 
 # COMMAND ----------
 
@@ -4459,7 +4459,7 @@ def silver_required_incompatible_adjudicator():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Tarnsformation: silver_case_adjudicator
+# MAGIC ### Transformation: silver_case_adjudicator
 
 # COMMAND ----------
 
@@ -4528,7 +4528,7 @@ def silver_archive_metadata():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Silver DLT staging table for gold transformation
+# MAGIC ## Silver DLT staging table for gold Transformation
 
 # COMMAND ----------
 
@@ -5035,7 +5035,7 @@ def generate_html(row, templates=templates):
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
                                         .replace("{{SpecificdirectionsPlaceHolder}}", str("\n".join(
-                                                f"<tr><td id=\"midpadding\">{rspecd.reviewspecificdirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
+                                                f"<tr><td id=\"midpadding\">{rspecd.SpecificDirection}</td><td id=\"midpadding\">{rspecd.DateRequiredIND}</td><td id=\"midpadding\">{rspecd.DateRequiredAppellantRep}</td><td id=\"midpadding\">{rspecd.DateReceivedIND}</td><td id=\"midpadding\">{rspecd.DateReceivedAppellantRep}</td></tr>"
                                                 for i, rspecd in enumerate(SDP.ReviewSpecficDirectionDetails or [])
                                             ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
                                         .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(

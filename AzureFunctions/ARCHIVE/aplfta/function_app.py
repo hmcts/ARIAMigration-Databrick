@@ -76,13 +76,13 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         sub_dir = f"ARIA{ARM_SEGMENT}/submission"
         logging.info(f'Created sub_dir: {sub_dir}')
 
+        # Ensure ContainerClient is properly closed
+        container_service_client = None
         try:
             container_service_client = ContainerClient.from_container_url(container_url)
             logging.info('Created container service client')
-        except Exception as e:
-            logging.error(f"Failed to connect to ARM Container Client {e}")
 
-        try:
+            #  Use async context managers for EventHub clients
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                        EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
 
@@ -100,11 +100,17 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                 ]
                 await asyncio.gather(*tasks)
                 logging.info('Finished processing messages')
+
+        except Exception as e:
+            logging.error(f"Failed to connect to ARM Container Client {e}")
+
         finally:
-            container_service_client.close()
+            # Explicitly close the container client to avoid session leaks
+            if container_service_client:
+                await container_service_client.close()
 
     finally:
-        # Explicitly close SecretClient to avoid session leaks
+        #  Explicitly close SecretClient and credential to prevent unclosed aiohttp sessions
         await kv_client.close()
         await credential.close()
 
@@ -121,6 +127,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 async def upload_blob_with_retry(blob_client, message, capture_response):
     logging.info(f'Uploading blob')
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
+    # Close blob client explicitly
+    await blob_client.close()
 
 
 async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret):
@@ -178,11 +186,12 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 
-        # Download file from source
-        source_blob_client = BlobClient.from_blob_url(source_blob_url_with_sas)
-        stream = await source_blob_client.download_blob()
-        file_content = await stream.readall()
-        await source_blob_client.close()
+        #  Download file from source use async context manager to ensure clean closure
+        async with BlobClient.from_blob_url(source_blob_url_with_sas) as source_blob_client:
+            stream = await source_blob_client.download_blob()
+            file_content = await stream.readall()
+            # await source_blob_client.close()  # Note: explicit close not required inside async context manager
+            # The async context ('async with') automatically handles session cleanup to prevent "Unclosed client session" warnings.
 
         # Upload to target
         full_blob_name = f"{subdirectory}/{file_name}"

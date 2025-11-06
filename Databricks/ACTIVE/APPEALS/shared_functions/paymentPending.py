@@ -1404,7 +1404,14 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
             country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
             appellant_stateless_expr.alias("appellantStateless"),
-            when(conditions, when((size(col("appellantNationalities")) == 0), None).otherwise(col("appellantNationalities")).alias("appellantNationalities")).otherwise(None).alias("appellantNationalities"),
+            when(
+                conditions,
+                when(
+                    (size(col("appellantNationalities")) == 0) |
+                    (array_contains(expr("transform(appellantNationalities, x -> x.value.code)"), "NO MAPPING REQUIRED")),
+                    lit(None)
+                ).otherwise(col("appellantNationalities"))
+            ).otherwise(lit(None)).alias("appellantNationalities"),
             when(conditions, col("lu_appellantNationalitiesDescription")).otherwise(None).alias("appellantNationalitiesDescription"),
             when(conditions & deportation_condition ,
                 lit("Yes")

@@ -3,6 +3,7 @@ import pytest
 
 ###### IDAM token manager code - to be deleted when you import the module
 import AzureFunctions.Active.active_ccd.tokenManager as tokenManager
+# import AzureFunctions.Active.active_ccd.tokenManager.S2S_Manager as S2S_Manager
 from datetime import datetime, timezone, timedelta
 
 
@@ -76,7 +77,53 @@ def test_get_token_when_token_expired(mock_need_refresh,mock_fetch_token,mock_ke
    assert uid == "test_uid"
 
    
-   
+#### S2S unit tests #####
 
+#mock retrieving secret from kv
+@pytest.fixture
+def mock_keyvault_client(monkeypatch):
+    """Mock Azure Key Vault SecretClient."""
+    mock_secret_client = MagicMock()
+    mock_secret_client.get_secret.side_effect = lambda name: MagicMock(value=f"mock_{name}")
 
-   
+    monkeypatch.setattr(tokenManager, "SecretClient", MagicMock(return_value=mock_secret_client))
+    monkeypatch.setattr(tokenManager, "DefaultAzureCredential", MagicMock(return_value=MagicMock()))
+    return mock_secret_client
+
+@pytest.fixture
+def s2s_manager(mock_keyvault_client):
+    return tokenManager.S2S_Manager(env="sbox")
+
+# mock fetching s2s token
+@patch("AzureFunctions.Active.active_ccd.tokenManager.pyotp.TOTP")
+@patch("AzureFunctions.Active.active_ccd.tokenManager.requests.post")
+def test_fetch_s2s_token(mock_post, mock_totp, s2s_manager):
+    mock_totp.return_value.now.return_value = "ey163899endke923"
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = "fake_s2s_token"
+    mock_post.return_value = mock_response
+
+    token = s2s_manager._fetch_s2s_token()
+
+    assert token == "fake_s2s_token"
+    assert s2s_manager._s2s_token == "fake_s2s_token"
+    assert s2s_manager.expire_time > datetime.now(timezone.utc)
+
+# test retrieving s2s token
+@patch("AzureFunctions.Active.active_ccd.tokenManager.pyotp.TOTP")
+@patch("AzureFunctions.Active.active_ccd.tokenManager.requests.post")
+def test_get_token_expired_fetches_new(mock_post, mock_totp, s2s_manager):
+    """Test get_token fetches new token if expired."""
+    mock_totp.return_value.now.return_value = "654321"
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = "fake_s2s_token"
+    mock_post.return_value = mock_response
+
+    token = s2s_manager._fetch_s2s_token()
+
+    assert token == "fake_s2s_token"
+    assert s2s_manager._s2s_token == "fake_s2s_token"
+    mock_post.assert_called_once()
+

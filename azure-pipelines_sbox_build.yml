@@ -107,15 +107,14 @@ stages:
       jobs:
         - job: RunTests
           displayName: Run Python Unit Tests
-          pool: server
           steps:
             - task: UsePythonVersion@0
+              displayName: 'Use Python 3.x'
               inputs:
-                versionSpec: '3.12'  # match your environment
-                addToPath: true
+                versionSpec: '3.x'
 
             - script: |
-                python -m pip install --upgrade pip
+                pip install --upgrade pip
                 pip install -r $(Build.SourcesDirectory)/tests/active/requirements.txt
               displayName: 'Install dependencies'
 

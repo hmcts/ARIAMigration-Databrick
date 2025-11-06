@@ -226,21 +226,12 @@ def test_submit_case_failure(mock_post):
 
     assert submit_response is None
 
-
-
-
-
-
-
 # def get_idam_token():
 #     response = requests.post("https://idam-web-public.aat.platform.hmcts.net/o/token")
 #     return response
 
 # @pytest.fixtures
 # def mock_dbutils
-
-
-
 
 # @patch('requests.post')
 # def test_get_idam_token(self,mock_get):
@@ -280,9 +271,9 @@ def test_process_funciton_success(mock_start_case_creation_response,mock_validat
         state="paymentPending"
     )
 
-    assert results['status']== "Success"
-    assert results['ccd_case_id']== "1234567891011"
-    assert results['error'] is None
+    assert results['Status']== "Success"
+    assert results['CCDCaseID']== "1234567891011"
+    assert results['Error'] is None
 
     ### failed to start case creation ###
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
@@ -298,8 +289,8 @@ def test_process_case_start_case_fail(mock_start_case_creation):
         state="paymentPending"
 )
     
-    assert results["status"]=="ERROR"
-    assert results["error"] is not None
+    assert results["Status"]=="ERROR"
+    assert results["Error"] is not None
 
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
@@ -315,8 +306,8 @@ def test_process_case_validation_fails(mock_start, mock_validate):
         state="paymentPending"
     )
 
-    assert result["status"] == "ERROR"
-    assert result["error"] is not None
+    assert result["Status"] == "ERROR"
+    assert result["Error"] is not None
 
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
@@ -335,6 +326,6 @@ def test_process_case_submission_fails(mock_start, mock_validate, mock_submit):
     )
 
 
-    assert result["status"] == "ERROR"
-    assert result["error"] is not None
+    assert result["Status"] == "ERROR"
+    assert result["Error"] is not None
 

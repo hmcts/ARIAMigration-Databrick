@@ -3063,7 +3063,7 @@ def silver_appealcase_detail():
         # "ap.MREmbassy",
         # "ap.MRPOU",
         # "ap.MRRespondent",
-        when(col("ap.CRRespondent") == 1, col("POUShortName")).otherwise("").alias("POUShortName"),
+        when(col("ap.CRRespondent") == 3, col("POUShortName")).when(col("ap.CRRespondent") == 2,col("EmbassyLocation")).otherwise("").alias("POUShortName"),
         when(col("ap.CRRespondent") == 1, col("RespondentName")).otherwise("").alias("RespondentName"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress1")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress1")).when(col("ap.CRRespondent") == 3, col("POUAddress1")).alias("RespondentAddress1"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress2")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress2")).when(col("ap.CRRespondent") == 3, col("POUAddress2")).alias("RespondentAddress2"),
@@ -4776,7 +4776,7 @@ def generate_html(row, templates=templates):
                 for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.UserName}</td><td id=\"midpadding\">{history.HistoryComment}</td></tr>"
+                f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td></tr>"
                 for i, history in enumerate(row.HistoryDetails or [])
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(

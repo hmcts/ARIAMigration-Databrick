@@ -1,0 +1,4 @@
+pytest 
+pyotp
+azure.identity
+azure.keyvault

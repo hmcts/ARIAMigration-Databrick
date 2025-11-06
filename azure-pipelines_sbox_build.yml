@@ -99,13 +99,37 @@ stages:
                 inputs:
                   approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
                   instructions: Please validate the build configuration and resume
+  
+  - ${{ each deployment in parameters.environment_components }}:
+    - stage: Run_Unit_Tests_${{ deployment.environment }}
+      displayName: 'Run Unit Tests for ${{ deployment.environment }}'
+      dependsOn: Init
+      jobs:
+        - job: RunTests
+          displayName: Run Python Unit Tests
+          pool: server
+          steps:
+            - task: UsePythonVersion@0
+              inputs:
+                versionSpec: '3.12'  # match your environment
+                addToPath: true
+
+            - script: |
+                python -m pip install --upgrade pip
+                pip install -r $(Build.SourcesDirectory)/tests/active/requirements.txt
+              displayName: 'Install dependencies'
+
+            - script: |
+                echo "Running FunctionApp unit tests for ${{ deployment.environment }}"
+                pytest $(Build.SourcesDirectory)/tests/active/functionApp --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results-${{ deployment.environment }}.xml -v
+              displayName: 'Run pytest unit tests'
 
   # Build shared wheel first as a single operation per environment
   - ${{ each deployment in parameters.environment_components }}:
     - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
       displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
       ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
-        dependsOn: Manual_Approval_${{ deployment.environment }}
+        dependsOn: Run_Unit_Tests_${{ deployment.environment }}
       ${{ else }}:
         dependsOn: Init
       jobs:

@@ -131,7 +131,11 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
       displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
-      dependsOn: Run_Unit_Tests_${{ deployment.environment }}
+ #     dependsOn: Run_Unit_Tests_${{ deployment.environment }} #uncomment this line when we uncomment the unit testing above.
+      ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+        dependsOn: Manual_Approval_${{ deployment.environment }}
+      ${{ else }}:
+        dependsOn: Init
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'

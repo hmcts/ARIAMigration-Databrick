@@ -133,8 +133,6 @@ stages:
       displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
       ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
         dependsOn: Run_Unit_Tests_${{ deployment.environment }}
-      ${{ else }}:
-        dependsOn: Init
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'

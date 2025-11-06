@@ -103,7 +103,7 @@ stages:
   - ${{ each deployment in parameters.environment_components }}:
     - stage: Run_Unit_Tests_${{ deployment.environment }}
       displayName: 'Run Unit Tests for ${{ deployment.environment }}'
-      dependsOn: Init
+      dependsOn: Manual_Approval_${{ deployment.environment }}
       jobs:
         - job: RunTests
           displayName: Run Python Unit Tests

@@ -144,21 +144,12 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             full_blob_name = f"{subdirectory}/{key}"
             results["filename"] = key
 
+            
             #upload message to blob with partition key as file name
 
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
             logging.info(f'Acquired Blob Client: {full_blob_name}')
 
-            #if the a360 file exists eg f"{subdirectory}/{key}" then log but pass
-
-            exists = await blob_client.exists()
-            if exists:
-                if key.endswith(".a360"):
-                    logging.info(f"Skipping a360 file {key}: already processed.")
-                else:
-                    logging.info(f"Skipping file {key}: already processed.")
-                results["http_message"] = "Skipped duplicate file"
-                results["timestamp"] = datetime.datetime.utcnow().isoformat()
 
             await upload_blob_with_retry(blob_client, message, capture_response)
 

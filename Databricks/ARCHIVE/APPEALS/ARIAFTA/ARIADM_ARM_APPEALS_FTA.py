@@ -3596,6 +3596,24 @@ def silver_link_detail():
 
 # COMMAND ----------
 
+when(col("st.FC") == True, "checked").otherwise("disabled").alias("FC"),
+when(col("st.VideoLink") == True, "checked").otherwise("disabled").alias("VideoLink"),
+when(col("st.Process") == 1, "On Paper")
+    .when(col("st.Process") == 2, "Oral")
+    .when(col("st.Process") == 3, "By Telephone")
+    .when((col("st.Process") == 0) | (col("st.Process").isNull()), "")
+    .otherwise("").alias("Process"),
+
+# 1 = On Paper
+# 2 = Oral
+# NULL = ''
+# 0 = ''
+# 3 = 'By Telephone'
+
+# use when Process 
+
+# COMMAND ----------
+
 @dlt.table(
     name="silver_status_detail",
     comment="Delta Live silver Table for status detail.",
@@ -3647,12 +3665,17 @@ def silver_status_detail():
                               "st.UKAITNo",
                               when(col("st.FC") == True, "checked").otherwise("disabled").alias("FC"),
                               when(col("st.VideoLink") == True, "checked").otherwise("disabled").alias("VideoLink"),
-                              "st.Process",
+                              # "st.Process",
+                              when(col("st.Process") == 1, "On Paper")
+                                .when(col("st.Process") == 2, "Oral")
+                                .when(col("st.Process") == 3, "By Telephone")
+                                .when((col("st.Process") == 0) | (col("st.Process").isNull()), "")
+                                .otherwise("").alias("Process"),
                               "st.COAReferenceNumber",
                               "st.HighCourtReference",
                               "st.OutOfTime",
                               when(col("st.ReconsiderationHearing") == True, "checked").otherwise("disabled").alias("ReconsiderationHearing"),
-                              when(col("st.DecisionSentToHO") == 1, "YES").otherwise('NO').alias("DecisionSentToHO"),
+                              when(col("st.DecisionSentToHO") == 1, "Yes").when(col("st.DecisionSentToHO") == 2, "No").otherwise("").alias("DecisionSentToHO"),
                               "st.DecisionSentToHODate",
                               when(col("st.MethodOfTyping") == 1, "IA Typed")
                               .when(col("st.MethodOfTyping") == 2, "Self Type")
@@ -5536,6 +5559,10 @@ def stg_statusdetail_data():
             'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
     
     return df_final
+
+# COMMAND ----------
+
+concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName")
 
 # COMMAND ----------
 

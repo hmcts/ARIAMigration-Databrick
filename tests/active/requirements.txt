@@ -3,3 +3,10 @@ pyotp
 azure.identity
 azure.keyvault
 pycountry
+uk-postcodes-parsing
+confluent-kafka
+azure-eventhub
+azure-storage-blob
+aiohttp
+pyspark
+pandas

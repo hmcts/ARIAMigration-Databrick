@@ -795,10 +795,10 @@ def legalRepDetails(silver_m1):
         coalesce(col("Rep_Name"), col("CaseRep_Name"))                     #If RepName is null use CaseRepName
     ).withColumn(
         "localAuthorityPolicy",
-        lit("""{
+        lit(json.dumps({
             "Organisation": {},
             "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
-        }""")
+        }))
     ).withColumn(
     "legalRepEmail",
     cleanEmailUDF(

@@ -3646,12 +3646,17 @@ def silver_status_detail():
                               "st.UKAITNo",
                               when(col("st.FC") == True, "checked").otherwise("disabled").alias("FC"),
                               when(col("st.VideoLink") == True, "checked").otherwise("disabled").alias("VideoLink"),
-                              "st.Process",
+                              # "st.Process",
+                              when(col("st.Process") == 1, "On Paper")
+                                .when(col("st.Process") == 2, "Oral")
+                                .when(col("st.Process") == 3, "By Telephone")
+                                .when((col("st.Process") == 0) | (col("st.Process").isNull()), "")
+                                .otherwise("").alias("Process"),
                               "st.COAReferenceNumber",
                               "st.HighCourtReference",
                               "st.OutOfTime",
                               when(col("st.ReconsiderationHearing") == True, "checked").otherwise("disabled").alias("ReconsiderationHearing"),
-                              when(col("st.DecisionSentToHO") == 1, "YES").otherwise('NO').alias("DecisionSentToHO"),
+                              when(col("st.DecisionSentToHO") == 1, "Yes").when(col("st.DecisionSentToHO") == 2, "No").otherwise("").alias("DecisionSentToHO"),
                               "st.DecisionSentToHODate",
                               when(col("st.MethodOfTyping") == 1, "IA Typed")
                               .when(col("st.MethodOfTyping") == 2, "Self Type")

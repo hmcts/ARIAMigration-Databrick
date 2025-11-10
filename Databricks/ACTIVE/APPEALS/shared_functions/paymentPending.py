@@ -609,9 +609,9 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         "caseFlags",
         when(size(col("caseFlagDetails")) > 0,
             struct(
-                col("caseFlagDetails").alias("details"),
-                lit(None).cast("string").alias("groupId"),
-                lit(None).cast("string").alias("visibility")
+                col("caseFlagDetails").alias("details")
+                # lit(None).cast("string").alias("groupId"),
+                # lit(None).cast("string").alias("visibility")
             )
         ).otherwise(lit(None))
     )
@@ -621,10 +621,10 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         when(F.size("appellantFlagDetails") > 0,
             struct(
                 col("appellantFlagDetails").alias("details"),
-                lit(None).cast("string").alias("groupId"),
+                # lit(None).cast("string").alias("groupId"),
                 lit("Functional PostDeployment").alias("partyName"),
                 lit("Appellant").alias("roleOnCase"),
-                lit(None).cast("string").alias("visibility")
+                # lit(None).cast("string").alias("visibility")
             )
         ).otherwise(lit(None))
     )

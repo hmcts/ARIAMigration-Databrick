@@ -62,6 +62,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         logging.info('Assigned container secret value')
         #container_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN-TEST")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
 
+        # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
+        # if "SharedAccessSignature=" in full_secret:
+        #     # Remove the prefix if it's a connection string
+        #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
+        # else:
+        #     container_secret = full_secret.lstrip('?')  # fallbak
         container_url = f"{account_url}/{container_name}?{container_secret}"
         logging.info(f'Created container URL: {container_url}')
 
@@ -105,6 +111,8 @@ async def upload_blob_with_retry(blob_client,message,capture_response):
     logging.info(f'Uploading blob')
     await blob_client.upload_blob(message,overwrite=True,raw_response_hook=capture_response)
 
+
+#we want to query if the a360 filename has already been sent. if not progress. if so, pass
 async def process_messages(event,container_service_client,subdirectory,dl_producer_client,ack_producer_client):
         ## set up results logging
         results: dict[str, any] = {
@@ -136,23 +144,18 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
             full_blob_name = f"{subdirectory}/{key}"
             results["filename"] = key
 
+            
             #upload message to blob with partition key as file name
+
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
             logging.info(f'Acquired Blob Client: {full_blob_name}')
 
-            #if the a360 file exists eg f"{subdirectory}/{key}" then log but ignore
-            exists = await blob_client.exists()
-            if exists:
-                if key.endswith(".a360"):
-                    logging.info(f"Skipping a360 file {key}: already processed.")
-                else:
-                    logging.info(f"Skipping file {key}: already processed.")
-                results["http_message"] = "Skipped duplicate file"
-                results["timestamp"] = datetime.datetime.utcnow().isoformat()
-            else:
-                await upload_blob_with_retry(blob_client, message, capture_response)
-                results["timestamp"] = datetime.datetime.utcnow().isoformat()
-                logging.info("Uploaded blob:%s",key)
+
+            await upload_blob_with_retry(blob_client, message, capture_response)
+
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            logging.info("Uploaded blob:%s",key)
+
 
         except Exception as e:
             logging.error(f"Failed to process event with key '{key}': {e}")
@@ -166,6 +169,7 @@ async def process_messages(event,container_service_client,subdirectory,dl_produc
         await send_to_eventhub(ack_producer_client,json.dumps(results),key)
         logging.info(f"{key}: Ack stored succesfully")
         return results
+
 
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
     """Sends messages to an Event Hub."""

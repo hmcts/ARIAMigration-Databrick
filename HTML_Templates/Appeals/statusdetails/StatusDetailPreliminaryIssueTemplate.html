@@ -74,7 +74,7 @@
                                 
                             </tbody></table>
                         </td>
-                        <!-- right side -->
+                        <!-- right side -->:
                         <td>
                             <table id="table3">
                                 <tbody><tr>
@@ -106,6 +106,10 @@
                                             <tr>
                                                 <td id="labels"><label for="outcome">Outcome : </label></td>
                                                 <td colspan="2"><input type="text" id="outcome" name="outcome" value="{{DecisionTypeDescription}}" readonly></td>
+                                            </tr>
+                                            <tr>
+                                                <td id="labels"><label for="Reasonforadjournment">Reason for adjournment : </label></td>
+                                                <td colspan="2"><input type="text" id="Reasonforadjournment" name="Reasonforadjournment" value ="{{ReasonAdjourn}}"readonly></td>
                                             </tr>
                                             <tr>
                                                 <td id="labels"><label for="dateOfService">Date of Service : </label></td>
@@ -165,7 +169,7 @@
                             <table id="table3">
                                 <tbody><tr>
                                     <td id="labels"><label for="adjWithType">Type : </label></td>
-                                    <td colspan="2"><input type="text" id="adjWithType" name="adjWithType" value="{{DecisionTypeDescription}}" readonly></td>
+                                    <td colspan="2"><input type="text" id="adjWithType" name="adjWithType" value="{{Type}}" readonly></td>
                                 </tr>
                                 <tr>
                                     <td id="labels"><label for="dateOfRequest">Date of request : </label></td>

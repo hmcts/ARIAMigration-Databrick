@@ -9,7 +9,7 @@ from typing import List
 import asyncio
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-import datetime
+from datetime import datetime, timezone, timedelta
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 try:
@@ -46,7 +46,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=2000,
+    max_batch_size=2,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
@@ -73,42 +73,48 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     
     async with res_eh_producer:
         event_data_batch = await res_eh_producer.create_batch()
-
-        for event in azeventhub:
-            try:
-                logging.info(f'Event received with partition key: {event.partition_key}')
-
-                caseNo = event.partition_key
-                payload_str = event.get_body().decode('utf-8')
-                payload = json.loads(payload_str)
-                run_id = payload.get("RunID", None)
-                state = payload.get("State", None)
-                data = payload.get("Content", None)
-
-
-                result = await asyncio.to_thread(
-                    process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
-                    )
-            
-
-                logging.info(f'Processing result for caseNo {caseNo}')
-
-                result_json = json.dumps(result)
+        try:
+            for event in azeventhub:
                 try:
-                    event_data_batch.add(EventData(result_json))
-                except ValueError:
-                    # If the batch is full, send it and create a new one
-                    await res_eh_producer.send_batch(event_data_batch)
-                    logging.info(f'Sent a batch of events to Results Event Hub')
-                    event_data_batch = await res_eh_producer.create_batch()
-                    event_data_batch.add(EventData(result_json))
-            except Exception as e:
-                logging.error(f'Error processing event for caseNo {caseNo}: {e}')
-        
-        # Send any remaining events in the batch
-        if len(event_data_batch) > 0:
-            await res_eh_producer.send_batch(event_data_batch)
-            logging.info(f'Sent the final batch of events to Results Event Hub')
+                    logging.info(f'Event received with partition key: {event.partition_key}')
+
+                    start_datetime = datetime.now(timezone.utc).isoformat()
+
+                    caseNo = event.partition_key
+                    payload_str = event.get_body().decode('utf-8')
+                    payload = json.loads(payload_str)
+                    run_id = payload.get("RunID", None)
+                    state = payload.get("State", None)
+                    data = payload.get("Content", None)
+
+
+                    result = await asyncio.to_thread(
+                        process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
+                        )
+                    
+                    result["StartDateTime"] = start_datetime
+                
+
+                    logging.info(f'Processing result for caseNo {caseNo}')
+
+                    result_json = json.dumps(result)
+                    try:
+                        event_data_batch.add(EventData(result_json))
+                    except ValueError:
+                        # If the batch is full, send it and create a new one
+                        await res_eh_producer.send_batch(event_data_batch)
+                        logging.info(f'Sent a batch of events to Results Event Hub')
+                        event_data_batch = await res_eh_producer.create_batch()
+                        event_data_batch.add(EventData(result_json))
+                except Exception as e:
+                    logging.error(f'Error processing event for caseNo {caseNo}: {e}')
+            
+            # Send any remaining events in the batch
+            if len(event_data_batch) > 0:
+                await res_eh_producer.send_batch(event_data_batch)
+                logging.info(f'Sent the final batch of events to Results Event Hub')
+        except Exception as e:
+            logging.error(f'Error in event hub processing batch: {e}')
 
 
 

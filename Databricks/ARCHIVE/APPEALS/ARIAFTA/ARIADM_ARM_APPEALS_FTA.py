@@ -5550,10 +5550,6 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-df_final.display()
-
-# COMMAND ----------
-
 # df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
 # df_status_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_status_detail")
 # df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_hearingpointschange_detail")

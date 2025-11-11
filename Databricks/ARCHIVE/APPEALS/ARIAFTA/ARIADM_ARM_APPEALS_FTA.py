@@ -3063,7 +3063,7 @@ def silver_appealcase_detail():
         # "ap.MREmbassy",
         # "ap.MRPOU",
         # "ap.MRRespondent",
-        when(col("ap.CRRespondent") == 3, col("POUShortName")).when(col("ap.CRRespondent") == 2,col("EmbassyLocation")).otherwise("").alias("POUShortName"),
+        when(col("ap.CRRespondent") == 3, col("POUShortName")).otherwise("").alias("POUShortName"),
         when(col("ap.CRRespondent") == 1, col("RespondentName")).otherwise("").alias("RespondentName"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress1")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress1")).when(col("ap.CRRespondent") == 3, col("POUAddress1")).alias("RespondentAddress1"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress2")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress2")).when(col("ap.CRRespondent") == 3, col("POUAddress2")).alias("RespondentAddress2"),
@@ -3637,6 +3637,10 @@ def silver_status_detail():
                               "st.Notes2",
                               "st.DecisionDate",
                               "st.Outcome",
+                              when(col("st.Outcome") == 27, "Adjournment")
+                              .when(col("st.Outcome") == 25, "Withdrawal")
+                              .otherwise(" ").alias("Type"),
+                              "st.OutcomeDate",
                               "st.Promulgated",
                               when(col("st.InterpreterRequired") == 0, "Zero")
                               .when(col("st.InterpreterRequired") == 1, "One")

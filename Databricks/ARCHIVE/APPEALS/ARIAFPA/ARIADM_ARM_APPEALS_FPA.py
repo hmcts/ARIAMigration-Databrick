@@ -3063,7 +3063,7 @@ def silver_appealcase_detail():
         # "ap.MREmbassy",
         # "ap.MRPOU",
         # "ap.MRRespondent",
-         when(col("ap.CRRespondent") == 3, col("POUShortName")).when(col("ap.CRRespondent") == 2,col("EmbassyLocation")).otherwise("").alias("POUShortName"),
+         when(col("ap.CRRespondent") == 3, col("POUShortName")).otherwise("").alias("POUShortName"),
         when(col("ap.CRRespondent") == 1, col("RespondentName")).otherwise("").alias("RespondentName"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress1")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress1")).when(col("ap.CRRespondent") == 3, col("POUAddress1")).alias("RespondentAddress1"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress2")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress2")).when(col("ap.CRRespondent") == 3, col("POUAddress2")).alias("RespondentAddress2"),

@@ -134,7 +134,7 @@ class IDAMTokenManager:
 
 import pyotp
 class S2S_Manager():
-    def __init__(self,env:str,skew:int=21):
+    def __init__(self,env:str,skew:int=21000):
         self.env = env
         self._s2s_token = None
         self.expire_time = None

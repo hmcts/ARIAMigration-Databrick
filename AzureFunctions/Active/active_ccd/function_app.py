@@ -46,7 +46,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=2,
+    max_batch_size=1,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
@@ -71,12 +71,15 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     res_eh_producer = EventHubProducerClient.from_connection_string(
         conn_str=result_eh_secret_key)
     
+    seen_cases = []
+    
     async with res_eh_producer:
         event_data_batch = await res_eh_producer.create_batch()
         try:
             for event in azeventhub:
                 try:
                     logging.info(f'Event received with partition key: {event.partition_key}')
+
 
                     start_datetime = datetime.now(timezone.utc).isoformat()
 
@@ -87,10 +90,15 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     state = payload.get("State", None)
                     data = payload.get("Content", None)
 
+                    if caseNo in seen_cases:
+                        raise Exception(f'Duplicate caseNo {caseNo} in the same batch')
+
 
                     result = await asyncio.to_thread(
                         process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
                         )
+                    
+                    seen_cases.append(caseNo)
                     
                     result["StartDateTime"] = start_datetime
                 

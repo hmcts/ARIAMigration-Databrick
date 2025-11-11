@@ -3641,7 +3641,6 @@ def silver_status_detail():
                               when(col("st.Outcome") == 27, "Adjournment")
                               .when(col("st.Outcome") == 25, "Withdrawal")
                               .otherwise(" ").alias("Type"),
-                              "st.OutcomeDate",
                               "st.Promulgated",
                               when(col("st.InterpreterRequired") == 0, "Zero")
                               .when(col("st.InterpreterRequired") == 1, "One")

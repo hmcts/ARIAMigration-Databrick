@@ -30,6 +30,7 @@ def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
     }
     try:
         response = requests.get(start_case_creation_url,headers=headers)
+        print(f"🔢 Response status: {response.status_code}:{response.text}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_case_creation_url}: {e}")
@@ -82,7 +83,7 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
 
     submit_case_url = ccd_base_url + submit_case_endpoint 
 
-    if isinstance(payloadData, str) or isinstance(payloadData, bytearray) or isinstance(payloadData, bytes):
+    if isinstance(payloadData, str):
         try:
             payloadData = json.loads(payloadData)
         except json.JSONDecodeError as e:
@@ -96,7 +97,7 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
     "event_token": event_token, 
     "ignore_warning": True
     })
-        print(f"🔢 Response status: {response.status_code}")
+        print(f"🔢 Submit Response status: {response.status_code}:{response.text}")
         # print(f"📨 Response text (first 1000 chars):\n{response.text[:1000]}")
         return response
     except Exception as e:
@@ -108,7 +109,7 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
 ### caseNo = event.key, payloadData = event.value
 
 
-def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
+def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     try:
         idam_token_mgr = IDAMTokenManager(env="sbox")
@@ -210,6 +211,8 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER=2811):
 
     ## submit case
     submit_case_response = submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
+
+    print(submit_case_response)
 
     if submit_case_response is None or submit_case_response.status_code not in {201,200}:
 

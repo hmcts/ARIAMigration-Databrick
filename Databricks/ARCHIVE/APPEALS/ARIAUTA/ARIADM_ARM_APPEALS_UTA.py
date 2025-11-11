@@ -4935,6 +4935,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{AdjudicatorForenames}}", str(SDP.LatestAdjudicatorForenames or ''))  \
                                         .replace("{{AdjudicatorTitle}}", str(SDP.LatestAdjudicatorTitle or '')) \
                                         .replace("{{AdjudicatorFullName}}", str(SDP.LatestAdjudicatorFullName or '')) \
+                                        .replace("{{StatusDetailAdjudicatorFullName}}", str(SDP.StatusDetailAdjudicatorFullName or '')) \
                                         .replace("{{MiscDate2}}", format_date_iso(SDP.MiscDate2 or '')) \
                                         .replace("{{VideoLink}}", str(SDP.VideoLink or '')) \
                                         .replace("{{RemittalOutcome}}", str(SDP.RemittalOutcome or '')) \

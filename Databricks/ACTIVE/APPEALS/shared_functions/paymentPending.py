@@ -1918,7 +1918,7 @@ def paymentType(silver_m1):
             .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
             .otherwise("unknown").alias("paymentDescription"),
         lit("Yes").alias("feePaymentAppealType"),
-        lit("Payment Pending").alias("paymentStatus"),
+        lit("Payment pending").alias("paymentStatus"),
         lit("2").alias("feeVersion"),
         when(col("VisitVisatype") == 1, "decisionWithoutHearing")
             .when(col("VisitVisatype") == 2, "decisionWithHearing")

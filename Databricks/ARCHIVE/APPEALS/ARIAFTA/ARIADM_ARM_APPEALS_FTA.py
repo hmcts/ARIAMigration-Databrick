@@ -1356,37 +1356,38 @@ def bronze_appealcase_bfdiary_bftype():
 
 # COMMAND ----------
 
-
 @dlt.table(
     name="bronze_appealcase_history_users",
     comment="Delta Live Table combining History and Users details.",
     path=f"{bronze_mnt}/bronze_appealcase_history_users"
 )
 def bronze_appealcase_history_users():
-    df =  dlt.read("raw_history").alias("h")\
-            .join(
-                dlt.read("raw_users").alias("u"),
-                col("h.UserId") == col("u.UserId"),
-                "left_outer"
-            ).select(
-                # History fields
-                col("h.HistoryId"),
-                trim(col("h.CaseNo")).alias('CaseNo'),
-                col("h.HistDate"),
-                col("h.HistType"),
-                col("h.Comment").alias("HistoryComment"),
-                col("h.StatusId"),
-                
-                # User fields
-                col("u.Name").alias("UserName"),
-                col("u.UserType"),
-                col("u.Fullname"),
-                col("u.Extension"),
-                col("u.DoNotUse")
-            )
-
-        
-    return df   
+    df = dlt.read("raw_history").alias("h") \
+        .join(
+            dlt.read("raw_users").alias("u"),
+            col("h.UserId") == col("u.UserId"),
+            "left_outer"
+        ).join(
+            dlt.read("raw_users").alias("udb"),
+            col("h.DeletedBy") == col("udb.UserId"),
+            "left_outer"
+        ).select(
+            # History fields
+            col("h.HistoryId"),
+            trim(col("h.CaseNo")).alias('CaseNo'),
+            col("h.HistDate"),
+            col("h.HistType"),
+            col("h.Comment").alias("HistoryComment"),
+            col("h.StatusId"),
+            col("udb.Fullname").alias("DeletedByUser"),
+            # User fields
+            col("u.Name").alias("UserName"),
+            col("u.UserType"),
+            col("u.Fullname"),
+            col("u.Extension"),
+            col("u.DoNotUse")
+        )
+    return df
 
 # COMMAND ----------
 
@@ -3500,6 +3501,7 @@ def silver_history_detail():
             "HistType",
             "HistoryComment",
             "StatusId",
+            "DeletedByUser",
             "UserName",
             "UserType",
             "Fullname",
@@ -5518,7 +5520,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle',  'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails').distinct()
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails',"status.Type").distinct()
 
 
         
@@ -5542,7 +5544,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("adjournAdjudicatorSurname"), col("adjournAdjudicatorForenames")), when(col("adjournAdjudicatorTitle").isNotNull(), concat(lit("("), col("adjournAdjudicatorTitle"), lit(")")))).alias("adjournAdjudicatorFullName"), 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher')).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher','Type')).alias("TempCaseStatusDetails"))
     
     return df_final
 

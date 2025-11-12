@@ -4952,7 +4952,6 @@ def generate_html(row, templates=templates):
                                         .replace("{{Allegation}}", str(SDP.Allegation or '')) \
                                         .replace("{{DecidingCentre}}", format_date_iso(SDP.DecidingCentre or '')) \
                                         .replace("{{Process}}", format_date_iso(SDP.Process or '')) \
-                                        # .replace("{{Tier}}", format_date_iso(SDP.Tier or '')) \
                                         .replace("{{NoCertAwardDate}}", format_date_iso(SDP.NoCertAwardDate or '')) \
                                         .replace("{{WrittenOffDate}}", format_date_iso(SDP.WrittenOffDate or '')) \
                                         .replace("{{WrittenOffFileDate}}", format_date_iso(SDP.WrittenOffFileDate or '')) \

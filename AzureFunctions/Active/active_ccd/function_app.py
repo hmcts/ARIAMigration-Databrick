@@ -32,6 +32,7 @@ ARIA_NAME = "active"
 eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"
 
 
+
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
@@ -44,9 +45,9 @@ app = func.FunctionApp()
     event_hub_name=eventhub_name,
     consumer_group='$Default',
     connection=eventhub_connection,
-    starting_position="-1",
+    starting_position="@latest",
     cardinality='many',
-    max_batch_size=1,
+    max_batch_size=100,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
@@ -97,8 +98,8 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     result = await asyncio.to_thread(
                         process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
                         )
-                    
-                    seen_cases.append(caseNo)
+                    if result["Status"] == "Success":
+                        seen_cases.append(caseNo)
                     
                     result["StartDateTime"] = start_datetime
                 

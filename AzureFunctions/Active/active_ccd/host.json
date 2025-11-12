@@ -12,9 +12,14 @@
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
   },
+  "scale": {
+    "minInstances": 1,
+    "maxInstances": 5,
+    "maxBurst": 1
+  },
   "retry": {
     "strategy": "exponentialBackoff",
-    "maxRetryCount": 0,
+    "maxRetryCount": 3,
     "minimumInterval": "00:00:02",
     "maximumInterval": "00:00:10"
   }

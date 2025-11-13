@@ -171,7 +171,7 @@ payload_data = """
 jid = "IA"
 ctid = "Asylum"
 etid = "ariaCreateCase"
-PR_NUMBER = "2841"
+PR_NUMBER = "2866"
 
 
 ccd_base_url = f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.platform.hmcts.net"

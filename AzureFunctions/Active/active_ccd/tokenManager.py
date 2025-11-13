@@ -145,13 +145,13 @@ class S2S_Manager():
      # ----- Environment config (host + key vault) -----
         urls = {
             "sbox": {
-                "s2s_host": "rpe-service-auth-provider-aat.service.core-compute-aat.internal",
+                "s2s_host": "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal",
                 "s2s_ip": "http://10.10.143.250/",
                 "key_vault": "ia-aat"},
             "stg": {
-                "s2s_host": None,
+                "s2s_host": "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal",
                 "s2s_ip": None,
-                "key_vault": None},
+                "key_vault": "ia-aat"},
             "prod": {
                 "s2s_host": None,
                 "s2s_ip": None,
@@ -170,7 +170,7 @@ class S2S_Manager():
 
         self._s2s_secret = kv_client.get_secret("s2s-secret").value
 
-        self.url = f"{self.s2s_ip}lease"
+        self.url = f"{self.s2s_host}/lease"
         self.s2s_microservice = "iac"
 
 
@@ -188,7 +188,7 @@ class S2S_Manager():
             self.url,
             json=s2s_payload,
             headers={
-                "Host": self.s2s_host,
+                # "Host": self.s2s_host,
                 "Content-Type": "application/json"
             }
     )

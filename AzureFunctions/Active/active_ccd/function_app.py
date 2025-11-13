@@ -47,7 +47,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="@latest",
     cardinality='many',
-    max_batch_size=2,
+    max_batch_size=1,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):

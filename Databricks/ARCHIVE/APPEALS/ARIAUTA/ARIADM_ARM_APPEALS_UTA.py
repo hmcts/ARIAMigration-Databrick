@@ -4942,8 +4942,8 @@ def generate_html(row, templates=templates):
                                         .replace("{{UpperTribunalAppellant}}", str(SDP.UpperTribunalAppellant or '')) \
                                         .replace("{{DecisionSentToHO}}", str(SDP.DecisionSentToHO or '')) \
                                         .replace("{{DecisionSentToHODate}}", format_date_iso(SDP.DecisionSentToHODate or '')) \
-                                        .replace("{{InitialHearingPoints}}", format_date_iso(SDP.InitialHearingPoints or '')) \
-                                        .replace("{{FinalHearingPoints}}", format_date_iso(SDP.FinalHearingPoints or '')) \
+                                        .replace("{{InitialHearingPoints}}", str(SDP.InitialHearingPoints or '')) \
+                                        .replace("{{FinalHearingPoints}}", str(SDP.FinalHearingPoints or '')) \
                                         .replace("{{HearingPointsChangeReasondesc}}", str(SDP.HearingPointsChangeReasondesc or '')) \
                                         .replace("{{CostOrderAppliedFor}}", str(SDP.CostOrderAppliedFor or '')) \
                                         .replace("{{HearingPointsChangeReasonId}}", format_date_iso(SDP.HearingPointsChangeReasonId or '')) \

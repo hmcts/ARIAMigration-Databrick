@@ -144,7 +144,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     urls = {
         "sbox":f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.platform.hmcts.net",
-        "stg":None,
+        "stg":"ccd-data-store-api-aat.service.core-compute-aat.internal",
         "prod":None
     }
 

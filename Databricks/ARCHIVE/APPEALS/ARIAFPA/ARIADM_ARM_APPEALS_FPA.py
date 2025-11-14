@@ -3665,7 +3665,12 @@ def silver_status_detail():
                               .when(col("st.MethodOfTyping") == 2, "Self Type")
                               .when(col("st.MethodOfTyping") == 3, "3rd Party")
                               .alias("MethodOfTyping"),
-                              "st.CourtSelection",
+                              when(col("st.CourtSelection").isNull(), " ") \
+                              .when(col("st.CourtSelection") == 0, " ") \
+                              .when(col("st.CourtSelection") == 1, "Court of Appeal") \
+                              .when(col("st.CourtSelection") == 2, "Court of Session") \
+                              .when(col("st.CourtSelection") == 3, "Northern Ireland") \
+                              .otherwise(" ").alias("CourtSelection"),
                               "st.DecidingCentre",
                               when(col("st.Tier").isNull(), "") \
                               .when(col("st.Tier") == 0, "") \
@@ -4956,8 +4961,8 @@ def generate_html(row, templates=templates):
                                         .replace("{{DecisionByTCW}}", str(SDP.DecisionByTCW or '')) \
                                         .replace("{{Allegation}}", str(SDP.Allegation or '')) \
                                         .replace("{{DecidingCentre}}", format_date_iso(SDP.DecidingCentre or '')) \
-                                        .replace("{{Process}}", format_date_iso(SDP.Process or '')) \
-                                        .replace("{{Tier}}", format_date_iso(SDP.Tier or '')) \
+                                        .replace("{{Process}}", str(SDP.Process or '')) \
+                                        .replace("{{Tier}}", str(SDP.Tier or '')) \
                                         .replace("{{NoCertAwardDate}}", format_date_iso(SDP.NoCertAwardDate or '')) \
                                         .replace("{{WrittenOffDate}}", format_date_iso(SDP.WrittenOffDate or '')) \
                                         .replace("{{WrittenOffFileDate}}", format_date_iso(SDP.WrittenOffFileDate or '')) \

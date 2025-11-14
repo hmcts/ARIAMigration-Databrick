@@ -5053,7 +5053,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{Label2_JudgeValue}}", str(SDP.Label2_JudgeValue or '')) \
                                         .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
                                         .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
-                                        .replace("{{CMROrder}}", str(SDP.CourtClerkUsher or '')) \
+                                        .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])

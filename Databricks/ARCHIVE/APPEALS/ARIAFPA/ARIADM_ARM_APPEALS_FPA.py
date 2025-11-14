@@ -5053,6 +5053,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{Label2_JudgeValue}}", str(SDP.Label2_JudgeValue or '')) \
                                         .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
                                         .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
+                                        .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
@@ -5378,6 +5379,7 @@ def stg_statusdetail_data():
 
     df_status_details = dlt.read("silver_status_detail")
     df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
+    df_reviewspecificdirection_details = dlt.read("hive_metastore.ariadm_arm_fpa.silver_reviewspecificdirection_detail")
 
     df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")
@@ -5494,7 +5496,12 @@ def stg_statusdetail_data():
     join_df = status_refined_df.filter((col("status.CaseStatus").cast("integer")).isin(casestatus_array)) \
         .join(df_case_adjudicator.alias('cadj'), 'CaseNo', 'left') \
         .join(df_reviewspecificdirection.alias('rsd'), 'CaseNo', 'left') \
-        .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left')
+        .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left')  \
+        .join(df_reviewspecificdirection_details.alias("rsd_raw"), 
+            ((col("status.StatusId") == col("adj.StatusId"))
+            & (col("status.CaseNo") == col("adj.CaseNo"))),
+            "left") \
+        .withColumn("CMROrder", when(col("rsd_raw.StatusId").isNotNull(), lit('Directions Exist')).otherwise(lit(None)))
         # .withColumn("JudgeFT", when(col("Position") != 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None))) \
         # .withColumn("CourtClerkUsher", when(col("Position") == 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None)))
         
@@ -5536,7 +5543,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle',  'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails',"status.StatusDetailAdjudicatorSurname","status.StatusDetailAdjudicatorForenames","status.StatusDetailAdjudicatorTitle","adjournApplicationType","adjournKeyDate").distinct()
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails',"status.StatusDetailAdjudicatorSurname","status.StatusDetailAdjudicatorForenames","status.StatusDetailAdjudicatorTitle","adjournApplicationType","adjournKeyDate","CMROrder").distinct()
 
 
         
@@ -5560,7 +5567,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("adjournAdjudicatorSurname"), col("adjournAdjudicatorForenames")), when(col("adjournAdjudicatorTitle").isNotNull(), concat(lit("("), col("adjournAdjudicatorTitle"), lit(")")))).alias("adjournAdjudicatorFullName"), 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher', concat_ws(" ", concat_ws(", ", col("StatusDetailAdjudicatorSurname"), col("StatusDetailAdjudicatorForenames")), when(col("StatusDetailAdjudicatorTitle").isNotNull(), concat(lit("("), col("StatusDetailAdjudicatorTitle"), lit(")")))).alias("StatusDetailAdjudicatorFullName"),"adjournApplicationType","adjournKeyDate")).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher', concat_ws(" ", concat_ws(", ", col("StatusDetailAdjudicatorSurname"), col("StatusDetailAdjudicatorForenames")), when(col("StatusDetailAdjudicatorTitle").isNotNull(), concat(lit("("), col("StatusDetailAdjudicatorTitle"), lit(")")))).alias("StatusDetailAdjudicatorFullName"),"adjournApplicationType","adjournKeyDate","CMROrder")).alias("TempCaseStatusDetails"))
     
     return df_final
 

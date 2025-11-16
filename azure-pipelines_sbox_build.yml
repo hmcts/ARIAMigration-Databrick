@@ -77,8 +77,8 @@ parameters:
       #       Resource_Group: 'ingest00-main-prod'
       #       Key_Vault_Name: 'ingest00-meta002-prod'
 
-${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-  stages:
+stages:
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
     - template: templates/pr-validation.yml
 
 

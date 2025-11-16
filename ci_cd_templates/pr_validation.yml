@@ -7,6 +7,7 @@ parameters:
 stages:
   - stage: PR_Validation
     displayName: 'PR Validation - Linting'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
     jobs:
       - job: Linting
         displayName: 'Lint Tests'

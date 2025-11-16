@@ -78,8 +78,9 @@ parameters:
       #       Key_Vault_Name: 'ingest00-meta002-prod'
 
 stages:
-  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-    - template: templates/pr-validation.yml
+  - template: templates/pr-validation.yml
+    parameters:
+      sourceDirectory: $(Build.SourcesDirectory)
 
 
 # stages:

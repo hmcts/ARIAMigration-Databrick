@@ -79,8 +79,6 @@ parameters:
 
 stages:
   - template: ci_cd_templates/pr_validation.yml
-    parameters:
-      sourceDirectory: $(Build.SourcesDirectory)
 
 
 # stages:

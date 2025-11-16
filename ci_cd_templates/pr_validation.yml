@@ -1,9 +1,3 @@
-
-parameters:
-  - name: sourceDirectory
-    type: string
-    sourceDirectory: $(Build.SourcesDirectory)
-
 stages:
   - stage: PR_Validation
     displayName: 'PR Validation - Linting'

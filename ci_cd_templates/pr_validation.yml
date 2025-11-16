@@ -12,7 +12,9 @@ stages:
               versionSpec: '3.x'
 
           - script: |
-              cd ${{ parameters.sourceDirectory }}/Databricks/ACTIVE/APPEALS/
+              cd ../Databricks/ACTIVE/APPEALS/
+              pip install uv
               uv tool install ruff
-              uv run ruff check ../Databricks ../AzureFunctions
+              uv run ruff check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
+              uv run ruff format --check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
             displayName: 'AzureFunction, Databricks code linting'

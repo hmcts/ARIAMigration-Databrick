@@ -1,5 +1,5 @@
 parameters:
-  segment: 'functionapp'
+  segment: 'functionApp'
 
 stages:
   - stage: ${{ parameters.segment }}_unitTests

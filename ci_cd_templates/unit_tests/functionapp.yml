@@ -22,7 +22,7 @@ stages:
         
         - script: |
             echo "Running ${{ parameters.segment }} unit tests"
-            pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }} \
+            pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}/ \
             --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
           displayName: 'Run pytest ${{ parameters.segment }} unit tests'
         

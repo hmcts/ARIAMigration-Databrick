@@ -1,0 +1,23 @@
+
+parameters:
+  - name: sourceDirectory
+    type: string
+    default: $(Build.SourcesDirectory)
+
+stages:
+  - stage: PR_Validation
+    displayName: 'PR Validation - Linting'
+    jobs:
+      - job: Linting
+        displayName: 'Lint Tests'
+        steps:
+          - task: UsePythonVersion@0
+            displayName: 'Use Python 3.x'
+            inputs:
+              versionSpec: '3.x'
+
+          - script: |
+              cd ${{ parameters.sourceDirectory }}/Databricks/ACTIVE/APPEALS/
+              pip install uv
+              uvx ruff check ../../../Databricks ../../../AzureFunctions && uvx ruff format --check ../../../Databricks ../../../AzureFunctions
+            displayName: 'AzureFunction, Databricks code linting'

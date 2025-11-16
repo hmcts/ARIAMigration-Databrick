@@ -17,7 +17,6 @@ import json
 
 def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
-
     start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
 
     start_case_creation_url = f"{ccd_base_url}{start_case_endpoint}"
@@ -144,7 +143,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     urls = {
         "sbox":f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.platform.hmcts.net",
-        "stg":"ccd-data-store-api-aat.service.core-compute-aat.internal",
+        "stg":"https://ccd-data-store-api-aat.service.core-compute-aat.internal",
         "prod":None
     }
 
@@ -156,6 +155,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     ## start case creation
 
     start_response = start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token)
+    #print start response code at this step?
 
     if start_response is None or start_response.status_code != 200 :
 

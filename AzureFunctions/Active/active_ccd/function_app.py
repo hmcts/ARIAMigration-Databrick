@@ -20,24 +20,15 @@ except Exception:
     # Fallback for running the script directly during local debugging.
     from ccdFunctions import process_case
 
-
-
-ENV: str = os.environ["ENVIRONMENT"]
+ENV = os.environ["ENVIRONMENT"]
 LZ_KEY = os.environ["LZ_KEY"]
 PR_NUMBER = os.environ["PR_NUMBER"]
-
-
 ARIA_NAME = "active"
 
 eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"
-
-
-
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
-
-
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -68,7 +59,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     result_eh_secret_key = results_eh_key.value
     logging.info('Acquired KV secret for Results Event Hub')
 
-
     res_eh_producer = EventHubProducerClient.from_connection_string(
         conn_str=result_eh_secret_key)
     
@@ -94,7 +84,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     if caseNo in seen_cases:
                         raise Exception(f'Duplicate caseNo {caseNo} in the same batch')
 
-
                     result = await asyncio.to_thread(
                         process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
                         )
@@ -103,7 +92,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     
                     result["StartDateTime"] = start_datetime
                 
-
                     logging.info(f'Processing result for caseNo {caseNo}')
 
                     result_json = json.dumps(result)
@@ -124,8 +112,5 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                 logging.info(f'Sent the final batch of events to Results Event Hub')
         except Exception as e:
             logging.error(f'Error in event hub processing batch: {e}')
-
-
-
 
 

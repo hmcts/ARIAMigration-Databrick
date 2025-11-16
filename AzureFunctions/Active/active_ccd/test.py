@@ -224,11 +224,15 @@ except KeyError:
 
 # print("Ready to start case creation")
 
+url = "https://ccd-data-store-api-aat.service.core-compute-aat.internal"
+headers = None
+response = requests.get(url)
+print(response.status_code)
 
 ## process funciton teest
 
-result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123,PR_NUMBER=PR_NUMBER)
-print(result)
+# result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123,PR_NUMBER=PR_NUMBER)
+# print(result)
 
 # ## start case creation
 

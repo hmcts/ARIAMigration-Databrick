@@ -1,6 +1,6 @@
 [project]
 name = "shared-functions"
-version = "0.6.4"
+version = "0.6.5"
 description = "Shared functions for ARIA ARCHIVE + ACTIVE cases"
 authors = [
     {name = "Andrew McDevitt"},
@@ -27,3 +27,21 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["shared_functions"]
+
+[tool.ruff]
+include = ["Databricks/**/*.py", "Databricks/**/*.ipynb", "AzureFunctions/**/*.py", "AzureFunctions/**/*.ipynb"]
+line-length = 79
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.ruff.format]
+quote-style = "double"

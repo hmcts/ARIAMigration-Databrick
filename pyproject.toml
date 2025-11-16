@@ -47,5 +47,5 @@ select = [
 quote-style = "double"
 
 [lint.per-file-ignores]
-"*.py" = ["F405"] #dbutils, spark. throwing errors in databricks notebooks
-"*.ipynb" = ["F821", "E999"] #Using * is throwing an error from imports #invalid syntax (eg SQL commands in spark.sql)
+"Databricks/**/*.py" = ["F405"] #dbutils, spark. throwing errors in databricks notebooks
+"AzureFunctions/**/*.ipynb" = ["F821", "E999"] #Using * is throwing an error from imports #invalid syntax (eg SQL commands in spark.sql)

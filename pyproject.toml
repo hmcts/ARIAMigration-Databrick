@@ -1,6 +1,6 @@
 [project]
 name = "shared-functions"
-version = "0.6.5"
+version = "0.6.6"
 description = "Shared functions for ARIA ARCHIVE + ACTIVE cases"
 authors = [
     {name = "Andrew McDevitt"},
@@ -46,6 +46,17 @@ select = [
 [tool.ruff.format]
 quote-style = "double"
 
+#[lint.per-file-ignores]
+#"Databricks/**/*.py" = ["F405"] #dbutils, spark. throwing errors in databricks notebooks
+#"AzureFunctions/**/*.ipynb" = ["F821", "E999"] #Using * is throwing an error from imports #invalid syntax (eg SQL commands in spark.sql)
+
 [lint.per-file-ignores]
-"Databricks/**/*.py" = ["F405"] #dbutils, spark. throwing errors in databricks notebooks
-"AzureFunctions/**/*.ipynb" = ["F821", "E999"] #Using * is throwing an error from imports #invalid syntax (eg SQL commands in spark.sql)
+# Databricks Python scripts and notebooks
+"Databricks/**/*.py" = ["F405"]                  # star imports
+"Databricks/**/*.ipynb" = ["F405", "F821", "E999"]  # undefined globals, SQL syntax
+
+# Azure Functions notebooks
+"AzureFunctions/**/*.ipynb" = ["F821", "E999"]  # undefined globals, SQL syntax
+
+# Optional: ignore notebook checkpoints
+exclude = ["**/.ipynb_checkpoints/*"]

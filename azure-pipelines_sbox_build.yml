@@ -78,7 +78,7 @@ parameters:
       #       Key_Vault_Name: 'ingest00-meta002-prod'
 
 stages:
-  - template: $(Build.SourcesDirectory)/ci_cd_templates/pr-validation.yml
+  - template: ci_cd_templates/pr-validation.yml
     # parameters:
     #   sourceDirectory: $(Build.SourcesDirectory)
 

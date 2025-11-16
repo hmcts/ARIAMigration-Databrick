@@ -2,7 +2,7 @@
 parameters:
   - name: sourceDirectory
     type: string
-    sourceDirectory: $(System.DefaultWorkingDirectory)
+    sourceDirectory: $(Build.SourcesDirectory)
 
 stages:
   - stage: PR_Validation

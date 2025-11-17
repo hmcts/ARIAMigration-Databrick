@@ -3,8 +3,6 @@ from unittest.mock import patch, MagicMock, ANY
 from datetime import datetime,timedelta,timezone
 from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
 from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
-from azure.identity import DefaultAzureCredential
-credential = DefaultAzureCredential()
 
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
 
@@ -248,7 +246,7 @@ def mock_response(status_code,json_data=None, text=""):
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
 
-def test_process_funciton_success(mock_start_case_creation_response, mock_validate_case_response, mock_submit_case_response):
+def test_process_funciton_success(mock_token_managers, mock_start_case_creation_response, mock_validate_case_response, mock_submit_case_response):
     mock_start_case_creation = mock_response(200,{"token":"ABC123"})
     mock_validate_case = mock_response(201)
     mock_submit_case = mock_response(201)

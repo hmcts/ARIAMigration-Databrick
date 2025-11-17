@@ -28,6 +28,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["shared_functions"]
 
+#shared_functions in active. start only active. use shared_functions to start 
 [tool.ruff]
 include = ["Databricks/**/*.py", "Databricks/**/*.ipynb", "AzureFunctions/**/*.py", "AzureFunctions/**/*.ipynb"]
 line-length = 79

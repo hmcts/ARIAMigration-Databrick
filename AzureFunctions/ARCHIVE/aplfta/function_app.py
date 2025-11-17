@@ -101,7 +101,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                 await asyncio.gather(*tasks)
                 logging.info('Finished processing messages')
         finally:
-            container_service_client.close()
+            await container_service_client.close()
 
     finally:
         # Explicitly close SecretClient to avoid session leaks

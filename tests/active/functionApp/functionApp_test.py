@@ -1,12 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock, ANY
-import unittest
 from datetime import datetime,timedelta,timezone
-import requests
-import json
 from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
 from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
-import os
+
+from azure.identity import DefaultAzureCredential
+credential = DefaultAzureCredential()
 
 
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
@@ -249,14 +248,6 @@ def mock_response(status_code,json_data=None, text=""):
     mock.headers = {'Content-Type':"application/json"}
     mock.json.return_values = json_data or {}
     return mock
-
-@pytest.fixture(autouse=True)
-def mock_azure_credentials():
-    """Mock Azure credentials for all tests"""
-    with patch('azure.identity.DefaultAzureCredential') as mock_cred:
-        mock_instance = MagicMock()
-        mock_cred.return_value = mock_instance
-        yield mock_instance
 
 ### Succesfully sent a case payload ###
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")

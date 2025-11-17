@@ -17,18 +17,11 @@ stages:
 
         - script: |
             pip install uv
-            uv pip install -r $(Build.SourcesDirectory)/tests/active/requirements.txt --system
+            uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
           displayName: 'Install dependencies'
         
         - script: |
             echo "Running ${{ parameters.segment }} unit tests"
-            pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}/ \
-            --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
+            pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}
           displayName: 'Run pytest ${{ parameters.segment }} unit tests'
         
-        - task: PublishTestResults@2
-          inputs:
-            testResultsFiles: '$(Build.ArtifactStagingDirectory)/pytest-results-*.xml'
-            testRunTitle: '${{ parameters.segment }} Unit Tests'
-            mergeTestResults: true
-            failTaskOnFailedTests: true

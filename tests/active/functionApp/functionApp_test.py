@@ -246,12 +246,15 @@ def mock_response(status_code,json_data=None, text=""):
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
+def test_process_funciton_success(mock_start_case_creation_response,
+                                  mock_validate_case_response,
+                                  mock_submit_case_response):
 
-def test_process_funciton_success(mock_start_case_creation_response, mock_validate_case_response, mock_submit_case_response):
-    mock_start_case_creation = mock_response(200,{"token":"ABC123"})
+    mock_start_case_creation = mock_response(200, {"token": "ABC123"})
     mock_validate_case = mock_response(201)
     mock_submit_case = mock_response(201)
-    mock_submit_case.json = lambda: {"id":"1234567891011"}
+    mock_submit_case.json = lambda: {"id": "1234567891011"}
+
     mock_start_case_creation_response.return_value = mock_start_case_creation
     mock_validate_case_response.return_value = mock_validate_case
     mock_submit_case_response.return_value = mock_submit_case
@@ -262,12 +265,12 @@ def test_process_funciton_success(mock_start_case_creation_response, mock_valida
         payloadData={"key": "value"},
         runId="run123",
         state="paymentPending",
-        PR_NUMBER = "2866"
+        PR_NUMBER="2866"
     )
 
-    assert results['Status']== "Success"
-    assert results['CCDCaseID']== "1234567891011"
-    assert results['Error'] is None
+    assert results["Status"] == "Success"
+    assert results["CCDCaseID"] == "1234567891011"
+    assert results["Error"] is None
 
     ### failed to start case creation ###
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")

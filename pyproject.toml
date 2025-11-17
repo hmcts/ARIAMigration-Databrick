@@ -31,7 +31,7 @@ packages = ["shared_functions"]
 #shared_functions in active. start only active. use shared_functions to start 
 [tool.ruff]
 include = ["Databricks/**/*.py", "Databricks/**/*.ipynb", "AzureFunctions/**/*.py", "AzureFunctions/**/*.ipynb"]
-line-length = 79
+line-length = 130
 
 [tool.ruff.lint]
 select = [

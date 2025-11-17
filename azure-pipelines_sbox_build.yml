@@ -78,9 +78,9 @@ parameters:
       #       Key_Vault_Name: 'ingest00-meta002-prod'
 
 stages:
+  - template: ci_cd_templates/ruff_linting.yml
   - template: ci_cd_templates/unit_tests/functionapp.yml
   - template: ci_cd_templates/unit_tests/active/paymentPending.yml
-  - template: ci_cd_templates/ruff_linting.yml
 
 
 # stages:

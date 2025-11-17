@@ -18,13 +18,11 @@ lz_key = os.environ["LZ_KEY"]
 
 ARIA_SEGMENT = "bl"
 ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
-#ARM_SEGMENT = "B"
 
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
-
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -63,13 +61,6 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
-
-        # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
-        # if "SharedAccessSignature=" in full_secret:
-        #     # Remove the prefix if it's a connection string
-        #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
-        # else:
-        #     container_secret = full_secret.lstrip('?')  # fallbak
 
         container_url = f"{account_url}/{container_name}?{container_secret}"
         logging.info(f'Created container URL: {container_url}')

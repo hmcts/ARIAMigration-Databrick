@@ -80,7 +80,7 @@ parameters:
 stages:
   - template: ci_cd_templates/unit_tests/functionapp.yml
   - template: ci_cd_templates/unit_tests/active/paymentPending.yml
-  - template: ci_cd_templates/pr_validation.yml
+  - template: ci_cd_templates/ruff_linting.yml
 
 
 # stages:

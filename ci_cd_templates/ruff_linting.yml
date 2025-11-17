@@ -15,8 +15,11 @@ stages:
               cd ../Databricks/ACTIVE/APPEALS/
               pip install uv
               uv tool install ruff
+
+
+              uv run ruff format $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
               uv run ruff check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
-              uv run ruff format --check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
             displayName: 'AzureFunction, Databricks code linting'
 
-            ##rename to linting of some sort (the file name)
+            # # uv run ruff check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions
+              # uv run ruff format --check $(Build.SourcesDirectory)/Databricks $(Build.SourcesDirectory)/AzureFunctions

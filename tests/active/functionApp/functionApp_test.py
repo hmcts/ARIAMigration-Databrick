@@ -3,16 +3,10 @@ from unittest.mock import patch, MagicMock, ANY
 from datetime import datetime,timedelta,timezone
 from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
 from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
-
 from azure.identity import DefaultAzureCredential
 credential = DefaultAzureCredential()
 
-
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
-
-
-
-
 
 ############################################################
 @patch("requests.get")

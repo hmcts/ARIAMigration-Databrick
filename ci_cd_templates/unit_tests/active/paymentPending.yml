@@ -14,7 +14,7 @@ stages:
 
         - script: |
             pip install uv
-            uv pip install -r $(Build.SourcesDirectory)/tests/active/requirements.txt --system
+            uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
           displayName: 'Install dependencies'
         
         - script: |

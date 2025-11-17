@@ -246,7 +246,7 @@ def mock_response(status_code,json_data=None, text=""):
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
 
-def test_process_funciton_success(mock_token_managers, mock_start_case_creation_response, mock_validate_case_response, mock_submit_case_response):
+def test_process_funciton_success(mock_start_case_creation_response, mock_validate_case_response, mock_submit_case_response, mock_token_managers):
     mock_start_case_creation = mock_response(200,{"token":"ABC123"})
     mock_validate_case = mock_response(201)
     mock_submit_case = mock_response(201)

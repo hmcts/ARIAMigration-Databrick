@@ -1,13 +1,20 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def mock_token_managers():
-    with patch("AzureFunctions.Active.active_ccd.tokenManager.IDAMTokenManager") as mock_idam, \
-         patch("AzureFunctions.Active.active_ccd.tokenManager.S2S_Manager") as mock_s2s:
-        
-        # Provide mock token values to avoid errors inside process_case
-        mock_idam.return_value.get_token.return_value = "mock-idam-token"
-        mock_s2s.return_value.get_s2s_token.return_value = "mock-s2s-token"
+    """
+    Patch the token managers in ccdFunctions where process_case is defined.
+    """
+    with patch("AzureFunctions.Active.active_ccd.ccdFunctions.tokenManager.IDAMTokenManager") as mock_idam, \
+         patch("AzureFunctions.Active.active_ccd.ccdFunctions.tokenManager.S2S_Manager") as mock_s2s:
+
+        mock_idam_inst = MagicMock()
+        mock_idam_inst.get_token.return_value = ("mock_idam_token", "uid123")
+        mock_idam.return_value = mock_idam_inst
+
+        mock_s2s_inst = MagicMock()
+        mock_s2s_inst.get_token.return_value = "mock_s2s_token"
+        mock_s2s.return_value = mock_s2s_inst
 
         yield

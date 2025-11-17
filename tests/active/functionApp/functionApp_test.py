@@ -271,7 +271,7 @@ def test_process_funciton_success(mock_start_case_creation_response,
     assert results["Status"] == "Success"
     assert results["CCDCaseID"] == "1234567891011"
     assert results["Error"] is None
-
+    
     ### failed to start case creation ###
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
 def test_process_case_start_case_fail(mock_start_case_creation):

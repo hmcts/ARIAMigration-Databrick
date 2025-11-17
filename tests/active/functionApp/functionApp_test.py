@@ -250,10 +250,15 @@ def mock_response(status_code,json_data=None, text=""):
     mock.json.return_values = json_data or {}
     return mock
 
+@pytest.fixture(autouse=True)
+def mock_azure_credentials():
+    """Mock Azure credentials for all tests"""
+    with patch('azure.identity.DefaultAzureCredential') as mock_cred:
+        mock_instance = MagicMock()
+        mock_cred.return_value = mock_instance
+        yield mock_instance
+
 ### Succesfully sent a case payload ###
-### replace place holder with the module import path ###
-# @patch("AzureFunctions.Active.active_ccd.tokenManager.IDAMTokenManager.get_token")
-# @patch("AzureFunctions.Active.active_ccd.tokenManager.S2S_Manager.get_token")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")

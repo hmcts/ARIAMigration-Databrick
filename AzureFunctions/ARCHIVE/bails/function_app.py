@@ -5,7 +5,7 @@ import datetime
 import os
 import asyncio
 from azure.keyvault.secrets._models import KeyVaultSecret
-from azure.storage.blob.aio import BlobServiceClient,ContainerClient
+from azure.storage.blob.aio import BlobServiceClient, ContainerClient, BlobClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
 from typing import List

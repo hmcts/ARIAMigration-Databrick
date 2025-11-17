@@ -5497,8 +5497,8 @@ def stg_statusdetail_data():
         .join(df_reviewspecificdirection.alias('rsd'), 'CaseNo', 'left') \
         .join(df_reviewstandarddirection.alias('rsdd'), 'CaseNo', 'left')  \
         .join(df_reviewspecificdirection_details.alias("rsd_raw"), 
-            ((col("status.StatusId") == col("adj.StatusId"))
-            & (col("status.CaseNo") == col("adj.CaseNo"))),
+            ((col("status.StatusId") == col("rsd_raw.StatusId"))
+            & (col("status.CaseNo") == col("rsd_raw.CaseNo"))),
             "left") \
         .withColumn("CMROrder", when(col("rsd_raw.StatusId").isNotNull(), lit('Directions Exist')).otherwise(lit(None)))
         # .withColumn("JudgeFT", when(col("Position") != 3, concat(col("AdjudicatorSurname"), lit(", "), col("AdjudicatorForenames"), lit(" ("), col("AdjudicatorTitle"), lit(")"))).otherwise(lit(None))) \

@@ -1,17 +1,18 @@
+import asyncio
 import azure.functions as func
 import logging
 import json
+import os
+
 from azure.keyvault.secrets._models import KeyVaultSecret
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
-from typing import List
-import asyncio
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
 from datetime import datetime, timezone, timedelta
-import os
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from typing import List
+# from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 try:
     # When running as a function app the module will be a package. Use a
     # relative import where possible.
@@ -71,7 +72,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                 try:
                     logging.info(f'Event received with partition key: {event.partition_key}')
 
-
                     start_datetime = datetime.now(timezone.utc).isoformat()
 
                     caseNo = event.partition_key
@@ -112,5 +112,3 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                 logging.info(f'Sent the final batch of events to Results Event Hub')
         except Exception as e:
             logging.error(f'Error in event hub processing batch: {e}')
-
-

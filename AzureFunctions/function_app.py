@@ -1,15 +1,12 @@
+import asyncio
 import azure.functions as func
 import logging
-import json
+import os
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceExistsError
 from azure.eventhub import EventHubProducerClient,EventData
-import os
 from typing import List
-import time
-import asyncio
-from tenacity import retry,stop_after_attempt,wait_exponential
-
+# from tenacity import retry,stop_after_attempt,wait_exponential
 
 app = func.FunctionApp()
 
@@ -40,7 +37,6 @@ async def eventhub_trigger(azeventhub: List[func.EventHubEvent]):
         tasks.append(task)
 
     await asyncio.gather(*tasks)
-
 
 async def process_messages(event,blob_service_client,container_name,producer_client):        
         # set the key and message to none at the start of each event
@@ -86,9 +82,6 @@ async def process_messages(event,blob_service_client,container_name,producer_cli
                     if attempt +1 < retries:
                         await asyncio.sleep(retry_delay)
 
-
-
-    
 async def send_to_deadletter(Producer_client:EventHubProducerClient,message: str, partition_key: str):
 
     try:
@@ -98,6 +91,3 @@ async def send_to_deadletter(Producer_client:EventHubProducerClient,message: str
         logging.info(f"Message added to dead letter EvenHub with partition key: {partition_key}")
     except Exception as e:
         logging.error(f"failed to upload {partition_key} to dead letter EventHhub: {e}")
-
-
-    

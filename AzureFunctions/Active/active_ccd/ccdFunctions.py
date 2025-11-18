@@ -1,5 +1,6 @@
+import json
 import requests
-import requests
+from datetime import datetime, timezone, timedelta
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.Active.active_ccd`.
 # Use a robust import that works both when running under the Functions host
@@ -10,13 +11,8 @@ try:
 except Exception:
   # fallback when running as a script in the same folder
   from tokenManager import IDAMTokenManager, S2S_Manager
-from datetime import datetime, timezone, timedelta
-import json
-
-
 
 def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
-
 
     start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
 
@@ -49,7 +45,6 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
     "Content-Type": "application/json"
     }
 
-
     if isinstance(payloadData, str):
         try:
             payloadData = json.loads(payloadData)
@@ -68,7 +63,6 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
     except Exception as e:
         print(f"❌ Network error while calling {validate_case_url}: {e}")
         return None
-
 
 def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token):
 
@@ -104,11 +98,7 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
         print(f"❌ Network error while calling {submit_case_url}: {e}")
         return None
 
-
-
 ### caseNo = event.key, payloadData = event.value
-
-
 def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     try:
@@ -144,7 +134,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     urls = {
         "sbox":f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.platform.hmcts.net",
-        "stg":"ccd-data-store-api-aat.service.core-compute-aat.internal",
+        "stg":"https://ccd-data-store-api-aat.service.core-compute-aat.internal",
         "prod":None
     }
 
@@ -156,6 +146,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     ## start case creation
 
     start_response = start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token)
+    #print start response code at this step?
 
     if start_response is None or start_response.status_code != 200 :
 
@@ -186,7 +177,6 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         print(json.dumps(validate_case_response.json(), indent=2))
     except Exception:
         print(validate_case_response.text)
-
 
     if validate_case_response is None or validate_case_response.status_code not in {201,200}:
         
@@ -244,13 +234,6 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
 
@@ -409,5 +392,3 @@ if __name__ == "__main__":
   "remissionType": "hoWaiverRemission",
   "ariaMigrationTaskDueDays": "2"
 } """
-
-

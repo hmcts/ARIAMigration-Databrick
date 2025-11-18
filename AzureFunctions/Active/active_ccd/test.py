@@ -1,8 +1,8 @@
 import requests
-from tokenManager import IDAMTokenManager,S2S_Manager
-import json
-from ccdFunctions import start_case_creation,validate_case,submit_case, process_case
 from datetime import datetime,timezone
+from ccdFunctions import start_case_creation,validate_case,submit_case, process_case
+from tokenManager import IDAMTokenManager,S2S_Manager
+# import json
 
 caseNo = "1723 0197 9804 1350"
 env = "sbox"
@@ -164,19 +164,14 @@ payload_data = """
 # payload_data = """
 # {"appealType":"refusalOfHumanRights","hmctsCaseCategory":"Human rights","appealReferenceNumber":"HU/00005/2019","appealTypeDescription":"Refusal of a human rights claim","isAppealReferenceNumberAvailable":"Yes","ccdReferenceNumberForDisplay":"","appellantsRepresentation":"Yes","submissionOutOfTime":"No","hearingCentre":"newport","staffLocation":"Newport","caseManagementLocation":{"region":"1","baseLocation":"227101"},"hearingCentreDynamicList":{"value":{"code":"227101","label":"Newport Tribunal Centre - Columbus House"},"list_items":[{"code":"227101","label":"Newport Tribunal Centre - Columbus House"},{"code":"231596","label":"Birmingham Civil And Family Justice Centre"},{"code":"28837","label":"Harmondsworth Tribunal Hearing Centre"},{"code":"366559","label":"Atlantic Quay - Glasgow"},{"code":"366796","label":"Newcastle Civil And Family Courts And Tribunals Centre"},{"code":"386417","label":"Hatton Cross Tribunal Hearing Centre"},{"code":"512401","label":"Manchester Tribunal Hearing Centre - Piccadilly Exchange"},{"code":"649000","label":"Yarls Wood Immigration And Asylum Hearing Centre"},{"code":"698118","label":"Bradford Tribunal Hearing Centre"},{"code":"765324","label":"Taylor House Tribunal Hearing Centre"}]},"caseManagementLocationRefData":{"region":"1","baseLocation":{"value":{"code":"227101","label":"Newport Tribunal Centre - Columbus House"},"list_items":[{"code":"227101","label":"Newport Tribunal Centre - Columbus House"},{"code":"231596","label":"Birmingham Civil And Family Justice Centre"},{"code":"28837","label":"Harmondsworth Tribunal Hearing Centre"},{"code":"366559","label":"Atlantic Quay - Glasgow"},{"code":"366796","label":"Newcastle Civil And Family Courts And Tribunals Centre"},{"code":"386417","label":"Hatton Cross Tribunal Hearing Centre"},{"code":"512401","label":"Manchester Tribunal Hearing Centre - Piccadilly Exchange"},{"code":"649000","label":"Yarls Wood Immigration And Asylum Hearing Centre"},{"code":"698118","label":"Bradford Tribunal Hearing Centre"},{"code":"765324","label":"Taylor House Tribunal Hearing Centre"}]}},"selectedHearingCentreRefData":"Newport Tribunal Centre - Columbus House","adminDeclaration1":["hasDeclared"],"appealSubmissionDate":"2019-11-25","appealSubmissionInternalDate":"2019-11-25","tribunalReceivedDate":"2019-11-25","caseLinks":[],"hasOtherAppeals":"NotSure","appellantFamilyName":"Test Old Appeal Types 4","appellantGivenNames":"Frans","appellantNameForDisplay":"Frans Test Old Appeal Types 4","appellantDateOfBirth":"2019-03-09","isAppellantMinor":"Yes","caseNameHmctsInternal":"Frans Test Old Appeal Types 4","hmctsCaseNameInternal":"Frans Test Old Appeal Types 4","appellantStateless":"hasNationality","appellantNationalities":[{"id":"96158815-f28c-4eb6-99f3-6f2b1389cb41","value":{"code":"GH"}}],"appellantNationalitiesDescription":"Ghana","deportationOrderOptions":"Yes","caseFlags":{"details":[{"id":"74d6246c-d07a-425b-bc95-d221d28b3a41","value":{"name":"Other","path":[{"id":"d6579a82-d750-4ea4-a01d-83b8e1533865","value":"Case"}],"status":"Active","flagCode":"OT0001","flagComment":"Expedite","dateTimeCreated":"2025-11-11T12:29:16Z","hearingRelevant":"Yes"}}]},"appellantLevelFlags":{"details":[{"id":"3c156489-139d-4c27-a012-54cd5a7e8184","value":{"name":"Unaccompanied minor","path":[{"id":"c869119c-7535-4c5f-8574-cfe1e0e0c797","value":"Party"}],"status":"Active","flagCode":"PF0013","dateTimeCreated":"2025-11-11T12:29:16Z","hearingRelevant":"No"}}],"partyName":"Functional PostDeployment","roleOnCase":"Appellant"},"s94bStatus":"No","journeyType":"aip","isAdmin":"Yes","isAriaMigratedFeeExemption":"No","isEjp":"No","appellantPartyId":"d139d5b8-261c-4720-bfd5-345eb6fd5355","isHomeOfficeIntegrationEnabled":"Yes","homeOfficeNotificationsEligible":"Yes","remissionType":"noRemission","hasSponsor":"No","sponsorAuthorisation":"No","feeAmountGbp":"14000","feeDescription":"Appeal determined with a hearing","feeWithHearing":"140","paymentDescription":"Appeal determined with a hearing","feePaymentAppealType":"Yes","paymentStatus":"Payment Pending","feeVersion":"2","decisionHearingFeeOption":"decisionWithHearing","hasServiceRequestAlready":"No","isServiceRequestTabVisibleConsideringRemissions":"No","applicationChangeDesignatedHearingCentre":"newport","notificationsSent":[],"submitNotificationStatus":"","isFeePaymentEnabled":"Yes","isRemissionsEnabled":"Yes","isOutOfCountryEnabled":"Yes","isIntegrated":"No","isNabaEnabled":"No","isNabaAdaEnabled":"Yes","isNabaEnabledOoc":"No","isCaseUsingLocationRefData":"Yes","hasAddedLegalRepDetails":"Yes","autoHearingRequestEnabled":"No","isDlrmFeeRemissionEnabled":"Yes","isDlrmFeeRefundEnabled":"Yes","sendDirectionActionAvailable":"Yes","changeDirectionDueDateActionAvailable":"No","markEvidenceAsReviewedActionAvailable":"No","uploadAddendumEvidenceActionAvailable":"No","uploadAdditionalEvidenceActionAvailable":"No","displayMarkAsPaidEventForPartialRemission":"No","haveHearingAttendeesAndDurationBeenRecorded":"No","markAddendumEvidenceAsReviewedActionAvailable":"No","uploadAddendumEvidenceLegalRepActionAvailable":"No","uploadAddendumEvidenceHomeOfficeActionAvailable":"No","uploadAddendumEvidenceAdminOfficerActionAvailable":"No","uploadAdditionalEvidenceHomeOfficeActionAvailable":"No","uploadTheAppealFormDocs":[],"caseNotes":[],"tribunalDocuments":[],"legalRepresentativeDocuments":[],"ariaDesiredState":"pendingPayment","ariaMigrationTaskDueDays":"14"}
 
-
 # """
-
 
 jid = "IA"
 ctid = "Asylum"
 etid = "ariaCreateCase"
 PR_NUMBER = "2866"
 
-
 ccd_base_url = f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}.preview.platform.hmcts.net"
-
-
 
 try:
     idam_token_mgr = IDAMTokenManager(env="sbox")
@@ -224,11 +219,15 @@ except KeyError:
 
 # print("Ready to start case creation")
 
+url = "https://ccd-data-store-api-aat.service.core-compute-aat.internal"
+headers = None
+response = requests.get(url)
+print(response.status_code)
 
 ## process funciton teest
 
-result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123,PR_NUMBER=PR_NUMBER)
-print(result)
+# result = process_case(env=env,caseNo=caseNo,payloadData=payload_data,state="paymentPending",runId=123,PR_NUMBER=PR_NUMBER)
+# print(result)
 
 # ## start case creation
 
@@ -261,9 +260,7 @@ print(result)
 # validate_case_response = validate_case(ccd_base_url,event_token, payload_data,jid,ctid,idam_token,uid,s2s_token)
 # print(f"Validation response for case {caseNo}: {validate_case_response.status_code}")
 
-
 # if validate_case_response is None or validate_case_response.status_code != 200:
-    
 
 #     status_code = validate_case_response.status_code if validate_case_response else "N/A"
 #     text = validate_case_response.text if validate_case_response else "No response from API"
@@ -314,9 +311,3 @@ print(result)
 #         "ccd_case_id": submit_case_response.json()["id"]
 #     }
 #     print(result) 
-
-    
-
-
-
-

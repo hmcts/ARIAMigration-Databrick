@@ -36,8 +36,6 @@ def test_fetch_token_success(mock_post,mock_fetch_uid,mock_keyvault_client):
 
    mock_post.return_value = mock_fetch_token_response
 
-
-
    IDAMTokenMgr = tokenManager.IDAMTokenManager("sbox")
 
    token,expr_in,uid = IDAMTokenMgr._fetch_token()

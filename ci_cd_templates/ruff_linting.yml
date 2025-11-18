@@ -1,0 +1,12 @@
+steps:
+  - task: UsePythonVersion@0
+    displayName: 'Use Python 3.x'
+    inputs:
+      versionSpec: '3.x'
+
+  - script: |
+      pip install uv
+      uv tool install ruff
+      uv run ruff format $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
+      uv run ruff check $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
+    displayName: 'AzureFunction, Databricks code linting'

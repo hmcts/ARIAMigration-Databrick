@@ -1,18 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock, ANY
-import unittest
 from datetime import datetime,timedelta,timezone
-import requests
-import json
 from AzureFunctions.Active.active_ccd.ccdFunctions import start_case_creation,validate_case,submit_case, process_case
 from AzureFunctions.Active.active_ccd.tokenManager import IDAMTokenManager,S2S_Manager
 
-
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was onyl done because we could not merge)#################
-
-
-
-
 
 ############################################################
 @patch("requests.get")
@@ -250,15 +242,19 @@ def mock_response(status_code,json_data=None, text=""):
     return mock
 
 ### Succesfully sent a case payload ###
-### replace place holder with the module import path ###
+@pytest.mark.usefixtures("mock_token_managers")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
-def test_process_funciton_success(mock_start_case_creation_response,mock_validate_case_response,mock_submit_case_response):
-    mock_start_case_creation = mock_response(200,{"token":"ABC123"})
+def test_process_funciton_success(mock_start_case_creation_response,
+                                  mock_validate_case_response,
+                                  mock_submit_case_response):
+
+    mock_start_case_creation = mock_response(200, {"token": "ABC123"})
     mock_validate_case = mock_response(201)
     mock_submit_case = mock_response(201)
-    mock_submit_case.json = lambda: {"id":"1234567891011"}
+    mock_submit_case.json = lambda: {"id": "1234567891011"}
+
     mock_start_case_creation_response.return_value = mock_start_case_creation
     mock_validate_case_response.return_value = mock_validate_case
     mock_submit_case_response.return_value = mock_submit_case
@@ -268,13 +264,14 @@ def test_process_funciton_success(mock_start_case_creation_response,mock_validat
         caseNo="CASE123",
         payloadData={"key": "value"},
         runId="run123",
-        state="paymentPending"
+        state="paymentPending",
+        PR_NUMBER="2866"
     )
 
-    assert results['Status']== "Success"
-    assert results['CCDCaseID']== "1234567891011"
-    assert results['Error'] is None
-
+    assert results["Status"] == "Success"
+    assert results["CCDCaseID"] == "1234567891011"
+    assert results["Error"] is None
+    
     ### failed to start case creation ###
 @patch("AzureFunctions.Active.active_ccd.ccdFunctions.start_case_creation")
 def test_process_case_start_case_fail(mock_start_case_creation):
@@ -285,8 +282,9 @@ def test_process_case_start_case_fail(mock_start_case_creation):
     env="sbox",
     caseNo="CASE123",
     payloadData={"key": "value"},
-        runId="run123",
-        state="paymentPending"
+    runId="run123",
+    state="paymentPending",
+    PR_NUMBER = "2866"
 )
     
     assert results["Status"]=="ERROR"
@@ -303,7 +301,8 @@ def test_process_case_validation_fails(mock_start, mock_validate):
         caseNo="CASE888",
         payloadData={},
         runId="run123",
-        state="paymentPending"
+        state="paymentPending",
+        PR_NUMBER = "2866"
     )
 
     assert result["Status"] == "ERROR"
@@ -322,7 +321,8 @@ def test_process_case_submission_fails(mock_start, mock_validate, mock_submit):
         caseNo="CASE777",
         payloadData={},
         runId="run123",
-        state="paymentPending"
+        state="paymentPending",
+        PR_NUMBER = "2866"
     )
 
 

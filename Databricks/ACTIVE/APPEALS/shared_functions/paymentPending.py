@@ -13,8 +13,8 @@ from pyspark.sql.types import StringType
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
-    size, udf, coalesce, concat_ws, concat, trim, year,split,datediff,
-    collect_set, current_timestamp,transform
+    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
+    collect_set, current_timestamp,transform, first, array_contains
 )
 
 from uk_postcodes_parsing import fix, postcode_utils
@@ -22,7 +22,6 @@ from uk_postcodes_parsing import fix, postcode_utils
 ################################################################
 ##########              appealType grouping          ###########
 ################################################################
-
 
 # AppealType grouping
 def appealType(silver_m1):
@@ -2191,9 +2190,6 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 ##########        sponsorDetails Function            ###########
 ################################################################
 
-
-from pyspark.sql.functions import when, col, first, lit, concat_ws, trim, collect_list, array_contains
-
 def sponsorDetails(silver_m1, silver_c):
     m1 = silver_m1.alias("m1")
     c = silver_c.alias("c")
@@ -2216,7 +2212,6 @@ def sponsorDetails(silver_m1, silver_c):
     )
 
     sponsor_condition = (array_contains(col("CategoryIdList"), 38) & col("Sponsor_Name").isNotNull())
-
 
     grouped = grouped.withColumn(
     "hasSponsor",
@@ -2662,7 +2657,6 @@ def documents(silver_m1):
         lit([]).cast("array<string>").alias("caseNotes"),
         lit([]).cast("array<string>").alias("tribunalDocuments"),
         lit([]).cast("array<string>").alias("legalRepresentativeDocuments")
-
     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
@@ -2705,7 +2699,6 @@ def documents(silver_m1):
 def caseState(silver_m1, desiredState):
     """
     desiredState = is the current state of the case, e.g. 'Awaiting Appeal Lodgement'
-    
     """
 
     df = silver_m1.select(
@@ -2730,11 +2723,9 @@ def caseState(silver_m1, desiredState):
     array(struct(*common_inputValues, lit("null"))).alias("ariaMigrationTaskDueDays_inputValues"),
     col("content.ariaMigrationTaskDueDays"),
     lit("no").alias("ariaMigrationTaskDueDays_Transformation")
-
     )
 
     return df,df_audit
 
 if __name__ == "__main__":
     pass
-

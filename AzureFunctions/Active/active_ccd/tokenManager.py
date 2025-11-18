@@ -1,13 +1,10 @@
 # from azure.keyvault import KeyVaultClient
-import requests
 import pyotp
+import requests
+import threading
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-
-
 from datetime import datetime, timezone, timedelta
-import threading
-import requests
 
 class IDAMTokenManager:
   def __init__(self,env:str,skew:int=28792):
@@ -52,9 +49,6 @@ class IDAMTokenManager:
     # Requested scopes.
     self.scope = "openid profile roles"
 
-
-
-
   def _fetch_token(self):
     data = {
             "grant_type": "password",
@@ -72,7 +66,6 @@ class IDAMTokenManager:
     if idam_response.status_code != 200:
       raise RuntimeError(f"Token request failed: {idam_response.status_code} {idam_response.text}")
 
-
     payload = idam_response.json()
 
     idam_token = payload.get("access_token")
@@ -88,14 +81,12 @@ class IDAMTokenManager:
 
     return idam_token,expiration_time,uid
   
-
   def _needs_refresh(self):
 
     if not self._token or not self._expiration_time:
       return True
 
     return datetime.now(timezone.utc) >= (self._expiration_time - self.skew)
-
 
   def get_token(self):
     if not self._needs_refresh():
@@ -124,8 +115,6 @@ class IDAMTokenManager:
         raise RuntimeError(f"UID missing in response: {payload}")
     return uid
 
-
-    
   def invalidate(self):
     with self._lock:
       self._token = None
@@ -140,7 +129,6 @@ class S2S_Manager():
         self.expire_time = None
         self._lock = threading.RLock()
         self._skew = skew
-
 
      # ----- Environment config (host + key vault) -----
         urls = {
@@ -172,7 +160,6 @@ class S2S_Manager():
 
         self.url = f"{self.s2s_host}/lease"
         self.s2s_microservice = "iac"
-
 
     def _fetch_s2s_token(self):
         otp = pyotp.TOTP(self._s2s_secret).now()
@@ -210,17 +197,12 @@ class S2S_Manager():
 
         return payload
 
-
     def get_token(self):
         if self.expire_time and datetime.now(timezone.utc) < self.expire_time:
             return self._s2s_token
         with self._lock:
             self._s2s_token = self._fetch_s2s_token()
         return self._s2s_token
-
-
-
-    
 
 if __name__ == "__main__":
     idam_token_mgr = IDAMTokenManager(env="sbox")
@@ -231,6 +213,3 @@ if __name__ == "__main__":
     s2s_manager = S2S_Manager("sbox",21)
     s2s_token = s2s_manager.get_token()
     print(f"S2S Token: {s2s_token}")
-
-
-

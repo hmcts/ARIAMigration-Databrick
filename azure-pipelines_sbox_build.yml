@@ -79,7 +79,7 @@ parameters:
 
 stages:
   - stage: Tests
-    displayName: 'Run Unit Tests'
+    displayName: 'Pull Request: Run Unit Tests'
     condition: eq(variables['Build.Reason'], 'PullRequest')
     jobs:
       - job: FunctionAppTests

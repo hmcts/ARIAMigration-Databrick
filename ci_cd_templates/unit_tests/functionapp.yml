@@ -1,27 +1,23 @@
 parameters:
   segment: 'functionApp'
 
-stages:
-  - stage: ${{ parameters.segment }}_unitTests
-    displayName: '${{ parameters.segment }} Unit Tests'
-    condition: eq(variables['Build.Reason'], 'PullRequest')
 
-    jobs:
-    - job: RunTests
-      displayName: Run Python Unit Tests
-      steps:
-        - task: UsePythonVersion@0
-          displayName: 'Use Python 3.x'
-          inputs:
-            versionSpec: '3.x'
+jobs:
+- job: RunTests
+  displayName: Run Python Unit Tests
+  steps:
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.x'
+      inputs:
+        versionSpec: '3.x'
 
-        - script: |
-            pip install uv
-            uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
-          displayName: 'Install dependencies'
-        
-        - script: |
-            echo "Running ${{ parameters.segment }} unit tests"
-            pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}
-          displayName: 'Run pytest ${{ parameters.segment }} unit tests'
-        
+    - script: |
+        pip install uv
+        uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
+      displayName: 'Install dependencies'
+    
+    - script: |
+        echo "Running ${{ parameters.segment }} unit tests"
+        pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}
+      displayName: 'Run pytest ${{ parameters.segment }} unit tests'
+    

@@ -98,6 +98,7 @@ stages:
   - stage: Tests
   # dependsOn: Init
     displayName: 'Run Unit Tests'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
     jobs:
     - job: RunTests
       displayName: 'Run all unit test templates'

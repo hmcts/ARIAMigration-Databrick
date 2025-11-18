@@ -106,7 +106,7 @@ stages:
     - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
       - stage: Manual_Approval_${{ deployment.environment }}
         displayName: 'Manual Approval for ${{ deployment.environment }}'
-        dependsOn: Tests
+        dependsOn: Init
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation

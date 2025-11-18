@@ -91,12 +91,22 @@ stages:
         displayName: 'Run Payment Pending Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/paymentPending.yml
+  
+  - stage: Init 
+    displayName: 'No dependency stage'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Job' 
+        steps:
+        - script: echo 'Initial stage set-up' 
+          displayName: 'Initial stage set-up'
 
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
       - stage: Manual_Approval_${{ deployment.environment }}
         displayName: 'Manual Approval for ${{ deployment.environment }}'
-        dependsOn: Tests
+        dependsOn: Init
         jobs:
           - job: waitForValidation
             displayName: Wait for Manual Validation
@@ -116,7 +126,7 @@ stages:
       ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
         dependsOn: Manual_Approval_${{ deployment.environment }}
       ${{ else }}:
-        dependsOn: Tests
+        dependsOn: Init
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'

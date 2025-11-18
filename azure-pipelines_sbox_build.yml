@@ -100,11 +100,15 @@ stages:
     displayName: 'Run Unit Tests'
     condition: eq(variables['Build.Reason'], 'PullRequest')
     jobs:
-    - job: RunTests
-      displayName: 'Run all unit test templates'
-      steps:
-        - template: ci_cd_templates/unit_tests/functionapp.yml
-        - template: ci_cd_templates/unit_tests/active/paymentPending.yml
+      - job: FunctionAppTests
+        displayName: 'Run Function App Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/functionapp.yml
+
+      - job: PaymentPendingTests
+        displayName: 'Run Payment Pending Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/paymentPending.yml
 
   - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
     - ${{ each deployment in parameters.environment_components }}:

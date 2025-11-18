@@ -799,6 +799,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("fl.TransferDate").alias("FileLocationTransferDate"),
         # Case Representative Fields
         col("crep.Name").alias("CaseRepName"),
+        col("crep.RepresentativeId").alias("RepRepresentativeId"),
         col("crep.Address1").alias("CaseRepAddress1"),
         col("crep.Address2").alias("CaseRepAddress2"),
         col("crep.Address3").alias("CaseRepAddress3"),
@@ -1872,7 +1873,7 @@ def silver_m1():
                         .otherwise("Other").alias("BailTypeDesc"),
                         when(col("CourtPreference") == 1,"All Male,")
                         .when(col("CourtPreference") == 2,"All Female,")
-                        .otherwise("Other").alias("CourtPreferenceDesc"),
+                        .otherwise("").alias("CourtPreferenceDesc"),
                         when(col("Interpreter") == 1,"Yes")
                         .when(col("Interpreter") == 2,"No").otherwise("Unknown").alias("InterpreterDesc"),
                         when(col("TypeOfCostAward") == 1,"Fee Costs")
@@ -3428,7 +3429,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             # Respondent Section
             "{{Detained}}": cd_row.AppellantDetainedDesc,
             "{{RespondentName}}": cd_row.MainRespondentName,
-            "{{repName}}": cd_row.CaseRepName,
+            "{{repName}}": cd_row.CaseRepName if cd_row.representative == 0 else cd_row.RepName,
             "{{InterpreterRequirementsLanguage}}": cd_row.InterpreterRequirementsLanguage,
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
@@ -3439,18 +3440,18 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{Notes}}": cd_row.AppealCaseNote,
 
             # Representative Tab
-            "{{RepName}}": cd_row.CaseRepName,
-            "{{CaseRepAddress1}}": cd_row.CaseRepAddress1,
-            "{{CaseRepAddress2}}": cd_row.CaseRepAddress2,
-            "{{CaseRepAddress3}}": cd_row.CaseRepAddress3,
-            "{{CaseRepAddress4}}": cd_row.CaseRepAddress4,
-            "{{CaseRepAddress5}}": cd_row.CaseRepAddress5,
-            "{{CaseRepPostcode}}": cd_row.CaseRepPostcode,
-            "{{CaseRepTelephone}}": cd_row.CaseRepPhone,
-            "{{CaseRepFAX}}": cd_row.CaseRepFax,
-            "{{CaseRepEmail}}": cd_row.CaseRepEmail,
-            "{{RepDxNo1}}": cd_row.RepDxNo1,
-            "{{RepDxNo2}}": cd_row.RepDxNo2,
+            "{{RepName}}": cd_row.CaseRepName if cd_row.representative == 0 else cd_row.RepName,
+            "{{CaseRepAddress1}}": cd_row.CaseRepAddress1 if cd_row.representative == 0 else cd_row.RepAddress1,
+            "{{CaseRepAddress2}}": cd_row.CaseRepAddress2 if cd_row.representative == 0 else cd_row.RepAddress2,
+            "{{CaseRepAddress3}}": cd_row.CaseRepAddress3 if cd_row.representative == 0 else cd_row.RepAddress3,
+            "{{CaseRepAddress4}}": cd_row.CaseRepAddress4 if cd_row.representative == 0 else cd_row.RepAddress4,
+            "{{CaseRepAddress5}}": cd_row.CaseRepAddress5 if cd_row.representative == 0 else cd_row.RepAddress5,
+            "{{CaseRepPostcode}}": cd_row.CaseRepPostcode if cd_row.representative == 0 else cd_row.RepPostcode,
+            "{{CaseRepTelephone}}": cd_row.CaseRepPhone if cd_row.representative == 0 else cd_row.RepTelephone,
+            "{{CaseRepFAX}}": cd_row.CaseRepFax if cd_row.representative == 0 else cd_row.RepFax,
+            "{{CaseRepEmail}}": cd_row.CaseRepEmail if cd_row.representative == 0 else cd_row.RepEmail,
+            "{{RepDxNo1}}": cd_row.RepDxNo1 if cd_row.representative == 0 else cd_row.RepDxNo1,
+            "{{RepDxNo2}}": cd_row.RepDxNo2 if cd_row.representative == 0 else cd_row.RepDxNo2,
             "{{RepLAARefNo}}": "",
             "{{RepLAACommission}}": cd_row.CaseRepLSCCommission
         }
@@ -3671,7 +3672,7 @@ def create_html_column(row, html_template=bails_html_dyn):
 
         # Financial supporter
 
-        sponsor_name = "Financial Condiiton Suportor details entered" if row.financial_condition_details else "Financial Condiiton Suportor details not entered"
+        sponsor_name = "Financial condition Supportor details entered" if row.financial_condition_details else "Financial condition Supportor details not entered"
 
         html = html.replace("{{sponsorName}}",str(sponsor_name))
 

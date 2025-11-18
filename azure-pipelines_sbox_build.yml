@@ -103,36 +103,190 @@ stages:
         - script: echo 'Initial stage set-up' 
           displayName: 'Initial stage set-up'
 
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
-        - stage: Manual_Approval_${{ deployment.environment }}
-          displayName: 'Manual Approval for ${{ deployment.environment }}'
-          dependsOn: Init
-          jobs:
-            - job: waitForValidation
-              displayName: Wait for Manual Validation
-              pool: server
-              steps:
-                - task: ManualValidation@1
-                  timeoutInMinutes: 23160
-                  inputs:
-                    approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
-                    instructions: Please validate the build configuration and resume
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+      - stage: Manual_Approval_${{ deployment.environment }}
+        displayName: 'Manual Approval for ${{ deployment.environment }}'
+        dependsOn: Init
+        jobs:
+          - job: waitForValidation
+            displayName: Wait for Manual Validation
+            pool: server
+            steps:
+              - task: ManualValidation@1
+                timeoutInMinutes: 23160
+                inputs:
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
+                  instructions: Please validate the build configuration and resume
 
 # Build shared wheel first as a single operation per environment
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
-        displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
-        # dependsOn: Run_Unit_Tests_${{ deployment.environment }} #uncomment this line when we uncomment the unit testing above.
-        ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
-          dependsOn: Manual_Approval_${{ deployment.environment }}
-        ${{ else }}:
-          dependsOn: Init
+  - ${{ each deployment in parameters.environment_components }}:
+    - stage: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+      displayName: 'Build Shared Wheel for ${{ deployment.deployment }}'
+      # dependsOn: Run_Unit_Tests_${{ deployment.environment }} #uncomment this line when we uncomment the unit testing above.
+      ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+        dependsOn: Manual_Approval_${{ deployment.environment }}
+      ${{ else }}:
+        dependsOn: Init
+      jobs:
+        - job: BuildWheel
+          displayName: 'Build Shared Python Wheel'
+          steps:
+            - task: UsePythonVersion@0
+              displayName: 'Use Python 3.x'
+              inputs:
+                versionSpec: '3.x'
+
+            - script: |
+                python --version
+                pip install --upgrade pip
+                pip install uv
+                pip install databricks-cli
+
+                echo "Listing dist contents:"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "removing files in dist/"
+                rm -rf $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "Listing dist contents after deletion:"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+
+                echo "Building wheel"
+                uv build --wheel --out-dir $(Build.SourcesDirectory)/ARIA_DABs/dist \
+                  $(Build.SourcesDirectory)
+
+                echo "Listing dist contents after building the wheel"
+                ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
+              displayName: 'Build Shared Python Wheel'
+
+            - task: PublishBuildArtifacts@1
+              inputs:
+                PathtoPublish: '$(Build.SourcesDirectory)/ARIA_DABs/dist'
+                ArtifactName: 'ariafunctionv2'
+                publishLocation: 'Container'
+              displayName: 'Publish Shared Wheel Artifact'   
+
+# Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each state in deployment.states }}:
+      - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+        displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ state }}'
+        dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
         jobs:
-          - job: BuildWheel
-            displayName: 'Build Shared Python Wheel'
+          - job: BuildFunction
+            displayName: 'Build Azure Function for ${{ state }}'
+            steps:
+              - script: |
+                  pip install --upgrade pip
+                  pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
+                    --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
+                displayName: 'Install dependencies for ${{ state }}'
+              
+              - task: PublishBuildArtifacts@1
+                inputs:
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
+                  ArtifactName: 'functionapp-${{ state }}'
+                  publishLocation: 'Container'
+                displayName: 'Publish Function App for ${{ state }}'        
+
+# Build function app package for each segment
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each segment in deployment.segments }}:
+      - stage: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+        displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
+        dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+        jobs:
+          - job: BuildFunction
+            displayName: 'Build Azure Function for ${{ segment }}'
+            steps:
+              - script: |
+                  pip install --upgrade pip
+                  pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
+                    --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
+                displayName: 'Install dependencies for ${{ segment }}'
+              
+              - task: PublishBuildArtifacts@1
+                inputs:
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
+                  ArtifactName: 'functionapp-${{ segment }}'
+                  publishLocation: 'Container'
+                displayName: 'Publish Function App for ${{ segment }}'
+
+# Deploy function app for Active State
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones}}:
+      - ${{ each state in deployment.states}}:
+          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}
+            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}'
+            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+            jobs:
+              - job: Deploy_Function_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ state }}'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Azure Function Artifact for ${{ state }}'
+
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ state }}'
+                      deploymentMethod: 'zipDeploy'
+                    displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones}}:
+      - ${{ each segment in deployment.segments}}:
+          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
+            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
+            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+            jobs:
+              - job: Deploy_Function_${{ lz.landing_zone }}
+                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+                steps:
+                  - task: DownloadBuildArtifacts@1
+                    inputs:
+                      buildType: 'current'
+                      downloadType: 'single'
+                      artifactName: 'functionapp-${{ segment }}'
+                      downloadPath: '$(Pipeline.Workspace)'
+                    displayName: 'Download Azure Function Artifact for ${{ segment }}'
+
+                  - task: AzureFunctionApp@2
+                    inputs:
+                      connectedServiceNameARM: ${{ deployment.service_connection }}
+                      appType: 'functionAppLinux'
+                      appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                      package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
+                      deploymentMethod: 'zipDeploy'
+                    displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+
+# Deploy HTML templates and Databricks code
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones}}:
+      - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+        displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
+        dependsOn:
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
+          - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
+
+        jobs:
+          - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
+            displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+            pool:
+              vmImage: 'ubuntu-latest'
             steps:
               - task: UsePythonVersion@0
                 displayName: 'Use Python 3.x'
@@ -140,382 +294,220 @@ stages:
                   versionSpec: '3.x'
 
               - script: |
-                  python --version
                   pip install --upgrade pip
-                  pip install uv
                   pip install databricks-cli
-
-                  echo "Listing dist contents:"
-                  ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
-
-                  echo "removing files in dist/"
-                  rm -rf $(Build.SourcesDirectory)/ARIA_DABs/dist
-
-                  echo "Listing dist contents after deletion:"
-                  ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
-
-                  echo "Building wheel"
-                  uv build --wheel --out-dir $(Build.SourcesDirectory)/ARIA_DABs/dist \
-                    $(Build.SourcesDirectory)
-
-                  echo "Listing dist contents after building the wheel"
-                  ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist
-                displayName: 'Build Shared Python Wheel'
-
-              - task: PublishBuildArtifacts@1
-                inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/ARIA_DABs/dist'
-                  ArtifactName: 'ariafunctionv2'
-                  publishLocation: 'Container'
-                displayName: 'Publish Shared Wheel Artifact'   
-
-# Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each state in deployment.states }}:
-        - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
-          displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ state }}'
-          dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
-          jobs:
-            - job: BuildFunction
-              displayName: 'Build Azure Function for ${{ state }}'
-              steps:
-                - script: |
-                    pip install --upgrade pip
-                    pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
-                      --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
-                  displayName: 'Install dependencies for ${{ state }}'
-                
-                - task: PublishBuildArtifacts@1
-                  inputs:
-                    PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
-                    ArtifactName: 'functionapp-${{ state }}'
-                    publishLocation: 'Container'
-                  displayName: 'Publish Function App for ${{ state }}'        
-
-# Build function app package for each segment
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each segment in deployment.segments }}:
-        - stage: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-          displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
-          dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
-          jobs:
-            - job: BuildFunction
-              displayName: 'Build Azure Function for ${{ segment }}'
-              steps:
-                - script: |
-                    pip install --upgrade pip
-                    pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
-                      --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
-                  displayName: 'Install dependencies for ${{ segment }}'
-                
-                - task: PublishBuildArtifacts@1
-                  inputs:
-                    PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
-                    ArtifactName: 'functionapp-${{ segment }}'
-                    publishLocation: 'Container'
-                  displayName: 'Publish Function App for ${{ segment }}'
-
-# Deploy function app for Active State
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each lz in deployment.landing_zones}}:
-        - ${{ each state in deployment.states}}:
-            - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}
-              displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}'
-              dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
-              jobs:
-                - job: Deploy_Function_${{ lz.landing_zone }}
-                  displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-                  steps:
-                    - task: DownloadBuildArtifacts@1
-                      inputs:
-                        buildType: 'current'
-                        downloadType: 'single'
-                        artifactName: 'functionapp-${{ state }}'
-                        downloadPath: '$(Pipeline.Workspace)'
-                      displayName: 'Download Azure Function Artifact for ${{ state }}'
-
-                    - task: AzureFunctionApp@2
-                      inputs:
-                        connectedServiceNameARM: ${{ deployment.service_connection }}
-                        appType: 'functionAppLinux'
-                        appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                        package: '$(Pipeline.Workspace)/functionapp-${{ state }}'
-                        deploymentMethod: 'zipDeploy'
-                      displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
-
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each lz in deployment.landing_zones}}:
-        - ${{ each segment in deployment.segments}}:
-            - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
-              displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
-              dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
-              jobs:
-                - job: Deploy_Function_${{ lz.landing_zone }}
-                  displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-                  steps:
-                    - task: DownloadBuildArtifacts@1
-                      inputs:
-                        buildType: 'current'
-                        downloadType: 'single'
-                        artifactName: 'functionapp-${{ segment }}'
-                        downloadPath: '$(Pipeline.Workspace)'
-                      displayName: 'Download Azure Function Artifact for ${{ segment }}'
-
-                    - task: AzureFunctionApp@2
-                      inputs:
-                        connectedServiceNameARM: ${{ deployment.service_connection }}
-                        appType: 'functionAppLinux'
-                        appName: 'af-${{ segment }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                        package: '$(Pipeline.Workspace)/functionapp-${{ segment }}'
-                        deploymentMethod: 'zipDeploy'
-                      displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
-
-# Deploy HTML templates and Databricks code
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each lz in deployment.landing_zones}}:
-        - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
-          displayName: 'Deploy HTML and Databricks code for ${{ deployment.environment }}${{ lz.landing_zone }}'
-          dependsOn:
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_bails   
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_apluta
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_td
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_joh
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
-            - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
-
-          jobs:
-            - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
-              displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-              pool:
-                vmImage: 'ubuntu-latest'
-              steps:
-                - task: UsePythonVersion@0
-                  displayName: 'Use Python 3.x'
-                  inputs:
-                    versionSpec: '3.x'
-
-                - script: |
-                    pip install --upgrade pip
-                    pip install databricks-cli
-                  displayName: 'Install Databricks CLI'
-
-                - script: |
-                    echo "[DEFAULT]" > $(HOME)/.databrickscfg
-                    echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
-                    echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
-                  displayName: "Configure Databricks CLI for ENV${{ deployment.environment }} LZ${{ lz.landing_zone }}"
-
-                - script: |
-                    databricks workspace delete /live --recursive || true
-                    databricks workspace mkdirs /live
-                    databricks workspace import_dir Databricks /live --overwrite
-                  displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
-            
-            - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
-              displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
-              pool: 
-                name : 'hmcts-sds-ptl'
-                # name: ${{ deployment.pool_name }}
-              steps:
-                - task: AzureCLI@2
-                  displayName: Configure RefData Storage
-                  inputs:
-                    azureSubscription: ${{ deployment.service_connection }}
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      echo "Assigning SP Blob Contributor Access"
-                      az role assignment create \
-                        --assignee "${{ lz.Client_ID }}" \
-                        --role "Storage Blob Data Contributor" \
-                        --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
-
-                      echo "Retrieving Storage Account Key"
-                      storage_account_key=$(az storage account keys list \
-                        --resource-group ${{ lz.Resource_Group }} \
-                        --account-name ${{ lz.RefData_StorageAccount }} \
-                        --query '[0].value' -o tsv)
-                      echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
-
-                      echo "Retrieving Blob Endpoint"
-                      blob_endpoint=$(az storage account show \
-                        --resource-group ${{ lz.Resource_Group }} \
-                        --name ${{ lz.RefData_StorageAccount }} \
-                        --query "primaryEndpoints.blob" -o tsv)
-                      echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
-
-                      echo "Creating external-csv container if not exists"
-                      az storage container create \
-                        --account-name ${{ lz.RefData_StorageAccount }} \
-                        --name external-csv \
-                        --account-key $storage_account_key \
-                        --blob-endpoint $blob_endpoint
-                      echo "Success! external-csv container created!"
-
-                      echo "Uploading CSVs"
-                      az storage blob upload-batch \
-                        --account-name ${{ lz.RefData_StorageAccount }} \
-                        --account-key $storage_account_key \
-                        --destination external-csv \
-                        --destination-path ReferenceData \
-                        --source '$(Build.SourcesDirectory)/ReferenceData/' \
-                        --pattern '*.csv' \
-                        --overwrite true
-                      echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
-
-            - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
-              displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
-              pool: 
-                name : 'hmcts-sds-ptl'
-              steps:
-                - task: AzureCLI@2
-                  displayName: Configure Storage and Upload HTML Templates
-                  inputs:
-                    azureSubscription: ${{ deployment.service_connection }}
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      echo "Assigning SP Blob Contributor Access"
-                      az role assignment create \
-                        --assignee "${{ lz.Client_ID }}" \
-                        --role "Storage Blob Data Contributor" \
-                        --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
-
-                      echo "Retrieving Storage Account Key"
-                      storage_account_key=$(az storage account keys list \
-                        --resource-group ${{ lz.Resource_Group }} \
-                        --account-name ${{ lz.HTML_StorageAccount }} \
-                        --query '[0].value' -o tsv)
-                      echo "Success! ${{ lz.HTML_StorageAccount }} is $storage_account_key"
-
-                      echo "Retrieving Blob Endpoint"
-                      blob_endpoint=$(az storage account show \
-                        --resource-group ${{ lz.Resource_Group }} \
-                        --name ${{ lz.HTML_StorageAccount }} \
-                        --query "primaryEndpoints.blob" -o tsv)
-                      echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
-
-                      echo "Creating html-template container if not exists"
-                      az storage container create \
-                        --account-name ${{ lz.HTML_StorageAccount }} \
-                        --name html-template \
-                        --account-key $storage_account_key \
-                        --blob-endpoint $blob_endpoint
-                      echo "Success! html-template container created!"
-
-                      echo "Uploading HTML Templates"
-                      az storage blob upload-batch \
-                        --account-name ${{ lz.HTML_StorageAccount }} \
-                        --account-key $storage_account_key \
-                        --destination html-template \
-                        --source '$(Build.SourcesDirectory)/HTML_Templates/' \
-                        --pattern '*.html' \
-                        --overwrite true
-                      echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
-
-# Deploy Python wheel to Databricks as final stage
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ each deployment in parameters.environment_components }}:
-      - ${{ each lz in deployment.landing_zones }}:
-        - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
-          displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
-          dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
-          jobs:
-            - job:
-              displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
-              pool: 
-                vmImage: 'ubuntu-latest'
-                  
-              steps:
-              - task: DownloadBuildArtifacts@1
-                inputs:
-                  buildType: 'current'
-                  downloadType: 'single'
-                  artifactName: 'ariafunctionv2'
-                  downloadPath: '$(Pipeline.Workspace)'
-                displayName: 'Download Wheel Artifact'
-              
-              - script: |
-                  echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
-                  ls -al $(Pipeline.Workspace)
-
-              - task: UsePythonVersion@0
-                displayName: 'Use Python 3.x'
-                inputs:
-                  versionSpec: '3.x'
-
-              - script: |
-                    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                    
-                    brew install databricks/tap/databricks
-                    databricks --version
                 displayName: 'Install Databricks CLI'
 
               - script: |
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                  export DATABRICKS_HOST="${{ lz.databricks_host }}"
-                  export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
-
-                  databricks --version  
                   echo "[DEFAULT]" > $(HOME)/.databrickscfg
                   echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
                   echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
-                  cat ~/.databrickscfg  # Print the contents for debugging
-                displayName: 'Configure Databricks CLI'
+                displayName: "Configure Databricks CLI for ENV${{ deployment.environment }} LZ${{ lz.landing_zone }}"
 
               - script: |
+                  databricks workspace delete /live --recursive || true
+                  databricks workspace mkdirs /live
+                  databricks workspace import_dir Databricks /live --overwrite
+                displayName: "Publish to Databricks Workspace - /live for ${{ deployment.environment }}${{ lz.landing_zone }}"
+          
+          - job: Configure_RefData_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+            displayName: 'Upload RefData to ${{ deployment.environment }}${{ lz.landing_zone }}'
+            pool: 
+              name : 'hmcts-sds-ptl'
+              # name: ${{ deployment.pool_name }}
+            steps:
+              - task: AzureCLI@2
+                displayName: Configure RefData Storage
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    echo "Assigning SP Blob Contributor Access"
+                    az role assignment create \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Storage Blob Data Contributor" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.RefData_StorageAccount }}"
+
+                    echo "Retrieving Storage Account Key"
+                    storage_account_key=$(az storage account keys list \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --query '[0].value' -o tsv)
+                    echo "Success! ${{ lz.RefData_StorageAccount }} is $storage_account_key"
+
+                    echo "Retrieving Blob Endpoint"
+                    blob_endpoint=$(az storage account show \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --name ${{ lz.RefData_StorageAccount }} \
+                      --query "primaryEndpoints.blob" -o tsv)
+                    echo "Success! ${{ lz.RefData_StorageAccount }} is $blob_endpoint"
+
+                    echo "Creating external-csv container if not exists"
+                    az storage container create \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --name external-csv \
+                      --account-key $storage_account_key \
+                      --blob-endpoint $blob_endpoint
+                    echo "Success! external-csv container created!"
+
+                    echo "Uploading CSVs"
+                    az storage blob upload-batch \
+                      --account-name ${{ lz.RefData_StorageAccount }} \
+                      --account-key $storage_account_key \
+                      --destination external-csv \
+                      --destination-path ReferenceData \
+                      --source '$(Build.SourcesDirectory)/ReferenceData/' \
+                      --pattern '*.csv' \
+                      --overwrite true
+                    echo "Success! CSVs imported to ${{ lz.RefData_StorageAccount }}/external-csv/ReferenceData"
+
+          - job: Configure_HTML_Upload_${{ deployment.environment }}_${{ lz.landing_zone }}
+            displayName: 'Upload HTML Templates to ${{ deployment.environment }}${{ lz.landing_zone }}'
+            pool: 
+              name : 'hmcts-sds-ptl'
+            steps:
+              - task: AzureCLI@2
+                displayName: Configure Storage and Upload HTML Templates
+                inputs:
+                  azureSubscription: ${{ deployment.service_connection }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    echo "Assigning SP Blob Contributor Access"
+                    az role assignment create \
+                      --assignee "${{ lz.Client_ID }}" \
+                      --role "Storage Blob Data Contributor" \
+                      --scope "/subscriptions/${{ lz.Subscription_ID }}/resourceGroups/${{ lz.Resource_Group }}/providers/Microsoft.Storage/storageAccounts/${{ lz.HTML_StorageAccount }}"
+
+                    echo "Retrieving Storage Account Key"
+                    storage_account_key=$(az storage account keys list \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --query '[0].value' -o tsv)
+                    echo "Success! ${{ lz.HTML_StorageAccount }} is $storage_account_key"
+
+                    echo "Retrieving Blob Endpoint"
+                    blob_endpoint=$(az storage account show \
+                      --resource-group ${{ lz.Resource_Group }} \
+                      --name ${{ lz.HTML_StorageAccount }} \
+                      --query "primaryEndpoints.blob" -o tsv)
+                    echo "Success! ${{ lz.HTML_StorageAccount }} is $blob_endpoint"
+
+                    echo "Creating html-template container if not exists"
+                    az storage container create \
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --name html-template \
+                      --account-key $storage_account_key \
+                      --blob-endpoint $blob_endpoint
+                    echo "Success! html-template container created!"
+
+                    echo "Uploading HTML Templates"
+                    az storage blob upload-batch \
+                      --account-name ${{ lz.HTML_StorageAccount }} \
+                      --account-key $storage_account_key \
+                      --destination html-template \
+                      --source '$(Build.SourcesDirectory)/HTML_Templates/' \
+                      --pattern '*.html' \
+                      --overwrite true
+                    echo "Success! HTML templates imported to ${{ lz.HTML_StorageAccount }}/html-template"
+
+# Deploy Python wheel to Databricks as final stage
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones }}:
+      - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
+        displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
+        dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+        jobs:
+          - job:
+            displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'
+            pool: 
+              vmImage: 'ubuntu-latest'
+                
+            steps:
+            - task: DownloadBuildArtifacts@1
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'ariafunctionv2'
+                downloadPath: '$(Pipeline.Workspace)'
+              displayName: 'Download Wheel Artifact'
+            
+            - script: |
+                echo " Files contained within Pipeline.workspace: $(Pipeline.Workspace)"
+                ls -al $(Pipeline.Workspace)
+
+            - task: UsePythonVersion@0
+              displayName: 'Use Python 3.x'
+              inputs:
+                versionSpec: '3.x'
+
+            - script: |
+                  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-                  set -e 
-
-                  echo "Searching for wheel files in: $(Pipeline.Workspace)" 
-                  find '$(Pipeline.Workspace)' -type f -name "*.whl"
-
-                  WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
-
-                  if [ -n "$WHEEL_FILE" ]; then
-                    echo "Found wheel file: $WHEEL_FILE"
-
-                    FILENAME=$(basename "$WHEEL_FILE")
-                    echo "Extracted filename: $FILENAME"
-
-                    DEST_PATH="dbfs:/FileStore/packages/$FILENAME"
-                    echo "Destination path: $DEST_PATH"
-
-                    echo "creating directory dbfs:/FileStore/packages"
-                    databricks fs mkdirs dbfs:/FileStore/packages    
-
-                    echo "copying wheel file to DBFS..."
-                    echo "copying $WHEEL_FILE to $DEST_PATH"
-                    databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
-
-                    echo "Displaying content of dbfs:/FileStore/packages"
-                    databricks fs ls dbfs:/FileStore/packages
-
-                  else
-                    echo "No wheel file found"
-                    exit 1
-                  fi
-                displayName: 'Upload Wheel to Databricks DBFS'
                   
-              - script: |
-                  echo "Current dir: $(pwd)"
-                  ls -al /home/vsts/work/1/s
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  brew install databricks/tap/databricks
+                  databricks --version
+              displayName: 'Install Databricks CLI'
 
-                  cd ARIA_DABs
+            - script: |
+                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                export DATABRICKS_HOST="${{ lz.databricks_host }}"
+                export DATABRICKS_TOKEN="${{ lz.databricks_token }}"
 
-                  echo "Current dir: $(pwd)"
-                  ls -al 
+                databricks --version  
+                echo "[DEFAULT]" > $(HOME)/.databrickscfg
+                echo "host = ${{ lz.databricks_host }}" >> $(HOME)/.databrickscfg
+                echo "token = ${{ lz.databricks_token }}" >> $(HOME)/.databrickscfg
+                cat ~/.databrickscfg  # Print the contents for debugging
+              displayName: 'Configure Databricks CLI'
 
-                  databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
-                  databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                  databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"
+            - script: |
+                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+                set -e 
+
+                echo "Searching for wheel files in: $(Pipeline.Workspace)" 
+                find '$(Pipeline.Workspace)' -type f -name "*.whl"
+
+                WHEEL_FILE=$(find '$(Pipeline.Workspace)' -type f -name "*.whl" | sort -V | head -n 1)
+
+                if [ -n "$WHEEL_FILE" ]; then
+                  echo "Found wheel file: $WHEEL_FILE"
+
+                  FILENAME=$(basename "$WHEEL_FILE")
+                  echo "Extracted filename: $FILENAME"
+
+                  DEST_PATH="dbfs:/FileStore/packages/$FILENAME"
+                  echo "Destination path: $DEST_PATH"
+
+                  echo "creating directory dbfs:/FileStore/packages"
+                  databricks fs mkdirs dbfs:/FileStore/packages    
+
+                  echo "copying wheel file to DBFS..."
+                  echo "copying $WHEEL_FILE to $DEST_PATH"
+                  databricks fs cp "$WHEEL_FILE" "$DEST_PATH" --overwrite --debug
+
+                  echo "Displaying content of dbfs:/FileStore/packages"
+                  databricks fs ls dbfs:/FileStore/packages
+
+                else
+                  echo "No wheel file found"
+                  exit 1
+                fi
+              displayName: 'Upload Wheel to Databricks DBFS'
+                
+            - script: |
+                echo "Current dir: $(pwd)"
+                ls -al /home/vsts/work/1/s
+                eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+                cd ARIA_DABs
+
+                echo "Current dir: $(pwd)"
+                ls -al 
+
+                databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
+                databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+              displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"

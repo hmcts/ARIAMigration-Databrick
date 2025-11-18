@@ -131,6 +131,7 @@ stages:
         dependsOn: Manual_Approval_${{ deployment.environment }}
       ${{ else }}:
         dependsOn: Tests
+      conditions: ne(variables['Build.Reason'], 'PullRequest')
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'
@@ -176,6 +177,7 @@ stages:
       - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
         displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ state }}'
         dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+        conditions: ne(variables['Build.Reason'], 'PullRequest')
         jobs:
           - job: BuildFunction
             displayName: 'Build Azure Function for ${{ state }}'
@@ -199,6 +201,7 @@ stages:
       - stage: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
         displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ segment }}'
         dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+        conditions: ne(variables['Build.Reason'], 'PullRequest')
         jobs:
           - job: BuildFunction
             displayName: 'Build Azure Function for ${{ segment }}'
@@ -223,6 +226,7 @@ stages:
           - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}
             displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}'
             dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+            conditions: ne(variables['Build.Reason'], 'PullRequest')
             jobs:
               - job: Deploy_Function_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
@@ -250,6 +254,7 @@ stages:
           - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}
             displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ segment }}'
             dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, segment) }}
+            conditions: ne(variables['Build.Reason'], 'PullRequest')
             jobs:
               - job: Deploy_Function_${{ lz.landing_zone }}
                 displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
@@ -285,6 +290,7 @@ stages:
           - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfpa
           - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_aplfta
           - Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_sbails
+        conditions: ne(variables['Build.Reason'], 'PullRequest')
 
         jobs:
           - job: Deploy_Databricks_HTML_RefData_${{ deployment.environment }}_${{ lz.landing_zone }}
@@ -422,6 +428,7 @@ stages:
       - stage: Deploy_Wheel_To_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}_
         displayName: 'Deploy Wheel to Databricks for ${{ deployment.environment }}${{ lz.landing_zone }}'
         dependsOn: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}
+        conditions: ne(variables['Build.Reason'], 'PullRequest')
         jobs:
           - job:
             displayName: 'Deploy_Databricks_resources_to_${{ deployment.environment }}_${{ lz.landing_zone }}'

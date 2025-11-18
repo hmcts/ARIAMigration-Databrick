@@ -130,7 +130,7 @@ stages:
       ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
         dependsOn: Manual_Approval_${{ deployment.environment }}
       ${{ else }}:
-        dependsOn: Init
+        dependsOn: Tests
       jobs:
         - job: BuildWheel
           displayName: 'Build Shared Python Wheel'

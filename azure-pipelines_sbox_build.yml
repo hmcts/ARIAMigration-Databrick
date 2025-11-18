@@ -77,23 +77,33 @@ parameters:
       #       Resource_Group: 'ingest00-main-prod'
       #       Key_vault_Name: 'ingest00-meta002-prod'
 
-stages:
-  - stage: Init
-    displayName: 'No dependency stage'
-    jobs:
-      - job: BuildJob
-        displayName: 'Build Job'
-        steps:
-          - script: echo 'Initial stage set-up'
-            displayName: 'Initial stage set-up'
+# stages:
+#   - stage: Init
+#     displayName: 'No dependency stage'
+#     jobs:
+#       - job: BuildJob
+#         displayName: 'Build Job'
+#         steps:
+#           - script: echo 'Initial stage set-up'
+#             displayName: 'Initial stage set-up'
 
+#   - stage: Tests
+#     dependsOn: Init
+#     displayName: 'Run Unit Tests'
+#   # - template: ci_cd_templates/ruff_linting.yml
+#   - template: ci_cd_templates/unit_tests/functionapp.yml
+#   - template: ci_cd_templates/unit_tests/active/paymentPending.yml
+
+stages: 
   - stage: Tests
-    dependsOn: Init
+  # dependsOn: Init
     displayName: 'Run Unit Tests'
-  # - template: ci_cd_templates/ruff_linting.yml
-  - template: ci_cd_templates/unit_tests/functionapp.yml
-  - template: ci_cd_templates/unit_tests/active/paymentPending.yml
-
+    jobs:
+    - job: RunTests
+      displayName: 'Run all unit test templates'
+      steps:
+        - template: ci_cd_templates/unit_tests/functionapp.yml
+        - template: ci_cd_templates/unit_tests/active/paymentPending.yml
 
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:

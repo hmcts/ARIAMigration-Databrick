@@ -3,10 +3,7 @@ trigger:
     include:
       - master
 
-pr:
-  branches:
-    include:
-      - '*'
+pr: none
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -78,24 +75,8 @@ parameters:
       #       Key_vault_Name: 'ingest00-meta002-prod'
 
 stages:
-  - stage: Tests
-    displayName: 'Pull Request: Run Unit Tests'
-    condition: eq(variables['Build.Reason'], 'PullRequest')
-    jobs:
-      - job: FunctionAppTests
-        displayName: 'Run Function App Tests'
-        steps:
-          - template: ci_cd_templates/unit_tests/functionapp.yml
-
-      - job: PaymentPendingTests
-        displayName: 'Run Payment Pending Tests'
-        steps:
-          - template: ci_cd_templates/unit_tests/active/paymentPending.yml
-  
-#  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
   - stage: Init 
     displayName: 'No dependency stage'
-    condition: ne(variables['Build.Reason'], 'PullRequest')
     jobs:
       - job: BuildJob
         displayName: 'Build Job' 
@@ -104,20 +85,20 @@ stages:
           displayName: 'Initial stage set-up'
 
   - ${{ each deployment in parameters.environment_components }}:
-    - stage: Manual_Approval_${{ deployment.environment }}
-      displayName: 'Manual Approval for ${{ deployment.environment }}'
-      dependsOn: Init
-      condition: and(ne(variables['Build.Reason'], 'PullRequest'), or(eq('${{ deployment.environment }}','stg'), eq('${{ deployment.environment }}','prod')))
-      jobs:
-        - job: waitForValidation
-          displayName: Wait for Manual Validation
-          pool: server
-          steps:
-            - task: ManualValidation@1
-              timeoutInMinutes: 23160
-              inputs:
-                approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
-                instructions: Please validate the build configuration and resume
+    - ${{ if or(eq(deployment.environment, 'stg'), eq(deployment.environment, 'prod')) }}:
+      - stage: Manual_Approval_${{ deployment.environment }}
+        displayName: 'Manual Approval for ${{ deployment.environment }}'
+        dependsOn: Init
+        jobs:
+          - job: waitForValidation
+            displayName: Wait for Manual Validation
+            pool: server
+            steps:
+              - task: ManualValidation@1
+                timeoutInMinutes: 23160
+                inputs:
+                  approvers: andrew.mcdevitt@hmcts.net, ara.islam1@hmcts.net, Naveen.Sriram@HMCTS.NET, aamir.saleem@hmcts.net
+                  instructions: Please validate the build configuration and resume
 
 # Build shared wheel first as a single operation per environment
   - ${{ each deployment in parameters.environment_components }}:

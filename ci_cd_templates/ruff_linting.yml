@@ -1,19 +1,12 @@
-stages:
-  - stage: PR_Validation
-    displayName: 'PR Validation - Linting'
-    condition: eq(variables['Build.Reason'], 'PullRequest')
-    jobs:
-      - job: Linting
-        displayName: 'Lint Tests'
-        steps:
-          - task: UsePythonVersion@0
-            displayName: 'Use Python 3.x'
-            inputs:
-              versionSpec: '3.x'
+steps:
+  - task: UsePythonVersion@0
+    displayName: 'Use Python 3.x'
+    inputs:
+      versionSpec: '3.x'
 
-          - script: |
-              pip install uv
-              uv tool install ruff
-              uv run ruff format $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
-              uv run ruff check $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
-            displayName: 'AzureFunction, Databricks code linting'
+  - script: |
+      pip install uv
+      uv tool install ruff
+      uv run ruff format $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
+      uv run ruff check $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS/shared_functions
+    displayName: 'AzureFunction, Databricks code linting'

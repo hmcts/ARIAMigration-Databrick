@@ -92,15 +92,16 @@ stages:
         steps:
           - template: ci_cd_templates/unit_tests/active/paymentPending.yml
   
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    - stage: Init 
-      displayName: 'No dependency stage'
-      jobs:
-        - job: BuildJob
-          displayName: 'Build Job' 
-          steps:
-          - script: echo 'Initial stage set-up' 
-            displayName: 'Initial stage set-up'
+#  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: Init 
+    displayName: 'No dependency stage'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Job' 
+        steps:
+        - script: echo 'Initial stage set-up' 
+          displayName: 'Initial stage set-up'
 
   - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
     - ${{ each deployment in parameters.environment_components }}:

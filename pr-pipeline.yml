@@ -9,7 +9,6 @@ pool:
 stages:
   - stage: Tests
     displayName: 'Pull Request: Run Unit Tests'
-    # condition: eq(variables['Build.Reason'], 'PullRequest')
     jobs:
       - job: FunctionAppTests
         displayName: 'Run Function App Tests'

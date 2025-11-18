@@ -75,7 +75,6 @@ parameters:
 stages:
   - stage: Init 
     displayName: 'No dependency stage'
-    dependsOn: Tests
     jobs:
       - job: BuildJob
         displayName: 'Build Job' 

@@ -1,0 +1,22 @@
+pr:
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Tests
+    displayName: 'Pull Request: Run Unit Tests'
+    # condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: FunctionAppTests
+        displayName: 'Run Function App Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/functionapp.yml
+
+      - job: PaymentPendingTests
+        displayName: 'Run Payment Pending Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/paymentPending.yml

@@ -167,6 +167,33 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         if not blob_url:
             raise ValueError("Missing blob_url in the event message")
 
+        # -----------------------------------------------
+        # 🟦 IDEMPOTENCY CHECK  (ADDED)
+        # -----------------------------------------------
+        idempotency_blob = container_service_client.get_blob_client(
+            blob=f"f"{subdirectory}/idempotency/processed/{file_name}.flag"
+        )
+
+        if await idempotency_blob.exists():
+            logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
+            results["filename"] = file_name
+            results["http_message"] = "Duplicate skipped by idempotency"
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
+
+        # Create flag immediately (first writer wins)
+        try:
+            await idempotency_blob.upload_blob(b"processed", overwrite=False)
+            logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
+        except Exception as ex:
+            logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
+            results["filename"] = file_name
+            results["http_message"] = "Duplicate skipped due to race-condition flag"
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
+        # -----------------------------------------------
+
+
         # ✅ Print blob_url for debugging
         logging.info(f"blob_url received: {blob_url}")
 

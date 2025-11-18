@@ -93,7 +93,8 @@ stages:
           - template: ci_cd_templates/unit_tests/active/paymentPending.yml
   
   - stage: Init 
-    displayName: 'No dependency stage' 
+    displayName: 'No dependency stage'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
     jobs:
       - job: BuildJob
         displayName: 'Build Job' 

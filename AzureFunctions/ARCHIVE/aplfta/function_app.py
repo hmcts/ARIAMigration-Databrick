@@ -168,7 +168,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             raise ValueError("Missing blob_url in the event message")
 
         # -----------------------------------------------
-        # 🟦 IDEMPOTENCY CHECK  (ADDED)
+        #  IDEMPOTENCY CHECK  (ADDED)
         # -----------------------------------------------
         idempotency_base = f"ARIA{ARM_SEGMENT}/idempotency/processed"
 

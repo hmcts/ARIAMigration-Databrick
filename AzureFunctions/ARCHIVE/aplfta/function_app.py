@@ -168,11 +168,23 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             raise ValueError("Missing blob_url in the event message")
 
         # -----------------------------------------------
-        #  IDEMPOTENCY CHECK  (ADDED)
+        #  IDEMPOTENCY CHECK  (UPDATED)
         # -----------------------------------------------
-        idempotency_base = f"ARIA{ARM_SEGMENT}/idempotency/processed"
+        # New path:
+        # https://ingest{lz_key}xcutting{env}.blob.core.windows.net/af-idempotency/ARCHIVE/ARIA{ARM_SEGMENT}/processed/<file>.flag
 
-        idempotency_blob = container_service_client.get_blob_client(
+        idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
+        idempotency_container_name = "af-idempotency"
+
+        idempotency_container = ContainerClient(
+            account_url=idempotency_account_url,
+            container_name=idempotency_container_name,
+            credential=DefaultAzureCredential()
+        )
+
+        idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
+
+        idempotency_blob = idempotency_container.get_blob_client(
             blob=f"{idempotency_base}/{file_name}.flag"
         )
 
@@ -183,7 +195,6 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
 
-        # Create flag immediately (first writer wins)
         try:
             await idempotency_blob.upload_blob(b"processed", overwrite=False)
             logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")

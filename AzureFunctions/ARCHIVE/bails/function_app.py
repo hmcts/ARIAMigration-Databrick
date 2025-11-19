@@ -182,10 +182,20 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         blob_client = container_service_client.get_blob_client(blob=full_blob_name)
         logging.info(f'Uploading to target blob: {full_blob_name}')
 
-        await upload_blob_with_retry(blob_client, file_content, capture_response)
+        exists = await blob_client.exists()
+        if exists:
+            if key.endswith(".a360"):
+                logging.info(f"Skipping a360 file {key}: already processed.")
+            else:
+                logging.info(f"Skipping file {key}: already processed.")
+            results["http_message"] = "Skipped duplicate file"
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+        else:
+            await upload_blob_with_retry(blob_client, message, capture_response)
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            logging.info("Uploaded blob:%s",key)
 
-        results["timestamp"] = datetime.datetime.utcnow().isoformat()
-        logging.info("Uploaded blob successfully: %s", key)
+        await upload_blob_with_retry(blob_client, file_content, capture_response)
 
     except Exception as e:
         logging.error(f"Failed to process event with key '{key}': {e}")

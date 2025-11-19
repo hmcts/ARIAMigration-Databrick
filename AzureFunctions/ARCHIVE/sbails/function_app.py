@@ -35,7 +35,6 @@ app = func.FunctionApp()
     max_batch_size=500,
     data_type='binary'
 )
-
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
 
@@ -55,9 +54,9 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
         # Blob Storage credentials
         account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        #account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
-        #container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
         container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
@@ -159,6 +158,35 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         if not blob_url:
             raise ValueError("Missing blob_url in the event message")
 
+        # -----------------------------------------------
+        #  IDEMPOTENCY CHECK  (ADDED)
+        # -----------------------------------------------
+        idempotency_base = f"ARIA{ARM_SEGMENT}/idempotency/processed"
+
+        idempotency_blob = container_service_client.get_blob_client(
+            blob=f"{idempotency_base}/{file_name}.flag"
+        )
+
+        if await idempotency_blob.exists():
+            logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
+            results["filename"] = file_name
+            results["http_message"] = "Duplicate skipped by idempotency"
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
+
+        # Create flag immediately (first writer wins)
+        try:
+            await idempotency_blob.upload_blob(b"processed", overwrite=False)
+            logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
+        except Exception as ex:
+            logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
+            results["filename"] = file_name
+            results["http_message"] = "Duplicate skipped due to race-condition flag"
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
+        # -----------------------------------------------
+
+
         # ✅ Print blob_url for debugging
         logging.info(f"blob_url received: {blob_url}")
 
@@ -182,20 +210,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         blob_client = container_service_client.get_blob_client(blob=full_blob_name)
         logging.info(f'Uploading to target blob: {full_blob_name}')
 
-        exists = await blob_client.exists()
-        if exists:
-            if key.endswith(".a360"):
-                logging.info(f"Skipping a360 file {key}: already processed.")
-            else:
-                logging.info(f"Skipping file {key}: already processed.")
-            results["http_message"] = "Skipped duplicate file"
-            results["timestamp"] = datetime.datetime.utcnow().isoformat()
-        else:
-            await upload_blob_with_retry(blob_client, message, capture_response)
-            results["timestamp"] = datetime.datetime.utcnow().isoformat()
-            logging.info("Uploaded blob:%s",key)
-
         await upload_blob_with_retry(blob_client, file_content, capture_response)
+
+        results["timestamp"] = datetime.datetime.utcnow().isoformat()
+        logging.info("Uploaded blob successfully: %s", key)
 
     except Exception as e:
         logging.error(f"Failed to process event with key '{key}': {e}")

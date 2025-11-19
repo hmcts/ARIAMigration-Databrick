@@ -170,8 +170,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # -----------------------------------------------
         # 🟦 IDEMPOTENCY CHECK  (ADDED)
         # -----------------------------------------------
+        idempotency_base = f"ARIA{ARM_SEGMENT}/idempotency/processed"
+
         idempotency_blob = container_service_client.get_blob_client(
-            blob=f"f"{subdirectory}/idempotency/processed/{file_name}.flag"
+            blob=f"{idempotency_base}/{file_name}.flag"
         )
 
         if await idempotency_blob.exists():

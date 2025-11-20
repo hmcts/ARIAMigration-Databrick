@@ -177,10 +177,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
         idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
-        try:
-            await idempotency_container.create_container_if_not_exists()
-        except Exception:
-            pass
+        # try:
+        #     await idempotency_container.create_container_if_not_exists()
+        # except Exception:
+        #     pass
 
         idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
         idempotency_blob = idempotency_container.get_blob_client(
@@ -191,6 +191,8 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped by idempotency"
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            results["http_response"] = 201
             await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
 
@@ -202,6 +204,8 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped due to race-condition flag"
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            results["http_response"] = 201
             await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
         # -----------------------------------------------

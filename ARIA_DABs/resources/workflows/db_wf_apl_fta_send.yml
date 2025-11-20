@@ -2,68 +2,71 @@ resources:
   jobs:
     db_wf_apl_fta_send_job:
       name: db_wf_apl_fta_send_job
+      job_clusters:
+        - job_cluster_key: db_wf_apl_fta_send_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 2
       tasks:
         - task_key: run-my-wheel
-          python_wheel_task:
-            package_name: shared_functions
-            entry_point: main
           job_cluster_key: db_wf_apl_fta_send_job
-          libraries:
-            - whl: dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl
+          python_wheel_task:
+            entry_point: main
+            package_name: shared_functions
+          libraries: 
+            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl"
+
         - task_key: DLT_creation_of_content
           depends_on:
             - task_key: run-my-wheel
           pipeline_task:
-            pipeline_id: c6664a36-140e-4fdd-998d-b0974a53df4c
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_fta.id}
             full_refresh: false
+        
         - task_key: audit_processing_fta
+          job_cluster_key: db_wf_apl_fta_send_job
           depends_on:
             - task_key: DLT_creation_of_content
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FTA"
             source: WORKSPACE
-          job_cluster_key: db_wf_apl_fta_send_job
+
         - task_key: publish_HTML_JSON_to_eh
+          job_cluster_key: db_wf_apl_fta_send_job
           depends_on:
             - task_key: audit_processing_fta
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA
-            base_parameters:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+            base_parameters: 
               file_types: html,json
             source: WORKSPACE
+          
+        - task_key: publish_A360_to_eh
           job_cluster_key: db_wf_apl_fta_send_job
-        - task_key: html_json_ack
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_html_json_acknowledge
-            source: WORKSPACE
-          job_cluster_key: db_wf_apl_fta_send_job
-        - task_key: publish_A360_to_eh
-          depends_on:
-            - task_key: html_json_ack
-          notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA
-            base_parameters:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
+            base_parameters: 
               file_types: a360
             source: WORKSPACE
+
+        - task_key: ARM_ack
           job_cluster_key: db_wf_apl_fta_send_job
-        - task_key: a360_ack
           depends_on:
+            - task_key: publish_HTML_JSON_to_eh
             - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_a360_acknowledge
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIADM_ACK_AUTOLOADER_FTA"
             source: WORKSPACE
+          
+        - task_key: appeal_fta_send_dashboard
           job_cluster_key: db_wf_apl_fta_send_job
-      job_clusters:
-        - job_cluster_key: db_wf_apl_fta_send_job
-          new_cluster:
-            cluster_name: ""
-            spark_version: 14.3.x-scala2.12
-            azure_attributes:
-              availability: ON_DEMAND_AZURE
-            node_type_id: Standard_D8ds_v5
-            enable_elastic_disk: true
-            num_workers: 2
+          depends_on:
+            - task_key: ARM_ack
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/AUDIT/FTA_Send_Audit_Dashboard"
+            source: WORKSPACE
       queue:
-        enabled: true
+        enabled: true   

@@ -94,7 +94,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                         sub_dir,
                         dl_producer_client,
                         ack_producer_client,
-                        source_container_secret
+                        source_container_secret,
+                        credential
                     )
                     for event in azeventhub
                 ]

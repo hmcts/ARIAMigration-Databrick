@@ -42,31 +42,30 @@ resources:
               file_types: html,json
             source: WORKSPACE
           
-        - task_key: publish_A360_to_eh
-          job_cluster_key: db_wf_apl_fpa_send_job
+        - task_key: html_json_ack
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ariafpa_html_json_acknowledge"
+            source: WORKSPACE
+          job_cluster_key: db_wf_apl_fpa_send_job
+
+        - task_key: publish_A360_to_eh
+          depends_on:
+            - task_key: html_json_ack
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FPA"
-            base_parameters: 
+            base_parameters:
               file_types: a360
             source: WORKSPACE
-
-        - task_key: ARM_ack
           job_cluster_key: db_wf_apl_fpa_send_job
+         
+        - task_key: a360_ack
           depends_on:
-            - task_key: publish_HTML_JSON_to_eh
             - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ARIADM_ACK_AUTOLOADER_FPA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafpa_a360_acknowledge"
             source: WORKSPACE
-          
-        - task_key: appeal_fpa_send_dashboard
           job_cluster_key: db_wf_apl_fpa_send_job
-          depends_on:
-            - task_key: ARM_ack
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/AUDIT/FPA_Send_Audit_Dashboard"
-            source: WORKSPACE
       queue:
         enabled: true   

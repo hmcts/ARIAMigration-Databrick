@@ -46,7 +46,7 @@ resources:
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-16112025/Databricks/ARCHIVE/APPEALS/ARIAFTA/ariafta_html_json_acknowledge
+            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_html_json_acknowledge
             source: WORKSPACE
           job_cluster_key: db_wf_apl_fta_send_job
 
@@ -64,7 +64,7 @@ resources:
           depends_on:
             - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: /Repos/naveen.sriram@hmcts.net/ARIAMigration-Databrick-16112025/Databricks/ARCHIVE/APPEALS/ARIAFTA/ariafta_a360_acknowledge
+            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_a360_acknowledge
             source: WORKSPACE
           job_cluster_key: db_wf_apl_fta_send_job
       queue:

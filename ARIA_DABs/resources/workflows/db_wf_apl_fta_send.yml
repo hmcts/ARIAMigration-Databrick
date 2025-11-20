@@ -7,7 +7,7 @@ resources:
           new_cluster:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
-            num_workers: 8
+            num_workers: 2
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_apl_fta_send_job

@@ -18,7 +18,6 @@ lz_key = os.environ["LZ_KEY"]
 
 ARIA_SEGMENT = "bl"
 ARM_SEGMENT = "BDEV" if env == "sbox" else "B"
-
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
@@ -86,7 +85,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                         sub_dir,
                         dl_producer_client,
                         ack_producer_client,
-                        source_container_secret
+                        source_container_secret,
+                        credential
                     )
                     for event in azeventhub
                 ]
@@ -115,7 +115,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret,credential):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,
@@ -162,16 +162,23 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # -----------------------------------------------
         #  IDEMPOTENCY CHECK  (ADDED)
         # -----------------------------------------------
-        idempotency_base = f"ARIA{ARM_SEGMENT}/idempotency/processed"
+        idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
+        idempotency_container_name = "af-idempotency"
 
-        idempotency_blob = container_service_client.get_blob_client(
-            blob=f"{idempotency_base}/{file_name}.flag"
+        idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
+        idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
+        idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
+        idempotency_blob = idempotency_container.get_blob_client(
+            f"{idempotency_base}/{file_name}.flag"
         )
 
         if await idempotency_blob.exists():
             logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped by idempotency"
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            results["http_response"] = 201
             await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
 
@@ -183,6 +190,8 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped due to race-condition flag"
+            results["timestamp"] = datetime.datetime.utcnow().isoformat()
+            results["http_response"] = 201
             await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
         # -----------------------------------------------

@@ -1718,7 +1718,7 @@ def silver_m1():
                         col("bs.BaseBailType"),
                         when(col("BaseBailType") == "Normal Bail","Bail").
                         when(col("BaseBailType") == "BailLegalHold","Bail").
-                        when(col("BailType") == "ScottishBailsFunds" ,"Scottish Bail")
+                        when(col("BaseBailType") == "ScottishBailsFunds" ,"Scottish Bail")
                         .otherwise("Other").alias("BailTypeDesc"),
                         when(col("CourtPreference") == 1,"All Male,")
                         .when(col("CourtPreference") == 2,"All Female,")

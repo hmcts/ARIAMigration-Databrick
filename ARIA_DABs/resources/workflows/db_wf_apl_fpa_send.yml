@@ -32,7 +32,7 @@ resources:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ARIADM_ARM_AUDIT_DATA_PROCESSING_FPA"
             source: WORKSPACE
 
-        - task_key: publish_HTML_JSON_to_eh
+        - task_key: publish_HTML_JSON_to_evh
           job_cluster_key: db_wf_apl_fpa_send_job
           depends_on:
             - task_key: audit_processing_fpa
@@ -44,13 +44,13 @@ resources:
           
         - task_key: html_json_ack
           depends_on:
-            - task_key: publish_HTML_JSON_to_eh
+            - task_key: publish_HTML_JSON_to_evh
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ariafpa_html_json_acknowledge"
             source: WORKSPACE
           job_cluster_key: db_wf_apl_fpa_send_job
 
-        - task_key: publish_A360_to_eh
+        - task_key: publish_A360_to_evh
           depends_on:
             - task_key: html_json_ack
           notebook_task:
@@ -62,7 +62,7 @@ resources:
          
         - task_key: a360_ack
           depends_on:
-            - task_key: publish_A360_to_eh
+            - task_key: publish_A360_to_evh
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ariafpa_a360_acknowledge"
             source: WORKSPACE

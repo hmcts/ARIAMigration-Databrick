@@ -29,7 +29,7 @@ resources:
           depends_on:
             - task_key: DLT_creation_of_content
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAuta/ARIADM_ARM_AUDIT_DATA_PROCESSING_UTA"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAUTA/ARIADM_ARM_AUDIT_DATA_PROCESSING_UTA"
             source: WORKSPACE
 
         - task_key: publish_HTML_JSON_to_eh

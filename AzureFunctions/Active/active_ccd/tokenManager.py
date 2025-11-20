@@ -134,7 +134,7 @@ class S2S_Manager():
         urls = {
             "sbox": {
                 "s2s_host": "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal",
-                "s2s_ip": "http://10.10.143.250/",
+                # "s2s_ip": "http://10.10.143.250/",
                 "key_vault": "ia-aat"},
             "stg": {
                 "s2s_host": "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal",

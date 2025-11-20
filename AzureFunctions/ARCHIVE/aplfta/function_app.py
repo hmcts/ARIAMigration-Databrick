@@ -94,8 +94,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                         sub_dir,
                         dl_producer_client,
                         ack_producer_client,
-                        source_container_secret,
-                        credential
+                        source_container_secret
                     )
                     for event in azeventhub
                 ]
@@ -124,7 +123,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, credential):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,
@@ -169,7 +168,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             raise ValueError("Missing blob_url in the event message")
 
         # -----------------------------------------------
-        #  IDEMPOTENCY CHECK  (Added)
+        #  IDEMPOTENCY CHECK  (ADDED)
         # -----------------------------------------------
         idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
         idempotency_container_name = "af-idempotency"
@@ -191,8 +190,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped by idempotency"
-            return results  # ACK moved to finally
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
 
+        # Create flag immediately (first writer wins)
         try:
             await idempotency_blob.upload_blob(b"processed", overwrite=False)
             logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
@@ -200,10 +201,12 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
             results["filename"] = file_name
             results["http_message"] = "Duplicate skipped due to race-condition flag"
-            return results  # ACK moved to finally
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            return results
         # -----------------------------------------------
 
-        #  Print blob_url for debugging
+
+        # ✅ Print blob_url for debugging
         logging.info(f"blob_url received: {blob_url}")
 
         # Append SAS token if missing
@@ -237,19 +240,13 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         # Send failed message to dead-letter event hub
         if message is not None and key is not None:
-            try:
-                await send_to_eventhub(dl_producer_client, message, key)
-            except Exception as e2:
-                logging.error(f"Failed to send to DL EventHub: {e2}")
-    finally:
-        # Always send acknowledgment at the very end
-        if key is not None:
-            try:
-                await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-                logging.info(f"{key}: Ack stored successfully")
-            except Exception as e:
-                logging.error(f"Failed to send ACK for {key}: {e}")
+            await send_to_eventhub(dl_producer_client, message, key)
+        else:
+            logging.error("Cannot send to dead-letter queue because message or key is None.")
 
+    # Always send acknowledgment
+    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+    logging.info(f"{key}: Ack stored successfully")
     return results
 
 

@@ -7,7 +7,7 @@ resources:
           new_cluster:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
-            num_workers: 2
+            num_workers: 8
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_apl_fta_send_job
@@ -46,7 +46,7 @@ resources:
           depends_on:
             - task_key: publish_HTML_JSON_to_eh
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_html_json_acknowledge
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_html_json_acknowledge"
             source: WORKSPACE
           job_cluster_key: db_wf_apl_fta_send_job
 
@@ -54,7 +54,7 @@ resources:
           depends_on:
             - task_key: html_json_ack
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ARIA_ADLS_TO_EVENTHUBS_GENRIC_FTA"
             base_parameters:
               file_types: a360
             source: WORKSPACE
@@ -64,7 +64,7 @@ resources:
           depends_on:
             - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_a360_acknowledge
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFTA/ariafta_a360_acknowledge"
             source: WORKSPACE
           job_cluster_key: db_wf_apl_fta_send_job
       queue:

@@ -2023,16 +2023,22 @@ from pyspark.sql import functions as F
   path=f"{silver_base_path}/silver_sbail_meta_data"
 )
 def silver_meta_data():
-  m1_df = dlt.read("silver_sbail_m1_case_details").alias("m1")
-  m2_df = dlt.read("silver_sbail_m2_case_appellant").alias("m2")
+  m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
+  m2_df = dlt.read("silver_bail_m2_case_appellant").alias("m2")
+  m7_df = dlt.read("silver_bail_m7_status").alias("m7")
+  max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
+
+  m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate")).alias("m7_max")
+
   base_df = (
-        m1_df.join(m2_df, on="CaseNo", how="left")
+        m1_df.join(m2_df, on="CaseNo", how="left"
+                   ).join(m7_max_decision_date, on="CaseNo", how="left")
              .select(
                  F.col("CaseNo").alias("client_identifier"),
                  date_format(
-                   coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
                  date_format(
-                   coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
                  F.when(
@@ -2059,14 +2065,20 @@ def silver_meta_data():
                  F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007")
              )
     )
-    
-    
+
   # Join the batchid mapping back onto the base DataFrame
   final_df = base_df
     
 
 
   return final_df
+
+# COMMAND ----------
+
+silver_scottish_sbails_fundsmetadata_df = spark.read.table(
+    'aria_s_bails.silver_sbail_meta_data'
+)
+display(silver_scottish_sbails_fundsmetadata_df)
 
 # COMMAND ----------
 
@@ -2705,33 +2717,48 @@ def stg_m3_m7():
 
 
 
-    m7 = dlt.read("silver_sbail_m7_status")
+    m7 = dlt.read("silver_bail_m7_status")
+    #we need to join this to a table below
+
+    adjournment_parents = m7.filter(col("CaseStatus") == 17) \
+    .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
+    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+
+    adjourned_withdrawal_df = m7.join(
+        adjournment_parents,
+        m7.StatusId == adjournment_parents.ParentStatusId,
+        "inner")
+
+    adjourned_withdrawal_new_df = m7.join(
+        adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
+        (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
+        (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+        "left")
 
 
     # Get all columns in m3 not in m7
-    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in m7.columns]
+    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
 
-    status_tab = m7.alias("m7").join(
+    #replaced m7 with adjournmentdf
+    status_tab = adjourned_withdrawal_new_df.alias("m7").join(
         pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        on= ["CaseNo","StatusId"] ,how=
-        "left"
-    )
-
+        (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
+        (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
+        how = "left"
+    ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
 
     # create a nested list for the stausus table (m7_m3 tables)
 
     status_tab_struct = struct(*[col(c) for c in status_tab.columns])
     m7_m3_statuses = (
         status_tab
-        .groupBy(col("CaseNo"))
+        .groupBy(col("m7.CaseNo"))
         .agg(
             collect_list(
                 # Collect each record's columns as a struct
                 status_tab_struct
             ).alias("all_status_objects")
-        )
-    )
-    return m7_m3_statuses
+        ))
 
 # COMMAND ----------
 
@@ -3415,6 +3442,8 @@ def create_html_column(row, html_template=bails_html_dyn):
             for index,status in enumerate(row.all_status_objects,start=1):
                 ## get the case status in the list
                 case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
+                if case_status not in case_status_mappings:
+                    continue
 
                 ## set the margin and id counter
                 if index == 1:
@@ -3433,7 +3462,18 @@ def create_html_column(row, html_template=bails_html_dyn):
 
 
                     for placeholder,field_name in status_mapping.items():
-                        if field_name in date_fields:
+                        if placeholder in ["{{adjDateOfApplication}}", "{{adjDateOfHearing}}", "{{adjPartyMakingApp}}", "{{adjDirections}}",
+                                                "{{adjDateOfDecision}}", "{{adjOutcome}}", "{{adjdatePartiesNotified}}"]:
+                            if status["adjournmentFlag"] == "Yes":
+                                if field_name in date_fields:
+                                    raw_value = status[field_name] if field_name in status else None
+                                    value = format_date_iso(raw_value)
+                                else:
+                                    value = status[field_name] if field_name in status else None
+                            else:
+                                value = ""
+
+                        elif field_name in date_fields:
                             raw_value = status[field_name] if field_name in status else None
                             value = format_date_iso(raw_value)
                         else:
@@ -3604,7 +3644,7 @@ create_html_udf = udf(create_html_column, StringType())
 def create_sbails_html_content():
     df = dlt.read("final_staging_sbails")
 
-    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}s_sbails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
+    results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}_sbails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
 
     results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
     .otherwise("Successful creating HTML Content") )
@@ -3666,7 +3706,7 @@ def create_sbails_json_content():
     try:
         m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df = dlt.read("final_staging_sbails")
 
-        df_with_json = m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df.withColumn("JSONContent", to_json(struct("*"))).withColumn("JSON_File_path", concat(lit(f"{gold_json_outputs}s_sbails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".json")))
+        df_with_json = m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df.withColumn("JSONContent", to_json(struct("*"))).withColumn("JSON_File_path", concat(lit(f"{gold_json_outputs}sbails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".json")))
 
         df_with_json = df_with_json.withColumn("JSON_status",when(col("JSONContent").contains("Error"), "Failure on Create JSON Content").otherwise("Successful creating JSON Content"))
 

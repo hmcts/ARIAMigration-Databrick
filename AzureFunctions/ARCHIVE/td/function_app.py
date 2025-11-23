@@ -312,3 +312,4 @@ async def send_to_eventhub(producer_client: EventHubProducerClient, message: str
         logging.info(f"Message added to Event Hub with partition key: {partition_key}")
     except Exception as e:
         logging.error(f"Failed to upload {partition_key} to EventHub: {e}")
+        

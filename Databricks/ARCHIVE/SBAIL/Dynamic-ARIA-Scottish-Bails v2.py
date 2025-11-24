@@ -696,11 +696,11 @@ def bail_raw_appeal_cases():
 # COMMAND ----------
 
 @dlt.table(
-    name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
+    name='bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang',
     comment='ARIA Migration Archive Bails cases bronze table',
-    path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
+    path=f"{bronze_base_path}/bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
-def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
+def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
     df = (dlt.read("raw_appeal_cases").alias("ac")
     .join(dlt.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
@@ -2030,9 +2030,9 @@ from pyspark.sql import functions as F
   path=f"{silver_base_path}/silver_sbail_meta_data"
 )
 def silver_meta_data():
-  m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
-  m2_df = dlt.read("silver_bail_m2_case_appellant").alias("m2")
-  m7_df = dlt.read("silver_bail_m7_status").alias("m7")
+  m1_df = dlt.read("silver_sbail_m1_case_details").alias("m1")
+  m2_df = dlt.read("silver_sbail_m2_case_appellant").alias("m2")
+  m7_df = dlt.read("silver_sbail_m7_status").alias("m7")
   max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
 
   m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate")).alias("m7_max")
@@ -2051,7 +2051,6 @@ def silver_meta_data():
                  F.when(
                         (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
                         "ARIASBDEV"
-
                     ).when(
                         (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
                         lit("ARIASB")
@@ -2079,13 +2078,6 @@ def silver_meta_data():
 
 
   return final_df
-
-# COMMAND ----------
-
-silver_scottish_sbails_fundsmetadata_df = spark.read.table(
-    'aria_s_bails.silver_sbail_meta_data'
-)
-display(silver_scottish_sbails_fundsmetadata_df)
 
 # COMMAND ----------
 
@@ -2726,7 +2718,7 @@ def stg_m3_m7():
 
 
 
-    m7 = dlt.read("silver_bail_m7_status")
+    m7 = dlt.read("silver_sbail_m7_status")
     #we need to join this to a table below
 
     adjournment_parents = m7.filter(col("CaseStatus") == 17) \
@@ -2768,6 +2760,8 @@ def stg_m3_m7():
                 status_tab_struct
             ).alias("all_status_objects")
         ))
+    
+    return m7_m3_statuses
 
 # COMMAND ----------
 

@@ -2990,11 +2990,6 @@ def m1_m2_m3_m7():
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC SELECT * FROM aria_bails.stg_m1_m2_m3_m7
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC #### Status Mapping dictionary
 

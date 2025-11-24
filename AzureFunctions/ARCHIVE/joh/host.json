@@ -8,15 +8,8 @@
       }
     }
   },
-  "extensions": {
-    "eventHub": {
-      "maxBatchSize": 256,
-      "prefetchCount": 1024,
-      "batchCheckpointFrequency": 1
-    }
-  },
-  "concurrency": {
-    "dynamicConcurrencyEnabled": false
-  },
-  "functionTimeout": "00:10:00"
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  }
 }

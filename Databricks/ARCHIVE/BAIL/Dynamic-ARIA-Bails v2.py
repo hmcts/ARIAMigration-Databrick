@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install pyspark azure-storage-blob
+# %pip install pyspark azure-storage-blob
 
 # COMMAND ----------
 

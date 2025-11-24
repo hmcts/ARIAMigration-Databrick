@@ -12,21 +12,19 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-import uuid  # Added for fallback partition key
+
 
 # Retrieve environment variables
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
-ARM_SEGMENT = "TDDEV" if env == "sbox" else "TD"
-ARIA_SEGMENT = "td"
 
+ARIA_SEGMENT = "aplfta"
+ARM_SEGMENT = "FTADEV" if env == 'sbox' else "FTA"
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
 
-# Limit concurrent tasks per instance to avoid unbounded asyncio explosion
-MAX_CONCURRENT_TASKS = int(os.getenv("MAX_CONCURRENT_TASKS", "32"))  # safer for scale-down
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -89,9 +87,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                        EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
 
                 logging.info('Processing messages')
-                # Protect each task from cancellation during scale-down
                 tasks = [
-                    asyncio.shield(process_messages(
+                    process_messages(
                         event,
                         container_service_client,
                         sub_dir,
@@ -99,14 +96,13 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                         ack_producer_client,
                         source_container_secret,
                         credential
-                    ))
+                    )
                     for event in azeventhub
                 ]
                 await asyncio.gather(*tasks)
                 logging.info('Finished processing messages')
         finally:
             await container_service_client.close()
-            await idempotency_blob_service.close()
 
     finally:
         # Explicitly close SecretClient to avoid session leaks
@@ -128,7 +124,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, credential):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret,credential):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,
@@ -143,12 +139,13 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_response"] = http_response.status_code
         results["http_message"] = getattr(http_response, "reason", "No reason provided")
 
-    key = event.partition_key or str(uuid.uuid4())  # fallback if missing
+    key = None
     message = None
 
     try:
         # Decode incoming event
         message = event.get_body().decode('utf-8').strip()
+        key = event.partition_key
         logging.info(f"Processing message for {key} file")
 
         if not key:
@@ -180,6 +177,11 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
         idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
+        # try:
+        #     await idempotency_container.create_container_if_not_exists()
+        # except Exception:
+        #     pass
+
         idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
         idempotency_blob = idempotency_container.get_blob_client(
             f"{idempotency_base}/{file_name}.flag"
@@ -208,6 +210,8 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             return results
         # -----------------------------------------------
 
+
+        # ✅ Print blob_url for debugging
         logging.info(f"blob_url received: {blob_url}")
 
         # Append SAS token if missing
@@ -240,19 +244,14 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_message"] = str(e)
 
         # Send failed message to dead-letter event hub
-        if message is not None:
+        if message is not None and key is not None:
             await send_to_eventhub(dl_producer_client, message, key)
         else:
             logging.error("Cannot send to dead-letter queue because message or key is None.")
 
-    finally:
-        # Always send acknowledgment; ensures ACK is sent even if exception occurs
-        try:
-            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-            logging.info(f"{key}: Ack stored successfully")
-        except Exception as ack_ex:
-            logging.error(f"Failed to send ACK for {key}: {ack_ex}")
-
+    # Always send acknowledgment
+    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+    logging.info(f"{key}: Ack stored successfully")
     return results
 
 

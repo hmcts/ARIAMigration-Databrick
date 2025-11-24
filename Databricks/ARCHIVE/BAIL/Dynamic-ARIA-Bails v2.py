@@ -1,8 +1,4 @@
 # Databricks notebook source
-# %pip install pyspark azure-storage-blob
-
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -539,6 +535,10 @@ def bail_decision_type():
 def raw_stm_cases():
     return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL",landing_base_path)
 
+@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_base_path}/raw_department")
+def bail_raw_appeal_cases():
+    return read_latest_parquet("Department","tv_department","ARIA_ARM_BAIL",landing_base_path)
+
 # COMMAND ----------
 
 # MAGIC %md 
@@ -723,6 +723,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
     .join(dlt.read("raw_hearing_centre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
+    .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
     .select(
         # AppealCase Fields
         col("ac.CaseNo"),
@@ -748,6 +749,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("l.Description").alias("Language"),
         col("ac.CentreId"),
         col("hc.Description").alias("DedicatedHearingCentre"),
+        col("hc.Description").alias("FileLocationCentre"),
         col("ac.AppealCategories"),
         col("ac.PubliclyFunded"),
         # Case Respondent Fields
@@ -795,6 +797,8 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         # Main Respondent Fields
         col("mr.Name").alias("MainRespondentName"),
         # File Location Fields
+        col("hc.Description").alias("FileLocationHearingCentre"),
+        col("dp.Description").alias("FileLocationDepartment"),
         col("fl.Note").alias("FileLocationNote"),
         col("fl.TransferDate").alias("FileLocationTransferDate"),
         # Case Representative Fields
@@ -1895,7 +1899,9 @@ def silver_m1():
                         .when(col("CostsAwardDecision") == 2,"Refused")
                         .when(col("CostsAwardDecision") == 3,"Interim field")
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
-                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc")
+                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
+                        #Adding File Location information per 1437
+                        concat_ws(", ", col("m1.FileLocationCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
                             
     )
 
@@ -2715,6 +2721,7 @@ stg_m1_m2_struct = struct(
     col("EmbassyFax"),
     col("EmbassyEmail"),
     col("MainRespondentName"),
+    col("FileLocation"),
     col("FileLocationNote"),
     col("FileLocationTransferDate"),
     col("CaseRepName"),
@@ -3446,7 +3453,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         replacements = {
             "{{ bailCaseNo }}": str(row.CaseNo),
             "{{LastDocument}}": row.last_document,
-            "{{FileLocation}}": row.file_location,
+            # "{{FileLocation}}": row.file_location,
             "{{CurrentStatus}}": row.MaxCaseStatusDescription,
         }
         for key, value in replacements.items():
@@ -3475,7 +3482,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{ConnectedFiles}}": "",
             "{{DateOfIssue}}": format_date_iso(cd_row.DateOfIssue),
             # "{{LastDocument}}": cd_row.last_document,
-            # "{{FileLocation}}": cd_row.file_location,
+            "{{FileLocation}}": cd_row.FileLocation,
             "{{BFEntry}}": "",
             "{{ProvisionalDestructionDate}}": format_date_iso(cd_row.ProvisionalDestructionDate),
 
@@ -3625,20 +3632,24 @@ def create_html_column(row, html_template=bails_html_dyn):
         code = ""
 
         if row.all_status_objects is not None:
+            first_flag = True
             for index,status in enumerate(row.all_status_objects,start=1):
                 ## get the case status in the list
                 case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
+                print(case_status)
                 if case_status not in case_status_mappings:
+                    print(f"case status = {case_status} I am skipping this case")
                     continue
 
 
                 ## set the margin and id counter
-                if index == 1:
+                if index == 1 or first_flag:
                     margin = "10px"
                 else:
                     margin = "600px"
 
                 counter = 30+index
+                first_flag = False
 
                 if case_status in case_status_mappings:
                     template = template_for_status[case_status]
@@ -3817,11 +3828,6 @@ create_html_udf = udf(create_html_column, StringType())
 
 # COMMAND ----------
 
-# DBTITLE 1,***DELTE***
-spark.read.table('aria_bails.final_staging_bails').display()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Create HTML Content
 
@@ -3848,11 +3854,6 @@ def create_bails_html_content():
 
 
     return df
-
-# COMMAND ----------
-
-# DBTITLE 1,***DELETE***
-# spark.read.table('aria_bails.create_bails_html_content').select(col("CaseNo"), "all_status_objects", "htmlcontent").display()
 
 # COMMAND ----------
 

@@ -1,8 +1,4 @@
 # Databricks notebook source
-# %pip install pyspark azure-storage-blob
-
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -533,6 +529,10 @@ def bail_decision_type():
 def raw_stm_cases():
     return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_sbail",landing_base_path)
 
+@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_base_path}/raw_department")
+def bail_raw_appeal_cases():
+    return read_latest_parquet("Department","tv_department","ARIA_ARM_BAIL",landing_base_path)
+
 # COMMAND ----------
 
 # MAGIC %md 
@@ -696,11 +696,11 @@ def raw_stm_cases():
 # COMMAND ----------
 
 @dlt.table(
-    name='bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang',
-    comment='ARIA Migration Archive SBails cases bronze table',
-    path=f"{bronze_base_path}/bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang"
+    name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
+    comment='ARIA Migration Archive Bails cases bronze table',
+    path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
 )
-def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
+def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
     df = (dlt.read("raw_appeal_cases").alias("ac")
     .join(dlt.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
@@ -717,9 +717,10 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
     .join(dlt.read("raw_hearing_centre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
+    .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
     .select(
         # AppealCase Fields
-        trim(col("ac.CaseNo")).alias("CaseNo"),
+        col("ac.CaseNo"),
         col("ac.HORef"),
         col("ac.BailType"),
         col("ac.CourtPreference"),
@@ -742,6 +743,7 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("l.Description").alias("Language"),
         col("ac.CentreId"),
         col("hc.Description").alias("DedicatedHearingCentre"),
+        col("hc.Description").alias("FileLocationCentre"),
         col("ac.AppealCategories"),
         col("ac.PubliclyFunded"),
         # Case Respondent Fields
@@ -789,6 +791,8 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         # Main Respondent Fields
         col("mr.Name").alias("MainRespondentName"),
         # File Location Fields
+        col("hc.Description").alias("FileLocationHearingCentre"),
+        col("dp.Description").alias("FileLocationDepartment"),
         col("fl.Note").alias("FileLocationNote"),
         col("fl.TransferDate").alias("FileLocationTransferDate"),
         # Case Representative Fields
@@ -1745,7 +1749,9 @@ def silver_m1():
                         .when(col("CostsAwardDecision") == 2,"Refused")
                         .when(col("CostsAwardDecision") == 3,"Interim field")
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
-                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc")
+                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
+                        #Adding File Location information per 1437
+                        concat_ws(", ", col("m1.FileLocationCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
                             
     )
 
@@ -2566,9 +2572,11 @@ stg_m1_m2_struct = struct(
     col("EmbassyFax"),
     col("EmbassyEmail"),
     col("MainRespondentName"),
+    col("FileLocation"),
     col("FileLocationNote"),
     col("FileLocationTransferDate"),
     col("CaseRepName"),
+    col("RepRepresentativeId"),
     col("CaseRepAddress1"),
     col("CaseRepAddress2"),
     col("CaseRepAddress3"),
@@ -3261,7 +3269,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         replacements = {
             "{{ bailCaseNo }}": str(row.CaseNo),
             "{{LastDocument}}": row.last_document,
-            "{{FileLocation}}": row.file_location,
+            # "{{FileLocation}}": row.file_location,
             "{{CurrentStatus}}": row.MaxCaseStatusDescription,
         }
         for key, value in replacements.items():
@@ -3290,7 +3298,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{ConnectedFiles}}": "",
             "{{DateOfIssue}}": format_date_iso(cd_row.DateOfIssue),
             # "{{LastDocument}}": cd_row.last_document,
-            # "{{FileLocation}}": cd_row.file_location,
+            "{{FileLocation}}": cd_row.FileLocation,
             "{{BFEntry}}": "",
             "{{ProvisionalDestructionDate}}": format_date_iso(cd_row.ProvisionalDestructionDate),
 
@@ -3310,7 +3318,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             # Respondent Section
             "{{Detained}}": cd_row.AppellantDetainedDesc,
             "{{RespondentName}}": cd_row.MainRespondentName,
-            "{{repName}}": cd_row.CaseRepName if cd_row.Representative == 0 else cd_row.RepName,
+            "{{repName}}": cd_row.CaseRepName if cd_row.RepRepresentativeId == 0 else cd_row.RepName,
             "{{InterpreterRequirementsLanguage}}": cd_row.InterpreterRequirementsLanguage,
             "{{HOInterpreter}}": cd_row.HOInterpreter,
             "{{CourtPreference}}": cd_row.CourtPreferenceDesc,
@@ -3321,18 +3329,18 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{Notes}}": cd_row.AppealCaseNote,
 
             # Representative Tab
-            "{{RepName}}": cd_row.CaseRepName if cd_row.Representative == 0 else cd_row.RepName,
-            "{{CaseRepAddress1}}": cd_row.CaseRepAddress1 if cd_row.Representative == 0 else cd_row.RepAddress1,
-            "{{CaseRepAddress2}}": cd_row.CaseRepAddress2 if cd_row.Representative == 0 else cd_row.RepAddress2,
-            "{{CaseRepAddress3}}": cd_row.CaseRepAddress3 if cd_row.Representative == 0 else cd_row.RepAddress3,
-            "{{CaseRepAddress4}}": cd_row.CaseRepAddress4 if cd_row.Representative == 0 else cd_row.RepAddress4,
-            "{{CaseRepAddress5}}": cd_row.CaseRepAddress5 if cd_row.Representative == 0 else cd_row.RepAddress5,
-            "{{CaseRepPostcode}}": cd_row.CaseRepPostcode if cd_row.Representative == 0 else cd_row.RepPostcode,
-            "{{CaseRepTelephone}}": cd_row.CaseRepPhone if cd_row.Representative == 0 else cd_row.RepTelephone,
-            "{{CaseRepFAX}}": cd_row.CaseRepFax if cd_row.Representative == 0 else cd_row.RepFax,
-            "{{CaseRepEmail}}": cd_row.CaseRepEmail if cd_row.Representative == 0 else cd_row.RepEmail,
-            "{{RepDxNo1}}": cd_row.RepDxNo1 if cd_row.Representative == 0 else cd_row.RepDxNo1,
-            "{{RepDxNo2}}": cd_row.RepDxNo2 if cd_row.Representative == 0 else cd_row.RepDxNo2,
+            "{{RepName}}": cd_row.CaseRepName if cd_row.RepRepresentativeId == 0 else cd_row.RepName,
+            "{{CaseRepAddress1}}": cd_row.CaseRepAddress1 if cd_row.RepRepresentativeId == 0 else cd_row.RepAddress1,
+            "{{CaseRepAddress2}}": cd_row.CaseRepAddress2 if cd_row.RepRepresentativeId == 0 else cd_row.RepAddress2,
+            "{{CaseRepAddress3}}": cd_row.CaseRepAddress3 if cd_row.RepRepresentativeId == 0 else cd_row.RepAddress3,
+            "{{CaseRepAddress4}}": cd_row.CaseRepAddress4 if cd_row.RepRepresentativeId == 0 else cd_row.RepAddress4,
+            "{{CaseRepAddress5}}": cd_row.CaseRepAddress5 if cd_row.RepRepresentativeId == 0 else cd_row.RepAddress5,
+            "{{CaseRepPostcode}}": cd_row.CaseRepPostcode if cd_row.RepRepresentativeId == 0 else cd_row.RepPostcode,
+            "{{CaseRepTelephone}}": cd_row.CaseRepPhone if cd_row.RepRepresentativeId == 0 else cd_row.RepTelephone,
+            "{{CaseRepFAX}}": cd_row.CaseRepFax if cd_row.RepRepresentativeId == 0 else cd_row.RepFax,
+            "{{CaseRepEmail}}": cd_row.CaseRepEmail if cd_row.RepRepresentativeId == 0 else cd_row.RepEmail,
+            "{{RepDxNo1}}": cd_row.RepDxNo1 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo1,
+            "{{RepDxNo2}}": cd_row.RepDxNo2 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo2,
             "{{RepLAARefNo}}": "",
             "{{RepLAACommission}}": cd_row.CaseRepLSCCommission
         }
@@ -3440,19 +3448,24 @@ def create_html_column(row, html_template=bails_html_dyn):
         code = ""
 
         if row.all_status_objects is not None:
+            first_flag = True
             for index,status in enumerate(row.all_status_objects,start=1):
                 ## get the case status in the list
                 case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
+                print(case_status)
                 if case_status not in case_status_mappings:
+                    print(f"case status = {case_status} I am skipping this case")
                     continue
 
+
                 ## set the margin and id counter
-                if index == 1:
+                if index == 1 or first_flag:
                     margin = "10px"
                 else:
                     margin = "600px"
 
                 counter = 30+index
+                first_flag = False
 
                 if case_status in case_status_mappings:
                     template = template_for_status[case_status]
@@ -3566,7 +3579,7 @@ def create_html_column(row, html_template=bails_html_dyn):
 
         # Financial supporter
 
-        sponsor_name = "Financial Condition Supportor details entered" if row.financial_condition_details else "Financial Condition Supportor details not entered"
+        sponsor_name = "Financial condition Supportor details entered" if row.financial_condition_details else "Financial condition Supportor details not entered"
 
         html = html.replace("{{sponsorName}}",str(sponsor_name))
 

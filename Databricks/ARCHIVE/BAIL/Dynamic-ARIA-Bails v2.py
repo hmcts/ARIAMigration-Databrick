@@ -1,8 +1,4 @@
 # Databricks notebook source
-# MAGIC %pip install pyspark azure-storage-blob
-
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC
 # MAGIC # Bail Cases
@@ -539,6 +535,10 @@ def bail_decision_type():
 def raw_stm_cases():
     return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL",landing_base_path)
 
+@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_base_path}/raw_department")
+def bail_raw_appeal_cases():
+    return read_latest_parquet("Department","tv_department","ARIA_ARM_BAIL",landing_base_path)
+
 # COMMAND ----------
 
 # MAGIC %md 
@@ -723,6 +723,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
     .join(dlt.read("raw_hearing_centre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
+    .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
     .select(
         # AppealCase Fields
         col("ac.CaseNo"),
@@ -748,6 +749,7 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         col("l.Description").alias("Language"),
         col("ac.CentreId"),
         col("hc.Description").alias("DedicatedHearingCentre"),
+        col("hc.Description").alias("FileLocationCentre"),
         col("ac.AppealCategories"),
         col("ac.PubliclyFunded"),
         # Case Respondent Fields
@@ -795,6 +797,8 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
         # Main Respondent Fields
         col("mr.Name").alias("MainRespondentName"),
         # File Location Fields
+        col("hc.Description").alias("FileLocationHearingCentre"),
+        col("dp.Description").alias("FileLocationDepartment"),
         col("fl.Note").alias("FileLocationNote"),
         col("fl.TransferDate").alias("FileLocationTransferDate"),
         # Case Representative Fields
@@ -1895,7 +1899,9 @@ def silver_m1():
                         .when(col("CostsAwardDecision") == 2,"Refused")
                         .when(col("CostsAwardDecision") == 3,"Interim field")
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
-                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc")
+                        when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
+                        #Adding File Location information per 1437
+                        concat_ws(", ", col("m1.FileLocationCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
                             
     )
 
@@ -2162,9 +2168,16 @@ def silver_m8():
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Adjournment table
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Meta Data table
 
 # COMMAND ----------
+
+# from pyspark.sql.functions import max
 
 @dlt.table(
   name="silver_bail_meta_data",
@@ -2174,14 +2187,20 @@ def silver_m8():
 def silver_meta_data():
   m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
   m2_df = dlt.read("silver_bail_m2_case_appellant").alias("m2")
+  m7_df = dlt.read("silver_bail_m7_status").alias("m7")
+  max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
+
+  m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate")).alias("m7_max")
+
   base_df = (
-        m1_df.join(m2_df, on="CaseNo", how="left")
+        m1_df.join(m2_df, on="CaseNo", how="left"
+                   ).join(m7_max_decision_date, on="CaseNo", how="left")
              .select(
                  F.col("CaseNo").alias("client_identifier"),
                  date_format(
-                   coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
                  date_format(
-                   coalesce(F.col("DateOfDecision"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
                  F.lit("GBR").alias("region"),
                  F.lit("ARIA").alias("publisher"),
                  F.when(
@@ -2313,7 +2332,7 @@ case_status_mappings = {
         ## adjournment
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
+        "{{adjPartyMakingApp}}": "StatusPartyDesc",
         "{{adjDirections}}":"StatusNotes1",
         "{{adjDateOfDecision}}":"DecisionDate",
         "{{adjOutcome}}":"OutcomeDescription",
@@ -2414,7 +2433,7 @@ case_status_mappings = {
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
-        ## adjournment
+        ## adjournment - potentially remove values below dependent on Bella's reponse
         "{{adjDateOfApplication}}": "DateReceived",
         "{{adjDateOfHearing}}": "MiscDate1",
         "{{adjPartyMakingApp}}":"StatusPartyDesc",
@@ -2702,6 +2721,7 @@ stg_m1_m2_struct = struct(
     col("EmbassyFax"),
     col("EmbassyEmail"),
     col("MainRespondentName"),
+    col("FileLocation"),
     col("FileLocationNote"),
     col("FileLocationTransferDate"),
     col("CaseRepName"),
@@ -2819,6 +2839,27 @@ def stg_m1_m2():
 
 # COMMAND ----------
 
+# df_status_details = spark.read.table('hive_metastore.aria_bails.silver_bail_m7_status')
+
+# adjournment_parents = df_status_details.filter(col("CaseStatus") == 17) \
+#     .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
+#     .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+
+# adjourned_withdrawal_df = df_status_details.join(
+#     adjournment_parents,
+#     df_status_details.StatusId == adjournment_parents.ParentStatusId,
+#     "inner")
+
+# adjourned_withdrawal_new_df = df_status_details.join(
+#     adjourned_withdrawal_df.select(col("CaseNo"), col("ParentStatusId"), col("adjournmentFlag")), 
+#     (df_status_details.CaseNo == adjourned_withdrawal_df.CaseNo) &
+#     (df_status_details.StatusId == adjourned_withdrawal_df.ParentStatusId),
+#     "left")
+
+# adjourned_withdrawal_new_df.display()
+
+# COMMAND ----------
+
 @dlt.table(name="stg_m3_m7")
 def stg_m3_m7():
 
@@ -2828,6 +2869,8 @@ def stg_m3_m7():
 
 
     m3 = dlt.read("silver_bail_m3_hearing_details")
+
+
 
     columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
 
@@ -2856,32 +2899,52 @@ def stg_m3_m7():
 
 
     m7 = dlt.read("silver_bail_m7_status")
+    #we need to join this to a table below
+
+    adjournment_parents = m7.filter(col("CaseStatus") == 17) \
+    .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
+    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+
+    adjourned_withdrawal_df = m7.join(
+        adjournment_parents,
+        m7.StatusId == adjournment_parents.ParentStatusId,
+        "inner")
+
+    adjourned_withdrawal_new_df = m7.join(
+        adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
+        (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
+        (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+        "left")
 
 
     # Get all columns in m3 not in m7
-    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in m7.columns]
+    m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
 
-    status_tab = m7.alias("m7").join(
+    #replaced m7 with adjournmentdf
+    status_tab = adjourned_withdrawal_new_df.alias("m7").join(
         pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        on= ["CaseNo","StatusId"] ,how=
-        "left"
-    )
-
+        (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
+        (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
+        how = "left"
+    ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
 
     # create a nested list for the stausus table (m7_m3 tables)
 
     status_tab_struct = struct(*[col(c) for c in status_tab.columns])
     m7_m3_statuses = (
         status_tab
-        .groupBy(col("CaseNo"))
+        .groupBy(col("m7.CaseNo"))
         .agg(
             collect_list(
                 # Collect each record's columns as a struct
                 status_tab_struct
             ).alias("all_status_objects")
-        )
-    )
+        ))
     return m7_m3_statuses
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
@@ -3146,6 +3209,10 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Join Casesurety to master table
 
@@ -3381,7 +3448,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         replacements = {
             "{{ bailCaseNo }}": str(row.CaseNo),
             "{{LastDocument}}": row.last_document,
-            "{{FileLocation}}": row.file_location,
+            # "{{FileLocation}}": row.file_location,
             "{{CurrentStatus}}": row.MaxCaseStatusDescription,
         }
         for key, value in replacements.items():
@@ -3410,7 +3477,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{ConnectedFiles}}": "",
             "{{DateOfIssue}}": format_date_iso(cd_row.DateOfIssue),
             # "{{LastDocument}}": cd_row.last_document,
-            # "{{FileLocation}}": cd_row.file_location,
+            "{{FileLocation}}": cd_row.FileLocation,
             "{{BFEntry}}": "",
             "{{ProvisionalDestructionDate}}": format_date_iso(cd_row.ProvisionalDestructionDate),
 
@@ -3560,17 +3627,24 @@ def create_html_column(row, html_template=bails_html_dyn):
         code = ""
 
         if row.all_status_objects is not None:
+            first_flag = True
             for index,status in enumerate(row.all_status_objects,start=1):
                 ## get the case status in the list
                 case_status = int(status["CaseStatus"]) if status["CaseStatus"] is not None else 0
+                print(case_status)
+                if case_status not in case_status_mappings:
+                    print(f"case status = {case_status} I am skipping this case")
+                    continue
+
 
                 ## set the margin and id counter
-                if index == 1:
+                if index == 1 or first_flag:
                     margin = "10px"
                 else:
                     margin = "600px"
 
                 counter = 30+index
+                first_flag = False
 
                 if case_status in case_status_mappings:
                     template = template_for_status[case_status]
@@ -3581,7 +3655,18 @@ def create_html_column(row, html_template=bails_html_dyn):
 
 
                     for placeholder,field_name in status_mapping.items():
-                        if field_name in date_fields:
+                        if placeholder in ["{{adjDateOfApplication}}", "{{adjDateOfHearing}}", "{{adjPartyMakingApp}}", "{{adjDirections}}",
+                                                "{{adjDateOfDecision}}", "{{adjOutcome}}", "{{adjdatePartiesNotified}}"]:
+                            if status["adjournmentFlag"] == "Yes":
+                                if field_name in date_fields:
+                                    raw_value = status[field_name] if field_name in status else None
+                                    value = format_date_iso(raw_value)
+                                else:
+                                    value = status[field_name] if field_name in status else None
+                            else:
+                                value = ""
+
+                        elif field_name in date_fields:
                             raw_value = status[field_name] if field_name in status else None
                             value = format_date_iso(raw_value)
                         else:

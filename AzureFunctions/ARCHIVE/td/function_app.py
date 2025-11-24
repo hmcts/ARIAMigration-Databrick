@@ -12,22 +12,21 @@ from azure.keyvault.secrets.aio import SecretClient
 import datetime
 import os
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-
+import uuid  # Added for fallback partition key
 
 # Retrieve environment variables
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
-
 ARM_SEGMENT = "TDDEV" if env == "sbox" else "TD"
 ARIA_SEGMENT = "td"
+
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
-# configurable limit to cap concurrent per-instance tasks to prevent explosion
-MAX_CONCURRENT_TASKS = int(os.getenv("MAX_CONCURRENT_TASKS", "100"))
-
 app = func.FunctionApp()
 
+# Limit concurrent tasks per instance to avoid unbounded asyncio explosion
+MAX_CONCURRENT_TASKS = int(os.getenv("MAX_CONCURRENT_TASKS", "32"))  # safer for scale-down
 
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
@@ -50,9 +49,6 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential
     )
     logging.info('Connected to KeyVault')
-
-    # Semaphore to limit concurrency per function instance to avoid unbounded task explosion
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
 
     try:
         # Retrieve Event Hub secrets
@@ -87,45 +83,26 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             logging.info('Created container service client')
         except Exception as e:
             logging.error(f"Failed to connect to ARM Container Client {e}")
-            raise
-
-        # Prepare idempotency container client once per batch instead of per message
-        idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
-        idempotency_container_name = "af-idempotency"
-        idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
-        idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
         try:
             async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                        EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
 
                 logging.info('Processing messages')
-
-                # wrapper that enforces semaphore to limit concurrency
-                async def bounded_process(event):
-                    await semaphore.acquire()
-                    try:
-                        return await process_messages(
-                            event,
-                            container_service_client,
-                            sub_dir,
-                            dl_producer_client,
-                            ack_producer_client,
-                            source_container_secret,
-                            credential,
-                            idempotency_container
-                        )
-                    finally:
-                        semaphore.release()
-
-                # create tasks but bounded by semaphore so we don't explode the loop
-                tasks = [bounded_process(event) for event in azeventhub]
-                # Run tasks concurrently but bounded
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                # log any exceptions from individual tasks
-                for r in results:
-                    if isinstance(r, Exception):
-                        logging.error(f"Task error: {r}")
+                # Protect each task from cancellation during scale-down
+                tasks = [
+                    asyncio.shield(process_messages(
+                        event,
+                        container_service_client,
+                        sub_dir,
+                        dl_producer_client,
+                        ack_producer_client,
+                        source_container_secret,
+                        credential
+                    ))
+                    for event in azeventhub
+                ]
+                await asyncio.gather(*tasks)
                 logging.info('Finished processing messages')
         finally:
             await container_service_client.close()
@@ -151,25 +128,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-# Add retry to ACK sending so transient throttling doesn't silently drop ACKs
-@retry(
-    wait=wait_exponential(multiplier=1, min=1, max=5),
-    stop=stop_after_attempt(5),
-    retry=retry_if_exception_type(Exception),
-    reraise=True,
-    before_sleep=lambda r: logging.warning(
-        f"Retrying EventHub send attempt {r.attempt_number} due to: {r.outcome.exception()}"
-    ),
-)
-async def safe_send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
-    """Sends messages to an Event Hub with retries."""
-    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-    event_data_batch.add(EventData(message))
-    await producer_client.send_batch(event_data_batch)
-    logging.info(f"Message added to Event Hub with partition key: {partition_key}")
-
-
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret,credential, idempotency_container):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, credential):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,
@@ -184,13 +143,12 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_response"] = http_response.status_code
         results["http_message"] = getattr(http_response, "reason", "No reason provided")
 
-    key = None
+    key = event.partition_key or str(uuid.uuid4())  # fallback if missing
     message = None
 
     try:
         # Decode incoming event
         message = event.get_body().decode('utf-8').strip()
-        key = event.partition_key
         logging.info(f"Processing message for {key} file")
 
         if not key:
@@ -216,12 +174,12 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # -----------------------------------------------
         #  IDEMPOTENCY CHECK  (ADDED)
         # -----------------------------------------------
-        # idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
-        # idempotency_container_name = "af-idempotency"
-        #
-        # idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
-        # idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
-        #
+        idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
+        idempotency_container_name = "af-idempotency"
+
+        idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
+        idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
         idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
         idempotency_blob = idempotency_container.get_blob_client(
             f"{idempotency_base}/{file_name}.flag"
@@ -233,7 +191,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             results["http_message"] = "Duplicate skipped by idempotency"
             results["timestamp"] = datetime.datetime.utcnow().isoformat()
             results["http_response"] = 201
-            await safe_send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
 
         # Create flag immediately (first writer wins)
@@ -246,12 +204,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             results["http_message"] = "Duplicate skipped due to race-condition flag"
             results["timestamp"] = datetime.datetime.utcnow().isoformat()
             results["http_response"] = 201
-            await safe_send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
             return results
         # -----------------------------------------------
 
-
-        # ✅ Print blob_url for debugging
         logging.info(f"blob_url received: {blob_url}")
 
         # Append SAS token if missing
@@ -284,22 +240,19 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_message"] = str(e)
 
         # Send failed message to dead-letter event hub
-        if message is not None and key is not None:
-            try:
-                await safe_send_to_eventhub(dl_producer_client, message, key)
-            except Exception as send_ex:
-                logging.error(f"Failed to send to dead-letter queue for {key}: {send_ex}")
+        if message is not None:
+            await send_to_eventhub(dl_producer_client, message, key)
         else:
             logging.error("Cannot send to dead-letter queue because message or key is None.")
 
-    # Always send acknowledgment
-    try:
-        await safe_send_to_eventhub(ack_producer_client, json.dumps(results), key)
-        logging.info(f"{key}: Ack stored successfully")
-    except Exception as ack_ex:
-        # If ACK cannot be delivered even after retries, log an error and raise so it can be observed
-        logging.error(f"Failed to send ACK for {key} after retries: {ack_ex}")
-        # Note: depending on your functions scaling/retry model you may want to re-raise here.
+    finally:
+        # Always send acknowledgment; ensures ACK is sent even if exception occurs
+        try:
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            logging.info(f"{key}: Ack stored successfully")
+        except Exception as ack_ex:
+            logging.error(f"Failed to send ACK for {key}: {ack_ex}")
+
     return results
 
 
@@ -312,4 +265,3 @@ async def send_to_eventhub(producer_client: EventHubProducerClient, message: str
         logging.info(f"Message added to Event Hub with partition key: {partition_key}")
     except Exception as e:
         logging.error(f"Failed to upload {partition_key} to EventHub: {e}")
-        

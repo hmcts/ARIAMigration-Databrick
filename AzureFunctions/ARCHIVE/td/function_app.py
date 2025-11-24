@@ -18,8 +18,8 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-ARIA_SEGMENT = "aplfta"
-ARM_SEGMENT = "FTADEV" if env == 'sbox' else "FTA"
+ARM_SEGMENT = "TDDEV" if env == "sbox" else "TD"
+ARIA_SEGMENT = "td"
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 

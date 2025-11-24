@@ -1715,11 +1715,11 @@ def silver_m1():
     
     segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
     
-    joined_df = m1_df.join(segmentation_df.alias("bs"), col("m1.CaseNo") == col("bs.CaseNo"), "inner")
+    joined_df = m1_df.join(segmentation_df.alias("bs"), trim(col("m1.CaseNo")) == col("bs.CaseNo"), "inner")
 
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
-    
-    df = joined_df.select("m1.CaseNo", *selected_columns,
+
+    df = joined_df.select(trim("m1.CaseNo").alias("CaseNo"), *selected_columns,
                         col("bs.BaseBailType"),
                         when(col("BaseBailType") == "Normal Bail","Bail").
                         when(col("BaseBailType") == "BailLegalHold","Bail").

@@ -3573,7 +3573,7 @@ def create_html_column(row, html_template=bails_html_dyn):
 
         # Financial supporter
 
-        sponsor_name = "Financial condition Supportor details entered" if row.financial_condition_details else "Financial condition Supportor details not entered"
+        sponsor_name = "Financial condition supporter details entered" if row.financial_condition_details else "Financial condition supporter details not entered"
 
         html = html.replace("{{sponsorName}}",str(sponsor_name))
 

@@ -6510,9 +6510,9 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from ariadm_arm_fta.stg_statusdetail_data
-# MAGIC -- where cast(TempCaseStatusDetails as string) like '37'
+# %sql
+# select * from ariadm_arm_fta.stg_statusdetail_data
+# -- where cast(TempCaseStatusDetails as string) like '37'
 
 # COMMAND ----------
 
@@ -7311,11 +7311,11 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
-# MAGIC where CaseNo = 'AA/00029/2014'
-# MAGIC
-# MAGIC
+# %sql
+# select * from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
+# where CaseNo = 'AA/00029/2014'
+
+
 
 # COMMAND ----------
 

@@ -5379,7 +5379,7 @@ def stg_statusdetail_data():
 
     df_status_details = dlt.read("silver_status_detail")
     df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
-    df_reviewspecificdirection_details = dlt.read("hive_metastore.ariadm_arm_fpa.silver_reviewspecificdirection_detail")
+    df_reviewspecificdirection_details = dlt.read("silver_reviewspecificdirection_detail")
 
     df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")

@@ -5379,7 +5379,7 @@ def stg_statusdetail_data():
 
     df_status_details = dlt.read("silver_status_detail")
     df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
-    df_reviewspecificdirection_details = dlt.read("hive_metastore.ariadm_arm_fpa.silver_reviewspecificdirection_detail")
+    df_reviewspecificdirection_details = dlt.read("silver_reviewspecificdirection_detail")
 
     df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")
@@ -6519,9 +6519,9 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from ariadm_arm_fta.stg_statusdetail_data
-# MAGIC -- where cast(TempCaseStatusDetails as string) like '37'
+# %sql
+# select * from ariadm_arm_fta.stg_statusdetail_data
+# -- where cast(TempCaseStatusDetails as string) like '37'
 
 # COMMAND ----------
 
@@ -7306,25 +7306,25 @@ case_no = 'IM/00023/2003' # dependents
 # COMMAND ----------
 
 # DBTITLE 1,art
-# MAGIC %sql
-# MAGIC select --distinct date_format(ListStartTime, 'h:mm a') as ListStartTime, 
-# MAGIC distinct ListStartTime from hive_metastore.ariadm_arm_fta.silver_list_detail
+# %sql
+# select --distinct date_format(ListStartTime, 'h:mm a') as ListStartTime, 
+# distinct ListStartTime from hive_metastore.ariadm_arm_fta.silver_list_detail
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select Statusid, CaseStatusDescription  from hive_metastore.ariadm_arm_fta.silver_status_detail
-# MAGIC where CaseNo = 'AA/00029/2014'
-# MAGIC -- group by CaseNo
-# MAGIC
+# %sql
+# select Statusid, CaseStatusDescription  from hive_metastore.ariadm_arm_fta.silver_status_detail
+# where CaseNo = 'AA/00029/2014'
+# -- group by CaseNo
+
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
-# MAGIC where CaseNo = 'AA/00029/2014'
-# MAGIC
-# MAGIC
+# %sql
+# select * from hive_metastore.ariadm_arm_fta.stg_statusdetail_data
+# where CaseNo = 'AA/00029/2014'
+
+
 
 # COMMAND ----------
 

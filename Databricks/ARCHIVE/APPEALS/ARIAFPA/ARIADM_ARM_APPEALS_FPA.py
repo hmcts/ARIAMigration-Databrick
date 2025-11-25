@@ -4530,7 +4530,7 @@ def silver_archive_metadata():
         # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
         # .alias("record_class"),
         when(
-            (env_name == lit('sbox')) | (env_name == lit('stg')),
+            (env_name == lit('sbox')),
             concat(col('flt.Segment'), lit("DEV"))
             ).otherwise(col('flt.Segment')).alias("record_class"),
         #col('flt.Segment').alias("record_class"),

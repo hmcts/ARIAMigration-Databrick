@@ -55,11 +55,11 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         logging.info('Acquired KV secrets for DL and ACK')
 
         # Blob Storage credentials
-        # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
-        # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
 
@@ -176,6 +176,11 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
         idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
+        # try:
+        #     await idempotency_container.create_container_if_not_exists()
+        # except Exception:
+        #     pass
 
         idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
         idempotency_blob = idempotency_container.get_blob_client(

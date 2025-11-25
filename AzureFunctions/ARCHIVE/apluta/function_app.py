@@ -18,6 +18,7 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
+
 ARIA_SEGMENT = "apluta"
 ARM_SEGMENT = "UTADEV" if env == 'sbox' else "UTA"
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
@@ -55,11 +56,11 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         logging.info('Acquired KV secrets for DL and ACK')
 
         # Blob Storage credentials
-        # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
+        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
         container_name = "dropzone"
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
-        # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
 

@@ -17,55 +17,55 @@ resources:
           libraries: 
             - whl: "dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl"
 
-        - task_key: create_td_content
+        - task_key: DLT_creation_of_content
           depends_on:
             - task_key: run-my-wheel
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_arm_td.id}
             full_refresh: false
-
+        
         - task_key: audit_processing_td
-          depends_on:
-            - task_key: create_td_content
           job_cluster_key: db_wf_td_send_job
+          depends_on:
+            - task_key: DLT_creation_of_content
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_AUDIT_DATA_PROCESSING_TD"
+            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/TD/ARIADM_ARM_AUDIT_DATA_PROCESSING_TD"
             source: WORKSPACE
 
-        - task_key: publish_html_json_eh
+        - task_key: publish_HTML_JSON_to_eh
+          job_cluster_key: db_wf_td_send_job
           depends_on:
             - task_key: audit_processing_td
-          job_cluster_key: db_wf_td_send_job
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/TD/ARIA_ADLS_TO_EVENTHUBS_GENRIC_TD"
-            base_parameters:
+            base_parameters: 
               file_types: html,json
             source: WORKSPACE
-
-        - task_key: publish_a360_eh
+          
+        - task_key: html_json_ack
           depends_on:
-            - task_key: publish_html_json_eh
+            - task_key: publish_HTML_JSON_to_eh
+          notebook_task:
+            notebook_path: "/Workspace/live/ARCHIVE/TD/ariatd_html_json_acknowledge"
+            source: WORKSPACE
           job_cluster_key: db_wf_td_send_job
+
+        - task_key: publish_A360_to_eh
+          depends_on:
+            - task_key: html_json_ack
           notebook_task:
             notebook_path: "/Workspace/live/ARCHIVE/TD/ARIA_ADLS_TO_EVENTHUBS_GENRIC_TD"
             base_parameters:
               file_types: a360
             source: WORKSPACE
-
-        - task_key: td_ack
-          depends_on:
-            - task_key: publish_a360_eh
           job_cluster_key: db_wf_td_send_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_ACK_AUTOLOADER_TD"
-            source: WORKSPACE
-                
-        - task_key: td_send_dashboard
+         
+        - task_key: a360_ack
           depends_on:
-            - task_key: td_ack
-          job_cluster_key: db_wf_td_send_job
+            - task_key: publish_A360_to_eh
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/TD/AUDIT/TD_Send_Audit_Dashboard"
+            notebook_path: "/Workspace/live/ARCHIVE/TD/ariatd_a360_acknowledge"
             source: WORKSPACE
+          job_cluster_key: db_wf_td_send_job
       queue:
-        enabled: true
+        enabled: true   

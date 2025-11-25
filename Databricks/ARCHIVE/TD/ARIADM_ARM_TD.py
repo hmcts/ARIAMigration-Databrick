@@ -1340,6 +1340,70 @@ def stg_create_td_iris_a360_content():
 
 # COMMAND ----------
 
+from pyspark.sql import functions as F
+
+# Read DLT sources
+a360_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_a360_content").alias("a360")
+html_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
+json_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_json_content").alias("json")
+
+
+
+# Perform joins
+df_unified = (
+    html_df
+    .join(json_df,  ((col("html.CaseNo") == col("json.CaseNo")) ), "inner")
+    .join(
+        a360_df,
+        (col("json.CaseNo") == col("a360.client_identifier")) ,
+        "inner"
+    )
+    .select(
+        col("a360.client_identifier"),
+        col("a360.bf_002"),
+        col("a360.bf_003"),
+        col("html.*"),
+        col("json.JSON_Content"),
+        col("json.File_Name").alias("JSON_File_Name"),
+        col("json.Status").alias("JSON_Status"),
+        col("a360.A360_Content"),
+        col("a360.Status").alias("Status")
+    )
+    .filter(
+        (~col("html.HTML_Content").like("Failure%")) &
+        (~col("a360.A360_Content").like("Failure%")) &
+        (~col("json.JSON_Content").like("Failure%"))
+    )
+)
+
+# Define a window specification for batching  
+window_spec = Window.orderBy(F.col("client_identifier"), F.col("bf_003"), F.col("bf_003"))
+
+df_batch = df_unified.withColumn("row_num", F.row_number().over(window_spec)) \
+                        .withColumn("A360_BatchId", F.floor((F.col("row_num") - 1) / 250) + 1) \
+                        .withColumn(
+                            "File_Name", 
+                            F.concat(F.lit(f"{gold_outputs}/A360/tribunal_decision_"), 
+                                    F.col("A360_BatchId"), 
+                                    F.lit(".a360"))
+                        )
+
+df_unified.filter(col("client_identifier").isin('EA/00007/2023',
+'EA/00002/2023',
+'EA/00006/2023')).display()
+
+# COMMAND ----------
+
+display(a360_df.groupBy("client_identifier").count().filter(col("count") > 1))
+
+# COMMAND ----------
+
+# Failure on Create HTML Content
+
+# Failure Error: Invalid date input: 1987-08-08T00:00:00.000Z. Error: unconverted data remains: T00:00:00.000Z-
+
+# COMMAND ----------
+
 # DBTITLE 1,Transformation: stg_td_iris_unified
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -1361,17 +1425,13 @@ def stg_td_iris_unified():
     html_df = dlt.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
     json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
 
-
-
     # Perform joins
     df_unified = (
         html_df
-        .join(json_df,  ((col("html.CaseNo") == col("json.CaseNo")) & (col("html.Forenames") == col("json.Forenames")) & (col("html.Name") == col("json.Name"))), "inner")
+        .join(json_df,  ((col("html.CaseNo") == col("json.CaseNo")) ), "inner")
         .join(
             a360_df,
-            (col("json.CaseNo") == col("a360.client_identifier")) &
-            (col("json.Forenames") == col("a360.bf_002")) &
-            (col("json.Name") == col("a360.bf_003")),
+            (col("json.CaseNo") == col("a360.client_identifier")) ,
             "inner"
         )
         .select(

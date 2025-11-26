@@ -193,12 +193,13 @@ stages:
 
               - script: |
                   cd $(Build.SourcesDirectory)/AzureFunctions/Active/${state}/active_ccd
+                  mkdir -p $(Build.ArtifactStagingDirectory)
                   zip -r $(Build.ArtifactStagingDirectory)/functionapp-${state}.zip .
                 displayName: 'Zip function app contents for ${{ state }}'
 
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.ArtifactStagingDirectory)/functionapp-${{ state }}.zip'
+                  PathtoPublish: '$(Build.ArtifactStagingDirectory)'
                   ArtifactName: 'functionapp-${{ state }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App ZIP for ${{ state }}'
@@ -280,7 +281,7 @@ stages:
                     package: '$(Pipeline.Workspace)/functionapp-${{ state }}/functionapp-${{ state }}.zip'
                     deploymentMethod: 'zipDeploy'
                   displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
-                
+
                 - script: |
                     echo "Listing contents of deployed ZIP for verification"
                     unzip -l $(Pipeline.Workspace)/functionapp-${{ state }}/functionapp-${{ state }}.zip

@@ -23,7 +23,7 @@ except Exception:
 
 ENV = os.environ["ENVIRONMENT"]
 LZ_KEY = os.environ["LZ_KEY"]
-PR_NUMBER = os.getenv("PR_NUMBER", None)
+PR_NUMBER = os.environ["PR_NUMBER"]
 ARIA_NAME = "active"
 
 eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"

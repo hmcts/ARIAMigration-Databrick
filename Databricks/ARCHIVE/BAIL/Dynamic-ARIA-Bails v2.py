@@ -2219,8 +2219,8 @@ def silver_meta_data():
                 #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
                  F.col("HoRef").alias("bf_001"),
-                 F.col("Forename").alias("bf_002"),
-                 F.col("Surname").alias("bf_003"),
+                 F.col("m2.AppellantForenames").alias("bf_002"),
+                 F.col("m2.AppellantName").alias("bf_003"),
                  date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
                  F.col("PortReference").alias("bf_005"),
                  F.col("RepPostcode").alias("bf_006"),
@@ -2230,7 +2230,7 @@ def silver_meta_data():
     
     
   # Join the batchid mapping back onto the base DataFrame
-  final_df = base_df
+  final_df = base_df.distinct()
     
 
 

@@ -1787,6 +1787,10 @@ def silver_m2():
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## M3: silver_sbail_m3_hearing_details
 # MAGIC
@@ -2031,7 +2035,7 @@ from pyspark.sql import functions as F
 )
 def silver_meta_data():
   m1_df = dlt.read("silver_sbail_m1_case_details").alias("m1")
-  m2_df = dlt.read("silver_sbail_m2_case_appellant").alias("m2")
+  m2_df = dlt.read("silver_sbail_m2_case_appellant").filter(col("Relationship").isNull()).alias("m2")
   m7_df = dlt.read("silver_sbail_m7_status").alias("m7")
   max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
 
@@ -2063,17 +2067,16 @@ def silver_meta_data():
                 #   .alias("record_class"),
                  F.lit("IA_Tribunal").alias("entitlement_tag"),
                  F.col("HoRef").alias("bf_001"),
-                 F.col("Forename").alias("bf_002"),
-                 F.col("Surname").alias("bf_003"),
+                 F.col("m2.AppellantForenames").alias("bf_002"),
+                 F.col("m2.AppellantName").alias("bf_003"),
                  date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
                  F.col("PortReference").alias("bf_005"),
                  F.col("RepPostcode").alias("bf_006"),
                  F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007")
              )
     )
-
-  # Join the batchid mapping back onto the base DataFrame
-  final_df = base_df
+  #Join the batchid mapping back onto the base DataFrame
+  final_df = base_df.distinct()
     
 
 

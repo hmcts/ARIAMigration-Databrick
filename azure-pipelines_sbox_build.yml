@@ -3,7 +3,12 @@ trigger:
     include:
       - master
 
-pr: none
+# pr: none
+
+pr:
+  branches:
+    include:
+      - '*'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -180,26 +185,25 @@ stages:
           - job: BuildFunction
             displayName: 'Build Azure Function for ${{ state }}'
             steps:
-              # Install runtime dependencies
               - script: |
                   pip install --upgrade pip
                   pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
                     --target="./AzureFunctions/Active/${{ state }}/.python_packages/lib/site-packages"
                 displayName: 'Install dependencies for ${{ state }}'
 
-              # Create ZIP package
+              # Zip all content including subfolders
               - script: |
                   cd AzureFunctions/Active/${{ state }}
                   zip -r ../../functionapp-${{ state }}.zip . -x '*.pyc'
-                displayName: 'Zip Function App for ${{ state }}'
+                  ls -R ../../functionapp-${{ state }}.zip
+                displayName: 'Zip Function App for ${{ state }} (with debug listing)'
 
-              # Publish the ZIP as artifact
               - task: PublishBuildArtifacts@1
                 inputs:
                   PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/functionapp-${{ state }}.zip'
                   ArtifactName: 'functionapp-${{ state }}'
                   publishLocation: 'Container'
-                displayName: 'Publish Function App ZIP for ${{ state }}'      
+                displayName: 'Publish Function App ZIP for ${{ state }}'    
 
 # Build function app package for each segment
   - ${{ each deployment in parameters.environment_components }}:
@@ -262,8 +266,6 @@ stages:
             - job: Deploy_Function_${{ lz.landing_zone }}
               displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
               steps:
-
-                # Download ZIP
                 - task: DownloadBuildArtifacts@1
                   inputs:
                     buildType: 'current'
@@ -272,7 +274,11 @@ stages:
                     downloadPath: '$(Pipeline.Workspace)'
                   displayName: 'Download Azure Function Artifact for ${{ state }}'
 
-                # Deploy ZIP via AzureFunctionApp@2
+                - script: |
+                    echo "Listing downloaded artifact:"
+                    ls -alR $(Pipeline.Workspace)/functionapp-${{ state }}
+                  displayName: 'Debug: List ZIP contents'
+
                 - task: AzureFunctionApp@2
                   inputs:
                     connectedServiceNameARM: ${{ deployment.service_connection }}

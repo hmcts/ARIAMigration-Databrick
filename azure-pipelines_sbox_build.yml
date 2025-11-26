@@ -3,12 +3,12 @@ trigger:
     include:
       - master
 
-pr: none
+# pr: none
 
-# pr:
-#   branches:
-#     include:
-#       - '*'
+pr:
+  branches:
+    include:
+      - '*'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -154,6 +154,28 @@ stages:
               displayName: 'Publish Shared Wheel Artifact'   
 
 # Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
+  # - ${{ each deployment in parameters.environment_components }}:
+  #   - ${{ each state in deployment.states }}:
+  #     - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+  #       displayName: 'Package Azure Function: ${{ deployment.deployment }}-${{ state }}'
+  #       dependsOn: ${{ format('{0}_Build_Wheel', deployment.deployment) }}
+  #       jobs:
+  #         - job: BuildFunction
+  #           displayName: 'Build Azure Function for ${{ state }}'
+  #           steps:
+  #             - script: |
+  #                 pip install --upgrade pip
+  #                 pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
+  #                   --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
+  #               displayName: 'Install dependencies for ${{ state }}'
+              
+  #             - task: PublishBuildArtifacts@1
+  #               inputs:
+  #                 PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
+  #                 ArtifactName: 'functionapp-${{ state }}'
+  #                 publishLocation: 'Container'
+  #               displayName: 'Publish Function App for ${{ state }}'     
+
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each state in deployment.states }}:
       - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
@@ -168,13 +190,19 @@ stages:
                   pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
                     --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ state }}'
-              
+
+              - script: |
+                  cd $(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}
+                  mkdir -p $(Build.ArtifactStagingDirectory)
+                  zip -r $(Build.ArtifactStagingDirectory)/functionapp-${{ state }}.zip .
+                displayName: 'Zip function app contents for ${{ state }}'
+
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
+                  PathtoPublish: '$(Build.ArtifactStagingDirectory)/functionapp-${{ state }}.zip'
                   ArtifactName: 'functionapp-${{ state }}'
                   publishLocation: 'Container'
-                displayName: 'Publish Function App for ${{ state }}'     
+                displayName: 'Publish Function App ZIP for ${{ state }}'
 
 # Build function app package for each segment
   - ${{ each deployment in parameters.environment_components }}:
@@ -200,32 +228,64 @@ stages:
                 displayName: 'Publish Function App for ${{ segment }}'
 
 # Deploy function app for Active State
-  - ${{ each deployment in parameters.environment_components }}:
-    - ${{ each lz in deployment.landing_zones}}:
-      - ${{ each state in deployment.states}}:
-          - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}
-            displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}'
-            dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
-            jobs:
-              - job: Deploy_Function_${{ lz.landing_zone }}
-                displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
-                steps:
-                  - task: DownloadBuildArtifacts@1
-                    inputs:
-                      buildType: 'current'
-                      downloadType: 'single'
-                      artifactName: 'functionapp-${{ state }}'
-                      downloadPath: '$(Pipeline.Workspace)'
-                    displayName: 'Download Azure Function Artifact for ${{ state }}'
+  # - ${{ each deployment in parameters.environment_components }}:
+  #   - ${{ each lz in deployment.landing_zones}}:
+  #     - ${{ each state in deployment.states}}:
+  #         - stage: Deploy_Functions_${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}
+  #           displayName: 'Deploy Functions for ${{ deployment.environment }}${{lz.landing_zone}}_${{ state }}'
+  #           dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+  #           jobs:
+  #             - job: Deploy_Function_${{ lz.landing_zone }}
+  #               displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+  #               steps:
+  #                 - task: DownloadBuildArtifacts@1
+  #                   inputs:
+  #                     buildType: 'current'
+  #                     downloadType: 'single'
+  #                     artifactName: 'functionapp-${{ state }}'
+  #                     downloadPath: '$(Pipeline.Workspace)'
+  #                   displayName: 'Download Azure Function Artifact for ${{ state }}'
 
-                  - task: AzureFunctionApp@2
-                    inputs:
-                      connectedServiceNameARM: ${{ deployment.service_connection }}
-                      appType: 'functionAppLinux'
-                      appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
-                      package: '$(Pipeline.Workspace)/functionapp-${{ state }}'
-                      deploymentMethod: 'zipDeploy'
-                    displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+  #                 - task: AzureFunctionApp@2
+  #                   inputs:
+  #                     connectedServiceNameARM: ${{ deployment.service_connection }}
+  #                     appType: 'functionAppLinux'
+  #                     appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+  #                     package: '$(Pipeline.Workspace)/functionapp-${{ state }}'
+  #                     deploymentMethod: 'zipDeploy'
+  #                   displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}' ##vnet and kv access policies
+
+  - ${{ each deployment in parameters.environment_components }}:
+    - ${{ each lz in deployment.landing_zones }}:
+      - ${{ each state in deployment.states }}:
+        - stage: Deploy_Functions_${{ deployment.environment }}${{ lz.landing_zone }}_${{ state }}
+          displayName: 'Deploy Functions for ${{ deployment.environment }}${{ lz.landing_zone }}_${{ state }}'
+          dependsOn: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
+          jobs:
+            - job: DeployFunction_${{ lz.landing_zone }}
+              displayName: 'Deploy to LZ ${{ lz.landing_zone }}'
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'functionapp-${{ state }}'
+                    downloadPath: '$(Pipeline.Workspace)'
+                  displayName: 'Download Azure Function Artifact for ${{ state }}'
+
+                - task: AzureFunctionApp@2
+                  inputs:
+                    connectedServiceNameARM: ${{ deployment.service_connection }}
+                    appType: 'functionAppLinux'
+                    appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                    package: '$(Pipeline.Workspace)/functionapp-${{ state }}/functionapp-${{ state }}.zip'
+                    deploymentMethod: 'zipDeploy'
+                  displayName: 'Deploy Azure Function for ${{ state }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
+                
+                - script: |
+                    echo "Listing contents of deployed ZIP for verification"
+                    unzip -l $(Pipeline.Workspace)/functionapp-${{ state }}/functionapp-${{ state }}.zip
+                  displayName: 'Verify ZIP contents for ${{ state }}'
 
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:

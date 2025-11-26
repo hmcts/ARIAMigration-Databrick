@@ -6171,15 +6171,13 @@ def gold_appeals_with_a360():
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
     .agg(
-        array_distinct(
-            collect_list("A360_Content")
-        ).alias("unique_lines")
+        collect_list("A360_Content").alias("unique_lines")
     ) \
     .withColumn("consolidate_A360Content", concat_ws("\n", col("unique_lines"))) \
     .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(200)
+    repartitioned_df = df_agg.repartition(64)
 
     # Remove existing files
     dbutils.fs.rm(f"{gold_outputs}/A360", True)

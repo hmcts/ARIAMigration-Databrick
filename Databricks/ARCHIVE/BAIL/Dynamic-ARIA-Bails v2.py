@@ -2230,7 +2230,7 @@ def silver_meta_data():
     
     
   # Join the batchid mapping back onto the base DataFrame
-  final_df = base_df
+  final_df = base_df.distinct()
     
 
 

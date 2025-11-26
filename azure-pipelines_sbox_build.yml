@@ -5,11 +5,6 @@ trigger:
 
 pr: none
 
-# pr:
-#   branches:
-#     include:
-#       - '*'
-
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -153,7 +148,7 @@ stages:
                 publishLocation: 'Container'
               displayName: 'Publish Shared Wheel Artifact'   
 
-# Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
+#Build Active function app package to af-active-ccd-sbox00-uks-dlrm-01
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each state in deployment.states }}:
       - stage: ${{ format('{0}_Package_{1}', deployment.deployment, state) }}
@@ -199,7 +194,7 @@ stages:
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'
 
-# Deploy function app for Active State
+#Deploy function app for Active State
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - ${{ each state in deployment.states}}:
@@ -254,7 +249,7 @@ stages:
                       deploymentMethod: 'zipDeploy'
                     displayName: 'Deploy Azure Function for ${{ segment }}-${{ deployment.environment }}-${{ lz.landing_zone }}'
 
-# Deploy HTML templates and Databricks code
+#Deploy HTML templates and Databricks code
   - ${{ each deployment in parameters.environment_components }}:
     - ${{ each lz in deployment.landing_zones}}:
       - stage: Deploy_HTML_Databricks_${{ deployment.environment }}_${{ lz.landing_zone }}

@@ -192,7 +192,7 @@ stages:
                 displayName: 'Install dependencies for ${{ state }}'
 
               - script: |
-                  cd $(Build.SourcesDirectory)/AzureFunctions/Active/${state}
+                  cd $(Build.SourcesDirectory)/AzureFunctions/Active/${state}/active_ccd
                   zip -r $(Build.ArtifactStagingDirectory)/functionapp-${state}.zip .
                 displayName: 'Zip function app contents for ${{ state }}'
 

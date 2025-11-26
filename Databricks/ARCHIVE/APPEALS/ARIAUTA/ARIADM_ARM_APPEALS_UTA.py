@@ -6154,10 +6154,19 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 def gold_appeals_with_a360():
     df_a360 = dlt.read("stg_appeals_unified")
 
+    # # Optionally load data from Hive
+    # if read_hive:
+    #     df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \
-            .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
-            .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
+    .agg(
+        array_distinct(
+            collect_list("A360_Content")
+        ).alias("unique_lines")
+    ) \
+    .withColumn("consolidate_A360Content", concat_ws("\n", col("unique_lines"))) \
+    .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
     repartitioned_df = df_agg.repartition(64)

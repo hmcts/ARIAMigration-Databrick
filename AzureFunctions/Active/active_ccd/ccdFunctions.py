@@ -235,160 +235,160 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     payloadData = """
-# {
-#   "email": "example@test.com",
-#   "isEjp": "No",
-#   "feeCode": "FEE0238",
-#   "isAdmin": "Yes",
-#   "paidDate": "2024-08-05",
-#   "appealType": "refusalOfHumanRights",
-#   "feeVersion": "2",
-#   "paidAmount": "14000",
-#   "s94bStatus": "No",
-#   "paymentDate": "5 Aug 2024",
-#   "feeAmountGbp": "14000",
-#   "isIntegrated": "No",
-#   "appellantInUk": "Yes",
-#   "hearingCentre": "taylorHouse",
-#   "isNabaEnabled": "No",
-#   "paymentStatus": "Paid",
-#   "staffLocation": "Taylor House",
-#   "SearchCriteria": {
-#     "SearchParties": [
-#       {
-#         "id": "ec889f66-0475-4633-8d69-b31b80d76e5a",
-#         "value": {
-#           "Name": "GivenName Migration 3 FamilyName appealSubmitted",
-#           "PostCode": "SE10 0XX",
-#           "DateOfBirth": "2000-01-01",
-#           "AddressLine1": "Flat 101",
-#           "EmailAddress": "example@test.com"
-#         }
-#       }
-#     ],
-#     "OtherCaseReferences": [
-#       {
-#         "id": "65e7cf55-21c9-4d5b-af62-afd13222a8eb",
-#         "value": "HU/50009/2024"
-#       }
-#     ]
-#   },
-#   "feeDescription": "Appeal determined with a hearing",
-#   "feeWithHearing": "140",
-#   "searchPostcode": "SE10 0XX",
-#   "hasOtherAppeals": "No",
-#   "adminDeclaration1": [
-#     "hasDeclared"
-#   ],
-#   "appellantAddress": {
-#     "County": "",
-#     "Country": "United Kingdom",
-#     "PostCode": "SE10 0XX",
-#     "PostTown": "London",
-#     "AddressLine1": "Flat 101",
-#     "AddressLine2": "10 Cutter Lane",
-#     "AddressLine3": ""
-#   },
-#   "appellantPartyId": "45889c92-2cf4-4dae-ae9a-f64aa051d525",
-#   "ariaDesiredState": "appealSubmitted",
-#   "isAppellantMinor": "No",
-#   "isNabaAdaEnabled": "No",
-#   "isNabaEnabledOoc": "No",
-#   "hearingTypeResult": "No",
-#   "hmctsCaseCategory": "Human rights",
-#   "notificationsSent": [],
-#   "tribunalDocuments": [],
-#   "appealOutOfCountry": "No",
-#   "appellantStateless": "hasNationality",
-#   "legalRepFamilyName": "",
-#   "paymentDescription": "Appeal determined with a hearing",
-#   "appellantFamilyName": "FamilyName appealSubmitted",
-#   "appellantGivenNames": "GivenName Migration 3",
-#   "isFeePaymentEnabled": "Yes",
-#   "isRemissionsEnabled": "Yes",
-#   "submissionOutOfTime": "No",
-#   "appealSubmissionDate": "2024-08-07",
-#   "appellantDateOfBirth": "2000-01-01",
-#   "feePaymentAppealType": "Yes",
-#   "letterSentOrReceived": "Sent",
-#   "localAuthorityPolicy": {
-#     "Organisation": {},
-#     "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
-#   },
-#   "tribunalReceivedDate": "2024-08-05",
-#   "additionalPaymentInfo": "Additional paid information",
-#   "appealReferenceNumber": "HU/50009/2024",
-#   "caseNameHmctsInternal": "GivenName Migration 3 FamilyName appealSubmitted",
-#   "hmctsCaseNameInternal": "GivenName Migration 3 FamilyName appealSubmitted",
-#   "isOutOfCountryEnabled": "Yes",
-#   "appellantNationalities": [
-#     {
-#       "id": "520cd556-39b3-4729-9093-a07513f4b03e",
-#       "value": {
-#         "code": "GB"
-#       }
-#     }
-#   ],
-#   "caseManagementCategory": {
-#     "value": {
-#       "code": "refusalOfHumanRights",
-#       "label": "Refusal of a human rights claim"
-#     },
-#     "list_items": [
-#       {
-#         "code": "refusalOfHumanRights",
-#         "label": "Refusal of a human rights claim"
-#       }
-#     ]
-#   },
-#   "caseManagementLocation": {
-#     "region": "1",
-#     "baseLocation": "765324"
-#   },
-#   "homeOfficeDecisionDate": "2024-08-05",
-#   "internalAppellantEmail": "example@test.com",
-#   "appealGroundsForDisplay": [],
-#   "appellantsRepresentation": "Yes",
-#   "appellantNameForDisplay": "GivenName Migration 3 FamilyName appealSubmitted",
-#   "deportationOrderOptions": "No",
-#   "uploadTheAppealFormDocs": [],
-#   "appellantHasFixedAddress": "Yes",
-#   "decisionHearingFeeOption": "decisionWithHearing",
-#   "hasServiceRequestAlready": "No",
-#   "homeOfficeReferenceNumber": "012345678",
-#   "isDlrmFeeRemissionEnabled": "Yes",
-#   "legalRepIndividualPartyId": "f7159136-7bff-40fb-921a-c8a53633afc8",
-#   "legalRepOrganisationPartyId": "71c50709-b802-42c7-ac56-2ef03e6e14e7",
-#   "appealSubmissionInternalDate": "2024-08-07",
-#   "ccdReferenceNumberForDisplay": "1723 0197 9804 1350",
-#   "legalRepresentativeDocuments": [],
-#   "sendDirectionActionAvailable": "Yes",
-#   "uploadTheNoticeOfDecisionDocs": [],
-#   "automaticEndAppealTimedEventId": "fd614594-6b6b-4116-8568-f0d80298486e",
-#   "currentCaseStateVisibleToJudge": "appealSubmitted",
-#   "currentCaseStateVisibleToCaseOfficer": "appealSubmitted",
-#   "changeDirectionDueDateActionAvailable": "No",
-#   "currentCaseStateVisibleToAdminOfficer": "appealSubmitted",
-#   "markEvidenceAsReviewedActionAvailable": "No",
-#   "uploadAddendumEvidenceActionAvailable": "No",
-#   "currentCaseStateVisibleToHomeOfficeAll": "appealSubmitted",
-#   "currentCaseStateVisibleToHomeOfficeApc": "appealSubmitted",
-#   "currentCaseStateVisibleToHomeOfficePou": "appealSubmitted",
-#   "currentCaseStateVisibleToHomeOfficeLart": "appealSubmitted",
-#   "uploadAdditionalEvidenceActionAvailable": "No",
-#   "applicationChangeDesignatedHearingCentre": "taylorHouse",
-#   "currentCaseStateVisibleToHomeOfficeGeneric": "appealSubmitted",
-#   "haveHearingAttendeesAndDurationBeenRecorded": "No",
-#   "currentCaseStateVisibleToLegalRepresentative": "appealSubmitted",
-#   "markAddendumEvidenceAsReviewedActionAvailable": "No",
-#   "uploadAddendumEvidenceLegalRepActionAvailable": "No",
-#   "isServiceRequestTabVisibleConsideringRemissions": "Yes",
-#   "uploadAddendumEvidenceHomeOfficeActionAvailable": "No",
-#   "uploadAddendumEvidenceAdminOfficerActionAvailable": "No",
-#   "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No",
-#   "remissionType": "hoWaiverRemission",
-#   "ariaMigrationTaskDueDays": "2"
-# } """
+    payloadData = """
+{
+  "email": "example@test.com",
+  "isEjp": "No",
+  "feeCode": "FEE0238",
+  "isAdmin": "Yes",
+  "paidDate": "2024-08-05",
+  "appealType": "refusalOfHumanRights",
+  "feeVersion": "2",
+  "paidAmount": "14000",
+  "s94bStatus": "No",
+  "paymentDate": "5 Aug 2024",
+  "feeAmountGbp": "14000",
+  "isIntegrated": "No",
+  "appellantInUk": "Yes",
+  "hearingCentre": "taylorHouse",
+  "isNabaEnabled": "No",
+  "paymentStatus": "Paid",
+  "staffLocation": "Taylor House",
+  "SearchCriteria": {
+    "SearchParties": [
+      {
+        "id": "ec889f66-0475-4633-8d69-b31b80d76e5a",
+        "value": {
+          "Name": "GivenName Migration 3 FamilyName appealSubmitted",
+          "PostCode": "SE10 0XX",
+          "DateOfBirth": "2000-01-01",
+          "AddressLine1": "Flat 101",
+          "EmailAddress": "example@test.com"
+        }
+      }
+    ],
+    "OtherCaseReferences": [
+      {
+        "id": "65e7cf55-21c9-4d5b-af62-afd13222a8eb",
+        "value": "HU/50009/2024"
+      }
+    ]
+  },
+  "feeDescription": "Appeal determined with a hearing",
+  "feeWithHearing": "140",
+  "searchPostcode": "SE10 0XX",
+  "hasOtherAppeals": "No",
+  "adminDeclaration1": [
+    "hasDeclared"
+  ],
+  "appellantAddress": {
+    "County": "",
+    "Country": "United Kingdom",
+    "PostCode": "SE10 0XX",
+    "PostTown": "London",
+    "AddressLine1": "Flat 101",
+    "AddressLine2": "10 Cutter Lane",
+    "AddressLine3": ""
+  },
+  "appellantPartyId": "45889c92-2cf4-4dae-ae9a-f64aa051d525",
+  "ariaDesiredState": "appealSubmitted",
+  "isAppellantMinor": "No",
+  "isNabaAdaEnabled": "No",
+  "isNabaEnabledOoc": "No",
+  "hearingTypeResult": "No",
+  "hmctsCaseCategory": "Human rights",
+  "notificationsSent": [],
+  "tribunalDocuments": [],
+  "appealOutOfCountry": "No",
+  "appellantStateless": "hasNationality",
+  "legalRepFamilyName": "",
+  "paymentDescription": "Appeal determined with a hearing",
+  "appellantFamilyName": "FamilyName appealSubmitted",
+  "appellantGivenNames": "GivenName Migration 3",
+  "isFeePaymentEnabled": "Yes",
+  "isRemissionsEnabled": "Yes",
+  "submissionOutOfTime": "No",
+  "appealSubmissionDate": "2024-08-07",
+  "appellantDateOfBirth": "2000-01-01",
+  "feePaymentAppealType": "Yes",
+  "letterSentOrReceived": "Sent",
+  "localAuthorityPolicy": {
+    "Organisation": {},
+    "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
+  },
+  "tribunalReceivedDate": "2024-08-05",
+  "additionalPaymentInfo": "Additional paid information",
+  "appealReferenceNumber": "HU/50009/2024",
+  "caseNameHmctsInternal": "GivenName Migration 3 FamilyName appealSubmitted",
+  "hmctsCaseNameInternal": "GivenName Migration 3 FamilyName appealSubmitted",
+  "isOutOfCountryEnabled": "Yes",
+  "appellantNationalities": [
+    {
+      "id": "520cd556-39b3-4729-9093-a07513f4b03e",
+      "value": {
+        "code": "GB"
+      }
+    }
+  ],
+  "caseManagementCategory": {
+    "value": {
+      "code": "refusalOfHumanRights",
+      "label": "Refusal of a human rights claim"
+    },
+    "list_items": [
+      {
+        "code": "refusalOfHumanRights",
+        "label": "Refusal of a human rights claim"
+      }
+    ]
+  },
+  "caseManagementLocation": {
+    "region": "1",
+    "baseLocation": "765324"
+  },
+  "homeOfficeDecisionDate": "2024-08-05",
+  "internalAppellantEmail": "example@test.com",
+  "appealGroundsForDisplay": [],
+  "appellantsRepresentation": "Yes",
+  "appellantNameForDisplay": "GivenName Migration 3 FamilyName appealSubmitted",
+  "deportationOrderOptions": "No",
+  "uploadTheAppealFormDocs": [],
+  "appellantHasFixedAddress": "Yes",
+  "decisionHearingFeeOption": "decisionWithHearing",
+  "hasServiceRequestAlready": "No",
+  "homeOfficeReferenceNumber": "012345678",
+  "isDlrmFeeRemissionEnabled": "Yes",
+  "legalRepIndividualPartyId": "f7159136-7bff-40fb-921a-c8a53633afc8",
+  "legalRepOrganisationPartyId": "71c50709-b802-42c7-ac56-2ef03e6e14e7",
+  "appealSubmissionInternalDate": "2024-08-07",
+  "ccdReferenceNumberForDisplay": "1723 0197 9804 1350",
+  "legalRepresentativeDocuments": [],
+  "sendDirectionActionAvailable": "Yes",
+  "uploadTheNoticeOfDecisionDocs": [],
+  "automaticEndAppealTimedEventId": "fd614594-6b6b-4116-8568-f0d80298486e",
+  "currentCaseStateVisibleToJudge": "appealSubmitted",
+  "currentCaseStateVisibleToCaseOfficer": "appealSubmitted",
+  "changeDirectionDueDateActionAvailable": "No",
+  "currentCaseStateVisibleToAdminOfficer": "appealSubmitted",
+  "markEvidenceAsReviewedActionAvailable": "No",
+  "uploadAddendumEvidenceActionAvailable": "No",
+  "currentCaseStateVisibleToHomeOfficeAll": "appealSubmitted",
+  "currentCaseStateVisibleToHomeOfficeApc": "appealSubmitted",
+  "currentCaseStateVisibleToHomeOfficePou": "appealSubmitted",
+  "currentCaseStateVisibleToHomeOfficeLart": "appealSubmitted",
+  "uploadAdditionalEvidenceActionAvailable": "No",
+  "applicationChangeDesignatedHearingCentre": "taylorHouse",
+  "currentCaseStateVisibleToHomeOfficeGeneric": "appealSubmitted",
+  "haveHearingAttendeesAndDurationBeenRecorded": "No",
+  "currentCaseStateVisibleToLegalRepresentative": "appealSubmitted",
+  "markAddendumEvidenceAsReviewedActionAvailable": "No",
+  "uploadAddendumEvidenceLegalRepActionAvailable": "No",
+  "isServiceRequestTabVisibleConsideringRemissions": "Yes",
+  "uploadAddendumEvidenceHomeOfficeActionAvailable": "No",
+  "uploadAddendumEvidenceAdminOfficerActionAvailable": "No",
+  "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No",
+  "remissionType": "hoWaiverRemission",
+  "ariaMigrationTaskDueDays": "2"
+} """

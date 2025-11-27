@@ -15,7 +15,6 @@ except Exception:
 def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
     start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
-
     start_case_creation_url = f"{ccd_base_url}{start_case_endpoint}"
 
     headers = {
@@ -35,7 +34,6 @@ def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token):
 
     validate_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
-
     validate_case_url = f"{ccd_base_url}{validate_case_endpoint}"
 
     headers = {
@@ -52,14 +50,22 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
             print(f"❌ Error decoding payloadData JSON string: {e}")
 
     try:
-        response = requests.post(validate_case_url,headers=headers,json={
-    "data": payloadData,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    }
-    )
+        json_object = {
+        "data": payloadData,
+        "event": {"id":"ariaCreateCase"},
+        "event_token": event_token, 
+        "ignore_warning": True
+        }
+
+        print(f"🔢 Validate posting payload: \nvalidate_case_url = {validate_case_url}\nheaders = {headers}\njson = {json_object} ")
+
+        response = requests.post(validate_case_url, 
+                                 headers=headers, 
+                                 json=json_object)
+
+        print(f"🔢 Response = {response}")
         return response
+
     except Exception as e:
         print(f"❌ Network error while calling {validate_case_url}: {e}")
         return None
@@ -83,27 +89,35 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
         except json.JSONDecodeError as e:
             print(f"❌ Error decoding payloadData JSON string: {e}")
 
-    print("🎁 payload recieved for submission:",type(payloadData))
+    print("🎁 payload recieved for submission:", type(payloadData))
+
     try:
-        response = requests.post(submit_case_url,headers=headers,json={
-    "data": payloadData,
-    "event": {"id":"ariaCreateCase"},
-    "event_token": event_token, 
-    "ignore_warning": True
-    })
+        json_object = {
+        "data": payloadData,
+        "event": {"id":"ariaCreateCase"},
+        "event_token": event_token, 
+        "ignore_warning": True
+        }
+
+        print(f"🔢 Submit payload: \nsubmit_case_url = {submit_case_url}\nheaders = {headers}\njson = {json_object} ")
+
+        response = requests.post(submit_case_url,headers=headers,json=json_object)
+
         print(f"🔢 Submit Response status: {response.status_code}:{response.text}")
-        # print(f"📨 Response text (first 1000 chars):\n{response.text[:1000]}")
         return response
+    
     except Exception as e:
         print(f"❌ Network error while calling {submit_case_url}: {e}")
         return None
 
 ### caseNo = event.key, payloadData = event.value
 def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
+    print(f"Starting processing case for {caseNo}")
 
     try:
         idam_token_mgr = IDAMTokenManager(env="sbox")
         idam_token,uid = idam_token_mgr.get_token()
+
     except Exception as e:
         result = {
             "RunID": runId,
@@ -114,6 +128,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
             "EndDateTime": datetime.now(timezone.utc).isoformat()
             }
         return result
+    
     try:
         s2s_manager = S2S_Manager("sbox",21)
         s2s_token = s2s_manager.get_token()
@@ -140,18 +155,20 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     try:
         ccd_base_url = urls[env]
+        print(f"URL for {urls}")
+
     except KeyError:
         raise ValueError("Invalid environment")
 
     ## start case creation
 
     start_response = start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token)
-    #print start response code at this step?
+    print("Starting case creation")
 
     if start_response is None or start_response.status_code != 200 :
 
         status_code = start_response.status_code if start_response else "N/A"
-        text = start_response.text if start_response else "No response from API"
+        text = start_response.text if start_response else "No response from API" #clean this up 
 
         print(f"Case creation failed: {status_code} - {text}")
 
@@ -164,14 +181,14 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         return result
+    
     else:
-
         event_token = start_response.json()["token"]
         print(f"Case creation started for case {caseNo} with event token {event_token}")
 
     # validate case
-
     validate_case_response = validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
+
     print(f"Validation response for case {caseNo}: {validate_case_response.status_code}")
     try:
         print(json.dumps(validate_case_response.json(), indent=2))
@@ -179,11 +196,9 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         print(validate_case_response.text)
 
     if validate_case_response is None or validate_case_response.status_code not in {201,200}:
-        
 
         status_code = validate_case_response.status_code if validate_case_response else "N/A"
         text = validate_case_response.text if validate_case_response else "No response from API"
-
         print(f"Case validation failed: {status_code} - {text}")
 
         result = {
@@ -201,14 +216,12 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
 
     ## submit case
     submit_case_response = submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2s_token)
-
-    print(submit_case_response)
+    print(f"Submit case response = {submit_case_response}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201,200}:
 
         status_code = submit_case_response.status_code if submit_case_response else "N/A"
         text = submit_case_response.text if submit_case_response else "No response from API"
-
         print(f"Case submission failed: {status_code} - {text}")
 
         result = {

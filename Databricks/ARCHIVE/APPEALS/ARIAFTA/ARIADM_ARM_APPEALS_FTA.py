@@ -6179,7 +6179,7 @@ def gold_appeals_with_a360():
     .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
     # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(64)
+    repartitioned_df = df_agg.repartition(200)
 
     # Remove existing files
     dbutils.fs.rm(f"{gold_outputs}/A360", True)

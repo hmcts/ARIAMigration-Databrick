@@ -1343,9 +1343,9 @@ def stg_create_td_iris_a360_content():
 from pyspark.sql import functions as F
 
 # Read DLT sources
-a360_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_a360_content").alias("a360")
-html_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
-json_df = spark.read.table("ariadm_arm_td.stg_create_td_iris_json_content").alias("json")
+a360_df = dlt.read("stg_create_td_iris_a360_content").alias("a360")
+html_df = dlt.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
+json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
 
 
 
@@ -2023,5 +2023,5 @@ dbutils.notebook.exit("Notebook completed successfully")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360
+# %sql
+# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360

@@ -917,12 +917,6 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail
-# where CaseNo = 'VA/00003/2009'
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation silver_archive_metadata
 # MAGIC <table style='float:left;'>

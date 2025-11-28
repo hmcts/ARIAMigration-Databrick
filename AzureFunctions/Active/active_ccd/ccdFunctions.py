@@ -57,7 +57,7 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
         "ignore_warning": True
         }
 
-        print(f"🔢 Validate posting payload: \nvalidate_case_url = {validate_case_url}\nheaders = {headers}\njson = {json_object} ")
+        print(f"🔢 Validate posting payload: \nvalidate_case_url = {validate_case_url}\nheaders = {headers}\njson = {json_object}\n^Validation response payload")
 
         response = requests.post(validate_case_url, 
                                  headers=headers, 
@@ -99,7 +99,7 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
         "ignore_warning": True
         }
 
-        print(f"🔢 Submit payload: \nsubmit_case_url = {submit_case_url}\nheaders = {headers}\njson = {json_object} ")
+        print(f"🔢 Submit payload: \nsubmit_case_url = {submit_case_url}\nheaders = {headers}\njson = {json_object}\n^Submission response payload")
 
         response = requests.post(submit_case_url,headers=headers,json=json_object)
 

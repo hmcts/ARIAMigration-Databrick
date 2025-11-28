@@ -29,7 +29,7 @@ resources:
             - task_key: DLT_paymentPending
           job_cluster_key: paymentPending_payload_databricks_job
           notebook_task:
-            notebook_path: "/Workspace/live/ACTIVE/Active_Publish_EH_HTML_JSON"
+            notebook_path: "/Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON"
             source: WORKSPACE
             base_parameters:
               state: paymentPending

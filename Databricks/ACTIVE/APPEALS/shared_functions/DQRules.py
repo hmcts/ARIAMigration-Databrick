@@ -451,7 +451,7 @@ def base_DQRules():
 
 
     checks["valid_feeDescription"] = ( #feeDescription is not null
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND feeDescription IN ('Notice of Appeal - appelant consent without hearing A','Appeal determined with a hearing')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL))"
+    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND feeDescription IN ('Notice of Appeal - appellant consents without hearing A','Appeal determined with a hearing')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL))"
     )
 
     # checks["valid_feeDescription"] = ( #feeDescription is not null

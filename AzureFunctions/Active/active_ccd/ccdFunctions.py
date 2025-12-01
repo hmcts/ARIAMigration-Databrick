@@ -91,6 +91,9 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
 
     print("🎁 payload recieved for submission:", type(payloadData))
 
+    ##modify json obj to test sending isAriaMigrated = "Yes"
+    payloadData = payloadData["isAriaMigrated"] = "Yes"
+
     try:
         json_object = {
         "data": payloadData,

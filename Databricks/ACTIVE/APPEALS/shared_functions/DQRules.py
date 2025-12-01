@@ -560,14 +560,14 @@ def base_DQRules():
     # IF CategoryId IN [38] = Include; ELSE OMIT
     # IF SponsorName IS NOT NULL = Yes; ELSE No
     checks["valid_hasSponsor_yes_no"] = (
-        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor = 'Yes') "
-        "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No') "
-        "OR ( hasSponsor IS NULL))"
+        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor = 'Yes')"
+        "OR (NOT array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No')"
+        "OR (hasSponsor = 'No'))"
     )
 
     # IF CategoryId IN [38] = Include; ELSE OMIT
     checks["valid_sponsorGivenNames_not_null"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL) )"
+        "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
     )
 
     # IF CategoryId IN [38] = Include; ELSE OMIT
@@ -578,10 +578,15 @@ def base_DQRules():
     # IF CategoryId IN [38] = Include; ELSE OMIT
     # IF Sponsor_Authorisation IS 1 = Yes; ELSE No 
     checks["valid_sponsorAuthorisation_yes_no"] = (
-        "((array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation = 1) AND sponsorAuthorisation = 'Yes') "
-        "OR (array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation != 1 OR Sponsor_Authorisation IS NULL) AND sponsorAuthorisation = 'No') "
-        "OR (sponsorAuthorisation IS NULL))"
+            "((array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAuthorisation IN('Yes', 'No'))" 
+            "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor = 'No' AND sponsorAuthorisation = 'No')"
+            "OR (sponsorAuthorisation = 'No'))"
     )
+
+    #     "((array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation = 1) AND sponsorAuthorisation = 'Yes') "
+    #     "OR (array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation != 1 OR Sponsor_Authorisation IS NULL) AND sponsorAuthorisation = 'No') "
+    #     "OR (sponsorAuthorisation IS NULL))"
+    # )
 
     ############################################################
     # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028

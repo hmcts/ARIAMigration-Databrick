@@ -193,7 +193,9 @@ def base_DQRules():
 
     checks["valid_legalRepHasAddress_yes_no"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as address are non-UK
       "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
+      # "OR (dv_representation = 'LR' AND legalRepHasAddress = 'No')"
     )
+
     checks["valid_legalRepHasAddressUK"]   = ( #Omit non-LR records. All fields are null, hence all expectations will fail. (55)
       "(((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND LEN(oocAddressLine1) < 151) OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL)"
       "OR ((dv_representation = 'LR' AND LEN(oocAddressLine2) < 51) OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))" 
@@ -223,7 +225,7 @@ def base_DQRules():
     # ##############################
     checks["valid_appellantStateless_values"] = ("(appellantStateless IN ('isStateless', 'hasNationality'))")
 
-    checks["valid_appellantNationalitiesDescription_not_null"] = "(appellantNationalitiesDescription IS NOT NULL)"
+    checks["valid_appellantNationalitiesDescription_not_null"] = ("(appellantNationalitiesDescription IS NOT NULL)")
 
     checks["valid_appellantNationalities_not_null"] = ("(appellantNationalities IS NOT NULL)")
 
@@ -622,8 +624,8 @@ def base_DQRules():
 
     # Only IF CategoryId IN [38] = Include; ELSE null
     checks["valid_appellantHasFixedAddressAdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
-        "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL) )"
+        "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
+        "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL))"
     )
 
     # addressLine1AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL

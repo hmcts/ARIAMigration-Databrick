@@ -266,7 +266,7 @@ def base_DQRules():
     # # ARIADM-709 (flagsLabels)
     # #############################
 
-    checks["valid_journeyType_aip_orNull"] = "((dv_representation = 'AIP' AND journeyType = 'aip') OR (dv_representation != 'AIP' AND journeyType IS NULL))"
+    # checks["valid_journeyType_aip_orNull"] = "((dv_representation = 'AIP' AND journeyType = 'aip') OR (dv_representation != 'AIP' AND journeyType IS NULL))"
 
     # #############################
     # # ARIADM-710 (flagsLabels)

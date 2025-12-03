@@ -1336,6 +1336,7 @@ def bronze_appealcase_bfdiary_bftype():
                 trim(col("bfd.CaseNo")).alias('CaseNo'),
                 col("bfd.Entry"),
                 col("bfd.EntryDate"),
+                col("bfd.BFDate"),
                 col("bfd.DateCompleted"),
                 col("bfd.Reason"),
                 
@@ -4727,7 +4728,7 @@ def generate_html(row, templates=templates):
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived"
+            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived"
         ]
 
     
@@ -4794,7 +4795,7 @@ def generate_html(row, templates=templates):
                 for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
+                f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
                 for i, history in enumerate(row.HistoryDetails or [])
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(
@@ -5877,7 +5878,7 @@ def stg_apl_combined():
     #     |-- NonLegalMember: integer (nullable = true)
 
     df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-        collect_list(struct('CaseNo', 'Entry', 'EntryDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
     )
 
     df_required_incompatible_adjudicator = dlt.read("silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(

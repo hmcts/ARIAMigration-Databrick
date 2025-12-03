@@ -630,7 +630,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
     ## Adding extra flagsLabels fields with conditions
     grouped = grouped.withColumn("s94bStatus", lit("No"))
     ####### ARIADM-709 ticket condition here #######
-    grouped = grouped.withColumn("journeyType", when(col("dv_representation") == "AIP", lit("aip")).otherwise(None))
+    # grouped = grouped.withColumn("journeyType", when(col("dv_representation") == "AIP", lit("aip")).otherwise(None))
     grouped = grouped.withColumn("isAdmin", lit("Yes"))
     ####### ARIADM-710 ticket condition here #######
     grouped = grouped.withColumn("isAriaMigratedFeeExemption", when(col("CasePrefix") == "DA", lit("Yes")).otherwise(lit("No")))
@@ -645,7 +645,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         when(conditions, col("caseFlags")).otherwise(None).alias("caseFlags"),
         when(conditions, col("appellantLevelFlags")).otherwise(None).alias("appellantLevelFlags"),
         when(conditions, col("s94bStatus")).otherwise(None).alias("s94bStatus"),
-        col("journeyType"),
+        # col("journeyType"),
         when(conditions, col("isAdmin")).otherwise(None).alias("isAdmin"),
         when(conditions, col("isAriaMigratedFeeExemption")).otherwise(None).alias("isAriaMigratedFeeExemption"),
         when(conditions, col("isEjp")).otherwise(None).alias("isEjp")
@@ -678,10 +678,10 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         lit("yes").alias("s94bStatus_Transformation"),
 
         #Audit journeyType
-        array(struct(*common_inputFields)).alias("journeyType_inputFields"),
-        array(struct(*common_inputValues)).alias("journeyType_inputValues"),
-        col("content.journeyType"),
-        lit("yes").alias("journeyType_Transformation"),
+        # array(struct(*common_inputFields)).alias("journeyType_inputFields"),
+        # array(struct(*common_inputValues)).alias("journeyType_inputValues"),
+        # col("content.journeyType"),
+        # lit("yes").alias("journeyType_Transformation"),
 
         #Audit isAdmin
         array(struct(*common_inputFields)).alias("isAdmin_inputFields"),

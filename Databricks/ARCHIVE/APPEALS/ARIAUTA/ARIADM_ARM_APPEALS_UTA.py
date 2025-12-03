@@ -4799,7 +4799,7 @@ def generate_html(row, templates=templates):
                 for i, history in enumerate(row.HistoryDetails or [])
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(bfdiary.EntryDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td></tr>"
+                f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"
                 for i, bfdiary in enumerate(row.BFDairyDetails or [])
             ),
             "{{DependentsPlaceHolder}}": "\n".join(

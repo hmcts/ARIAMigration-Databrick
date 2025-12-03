@@ -1336,6 +1336,7 @@ def bronze_appealcase_bfdiary_bftype():
                 trim(col("bfd.CaseNo")).alias('CaseNo'),
                 col("bfd.Entry"),
                 col("bfd.EntryDate"),
+                col("bfd.BFDate"),
                 col("bfd.DateCompleted"),
                 col("bfd.Reason"),
                 
@@ -4727,7 +4728,7 @@ def generate_html(row, templates=templates):
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived"
+            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived"
         ]
 
     
@@ -5877,7 +5878,7 @@ def stg_apl_combined():
     #     |-- NonLegalMember: integer (nullable = true)
 
     df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-        collect_list(struct('CaseNo', 'Entry', 'EntryDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
     )
 
     df_required_incompatible_adjudicator = dlt.read("silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(

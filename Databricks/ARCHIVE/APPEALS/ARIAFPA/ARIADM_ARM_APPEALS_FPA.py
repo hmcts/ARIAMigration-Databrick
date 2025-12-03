@@ -4729,7 +4729,7 @@ def generate_html(row, templates=templates):
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived"
+            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
         ]
 
     

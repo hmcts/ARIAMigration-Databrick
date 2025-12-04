@@ -63,8 +63,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     res_eh_producer = EventHubProducerClient.from_connection_string(
         conn_str=result_eh_secret_key)
     
-    seen_cases = []
-    
     async with res_eh_producer:
         event_data_batch = await res_eh_producer.create_batch()
         try:
@@ -72,8 +70,8 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                 try:
                     logging.info(f'Event received with partition key: {event.partition_key}')
 
+                    ## Parse the payload
                     start_datetime = datetime.now(timezone.utc).isoformat()
-
                     caseNo = event.partition_key
                     payload_str = event.get_body().decode('utf-8')
                     payload = json.loads(payload_str)
@@ -81,20 +79,38 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     state = payload.get("State", None)
                     data = payload.get("Content", None)
 
-                    if caseNo in seen_cases:
-                        raise Exception(f'Duplicate caseNo {caseNo} in the same batch')
+                    ##Build the idempotency flags
+                    idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
+                    idempotency_container_name = "af-idempotency"
 
+                    idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
+                    idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
+                    idempotency_base = f"active/processed/{payload.get('State', None)}"
+                    idempotency_blob = idempotency_container.get_blob_client(
+                        f"{idempotency_base}/{event.partition_key}.flag"
+                    )
+
+                    ##Idempotency check
+                    if await idempotency_blob.exists():
+                        logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for state/file: {payload.get("State", None)}{event.partition_key}")
+                        continue
+
+                    ##Process file if idempotency check is false
                     result = await asyncio.to_thread(
                         process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
                         )
-                    if result["Status"] == "Success":
-                        seen_cases.append(caseNo)
                     
                     result["StartDateTime"] = start_datetime
+                    
+                    if result["Status"] == "Success":
+                        await idempotency_blob.upload_blob(b"", overwrite=True)
+                        logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
                 
                     logging.info(f'Processing result for caseNo {caseNo}')
 
                     result_json = json.dumps(result)
+
                     try:
                         event_data_batch.add(EventData(result_json))
                     except ValueError:

@@ -83,64 +83,47 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     state = payload.get("State", None)
                     data = payload.get("Content", None)
 
+                    ##Once the file is received, regardless of success/failure - flag it for idempotency
+                    try:
+                        received_blob_path = f"active/{state}/received/{caseNo}.flag"
+                        received_blob = idempotency_container.get_blob_client(received_blob_path)
+
+                        await received_blob.upload_blob(b"", overwrite=True)
+                        logging.info(f"[IDEMPOTENCY] Marked RECEIVED for {state}/{caseNo}")
+
+                    except Exception as recv_err:
+                        logging.error(f"[IDEMPOTENCY] Failed to mark RECEIVED for {state}/{caseNo}: {recv_err}")
+
                     ## Build idempotency blob reference
-                    idempotency_base = f"active/processed/{state}"
-                    idempotency_blob_path = f"{idempotency_base}/{caseNo}.flag"
+                    idempotency_blob_path = f"active/{state}/processed/{caseNo}.flag"
                     idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
-                    ## Idempotency check
                     try:
-                        blob_exists = await idempotency_blob.exists()
-                        if blob_exists:
-                            logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for {state}/{caseNo}")
+                        if await idempotency_blob.exists():
+                            logging.warning(
+                                f"[IDEMPOTENCY] Skipping duplicate message for {state}/{caseNo}"
+                            )
                             continue
                     except Exception as check_error:
-                        logging.error(f"[IDEMPOTENCY] Error checking blob existence for {caseNo}: {check_error}")
-                        pass
-
-                    ## Reference the validation function for idempotency as those that fail validation
-                    ## Can be picked up and prevented from pushing through twice (non-idempotent)
-                    ### how do we pull these parameters through
-                    validation_result = await asyncio.to_thread(validate_case, ccd_base_url, event_token,
-                                                                data, jid, ctid, idam_token, uid, s2s_token
-                                                                )
-                    
-                    if not validation_result.get("is_valid", False): # does this is_valid value appear in the validation?
-
-                        result = {
-                            "RunID": run_id,
-                            "CaseNo": caseNo,
-                            "State": state,
-                            "StartDateTime": start_datetime,
-                            "EndDateTime": datetime.now(timezone.utc).isoformat(),
-                            "CCDCaseID": None,
-                            "Status": "ValidationFailed",
-                            "Error": validation_result.get("error", "Validation failed")
-                        }
-                        logging.warning(f"Validation failed for {caseNo}: {result['Error']}")
-                    else:
-                        # Validation passed - process file
-                        result = await asyncio.to_thread(
-                            process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
+                        logging.error(
+                            f"[IDEMPOTENCY] Error checking blob for {caseNo}: {check_error}"
                         )
 
-                    #Process file
-                    # result = await asyncio.to_thread(
-                    #     process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
-                    # )
-                    
+                    # Process the file
+                    result = await asyncio.to_thread(
+                        process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
+                    )
                     result["StartDateTime"] = start_datetime
-                    
-                    #Overwrite the value if multiple instances/retry mechanism has kicked in
-                    #Use empty bytes. we only want to store the file name 
+
+                    # Mark processed if success
                     if result.get("Status") == "Success":
                         try:
                             await idempotency_blob.upload_blob(b"", overwrite=True)
                             logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
                         except Exception as upload_error:
-                            logging.error(f"[IDEMPOTENCY] Failed to mark {caseNo} as processed: {upload_error}")
-                
-                    logging.info(f'Processing result for caseNo {caseNo}')
+                            logging.error(
+                                f"[IDEMPOTENCY] Failed to mark processed for {caseNo}: {upload_error}"
+                            )
 
                     result_json = json.dumps(result)
 
@@ -168,91 +151,3 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             await idempotency_blob_service.close()
             await kv_client.close()
             await credential.close()
-
-
-# async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
-#     logging.info(f"Processing a batch of {len(azeventhub)} events")
-
-#     # Retrieve credentials
-#     credential = DefaultAzureCredential()
-#     logging.info('Connected to Azure Credentials')
-
-#     kv_url = f"https://ingest{LZ_KEY}-meta002-{ENV}.vault.azure.net"
-#     kv_client = SecretClient(vault_url=kv_url, credential=credential)
-#     logging.info(f'Connected to KeyVault: {kv_url}')
-
-#     results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
-
-#     results_eh_key = ( await kv_client.get_secret(f"{results_eh_name}-key") )
-
-#     result_eh_secret_key = results_eh_key.value
-#     logging.info('Acquired KV secret for Results Event Hub')
-
-#     res_eh_producer = EventHubProducerClient.from_connection_string(
-#         conn_str=result_eh_secret_key)
-    
-#     async with res_eh_producer:
-#         event_data_batch = await res_eh_producer.create_batch()
-#         try:
-#             for event in azeventhub:
-#                 try:
-#                     logging.info(f'Event received with partition key: {event.partition_key}')
-
-#                     ## Parse the payload
-#                     start_datetime = datetime.now(timezone.utc).isoformat()
-#                     caseNo = event.partition_key
-#                     payload_str = event.get_body().decode('utf-8')
-#                     payload = json.loads(payload_str)
-#                     run_id = payload.get("RunID", None)
-#                     state = payload.get("State", None)
-#                     data = payload.get("Content", None)
-
-#                     ##Build the idempotency flags
-#                     # idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
-#                     # idempotency_container_name = "af-idempotency"
-
-#                     # idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
-#                     # idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
-
-#                     # idempotency_base = f"active/processed/{payload.get('State', None)}"
-#                     # idempotency_blob = idempotency_container.get_blob_client(
-#                     #     f"{idempotency_base}/{event.partition_key}.flag"
-#                     # )
-
-#                     # ##Idempotency check
-#                     # if await idempotency_blob.exists():
-#                     #     logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for state/file: {payload.get("State", None)}{event.partition_key}")
-#                     #     continue
-
-#                     ##Process file if idempotency check is false
-#                     result = await asyncio.to_thread(
-#                         process_case,ENV,caseNo,data,run_id,state,PR_NUMBER
-#                         )
-                    
-#                     result["StartDateTime"] = start_datetime
-                    
-#                     # if result["Status"] == "Success":
-#                     #     await idempotency_blob.upload_blob(b"", overwrite=True)
-#                     #     logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
-                
-#                     logging.info(f'Processing result for caseNo {caseNo}')
-
-#                     result_json = json.dumps(result)
-
-#                     try:
-#                         event_data_batch.add(EventData(result_json))
-#                     except ValueError:
-#                         # If the batch is full, send it and create a new one
-#                         await res_eh_producer.send_batch(event_data_batch)
-#                         logging.info(f'Sent a batch of events to Results Event Hub')
-#                         event_data_batch = await res_eh_producer.create_batch()
-#                         event_data_batch.add(EventData(result_json))
-#                 except Exception as e:
-#                     logging.error(f'Error processing event for caseNo {caseNo}: {e}')
-            
-#             # Send any remaining events in the batch
-#             if len(event_data_batch) > 0:
-#                 await res_eh_producer.send_batch(event_data_batch)
-#                 logging.info(f'Sent the final batch of events to Results Event Hub')
-#         except Exception as e:
-#             logging.error(f'Error in event hub processing batch: {e}')

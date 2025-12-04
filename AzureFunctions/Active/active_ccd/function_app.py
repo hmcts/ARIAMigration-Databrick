@@ -93,32 +93,21 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for {state}/{caseNo}")
                         continue
 
-                    ##Retrieve tokens for validation
-                    idam_manager = IDAMTokenManager(ENV, 18000)
-                    idam_token, uid = idam_manager.get_token()
-                    s2s_manager = S2S_Manager(ENV, 18000)
-                    s2s_token = s2s_manager.get_token()
-
-                    validate_response = await asyncio.to_thread(
-                    validate_case,
-                    ccd_base_url = f"https://ccd-service-{ENV}.platform.hmcts.net",
-                    event_token = run_id,
-                    payloadData = data,
-                    jid = "IA",
-                    ctid = "Asylum",
-                    idam_token = idam_token,
-                    uid = uid,
-                    s2s_token = s2s_token
+                    # Process the file
+                    result = await asyncio.to_thread(
+                        process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
                     )
+                    result["StartDateTime"] = start_datetime
 
-                    # If validation is a pass or fail return the idempotent value
-                    await idempotency_blob.upload_blob(b"", overwrite=True)
-
-                    if validate_response is not None and validate_response.status_code == 200:
-                        result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_NUMBER)
-                        result["StartDateTime"] = start_datetime
-                    else: 
-                        logging.warning(f"Validation failed for {caseNo}, skipping processing")
+                    # Mark processed if success
+                    if result.get("Status") == "Success":
+                        try:
+                            await idempotency_blob.upload_blob(b"", overwrite=True)
+                            logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
+                        except Exception as upload_error:
+                            logging.error(
+                                f"[IDEMPOTENCY] Failed to mark processed for {caseNo}: {upload_error}"
+                            )
 
                     result_json = json.dumps(result)
 
@@ -146,8 +135,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             await idempotency_blob_service.close()
             await kv_client.close()
             await credential.close()
-
-
 
 
 # async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
@@ -199,9 +186,9 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 #                         continue
 
 #                     ##Retrieve tokens for validation
-#                     idam_manager = IDAMTokenManager(ENV)
+#                     idam_manager = IDAMTokenManager(ENV, 18000)
 #                     idam_token, uid = idam_manager.get_token()
-#                     s2s_manager = S2S_Manager(ENV)
+#                     s2s_manager = S2S_Manager(ENV, 18000)
 #                     s2s_token = s2s_manager.get_token()
 
 #                     validate_response = await asyncio.to_thread(
@@ -216,25 +203,14 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 #                     s2s_token = s2s_token
 #                     )
 
-#                     if validate_response is None or validate_response.status_code != 200:
+#                     # If validation is a pass or fail return the idempotent value
+#                     await idempotency_blob.upload_blob(b"", overwrite=True)
+
+#                     if validate_response is not None and validate_response.status_code == 200:
+#                         result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_NUMBER)
+#                         result["StartDateTime"] = start_datetime
+#                     else: 
 #                         logging.warning(f"Validation failed for {caseNo}, skipping processing")
-#                         continue
-
-#                     # Process the file
-#                     result = await asyncio.to_thread(
-#                         process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
-#                     )
-#                     result["StartDateTime"] = start_datetime
-
-#                     # Mark processed if success
-#                     if result.get("Status") == "Success":
-#                         try:
-#                             await idempotency_blob.upload_blob(b"", overwrite=True)
-#                             logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
-#                         except Exception as upload_error:
-#                             logging.error(
-#                                 f"[IDEMPOTENCY] Failed to mark processed for {caseNo}: {upload_error}"
-#                             )
 
 #                     result_json = json.dumps(result)
 

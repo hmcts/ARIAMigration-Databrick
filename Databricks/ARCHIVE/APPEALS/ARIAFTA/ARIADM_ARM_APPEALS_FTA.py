@@ -5960,41 +5960,6 @@ def stg_apl_combined():
 
 # COMMAND ----------
 
-df_dfdairy = dlt.read("silver_dfdairy_detail") \
-    .orderBy("BFDate") \
-    .groupBy("CaseNo") \
-    .agg(
-        collect_list(
-            struct('CaseNo', 'Entry', 'EntryDate', "BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')
-        ).alias("BFDairyDetails")
-    )
-
-# COMMAND ----------
-
-from pyspark.sql.functions import size
-
-df_dfdairy = spark.read.table("ariadm_arm_fta.silver_dfdairy_detail") \
-    .orderBy("BFDate") \
-    .groupBy("CaseNo") \
-    .agg(
-        collect_list(
-            struct('CaseNo', 'Entry', 'EntryDate', "BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')
-        ).alias("BFDairyDetails")
-    ) \
-    .withColumn("BFDairyDetails_len", size("BFDairyDetails")) \
-    .filter(col("BFDairyDetails_len") > 1)
-
-display(df_dfdairy)
-
-
-
-# COMMAND ----------
-
-df_status_details =  spark.read.table("ariadm_arm_fta.silver_status_detail")
-df_status_details.select("BailHOConsent").distinct().display()
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation: stg_fta_create_json_content
 @dlt.table(
     name="stg_apl_create_json_content",

@@ -80,21 +80,21 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     data = payload.get("Content", None)
 
                     ##Build the idempotency flags
-                    idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
-                    idempotency_container_name = "af-idempotency"
+                    # idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
+                    # idempotency_container_name = "af-idempotency"
 
-                    idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
-                    idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+                    # idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
+                    # idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
-                    idempotency_base = f"active/processed/{payload.get('State', None)}"
-                    idempotency_blob = idempotency_container.get_blob_client(
-                        f"{idempotency_base}/{event.partition_key}.flag"
-                    )
+                    # idempotency_base = f"active/processed/{payload.get('State', None)}"
+                    # idempotency_blob = idempotency_container.get_blob_client(
+                    #     f"{idempotency_base}/{event.partition_key}.flag"
+                    # )
 
-                    ##Idempotency check
-                    if await idempotency_blob.exists():
-                        logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for state/file: {payload.get("State", None)}{event.partition_key}")
-                        continue
+                    # ##Idempotency check
+                    # if await idempotency_blob.exists():
+                    #     logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for state/file: {payload.get("State", None)}{event.partition_key}")
+                    #     continue
 
                     ##Process file if idempotency check is false
                     result = await asyncio.to_thread(
@@ -103,9 +103,9 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     
                     result["StartDateTime"] = start_datetime
                     
-                    if result["Status"] == "Success":
-                        await idempotency_blob.upload_blob(b"", overwrite=True)
-                        logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
+                    # if result["Status"] == "Success":
+                    #     await idempotency_blob.upload_blob(b"", overwrite=True)
+                    #     logging.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
                 
                     logging.info(f'Processing result for caseNo {caseNo}')
 

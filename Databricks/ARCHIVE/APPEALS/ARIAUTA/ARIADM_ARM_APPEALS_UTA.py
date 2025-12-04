@@ -5794,7 +5794,7 @@ def stg_apl_combined():
             'HearingPointsChangeDoNotUse'
         )
     ).alias("hearingpointschangedetail")
-)
+    )
     
 
 
@@ -5877,8 +5877,17 @@ def stg_apl_combined():
     #     |-- JudgeFirstTier: integer (nullable = true)
     #     |-- NonLegalMember: integer (nullable = true)
 
-    df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+    # df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
+    #     collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+    # )
+    
+    df_dfdairy = spark.read.table("ariadm_arm_fta.silver_dfdairy_detail").groupBy("CaseNo").agg(
+        sort_array(
+            collect_list(
+                struct("BFDate",'CaseNo', 'Entry', 'EntryDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')
+            ),
+            asc=False
+        ).alias("BFDairyDetails")
     )
 
     df_required_incompatible_adjudicator = dlt.read("silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(

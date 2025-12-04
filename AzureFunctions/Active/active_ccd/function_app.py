@@ -16,10 +16,10 @@ from typing import List
 try:
     # When running as a function app the module will be a package. Use a
     # relative import where possible.
-    from .ccdFunctions import process_case
+    from .ccdFunctions import process_case, validate_case
 except Exception:
     # Fallback for running the script directly during local debugging.
-    from ccdFunctions import process_case
+    from ccdFunctions import process_case, validate_case
 
 ENV = os.environ["ENVIRONMENT"]
 LZ_KEY = os.environ["LZ_KEY"]
@@ -59,7 +59,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     result_eh_secret_key = results_eh_key.value
     logging.info('Acquired KV secret for Results Event Hub')
 
-    # Initialize idempotency blob client ONCE outside the loop
+    # Initialise the idempotent client outside of the loop / context manager
     idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
     idempotency_container_name = "af-idempotency"
     idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
@@ -98,10 +98,36 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logging.error(f"[IDEMPOTENCY] Error checking blob existence for {caseNo}: {check_error}")
                         pass
 
+                    ## Reference the validation function for idempotency as those that fail validation
+                    ## Can be picked up and prevented from pushing through twice (non-idempotent)
+                    ### how do we pull these parameters through
+                    validation_result = await asyncio.to_thread(validate_case, ccd_base_url, event_token,
+                                                                data, jid, ctid, idam_token, uid, s2s_token
+                                                                )
+                    
+                    if not validation_result.get("is_valid", False): # does this is_valid value appear in the validation?
+
+                        result = {
+                            "RunID": run_id,
+                            "CaseNo": caseNo,
+                            "State": state,
+                            "StartDateTime": start_datetime,
+                            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+                            "CCDCaseID": None,
+                            "Status": "ValidationFailed",
+                            "Error": validation_result.get("error", "Validation failed")
+                        }
+                        logging.warning(f"Validation failed for {caseNo}: {result['Error']}")
+                    else:
+                        # Validation passed - process file
+                        result = await asyncio.to_thread(
+                            process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
+                        )
+
                     #Process file
-                    result = await asyncio.to_thread(
-                        process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
-                    )
+                    # result = await asyncio.to_thread(
+                    #     process_case, ENV, caseNo, data, run_id, state, PR_NUMBER
+                    # )
                     
                     result["StartDateTime"] = start_datetime
                     

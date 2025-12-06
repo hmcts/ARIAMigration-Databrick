@@ -4796,11 +4796,11 @@ def generate_html(row, templates=templates):
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
-                for i, history in enumerate(row.HistoryDetails or [])
+                for i, history in enumerate(sorted(row.HistoryDetails or [])
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"
-                for i, bfdiary in enumerate(row.BFDairyDetails or [])
+                for i, bfdiary in enumerate(sorted(row.BFDairyDetails or [], key=lambda x: x.BFDate, reverse=True), start=1)
             ),
             "{{DependentsPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{dependent.AppellantName}</td><td id=\"midpadding\">{dependent.CaseAppellantRelationship}</td></tr>"
@@ -5877,9 +5877,9 @@ def stg_apl_combined():
     #     |-- JudgeFirstTier: integer (nullable = true)
     #     |-- NonLegalMember: integer (nullable = true)
 
-    # df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-    #     collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
-    # )
+    df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
+        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+    )
     
     df_dfdairy = spark.read.table("ariadm_arm_fta.silver_dfdairy_detail").groupBy("CaseNo").agg(
         sort_array(

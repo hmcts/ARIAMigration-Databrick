@@ -4796,7 +4796,7 @@ def generate_html(row, templates=templates):
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
-                for i, history in enumerate(sorted(row.HistoryDetails or [])
+                for i, history in enumerate(sorted(row.HistoryDetails or [], key=lambda x: x.HistDate, reverse=True), start=1)
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"

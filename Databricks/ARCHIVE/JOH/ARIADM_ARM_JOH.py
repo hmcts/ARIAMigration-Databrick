@@ -1392,15 +1392,20 @@ def stg_judicial_officer_combined():
         ).alias("Roles")
     ).cache()
      
-     # Aggregate History
+    # Aggregate History
     grouped_history = df_history.groupBy("AdjudicatorId").agg(
-        sort_array(
             collect_list(
                 struct("HistDate", "HistType", "UserName", "Comment")
-            ),
-            asc=False
         ).alias("History")
     )
+    # grouped_history = df_history.groupBy("AdjudicatorId").agg(
+    #     sort_array(
+    #         collect_list(
+    #             struct("HistDate", "HistType", "UserName", "Comment")
+    #         ),
+    #         asc=False
+    #     ).alias("History")
+    # )
 
     # Join all aggregated data with JudicialOfficerDetails
     df_combined = (

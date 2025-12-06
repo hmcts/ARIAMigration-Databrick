@@ -4797,11 +4797,11 @@ def generate_html(row, templates=templates):
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(history.HistDate)}</td><td id=\"midpadding\">{history.HistTypeDescription}</td><td id=\"midpadding\">{history.Fullname}</td><td id=\"midpadding\">{history.HistoryComment}</td><td id=\"midpadding\">{history.DeletedByUser}</td></tr>"
-                for i, history in enumerate(row.HistoryDetails or [])
+                for i, history in enumerate(sorted(row.HistoryDetails or [], key=lambda x: x.HistDate, reverse=True), start=1)
             ),
             "{{bfdiaryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{format_date(bfdiary.DateCompleted)}</td></tr>"
-                for i, bfdiary in enumerate(row.BFDairyDetails or [])
+                for i, bfdiary in enumerate(sorted(row.BFDairyDetails or [], key=lambda x: x.BFDate, reverse=True), start=1)
             ),
             "{{DependentsPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{dependent.AppellantName}</td><td id=\"midpadding\">{dependent.CaseAppellantRelationship}</td></tr>"
@@ -5878,9 +5878,9 @@ def stg_apl_combined():
     #     |-- JudgeFirstTier: integer (nullable = true)
     #     |-- NonLegalMember: integer (nullable = true)
 
-    # df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-    #     collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
-    # )
+    df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
+        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+    )
     
     df_dfdairy = spark.read.table("ariadm_arm_fta.silver_dfdairy_detail").groupBy("CaseNo").agg(
         sort_array(
@@ -6481,7 +6481,7 @@ dbutils.notebook.exit("Notebook completed successfully")
 # case_no = 'AA/00001/2023' # HistoryComment
 # case_no = 'AA/00007/2014' # fileLocationNote
 # case_no = 'AA/00001/2012' # payment details
-case_no = 'IM/00023/2003' # dependents
+# case_no = 'IM/00023/2003' # dependents
 # case_no = 'AA/00017/2011' # Linked Files
 # case_no = 'TH/00137/2003' ## StatusDetailFirstTierHearingTemplate
 # case_no = 'AA/00011/2012' # bf dairy
@@ -6508,7 +6508,7 @@ case_no = 'IM/00023/2003' # dependents
 # case_no = 'AA/00006/2012' # CaseStatus(multiple) 37
 # case_no = 'TH/00137/2003' # CaseStatus 37
 # case_no = 'OC/00015/2011'  # CaseStatus 37 with CaseStatus 17
-# case_no = 'OC/00014/2005' # CaseStatus 10 and 30 multiple
+case_no = 'OC/00014/2005' # CaseStatus 10 and 30 multiple
 
 
 # COMMAND ----------
@@ -6542,7 +6542,7 @@ case_no = 'IM/00023/2003' # dependents
 
 # DBTITLE 1,Display HTML Content
 # # case_no = 'HR/00014/2004'
-# case_no = 'AA/00002/2012'
+# # case_no = 'AA/00002/2012'
 # df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_html")
 
 # # display(df)
@@ -6553,19 +6553,14 @@ case_no = 'IM/00023/2003' # dependents
 
 # COMMAND ----------
 
-# %sql
-# drop schema ariadm_arm_appeals cascade
-
-# COMMAND ----------
-
 # DBTITLE 1,Display JSON Content
 
-# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_appeals.gold_appeals_with_json")
+# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_json")
 # display(df)
 # # Filter for the specific case and extract the JSON collection
-# filtered_row = df.filter(col("CaseNo") == "OC/00014/2005").select("JSONCollection").first()
+# filtered_row = df.filter(col("CaseNo") == "OC/00014/2005").select("JSON_content").first()
 
-# json_data = filtered_row["JSONCollection"]
+# json_data = filtered_row["JSON_content"]
 
 # formated_json = json.dumps(json.loads(json_data), indent=4)
     
@@ -6577,11 +6572,11 @@ case_no = 'IM/00023/2003' # dependents
 
 # DBTITLE 1,Display A360 Content
 
-# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_appeals.gold_appeals_with_a360")
+# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_fta.gold_appeals_with_a360")
 
 # display(df)
 # # Filter for the specific case and extract the JSON collection
-# filtered_row = df.filter(col("A360BatchId") == 1).select("consolidate_A360Content").first()
+# filtered_row = df.filter(col("A360_BatchId") == 1).select("consolidate_A360Content").first()
 
 # A360Content_data = filtered_row["consolidate_A360Content"]
 

@@ -24,7 +24,9 @@ def base_DQRules():
     checks["valid_appealtype_in_allowed_values"] = (
         "(AppealType IN ('refusalOfHumanRights', 'refusalOfEu', 'deprivation', 'protection', 'revocationOfProtection', 'euSettlementScheme'))"
     )
+
     checks["valid_hmctsCaseCategory_not_null"] = "(hmctsCaseCategory IS NOT NULL)"
+
     checks["valid_appealTypeDescription_not_null"] = "(appealTypeDescription IS NOT NULL)"
     # Null Values as accepted values as where Representation = AIP
     checks["valid_caseManagementCategory_code_in_list_items"] = """
@@ -36,6 +38,7 @@ def base_DQRules():
       )
     )
     """
+    
     checks["valid_caseManagementCategory_label_in_list_items"] = """
     (
       caseManagementCategory.value.label IS NULL OR
@@ -75,9 +78,15 @@ def base_DQRules():
     checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
         "(recordedOutOfTimeDecision IS NULL OR recordedOutOfTimeDecision IN ('Yes', 'No'))"
     )
-    checks["valid_applicationOutOfTimeExplanation_yes_no_or_null"] = (
-        "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation IN ('Yes', 'No'))"
+    checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
+        "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
     )
+
+
+
+    # checks["valid_applicationOutOfTimeExplanation_yes_no_or_null"] = (
+    #     "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation IN ('Yes', 'No'))"
+    # )
 
     # ##############################
     # # ARIADM-708 (CaseData)

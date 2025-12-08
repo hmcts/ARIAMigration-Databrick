@@ -1,36 +1,33 @@
 resources:
   jobs:
-    db_wf_apl_fpa_receive_job:
-      name: db_wf_apl_fpa_receive_job
-      job_clusters:
-        - job_cluster_key: db_wf_apl_fpa_receive_job
-          new_cluster:
-            spark_version: 14.3.x-scala2.12
-            node_type_id: Standard_D8ds_v5
-            num_workers: 8
+    db_wf_fpa_receive_job:
+      name: "db_wf_fpa_receive_job"
       tasks:
-        - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fpa_receive_job
-          python_wheel_task:
-            entry_point: main
-            package_name: shared_functions
-          libraries: 
-            - whl: "dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl"
-
-        - task_key: fpa_response_autoloader
+        - task_key: collect_responses
           depends_on:
             - task_key: run-my-wheel
-          job_cluster_key: db_wf_apl_fpa_receive_job
           notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/ARIADM_RESPONSE_AUTOLOADER_FPA"
+            notebook_path: /Workspace/live/ARCHIVE/APPEALS/ARIAFPA/fpa_resp_autoloader
             source: WORKSPACE
-          
-        - task_key: appeal_fpa_receive_dashboard
-          depends_on:
-            - task_key: fpa_response_autoloader
-          job_cluster_key: db_wf_apl_fpa_receive_job
-          notebook_task:
-            notebook_path: "/Workspace/live/ARCHIVE/APPEALS/ARIAFPA/AUDIT/FPA_Receive_Audit_Dashboard"
-            source: WORKSPACE
+          job_cluster_key: db_wf_fpa_receive_job
+        - task_key: run-my-wheel
+          python_wheel_task:
+            package_name: shared_functions
+            entry_point: main
+          job_cluster_key: db_wf_fpa_receive_job
+          libraries:
+            - whl: dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl
+      job_clusters:
+        - job_cluster_key: db_wf_fpa_receive_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            azure_attributes:
+              availability: ON_DEMAND_AZURE
+            node_type_id: Standard_D8ds_v5
+            enable_elastic_disk: true
+            runtime_engine: PHOTON
+            num_workers: 8
       queue:
         enabled: true
+      run_as:
+        user_name: andrew.mcdevitt@hmcts.net

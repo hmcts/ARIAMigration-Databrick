@@ -5873,7 +5873,7 @@ def stg_apl_combined():
 
 
     df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
-        collect_list(struct('CaseNo', 'Entry', 'EntryDate',"BFDate", 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
+        collect_list(struct('CaseNo', 'Entry', 'EntryDate','BFDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
     )
     
 

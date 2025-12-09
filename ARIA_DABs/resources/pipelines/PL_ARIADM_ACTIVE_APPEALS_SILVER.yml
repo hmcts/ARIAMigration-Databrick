@@ -1,7 +1,7 @@
 resources:
   pipelines:
     pipeline_pl_ariadm_active_appeals_silver:
-      name: PL_ARIADM_ACTIVE_APPEALS_BRONZE_SILVER
+      name: PL_ARIADM_ACTIVE_APPEALS_SILVER
       clusters:
         - label: default
           node_type_id: Standard_D4ads_v5
@@ -13,5 +13,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS"
-      target: ariadm_active_appeals_silver
+      target: ariadm_active_appeals_bronze
       development: true

@@ -1,6 +1,6 @@
 resources:
   pipelines:
-    pipeline_pl_ariadm_active_appeals_bronze_silver:
+    pipeline_pl_ariadm_active_appeals_bronze:
       name: PL_ARIADM_ACTIVE_APPEALS_BRONZE
       clusters:
         - label: default

@@ -2667,7 +2667,11 @@ def stg_m1_m2():
     m2_new_columns = [col_name for col_name in m2.columns if col_name not in m1.columns]
 
 
-    selected_columns = [col("m1.*")] + [col(f"m2.{c}") for c in m2_new_columns]
+    # selected_columns = [col("m1.*")] + [col(f"m2.{c}") for c in m2_new_columns]
+    selected_columns = [
+    col("m1.CaseNo"),
+    col("m2.AppellantForenames").alias("Forename"),
+    col("m2.AppellantName").alias("Surname")] + [col(f"m1.{c}") for c in m1.columns if c not in ["CaseNo", "Forename", "Surname"]] + [col(f"m2.{c}") for c in m2_new_columns]
 
     # Join M1 and M2 tables
     m1_m2 = m1.join(

@@ -1910,6 +1910,10 @@ def silver_m1():
 
 # COMMAND ----------
 
+spark.read.table("aria_bails.silver_bail_m1_case_details").display()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## M2: silver_bail_m2_case_appellant
 
@@ -2826,7 +2830,12 @@ def stg_m1_m2():
     m2_new_columns = [col_name for col_name in m2.columns if col_name not in m1.columns]
 
 
-    selected_columns = [col("m1.*")] + [col(f"m2.{c}") for c in m2_new_columns]
+    # selected_columns = [col("m1.*")] + [col(f"m2.{c}") for c in m2_new_columns]
+
+    selected_columns = [
+    col("m1.CaseNo"),
+    col("m2.AppellantForenames").alias("Forename"),
+    col("m2.AppellantName").alias("Surname")] + [col(f"m1.{c}") for c in m1.columns if c not in ["CaseNo", "Forename", "Surname"]] + [col(f"m2.{c}") for c in m2_new_columns]
 
     # Join M1 and M2 tables
     m1_m2 = m1.join(
@@ -2843,27 +2852,6 @@ def stg_m1_m2():
 
 # MAGIC %md
 # MAGIC ### Join M3 and M7 to Master table
-
-# COMMAND ----------
-
-# df_status_details = spark.read.table('hive_metastore.aria_bails.silver_bail_m7_status')
-
-# adjournment_parents = df_status_details.filter(col("CaseStatus") == 17) \
-#     .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
-#     .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
-
-# adjourned_withdrawal_df = df_status_details.join(
-#     adjournment_parents,
-#     df_status_details.StatusId == adjournment_parents.ParentStatusId,
-#     "inner")
-
-# adjourned_withdrawal_new_df = df_status_details.join(
-#     adjourned_withdrawal_df.select(col("CaseNo"), col("ParentStatusId"), col("adjournmentFlag")), 
-#     (df_status_details.CaseNo == adjourned_withdrawal_df.CaseNo) &
-#     (df_status_details.StatusId == adjourned_withdrawal_df.ParentStatusId),
-#     "left")
-
-# adjourned_withdrawal_new_df.display()
 
 # COMMAND ----------
 
@@ -2953,92 +2941,6 @@ def stg_m3_m7():
     )
 
     return m7_m3_statuses
-
-# COMMAND ----------
-
-# DBTITLE 1,***DELETE***
-# from pyspark.sql.functions import col, lit, first, struct, collect_list, sort_array
-# m3 = spark.read.table("aria_bails.silver_bail_m3_hearing_details")
-
-
-
-# columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
-
-# df_named = m3.withColumn(
-#     "FullName",
-#     concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
-# )
-# pivoted_df = df_named.groupBy(*columns_to_group_by) \
-#     .pivot("Position",["3","10","11","12"]) \
-#     .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher").withColumnRenamed("null", "NoPossition")
-
-
-# for c in pivoted_df.columns:
-#     if c == "null":
-#         new_col = "NoPosition"
-#     elif c.isdigit():
-#         if c == "3":
-#             new_col = "CourtClerkUsher"
-#         else:
-#             new_col = f"Position{c}"
-#     else:
-#         new_col = c
-# pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
-
-# m7 = spark.read.table("aria_bails.silver_bail_m7_status")
-# #we need to join this to a table below
-
-# adjournment_parents = m7.filter(col("CaseStatus") == 17) \
-# .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
-# .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
-
-# adjourned_withdrawal_df = m7.join(
-#     adjournment_parents,
-#     m7.StatusId == adjournment_parents.ParentStatusId,
-#     "inner")
-
-# adjourned_withdrawal_new_df = m7.join(
-#     adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
-#     (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
-#     (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
-#     "left")
-
-# # Get all columns in m3 not in m7
-# m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
-
-# #replaced m7 with adjournmentdf
-# status_tab = adjourned_withdrawal_new_df.alias("m7").join(
-#     pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-#     (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
-#     (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
-#     how = "left"
-# ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
-
-# status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
-
-# # status_tab.display()
-
-# # create a nested list for the stausus table (m7_m3 tables)
-
-# def sort_by_StatusId(arr):
-#     return sorted(arr, key=lambda x: x['StatusId'] if x['StatusId'] is not None else '', reverse=True)
-
-# from pyspark.sql.types import StructType
-# status_tab_struct = StructType([field for field in status_tab_sorted.schema.fields])
-
-
-# sort_udf = udf(sort_by_StatusId, ArrayType(status_tab_struct))
-
-# status_tab_struct = struct(*[col(c) for c in status_tab_sorted.columns])
-# m7_m3_statuses = (
-#     status_tab
-#     .groupBy(col("m7.CaseNo"))
-#     .agg(
-#         sort_udf(collect_list(status_tab_struct)).alias("all_status_objects")
-#     )
-# )
-
-# m7_m3_statuses.display()
 
 # COMMAND ----------
 
@@ -3488,13 +3390,6 @@ def final_staging_bails():
 
 # COMMAND ----------
 
-# DBTITLE 1,***DELETE***
-spark.read.table("aria_bails.final_staging_bails").display()
-
-## Update Surname and Forename to use the appellant forename and surname 
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Functions Diagram
 
@@ -3929,26 +3824,6 @@ create_html_udf = udf(create_html_column, StringType())
 
 # COMMAND ----------
 
-# DBTITLE 1,***DELETE***
-
-df = spark.read.table("aria_bails.final_staging_bails")
-
-results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
-
-results_df.display()
-
-# results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
-# .otherwise("Successful creating HTML Content") )
-
-
-# ## Create and save audit log for this table
-# df = results_df.withColumn("File_name", col("HTML_File_path"))
-# df = df.withColumnRenamed("HTML_Status","Status")
-
-
-
-# COMMAND ----------
-
 
 @dlt.table(
     name="create_bails_html_content",
@@ -4210,19 +4085,8 @@ def gold_bails_HTML_JSON_with_a360():
 
 # COMMAND ----------
 
-# DBTITLE 1,***DELETE***
-spark.read.table("aria_bails.gold_bails_HTML_JSON_a360").display()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC # Save HMTL
-
-# COMMAND ----------
-
-# results_df_dev = spark.read.table("hive_metastore.aria_bails.gold_bails_HTML_JSON_a360")
-
-# results_df_dev.display()
 
 # COMMAND ----------
 

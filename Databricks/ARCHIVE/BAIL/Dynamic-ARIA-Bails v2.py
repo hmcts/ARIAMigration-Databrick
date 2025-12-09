@@ -68,6 +68,7 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import  StringType, IntegerType
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
+from pyspark.sql.types import StructType
 
 
 # COMMAND ----------
@@ -111,8 +112,8 @@ def format_date_iso(date_value):
 def simple_date_format(date_value):
     try:
         if isinstance(date_value, str):
-            date_value = datetime.strptime(date_value, "%Y-%m-%d")
-        return date_value.strftime("%d-%m-%Y")
+            date_value = datetime.strptime(date_value, "%Y/%m/%d")
+        return date_value.strftime("%d/%m/%Y")
     except Exception:
         return ""
 
@@ -1976,6 +1977,8 @@ def silver_m3():
 
     df = joined_df.drop("BaseBailType")
 
+    df = df.orderBy(col("Outcome").desc())
+
     return df
 
 
@@ -2069,7 +2072,7 @@ def silver_m5():
                           .otherwise("Unknown").alias("HistTypeDesc")
     )
 
-    return df.orderBy(col("HistDate").desc())
+    return df.orderBy(col("HistoryId").desc())
 
 # COMMAND ----------
 
@@ -2235,6 +2238,10 @@ def silver_meta_data():
 
 
   return final_df
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
@@ -2896,8 +2903,6 @@ def stg_m3_m7():
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
 
-
-
     m7 = dlt.read("silver_bail_m7_status")
     #we need to join this to a table below
 
@@ -2929,22 +2934,111 @@ def stg_m3_m7():
     ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
 
     # create a nested list for the stausus table (m7_m3 tables)
+    status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
 
-    status_tab_struct = struct(*[col(c) for c in status_tab.columns])
+    #Create a function to sort the m7_m3 status tab below. We want to order the array on the StatusId field DESC
+    def sort_by_StatusId(arr):
+        return sorted(arr, key=lambda x: x['StatusId'] if x['StatusId'] is not None else '', reverse=True)
+
+    status_tab_struct = StructType([field for field in status_tab_sorted.schema.fields])
+    sort_udf = udf(sort_by_StatusId, ArrayType(status_tab_struct))
+
+    status_tab_struct = struct(*[col(c) for c in status_tab_sorted.columns])
     m7_m3_statuses = (
         status_tab
         .groupBy(col("m7.CaseNo"))
         .agg(
-            collect_list(
-                # Collect each record's columns as a struct
-                status_tab_struct
-            ).alias("all_status_objects")
-        ))
+            sort_udf(collect_list(status_tab_struct)).alias("all_status_objects")
+        )
+    )
+
     return m7_m3_statuses
 
 # COMMAND ----------
 
+# DBTITLE 1,***DELETE***
+# from pyspark.sql.functions import col, lit, first, struct, collect_list, sort_array
+# m3 = spark.read.table("aria_bails.silver_bail_m3_hearing_details")
 
+
+
+# columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
+
+# df_named = m3.withColumn(
+#     "FullName",
+#     concat_ws(" ", col("AdjudicatorTitle"), col("AdjudicatorForenames"), col("AdjudicatorSurname"))
+# )
+# pivoted_df = df_named.groupBy(*columns_to_group_by) \
+#     .pivot("Position",["3","10","11","12"]) \
+#     .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher").withColumnRenamed("null", "NoPossition")
+
+
+# for c in pivoted_df.columns:
+#     if c == "null":
+#         new_col = "NoPosition"
+#     elif c.isdigit():
+#         if c == "3":
+#             new_col = "CourtClerkUsher"
+#         else:
+#             new_col = f"Position{c}"
+#     else:
+#         new_col = c
+# pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
+
+# m7 = spark.read.table("aria_bails.silver_bail_m7_status")
+# #we need to join this to a table below
+
+# adjournment_parents = m7.filter(col("CaseStatus") == 17) \
+# .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
+# .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+
+# adjourned_withdrawal_df = m7.join(
+#     adjournment_parents,
+#     m7.StatusId == adjournment_parents.ParentStatusId,
+#     "inner")
+
+# adjourned_withdrawal_new_df = m7.join(
+#     adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
+#     (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
+#     (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+#     "left")
+
+# # Get all columns in m3 not in m7
+# m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
+
+# #replaced m7 with adjournmentdf
+# status_tab = adjourned_withdrawal_new_df.alias("m7").join(
+#     pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
+#     (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
+#     (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
+#     how = "left"
+# ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
+
+# status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
+
+# # status_tab.display()
+
+# # create a nested list for the stausus table (m7_m3 tables)
+
+# def sort_by_StatusId(arr):
+#     return sorted(arr, key=lambda x: x['StatusId'] if x['StatusId'] is not None else '', reverse=True)
+
+# from pyspark.sql.types import StructType
+# status_tab_struct = StructType([field for field in status_tab_sorted.schema.fields])
+
+
+# sort_udf = udf(sort_by_StatusId, ArrayType(status_tab_struct))
+
+# status_tab_struct = struct(*[col(c) for c in status_tab_sorted.columns])
+# m7_m3_statuses = (
+#     status_tab
+#     .groupBy(col("m7.CaseNo"))
+#     .agg(
+#         sort_udf(collect_list(status_tab_struct)).alias("all_status_objects")
+#     )
+# )
+
+# m7_m3_statuses.display()
 
 # COMMAND ----------
 
@@ -3394,6 +3488,13 @@ def final_staging_bails():
 
 # COMMAND ----------
 
+# DBTITLE 1,***DELETE***
+spark.read.table("aria_bails.final_staging_bails").display()
+
+## Update Surname and Forename to use the appellant forename and surname 
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Functions Diagram
 
@@ -3560,7 +3661,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         history_code = ''
         if row.m5_history_details is not None:
             for history in row.m5_history_details:
-                history_line = f"<tr><td id='midpadding'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistTypeDesc}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
+                history_line = f"<tr><td id='midpadding' style='white-space: nowrap;'>{simple_date_format(history.HistDate)}</td><td id='midpadding'>{history.HistTypeDesc}</td><td id='midpadding'>{history.UserFullname}</td><td id='midpadding'>{history.HistoryComment}</td></tr>"
                 history_code += history_line + "\n"
             html = html.replace("{{HistoryPlaceholder}}", history_code)
         else:
@@ -3828,6 +3929,26 @@ create_html_udf = udf(create_html_column, StringType())
 
 # COMMAND ----------
 
+# DBTITLE 1,***DELETE***
+
+df = spark.read.table("aria_bails.final_staging_bails")
+
+results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
+
+results_df.display()
+
+# results_df = results_df.withColumn("HTML_status",when(col("HTMLContent").contains("Failure Error:"), "Failure on Create Content")
+# .otherwise("Successful creating HTML Content") )
+
+
+# ## Create and save audit log for this table
+# df = results_df.withColumn("File_name", col("HTML_File_path"))
+# df = df.withColumnRenamed("HTML_Status","Status")
+
+
+
+# COMMAND ----------
+
 
 @dlt.table(
     name="create_bails_html_content",
@@ -4086,6 +4207,11 @@ def gold_bails_HTML_JSON_with_a360():
 
 
     return unified_df
+
+# COMMAND ----------
+
+# DBTITLE 1,***DELETE***
+spark.read.table("aria_bails.gold_bails_HTML_JSON_a360").display()
 
 # COMMAND ----------
 

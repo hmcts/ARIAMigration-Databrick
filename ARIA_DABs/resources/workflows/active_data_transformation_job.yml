@@ -9,7 +9,13 @@ resources:
             node_type_id: Standard_D8ds_v5
             num_workers: 8
       tasks:        
-        - task_key: DLT_creation_of_content
+        - task_key: DLT_creation_of_content_bronze
           pipeline_task:
-            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_active_appeals_bronze_silver.id}
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_active_appeals_bronze.id}
+            full_refresh: true     
+        - task_key: DLT_creation_of_content_silver
+          depends_on:
+            - task_key: DLT_creation_of_content_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_active_appeals_silver.id}
             full_refresh: true

@@ -16,5 +16,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/BRONZE_ACTIVE_APPEALS"
-      target: ariadm_active_appeals_bronze
+      target: ariadm_active_appeals
       development: true

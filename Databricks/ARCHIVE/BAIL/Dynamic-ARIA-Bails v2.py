@@ -1870,7 +1870,7 @@ def silver_m1():
 
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
     
-    df = joined_df.select("m1.CaseNo", *selected_columns,
+    df = joined_df.select(trim("m1.CaseNo").alias("CaseNo"), *selected_columns,
                         col("bs.BaseBailType"),
                         when(col("BaseBailType") == "Normal Bail","Bail").
                         when(col("BaseBailType") == "BailLegalHold","Bail").
@@ -1910,6 +1910,7 @@ def silver_m1():
 
 # COMMAND ----------
 
+# DBTITLE 1,***DELETE***
 spark.read.table("aria_bails.silver_bail_m1_case_details").display()
 
 # COMMAND ----------
@@ -1930,7 +1931,7 @@ def silver_m2():
 
     selected_columns = [col(c) for c in m2_df.columns if c != "CaseNo"]
 
-    df = joined_df.select("m2.CaseNo", *selected_columns,
+    df = joined_df.select(trim("m2.CaseNo").alias("CaseNo"), *selected_columns,
                         when(col("AppellantDetained") == 1,"HMP")
                         .when(col("AppellantDetained") == 2,"IRC")
                         .when(col("AppellantDetained") == 3,"No")
@@ -1974,17 +1975,16 @@ m3_grouped_cols = [
 def silver_m3():
     # 1. Read from the existing Hive table
     m3_df = dlt.read("bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
+    m3_df = m3_df.withColumn("CaseNo", trim("CaseNo"))
     
-
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    segmentation_df = segmentation_df.withColumn("CaseNo", trim("CaseNo"))
+
     joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
 
     df = joined_df.drop("BaseBailType")
 
-    df = df.orderBy(col("Outcome").desc())
-
     return df
-
 
 
 # COMMAND ----------
@@ -2003,6 +2003,7 @@ def silver_m4():
     joined_df = m4_df.join(segmentation_df.alias("bs"), col("m4.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m4_df.columns if c != "CaseNo"]
     df = joined_df.select("m4.CaseNo", *selected_columns)
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
 
     return df.orderBy(col("BFDate").desc())
@@ -2022,7 +2023,7 @@ def silver_m5():
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     joined_df = m5_df.join(segmentation_df.alias("bs"), col("m5.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m5_df.columns if c != "CaseNo"]
-    df = joined_df.select("m5.CaseNo", *selected_columns,
+    df = joined_df.select(trim("m5.CaseNo").alias("CaseNo"), *selected_columns,
                           when(col("HistType") == 1, "Adjournment")
                           .when(col("HistType") == 2, "Adjudicator Process")
                           .when(col("HistType") == 3, "Bail Process")
@@ -2097,6 +2098,7 @@ def silver_m6():
     df = joined_df.select("m6.CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
 
     return df
@@ -2148,7 +2150,7 @@ def silver_m7():
     joined_df = m7_ref_df.join(segmentation_df.alias("bs"), col("m7.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m7_ref_df.columns if c != "CaseNo"]
     df = joined_df.select("m7.CaseNo", *selected_columns)
-
+    df = df.withColumn("CaseNo", trim(col("CaseNo")))
 
     return df
 
@@ -2169,6 +2171,8 @@ def silver_m8():
     joined_df = m8_df.join(segmentation_df.alias("bs"), col("m8.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m8_df.columns if c != "CaseNo"]
     df = joined_df.select("m8.CaseNo", *selected_columns)
+
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
     return df
 

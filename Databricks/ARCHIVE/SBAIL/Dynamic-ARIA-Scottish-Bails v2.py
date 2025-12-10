@@ -1775,7 +1775,7 @@ def silver_m2():
 
     selected_columns = [col(c) for c in m2_df.columns if c != "CaseNo"]
 
-    df = joined_df.select("m2.CaseNo", *selected_columns,
+    df = joined_df.select(trim("m2.CaseNo").alias("CaseNo"), *selected_columns,
                         when(col("AppellantDetained") == 1,"HMP")
                         .when(col("AppellantDetained") == 2,"IRC")
                         .when(col("AppellantDetained") == 3,"No")
@@ -1823,9 +1823,11 @@ m3_grouped_cols = [
 def silver_m3():
     # 1. Read from the existing Hive table
     m3_df = dlt.read("bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
+    m3_df = m3_df.withColumn("CaseNo", trim("CaseNo"))
     
-
     segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
+    segmentation_df = segmentation_df.withColumn("CaseNo", trim("CaseNo"))
+
     joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
 
     df = joined_df.drop("BaseBailType")
@@ -1852,6 +1854,7 @@ def silver_m4():
     joined_df = m4_df.join(segmentation_df.alias("bs"), col("m4.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m4_df.columns if c != "CaseNo"]
     df = joined_df.select("m4.CaseNo", *selected_columns)
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
 
     return df.orderBy(col("BFDate").desc())
@@ -1871,7 +1874,7 @@ def silver_m5():
     segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
     joined_df = m5_df.join(segmentation_df.alias("bs"), col("m5.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m5_df.columns if c != "CaseNo"]
-    df = joined_df.select("m5.CaseNo", *selected_columns,
+    df = joined_df.select(trim("m5.CaseNo").alias("CaseNo"), *selected_columns,
                           when(col("HistType") == 1, "Adjournment")
                           .when(col("HistType") == 2, "Adjudicator Process")
                           .when(col("HistType") == 3, "Bail Process")
@@ -1946,6 +1949,7 @@ def silver_m6():
     df = joined_df.select("m6.CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
 
     return df
@@ -1997,6 +2001,7 @@ def silver_m7():
     joined_df = m7_ref_df.join(segmentation_df.alias("bs"), col("m7.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m7_ref_df.columns if c != "CaseNo"]
     df = joined_df.select("m7.CaseNo", *selected_columns)
+    df = df.withColumn("CaseNo", trim(col("CaseNo")))
 
 
     return df
@@ -2018,6 +2023,7 @@ def silver_m8():
     joined_df = m8_df.join(segmentation_df.alias("bs"), col("m8.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m8_df.columns if c != "CaseNo"]
     df = joined_df.select("m8.CaseNo", *selected_columns)
+    df = df.withColumn("CaseNo", trim("CaseNo"))
 
     return df
 
@@ -2694,7 +2700,7 @@ def stg_m1_m2():
 @dlt.table(name="stg_m3_m7")
 def stg_m3_m7():                                                                                                                     
 
-    m3 = dlt.read("silver_bail_m3_hearing_details")
+    m3 = dlt.read("silver_sbail_m3_hearing_details")
 
     columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
 
@@ -2718,7 +2724,7 @@ def stg_m3_m7():
             new_col = c
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
-    m7 = dlt.read("silver_bail_m7_status")
+    m7 = dlt.read("silver_sbail_m7_status")
     #we need to join this to a table below
 
     adjournment_parents = m7.filter(col("CaseStatus") == 17) \
@@ -2735,6 +2741,7 @@ def stg_m3_m7():
         (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
         (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
         "left")
+
 
     # Get all columns in m3 not in m7
     m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
@@ -2767,6 +2774,7 @@ def stg_m3_m7():
     )
 
     return m7_m3_statuses
+
 
 # COMMAND ----------
 

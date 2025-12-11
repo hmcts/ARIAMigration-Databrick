@@ -11,10 +11,13 @@ def hearingRequirements(silver_m1, silver_m3, silver_c):
     # Add row_number to get the row with the highest StatusId per CaseNo
     silver_m3_ranked = silver_m3.withColumn("row_num", row_number().over(window_spec))
 
-    # Filter the top-ranked rows where Outcome is not null
     silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (col("Outcome").isNotNull())
-    ).select(col("CaseNo"))
+        (col("row_num") == 1) 
+        & (
+            ((col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50)))
+            | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52)))
+        )
+    )
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
@@ -35,7 +38,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c):
             ))
             .withColumn("isInterpreterServicesNeeded", (
                 when((col("m1.Interpreter") == 1), lit("Yes"))
-                .when((col("m1.Interprefer") == 0), lit("No"))
+                .when((col("m1.Interpreter") == 0), lit("No"))
                 .otherwise(lit(None))
             ))
             .withColumn("appellantInterpreterLanguageCategory", lit("PLACEHOLDER TODO"))

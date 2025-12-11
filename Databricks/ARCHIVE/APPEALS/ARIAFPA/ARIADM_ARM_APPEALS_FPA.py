@@ -5409,15 +5409,17 @@ def stg_statusdetail_data():
     # this returns the parent StatusID to the application to adjourn
     # this returns the parent StatusID to the application to adjourn
     adjournment_parents = df_status_details.filter(col("CaseStatus") == 17) \
-        .select(col("AdjournmentParentStatusId"), col("ApplicationType")) \
-        .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") \
-        .withColumnRenamed("ApplicationType", "adjournApplicationType")
+    .select(col("AdjournmentParentStatusId"), col("ApplicationType"),col("InTime"),col("DecisionTypeDescription")) \
+    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") \
+    .withColumnRenamed("ApplicationType", "adjournApplicationType") \
+    .withColumnRenamed("InTime", "adjournInTime") \
+    .withColumnRenamed("DecisionTypeDescription", "adjournDecisionTypeDescription") \
 
     adjourned_withdrawal_df = df_status_details.join(
-        adjournment_parents,
-        df_status_details.StatusId == adjournment_parents.ParentStatusId,
-        "inner"
-    ).select(df_status_details["*"], adjournment_parents["adjournApplicationType"])
+    adjournment_parents.alias("adjournment_parents"),
+    df_status_details.StatusId == adjournment_parents.ParentStatusId,
+    "inner"
+    ).select(df_status_details["*"], col("adjournment_parents.adjournApplicationType"), col("adjournment_parents.adjournInTime"),col("adjournment_parents.adjournDecisionTypeDescription"))
 
     # Join to merge M3 and M7
     status_joined_df = df_list_details.alias("list").join(df_status_details.alias('status'), 
@@ -5469,12 +5471,12 @@ def stg_statusdetail_data():
             
             "left") \
         .withColumn("adjourned_withdrawal_enabled", when(col("adj.StatusId").isNotNull(), lit(True)).otherwise(lit(False))) \
-        .withColumn("adjournDecisionTypeDescription",  when(col("adj.StatusId").isNotNull(),col("adj.DecisionTypeDescription")).otherwise(lit(None))) \
+        .withColumn("adjournDecisionTypeDescription",  when(col("adj.StatusId").isNotNull(),col("adj.adjournDecisionTypeDescription")).otherwise(lit(None))) \
         .withColumn("adjournDateReceived", when(col("adj.StatusId").isNotNull(),col("adj.DateReceived")).otherwise(lit(None))) \
         .withColumn("adjournmiscdate1", when(col("adj.StatusId").isNotNull(),col("adj.miscdate1")).otherwise(lit(None))) \
         .withColumn("adjournmiscdate2", when(col("adj.StatusId").isNotNull(),col("adj.miscdate2")).otherwise(lit(None))) \
         .withColumn("adjournParty", when(col("adj.StatusId").isNotNull(),col("adj.Party")).otherwise(lit(None))) \
-        .withColumn("adjournInTime", when(col("adj.StatusId").isNotNull(),col("adj.InTime")).otherwise(lit(None))) \
+        .withColumn("adjournInTime", when(col("adj.StatusId").isNotNull(),col("adj.adjournInTime")).otherwise(lit(None))) \
         .withColumn("adjournLetter1Date", when(col("adj.StatusId").isNotNull(),col("adj.Letter1Date")).otherwise(lit(None))) \
         .withColumn("adjournLetter2Date", when(col("adj.StatusId").isNotNull(),col("adj.Letter2Date")).otherwise(lit(None))) \
         .withColumn("adjournAdjudicatorSurname", when(col("adj.StatusId").isNotNull(),col("adj.StatusDetailAdjudicatorSurname")).otherwise(lit(None))) \
@@ -5482,7 +5484,6 @@ def stg_statusdetail_data():
         .withColumn("adjournAdjudicatorTitle", when(col("adj.StatusId").isNotNull(),col("adj.StatusDetailAdjudicatorTitle")).otherwise(lit(None))) \
         .withColumn("adjournNotes1", when(col("adj.StatusId").isNotNull(),col("adj.Notes1")).otherwise(lit(None))) \
         .withColumn("adjournDecisionDate", when(col("adj.StatusId").isNotNull(),col("adj.DecisionDate")).otherwise(lit(None))) \
-        .withColumn("adjournDecisionTypeDescription", when(col("adj.StatusId").isNotNull(),col("adj.DecisionTypeDescription")).otherwise(lit(None))) \
         .withColumn("adjournPromulgated", when(col("adj.StatusId").isNotNull(),col("adj.Promulgated")).otherwise(lit(None))) \
         .withColumn("adjournUKAITNo", when(col("adj.StatusId").isNotNull(),col("adj.UKAITNo")).otherwise(lit(None))) \
         .withColumn("AdjudicatorSurname", when(col("status.KeyDate").isNull(), col("status.StatusDetailAdjudicatorSurname")).otherwise(col("list.ListAdjudicatorSurname"))) \

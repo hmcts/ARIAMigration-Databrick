@@ -1,0 +1,17 @@
+resources:
+  pipelines:
+    pipeline_pl_ariadm_active_appeals_all_states:
+      name: pipeline_pl_ariadm_active_appeals_all_states
+      clusters:
+        - label: default
+          node_type_id: Standard_D4ads_v5
+          driver_node_type_id: Standard_D4ads_v5
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE/APPEALS/cdam/ARIADM_ACTIVE_APPEALS_CDAM_HTML"
+      target: ariadm_active_appeals_cdam_html
+      development: true

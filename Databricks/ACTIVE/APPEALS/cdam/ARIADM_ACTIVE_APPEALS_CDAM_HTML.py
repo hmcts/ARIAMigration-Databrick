@@ -118,21 +118,21 @@ spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.c
 # DBTITLE 1,Set Paths and Hive Schema Variables
 # read_hive = False
 
-AppealCategory = "ARIAFTA"
+AppealCategory = "CDAM"
 
 # Setting variables for use in subsequent cells
-raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+raw_mnt = f"abfss://raw@ingest{lz_key}raw{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/APPEALS/{AppealCategory}"
 landing_mnt =  f"abfss://landing@ingest{lz_key}landing{env_name}.dfs.core.windows.net/SQLServer/Sales/IRIS/dbo/"  # CORE FULL LOAD SQL TABLES parquest
-bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-silver_mnt =  f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
-gold_mnt =f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/APPEALS/{AppealCategory}"
+bronze_mnt = f"abfss://bronze@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/APPEALS/{AppealCategory}"
+silver_mnt =  f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/APPEALS/{AppealCategory}"
+gold_mnt =f"abfss://gold@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/APPEALS/{AppealCategory}"
 html_mnt = f"abfss://html-template@ingest{lz_key}landing{env_name}.dfs.core.windows.net/"
 
-gold_outputs = f"ARIADM/ARM/APPEALS/{AppealCategory}"
-hive_schema = f"ariadm_arm_{AppealCategory[-3:].lower()}"
+gold_outputs = f"ARIADM/ACTIVE/APPEALS/{AppealCategory}"
+hive_schema = f"ariadm_active_appeals_cdam_html"
 # key_vault = "ingest00-keyvault-sbox"
 
-audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ARM/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
+audit_delta_path = f"abfss://silver@ingest{lz_key}curated{env_name}.dfs.core.windows.net/ARIADM/ACTIVE/AUDIT/APPEALS/{AppealCategory}/apl_{AppealCategory[-3:].lower()}_cr_audit_table"
 
 # Print all variables
 variables = {
@@ -4839,7 +4839,7 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_combined
+# DBTITLE 1,Transformation: stg_apl_combined
 @dlt.table(
     name="stg_apl_combined",
     comment="Delta Live unified stage created all consolidated data.",
@@ -5018,7 +5018,7 @@ def stg_apl_combined():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_fta_create_html_content
+# DBTITLE 1,Transformation: stg_apl_create_html_content
 @dlt.table(
     name="stg_apl_create_html_content",
     comment="Delta Live unified stage Gold Table for gold outputs.",
@@ -5029,61 +5029,33 @@ def stg_apl_create_html_content():
     # Read unique CaseNo tables
     # M1
     df_combined = dlt.read("stg_apl_combined")
+    stg_appeals_filtered = spark.read.table("ariadm_active_appeals.stg_segmentation_states")
 
-     #HTML extra requirement- status details data
-    df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
+    #HTML extra requirement- status details data
+    df_with_statusdetail_data = df_combined.join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
 
 
     df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-        "File_Name", concat(lit(f"{gold_outputs}/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+        "File_Name", concat(lit(f"{gold_outputs}/"),upper(col("TargetState")),lit("/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
    
 
     return df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status")
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation: stg_appeals_unified
-# @dlt.table(
-#     name="stg_appeals_unified",
-#     comment="Delta Live unified stage Gold Table for gold outputs.",
-#     path=f"{silver_mnt}/stg_appeals_unified"
-# )
-# @dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
-# def stg_appeals_unified():
+# DBTITLE 1,temp
+# df_combined = spark.read.table("ariadm_active_appeals_cdam_html.stg_apl_combined")
+# stg_appeals_filtered = spark.read.table("ariadm_active_appeals.stg_segmentation_states")
 
-#     df_combined = dlt.read("stg_apl_combined")
+# #HTML extra requirement- status details data
+# df_with_statusdetail_data = df_combined.join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
 
-#     # Read DLT sources
-#     html_df = dlt.read("stg_apl_create_html_content").alias("html")
 
-#      # Perform joins
-#     df_unified = (
-#         html_df
-#         .join(json_df,  ((col("html.CaseNo") == col("json.CaseNo"))), "inner")
-#         .join(
-#             a360_df,
-#             (col("json.CaseNo") == col("a360.client_identifier")),
-#             "inner"
-#         )
-#         .select(
-#             col("a360.client_identifier"),
-#             col("json.*"),
-#             col("html.HTML_Content"),
-#             col("html.File_Name").alias("HTML_File_Name"),
-#             col("html.Status").alias("HTML_Status"),
-#             col("a360.A360_Content"),
-#             col("a360.Status").alias("Status"),
-#             col("a360.File_Name").alias("File_Name"),
-#             col("a360.A360_BatchId")
-#         )
-#         .filter(
-#             (~col("html.HTML_Content").like("Failure%")) &
-#             (~col("a360.A360_Content").like("Failure%")) &
-#             (~col("json.JSON_Content").like("Failure%"))
-#         )
-#     ) 
+# df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
+#     "File_Name", concat(lit(f"{gold_outputs}/"),upper(col("TargetState")),lit("/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
 
-#     return df_unified
+# df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status","TargetState").display()
+
 
 # COMMAND ----------
 
@@ -5092,67 +5064,30 @@ def stg_apl_create_html_content():
 
 # COMMAND ----------
 
-# DBTITLE 1,Transformation gold_appeals_with_json
-# @dlt.table(
-#     name="gold_appeals_with_json",
-#     comment="Delta Live Gold Table with JSON content.",
-#     path=f"{gold_mnt}/gold_appeals_with_json"
-# )
-# def gold_appeals_with_json():
-#     """
-#     Delta Live Table for creating and uploading JSON content for Appeals.
-#     """
-#     # Load source data
-#     df_unified = dlt.read("stg_appeals_unified")
-    
-
-#     # Optionally load data from Hive if needed
-#     # if read_hive:
-#     #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
-
-#     # Repartition to optimize parallelism
-#     repartitioned_df = df_unified.repartition(200)
-
-#     df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
-#             "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
-#         )
-
-
-#     # Return the DataFrame for DLT table creation
-#     return df_with_upload_status.select("CaseNo","A360_BatchId", "JSON_content",col("JSON_File_Name").alias("File_Name"),"Status")
-
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation gold_appeals_with_html
-# checks = {}
-# checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
+checks = {}
+checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
-# @dlt.table(
-#     name="gold_appeals_with_html",
-#     comment="Delta Live Gold Table with HTML content and uploads.",
-#     path=f"{gold_mnt}/gold_appeals_with_html"
-# )
-# @dlt.expect_all_or_fail(checks)
-# def gold_appeals_with_html():
-#     # Load source data
-#     df_combined = dlt.read("stg_appeals_unified")
+@dlt.table(
+    name="gold_appeals_with_html",
+    comment="Delta Live Gold Table with HTML content and uploads.",
+    path=f"{gold_mnt}/gold_appeals_with_html"
+)
+@dlt.expect_all_or_fail(checks)
+def gold_appeals_with_html():
+    # Load source data
+    df_combined = dlt.read("stg_apl_create_html_content")
 
-#     # # Optional: Load from Hive if not an initial load
-#     # if read_hive:
-#     #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
+    # Repartition to optimize parallelism
+    repartitioned_df = df_combined.repartition(200)
 
-#     # Repartition to optimize parallelism
-#     repartitioned_df = df_combined.repartition(200)
+    # Trigger upload logic for each row
+    df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
+        "Status", upload_udf(col("File_Name"), col("HTML_Content"))
+    )
 
-#     # Trigger upload logic for each row
-#     df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
-#         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
-#     )
-
-
-#     # Return the DataFrame for DLT table creation, including the upload status
-#     return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), "Status")
+    # Return the DataFrame for DLT table creation, including the upload status
+    return df_with_upload_status.select("CaseNo", "HTML_Content", col("File_Name").alias("File_Name"), "Status")
 
 # COMMAND ----------
 

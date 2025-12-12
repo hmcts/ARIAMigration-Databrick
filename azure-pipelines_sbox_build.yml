@@ -490,5 +490,5 @@ stages:
 
                 databricks bundle destroy -t ${{ deployment.environment }}${{ lz.landing_zone }}
                 databricks bundle validate -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
-                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug
+                databricks bundle deploy -t ${{ deployment.environment }}${{ lz.landing_zone }} --debug --auto-approve
               displayName: "Deploy Databricks resources to ${{ deployment.environment }}-${{ lz.landing_zone }} workspace"

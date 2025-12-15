@@ -5032,7 +5032,7 @@ def stg_apl_create_html_content():
     stg_appeals_filtered = spark.read.table("ariadm_active_appeals.stg_segmentation_states")
 
     #HTML extra requirement- status details data
-    df_with_statusdetail_data = df_combined.join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
+    df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
 
     Datetime_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 

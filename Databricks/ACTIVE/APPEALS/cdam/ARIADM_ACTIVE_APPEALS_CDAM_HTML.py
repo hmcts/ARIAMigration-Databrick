@@ -5034,28 +5034,13 @@ def stg_apl_create_html_content():
     #HTML extra requirement- status details data
     df_with_statusdetail_data = df_combined.join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
 
+    Datetime_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
     df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-        "File_Name", concat(lit(f"{gold_outputs}/"),upper(col("TargetState")),lit("/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
+        "File_Name", concat(lit(f"{gold_outputs}/{Datetime_name}/"),upper(col("TargetState")),lit("/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
    
 
     return df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status")
-
-# COMMAND ----------
-
-# DBTITLE 1,temp
-# df_combined = spark.read.table("ariadm_active_appeals_cdam_html.stg_apl_combined")
-# stg_appeals_filtered = spark.read.table("ariadm_active_appeals.stg_segmentation_states")
-
-# #HTML extra requirement- status details data
-# df_with_statusdetail_data = df_combined.join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statusdetail_data"), "CaseNo", "left").join(spark.read.table("ariadm_active_appeals_cdam_html.stg_statichtml_data"), "CaseNo", "left").join(stg_appeals_filtered, "CaseNo", "left")
-
-
-# df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
-#     "File_Name", concat(lit(f"{gold_outputs}/"),upper(col("TargetState")),lit("/HTML/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".html")) ).withColumn("Status", when((col("HTML_Content").like("Failure%") | col("HTML_Content").isNull()), "Failure on Create HTML Content").otherwise("Successful creating HTML Content"))
-
-# df_with_html_content.select("CaseNo","HTML_Content","File_Name","Status","TargetState").display()
-
 
 # COMMAND ----------
 

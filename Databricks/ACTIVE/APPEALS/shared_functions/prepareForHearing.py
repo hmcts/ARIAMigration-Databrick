@@ -80,6 +80,8 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
             )
             .otherwise(lit(None))
         )
+        .withColumn(lit([]).cast("array<string>").alias("witnessDetails"))
+        .withColumn(lit({}).cast("map<string,string>").alias("uploadTheAppealFormDocs"))
 
     )
     return df

@@ -2463,7 +2463,7 @@ def silver_appealcase_detail():
         when(col("ap.CRRespondent") == 1, col("RespondentAddress3")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress3")).when(col("ap.CRRespondent") == 3, col("POUAddress3")).alias("RespondentAddress3"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress4")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress4")).when(col("ap.CRRespondent") == 3, col("POUAddress4")).alias("RespondentAddress4"),
         when(col("ap.CRRespondent") == 1, col("RespondentAddress5")).when(col("ap.CRRespondent") == 2, col("EmbassyAddress5")).when(col("ap.CRRespondent") == 3, col("POUAddress5")).alias("RespondentAddress5"),
-        when(col("ap.CRRespondent") == 1, col("RespondentPostcode")).when(col("ap.CRRespondent") == 2, col("EmbassyPostcode")).when(col("ap.CRRespondent") == 3, col("POUFax")).alias("RespondentPostcode"),
+        when(col("ap.CRRespondent") == 1, col("RespondentPostcode")).when(col("ap.CRRespondent") == 2, col("EmbassyPostcode")).when(col("ap.CRRespondent") == 3, col("POUPostcode")).alias("RespondentPostcode"),
         when(col("ap.CRRespondent") == 1, col("RespondentTelephone")).when(col("ap.CRRespondent") == 2, col("EmbassyTelephone")).when(col("ap.CRRespondent") == 3, col("POUTelephone")).alias("RespondentTelephone"),
         when(col("ap.CRRespondent") == 1, col("RespondentFax")).when(col("ap.CRRespondent") == 2, col("EmbassyFax")).when(col("ap.CRRespondent") == 3, col("POUFax")).alias("RespondentFax"),
         when(col("ap.CRRespondent") == 1, col("RespondentEmail")).when(col("ap.CRRespondent") == 2, col("EmbassyEmail")).when(col("ap.CRRespondent") == 3, col("POUEmail")).alias("RespondentEmail"),
@@ -3032,7 +3032,7 @@ def silver_status_detail():
                               "st.DecisionDate",
                               "st.Outcome",
                               "st.Promulgated",
-                              when(col("st.InterpreterRequired") == 0, "Zero")
+                              when(col("st.InterpreterRequired") == 0, "")
                               .when(col("st.InterpreterRequired") == 1, "One")
                               .when(col("st.InterpreterRequired") == 2, "Two")
                               .when(col("st.InterpreterRequired") == 3, "Zero")
@@ -3054,7 +3054,7 @@ def silver_status_detail():
                               when(col("st.DecisionSentToHO") == 1, "Yes").when(col("st.DecisionSentToHO") == 2, "No").otherwise("").alias("DecisionSentToHO"),
                               "st.DecisionSentToHODate",
                               when(col("st.MethodOfTyping") == 1, "IA Typed")
-                              .when(col("st.MethodOfTyping") == 2, "Self Type")
+                              .when(col("st.MethodOfTyping") == 2, "Self Typed")
                               .when(col("st.MethodOfTyping") == 3, "3rd Party")
                               .alias("MethodOfTyping"),
                               when(col("st.CourtSelection").isNull(), " ") \

@@ -14,9 +14,9 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank
+    collect_set, current_timestamp,transform, first, array_contains
 )
-
+from pyspark.sql.functions import rank
 from uk_postcodes_parsing import fix, postcode_utils
 
 ################################################################
@@ -41,13 +41,13 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
         .join(silver_m3.alias("m3"), ["CaseNo"], "left")
         .join(silver_m6.alias("m6"), ["CaseNo"], "left")
         .join(content_df.alias("m3_content"), ["CaseNo"], "left")
-        .withColumn(
-            "isAppeaalSuitableToFloat",
-            when(
-                col("m3.InCamera") == True,
-                lit("This is a migrated ARIA case. Please refer to the documents.")
-            ).otherwise(lit(None))
-        )
+        # .withColumn(
+        #     "isAppeaalSuitableToFloat",
+        #     when(
+        #         col("m3.InCamera") == True,
+        #         lit("This is a migrated ARIA case. Please refer to the documents.")
+        #     ).otherwise(lit(None))
+        # )
         .withColumn(
             "isInCameraCourtAllowed",
             when(col("m1.InCamera") == True, lit("Granted")).otherwise(lit(None))
@@ -116,21 +116,6 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
             when(col("m6.Required") == 0, lit("Not Required"))
             .when(col("m6.Required") == 1, lit("Required"))                                                                         
         )
-            
-        # .withColumn(
-        #     "hearingChannel",
-        #     when(
-        #         col("m1.VisitVisaType") == 1,
-        #         struct(lit("ONPPRS").alias("channelCode"), lit("On the papers").alias("channelLabel"))
-        #     )
-        #     .when(
-        #         col("m1.VisitVisaType") == 2,
-        #         struct(lit("INTER").alias("channelCode"), lit("In Person").alias("channelLabel"))
-        #     ).otherwise(lit(None))
-        # )
-        # .withColumn(lit([]).cast("array<string>").alias("witnessDetails"))
-        # .withColumn(lit({}).cast("map<string,string>").alias("uploadTheAppealFormDocs"))
-
     )
     return df
 

@@ -28,15 +28,15 @@ parameters:
             RefData_StorageAccount: 'ingest00externalsbox'
             Resource_Group: 'ingest00-main-sbox'
             Key_vault_Name: 'ingest00-meta002-sbox'
-          - landing_zone: '01'
-            databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
-            databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
-            Client_ID: $(SBOX_CLIENT_ID)
-            Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
-            HTML_StorageAccount: 'ingest01landingsbox'
-            RefData_StorageAccount: 'ingest01externalsbox'
-            Resource_Group: 'ingest01-main-sbox'
-            Key_vault_Name: 'ingest01-meta002-sbox'
+          # - landing_zone: '01'
+          #   databricks_host: 'https://adb-376876256300083.3.azuredatabricks.net'
+          #   databricks_token: "$(DATABRICKS_PAT_SBOX01)" 
+          #   Client_ID: $(SBOX_CLIENT_ID)
+          #   Subscription_ID: $(SBOX_SUBSCRIPTION_ID)
+          #   HTML_StorageAccount: 'ingest01landingsbox'
+          #   RefData_StorageAccount: 'ingest01externalsbox'
+          #   Resource_Group: 'ingest01-main-sbox'
+          #   Key_vault_Name: 'ingest01-meta002-sbox'
 
       - deployment: stg_aria
         environment: stg

@@ -18,6 +18,7 @@ def add_checks_hearing_requirements(checks={}):
 
     checks["valid_isWitnessesAttending"] = (
         "(isWitnessesAttending <=> 'No')"
+
     )
 
     checks["valid_isEvidenceFromOutsideUkOoc"] = (
@@ -26,9 +27,11 @@ def add_checks_hearing_requirements(checks={}):
             OR
             (NOT(ARRAY_CONTAINS(valid_categoryIdList, 38)) AND isEvidenceFromOutsideUkOoc IS NULL)
             OR
+
             (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkOoc <=> 'Yes')
             OR
             (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkOoc <=> 'No')
+
         )"""
     )
 
@@ -41,6 +44,7 @@ def add_checks_hearing_requirements(checks={}):
             (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkInCountry <=> 'Yes')
             OR
             (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkInCountry <=> 'No')
+
         )"""
     )
 
@@ -51,6 +55,7 @@ def add_checks_hearing_requirements(checks={}):
             (Interpreter <=> 2 AND isInterpreterServicesNeeded <=> 'No')
             OR
             (Interpreter NOT IN (1, 2) AND isInterpreterServicesNeeded <=> 'No')
+
         )"""
     )
 
@@ -74,6 +79,7 @@ def add_checks_hearing_requirements(checks={}):
                         (AdditionalLanguageId IS NULL OR AdditionalLanguageId <=> 0)
                         OR
                         (AdditionalLanguageId IS NOT NULL AND NOT(AdditionalLanguageId <=> 0) AND ARRAY_CONTAINS(appellantInterpreterLanguageCategory, valid_additionalLanguageCategory))
+
                     )
                 )
             END
@@ -84,9 +90,11 @@ def add_checks_hearing_requirements(checks={}):
         """(
             CASE
                 WHEN (
+
                     (LanguageId IS NULL OR LanguageId <=> 0 OR NOT(valid_languageCategory <=> 'spokenLanguageInterpreter'))
                     AND
                     (AdditionalLanguageId IS NULL OR AdditionalLanguageId <=> 0 OR NOT(valid_additionalLanguageCategory <=> 'spokenLanguageInterpreter'))
+
                 ) THEN (
                     appellantInterpreterSpokenLanguage IS NULL
                 ) ELSE (
@@ -155,6 +163,7 @@ def add_checks_hearing_requirements(checks={}):
                                     (appellantInterpreterSpokenLanguage.languageManualEntryDescription IS NULL)
                                 )
                             END
+
                         )
                     )
                 )
@@ -169,6 +178,7 @@ def add_checks_hearing_requirements(checks={}):
                     (LanguageId IS NULL OR LanguageId <=> 0 OR NOT(valid_languageCategory <=> 'signLanguageInterpreter'))
                     AND
                     (AdditionalLanguageId IS NULL OR AdditionalLanguageId <=> 0 OR NOT(valid_additionalLanguageCategory <=> 'signLanguageInterpreter'))
+
                 ) THEN (
                     appellantInterpreterSignLanguage IS NULL
                 ) ELSE (
@@ -237,6 +247,7 @@ def add_checks_hearing_requirements(checks={}):
                                     (appellantInterpreterSignLanguage.languageManualEntryDescription IS NULL)
                                 )
                             END
+
                         )
                     )
                 )
@@ -282,6 +293,7 @@ def add_checks_hearing_requirements(checks={}):
 
     checks["valid_multimediaEvidenceDescription"] = (
         "(multimediaEvidenceDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
+
     )
 
     checks["valid_singleSexCourt"] = (
@@ -291,6 +303,7 @@ def add_checks_hearing_requirements(checks={}):
             ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourt <=> 'Yes')
             OR
             (CourtPreference NOT IN (0, 1, 2) AND singleSexCourt <=> 'No')
+
         )"""
     )
 
@@ -301,19 +314,23 @@ def add_checks_hearing_requirements(checks={}):
             (CourtPreference <=> 2 AND singleSexCourtType <=> 'All female')
             OR
             (CourtPreference NOT IN (1, 2) AND singleSexCourtType IS NULL)
+
         )"""
     )
 
     checks["valid_singleSexCourtTypeDescription"] = (
         """(
+
             ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourtTypeDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court.')
             OR
             (CourtPreference NOT IN (1, 2) AND singleSexCourtTypeDescription IS NULL)
+
         )"""
     )
 
     checks["valid_inCameraCourt"] = (
         """(
+
             (InCamera IS NULL AND inCameraCourt <=> 'No')
             OR
             (InCamera <=> 1 AND inCameraCourt <=> 'Yes')
@@ -321,6 +338,7 @@ def add_checks_hearing_requirements(checks={}):
             (InCamera <=> 0 AND inCameraCourt <=> 'No')
             OR
             (INT(InCamera) NOT IN (0, 1) AND inCameraCourt <=> 'No')
+
         )"""
     )
         
@@ -328,13 +346,16 @@ def add_checks_hearing_requirements(checks={}):
         """(
             (InCamera IS NULL AND inCameraCourtDescription IS NULL)
             OR
+
             (InCamera <=> 1 AND inCameraCourtDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court.')
             OR
             (NOT(InCamera <=> 1) AND inCameraCourtDescription IS NULL)
+
         )"""
     )
             
     checks["valid_additionalRequests"] = (
+
         "(additionalRequests <=> 'Yes')"
     )
                 
@@ -344,6 +365,7 @@ def add_checks_hearing_requirements(checks={}):
                     
     checks["valid_datesToAvoidYesNo"] = (
         "(datesToAvoidYesNo <=> 'No')"
+
     )
 
     return checks
@@ -352,17 +374,21 @@ def add_checks_hearing_requirements(checks={}):
 def add_checks_general(checks={}):
     checks["valid_caseArgumentAvailable"] = (
         """(
+
             (dv_representation <=> 'LR' AND caseArgumentAvailable <=> 'Yes')
             OR
             (NOT(dv_representation <=> 'LR') AND caseArgumentAvailable IS NULL)
+
         )"""
     )
 
     checks["valid_reasonsForAppealDecision"] = (
         """(
+
             (dv_representation <=> 'AIP' AND reasonsForAppealDecision <=> 'This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.')
             OR
             (NOT(dv_representation <=> 'AIP') AND reasonsForAppealDecision IS NULL)
+
         )"""
     )
 
@@ -404,6 +430,7 @@ def add_checks_general_default(checks={}):
 
     checks["valid_uploadHomeOfficeAppealResponseActionAvailable"] = (
         "(uploadHomeOfficeAppealResponseActionAvailable <=> 'No')"
+
     )
 
     return checks
@@ -411,7 +438,9 @@ def add_checks_general_default(checks={}):
 
 def add_checks_document(checks={}):
     checks["valid_hearingRequirements"] = (
+
         "(ARRAY_SIZE(hearingRequirements) <=> 0)"
+
     )
 
     return checks

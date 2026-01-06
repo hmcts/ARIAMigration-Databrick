@@ -55,6 +55,15 @@ parameters:
             RefData_StorageAccount: 'ingest00externalstg'
             Resource_Group: 'ingest00-main-stg'
             Key_vault_Name: 'ingest00-meta002-stg'
+          - landing_zone: '01'
+            databricks_host: 'https://adb-7405617797633943.3.azuredatabricks.net'
+            databricks_token: "$(STG01_DATABRICKS_TOKEN_WORKSPACE)"
+            Client_ID: $(STG_CLIENT_ID)
+            Subscription_ID: $(STG_SUBSCRIPTION_ID)
+            HTML_StorageAccount: 'ingest01landingstg'
+            RefData_StorageAccount: 'ingest01externalstg'
+            Resource_Group: 'ingest01-main-stg'
+            Key_vault_Name: 'ingest01-meta002-stg'
 
       # - deployment: prod_aria
       #   environment: prod

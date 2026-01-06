@@ -34,4 +34,11 @@ targets:
       presets:
         name_prefix: "[Staging00] "
 
+  stg01:
+      workspace: 
+        host: https://adb-7405617797633943.3.azuredatabricks.net
+      default : true
+      presets:
+        name_prefix: "[Staging01] "
+
 

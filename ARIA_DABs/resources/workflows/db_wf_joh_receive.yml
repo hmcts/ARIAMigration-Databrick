@@ -16,7 +16,7 @@ resources:
             entry_point: main
           job_cluster_key: db_wf_joh_receive_job
           libraries:
-            - whl: dbfs:/FileStore/packages/shared_functions-0.6.4-py3-none-any.whl
+            - whl: dbfs:/FileStore/packages/shared_functions-0.6.6-py3-none-any.whl
       job_clusters:
         - job_cluster_key: db_wf_joh_receive_job
           new_cluster:

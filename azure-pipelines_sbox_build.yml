@@ -144,7 +144,7 @@ stages:
 
                 echo "Building wheel"
                 uv build --wheel --out-dir $(Build.SourcesDirectory)/ARIA_DABs/dist \
-                  $(Build.SourcesDirectory)/ACTIVE/APPEALS
+                  $(Build.SourcesDirectory)/Databricks/ACTIVE/APPEALS
 
                 echo "Listing dist contents after building the wheel"
                 ls -al $(Build.SourcesDirectory)/ARIA_DABs/dist

@@ -3,6 +3,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions import listing
 from pyspark.sql import SparkSession
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
 from pyspark.testing.utils import assertDataFrameEqual
+from unittest.mock import patch
 
 import pytest
 
@@ -34,8 +35,35 @@ def bronze_interpreter_languages_test_data(spark):
     return df
 
 
+@pytest.fixture(scope="session")
+def bronze_hearing_centres_test_data(spark):
+    columns = StructType([
+        StructField("Id", StringType())
+    ])
+    data = []
+
+    df = spark.createDataFrame(data, columns)
+
+    return df
+
+
+@pytest.fixture(scope="session")
+def bronze_derive_hearing_centres_test_data(spark):
+    columns = StructType([
+        StructField("Id", StringType())
+    ])
+    data = []
+
+    df = spark.createDataFrame(data, columns)
+
+    return df
+
+
 class TestListingState():
 
+    CASE_NO_COLUMNS = StructType([
+        StructField("CaseNo", StringType())
+    ])
     M1_COLUMNS = StructType([
         StructField("CaseNo", StringType()),
         StructField("dv_representation", StringType()),
@@ -80,8 +108,8 @@ class TestListingState():
 
         df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
-        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/yes_no_output.jsonl")
-        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/yes_no_audit_output.jsonl")
+        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_output.jsonl")
+        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_audit_output.jsonl")
 
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
@@ -118,8 +146,8 @@ class TestListingState():
 
         df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
-        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/interpreter_languages_output.jsonl")
-        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/interpreter_languages_audit_output.jsonl")
+        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_output.jsonl")
+        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_audit_output.jsonl")
 
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
@@ -183,8 +211,8 @@ class TestListingState():
 
         df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
-        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/m3_conditional_output.jsonl")
-        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/m3_conditional_audit_output.jsonl")
+        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_output.jsonl")
+        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_audit_output.jsonl")
 
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
@@ -216,8 +244,67 @@ class TestListingState():
 
         df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
-        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/category_output.jsonl")
-        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/category_audit_output.jsonl")
+        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/category_output.jsonl")
+        expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/category_audit_output.jsonl")
 
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
+
+    def test_general_fields(self, spark, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.PP') as PP:
+            paymentPendingCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the paymentPendingOutput, trailing comma for tuple type
+            PP.general.return_value = spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS)
+            m1_data = [
+                ("1", "AIP", "FT", 0, 0, 0, 0),  # AIP Case
+                ("2", "LR", "FT", 0, 0, 0, 0),   # LR Case
+                ("3", "AIP", None, 0, 0, 0, 0),  # AIP Case no appealType
+                ("4", "LR", None, 0, 0, 0, 0),   # LR Case no appealType
+                ("5", None, "FT", 0, 0, 0, 0),   # No representation
+                ("6", "UN", "FT", 0, 0, 0, 0)    # Not AIP or LR Case
+            ]
+
+            silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+            silver_m2_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
+            silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
+            silver_h_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
+
+            df, df_audit = listing.general(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_h_test_data, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data)
+
+            expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/general/general_output.jsonl")
+            expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/general/general_audit_output.jsonl")
+
+            assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
+            assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
+
+    def test_general__default_fields(self, spark):
+        m1_data = [
+            ("1", "AIP", "FT", 0, 0, 0, 0),  # Defaults 1
+            ("2", "LR", "FT", 0, 0, 0, 0)    # Defaults 2
+        ]
+
+        silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+
+        df = listing.generalDefault(silver_m1_test_data)
+
+        expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/general_default/general_default_output.jsonl")
+
+        assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
+
+    def test_documents_fields(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.AERb') as AERb:
+            aerBCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the AERb output, trailing comma for tuple type
+            AERb.documents.return_value = spark.createDataFrame(aerBCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(aerBCaseOutput, self.CASE_NO_COLUMNS)
+            m1_data = [
+                ("1", "AIP", "FT", 0, 0, 0, 0),  # Defaults 1
+                ("2", "LR", "FT", 0, 0, 0, 0)    # Defaults 2
+            ]
+
+            silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+
+            df, df_audit = listing.documents(silver_m1_test_data)
+
+            expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/documents/documents_output.jsonl")
+            expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/documents/documents_audit_output.jsonl")
+
+            assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
+            assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)

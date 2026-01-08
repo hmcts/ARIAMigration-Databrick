@@ -437,12 +437,12 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 # caseArgumentAvailable
                 array(struct(lit("dv_representation"), lit("lu_appealType"))).alias("caseArgumentAvailable_inputFields"),
                 array(struct(col("general.dv_representation"), col("general.lu_appealType"))).alias("caseArgumentAvailable_inputValues"),
-                col("general.caseArgumentAvailable"),
+                col("general.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
                 lit("Yes").alias("caseArgumentAvailable_Transformed"),
                 # reasonForAppealDecision
                 array(struct(lit("dv_representation"), lit("lu_appealType"))).alias("reasonsForAppealDecision_inputFields"),
                 array(struct(col("general.dv_representation"), col("general.lu_appealType"))).alias("reasonsForAppealDecision_inputValues"),
-                col("general.reasonsForAppealDecision"),
+                col("general.reasonsForAppealDecision").alias("reasonsForAppealDecision_value"),
                 lit("Yes").alias("reasonsForAppealDecision_Transformed")
             )
     )
@@ -545,6 +545,19 @@ def documents(silver_m1):
     df_documents = (
         df_documents
             .withColumn("hearingRequirements", lit([]).cast("array<string>"))
+    )
+
+    df_audit_documents = (
+        df_audit_documents.alias("audit")
+            .join(df_documents.alias("documents"), on="CaseNo", how="left")
+            .select(
+                "audit.*",
+                # hearingRequirements
+                array(struct()).alias("hearingRequirements_inputFields"),
+                array(struct()).alias("hearingRequirements_inputValues"),
+                col("documents.hearingRequirements").alias("hearingRequirements_value"),
+                lit("Yes").alias("hearingRequirements_Transformed")
+            )
     )
 
     return df_documents, df_audit_documents

@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, regexp_extract, max
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor, col, date_format, count, explode, round, regexp_extract, max
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -2042,53 +2042,132 @@ from pyspark.sql import functions as F
   path=f"{silver_base_path}/silver_sbail_meta_data"
 )
 def silver_meta_data():
-  m1_df = dlt.read("silver_sbail_m1_case_details").alias("m1")
-  m2_df = dlt.read("silver_sbail_m2_case_appellant").filter(col("Relationship").isNull()).alias("m2")
-  m7_df = dlt.read("silver_sbail_m7_status").alias("m7")
-  max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
-
-  m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate")).alias("m7_max")
-
-  base_df = (
-        m1_df.join(m2_df, on="CaseNo", how="left"
-                   ).join(m7_max_decision_date, on="CaseNo", how="left")
-             .select(
-                 F.col("CaseNo").alias("client_identifier"),
-                 date_format(
-                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-                 date_format(
-                   coalesce(F.col("m7_max.DecisionDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-                 F.lit("GBR").alias("region"),
-                 F.lit("ARIA").alias("publisher"),
-                 F.when(
-                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
-                        "ARIASBDEV"
-                    ).when(
-                        (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
-                        lit("ARIASB")
-                    ).when(
-                        (col("m1.BailTypeDesc") != "Scottish Bail") & (env == lit("sbox")),
-                        lit("ARIABDEV")
-                        ).otherwise(lit("ARIAB")).alias("record_class"),
-                #  F.when(F.col("m1.BaseBailType") == "ScottishBailsFunds", "ARIASB") &&env = sbox then dev
-                #   .otherwise("ARIAB")
-                #   .alias("record_class"),
-                 F.lit("IA_Tribunal").alias("entitlement_tag"),
-                 F.col("HoRef").alias("bf_001"),
-                 F.col("m2.AppellantForenames").alias("bf_002"),
-                 F.col("m2.AppellantName").alias("bf_003"),
-                 date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
-                 F.col("PortReference").alias("bf_005"),
-                 F.col("RepPostcode").alias("bf_006"),
-                 F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007")
-             )
+    ## Read in Status, Outcome combinations
+    df_StatusOutcomeCombinations = spark.read.option("header", True).csv(
+        f"abfss://external-csv@ingest{lz_key}external{env}.dfs.core.windows.net/ReferenceData/StatusOutcomeCombinations.csv"
     )
-  #Join the batchid mapping back onto the base DataFrame
-  final_df = base_df.distinct()
-    
+    ##Filter on bails (not scottish)
+    df_StatusOutcomeCombinations_bails = (
+        df_StatusOutcomeCombinations.filter(
+        (col("Case Type") == "Bail")
+        ).select(
+            col("CaseStatus").cast("int").alias("lk_case_status"),
+            col("Outcome").cast("int").alias("lk_outcome")
+        )
+        .dropna()
+        .dropDuplicates()
+    )
 
+    m1_df = dlt.read("silver_sbail_m1_case_details").alias("m1")
+    m2_df = dlt.read("silver_sbail_m2_case_appellant").alias("m2")
+    m7_df = dlt.read("silver_sbail_m7_status").alias("m7")
+    # max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
 
-  return final_df
+    # m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate"), col("m7.CaseStatus"), col("m7.Outcome")).alias("m7_max")
+
+    w = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    m7_ranked = (
+        m7_df
+        .withColumn("rn", F.row_number().over(w)))
+
+    #Retain top 2 rows
+    m7_top2 = m7_ranked.filter(col("rn") <= 2)
+
+    ##pivot r1, r2 into cols
+    m7_pivoted = (
+        m7_top2
+        .groupBy("CaseNo")
+        .agg(
+            F.max(F.when(col("rn") == 1, col("DecisionDate"))).alias("decision_date_latest"),
+            F.max(F.when(col("rn") == 2, col("DecisionDate"))).alias("decision_date_prev"),
+            F.max(F.when(col("rn") == 1, col("CaseStatus"))).alias("CaseStatus"),
+            F.max(F.when(col("rn") == 1, col("Outcome"))).alias("Outcome")
+        )
+    )
+
+    base_df = (
+        m1_df
+        .join(m2_df, on="CaseNo", how="left")
+        .join(m7_pivoted, on="CaseNo", how="left")
+        .select(
+            col("CaseNo").alias("client_identifier"),
+            date_format(
+                coalesce(col("decision_date_latest"), current_timestamp()),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            ).alias("event_date"),
+            date_format(
+                coalesce(col("decision_date_latest"), current_timestamp()),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            ).alias("recordDate"),
+            F.lit("GBR").alias("region"),
+            F.lit("ARIA").alias("publisher"),
+            F.when(
+                (col("m1.BailTypeDesc") == "Scottish Bail") & (env == lit("sbox")),
+                "ARIASBDEV"
+            ).when(
+                (col("m1.BailTypeDesc") == "Scottish Bail") & (env != lit("sbox")),
+                lit("ARIASB")
+            ).when(
+                (col("m1.BailTypeDesc") != "Scottish Bail") & (env == lit("sbox")),
+                lit("ARIABDEV")
+                ).otherwise(lit("ARIAB")).alias("record_class"),
+            F.lit("IA_Tribunal").alias("entitlement_tag"),
+            F.col("HoRef").alias("bf_001"),
+            F.col("m2.AppellantForenames").alias("bf_002"),
+            F.col("m2.AppellantName").alias("bf_003"),
+            date_format(coalesce(F.col("AppellantBirthDate"),current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("bf_004"),
+            F.col("PortReference").alias("bf_005"),
+            F.col("RepPostcode").alias("bf_006"),
+            F.when(F.col("m1.BaseBailType") == "BailLegalHold", "Yes").otherwise("No").alias("bf_007"),
+            col("CaseStatus").cast("int"),
+            col("Outcome").cast("int"),
+            col("decision_date_prev")
+        )
+    )
+
+    #Compare metadata dataframe status, outcome combinations with lookup table
+    comparison_df = (
+        base_df.alias("b")
+        .join(
+            df_StatusOutcomeCombinations_bails.alias("bl"),
+            (col("b.CaseStatus") == col("bl.lk_case_status")) &
+            (col("b.Outcome") == col("bl.lk_outcome")),
+            how="left"
+        )
+        .withColumn(
+            "is_valid_status_outcome",
+            F.when(col("bl.lk_case_status").isNotNull(), lit(True))
+            .otherwise(lit(False))
+        )
+        .drop("lk_case_status", "lk_outcome")
+    )
+
+    ## Set retention dates based on status/outcome combinations
+    ## if combo exists, set retention date to + 240 (20 yrs) months from Dateofdecision
+    ## if combo is (38, 4) or (38, 19) set retention date to + 240 (20 yrs) months from decision_date_prev, otherwise null -> set to current date
+    ## if combo is null, set retention date to current date
+    final_df = comparison_df.withColumn(
+    "retentionDate",
+    F.when(
+        col("is_valid_status_outcome") == True,
+        F.add_months(col("event_date"), 240)
+    )
+    .when(
+        ((col("Outcome") == 38) & (col("CaseStatus") == 4)) | ((col("Outcome") == 38) & (col("CaseStatus") == 19)),
+        F.add_months(
+            coalesce(col("decision_date_prev"), F.current_date()),
+            240))
+    .when(
+        col("Outcome").isNull() & col("CaseStatus").isNull(),
+        F.current_date()
+    ).otherwise(F.current_date())
+    ).withColumn(
+        "recordDate",
+        concat(F.col("retentionDate"), lit("T00:00:00.000Z"))
+    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"))
+
+    return final_df
 
 # COMMAND ----------
 
@@ -3770,7 +3849,8 @@ def generate_a360(row):
                 "bf_002": row.bf_002 or "",
                 "bf_003": row.bf_003 or "",
                 "bf_004": str(row.bf_004) or "",
-                "bf_005": row.bf_005 or ""
+                "bf_005": row.bf_005 or "",
+                "retentionDate": str(row.retentionDate) or ""
             }
         }
  

@@ -11,7 +11,7 @@ steps:
   
   - script: |
       echo "Running paymentPending unit tests"
-      pytest $(Build.SourcesDirectory)/tests/active/paymentPending \
+      python -m pytest $(Build.SourcesDirectory)/tests/active/paymentPending \
         --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
     displayName: 'Run pytest unit tests'
   

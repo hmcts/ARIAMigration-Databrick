@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch, ANY
 import pytest
 
 ###### IDAM token manager code - to be deleted when you import the module
-import AzureFunctions.ACTIVE.active_ccd.tokenManager as tokenManager
+from AzureFunctions.ACTIVE.active_ccd import tokenManager
 # import AzureFunctions.ACTIVE.active_ccd.tokenManager.S2S_Manager as S2S_Manager
 from datetime import datetime, timezone, timedelta
 

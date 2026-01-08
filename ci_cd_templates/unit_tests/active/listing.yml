@@ -11,7 +11,7 @@ steps:
   
   - script: |
       echo "Running listing unit tests"
-      pytest $(Build.SourcesDirectory)/tests/active/listing \
+      python -m pytest $(Build.SourcesDirectory)/tests/active/listing \
         --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
     displayName: 'Run listing state pytest unit tests'
   

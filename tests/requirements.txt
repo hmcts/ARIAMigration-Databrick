@@ -10,3 +10,4 @@ azure-storage-blob
 aiohttp
 pyspark
 pandas
+azure.functions

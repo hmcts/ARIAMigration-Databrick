@@ -6,8 +6,8 @@ def mock_token_managers():
     """
     Patch IDAMTokenManager and S2S_Manager in ccdFunctions where process_case uses them.
     """
-    with patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.IDAMTokenManager") as mock_idam, \
-         patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager") as mock_s2s:
+    with patch("AzureFunctionsTestWorkaround.ACTIVE.active_ccd.ccdFunctions.IDAMTokenManager") as mock_idam, \
+         patch("AzureFunctionsTestWorkaround.ACTIVE.active_ccd.ccdFunctions.S2S_Manager") as mock_s2s:
 
         mock_idam_inst = MagicMock()
         mock_idam_inst.get_token.return_value = ("mock_idam_token", "uid123")

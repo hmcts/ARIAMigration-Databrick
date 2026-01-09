@@ -21,3 +21,8 @@ stages:
         displayName: 'Run Payment Pending Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/paymentPending.yml
+
+      - job: ListingTests
+        displayName: 'Run Listing Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/listing.yml

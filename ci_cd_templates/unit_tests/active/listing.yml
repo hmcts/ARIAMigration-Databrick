@@ -10,8 +10,8 @@ steps:
     displayName: 'Install dependencies'
   
   - script: |
-      echo "Running paymentPending unit tests"
-      python -m pytest $(Build.SourcesDirectory)/tests/active/paymentPending \
+      echo "Running listing unit tests"
+      python -m pytest $(Build.SourcesDirectory)/tests/active/listing \
         --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
-    displayName: 'Run pytest unit tests'
+    displayName: 'Run listing state pytest unit tests'
   

@@ -155,7 +155,7 @@ def add_checks_hearing_details(checks={}):
     """
 
     checks["valid_witnessDetails"] = (
-        "(witnessDetails = '[]')"
+        "(size(witnessDetails) = 0)"
     )
     
     checks["listing_location_struct_consistent_when_matched"] = """
@@ -179,78 +179,78 @@ def add_checks_hearing_details(checks={}):
     """
 
     checks["valid_witness1InterpreterSignLanguage"] = (
-        "(witness1InterpreterSignLanguage = '{}')"
+        "(size(witness1InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness2InterpreterSignLanguage"] = (
-        "(witness2InterpreterSignLanguage = '{}')"
+        "(size(witness2InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness2InterpreterSignLanguage"] = (
-        "(witness2InterpreterSignLanguage = '{}')"
+        "(size(witness2InterpreterSignLanguage) = 0')"
     )
     checks["valid_witness3InterpreterSignLanguage"] = (
-        "(witness3InterpreterSignLanguage = '{}')"
+        "(size(witness3InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness4InterpreterSignLanguage"] = (
-        "(witness4InterpreterSignLanguage = '{}')"
+        "(size(witness4InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness5InterpreterSignLanguage"] = (
-        "(witness5InterpreterSignLanguage = '{}')"
+        "(size(witness5InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness6InterpreterSignLanguage"] = (
-        "(witness6InterpreterSignLanguage = '{}')"
+        "(size(witness6InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness7InterpreterSignLanguage"] = (
-        "(witness7InterpreterSignLanguage = '{}')"
+        "(size(witness7InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness8InterpreterSignLanguage"] = (
-        "(witness8InterpreterSignLanguage = '{}')"
+        "(size(witness8InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness9InterpreterSignLanguage"] = (
-        "(witness9InterpreterSignLanguage = '{}')"
+        "(size(witness9InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness10InterpreterSignLanguage"] = (
-        "(witness10InterpreterSignLanguage = '{}')"
+        "(size(witness10InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness1InterpreterSpokenLanguage"] = (
-        "(witness1InterpreterSpokenLanguage = '{}')"
+        "(size(witness1InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness2InterpreterSpokenLanguage"] = (
-        "(witness2InterpreterSpokenLanguage = '{}')"
+        "(size(witness2InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness3InterpreterSpokenLanguage"] = (
-        "(witness3InterpreterSpokenLanguage = '{}')"
+        "(size(witness3InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness4InterpreterSpokenLanguage"] = (
-        "(witness4InterpreterSpokenLanguage = '{}')"
+        "(size(witness4InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness5InterpreterSpokenLanguage"] = (
-        "(witness5InterpreterSpokenLanguage = '{}')"
+        "(size(witness5InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness6InterpreterSpokenLanguage"] = (
-        "(witness6InterpreterSpokenLanguage = '{}')"
+        "(size(witness6InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness7InterpreterSpokenLanguage"] = (
-        "(witness7InterpreterSpokenLanguage = '{}')"
+        "(size(witness7InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness8InterpreterSpokenLanguage"] = (
-        "(witness8InterpreterSpokenLanguage = '{}')"
+        "(size(witness8InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness9InterpreterSpokenLanguage"] = (
-        "(witness9InterpreterSpokenLanguage = '{}')"
+        "(size(witness9InterpreterSpokenLanguage) = 0)"
     )
     checks["valid_witness10InterpreterSpokenLanguage"] = (
-        "(witness10InterpreterSpokenLanguage = '{}')"
+        "(size(witness10InterpreterSpokenLanguage) = 0)"
     )
 
     return checks
 
 def add_checks_document(checks={}):
     checks["valid_hearingDocuments"] = (
-        "(hearingDocuments = '[]')"
+        "(size(hearingDocuments) = 0) "
     )
 
     checks["valid_letterBundleDocuments"] = (
-        "(letterBundleDocuments = '[]')"
+        "(size(letterBundleDocuments) = 0) "
     )
 
     return checks

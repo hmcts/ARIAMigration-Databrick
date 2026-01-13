@@ -30,4 +30,4 @@ stages:
       - job: PrepareForHearingTests
         displayName: 'Run Prepare For Hearing Tests'
         steps:
-          - template: ci_cd_templates/unit_tests/active/prepareforhearing.yml
+          - template: ci_cd_templates/unit_tests/active/prepareForHearing.yml

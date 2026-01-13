@@ -2602,7 +2602,7 @@ def generalDefault(silver_m1):
                 ).withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("No")
                 ).withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("No")
                 ).withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("No")
-                ).withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("No")                
+                ).withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("No")          
     ).select(
         col("CaseNo"),
         # lit("").alias("ccdReferenceNumberForDisplay"), Done as part of AppealType 
@@ -2726,6 +2726,28 @@ def caseState(silver_m1, desiredState):
     )
 
     return df,df_audit
+
+################################################################
+##########          Detained State Function          ###########
+################################################################
+
+def detainedState(silver_m1):
+
+    df = silver_m1.select(col("CaseNo"), lit("No").alias("appellantInDetention"))
+
+    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
+    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
+
+    df_audit = silver_m1.alias("audit").join(df.alias("content"), on = ["CaseNo"], how = "left").select(col("CaseNo"),
+  
+    #ariaDesiredState - ARIADM-797
+    array(struct(*common_inputFields, lit("appellantInDetention"))).alias("appellantInDetention_inputFields"),
+    array(struct(*common_inputValues, lit("No"))).alias("appellantInDetention_inputValues"),
+    col("content.appellantInDetention"),
+    lit("No").alias("appellantInDetention_Transformation")
+    )
+
+    return df, df_audit
 
 if __name__ == "__main__":
     pass

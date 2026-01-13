@@ -11,6 +11,6 @@ steps:
   
   - script: |
       echo "Running prepareForHearing unit tests"
-      pytest $(Build.SourcesDirectory)/tests/active/prepareForHearing \
+      pytest $(Build.SourcesDirectory)/tests/active/prepareforhearing \
         --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
     displayName: 'Run pytest unit tests'

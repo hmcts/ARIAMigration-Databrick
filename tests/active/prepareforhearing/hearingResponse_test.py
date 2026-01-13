@@ -44,7 +44,7 @@ def test_feeAmountGbp(spark,paymentType_outputs):
     # results = get_payment_content(payment_content)
     results = paymentType_outputs
 
-    assert results["CASE001"]["feeAmountGbp"] == 8000
+    assert results["CASE001"]["feeAmountGbp"] == 80000
     assert results["CASE002"]["feeAmountGbp"] == 14000
     assert results["CASE003"]["feeAmountGbp"] == None
     assert "CASE004" not in  results

@@ -26,3 +26,9 @@ stages:
         displayName: 'Run Listing Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/listing.yml
+
+      - job: PrepareForHearingTests
+        displayName: 'Run Prepare For Hearing Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/prepareForHearing.yml
+

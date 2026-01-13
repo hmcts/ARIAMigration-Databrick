@@ -2,6 +2,9 @@ from Databricks.ACTIVE.APPEALS.Active_Functions.paymentPending import paymentTyp
 from pyspark.sql import SparkSession
 import pytest
 
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F, types as T
+
 
 @pytest.fixture(scope="session")
 def spark():

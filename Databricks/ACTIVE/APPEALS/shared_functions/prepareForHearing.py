@@ -393,9 +393,12 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
+    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
+    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-    silver_m3_filtered_casestatus = silver_m3_max_statusid.filter(col("CaseStatus").isin(37, 38))
+
+    silver_m3_filtered_casestatus = silver_m3_max_statusid
 
     silver_m3_filtered_casestatus = silver_m3_filtered_casestatus.alias("m3").join(
         bronze_listing_location.alias("location"),

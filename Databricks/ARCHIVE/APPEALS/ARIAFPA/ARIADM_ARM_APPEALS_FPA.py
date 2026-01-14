@@ -3454,7 +3454,11 @@ def silver_dfdairy_detail():
 
     joined_df = appeals_df.join(flt_df, col("df.CaseNo") == col("flt.CaseNo"), "inner").select("df.*")
 
-    return joined_df
+    window = Window.partitionBy("CaseNo").orderBy(col("BFDate"))
+    joined_df_window = joined_df.withColumn("row_num", row_number().over(window))
+    joined_df_ordered = joined_df_window.orderBy(col("BFDate").desc())
+
+    return joined_df_ordered
 
 # COMMAND ----------
 

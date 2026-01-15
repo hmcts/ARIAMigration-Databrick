@@ -111,5 +111,5 @@ def test_listingLocation(spark,hearingDetails_outputs):
 
     assert results["CASE001"]["listingLocation"] == None
     assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
-    assert results["CASE008"]["listingLocation"] == {'code': None, 'label': None}
+    assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
     assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}

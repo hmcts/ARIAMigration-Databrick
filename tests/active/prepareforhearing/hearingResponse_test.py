@@ -99,7 +99,7 @@ def hearingResponse_outputs(spark):
     
     m6_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("Required", T.BooleanType(), True),
+        T.StructField("Required", T.IntegerType(), True),
         T.StructField("Judge_Surname", T.StringType(), True),
         T.StructField("Judge_Forenames", T.StringType(), True),
         T.StructField("Judge_Title", T.StringType(), True),

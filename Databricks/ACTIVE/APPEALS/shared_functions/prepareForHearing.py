@@ -80,7 +80,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("Start Time",
                                 when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
                     ).withColumn("Estimated Duration",
-                                when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate"))
+                                when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate").cast("string"))
                     ).withColumn("Required/Incompatible Judicial Officers", concat_ws(" ", col("Judge_Surname"), col("Judge_Forenames")
                     , when(col("Judge_Title").isNotNull(),"("),
                     col("Judge_Title"),

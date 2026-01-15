@@ -142,6 +142,7 @@ def test_isAppealSuitableToFloat(spark,hearingResponse_outputs):
 
     assert results["CASE001"]["isAppealSuitableToFloat"] == 'Yes'
     assert results["CASE006"]["isAppealSuitableToFloat"] == 'No'
+    assert results["CASE007"]["isAppealSuitableToFloat"] == 'No'
     assert results["CASE008"]["isAppealSuitableToFloat"] == 'No'
 
 def test_isMultimediaAllowed(spark,hearingResponse_outputs):

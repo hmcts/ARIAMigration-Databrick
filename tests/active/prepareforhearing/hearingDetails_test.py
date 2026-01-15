@@ -86,29 +86,29 @@ def hearingDetails_outputs(spark):
     return results
 
 
-    def test_hearingChannel(spark,hearingDetails_outputs):
+def test_hearingChannel(spark,hearingDetails_outputs):
 
-        results = hearingDetails_outputs
+    results = hearingDetails_outputs
 
-        assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
-        assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
-        assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
+    assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
+    assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
+    assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
 
 
-    def test_listingLength(spark,hearingDetails_outputs):
+def test_listingLength(spark,hearingDetails_outputs):
 
-        results = hearingDetails_outputs
+    results = hearingDetails_outputs
 
-        assert results["CASE001"]["listingLength"] == None
-        assert results["CASE006"]["listingLength"] == {'hours': 4, 'minutes': 0}
-        assert results["CASE008"]["listingLength"] == {'hours': None, 'minutes': None}
-        assert results["CASE011"]["listingLength"] == {'hours': 0, 'minutes': 45}
+    assert results["CASE001"]["listingLength"] == None
+    assert results["CASE006"]["listingLength"] == {'hours': 4, 'minutes': 0}
+    assert results["CASE008"]["listingLength"] == {'hours': None, 'minutes': None}
+    assert results["CASE011"]["listingLength"] == {'hours': 0, 'minutes': 45}
 
-    def test_listingLocation(spark,hearingDetails_outputs):
+def test_listingLocation(spark,hearingDetails_outputs):
 
-        results = hearingDetails_outputs
+    results = hearingDetails_outputs
 
-        assert results["CASE001"]["listingLocation"] == None
-        assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
-        assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
-        assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}
+    assert results["CASE001"]["listingLocation"] == None
+    assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
+    assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
+    assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}

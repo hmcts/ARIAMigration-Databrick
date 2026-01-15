@@ -77,7 +77,7 @@ def hearingResponse_outputs(spark):
         ("CASE003", 1, 38, 240, "LOC003", "CC_Sur", None, "CC_T",5,"Special","2023-10-01","HearingType","CourtName","2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),  
         ("CASE004", 1, 38, 360, "LOC004", "CC_Sur", "CC_Fore", None,5,"Standard","2023-10-01",None,"CourtName","2023-10-01T10:00:00","Jud_S1_Name",None,"Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),   
         ("CASE005", 1, 37, None, "LOC005", None, None, "CC_T",5,"Urgent","2023-10-01","HearingType",None,"2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T",None),   
-        ("CASE006", 1, 37, 30, "LOC006",None, None, None,5,"Special","2023-10-01","HearingType","CourtName","2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),   
+        ("CASE006", 1, 37, 30, "LOC006",None, None, None,None,"Special","2023-10-01","HearingType","CourtName","2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),   
         ("CASE007", 1, 38, None, "LOC007", "CC_Sur", "CC_Fore", "CC_T",2,"Standard","2023-10-01","HearingType","CourtName","2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),
         ("CASE008", 1, 38, 45, "LOC008", "CC_Sur", "CC_Fore", "CC_T",1,"Urgent","2023-10-01","HearingType","CourtName","2023-10-01T10:00:00","Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes")
     ]
@@ -127,29 +127,43 @@ def hearingResponse_outputs(spark):
     return results
 
 
-def test_hearingChannel(spark,hearingResponse_outputs):
+def test_isRemoteHearing(spark,hearingResponse_outputs):
 
     results = hearingResponse_outputs
 
-    assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
-    assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
-    assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
+    assert results["CASE001"]["isRemoteHearing"] == 'No'
+    assert results["CASE002"]["isRemoteHearing"] == 'No'
+    assert results["CASE006"]["isRemoteHearing"] == 'No'
 
 
-def test_listingLength(spark,hearingResponse_outputs):
-
-    results = hearingResponse_outputs
-
-    assert results["CASE001"]["listingLength"] == None
-    assert results["CASE006"]["listingLength"] == {'hours': 4, 'minutes': 0}
-    assert results["CASE008"]["listingLength"] == {'hours': None, 'minutes': None}
-    assert results["CASE011"]["listingLength"] == {'hours': 0, 'minutes': 45}
-
-def test_listingLocation(spark,hearingResponse_outputs):
+def test_isAppealSuitableToFloat(spark,hearingResponse_outputs):
 
     results = hearingResponse_outputs
 
-    assert results["CASE001"]["listingLocation"] == None
-    assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
-    assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
-    assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}
+    assert results["CASE001"]["isAppealSuitableToFloat"] == 'Yes'
+    assert results["CASE006"]["isAppealSuitableToFloat"] == 'No'
+    assert results["CASE008"]["isAppealSuitableToFloat"] == 'No'
+
+def test_isMultimediaAllowed(spark,hearingResponse_outputs):
+
+    results = hearingResponse_outputs
+
+    assert results["CASE001"]["isMultimediaAllowed"] == 'Granted'
+    assert results["CASE002"]["isMultimediaAllowed"] == 'Granted'
+    assert results["CASE006"]["isMultimediaAllowed"] == 'Granted'
+
+def test_multimediaTribunalResponse(spark,hearingResponse_outputs):
+
+    results = hearingResponse_outputs
+
+    assert results["CASE001"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+    assert results["CASE002"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+    assert results["CASE006"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+
+def test_multimediaDecisionForDisplay(spark,hearingResponse_outputs):
+
+    results = hearingResponse_outputs
+
+    assert results["CASE001"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
+    assert results["CASE002"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
+    assert results["CASE006"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'

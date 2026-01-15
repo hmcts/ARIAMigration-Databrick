@@ -414,28 +414,34 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 
     content_df = silver_m3_filtered_casestatus.withColumn(
         "listingLength",
-        F.when(
-            F.col("TimeEstimate").isNull(),
-            # Create a struct with null hours and minutes when TimeEstimate is null
-            F.struct(
-                F.lit(None).cast("int").alias("hours"),
-                F.lit(None).cast("int").alias("minutes")
-            )
-        ).otherwise(
-            # Compute hours and minutes from TimeEstimate (assumed to be minutes)
-            F.struct(
-                F.floor(F.col("TimeEstimate").cast("int") / 60).alias("hours"),
-                (F.col("TimeEstimate").cast("int") % 60).alias("minutes")
-            )
+        F.create_map(
+                F.lit("hours"),
+                F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int").alias("hours"))
+                .otherwise(F.floor(F.col("TimeEstimate").cast("int") / 60).alias("hours")),
+                F.lit("minutes"),
+                F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int").alias("minutes"))
+                .otherwise(F.col("TimeEstimate").cast("int") % 60).alias("minutes"))
+        ).select(
+            col("CaseNo").alias("CaseNo"),
+            col("listingLength"),
+            col("listingLocation"),
+            col("TimeEstimate"),
+            col("HearingCentre") 
         )
-    ).select(
-        col("CaseNo").alias("CaseNo"),
-        col("listingLength"),
-        col("listingLocation"),
-        col("TimeEstimate"),
-        col("HearingCentre") 
-    )
-        
+            # F.when(
+        #     F.col("TimeEstimate").isNull(),
+        #     # Create a struct with null hours and minutes when TimeEstimate is null
+        #     F.struct(
+        #         F.lit(None).cast("int").alias("hours"),
+        #         F.lit(None).cast("int").alias("minutes")
+        #     )
+        # ).otherwise(
+        #     # Compute hours and minutes from TimeEstimate (assumed to be minutes)
+        #     F.struct(
+        #         F.floor(F.col("TimeEstimate").cast("int") / 60).alias("hours"),
+        #         (F.col("TimeEstimate").cast("int") % 60).alias("minutes")
+        #     )
+        # )
     df_hearingDetails = (
         silver_m1.alias("m1")
         .join(content_df.alias("m3_content"), ["CaseNo"], "left")

@@ -116,14 +116,16 @@ def add_checks_hearing_response(checks={}):
 
 def add_checks_hearing_details(checks={}):
 
-    
-    checks["valid_listinglength_hours_non_negative"] = """
-    (listingLength.hours IS NULL OR listingLength.hours >= 0)
-    """
-
-    checks["valid_listinglength_minutes_range"] = """
-    (listingLength.minutes IS NULL OR (listingLength.minutes >= 0 AND listingLength.minutes < 60))
-    """
+    checks["valid_listinglength"] = """
+    (TimeEstimate IS NULL AND
+        element_at(listingLength, 'hours') IS NULL AND
+        element_at(listingLength, 'minutes') IS NULL
+    ) OR (
+        TimeEstimate IS NOT NULL AND
+        element_at(listingLength, 'hours') >=0 AND
+        element_at(listingLength, 'minutes') >=0
+    )
+    """"
 
     checks["valid_hearingChannel"] = """
     (

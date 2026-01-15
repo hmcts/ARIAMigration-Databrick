@@ -406,11 +406,14 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
         how="left"
     ).withColumn(
         "listingLocation",
-        F.struct(
-            col("location.locationCode").alias("code"),
-            col("location.locationLabel").alias("label")
-        )
-    )
+        F.create_map(
+            F.lit("code"),
+            F.when(col("location.ListedCentre").isNull(), F.lit(None).alias("code"))
+                .otherwise(col("location.locationCode").alias("code")),
+            F.lit("label"),
+            F.when(col("location.ListedCentre").isNull(), F.lit(None).alias("code"))
+                .otherwise(col("location.locationLabel").alias("label"))
+    ))
 
     content_df = silver_m3_filtered_casestatus.withColumn(
         "listingLength",

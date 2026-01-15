@@ -42,7 +42,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
             concat(lit("("), col("CourtClerk_Title"), lit(")"))).otherwise(lit(None))))
             ).withColumn("isAppealSuitableToFloat",when(col("ListTypeId") == 5, lit("Yes")).otherwise("No"))
  
-    stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
+    stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == 0, lit('Not Required')).when(F.col("Required") == 1, lit('Required')))
 
     final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",

@@ -1,4 +1,3 @@
-from sqlite3 import Row
 from Databricks.ACTIVE.APPEALS.shared_functions.prepareForHearing import hearingDetails
 from pyspark.sql import SparkSession
 import pytest

@@ -14,6 +14,7 @@ def spark():
         .getOrCreate()
     )
 
+
 ##### Testing the documents field grouping function #####
 @pytest.fixture(scope="session")
 def hearingResponse_outputs(spark):

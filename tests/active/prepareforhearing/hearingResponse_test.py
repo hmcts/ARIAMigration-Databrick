@@ -106,12 +106,12 @@ def hearingResponse_outputs(spark):
         ])
     
     m6_data = [
-        ("CASE001", True,  "Jud_S_Name","Jud_F_Name","Judge_T"),   # StatusId 1 Unused Additional Spoken Language Only
-        ("CASE002", False,  None,"Jud_F_Name","Judge_T"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
-        ("CASE003", True, "Jud_S_Name",None,"Judge_T"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
-        ("CASE004", True,  "Jud_S_Name","Jud_F_Name",None),   # Additional Sign Language (to Spoken + Sign)
-        ("CASE005", False, None,None,"Judge_T"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
-        ("CASE006", False, None,None,None),   # Additional Sign Language (to Sign + Sign Manual)
+        ("CASE001", 1,  "Jud_S_Name","Jud_F_Name","Judge_T"),   # StatusId 1 Unused Additional Spoken Language Only
+        ("CASE002", 0,  None,"Jud_F_Name","Judge_T"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
+        ("CASE003", 1, "Jud_S_Name",None,"Judge_T"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
+        ("CASE004", 1,  "Jud_S_Name","Jud_F_Name",None),   # Additional Sign Language (to Spoken + Sign)
+        ("CASE005", 0, None,None,"Judge_T"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
+        ("CASE006", 0, None,None,None),   # Additional Sign Language (to Sign + Sign Manual)
         ("CASE007", None,  "Jud_S_Name","Jud_F_Name","Judge_T"),  # Additional Manual Language Entry (to Sign + Spoken Manual)
         ("CASE008", None, "Jud_S_Name","Jud_F_Name","Judge_T")   # Additional Sign Manual Language (to Sign + Sign Manual)
         ] 

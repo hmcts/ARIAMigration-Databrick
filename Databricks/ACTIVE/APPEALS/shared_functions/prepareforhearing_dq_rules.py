@@ -162,11 +162,11 @@ def add_checks_hearing_details(checks={}):
     
     checks["listing_location_struct_consistent_when_matched"] = """
     (
-    location.ListedCentre IS NULL
+    ListedCentre IS NULL
     OR
     (
-        listingLocation.code = location.locationCode AND
-        listingLocation.label = location.locationLabel
+        listingLocation.code = locationCode AND
+        listingLocation.label = locationLabel
     )
     )
     """
@@ -174,9 +174,9 @@ def add_checks_hearing_details(checks={}):
     # If no match, both fields in listingLocation must be NULL.
     checks["valid_listinglocation_null_when_not_matched"] = """
     (
-    location.ListedCentre IS NOT NULL
-    OR
-    (listingLocation.code IS NULL AND listingLocation.label IS NULL)
+    ListedCentre IS NOT NULL
+    AND
+    (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
     )
     """
 

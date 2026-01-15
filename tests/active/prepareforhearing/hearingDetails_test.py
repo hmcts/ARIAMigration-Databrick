@@ -85,16 +85,6 @@ def hearingDetails_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
     return results
 
-
-def test_hearingChannel(spark,hearingDetails_outputs):
-
-    results = hearingDetails_outputs
-
-    assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
-    assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
-    assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
-
-
 def test_listingLength(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
@@ -104,6 +94,24 @@ def test_listingLength(spark,hearingDetails_outputs):
     assert results["CASE008"]["listingLength"] == {'hours': None, 'minutes': None}
     assert results["CASE011"]["listingLength"] == {'hours': 0, 'minutes': 45}
 
+
+def test_hearingChannel(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
+    assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
+    assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
+
+def test_witnessDetails(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witnessDetails"] == []
+    assert results["CASE002"]["witnessDetails"] == []
+    assert results["CASE006"]["witnessDetails"] == []
+
+
 def test_listingLocation(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
@@ -112,3 +120,164 @@ def test_listingLocation(spark,hearingDetails_outputs):
     assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
     assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
     assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}
+
+def test_witness1InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness1InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness1InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness1InterpreterSignLanguage"] == {}
+
+def test_witness2InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness2InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness2InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness2InterpreterSignLanguage"] == {}
+
+def test_witness3InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness3InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness3InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness3InterpreterSignLanguage"] == {}
+
+def test_witness4InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness4InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness4InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness4InterpreterSignLanguage"] == {}
+
+def test_witness5InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness5InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness5InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness5InterpreterSignLanguage"] == {}
+
+def test_witness6InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness6InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness6InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness6InterpreterSignLanguage"] == {}
+
+def test_witness7InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness7InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness7InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness7InterpreterSignLanguage"] == {}
+
+def test_witness8InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness8InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness8InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness8InterpreterSignLanguage"] == {}
+
+def test_witness9InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness9InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness9InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness9InterpreterSignLanguage"] == {}
+
+def test_witness10InterpreterSignLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness10InterpreterSignLanguage"] == {}
+    assert results["CASE002"]["witness10InterpreterSignLanguage"] == {}
+    assert results["CASE006"]["witness10InterpreterSignLanguage"] == {}
+
+
+def test_witness1InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness1InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness1InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness1InterpreterSpokenLanguage"] == {}
+
+def test_witness2InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness2InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness2InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness2InterpreterSpokenLanguage"] == {}
+
+def test_witness3InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness3InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness3InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness3InterpreterSpokenLanguage"] == {}
+
+def test_witness4InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness4InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness4InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness4InterpreterSpokenLanguage"] == {}
+
+def test_witness5InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness5InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness5InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness5InterpreterSpokenLanguage"] == {}
+
+def test_witness6InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness6InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness6InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness6InterpreterSpokenLanguage"] == {}
+
+def test_witness7InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness7InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness7InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness7InterpreterSpokenLanguage"] == {}
+
+def test_witness8InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness8InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness8InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness8InterpreterSpokenLanguage"] == {}
+
+def test_witness9InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness9InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness9InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness9InterpreterSpokenLanguage"] == {}
+
+def test_witness10InterpreterSpokenLanguage(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["witness10InterpreterSpokenLanguage"] == {}
+    assert results["CASE002"]["witness10InterpreterSpokenLanguage"] == {}
+    assert results["CASE006"]["witness10InterpreterSpokenLanguage"] == {}

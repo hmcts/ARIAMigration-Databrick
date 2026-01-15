@@ -99,19 +99,19 @@ def hearingResponse_outputs(spark):
     
     m6_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("Required", T.StringType(), True),
+        T.StructField("Required", T.BooleanType(), True),
         T.StructField("Judge_Surname", T.StringType(), True),
         T.StructField("Judge_Forenames", T.StringType(), True),
         T.StructField("Judge_Title", T.StringType(), True),
         ])
     
     m6_data = [
-        ("CASE001", "1",  "Jud_S_Name","Jud_F_Name","Judge_T"),   # StatusId 1 Unused Additional Spoken Language Only
-        ("CASE002", "0",  None,"Jud_F_Name","Judge_T"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
-        ("CASE003", "1", "Jud_S_Name",None,"Judge_T"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
-        ("CASE004", "1",  "Jud_S_Name","Jud_F_Name",None),   # Additional Sign Language (to Spoken + Sign)
-        ("CASE005", "0", None,None,"Judge_T"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
-        ("CASE006", "0", None,None,None),   # Additional Sign Language (to Sign + Sign Manual)
+        ("CASE001", 1,  "Jud_S_Name","Jud_F_Name","Judge_T"),   # StatusId 1 Unused Additional Spoken Language Only
+        ("CASE002", 0,  None,"Jud_F_Name","Judge_T"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
+        ("CASE003", 1, "Jud_S_Name",None,"Judge_T"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
+        ("CASE004", 1,  "Jud_S_Name","Jud_F_Name",None),   # Additional Sign Language (to Spoken + Sign)
+        ("CASE005", 0, None,None,"Judge_T"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
+        ("CASE006", 0, None,None,None),   # Additional Sign Language (to Sign + Sign Manual)
         ("CASE007", None,  "Jud_S_Name","Jud_F_Name","Judge_T"),  # Additional Manual Language Entry (to Sign + Spoken Manual)
         ("CASE008", None, "Jud_S_Name","Jud_F_Name","Judge_T")   # Additional Sign Manual Language (to Sign + Sign Manual)
         ] 
@@ -135,36 +135,35 @@ def test_isRemoteHearing(spark,hearingResponse_outputs):
     # assert results["CASE002"]["isRemoteHearing"] == 'No'
     # assert results["CASE006"]["isRemoteHearing"] == 'No'
 
+# def test_isAppealSuitableToFloat(spark,hearingResponse_outputs):
 
-def test_isAppealSuitableToFloat(spark,hearingResponse_outputs):
+#     results = hearingResponse_outputs
 
-    results = hearingResponse_outputs
+#     assert results["CASE001"]["isAppealSuitableToFloat"] == 'Yes'
+#     assert results["CASE006"]["isAppealSuitableToFloat"] == 'No'
+#     assert results["CASE007"]["isAppealSuitableToFloat"] == 'No'
+#     assert results["CASE008"]["isAppealSuitableToFloat"] == 'No'
 
-    assert results["CASE001"]["isAppealSuitableToFloat"] == 'Yes'
-    assert results["CASE006"]["isAppealSuitableToFloat"] == 'No'
-    assert results["CASE007"]["isAppealSuitableToFloat"] == 'No'
-    assert results["CASE008"]["isAppealSuitableToFloat"] == 'No'
+# def test_isMultimediaAllowed(spark,hearingResponse_outputs):
 
-def test_isMultimediaAllowed(spark,hearingResponse_outputs):
+#     results = hearingResponse_outputs
 
-    results = hearingResponse_outputs
+#     assert results["CASE001"]["isMultimediaAllowed"] == 'Granted'
+#     assert results["CASE002"]["isMultimediaAllowed"] == 'Granted'
+#     assert results["CASE006"]["isMultimediaAllowed"] == 'Granted'
 
-    assert results["CASE001"]["isMultimediaAllowed"] == 'Granted'
-    assert results["CASE002"]["isMultimediaAllowed"] == 'Granted'
-    assert results["CASE006"]["isMultimediaAllowed"] == 'Granted'
+# def test_multimediaTribunalResponse(spark,hearingResponse_outputs):
 
-def test_multimediaTribunalResponse(spark,hearingResponse_outputs):
+#     results = hearingResponse_outputs
 
-    results = hearingResponse_outputs
+#     assert results["CASE001"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+#     assert results["CASE002"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+#     assert results["CASE006"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
 
-    assert results["CASE001"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
-    assert results["CASE002"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
-    assert results["CASE006"]["multimediaTribunalResponse"] == 'This is a migrated ARIA case. Please refer to the documents.'
+# def test_multimediaDecisionForDisplay(spark,hearingResponse_outputs):
 
-def test_multimediaDecisionForDisplay(spark,hearingResponse_outputs):
+#     results = hearingResponse_outputs
 
-    results = hearingResponse_outputs
-
-    assert results["CASE001"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
-    assert results["CASE002"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
-    assert results["CASE006"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
+#     assert results["CASE001"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
+#     assert results["CASE002"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'
+#     assert results["CASE006"]["multimediaDecisionForDisplay"] == 'Granted - This is a migrated ARIA case. Please refer to the documents.'

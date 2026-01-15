@@ -356,10 +356,10 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     lit("dv_representation").alias("field"),
                     array(lit("dv_representation")).alias("source_columns")
                 ),
-                struct(
-                    lit("dv_CCDAppealType").alias("field"),
-                    array(lit("dv_CCDAppealType")).alias("source_columns")
-                )
+                # struct(
+                #     lit("dv_CCDAppealType").alias("field"),
+                #     array(lit("dv_CCDAppealType")).alias("source_columns")
+                # )
             ).alias("additionalInstructionsTribunalResponse_inputFields"),
             
             array(
@@ -376,7 +376,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                 struct(lit("Notes").alias("field"), col("f.`Notes`").cast("string").alias("value")),
                 struct(lit("Court Clerk / Usher").alias("field"), col("f.CourtClerkFull").cast("string").alias("value")),
                 struct(lit("dv_representation").alias("field"), col("m1.`dv_representation`").cast("string").alias("value")),
-                struct(lit("dv_CCDAppealType").alias("field"), col("m1.`dv_CCDAppealType`").cast("string").alias("value"))
+                # struct(lit("dv_CCDAppealType").alias("field"), col("m1.`dv_CCDAppealType`").cast("string").alias("value"))
             ).alias("additionalInstructionsTribunalResponse_inputValues")
 
         )

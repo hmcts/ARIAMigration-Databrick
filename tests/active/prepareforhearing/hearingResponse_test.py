@@ -131,7 +131,7 @@ def test_isRemoteHearing(spark,hearingResponse_outputs):
 
     results = hearingResponse_outputs
 
-    assert results["CASE001"]["isRemoteHearing"] == "No"
+    assert results["CASE001"]["isRemoteHearing"] == 'No'
     # assert results["CASE002"]["isRemoteHearing"] == 'No'
     # assert results["CASE006"]["isRemoteHearing"] == 'No'
 

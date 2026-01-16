@@ -125,7 +125,7 @@ def add_checks_hearing_details(checks={}):
         element_at(listingLength, 'hours') >=0 AND
         element_at(listingLength, 'minutes') >=0
     )
-    """"
+    """
 
     checks["valid_hearingChannel"] = """
     (

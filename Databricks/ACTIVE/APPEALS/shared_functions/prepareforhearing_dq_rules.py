@@ -7,7 +7,7 @@ def add_checks(checks={}):
 
 
 def add_checks_hearing_response(checks={}):
-    checks["valid_isRemoteHearing"] = ( "(isRemmoteHearing = 'No')")
+    checks["valid_isRemoteHearing"] = ( "(isRemoteHearing = 'No')")
 
     checks["valid_isAppealSuitableToFloat"] = (
         """(

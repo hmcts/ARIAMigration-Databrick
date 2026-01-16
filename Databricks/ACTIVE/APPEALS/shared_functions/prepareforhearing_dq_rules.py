@@ -160,25 +160,25 @@ def add_checks_hearing_details(checks={}):
         "(size(witnessDetails) = 0)"
     )
     
-    # checks["listing_location_struct_consistent_when_matched"] = """
-    # (
-    # ListedCentre IS NULL
-    # OR
-    # (
-    #     listingLocation.code = locationCode AND
-    #     listingLocation.label = locationLabel
-    # )
-    # )
-    # """
+    checks["listing_location_struct_consistent_when_matched"] = ("""
+    (
+    ListedCentre IS NULL
+    OR
+    (
+        listingLocation.code = locationCode AND
+        listingLocation.label = locationLabel
+    )
+    )
+    """)
 
-    # # If no match, both fields in listingLocation must be NULL.
-    # checks["valid_listinglocation_null_when_not_matched"] = """
-    # (
-    # ListedCentre IS NOT NULL
-    # AND
-    # (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
-    # )
-    # """
+    # If no match, both fields in listingLocation must be NULL.
+    checks["valid_listinglocation_null_when_not_matched"] = ("""
+    (
+    ListedCentre IS NOT NULL
+    AND
+    (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
+    )
+    """)
 
     checks["valid_witness1InterpreterSignLanguage"] = (
         "(size(witness1InterpreterSignLanguage) = 0)"

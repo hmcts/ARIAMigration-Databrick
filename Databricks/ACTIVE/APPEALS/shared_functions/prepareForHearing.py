@@ -10,12 +10,13 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
 from . import AwaitingEvidenceRespondant_b as AERb
+from . import listing as L
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map
+    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
 
 
@@ -297,7 +298,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                 # additionalInstructionsTribunalResponse
                 # array(struct()).alias("additionalInstructionsTribunalResponse_inputFields"),
                 # array(struct()).alias("additionalInstructionsTribunalResponse_inputValues"),
-                col("hr.additionalInstructionsTribunalResponse"),
+                # col("hr.additionalInstructionsTribunalResponse"),
                 # lit("Yes").alias("additionalInstructionsTribunalResponse_Transformed"),
                 array(
                 struct(
@@ -462,26 +463,26 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
             )
         )
     .withColumn("witnessDetails",lit([]).cast("array<string>"))
-    .withColumn("witness1InterpreterSignLanguage", create_map())
-    .withColumn("witness2InterpreterSignLanguage", create_map())
-    .withColumn("witness3InterpreterSignLanguage", create_map())
-    .withColumn("witness4InterpreterSignLanguage", create_map())
-    .withColumn("witness5InterpreterSignLanguage", create_map())
-    .withColumn("witness6InterpreterSignLanguage", create_map())
-    .withColumn("witness7InterpreterSignLanguage", create_map())
-    .withColumn("witness8InterpreterSignLanguage", create_map())
-    .withColumn("witness9InterpreterSignLanguage", create_map())
-    .withColumn("witness10InterpreterSignLanguage", create_map())
-    .withColumn("witness1InterpreterSpokenLanguage", create_map())
-    .withColumn("witness2InterpreterSpokenLanguage", create_map())
-    .withColumn("witness3InterpreterSpokenLanguage", create_map())
-    .withColumn("witness4InterpreterSpokenLanguage", create_map())
-    .withColumn("witness5InterpreterSpokenLanguage", create_map())
-    .withColumn("witness6InterpreterSpokenLanguage", create_map())
-    .withColumn("witness7InterpreterSpokenLanguage", create_map())
-    .withColumn("witness8InterpreterSpokenLanguage", create_map())
-    .withColumn("witness9InterpreterSpokenLanguage", create_map())
-    .withColumn("witness10InterpreterSpokenLanguage", create_map())
+    .withColumn("witness1InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness2InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness3InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness4InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness5InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness6InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness7InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness8InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness9InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness10InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness1InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness2InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness3InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness4InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness5InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness6InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness7InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness8InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness9InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
+    .withColumn("witness10InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
     .select(
     col("m1.CaseNo").alias("CaseNo"),
     col("listingLength"),
@@ -507,7 +508,8 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     col("witness7InterpreterSpokenLanguage"), 
     col("witness8InterpreterSpokenLanguage"), 
     col("witness9InterpreterSpokenLanguage"), 
-    col("witness10InterpreterSpokenLanguage"))
+    col("witness10InterpreterSpokenLanguage")
+    )
     )
 
     df_audit_hearingDetails = (
@@ -530,7 +532,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 
                 # # listingLocation
                 
-                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label"),).alias("listingLocation_inputFields")),
+                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
                 # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
                 # col("hd.listingLocation"),
                 # lit("Yes").alias("listingLocation_Transformed"),
@@ -545,7 +547,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 ################################################################
 
 def documents(silver_m1): 
-    documents_df, documents_audit = AERb.documents(silver_m1)
+    documents_df, documents_audit = L.documents(silver_m1)
 
     documents_df = documents_df.select("*",
                 lit([]).cast("array<string>").alias("hearingDocuments"),

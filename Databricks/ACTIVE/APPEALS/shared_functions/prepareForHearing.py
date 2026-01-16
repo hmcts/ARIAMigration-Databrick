@@ -528,13 +528,15 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 col("hd.hearingChannel"),
                 lit("Yes").alias("hearingChannel_Transformed"),
 
-                # listingLocation
-                array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label"),).alias("listingLocation_inputFields")),
-                array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
-                col("hd.listingLocation"),
-                lit("Yes").alias("listingLocation_Transformed"),
+                # # listingLocation
+                
+                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label"),).alias("listingLocation_inputFields")),
+                # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
+                # col("hd.listingLocation"),
+                # lit("Yes").alias("listingLocation_Transformed"),
         )
     )
+
 
     return df_hearingDetails, df_audit_hearingDetails
 

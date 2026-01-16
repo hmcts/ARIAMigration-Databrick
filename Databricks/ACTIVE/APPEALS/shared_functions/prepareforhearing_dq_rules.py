@@ -187,7 +187,7 @@ def add_checks_hearing_details(checks={}):
         "(size(witness2InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness2InterpreterSignLanguage"] = (
-        "(size(witness2InterpreterSignLanguage) = 0')"
+        "(size(witness2InterpreterSignLanguage) = 0)"
     )
     checks["valid_witness3InterpreterSignLanguage"] = (
         "(size(witness3InterpreterSignLanguage) = 0)"

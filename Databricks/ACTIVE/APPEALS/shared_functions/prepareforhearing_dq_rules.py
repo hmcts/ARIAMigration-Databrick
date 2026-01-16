@@ -73,7 +73,7 @@ def add_checks_hearing_response(checks={}):
 
     checks["valid_isVulnerabilitiesAllowed"] = ( "(isVulnerabilitiesAllowed = 'Granted')")
 
-    checks["valid_isVulnerabilitiesAllowed"] = ( "(isVulnerabilitiesAllowed = 'This is a migrated ARIA case. Please refer to the documents.')")
+    checks["valid_vulnerabilitiesTribunalResponse"] = ( "(isVulnerabilitiesAllowed = 'This is a migrated ARIA case. Please refer to the documents.')")
 
     checks["valid_vulnerabilitiesDecisionForDisplay"] = ( "(vulnerabilitiesDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
 
@@ -116,7 +116,7 @@ def add_checks_hearing_response(checks={}):
 
 def add_checks_hearing_details(checks={}):
 
-    checks["valid_listinglength"] = """
+    checks["valid_listinglength"] = ("""
     (TimeEstimate IS NULL AND
         element_at(listingLength, 'hours') IS NULL AND
         element_at(listingLength, 'minutes') IS NULL
@@ -125,9 +125,9 @@ def add_checks_hearing_details(checks={}):
         element_at(listingLength, 'hours') >=0 AND
         element_at(listingLength, 'minutes') >=0
     )
-    """
+    """)
 
-    checks["valid_hearingChannel"] = """
+    checks["valid_hearingChannel"] = ("""
     (
     -- Case: VisitVisaType = 1
     (
@@ -154,7 +154,7 @@ def add_checks_hearing_details(checks={}):
         element_at(hearingChannel, 'label') IS NULL
     )
     )
-    """
+    """)
 
     checks["valid_witnessDetails"] = (
         "(size(witnessDetails) = 0)"

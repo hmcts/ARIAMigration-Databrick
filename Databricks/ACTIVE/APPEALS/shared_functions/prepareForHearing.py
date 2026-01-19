@@ -188,6 +188,9 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
         )
     )
 
+    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
+    common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
+
     df_audit_hearingResponse = (
         df_hearingResponse.alias("hr")
         .join(silver_m1.alias("m1"), ["CaseNo"], "left")
@@ -195,111 +198,102 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
         .join(final_df.alias("f"), ["CaseNo"], "left")
         .select(
                 "hr.CaseNo",
-                # isRemoteHearing
-                array(struct()).alias("isRemoteHearing_inputFields"),
-                array(struct()).alias("isRemoteHearing_inputValues"),
-                col("hr.isRemoteHearing"),
-                lit("Yes").alias("isRemoteHearing_Transformed"),
-                # isAppealSuitableToFloat
-                array(struct(lit("ListTypeId"))).alias("isAppealSuitableToFloat_inputFields"),
-                array(struct(col("m3.ListTypeId"))).alias("isAppealSuitableToFloat_inputValues"),
-                col("hr.isAppealSuitableToFloat"),
-                lit("Yes").alias("isAppealSuitableToFloat_Transformed"),
-                # isMultimediaAllowed
-                array(struct()).alias("isMultimediaAllowed_inputFields"),
-                array(struct()).alias("isMultimediaAllowed_inputValues"),
-                col("hr.isMultimediaAllowed"),
-                lit("Yes").alias("isMultimediaAllowed_Transformed"),
-                # multimediaTribunalResponse
-                array(struct()).alias("multimediaTribunalResponse_inputFields"),
-                array(struct()).alias("multimediaTribunalResponse_inputValues"),
-                col("hr.multimediaTribunalResponse"),
-                lit("Yes").alias("multimediaTribunalResponse_Transformed"),
-                # multimediaDecisionForDisplay
-                array(struct()).alias("multimediaDecisionForDisplay_inputFields"),
-                array(struct()).alias("multimediaDecisionForDisplay_inputValues"),
-                col("hr.multimediaDecisionForDisplay"),
-                lit("Yes").alias("multimediaDecisionForDisplay_Transformed"),
-                # isInCameraCourtAllowed
                 array(struct(lit("InCamera"))).alias("isInCameraCourtAllowed_inputFields"),
                 array(struct(col("m1.InCamera"))).alias("isInCameraCourtAllowed_inputValues"),
-                col("hr.isInCameraCourtAllowed"),
+                col("hr.isInCameraCourtAllowed").alias("isInCameraCourtAllowed_value"),
                 lit("Yes").alias("isInCameraCourtAllowed_Transformed"),
-                # inCameraCourtTribunalResponse
                 array(struct(lit("InCamera"))).alias("inCameraCourtTribunalResponse_inputFields"),
                 array(struct(col("m1.InCamera"))).alias("inCameraCourtTribunalResponse_inputValues"),
-                col("hr.inCameraCourtTribunalResponse"),
+                col("hr.inCameraCourtTribunalResponse").alias("inCameraCourtTribunalResponse_value"),
                 lit("Yes").alias("inCameraCourtTribunalResponse_Transformed"),
-                # inCameraCourtDecisionForDisplay
                 array(struct(lit("InCamera"))).alias("inCameraCourtDecisionForDisplay_inputFields"),
                 array(struct(col("m1.InCamera"))).alias("inCameraCourtDecisionForDisplay_inputValues"),
-                col("hr.inCameraCourtDecisionForDisplay"),
-                lit("Yes").alias("inCameraCourtDecisionForDisplay_Transformed"),
+                col("hr.inCameraCourtDecisionForDisplay").alias("inCameraCourtDecisionForDisplay_Transformed"),
+                array(struct(lit("ListTypeId"))).alias("isAppealSuitableToFloat_inputFields"),
+                array(struct(col("m3.ListTypeId"))).alias("isAppealSuitableToFloat_inputValues"),
+                col("hr.isAppealSuitableToFloat").alias("isAppealSuitableToFloat_value"),
+                lit("Yes").alias("isAppealSuitableToFloat_Transformed"),
                 # isSingleSexCourtAllowed
                 array(struct(lit("CourtPreference"))).alias("isSingleSexCourtAllowed_inputFields"),
                 array(struct(col("m1.CourtPreference"))).alias("isSingleSexCourtAllowed_inputValues"),
-                col("hr.isSingleSexCourtAllowed"),
+                col("hr.isSingleSexCourtAllowed").alias("isSingleSexCourtAllowed_value"),
                 lit("Yes").alias("isSingleSexCourtAllowed_Transformed"),
                 # singleSexCourtTribunalResponse
                 array(struct(lit("CourtPreference"))).alias("singleSexCourtTribunalResponse_inputFields"),
                 array(struct(col("m1.CourtPreference"))).alias("singleSexCourtTribunalResponse_inputValues"),
-                col("hr.singleSexCourtTribunalResponse"),
+                col("hr.singleSexCourtTribunalResponse").alias("singleSexCourtTribunalResponse_value"),
                 lit("Yes").alias("singleSexCourtTribunalResponse_Transformed"),
                 # singleSexCourtDecisionForDisplay
                 array(struct(lit("CourtPreference"))).alias("singleSexCourtDecisionForDisplay_inputFields"),
                 array(struct(col("m1.CourtPreference"))).alias("singleSexCourtDecisionForDisplay_inputValues"),
-                col("hr.singleSexCourtDecisionForDisplay"),
+                col("hr.singleSexCourtDecisionForDisplay").alias("singleSexCourtDecisionForDisplay_value"),
                 lit("Yes").alias("singleSexCourtDecisionForDisplay_Transformed"),
+                
+                array(struct(*common_inputFields)).alias("isRemoteHearing_inputFields"),
+                array(struct(*common_inputValues)).alias("isRemoteHearing_inputValues"),
+                col("hr.isRemoteHearing").alias("isRemoteHearing_value"),
+                lit("Yes").alias("isRemoteHearing_Transformed"),
+            #     # isMultimediaAllowed
+                array(struct(*common_inputFields)).alias("isMultimediaAllowed_inputFields"),
+                array(struct(*common_inputValues)).alias("isMultimediaAllowed_inputValues"),
+                col("hr.isMultimediaAllowed").alias("isMultimediaAllowed_value"),
+                lit("Yes").alias("isMultimediaAllowed_Transformed"),
+                # multimediaTribunalResponse
+                array(struct(*common_inputFields)).alias("multimediaTribunalResponse_inputFields"),
+                array(struct(*common_inputValues)).alias("multimediaTribunalResponse_inputValues"),
+                col("hr.multimediaTribunalResponse").alias("multimediaTribunalResponse_value"),
+                lit("Yes").alias("multimediaTribunalResponse_Transformed"),
+                # multimediaDecisionForDisplay
+                array(struct(*common_inputFields)).alias("multimediaDecisionForDisplay_inputFields"),
+                array(struct(*common_inputValues)).alias("multimediaDecisionForDisplay_inputValues"),
+                col("hr.multimediaDecisionForDisplay").alias("multimediaDecisionForDisplay_value"),
+                lit("Yes").alias("multimediaDecisionForDisplay_Transformed"),
                 # isVulnerabilitiesAllowed
-                array(struct()).alias("isVulnerabilitiesAllowed_inputFields"),
-                array(struct()).alias("isVulnerabilitiesAllowed_inputValues"),
-                col("hr.isVulnerabilitiesAllowed"),
+                array(struct(*common_inputFields)).alias("isVulnerabilitiesAllowed_inputFields"),
+                array(struct(*common_inputValues)).alias("isVulnerabilitiesAllowed_inputValues"),
+                col("hr.isVulnerabilitiesAllowed").alias("isVulnerabilitiesAllowed_value"),
                 lit("Yes").alias("isVulnerabilitiesAllowed_Transformed"),
                 # vulnerabilitiesTribunalResponse
-                array(struct()).alias("vulnerabilitiesTribunalResponse_inputFields"),
-                array(struct()).alias("vulnerabilitiesTribunalResponse_inputValues"),
-                col("hr.vulnerabilitiesTribunalResponse"),
+                array(struct(*common_inputFields)).alias("vulnerabilitiesTribunalResponse_inputFields"),
+                array(struct(*common_inputValues)).alias("vulnerabilitiesTribunalResponse_inputValues"),
+                col("hr.vulnerabilitiesTribunalResponse").alias("vulnerabilitiesTribunalResponse_value"),
                 lit("Yes").alias("vulnerabilitiesTribunalResponse_Transformed"),
                 # vulnerabilitiesDecisionForDisplay
-                array(struct()).alias("vulnerabilitiesDecisionForDisplay_inputFields"),
-                array(struct()).alias("vulnerabilitiesDecisionForDisplay_inputValues"),
-                col("hr.vulnerabilitiesDecisionForDisplay"),
+                array(struct(*common_inputFields)).alias("vulnerabilitiesDecisionForDisplay_inputFields"),
+                array(struct(*common_inputValues)).alias("vulnerabilitiesDecisionForDisplay_inputValues"),
+                col("hr.vulnerabilitiesDecisionForDisplay").alias("vulnerabilitiesDecisionForDisplay_value"),
                 lit("Yes").alias("vulnerabilitiesDecisionForDisplay_Transformed"),
                 # isRemoteHearingAllowed
-                array(struct()).alias("isRemoteHearingAllowed_inputFields"),
-                array(struct()).alias("isRemoteHearingAllowed_inputValues"),
-                col("hr.isRemoteHearingAllowed"),
+                array(struct(*common_inputFields)).alias("isRemoteHearingAllowed_inputFields"),
+                array(struct(*common_inputValues)).alias("isRemoteHearingAllowed_inputValues"),
+                col("hr.isRemoteHearingAllowed").alias("isRemoteHearingAllowed_value"),
                 lit("Yes").alias("isRemoteHearingAllowed_Transformed"),
                 # remoteVideoCallTribunalResponse
-                array(struct()).alias("remoteVideoCallTribunalResponse_inputFields"),
-                array(struct()).alias("remoteVideoCallTribunalResponse_inputValues"),
-                col("hr.remoteVideoCallTribunalResponse"),
+                array(struct(*common_inputFields)).alias("remoteVideoCallTribunalResponse_inputFields"),
+                array(struct(*common_inputValues)).alias("remoteVideoCallTribunalResponse_inputValues"),
+                col("hr.remoteVideoCallTribunalResponse").alias("remoteVideoCallTribunalResponse_value"),
                 lit("Yes").alias("remoteVideoCallTribunalResponse_Transformed"),
                 # isAdditionalAdjustmentsAllowed
-                array(struct()).alias("isAdditionalAdjustmentsAllowed_inputFields"),
-                array(struct()).alias("isAdditionalAdjustmentsAllowed_inputValues"),
-                col("hr.isAdditionalAdjustmentsAllowed"),
+                array(struct(*common_inputFields)).alias("isAdditionalAdjustmentsAllowed_inputFields"),
+                array(struct(*common_inputValues)).alias("isAdditionalAdjustmentsAllowed_inputValues"),
+                col("hr.isAdditionalAdjustmentsAllowed").alias("isAdditionalAdjustmentsAllowed_value"),
                 lit("Yes").alias("isAdditionalAdjustmentsAllowed_Transformed"),
                 # additionalTribunalResponse
-                array(struct()).alias("additionalTribunalResponse_inputFields"),
-                array(struct()).alias("additionalTribunalResponse_inputValues"),
-                col("hr.additionalTribunalResponse"),
+                array(struct(*common_inputFields)).alias("additionalTribunalResponse_inputFields"),
+                array(struct(*common_inputValues)).alias("additionalTribunalResponse_inputValues"),
+                col("hr.additionalTribunalResponse").alias("additionalTribunalResponse_value"),
                 lit("Yes").alias("additionalTribunalResponse_Transformed"),
                 # otherDecisionForDisplay
-                array(struct()).alias("otherDecisionForDisplay_inputFields"),
-                array(struct()).alias("otherDecisionForDisplay_inputValues"),
-                col("hr.otherDecisionForDisplay"),
+                array(struct(*common_inputFields)).alias("otherDecisionForDisplay_inputFields"),
+                array(struct(*common_inputValues)).alias("otherDecisionForDisplay_inputValues"),
+                col("hr.otherDecisionForDisplay").alias("otherDecisionForDisplay_value"),
                 lit("Yes").alias("otherDecisionForDisplay_Transformed"),
                 # isAdditionalInstructionAllowed
-                array(struct()).alias("isAdditionalInstructionAllowed_inputFields"),
-                array(struct()).alias("isAdditionalInstructionAllowed_inputValues"),
-                col("hr.isAdditionalInstructionAllowed"),
+                array(struct(*common_inputFields)).alias("isAdditionalInstructionAllowed_inputFields"),
+                array(struct(*common_inputValues)).alias("isAdditionalInstructionAllowed_inputValues"),
+                col("hr.isAdditionalInstructionAllowed").alias("isAdditionalInstructionAllowed_value"),
                 lit("Yes").alias("isAdditionalInstructionAllowed_Transformed"),
                 # additionalInstructionsTribunalResponse
-                # array(struct()).alias("additionalInstructionsTribunalResponse_inputFields"),
-                # array(struct()).alias("additionalInstructionsTribunalResponse_inputValues"),
-                # col("hr.additionalInstructionsTribunalResponse"),
-                # lit("Yes").alias("additionalInstructionsTribunalResponse_Transformed"),
                 array(
                 struct(
                     lit("Hearing Centre").alias("field"),

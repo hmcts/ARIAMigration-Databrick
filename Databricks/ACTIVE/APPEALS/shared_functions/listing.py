@@ -37,7 +37,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
         for row in spoken_languages_list
     ])
-
     # Language Ref Data condition is:
     # Only 1 of language or additional language must match the spoken category and neither language matching spoken category is a manualEntry one.
     spoken_language_ref_data_condition = (
@@ -49,7 +48,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
             & ~((col("ail.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)) & (col("ail.manualEntry").eqNullSafe("Yes")))
         )
     )
-
     # List items for all Sign Languages
     sign_languages_list = bronze_interpreter_languages.filter(
         (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory)) & (col("manualEntry") != lit("Yes"))
@@ -157,6 +155,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
             .withColumn("lu_appellantInterpreterSpokenLanguage",
                 when((array_contains(col("lu_appellantInterpreterLanguageCategory"), spokenLanguageCategory)),
                     struct(
+
                         when(spoken_language_ref_data_condition,
                             col("lu_appellantInterpreterSpokenLanguageRefData")
                         ).alias("languageRefData"),
@@ -167,6 +166,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when((array_size(col("lu_spokenManualEntry")) > 0),
                             col("lu_spokenManualEntryDescription")
                         ).alias("languageManualEntryDescription")
+
                     )
                 )
             )
@@ -183,6 +183,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when((array_size(col("lu_signManualEntry")) > 0),
                             col("lu_signManualEntryDescription")
                         ).alias("languageManualEntryDescription")
+
                     )
                 )
             )
@@ -578,7 +579,6 @@ def documents(silver_m1):
         df_documents
             .withColumn("hearingRequirements", lit([]).cast("array<string>"))
     )
-
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
 

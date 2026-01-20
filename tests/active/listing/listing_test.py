@@ -31,6 +31,7 @@ def bronze_interpreter_languages_test_data(spark):
         (8, "Sign (Other)", "signLanguageInterpreter", None, None, "Yes", "Sign Language (Other)"),      # Sign Language Manual Entry
         (9, "Manual", "spokenLanguageInterpreter", None, None, "Yes", "Additional Manual Entry"),        # Spoken Language Additional Manual Entry
         (10, "Manual", "signLanguageInterpreter", None, None, "Yes", "Additional Manual Sign Entry")     # Sign Language Additional Manual Entry
+
     ]
 
     df = spark.createDataFrame(data, columns)
@@ -164,6 +165,7 @@ class TestListingState():
             ("20", 1, 37, 0, 5),   # Additional only manual spoken language
             ("21", 1, 37, 0, 6),   # Additional only sign language
             ("22", 1, 37, 0, 7)    # Additional only manual sign language
+
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
@@ -200,6 +202,7 @@ class TestListingState():
             ("18", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
             ("19", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
             ("20", "AIP", "FT", None, 0, 0, 0, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
+
         ]
 
         m3_data = [

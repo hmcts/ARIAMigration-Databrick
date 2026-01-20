@@ -32,6 +32,7 @@ class TestListingDQChecks():
     ])
 
     LANGUAGE_MAP_TYPE = StructType([StructField("code", StringType()), StructField("label", StringType())])
+
     LANGUAGE_REF_DATA_TYPE = StructType([StructField("value", LANGUAGE_MAP_TYPE)])
 
     APPELLANT_INTERPRETER_LANGUAGE_COLUMNS = StructType([
@@ -42,13 +43,17 @@ class TestListingDQChecks():
             StructField("languageRefData", LANGUAGE_REF_DATA_TYPE),
             StructField("list_items", ArrayType(LANGUAGE_MAP_TYPE)),
             StructField("languageManualEntry", ArrayType(StringType())),
+
             StructField("languageManualEntryDescription", StringType())
+
         ])),
         StructField("appellantInterpreterSignLanguage", StructType([
             StructField("languageRefData", LANGUAGE_REF_DATA_TYPE),
             StructField("list_items", ArrayType(LANGUAGE_MAP_TYPE)),
             StructField("languageManualEntry", ArrayType(StringType())),
+
             StructField("languageManualEntryDescription", StringType())
+
         ])),
         StructField("valid_languageCategory", StringType()),
         StructField("valid_languageCode", StringType()),
@@ -99,6 +104,7 @@ class TestListingDQChecks():
 
     def test_valid_appellantInterpreterSpokenLanguage(self, spark, dq_checks):
         df = spark.createDataFrame([
+
             ("1", 1, 2, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", "c", "d", None, None),                                                                   # Two languages - valid
             ("2", 1, 3, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, desc"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", None, None, "Yes", "desc"),                                                           # One lanuage, 1 manual language - valid
             ("3", 4, 3, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "desc, desc_two"}, None, "spokenLanguageInterpreter", None, None, "Yes", "desc", "spokenLanguageInterpreter", None, None, "Yes", "desc_two"),                                           # Two manual languages - valid
@@ -110,6 +116,7 @@ class TestListingDQChecks():
             ("9", 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),    # LanguageIds set but no spoken languages - valid
             ("10", 5, 6, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", "c", "d", None, None),                                                                      # Two LanguageId set but no spoken languages - valid
             ("11", 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, None, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # Sign languageId set but has spoken language - invalid
+
         ], self.APPELLANT_INTERPRETER_LANGUAGE_COLUMNS)
 
         checks_to_run = dq_checks["valid_appellantInterpreterSpokenLanguage"]
@@ -137,6 +144,7 @@ class TestListingDQChecks():
             ("9", 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, None, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # LanguageIds set but no sign languages - valid
             ("10", 5, 6, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", "c", "d", None, None),                                                                   # Two LanguageId set but no sign languages - valid
             ("11", 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),  # Sign languageId set but has spoken language - invalid
+
         ], self.APPELLANT_INTERPRETER_LANGUAGE_COLUMNS)
 
         checks_to_run = dq_checks["valid_appellantInterpreterSignLanguage"]

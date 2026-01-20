@@ -26,7 +26,7 @@ resources:
                 
         - task_key: active_publish_EH_HTML_JSON
           depends_on: 
-            - task_key: DLT_listing
+            - task_key: DLT_prepareForHearing
           job_cluster_key: prepareForHearing_payload_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON"

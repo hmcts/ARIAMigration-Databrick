@@ -6,14 +6,14 @@ resources:
         pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
       clusters:
         - label: default
-          node_type_id: Standard_D4ads_v5
-          driver_node_type_id: Standard_D4ads_v5
+          node_type_id: Standard_D8ads_v5
+          driver_node_type_id: Standard_D8ads_v5
           autoscale:
-            min_workers: 1
-            max_workers: 8
+            min_workers: 4
+            max_workers: 16
             mode: ENHANCED
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PREPARE_FOR_HEARING_JSON"
-      target: listing_gold
+      target: prepareforhearing_gold
       development: true

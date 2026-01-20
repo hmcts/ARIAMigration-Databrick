@@ -169,13 +169,13 @@ stages:
             steps:
               - script: |
                   pip install --upgrade pip
-                  pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
-                    --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
+                  pip install -r AzureFunctionsApp/Active/${{ state }}/requirements.txt \
+                    --target="./AzureFunctionsApp/.python_packages_${{ state }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ state }}'
               
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctionsApp/Active/${{ state }}'
                   ArtifactName: 'functionapp-${{ state }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ state }}'     
@@ -192,13 +192,13 @@ stages:
             steps:
               - script: |
                   pip install --upgrade pip
-                  pip install -r AzureFunctions/ARCHIVE/${{ segment }}/requirements.txt \
-                    --target="./AzureFunctions/.python_packages_${{ segment }}/lib/site-packages"
+                  pip install -r AzureFunctionsApp/ARCHIVE/${{ segment }}/requirements.txt \
+                    --target="./AzureFunctionsApp/.python_packages_${{ segment }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ segment }}'
               
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ARCHIVE/${{ segment }}'
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctionsApp/ARCHIVE/${{ segment }}'
                   ArtifactName: 'functionapp-${{ segment }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ segment }}'

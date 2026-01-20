@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime, timezone, timedelta
 # tokenManager lives in the same package. When this module is imported by the
-# Functions host the package root will be `AzureFunctions.Active.active_ccd`.
+# Functions host the package root will be `AzureFunctionsApp.Active.active_ccd`.
 # Use a robust import that works both when running under the Functions host
 # (package import) and when running the module directly (script import).
 try:

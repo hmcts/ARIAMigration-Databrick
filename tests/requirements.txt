@@ -1,6 +1,8 @@
-pytest 
+pytest
+pytest-env
 pyotp
 azure.identity
+azure.functions
 azure.keyvault
 pycountry
 uk-postcodes-parsing

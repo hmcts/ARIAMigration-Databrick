@@ -121,28 +121,28 @@ class TestListingState():
 
     def test_hearing_requirements_interpreter_language_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FTPA", None, 0, 0, 0, 1),    # LanguageCode 1 - Spoken Language
-            ("2", "AIP", "FTPA", None, 0, 0, 0, 5),    # LanguageCode 5 - Spoken Language Manual Entry
-            ("3", "AIP", "FTPA", None, 0, 0, 0, 6),    # LanguageCode 6 - Sign Language
-            ("4", "AIP", "FTPA", None, 0, 0, 0, 8),    # LanguageCode 7 - Sign Language Manual Entry
-            ("5", "AIP", "FT", None, 0, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken (+ Latest StatusId Check)
-            ("6", "AIP", "FT", None, 0, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken Manual
-            ("7", "AIP", "FT", None, 0, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign
-            ("8", "AIP", "FT", None, 0, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign Manual
-            ("9", "AIP", "FT", None, 0, 0, 0, 6),      # For m3 conditional tests - Additional Language Sign + Sign
-            ("10", "AIP", "FT", None, 0, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Spoken Manual
-            ("11", "AIP", "FT", None, 0, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Sign Manual
-            ("12", "AIP", "FT", None, 0, 0, 0, 5),     # For m3 conditional tests - Additional Language Spoken Manual + Spoken Manual
-            ("13", "AIP", "FT", None, 0, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Spoken Manual
-            ("14", "AIP", "FT", None, 0, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Sign Manual
-            ("15", "AIP", "FT", None, 0, 0, 0, 1),     # For m3 conditional tests - Two of the same spoken language
-            ("16", "AIP", "FT", None, 0, 0, 0, 6),     # For m3 conditional tests - Two of the same sign language
-            ("17", "AIP", "FT", None, 0, 0, 0, 5),     # For m3 conditional tests - Two of the same manual spoken language
-            ("18", "AIP", "FT", None, 0, 0, 0, 8),     # For m3 conditional tests - Two of the same manual sign language
-            ("19", "AIP", "FT", None, 0, 0, 0, None),  # For m3 conditional tests - Additional spoken language only
-            ("20", "AIP", "FT", None, 0, 0, 0, 0),     # For m3 conditional tests - Additional manual spoken language only
-            ("21", "AIP", "FT", None, 0, 0, 0, 0),     # For m3 conditional tests - Additional sign language only
-            ("22", "AIP", "FT", None, 0, 0, 0, None)   # For m3 conditional tests - Additional manual sign language only
+            ("1", "AIP", "FTPA", None, 1, 0, 0, 1),    # LanguageCode 1 - Spoken Language
+            ("2", "AIP", "FTPA", None, 1, 0, 0, 5),    # LanguageCode 5 - Spoken Language Manual Entry
+            ("3", "AIP", "FTPA", None, 1, 0, 0, 6),    # LanguageCode 6 - Sign Language
+            ("4", "AIP", "FTPA", None, 1, 0, 0, 8),    # LanguageCode 7 - Sign Language Manual Entry
+            ("5", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken (+ Latest StatusId Check)
+            ("6", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken Manual
+            ("7", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign
+            ("8", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign Manual
+            ("9", "AIP", "FT", None, 1, 0, 0, 6),      # For m3 conditional tests - Additional Language Sign + Sign
+            ("10", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Spoken Manual
+            ("11", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Sign Manual
+            ("12", "AIP", "FT", None, 1, 0, 0, 5),     # For m3 conditional tests - Additional Language Spoken Manual + Spoken Manual
+            ("13", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Spoken Manual
+            ("14", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Sign Manual
+            ("15", "AIP", "FT", None, 1, 0, 0, 1),     # For m3 conditional tests - Two of the same spoken language
+            ("16", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Two of the same sign language
+            ("17", "AIP", "FT", None, 1, 0, 0, 5),     # For m3 conditional tests - Two of the same manual spoken language
+            ("18", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Two of the same manual sign language
+            ("19", "AIP", "FT", None, 1, 0, 0, None),  # For m3 conditional tests - Additional spoken language only
+            ("20", "AIP", "FT", None, 1, 0, 0, 0),     # For m3 conditional tests - Additional manual spoken language only
+            ("21", "AIP", "FT", None, 1, 0, 0, 0),     # For m3 conditional tests - Additional sign language only
+            ("22", "AIP", "FT", None, 1, 0, 0, None)   # For m3 conditional tests - Additional manual sign language only
         ]
 
         m3_data = [
@@ -164,8 +164,7 @@ class TestListingState():
             ("19", 1, 37, 0, 1),   # Additional only spoken language
             ("20", 1, 37, 0, 5),   # Additional only manual spoken language
             ("21", 1, 37, 0, 6),   # Additional only sign language
-            ("22", 1, 37, 0, 7)    # Additional only manual sign language
-
+            ("22", 1, 37, 0, 8)    # Additional only manual sign language
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)

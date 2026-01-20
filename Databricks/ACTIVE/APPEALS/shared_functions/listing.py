@@ -30,7 +30,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
 
     # List items for all Spoken Languages
     spoken_languages_list = bronze_interpreter_languages.filter(
-        (col("appellantInterpreterLanguageCategory") == lit(spokenLanguageCategory)) & (col("manualEntry") != lit("Yes"))
+        (col("appellantInterpreterLanguageCategory") == lit(spokenLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
     ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
 
     spoken_languages_list_literal = array([
@@ -50,7 +50,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
     )
     # List items for all Sign Languages
     sign_languages_list = bronze_interpreter_languages.filter(
-        (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory)) & (col("manualEntry") != lit("Yes"))
+        (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
     ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
 
     sign_languages_list_literal = array([
@@ -76,7 +76,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         silver_m1.alias("m1")
             .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
             .join(bronze_interpreter_languages.alias("il"), on=(col("m1.LanguageId") == col("il.LanguageId")), how="left")
-            .join(bronze_interpreter_languages.alias("ail"), on=((col("m3.AdditionalLanguageId") == col("ail.LanguageId")) & (col("m1.LanguageId") != col("m3.AdditionalLanguageId"))), how="left")
+            .join(bronze_interpreter_languages.alias("ail"), on=((col("m3.AdditionalLanguageId") == col("ail.LanguageId")) & (~(col("m1.LanguageId").eqNullSafe(col("m3.AdditionalLanguageId"))))), how="left")
             .withColumn("lu_appellantInterpreterLanguageCategory", array_distinct(array_compact(array(
                 col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory")
             ))))
@@ -155,7 +155,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
             .withColumn("lu_appellantInterpreterSpokenLanguage",
                 when((array_contains(col("lu_appellantInterpreterLanguageCategory"), spokenLanguageCategory)),
                     struct(
-
                         when(spoken_language_ref_data_condition,
                             col("lu_appellantInterpreterSpokenLanguageRefData")
                         ).alias("languageRefData"),
@@ -166,7 +165,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when((array_size(col("lu_spokenManualEntry")) > 0),
                             col("lu_spokenManualEntryDescription")
                         ).alias("languageManualEntryDescription")
-
                     )
                 )
             )
@@ -183,7 +181,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when((array_size(col("lu_signManualEntry")) > 0),
                             col("lu_signManualEntryDescription")
                         ).alias("languageManualEntryDescription")
-
                     )
                 )
             )
@@ -207,22 +204,32 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 when(expr("array_contains(c.CategoryIdList, 38)"),
                     when(col("m1.Sponsor_Name").isNotNull(), lit("Yes"))
                     .otherwise(lit("No")))
-                .otherwise(lit(None))
             ))
             .withColumn("isEvidenceFromOutsideUkInCountry", (
                 when(expr("array_contains(c.CategoryIdList, 37)"),
                     when(col("m1.Sponsor_Name").isNotNull(), lit("Yes"))
                     .otherwise(lit("No")))
-                .otherwise(lit(None))
             ))
             .withColumn("isInterpreterServicesNeeded", (
                 when((col("m1.Interpreter") == 1), lit("Yes"))
                 .when((col("m1.Interpreter") == 2), lit("No"))
                 .otherwise(lit("No"))
             ))
-            .withColumn("appellantInterpreterLanguageCategory", col("ilu.lu_appellantInterpreterLanguageCategory"))
-            .withColumn("appellantInterpreterSpokenLanguage", col("ilu.lu_appellantInterpreterSpokenLanguage"))
-            .withColumn("appellantInterpreterSignLanguage", col("ilu.lu_appellantInterpreterSignLanguage"))
+            .withColumn("appellantInterpreterLanguageCategory", (
+                when((col("m1.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterLanguageCategory")
+                )
+            ))
+            .withColumn("appellantInterpreterSpokenLanguage", (
+                when((col("m1.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterSpokenLanguage")
+                )
+            ))
+            .withColumn("appellantInterpreterSignLanguage", (
+                when((col("m1.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterSignLanguage")
+                )
+            ))
             .withColumn("isHearingRoomNeeded", lit("Yes"))
             .withColumn("isHearingLoopNeeded", lit("Yes"))
             .withColumn("remoteVideoCall", lit("Yes"))
@@ -334,18 +341,18 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 col("hr.isInterpreterServicesNeeded").alias("isInterpreterServicesNeeded_value"),
                 lit("Yes").alias("isInterpreterServicesNeeded_Transformed"),
                 # appellantInterpreterLanguageCategory
-                array(struct(*common_inputFields, lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputFields"),
-                array(struct(*common_inputValues, col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputValues"),
+                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputFields"),
+                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputValues"),
                 col("hr.appellantInterpreterLanguageCategory").alias("appellantInterpreterLanguageCategory_value"),
                 lit("Yes").alias("appellantInterpreterLanguageCategory_Transformed"),
                 # appellantInterpreterSpokenLanguage
-                array(struct(*common_inputFields, lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputFields"),
-                array(struct(*common_inputValues, col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputValues"),
+                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputFields"),
+                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputValues"),
                 col("hr.appellantInterpreterSpokenLanguage").alias("appellantInterpreterSpokenLanguage_value"),
                 lit("Yes").alias("appellantInterpreterSpokenLanguage_Transformed"),
                 # appellantInterpreterSignLanguage
-                array(struct(*common_inputFields, lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputFields"),
-                array(struct(*common_inputValues, col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputValues"),
+                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputFields"),
+                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputValues"),
                 col("hr.appellantInterpreterSignLanguage").alias("appellantInterpreterSignLanguage_value"),
                 lit("Yes").alias("appellantInterpreterSignLanguage_Transformed"),
                 # isHearingRoomNeeded

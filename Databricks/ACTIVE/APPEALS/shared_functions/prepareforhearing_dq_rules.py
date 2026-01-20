@@ -73,7 +73,7 @@ def add_checks_hearing_response(checks={}):
 
     checks["valid_isVulnerabilitiesAllowed"] = ( "(isVulnerabilitiesAllowed = 'Granted')")
 
-    checks["valid_vulnerabilitiesTribunalResponse"] = ( "(isVulnerabilitiesAllowed = 'This is a migrated ARIA case. Please refer to the documents.')")
+    checks["valid_vulnerabilitiesTribunalResponse"] = ( "(vulnerabilitiesTribunalResponse = 'This is a migrated ARIA case. Please refer to the documents.')")
 
     checks["valid_vulnerabilitiesDecisionForDisplay"] = ( "(vulnerabilitiesDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
 
@@ -95,6 +95,7 @@ def add_checks_hearing_response(checks={}):
     checks["valid_additionalInstructionsTribunalResponse"] = ("""
         additionalInstructionsTribunalResponse IS NULL OR
         (
+            additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA:%' AND
             additionalInstructionsTribunalResponse LIKE '%\\n Hearing Centre: %' AND
             additionalInstructionsTribunalResponse LIKE '%\\n Hearing Date: %' AND
             additionalInstructionsTribunalResponse LIKE '%\\n Hearing Type: %' AND

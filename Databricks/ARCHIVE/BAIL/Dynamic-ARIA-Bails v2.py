@@ -4111,8 +4111,8 @@ def gold_bails_with_a360():
 
 # COMMAND ----------
 
-# html = spark.table("aria_bails.create_bails_html_content").filter(col("CaseNo") == "ZY/00003     ")
-# html.select("Case_detail.AppellantTitle").show()
+# html = spark.table("aria_bails.create_bails_html_content")
+# html.select("CaseNo", "Case_detail.AppellantTitle").display()
 
 # html
 

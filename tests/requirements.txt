@@ -1,6 +1,7 @@
 pytest 
 pyotp
 azure.identity
+azure.functions
 azure.keyvault
 pycountry
 uk-postcodes-parsing
@@ -10,4 +11,3 @@ azure-storage-blob
 aiohttp
 pyspark
 pandas
-azure.functions

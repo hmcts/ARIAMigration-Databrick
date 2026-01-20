@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch, ANY
 import pytest
 
 ###### IDAM token manager code - to be deleted when you import the module
-from AzureFunctions.ACTIVE.active_ccd import tokenManager
-# import AzureFunctions.ACTIVE.active_ccd.tokenManager.S2S_Manager as S2S_Manager
+from AzureFunctionsApp.ACTIVE.active_ccd import tokenManager
+# import AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.S2S_Manager as S2S_Manager
 from datetime import datetime, timezone, timedelta
 
 
@@ -23,8 +23,8 @@ def mock_keyvault_client(monkeypatch):
     return mock_secret_client
 
 ### test get token
-@patch(f"AzureFunctions.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._fetch_uid",return_value="test_uid")
-@patch(f"AzureFunctions.ACTIVE.active_ccd.tokenManager.requests.post")
+@patch(f"AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._fetch_uid",return_value="test_uid")
+@patch(f"AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.requests.post")
 def test_fetch_token_success(mock_post,mock_fetch_uid,mock_keyvault_client):
    
    mock_fetch_token_response = MagicMock()
@@ -62,8 +62,8 @@ def test_fetch_uid_success(mock_get,mock_keyvault_client):
 
 ##### Test that when token needs refresh this calls _fetch_token to get a new token 
 
-@patch(f"AzureFunctions.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._fetch_token",return_value=("test_idam_token",datetime.now(),"test_uid"))
-@patch(f"AzureFunctions.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._needs_refresh",return_value=True)
+@patch(f"AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._fetch_token",return_value=("test_idam_token",datetime.now(),"test_uid"))
+@patch(f"AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.IDAMTokenManager._needs_refresh",return_value=True)
 def test_get_token_when_token_expired(mock_need_refresh,mock_fetch_token,mock_keyvault_client):
    
    mgr = tokenManager.IDAMTokenManager("sbox")
@@ -93,8 +93,8 @@ def s2s_manager(mock_keyvault_client):
     return tokenManager.S2S_Manager(env="sbox")
 
 # mock fetching s2s token
-@patch("AzureFunctions.ACTIVE.active_ccd.tokenManager.pyotp.TOTP")
-@patch("AzureFunctions.ACTIVE.active_ccd.tokenManager.requests.post")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.pyotp.TOTP")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.requests.post")
 def test_fetch_s2s_token(mock_post, mock_totp, s2s_manager):
     mock_totp.return_value.now.return_value = "ey163899endke923"
     mock_response = MagicMock()
@@ -109,8 +109,8 @@ def test_fetch_s2s_token(mock_post, mock_totp, s2s_manager):
     assert s2s_manager.expire_time > datetime.now(timezone.utc)
 
 # test retrieving s2s token
-@patch("AzureFunctions.ACTIVE.active_ccd.tokenManager.pyotp.TOTP")
-@patch("AzureFunctions.ACTIVE.active_ccd.tokenManager.requests.post")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.pyotp.TOTP")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.tokenManager.requests.post")
 def test_get_token_expired_fetches_new(mock_post, mock_totp, s2s_manager):
     """Test get_token fetches new token if expired."""
     mock_totp.return_value.now.return_value = "654321"

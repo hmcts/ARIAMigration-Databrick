@@ -28,37 +28,43 @@ def legalRepDetails_outputs(spark):
         T.StructField("CaseRep_Address2", T.StringType(), True),
         T.StructField("CaseRep_Address3", T.StringType(), True),
         T.StructField("CaseRep_Address4", T.StringType(), True),
+        T.StructField("CaseRep_Address5", T.StringType(), True),
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("Rep_Address1", T.StringType(), True),
         T.StructField("Rep_Address2", T.StringType(), True),
         T.StructField("Rep_Address3", T.StringType(), True),
         T.StructField("Rep_Address4", T.StringType(), True),
-        T.StructField("Rep_Address5", T.StringType(), True)
+        T.StructField("Rep_Address5", T.StringType(), True),
+        T.StructField("Rep_Postcode", T.StringType(), True)
     ])
 
     m1_data = [
         # Case01: AIP → filtered out
         ("Case01", "AIP", None, None, None, None, None, None, None, 0,
-        None, None, None, None, None, None, None, None, None, None),
+        None, None, None, None, None, None, None, None, None, None, None, None),
 
-        # Case02: LR + RepId>0 → legalRepHasAddress=Yes
+        # Case02: LR + RepId>0 → legalRepHasAddress=Yes, Rep fields used
         ("Case02", "LR", "FTPA", "rep@test.com", None, None, "Contact Name", "RepName", None, 123,
-        "CR1", "CR2", "CR3", "CR4", "CRP", "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom"),
+        "CR1", "CR2", "CR3", "CR4", "CRP", "SW1A 1AA",  # CaseRep addresses + postcode
+        "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom", "SW1A 1AA"),  # Rep addresses + postcode
 
         # Case03: LR + RepId=0 + non-UK → legalRepHasAddress=No
         ("Case03", "LR", "FTPA", None, "case@test.com", None, None, None, "CaseRepName", 0,
         "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910",
-        None, None, None, None, None),  
+        None,  # CaseRep_Address5
+        None, None, None, None, None, None),  # Rep addresses + postcode
 
         # Case04: LR + RepId=0 + valid UK postcode → legalRepHasAddress=Yes
         ("Case04", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
         "1 Some Street", "Area", "London", None, "SW1A 1AA",
-        None, None, None, None, None),
+        None,  # CaseRep_Address5
+        None, None, None, None, None, None),  # Rep addresses + postcode
 
         # Case05: LR + RepId=0 + invalid postcode but country in address → legalRepHasAddress=Yes
         ("Case05", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
         "Flat 2", "Road Name", "TownName", "United Kingdom", "NOTAPOSTCODE",
-        None, None, None, None, None),
+        None,  # CaseRep_Address5
+        None, None, None, None, None, None)  # Rep addresses + postcode
     ]
 
     bronze_country_schema = T.StructType([

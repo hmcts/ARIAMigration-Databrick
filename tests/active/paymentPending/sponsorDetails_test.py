@@ -174,7 +174,7 @@ def test_HU_00574_2023_has_sponsor_paymentPending(sponsorDetails_outputs):
     assert res["sponsorFamilyName"] == "LopezX"
     assert res["sponsorGivenNames"] == "BruceX"
     assert res["sponsorEmailAdminJ"] is None
-    assert res["sponsorMobileNumberAdminJ"] == "0141 496 0600"
+    assert res["sponsorMobileNumberAdminJ"] == "01414960600"
     assert res["Sponsor_Authorisation"] == "Yes"
 
 def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):

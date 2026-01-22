@@ -14,7 +14,7 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains
+    collect_set, current_timestamp,transform, first, array_contains, nullif
 )
 
 from uk_postcodes_parsing import fix, postcode_utils
@@ -781,10 +781,10 @@ phoneNumberUDF = udf(cleanPhoneNumber, StringType())
 
 ##Create legalRepDetails fields
 
-def legalRepDetails(silver_m1):
+def legalRepDetails(silver_m1, bronze_countryFromAddress):
     conditions_legalRepDetails = (col("dv_representation") == 'LR') & (col("lu_appealType").isNotNull())
 
-    df = silver_m1.alias("m1").filter(conditions_legalRepDetails).withColumn(
+    staging_df = silver_m1.alias("m1").filter(conditions_legalRepDetails).withColumn(
         "legalRepGivenName",
         coalesce(col("Contact"), col("Rep_Name"), col("CaseRep_Name"))   #If contact is null use RepName, if RepName null use CaseRepName
     ).withColumn(
@@ -827,42 +827,73 @@ def legalRepDetails(silver_m1):
     getCountryFromAddressUDF(col("legalRepAddressUK"))
 
     ## Apply UDFs to determine if the legalRep has a UK address - 3. Is the Postcode or country from the UK?
+    # ).withColumn(
+    # "legalRepHasAddress",
+    # legalRepHasAddressUDF(
+    #     col("RepresentativeId"),
+    #     col("ukPostcode"),
+    #     col("countryFromAddress")
+    # )
     ).withColumn(
     "legalRepHasAddress",
-    legalRepHasAddressUDF(
-        col("RepresentativeId"),
-        col("ukPostcode"),
-        "countryFromAddress"
-    )
+    when(col("RepresentativeId") > 0, "Yes")  # Active reps, always Yes
+    .when((col("RepresentativeId") == 0) & (col("ukPostcode") == "True"), "Yes")  # 0 + UK postcode
+    .when((col("RepresentativeId") == 0) & (col("countryFromAddress").contains("United Kingdom")), "Yes")  # 0 + UK country
+    .otherwise("No")  # everything else
                                                                              
     ).withColumn("legalRepAddressUK", col("legalRepAddressUK")
 
-    ).withColumn("oocAddressLine1",                                            #If Address1 is null use 2. If 1,2 null use 3
-                when((col("CaseRep_Address1").isNotNull()), col("CaseRep_Address1")
-                      ).otherwise(coalesce(col("CaseRep_Address2"),
-                          col("CaseRep_Address3"), col("CaseRep_Address4"),
-                          col("CaseRep_Address5"))
-                          )
-                 
-    ).withColumn("oocAddressLine2", 
-                when((col("CaseRep_Address2").isNotNull()), col("CaseRep_Address2")
-                      ).otherwise(coalesce(col("CaseRep_Address3"),
-                          col("CaseRep_Address4"), col("CaseRep_Address5"))
-                )
-                 
+    ).withColumn("oocAddressLine1",
+            when(col("legalRepHasAddress") == lit("Yes"), None)  # No address if legalRepHasAddress is No
+            .otherwise(
+                coalesce(col("CaseRep_Address1"),
+                        col("CaseRep_Address2"),
+                        col("CaseRep_Address3"),
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5"))
+            )
+
+    ).withColumn("oocAddressLine2",
+            when(col("legalRepHasAddress") == lit("Yes"), None)
+            .otherwise(
+                coalesce(col("CaseRep_Address2"),
+                        col("CaseRep_Address3"),
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5"))
+            )
+
     ).withColumn("oocAddressLine3",
-                when((col("CaseRep_Address3").isNotNull()), concat(col("CaseRep_Address3"), lit(", "), col("CaseRep_Address4"))
-                      ).otherwise(col("CaseRep_Address4")
+                when(col("legalRepHasAddress") == lit("Yes"), None)
+                .otherwise(expr("""
+            nullif(
+                concat_ws(
+                    ', ',
+                    nullif(trim(CaseRep_Address3), ''),
+                    nullif(trim(CaseRep_Address4), '')
+                ),
+                ''
+            )
+        """)
                 )
-    
+
     ).withColumn("oocAddressLine4",
-                when((col("CaseRep_Address5").isNotNull()), concat(col("CaseRep_Address5"), lit(", "), col("CaseRep_Postcode"))
-                      ).otherwise(col("CaseRep_Postcode")
+                when(col("legalRepHasAddress") == lit("Yes"), None)
+                .otherwise(expr("""
+            nullif(
+                concat_ws(
+                    ', ',
+                    nullif(trim(CaseRep_Address5), ''),
+                    nullif(trim(CaseRep_Postcode), '')
+                ),
+                ''
+            )
+        """)
                 )
                  
     ).withColumn(
         "oocLrCountryGovUkAdminJ",
-        getCountryLRUDF(col("legalRepAddressUK"))     #Use UDF getCountryLR(). Sample data indicates function works.
+        when(col("legalRepHasAddress") == lit("Yes"), None)
+        .otherwise(getCountryLRUDF(col("legalRepAddressUK")))     #Use UDF getCountryLR(). Sample data indicates function works.
                  
     ).select(
         col("CaseNo"),
@@ -871,7 +902,7 @@ def legalRepDetails(silver_m1):
         "legalRepCompanyPaperJ",
         "localAuthorityPolicy",
         "legalRepEmail",
-        "legalRepAddressUK",         
+        "legalRepAddressUK",     
         "legalRepHasAddress",
         "oocAddressLine1",
         "oocAddressLine2",
@@ -879,6 +910,12 @@ def legalRepDetails(silver_m1):
         "oocAddressLine4",
         "oocLrCountryGovUkAdminJ"
     )
+
+    df = staging_df.alias("d1").join(bronze_countryFromAddress.alias("b1"),
+            col("d1.oocLrCountryGovUkAdminJ") == col("b1.countryFromAddress"), "left"
+        ).drop(col("d1.oocLrCountryGovUkAdminJ"), col("b1.countryGovUkOocAdminJ"), col("b1.lu_countryGovUkOocAdminJ"), col("b1.countryFromAddress")
+        ).withColumn("oocLrCountryGovUkAdminJ", col("b1.oocLrCountryGovUkAdminJ")
+        )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]
@@ -1052,22 +1089,37 @@ def getCountryFromAddress(address):
 getCountryFromAddressUDF = udf(getCountryFromAddress, StringType())
 
 # Step 5: UDF to decide if LR address is UK
-def legalRepHasAddress(repId, clean_postcode, full_address):
+def legalRepHasAddress(repId, clean_postcode, country):
     if repId > 0:
         return "Yes"
-
+    
     if repId == 0:
+        # 2a. UK postcode
         if clean_postcode == "True":
             return "Yes"
-        elif clean_postcode == "False":
-            country = getCountryFromAddress(full_address)
-            if country == "United Kingdom":
-                return "Yes"
-            elif country != "United Kingdom":
-                return "No"
-            elif country == '':
-                return "Yes"
+        # 2b. Check if "United Kingdom" exists in country string
+        if country and "United Kingdom" in country:
+            return "Yes"
+        # 2c. All other non-UK countries
+        return "No"
+    # Default
     return "No"
+
+    # if repId == 0:
+    #     if clean_postcode == "True":
+    #         return "Yes"
+    #     # elif clean_postcode == "False":
+    #     #     country = getCountryFromAddress(full_address)
+    #     if country and "United Kingdom" in country:
+    #         return "Yes"
+    #     if not country or country.strip() == "":
+    #         return "Yes"
+    #     # elif country != "United Kingdom":
+    #     #     return "No"
+    #     # elif country == '':
+    #     #     return "Yes"
+    #     return "No"
+    # return "No"
 
 legalRepHasAddressUDF = udf(legalRepHasAddress, StringType())
 

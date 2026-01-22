@@ -68,7 +68,7 @@ def legalRepDetails_outputs(spark):
     bronze_country_data = [("United Kingdom", "UK"), ("Guam", "GU"), ("Argentina", "AR")]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
-    bronze_countryFromAddress =  spark.createDataFrame(bronze_country_schema, bronze_country_data)
+    bronze_countryFromAddress =  spark.createDataFrame(bronze_country_data, bronze_country_schema)
 
     # Call the function under test
     legalRepDetails_content, _ = legalRepDetails(silver_m1, bronze_countryFromAddress)

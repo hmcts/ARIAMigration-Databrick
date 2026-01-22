@@ -31,6 +31,12 @@ def sponsorDetails_outputs(spark):
         T.StructField("sponsorEmailAdminJ", T.StringType(), True),
         T.StructField("sponsorMobileNumberAdminJ", T.StringType(), True),
         T.StructField("sponsorAuthorisation", T.StringType(), True),
+        T.StructField("sponsor_Address1", T.StringType(), True),
+        T.StructField("sponsor_Address2", T.StringType(), True),
+        T.StructField("sponsor_Address3", T.StringType(), True),
+        T.StructField("sponsor_Address4", T.StringType(), True),
+        T.StructField("sponsor_Address5", T.StringType(), True),
+        T.StructField("sponsor_Postcode", T.StringType(), True),
     ])
 
     # -------------------------------

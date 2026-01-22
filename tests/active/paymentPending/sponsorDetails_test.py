@@ -175,7 +175,7 @@ def test_HU_00574_2023_has_sponsor_paymentPending(sponsorDetails_outputs):
     assert res["sponsorGivenNames"] == "BruceX"
     assert res["sponsorEmailAdminJ"] is None
     assert res["sponsorMobileNumberAdminJ"] == "01414960600"
-    assert res["Sponsor_Authorisation"] == "Yes"
+    assert res["sponsorAuthorisation"] == "Yes"
 
 def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):
     # EA/00072/2025 has category 38 → sponsorAddress should be populated

@@ -60,15 +60,15 @@ def legalRepDetails_outputs(spark):
          None, None, None, None, None),
     ]
 
-    bronze_country_schema = T.StructType("countryFromAddress", T.StringType(), True,
-                            T.StructType("countryGovUkOocAdminJ", T.StringType(), True))
+    bronze_country_schema = T.StructType([
+        T.StructField("countryFromAddress", T.StringType(), True),
+        T.StructField("oocLrCountryGovUkAdminJ", T.StringType(), True)
+    ])
 
-    bronze_country_schema_data = [("United Kingdom", "countryGovUkOocAdminJ"="GB"), 
-                                ("Guam", "countryGovUkOocAdminJ"="GU"),
-                                ("Argentina", "countryGovUkOocAdminJ"="AR")]
+    bronze_country_data = [("United Kingdom", "UK"), ("Guam", "GU"), ("Argentina", "AR")]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
-    bronze_countryFromAddress =  spark.createDataFrame(bronze_country_schema, bronze_country_schema_data)
+    bronze_countryFromAddress =  spark.createDataFrame(bronze_country_schema, bronze_country_data)
 
     # Call the function under test
     legalRepDetails_content, _ = legalRepDetails(silver_m1, bronze_countryFromAddress)

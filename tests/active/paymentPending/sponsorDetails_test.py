@@ -43,20 +43,44 @@ def sponsorDetails_outputs(spark):
     # 2. Populate m1_data based on your CSV
     # -------------------------------
     m1_data = [
-        ("EA/00490/2025", "No", None, None, None, [47,38,11,3], None, None, None, None, None, None, None, None),
-        ("EA/00072/2025", "Yes", "HarryX", "OwenX", 
-         "873 Hurst Parkways Suite 226X, Owens StravenueX, L7T 6AE",
-         [47,38,11], "OwenX", "HarryX", "matthewthompson@example.org",
-         "01314960380", "true", "matthewthompson@example.org", "01314960380", "Yes"),
-        ("HU/00447/2025", "Yes", "TashaX", "FisherX",
-         "64644 Michael Junction Suite 48X, Kathryn MeadowX, G30 7NJ",
-         [38,10], "FisherX", "TashaX", "meghanmitchell@example.org",
-         None, "true", "meghanmitchell@example.org", None, "Yes"),
-        ("EA/00061/2025", None, None, None, None, [47,37,13,11,3], None, None, None, None, None, None, None, None),
-        ("HU/00574/2023", "Yes", "BruceX", "LopezX",
-         "358 Carter Corners Suite 044X, Wells FordX, UB4B 0LY",
-         [38,10], "LopezX", "BruceX", None,
-         "0141 496 0600", "true", None, "01414960600", "Yes"),
+    # --------------------------------------------------
+    # EA/00490/2025 → No sponsor (category 38 missing)
+    # --------------------------------------------------
+    ("EA/00490/2025", None, None, None, None, [47,38,11,3],
+     None, None, None, None, None, None, None, None,
+     None, None, None, None, None, None),
+
+    # --------------------------------------------------
+    # EA/00072/2025 → Has sponsor, full address, authorisation Yes
+    # --------------------------------------------------
+    ("EA/00072/2025", None, None, None, None, [47,38,11],
+     "OwenX", "HarryX", "matthewthompson@example.org", "01314960380", True,
+     None, None, None,
+     "873 Hurst Parkways Suite 226X", "Owens StravenueX", None, None, None, "L7T 6AE"),
+
+    # --------------------------------------------------
+    # HU/00447/2025 → Has sponsor, no telephone, authorisation True
+    # --------------------------------------------------
+    ("HU/00447/2025", None, None, None, None, [38,10],
+     "FisherX", "TashaX", "meghanmitchell@example.org", None, True,
+     None, None, None,
+     "64644 Michael Junction Suite 48X", "Kathryn MeadowX", None, None, None, "G30 7NJ"),
+
+    # --------------------------------------------------
+    # EA/00061/2025 → Missing categoryId 38 → sponsor omitted
+    # --------------------------------------------------
+    ("EA/00061/2025", None, None, None, None, [47,37,13,11,3],
+     "UnknownX", "UnknownX", "unknown@example.org", None, None,
+     None, None, None,
+     None, None, None, None, None, None),
+
+    # --------------------------------------------------
+    # HU/00574/2023 → Has sponsor, multiple addresses, partial telephone
+    # --------------------------------------------------
+    ("HU/00574/2023", None, None, None, None, [38,10],
+     "LopezX", "BruceX", None, "0141 496 0600", True,
+     None, None, None,
+     "358 Carter Corners Suite 044X", "Wells FordX", None, None, None, "UB4B 0LY"),
     ]
 
     # -------------------------------
@@ -69,20 +93,12 @@ def sponsorDetails_outputs(spark):
     ])
 
     silver_c_data = [
-        ("EA/00490/2025", 3, "paymentPending"),
-        ("EA/00490/2025", 11, "paymentPending"),
-        ("EA/00490/2025", 38, "paymentPending"),
-        ("EA/00490/2025", 47, "paymentPending"),
-        ("EA/00072/2025", 11, "paymentPending"),
-        ("EA/00072/2025", 38, "paymentPending"),
-        ("EA/00072/2025", 47, "paymentPending"),
-        ("EA/00061/2025", 3, "paymentPending"),
-        ("EA/00061/2025", 11, "paymentPending"),
-        ("EA/00061/2025", 13, "paymentPending"),
-        ("EA/00061/2025", 37, "paymentPending"),
-        ("EA/00061/2025", 47, "paymentPending"),
-        ("HU/00574/2023", 10, "paymentPending"),
-        ("HU/00574/2023", 38, "paymentPending"),
+        ("EA/00490/2025", 3), ("EA/00490/2025", 11), ("EA/00490/2025", 47),
+        ("EA/00072/2025", 11), ("EA/00072/2025", 38), ("EA/00072/2025", 47),
+        ("EA/00061/2025", 3), ("EA/00061/2025", 11), ("EA/00061/2025", 13),
+        ("EA/00061/2025", 37), ("EA/00061/2025", 47),
+        ("HU/00447/2025", 38), ("HU/00447/2025", 10),
+        ("HU/00574/2023", 10), ("HU/00574/2023", 38),
     ]
 
     # -------------------------------
@@ -156,3 +172,33 @@ def test_HU_00574_2023_has_sponsor_paymentPending(sponsorDetails_outputs):
     assert res["Sponsor_Email"] is None
     assert res["Sponsor_Telephone"] == "0141 496 0600"
     assert res["Sponsor_Authorisation"] == "Yes"
+
+def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):
+    # EA/00072/2025 has category 38 → sponsorAddress should be populated
+    res = sponsorDetails_outputs["EA/00072/2025"]
+    assert res["sponsorAddress"] is not None
+    assert "873 Hurst Parkways" in res["sponsorAddress"]
+    assert "Owens StravenueX" in res["sponsorAddress"]
+
+    # HU/00447/2025 has category 38 → sponsorAddress should be populated
+    res = sponsorDetails_outputs["HU/00447/2025"]
+    assert res["sponsorAddress"] is not None
+    assert "64644 Michael Junction" in res["sponsorAddress"]
+
+def test_sponsorAddress_none_when_no_category38(sponsorDetails_outputs):
+    # EA/00490/2025 missing category 38 → sponsorAddress should be None
+    res = sponsorDetails_outputs["EA/00490/2025"]
+    assert res["sponsorAddress"] is None
+
+    # EA/00061/2025 missing category 38 → sponsorAddress should be None
+    res = sponsorDetails_outputs["EA/00061/2025"]
+    assert res["sponsorAddress"] is None
+
+def test_sponsorAddress_multiple_lines(sponsorDetails_outputs):
+    # HU/00574/2023 has category 38 → multiple address parts
+    res = sponsorDetails_outputs["HU/00574/2023"]
+    address = res["sponsorAddress"]
+    assert address is not None
+    # Check that the first part and postcode are included
+    assert "358 Carter Corners" in address
+    assert "UB4B 0LY" in address

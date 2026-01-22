@@ -37,18 +37,18 @@ def legalRepDetails_outputs(spark):
     ])
 
     m1_data = [
-        # Case01: AIP → should be filtered out
+        # Case01: AIP → filtered out
         ("Case01", "AIP", None, None, None, None, None, None, 0,
-        None, None, None, None, None, None, None, None, None, None, None),
+        None, None, None, None, None, None, None, None, None, None),
 
-        # Case02: LR + RepId>0 → legalRepHasAddress=Yes, Rep fields used
+        # Case02: LR + RepId>0 → legalRepHasAddress=Yes
         ("Case02", "LR", "FTPA", "rep@test.com", None, None, "Contact Name", "RepName", None, 123,
         "CR1", "CR2", "CR3", "CR4", "CRP", "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom"),
 
         # Case03: LR + RepId=0 + non-UK → legalRepHasAddress=No
         ("Case03", "LR", "FTPA", None, "case@test.com", None, None, None, "CaseRepName", 0,
         "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910",
-        None, None, None, None, None),
+        None, None, None, None, None),  
 
         # Case04: LR + RepId=0 + valid UK postcode → legalRepHasAddress=Yes
         ("Case04", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,

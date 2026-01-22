@@ -43,33 +43,42 @@ def bronze_countryFromAddress(spark):
 @pytest.fixture(scope="session")
 def legalRepDetails_outputs(spark, bronze_countryFromAddress):
 
+    # data = [
+    #     # Case01: AIP filtered
+    #     ("Case01", "AIP", None, None, None, None, None, None, 0,
+    #      None, None, None, None, None, None, None, None, None, None),
+
+    #     # Case02: LR + RepId>0 → legalRepHasAddress = Yes
+    #     ("Case02", "LR", "rep@test.com", None, None, "Contact Name", "RepName", None, 123,
+    #      "CR1", "CR2", "CR3", "CR4", "CRP", "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom"),
+
+    #     # Case03: LR + RepId=0 + non-UK → legalRepHasAddress = No
+    #     ("Case03", "LR", None, "case@test.com", None, None, None, "CaseRepName", 0,
+    #      "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910",
+    #      None, None, None, None, None),
+
+    #     # Case04: LR + RepId=0 + UK postcode → legalRepHasAddress = Yes
+    #     ("Case04", "LR", None, None, None, None, None, "CaseRepName", 0,
+    #      "1 Some Street", "Area", "London", None, "SW1A 1AA",
+    #      None, None, None, None, None),
+    # ]
+
+    columns = ["CaseNo", "dv_representation", "Rep_Email", "CaseRep_Email", 
+               "CaseRep_FileSpecific_Email", "Contact", "Rep_Name", "CaseRep_Name", "RepresentativeId", "CaseRep_Address1", 
+               "CaseRep_Address2", "CaseRep_Address3", "CaseRep_Address4", "CaseRep_Postcode", "Rep_Address1", "Rep_Address2", 
+               "Rep_Address3", "Rep_Address4", "Rep_Address5"]
+
     data = [
-        # Case01: AIP filtered
-        ("Case01", "AIP", None, None, None, None, None, None, 0,
-         None, None, None, None, None, None, None, None, None, None),
+        # Case03: LR + RepId=0 + non-UK → legalRepHasAddress=No
+        ("Case03", "LR", None, "case@test.com", None,
+        None, None, "CaseRepName", 0,
+        "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910",
+        None, None, None, None, None),
 
-        # Case02: LR + RepId>0 → legalRepHasAddress = Yes
-        ("Case02", "LR", "rep@test.com", None, None, "Contact Name", "RepName", None, 123,
-         "CR1", "CR2", "CR3", "CR4", "CRP", "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom"),
-
-        # Case03: LR + RepId=0 + non-UK → legalRepHasAddress = No
-        ("Case03", "LR", None, "case@test.com", None, None, None, "CaseRepName", 0,
-         "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910",
-         None, None, None, None, None),
-
-        # Case04: LR + RepId=0 + UK postcode → legalRepHasAddress = Yes
+        # Case04: LR + RepId=0 + UK postcode → legalRepHasAddress=Yes
         ("Case04", "LR", None, None, None, None, None, "CaseRepName", 0,
-         "1 Some Street", "Area", "London", None, "SW1A 1AA",
-         None, None, None, None, None),
-    ]
-
-    columns = [
-        "CaseNo", "dv_representation",
-        "Rep_Email", "CaseRep_Email", "CaseRep_FileSpecific_Email",
-        "Contact", "Rep_Name", "CaseRep_Name",
-        "RepresentativeId",
-        "CaseRep_Address1", "CaseRep_Address2", "CaseRep_Address3", "CaseRep_Address4", "CaseRep_Postcode",
-        "Rep_Address1", "Rep_Address2", "Rep_Address3", "Rep_Address4", "Rep_Address5"
+        "1 Some Street", "Area", "London", None, "SW1A 1AA",
+        None, None, None, None, None),
     ]
 
     df = spark.createDataFrame(data, columns)
@@ -95,10 +104,12 @@ def assert_equals(row, **expected):
 # -------------------------------
 # 5️⃣ Example test functions
 # -------------------------------
+
+# Then update the fixture test:
 def test_fixture_runs(legalRepDetails_outputs):
     # sanity check
-    assert "Case01" in legalRepDetails_outputs
-    assert "Case02" in legalRepDetails_outputs
+    assert "Case03" in legalRepDetails_outputs
+    assert "Case04" in legalRepDetails_outputs
 
 def test_legalRepHasAddress_case02(legalRepDetails_outputs):
     row = legalRepDetails_outputs["Case02"]

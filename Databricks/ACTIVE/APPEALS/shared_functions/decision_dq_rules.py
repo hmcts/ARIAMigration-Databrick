@@ -105,16 +105,21 @@ def add_checks_general_default(checks={}):
 
     return checks
 
+
+
 def add_checks_general(checks={}):
+
     checks["valid_bundleFileNamePrefix"] = (
-        """(
-
-            (bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '_' || Appellant_Name)
-
-        )"""
+        """
+        (
+            bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '_' || Appellant_Name
+        )
+        """
     )
 
     return checks
+
+
 
 if __name__ == "__main__":
     pass

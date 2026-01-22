@@ -535,6 +535,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     )
 
 
+
     return df_hearingDetails, df_audit_hearingDetails
 
 ################################################################

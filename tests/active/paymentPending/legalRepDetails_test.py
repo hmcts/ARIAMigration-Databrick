@@ -182,7 +182,7 @@ def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
-def test_HU_00185_2025(legalRepDetails_outputs):
+def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/00185/2025"]
 
     assert_equals(
@@ -205,7 +205,7 @@ def test_HU_00185_2025(legalRepDetails_outputs):
         "oocLrCountryGovUkAdminJ",
     )
 
-def test_HU_01475_2024(legalRepDetails_outputs):
+def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/01475/2024"]
 
     assert_equals(
@@ -228,7 +228,7 @@ def test_HU_01475_2024(legalRepDetails_outputs):
 
     assert row["oocLrCountryGovUkAdminJ"] is None
 
-def test_HU_02191_2024(legalRepDetails_outputs):
+def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/02191/2024"]
 
     assert_equals(
@@ -250,7 +250,7 @@ def test_HU_02191_2024(legalRepDetails_outputs):
         oocLrCountryGovUkAdminJ="GU",
     )
 
-def test_HU_02151_2024(legalRepDetails_outputs):
+def test_HU_02151_2024_no_address(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/02151/2024"]
 
     assert_equals(

@@ -38,7 +38,7 @@ def legalRepDetails_outputs(spark):
 
     m1_data = [
         # Case01: AIP → filtered out
-        ("Case01", "AIP", None, None, None, None, None, None, 0,
+        ("Case01", "AIP", None, None, None, None, None, None, None, 0,
         None, None, None, None, None, None, None, None, None, None),
 
         # Case02: LR + RepId>0 → legalRepHasAddress=Yes

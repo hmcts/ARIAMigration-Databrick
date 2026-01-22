@@ -1,5 +1,5 @@
 import pytest
-from pyspark.sql import SparkSession, types as T, Row
+from pyspark.sql import SparkSession, types as T
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import legalRepDetails
 
 @pytest.fixture(scope="session")
@@ -11,16 +11,7 @@ def spark():
     )
 
 @pytest.fixture(scope="session")
-def bronze_countryFromAddress(spark):
-    # Fallback test data for country codes
-    return spark.createDataFrame([
-        Row(countryFromAddress="United Kingdom", countryGovUkOocAdminJ="GB"),
-        Row(countryFromAddress="Guam", countryGovUkOocAdminJ="GU"),
-        Row(countryFromAddress="Argentina", countryGovUkOocAdminJ="AR"),
-    ])
-
-@pytest.fixture(scope="session")
-def legalRepDetails_outputs(spark, bronze_countryFromAddress):
+def legalRepDetails_outputs(spark):
 
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -69,10 +60,18 @@ def legalRepDetails_outputs(spark, bronze_countryFromAddress):
          None, None, None, None, None),
     ]
 
-    df_m1 = spark.createDataFrame(m1_data, m1_schema)
+    bronze_country_schema = T.StructType("countryFromAddress", T.StringType(), True,
+                            T.StructType("countryGovUkOocAdminJ", T.StringType(), True))
+
+    bronze_country_schema_data = [("United Kingdom", "countryGovUkOocAdminJ"="GB"), 
+                                ("Guam", "countryGovUkOocAdminJ"="GU"),
+                                ("Argentina", "countryGovUkOocAdminJ"="AR")]
+
+    silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
+    bronze_countryFromAddress =  spark.createDataFrame(bronze_country_schema, bronze_country_schema_data)
 
     # Call the function under test
-    legalRepDetails_content, _ = legalRepDetails(df_m1, bronze_countryFromAddress)
+    legalRepDetails_content, _ = legalRepDetails(silver_m1, bronze_countryFromAddress)
 
     # Convert to dictionary keyed by CaseNo
     results = {row["CaseNo"]: row.asDict() for row in legalRepDetails_content.collect()}

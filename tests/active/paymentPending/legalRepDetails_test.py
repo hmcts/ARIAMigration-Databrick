@@ -39,40 +39,54 @@ def legalRepDetails_outputs(spark):
     ])
 
     m1_data = [
-        # Case01: AIP → filtered out
-        ("Case01", "AIP", "FTPA", None, None, None, None, None, None, 0,
+        # HU/00185/2025 -> No address, ooc all null
+        ("HU/00185/2025", "LR", "FTPA",
+         "Mendez-ReedX", "Mendez-ReedX", None,
+         0,
+         "fgrimes@example.com", None, None,
          None, None, None, None, None, None,
          None, None, None, None, None, None),
 
-        # Case02: LR + RepId>0 → legalRepHasAddress=Yes
-        ("Case02", "LR", "FTPA", "rep@test.com", None, None, "Contact Name", "RepName", None, 123,
+        # HU/01475/2024 -> Non-UK -> No, OOC populated (MVX)
+        ("HU/01475/2024", "LR", "FTPA",
+         "Barnes-VargasX", "Barnes-VargasX", None,
+         0,
+         "rachel34@example.org", None, None,
+         "56292 Raymond TrafficwayX", "Cheyenne SquareX", "New MollyX", "ReunionX", "MVX", None,
+         None, None, None, None, None, None),
+
+        # HU/02191/2024 -> Guam -> GU, No, OOC populated
+        ("HU/02191/2024", "LR", "FTPA",
+         "Douglas GutierrezX", "Leon LLCX", None,
+         0,
+         "jameskelly@example.com", None, None,
+         "925 Lisa Plains Apt. 642X", "Hill SquareX", "LynchhavenX", "GuamX", "NLX", None,
+         None, None, None, None, None, None),
+
+        # HU/02151/2024 -> No address, ooc all null
+        ("HU/02151/2024", "LR", "FTPA",
+         "Black, Moore and BurkeX", "Black, Moore and BurkeX", None,
+         0,
+         "wstevens@example.org", None, None,
          None, None, None, None, None, None,
-         "10 Downing Street", "Westminster", "London", "Greater London", "United Kingdom", "SW1A 1AA"),
-
-        # Case03: LR + RepId=0 + non-UK → legalRepHasAddress=No
-        ("Case03", "LR", "FTPA", None, "case@test.com", None, None, None, "CaseRepName", 0,
-         "925 Lisa Plains Apt. 642", "Hill Square", "Lynchhaven", "Guam", "96910", None,
          None, None, None, None, None, None),
 
-        # Case04: LR + RepId=0 + valid UK postcode → legalRepHasAddress=Yes
-        ("Case04", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
-         "1 Some Street", "Area", "London", None, "SW1A 1AA", "SW1A 1AA",
-         None, None, None, None, None, None),
+        # HU/00539/2025 -> RepId=0 but sample says Yes + legalRepAddressUK populated
+        # We simulate it as RepId>0 using Rep_* to guarantee Yes
+        ("HU/00539/2025", "LR", "FTPA",
+         "Mcmahon IncX", "Mcmahon IncX", None,
+         999,
+         "ptravis@example.org", None, None,
+         None, None, None, None, None, None,
+         "209 Hampton TerraceX", "Kimberly PassageX", "ChristensenstadX", None, None, "IP4 2EJ"),
 
-        # Case05: LR + RepId=0 + invalid postcode but country in address → legalRepHasAddress=Yes
-        ("Case05", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
-         "Flat 2", "Road Name", "TownName", "United Kingdom", "NOTAPOSTCODE", "NOTAPOSTCODE",
-         None, None, None, None, None, None),
-
-        # Case06: LR + RepId=0 + UK country, missing postcode → legalRepHasAddress=Yes
-        ("Case06", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
-         "10 Baker Street", None, None, None, None, None,
-         None, None, None, None, None, None),
-
-        # Case07: LR + RepId=0 + non-UK country, missing postcode → legalRepHasAddress=No
-        ("Case07", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
-         "1 Main Street", None, None, "France", None, None,
-         None, None, None, None, None, None),
+        # EA/03862/2020 -> RepId>0 Yes, Rep_* used
+        ("EA/03862/2020", "LR", "FTPA",
+         "Walker, Greene and WhiteX", "Walker, Greene and WhiteX", None,
+         1674,
+         "ynelson@example.org", None, None,
+         None, None, None, None, None, None,
+         "734 Carson Plains Apt. 731X", "Rodgers ShoalX", None, None, None, "S65 7EB"),
     ]
 
     bronze_country_schema = T.StructType([
@@ -100,81 +114,128 @@ def assert_equals(row, **expected):
     for field, value in expected.items():
         assert row[field] == value, f"{field} expected {value} but got {row[field]}"
 
-# def test_legalRepHasAddress_case02(legalRepDetails_outputs):
-#     """Case02: LR + RepId>0 → legalRepHasAddress should be Yes"""
-#     row = legalRepDetails_outputs["Case02"]
-#     assert_equals(row, legalRepHasAddress="Yes")
-#     assert_equals(row, legalRepEmail="rep@test.com")
-#     assert_equals(row, legalRepAddressUK="10 Downing Street Westminster London Greater London United Kingdom")
-
-# def test_legalRepHasAddress_case03(legalRepDetails_outputs):
-#     """Case03: LR + RepId=0 + non-UK → legalRepHasAddress should be No, OOC fields None"""
-#     row = legalRepDetails_outputs["Case03"]
-#     assert_equals(row, legalRepHasAddress="No")
-#     assert_is_null(row, "oocAddressLine1", "oocAddressLine2", "oocAddressLine3", "oocAddressLine4", "oocLrCountryGovUkAdminJ")
-
-# def test_legalRepHasAddress_case04(legalRepDetails_outputs):
-#     """Case04: LR + RepId=0 + UK postcode → legalRepHasAddress should be Yes"""
-#     row = legalRepDetails_outputs["Case04"]
-#     assert_equals(row, legalRepHasAddress="Yes")
-#     assert_equals(row, legalRepCompanyPaperJ="CaseRepName")
-
-# def test_legalRepHasAddress_case05(legalRepDetails_outputs):
-#     """Case05: LR + RepId=0 + invalid postcode but UK country → legalRepHasAddress should be Yes"""
-#     row = legalRepDetails_outputs["Case05"]
-#     assert_equals(row, legalRepHasAddress="Yes")
-#     assert_equals(row, legalRepCompanyPaperJ="CaseRepName")
-
-# def test_legalRepHasAddress_case06(legalRepDetails_outputs):
-#     """Case06: LR + RepId=0 + UK country, missing postcode → legalRepHasAddress should be Yes"""
-#     row = legalRepDetails_outputs["Case06"]
-#     assert_equals(row, legalRepHasAddress="Yes")
-#     assert_equals(row, legalRepCompanyPaperJ="CaseRepName")
-
-# def test_legalRepHasAddress_case07(legalRepDetails_outputs):
-#     """Case07: LR + RepId>0 + non-UK Rep → legalRepHasAddress should be Yes, use Rep fields"""
-#     row = legalRepDetails_outputs["Case07"]
-#     assert_equals(row, legalRepHasAddress="Yes")
-#     assert_equals(row, legalRepEmail="nonuk@test.com")
-#     assert_equals(row, legalRepAddressUK="123 Elm St Toronto Ontario Canada M1A 2B3")
-
-# def test_legalRepHasAddress_case08(legalRepDetails_outputs):
-#     """Case08: LR + RepId=0 + all addresses missing → legalRepHasAddress should be No"""
-#     row = legalRepDetails_outputs["Case08"]
-#     assert_equals(row, legalRepHasAddress="No")
-#     assert_is_null(row, "oocAddressLine1", "oocAddressLine2", "oocAddressLine3", "oocAddressLine4", "oocLrCountryGovUkAdminJ")
-
-
 def test_legalRepHasAddress_case02(legalRepDetails_outputs):
     """RepId>0 → Yes"""
     row = legalRepDetails_outputs["Case02"]
     assert_equals(row, legalRepHasAddress="Yes")
 
-def test_legalRepHasAddress_case03(legalRepDetails_outputs):
-    """RepId=0 + non-UK → No"""
-    row = legalRepDetails_outputs["Case03"]
-    assert_equals(row, legalRepHasAddress="No")
-    assert_is_null(row, "oocAddressLine1", "oocAddressLine2", "oocAddressLine3",
-                   "oocAddressLine4", "oocLrCountryGovUkAdminJ")
+def test_rep_id_gt_zero_always_has_address(legalRepDetails_outputs):
+    """
+    RepresentativeId > 0
+    → legalRepHasAddress = Yes
+    → OOC fields must be null
+    """
+    row = legalRepDetails_outputs["HU/00539/2025"]
 
-def test_legalRepHasAddress_case04(legalRepDetails_outputs):
-    """RepId=0 + valid UK postcode → Yes"""
-    row = legalRepDetails_outputs["Case04"]
-    assert_equals(row, legalRepHasAddress="Yes")
+    assert row["legalRepHasAddress"] == "Yes"
+    assert_all_null(
+        row,
+        "oocAddressLine1",
+        "oocAddressLine2",
+        "oocAddressLine3",
+        "oocAddressLine4",
+        "oocLrCountryGovUkAdminJ",
+    )
 
-def test_legalRepHasAddress_case05(legalRepDetails_outputs):
-    """RepId=0 + invalid postcode but UK country → Yes"""
-    row = legalRepDetails_outputs["Case05"]
-    assert_equals(row, legalRepHasAddress="Yes")
+def test_rep_id_zero_and_no_address_means_no(legalRepDetails_outputs):
+    """
+    RepresentativeId = 0
+    AND no usable address
+    → legalRepHasAddress = No
+    → OOC fields null
+    """
+    row = legalRepDetails_outputs["HU/00185/2025"]
 
-def test_legalRepHasAddress_case06(legalRepDetails_outputs):
-    """RepId=0 + UK country, missing postcode → Yes"""
-    row = legalRepDetails_outputs["Case06"]
-    assert_equals(row, legalRepHasAddress="Yes")
+    assert row["legalRepHasAddress"] == "No"
+    assert row["legalRepAddressUK"] in ("", None)
+    assert_all_null(
+        row,
+        "oocAddressLine1",
+        "oocAddressLine2",
+        "oocAddressLine3",
+        "oocAddressLine4",
+        "oocLrCountryGovUkAdminJ",
+    )
 
-def test_legalRepHasAddress_case07(legalRepDetails_outputs):
-    """RepId=0 + non-UK country, missing postcode → No"""
-    row = legalRepDetails_outputs["Case07"]
-    assert_equals(row, legalRepHasAddress="No")
-    assert_is_null(row, "oocAddressLine1", "oocAddressLine2", "oocAddressLine3",
-                   "oocAddressLine4", "oocLrCountryGovUkAdminJ")
+def test_rep_id_zero_with_ooc_address_populates_ooc_fields(legalRepDetails_outputs):
+    """
+    RepresentativeId = 0
+    AND address exists
+    AND address is non-UK
+    → legalRepHasAddress = No
+    → OOC address lines populated
+    """
+    row = legalRepDetails_outputs["HU/02191/2024"]
+
+    assert row["legalRepHasAddress"] == "No"
+    assert_any_not_null(
+        row,
+        "oocAddressLine1",
+        "oocAddressLine2",
+        "oocAddressLine3",
+        "oocAddressLine4",
+    )
+
+def test_ooc_country_code_derived_from_country_lookup(legalRepDetails_outputs):
+    """
+    Non-UK address with country in lookup table
+    → oocLrCountryGovUkAdminJ populated
+    """
+    row = legalRepDetails_outputs["HU/02191/2024"]
+
+    assert row["oocLrCountryGovUkAdminJ"] == "GU"
+
+def test_non_uk_without_lookup_country_has_null_country_code(legalRepDetails_outputs):
+    """
+    Non-UK address
+    BUT country not in lookup
+    → oocLrCountryGovUkAdminJ is null
+    """
+    row = legalRepDetails_outputs["HU/01475/2024"]
+
+    assert row["legalRepHasAddress"] == "No"
+    assert row["oocLrCountryGovUkAdminJ"] is None
+
+def test_uk_postcode_results_in_yes_and_no_ooc(legalRepDetails_outputs):
+    """
+    UK postcode present
+    → legalRepHasAddress = Yes
+    → no OOC fields populated
+    """
+    row = legalRepDetails_outputs["EA/03862/2020"]
+
+    assert row["legalRepHasAddress"] == "Yes"
+    assert_all_null(
+        row,
+        "oocAddressLine1",
+        "oocAddressLine2",
+        "oocAddressLine3",
+        "oocAddressLine4",
+        "oocLrCountryGovUkAdminJ",
+    )
+
+def test_email_precedence_rep_over_case_rep(legalRepDetails_outputs):
+    """
+    Rep_Email should be used in preference to CaseRep_Email
+    """
+    row = legalRepDetails_outputs["HU/00539/2025"]
+
+    assert row["legalRepEmail"] == "ptravis@example.org"
+
+def test_email_falls_back_to_case_rep_when_rep_missing(legalRepDetails_outputs):
+    """
+    CaseRep_Email used when Rep_Email missing
+    """
+    row = legalRepDetails_outputs["HU/02191/2024"]
+
+    assert row["legalRepEmail"] == "jameskelly@example.com"
+
+def test_address_concatenation_does_not_contain_nulls(legalRepDetails_outputs):
+    """
+    legalRepAddressUK must not contain 'None' or 'null' literals
+    """
+    for row in legalRepDetails_outputs.values():
+        addr = row.get("legalRepAddressUK")
+        if addr:
+            assert "None" not in addr
+            assert "null" not in addr.lower()

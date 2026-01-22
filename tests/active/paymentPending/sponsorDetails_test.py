@@ -135,46 +135,46 @@ def assert_equals(row, **expected):
 def test_EA_00490_2025_no_sponsor_paymentPending(sponsorDetails_outputs):
     """Case EA/00490/2025 has hasSponsor='No' → all sponsor fields should be null"""
     res = sponsorDetails_outputs["EA/00490/2025"]
-    assert res["Sponsor_Name"] is None
-    assert res["Sponsor_Forenames"] is None
-    assert res["Sponsor_Email"] is None
-    assert res["Sponsor_Telephone"] is None
-    assert res["Sponsor_Authorisation"] is None
+    assert res["sponsorFamilyName"] is None
+    assert res["sponsorGivenNames"] is None
+    assert res["sponsorEmailAdminJ"] is None
+    assert res["sponsorMobileNumberAdminJ"] is None
+    assert res["sponsorAuthorisation"] is None
 
 def test_EA_00072_2025_has_sponsor_paymentPending(sponsorDetails_outputs):
     """Case EA/00072/2025 has hasSponsor='Yes' and matching CategoryIds → sponsor fields populated"""
     res = sponsorDetails_outputs["EA/00072/2025"]
-    assert res["Sponsor_Name"] == "OwenX"
-    assert res["Sponsor_Forenames"] == "HarryX"
-    assert res["Sponsor_Email"] == "matthewthompson@example.org"
-    assert res["Sponsor_Telephone"] == "01314960380"
-    assert res["Sponsor_Authorisation"] == "Yes"
+    assert res["sponsorFamilyName"] == "OwenX"
+    assert res["sponsorGivenNames"] == "HarryX"
+    assert res["sponsorEmailAdminJ"] == "matthewthompson@example.org"
+    assert res["sponsorMobileNumberAdminJ"] == "01314960380"
+    assert res["sponsorAuthorisation"] == "Yes"
 
 def test_HU_00447_2025_has_sponsor_paymentPending(sponsorDetails_outputs):
     """Case HU/00447/2025 has hasSponsor='Yes' → sponsor fields populated"""
     res = sponsorDetails_outputs["HU/00447/2025"]
-    assert res["Sponsor_Name"] == "FisherX"
-    assert res["Sponsor_Forenames"] == "TashaX"
-    assert res["Sponsor_Email"] == "meghanmitchell@example.org"
-    assert res["Sponsor_Telephone"] is None
-    assert res["Sponsor_Authorisation"] == "Yes"
+    assert res["sponsorFamilyName"] == "FisherX"
+    assert res["sponsorGivenNames"] == "TashaX"
+    assert res["sponsorEmailAdminJ"] == "meghanmitchell@example.org"
+    assert res["sponsorMobileNumberAdminJ"] is None
+    assert res["sponsorAuthorisation"] == "Yes"
 
 def test_EA_00061_2025_missing_categoryIds(sponsorDetails_outputs):
     """Case EA/00061/2025 has no matching CategoryId in silver_c → all sponsor fields should be null"""
     res = sponsorDetails_outputs["EA/00061/2025"]
-    assert res["Sponsor_Name"] is None
-    assert res["Sponsor_Forenames"] is None
-    assert res["Sponsor_Email"] is None
-    assert res["Sponsor_Telephone"] is None
-    assert res["Sponsor_Authorisation"] is None
+    assert res["sponsorFamilyName"] is None
+    assert res["sponsorGivenNames"] is None
+    assert res["sponsorEmailAdminJ"] is None
+    assert res["sponsorMobileNumberAdminJ"] is None
+    assert res["sponsorAuthorisation"] is None
 
 def test_HU_00574_2023_has_sponsor_paymentPending(sponsorDetails_outputs):
     """Case HU/00574/2023 has hasSponsor='Yes' and matching CategoryIds → sponsor fields populated"""
     res = sponsorDetails_outputs["HU/00574/2023"]
-    assert res["Sponsor_Name"] == "LopezX"
-    assert res["Sponsor_Forenames"] == "BruceX"
-    assert res["Sponsor_Email"] is None
-    assert res["Sponsor_Telephone"] == "0141 496 0600"
+    assert res["sponsorFamilyName"] == "LopezX"
+    assert res["sponsorGivenNames"] == "BruceX"
+    assert res["sponsorEmailAdminJ"] is None
+    assert res["sponsorMobileNumberAdminJ"] == "0141 496 0600"
     assert res["Sponsor_Authorisation"] == "Yes"
 
 def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):

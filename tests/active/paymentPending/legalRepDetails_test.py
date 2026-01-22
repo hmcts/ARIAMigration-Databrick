@@ -66,7 +66,7 @@ def legalRepDetails_outputs(spark):
         # Case06: LR + RepId=0 + UK country, missing postcode → should still be Yes
         ("Case06", "LR", "FTPA", None, None, None, None, None, "CaseRepName", 0,
         "10 Baker Street", None, None, None, None, None,
-        None, None, None, None, None, None, None),
+        None, None, None, None, None, None),
 
         # Case07: LR + RepId>0 + non-UK Rep → legalRepHasAddress=Yes, Rep fields used
         ("Case07", "LR", "FTPA", "nonuk@test.com", None, None, None, "RepNonUK", None, 5,
@@ -76,7 +76,7 @@ def legalRepDetails_outputs(spark):
         # Case08: LR + RepId=0 + all addresses missing → legalRepHasAddress=No
         ("Case08", "LR", "FTPA", None, None, None, None, None, None, 0,
         None, None, None, None, None, None,
-        None, None, None, None, None, None, None),
+        None, None, None, None, None, None),
     ]
 
     bronze_country_schema = T.StructType([

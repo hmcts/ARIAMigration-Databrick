@@ -88,8 +88,7 @@ def sponsorDetails_outputs(spark):
     # -------------------------------
     silver_c_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("CategoryId", T.IntegerType(), True),
-        T.StructField("dv_targetState", T.StringType(), True)
+        T.StructField("CategoryId", T.IntegerType(), True)
     ])
 
     silver_c_data = [

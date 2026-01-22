@@ -1,5 +1,6 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import legalRepDetails
 from pyspark.sql import SparkSession
+from pyspark.sql import Row
 import pytest
 
 
@@ -14,6 +15,12 @@ def spark():
 ##### Testing the PaymentType field grouping function #####
 @pytest.fixture(scope="session")
 def legalRepDetails_outputs(spark):
+
+    bronze_countryFromAddress = spark.createDataFrame([
+        Row(countryFromAddress="United Kingdom", countryGovUkOocAdminJ="GB"),
+        Row(countryFromAddress="Guam", countryGovUkOocAdminJ="GU"),
+        Row(countryFromAddress="Argentina", countryGovUkOocAdminJ="AR")
+    ])
 
     data = [
         # ---------------------------------------------------------------------
@@ -242,7 +249,7 @@ def legalRepDetails_outputs(spark):
 
     df = spark.createDataFrame(data, columns)
 
-    legalRepDetails_content, _ = legalRepDetails(df)
+    legalRepDetails_content, _ = legalRepDetails(df, bronze_countryFromAddress)
 
     # ✅ build dict keyed by CaseNo
     results = {row["CaseNo"]: row.asDict() for row in legalRepDetails_content.collect()}

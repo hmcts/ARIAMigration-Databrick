@@ -37,6 +37,8 @@ def sponsorDetails_outputs(spark):
         T.StructField("sponsor_Address4", T.StringType(), True),
         T.StructField("sponsor_Address5", T.StringType(), True),
         T.StructField("sponsor_Postcode", T.StringType(), True),
+        T.StructField("dv_representation", T.StringType(), True),
+        T.StructField("lu_appealType", T.StringType(), True)
     ])
 
     # -------------------------------
@@ -48,7 +50,7 @@ def sponsorDetails_outputs(spark):
     # --------------------------------------------------
     ("EA/00490/2025", None, None, None, None, [47,38,11,3],
      None, None, None, None, None, None, None, None,
-     None, None, None, None, None, None),
+     None, None, None, None, None, None, "LR", "HU"),
 
     # --------------------------------------------------
     # EA/00072/2025 → Has sponsor, full address, authorisation Yes
@@ -56,7 +58,8 @@ def sponsorDetails_outputs(spark):
     ("EA/00072/2025", None, None, None, None, [47,38,11],
      "OwenX", "HarryX", "matthewthompson@example.org", "01314960380", True,
      None, None, None,
-     "873 Hurst Parkways Suite 226X", "Owens StravenueX", None, None, None, "L7T 6AE"),
+     "873 Hurst Parkways Suite 226X", "Owens StravenueX", None, None, None, "L7T 6AE",
+     "AIP", "EA"),
 
     # --------------------------------------------------
     # HU/00447/2025 → Has sponsor, no telephone, authorisation True
@@ -64,7 +67,8 @@ def sponsorDetails_outputs(spark):
     ("HU/00447/2025", None, None, None, None, [38,10],
      "FisherX", "TashaX", "meghanmitchell@example.org", None, True,
      None, None, None,
-     "64644 Michael Junction Suite 48X", "Kathryn MeadowX", None, None, None, "G30 7NJ"),
+     "64644 Michael Junction Suite 48X", "Kathryn MeadowX", None, None, None, "G30 7NJ",
+     "AIP", "HU"),
 
     # --------------------------------------------------
     # EA/00061/2025 → Missing categoryId 38 → sponsor omitted
@@ -72,7 +76,7 @@ def sponsorDetails_outputs(spark):
     ("EA/00061/2025", None, None, None, None, [47,37,13,11,3],
      "UnknownX", "UnknownX", "unknown@example.org", None, None,
      None, None, None,
-     None, None, None, None, None, None),
+     None, None, None, None, None, None,"LR", "EA"),
 
     # --------------------------------------------------
     # HU/00574/2023 → Has sponsor, multiple addresses, partial telephone
@@ -80,7 +84,8 @@ def sponsorDetails_outputs(spark):
     ("HU/00574/2023", None, None, None, None, [38,10],
      "LopezX", "BruceX", None, "0141 496 0600", True,
      None, None, None,
-     "358 Carter Corners Suite 044X", "Wells FordX", None, None, None, "UB4B 0LY"),
+     "358 Carter Corners Suite 044X", "Wells FordX", None, None, None,
+     "UB4B 0LY","AIP", "HU"),
     ]
 
     # -------------------------------

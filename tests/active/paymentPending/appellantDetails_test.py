@@ -51,31 +51,32 @@ def appellantDetaild_outputs(spark):
         T.StructField("HORef", T.StringType(), True),
         T.StructField("CasePrefix", T.StringType(), True),
         T.StructField("AppellantCountryId", T.IntegerType(), True),
-        T.StructField("Relationship", T.StringType(), True)
+        T.StructField("Relationship", T.StringType(), True),
+        T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True)
     ])
 
     m2_data = [
         ("HU/00487/2025", "LR", "refusalOfHumanRights", "RobinsonX", "AdamX", None, None,
          "7759 Rios SquareX", "Paul WalksX", "KristinfurtX", "Trinidad and TobagoX", None, "W3 8PF",
-         None, None, None, "HU", 133, None),
+         None, None, None, "HU", 133, None, None),
         ("HU/00365/2025", "AIP", "euSettlementScheme", "SandersX", "AmandaX", "smithjohn@example.net", None,
          "4280 Michael Highway Suite 815X", "Stephanie AlleyX", "Port DanielX", "GibraltarX", None, "DD3 1HW",
-         None, None, None, "HU", 128, None),
+         None, None, None, "HU", 128, None, None),
         ("EA/03208/2023", "LR", "refusalOfEu", "PachecoX", "KiaraX", "chelsea42@example.net", None,
          "7706 Barbara Gateway Apt. 725X", "Daniel BurgsX", "North JillportX", None, None, "LS3M 4BX",
-         None, None, None, "EA", 155, None),
+         None, None, None, "EA", 155, None, None),
         ("EA/01698/2024", "AIP", "euSettlementScheme", "ColemanX", "AlyssaX", "betty23@example.net", None,
          "06382 Bryan MountX", "Kimberly ThroughwayX", "ZacharyburghX", None, None, "B37 5LW",
-         None, None, "T1113940", "EA", 124, None),
+         None, None, "T1113940", "EA", 124, None, None),
         ("HU/00560/2025", "LR", "refusalOfHumanRights", "MccallX", "ThomasX", None, None,
          None, None, None, None, None, None,
-         None, None, None, "HU", 86, None),
+         None, None, None, "HU", 86, None, None),
         ("HU/00532/2025", "LR", "refusalOfHumanRights", "AlvarezX", "JasmineX", None, None,
          None, None, None, None, None, None,
-         None, None, None, "HU", 152, None),
+         None, None, None, "HU", 152, None, None),
         ("HU/00423/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
          None, None, None, None, None, None,
-         None, None, None, "HU", 191, None)
+         None, None, None, "HU", 191, None, None)
     ]
 
 

@@ -16,6 +16,7 @@ def appellantDetaild_outputs(spark):
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("DateLodged", T.StringType(), True),
+        T.StructField("dv_CCDAppealType", T.StringType(), True),
         T.StructField("BirthDate", T.StringType(), True),
         T.StructField("NationalityId", T.StringType(), True),
         T.StructField("lu_countryCode", T.StringType(), True),
@@ -23,13 +24,13 @@ def appellantDetaild_outputs(spark):
     ])
 
     m1_data = [
-        ("HU/00487/2025", "2025-03-07", "1961-05-18", "1", "AF", "Afghanistan"),
-        ("HU/00365/2025", "2024-11-06", "2017-05-06", "27", "BI", "Burundi"),
-        ("EA/03208/2023", "2023-09-15", "1995-07-23", "63", "GR", "Greece"),
-        ("EA/01698/2024", "2024-07-31", "2000-04-28", "94", "LR", "Liberia"),
-        ("HU/00560/2025", "2025-03-31", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
-        ("HU/00532/2025", "2025-03-24", "1983-08-08", "169", "TR", "Turkey"),
-        ("HU/00423/2025", "2025-02-21", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)")
+        ("HU/00487/2025", "2025-03-07", "HU", "1961-05-18", "1", "AF", "Afghanistan"),
+        ("HU/00365/2025", "2024-11-06", "HU", "2017-05-06", "27", "BI", "Burundi"),
+        ("EA/03208/2023", "2023-09-15", "EA", "1995-07-23", "63", "GR", "Greece"),
+        ("EA/01698/2024", "2024-07-31", "EA", "2000-04-28", "94", "LR", "Liberia"),
+        ("HU/00560/2025", "2025-03-31", "HU", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
+        ("HU/00532/2025", "2025-03-24", "HU", "1983-08-08", "169", "TR", "Turkey"),
+        ("HU/00423/2025", "2025-02-21", "HU", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)")
     ]
 
     m2_schema = T.StructType([

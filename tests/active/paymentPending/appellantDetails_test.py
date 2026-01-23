@@ -221,14 +221,15 @@ def test_appellant_address_fields(appellantDetails_outputs):
 
     # Out-of-country adminJ address (CategoryId 38)
     row = appellantDetails_outputs["HU/00365/2025"]
+    print(f"[DEBUG] countryGovUkOocAdminJ={row.get('countryGovUkOocAdminJ')}")
     assert_equals(row,
-        addressLine1AdminJ="4280 Michael Highway Suite 815X",
-        addressLine2AdminJ="Stephanie AlleyX",
-        addressLine3AdminJ="Port DanielX, GibraltarX",
-        addressLine4AdminJ="DD3 1HW",
-        countryGovUkOocAdminJ="GI",
-        appellantHasFixedAddressAdminJ="Yes"
-    )
+              addressLine1AdminJ="4280 Michael Highway Suite 815X",
+              addressLine2AdminJ="Stephanie AlleyX",
+              addressLine3AdminJ="Port DanielX, GibraltarX",
+              addressLine4AdminJ="DD3 1HW",
+              countryGovUkOocAdminJ="GI",
+              appellantHasFixedAddressAdminJ="Yes"
+             )
     
 def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
     row = appellantDetails_outputs["HU/00487/2025"]

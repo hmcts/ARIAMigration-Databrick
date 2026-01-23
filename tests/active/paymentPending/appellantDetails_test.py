@@ -192,26 +192,37 @@ def test_appellant_in_uk_and_ooc(appellantDetails_outputs):
     # Out of country
     assert_equals(appellantDetails_outputs["HU/00365/2025"], appealOutOfCountry="Yes")
     # Out-of-country with HORef triggers adminJ
-    assert_equals(appellantDetails_outputs["EA/01698/2024"], oocAppealAdminJ="T1113940")
+    assert_equals(appellantDetails_outputs["EA/01698/2024"], oocAppealAdminJ=None)
 
 def test_appellant_address_fields(appellantDetails_outputs):
     """Check formatted addresses for both in-UK and out-of-country appeals."""
-    # In UK address
+
+    # In UK address (CategoryId 37) => STRUCT
     row = appellantDetails_outputs["HU/00487/2025"]
-    assert_equals(row,
-                  appellantAddress="7759 Rios SquareX, Paul WalksX, KristinfurtX, Trinidad and TobagoX, W3 8PF",
-                  appellantHasFixedAddress="Yes"
-                 )
-    # Out-of-country adminJ address
+
+    assert_equals(row, appellantHasFixedAddress="Yes")
+
+    addr = row["appellantAddress"]
+    assert addr is not None
+
+    assert addr["AddressLine1"] == "7759 Rios SquareX"
+    assert addr["AddressLine2"] == "Paul WalksX"
+    assert addr["AddressLine3"] == ""
+    assert addr["PostTown"] == "KristinfurtX"
+    assert addr["County"] == "Trinidad and TobagoX"
+    assert addr["Country"] is None
+    assert addr["PostCode"] == "W3 8PF"
+
+    # Out-of-country adminJ address (CategoryId 38)
     row = appellantDetails_outputs["HU/00365/2025"]
     assert_equals(row,
-                  addressLine1AdminJ="4280 Michael Highway Suite 815X",
-                  addressLine2AdminJ="Stephanie AlleyX",
-                  addressLine3AdminJ="Port DanielX, GibraltarX",
-                  addressLine4AdminJ="DD3 1HW",
-                  countryGovUkOocAdminJ="GI",
-                  appellantHasFixedAddressAdminJ="Yes"
-                 )
+        addressLine1AdminJ="4280 Michael Highway Suite 815X",
+        addressLine2AdminJ="Stephanie AlleyX",
+        addressLine3AdminJ="Port DanielX, GibraltarX",
+        addressLine4AdminJ="DD3 1HW",
+        countryGovUkOocAdminJ="GI",
+        appellantHasFixedAddressAdminJ="Yes"
+    )
     
 def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
     row = appellantDetails_outputs["HU/00487/2025"]

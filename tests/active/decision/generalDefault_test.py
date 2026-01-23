@@ -25,7 +25,7 @@ def generalDefault_outputs(spark):
     columns = ["CaseNo", "dv_representation", "lu_appealType"]
     df =  spark.createDataFrame(data, columns)
 
-    generalDefault_content,_ = generalDefault(df)
+    generalDefault_content = generalDefault(df)
 
     results = {row["CaseNo"]: row.asDict() for row in generalDefault_content.collect()}
     return results

@@ -11,7 +11,7 @@ def spark():
     )
 
 @pytest.fixture(scope="session")
-def appellantDetaild_outputs(spark):
+def appellantDetails_outputs(spark):
 
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -69,7 +69,7 @@ def appellantDetaild_outputs(spark):
          None, None, None, "EA", 155, None, None, None),
         ("EA/01698/2024", "AIP", "euSettlementScheme", "ColemanX", "AlyssaX", "betty23@example.net", None,
          "06382 Bryan MountX", "Kimberly ThroughwayX", "ZacharyburghX", None, None, "B37 5LW",
-         None, None, "T1113940", "EA", 124, None, None, None),
+         None, None, "T1113940", "EA", 124, None, "ZH", None),
         ("HU/00560/2025", "LR", "refusalOfHumanRights", "MccallX", "ThomasX", None, None,
          None, None, None, None, None, None,
          None, None, None, "HU", 86, None, None, None),
@@ -81,18 +81,16 @@ def appellantDetaild_outputs(spark):
          None, None, None, "HU", 191, None, None, None)
     ]
 
-
     silver_c_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("CategoryId", T.IntegerType(), True)
     ])
 
-    # explode CategoryIdList into multiple rows
     silver_c_data = [
         ("HU/00487/2025", 3), ("HU/00487/2025", 10), ("HU/00487/2025", 37),
         ("HU/00365/2025", 10), ("HU/00365/2025", 38),
         ("EA/03208/2023", 3), ("EA/03208/2023", 11), ("EA/03208/2023", 37), ("EA/03208/2023", 47),
-        ("EA/01698/2024", 3), ("EA/01698/2024", 11), ("EA/01698/2024", 37), ("EA/01698/2024", 48),
+        ("EA/01698/2024", 3), ("EA/01698/2024", 11), ("EA/01698/2024", 37), ("EA/01698/2024", 38), ("EA/01698/2024", 48),
         ("HU/00560/2025", 3), ("HU/00560/2025", 10), ("HU/00560/2025", 31), ("HU/00560/2025", 37), ("HU/00560/2025", 39),
         ("HU/00532/2025", 3), ("HU/00532/2025", 10), ("HU/00532/2025", 32), ("HU/00532/2025", 37), ("HU/00532/2025", 39),
         ("HU/00423/2025", 3), ("HU/00423/2025", 10), ("HU/00423/2025", 31), ("HU/00423/2025", 37), ("HU/00423/2025", 39)
@@ -127,10 +125,10 @@ def appellantDetaild_outputs(spark):
     bronze_countryFromAddress =  spark.createDataFrame(bronze_countryFromAddress_data, bronze_countryFromAddress_schema)
     bronze_HORef_cleansing =  spark.createDataFrame(bronze_HORef_cleansing_data, bronze_HORef_cleansing_schema)
 
-    # Call the function under test
-    appellantDetails_content, _ = appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
+    appellantDetails_content, _ = appellantDetails(
+        silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing
+    )
 
-    # Convert to dictionary keyed by CaseNo
     results = {row["CaseNo"]: row.asDict() for row in appellantDetails_content.collect()}
     return results
 
@@ -143,9 +141,9 @@ def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
-def test_appellant_basic_names(appellantDetaild_outputs):
-    # Each CaseNo mapped correctly
-    row = appellantDetaild_outputs["HU/00487/2025"]
+def test_appellant_basic_names(appellantDetails_outputs):
+    """Check that names are mapped correctly."""
+    row = appellantDetails_outputs["HU/00487/2025"]
     assert_equals(row,
                   AppellantName="RobinsonX",
                   AppellantForenames="AdamX",
@@ -154,39 +152,45 @@ def test_appellant_basic_names(appellantDetaild_outputs):
                   hmctsCaseNameInternal="AdamX RobinsonX"
                  )
 
-def test_is_appellant_minor(appellantDetaild_outputs):
-    # Under 18 -> Yes, else No
-    assert_equals(appellantDetaild_outputs["HU/00365/2025"], isAppellantMinor="Yes")  # 2017 -> minor
-    assert_equals(appellantDetaild_outputs["HU/00487/2025"], isAppellantMinor="No")   # 1961 -> adult
+def test_is_appellant_minor(appellantDetails_outputs):
+    """Check minor vs adult based on BirthDate."""
+    # Minor
+    assert_equals(appellantDetails_outputs["HU/00365/2025"], isAppellantMinor="Yes")
+    # Adult
+    assert_equals(appellantDetails_outputs["HU/00487/2025"], isAppellantMinor="No")
 
-def test_appellant_contact_info(appellantDetaild_outputs):
-    # Email / Mobile populated only if present
-    assert_equals(appellantDetaild_outputs["HU/00365/2025"],
+def test_appellant_contact_info(appellantDetails_outputs):
+    """Check email and mobile presence."""
+    # Has email
+    assert_equals(appellantDetails_outputs["HU/00365/2025"],
                   internalAppellantEmail="smithjohn@example.net",
                   email="smithjohn@example.net",
                   internalAppellantMobileNumber=None,
                   mobileNumber=None)
-    assert_all_null(appellantDetaild_outputs["HU/00487/2025"],
-                    "internalAppellantEmail", "email", "internalAppellantMobileNumber", "mobileNumber")
+    # No email/mobile
+    assert_all_null(appellantDetails_outputs["HU/00487/2025"],
+                    "internalAppellantEmail", "email",
+                    "internalAppellantMobileNumber", "mobileNumber")
 
-def test_appellant_in_uk_and_ooc(appellantDetaild_outputs):
-    # CategoryId 37 -> appellantInUk=Yes
-    # CategoryId 38 -> appealOutOfCountry=Yes
-    assert_equals(appellantDetaild_outputs["HU/00487/2025"], appellantInUk="Yes")
-    assert_equals(appellantDetaild_outputs["HU/00365/2025"], appealOutOfCountry="Yes")
-    # Category 38 with HORef triggers oocAppealAdminJ logic
-    assert_equals(appellantDetaild_outputs["EA/01698/2024"], oocAppealAdminJ="T1113940")
+def test_appellant_in_uk_and_ooc(appellantDetails_outputs):
+    """Check appellant location flags and ooc admin."""
+    # In UK
+    assert_equals(appellantDetails_outputs["HU/00487/2025"], appellantInUk="Yes")
+    # Out of country
+    assert_equals(appellantDetails_outputs["HU/00365/2025"], appealOutOfCountry="Yes")
+    # Out-of-country with HORef triggers adminJ
+    assert_equals(appellantDetails_outputs["EA/01698/2024"], oocAppealAdminJ="T1113940")
 
-def test_appellant_address_fields(appellantDetaild_outputs):
-    # Category 37 -> appellantAddress included
-    row = appellantDetaild_outputs["HU/00487/2025"]
+def test_appellant_address_fields(appellantDetails_outputs):
+    """Check formatted addresses for both in-UK and out-of-country appeals."""
+    # In UK address
+    row = appellantDetails_outputs["HU/00487/2025"]
     assert_equals(row,
                   appellantAddress="7759 Rios SquareX, Paul WalksX, KristinfurtX, Trinidad and TobagoX, W3 8PF",
                   appellantHasFixedAddress="Yes"
                  )
-
-    # Category 38 -> adminJ address lines
-    row = appellantDetaild_outputs["HU/00365/2025"]
+    # Out-of-country adminJ address
+    row = appellantDetails_outputs["HU/00365/2025"]
     assert_equals(row,
                   addressLine1AdminJ="4280 Michael Highway Suite 815X",
                   addressLine2AdminJ="Stephanie AlleyX",
@@ -196,29 +200,31 @@ def test_appellant_address_fields(appellantDetaild_outputs):
                   appellantHasFixedAddressAdminJ="Yes"
                  )
 
-def test_appellant_stateless_and_nationalities(appellantDetaild_outputs):
-    row = appellantDetaild_outputs["HU/00487/2025"]
+def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
+    """Check appellant nationality mapping."""
+    # Normal nationality
+    row = appellantDetails_outputs["HU/00487/2025"]
     assert_equals(row,
                   appellantStateless="hasNationality",
                   appellantNationalities=[{"id":"4f7b9a0a-90fa-4258-a530-395aedebfc02","value":{"code":"AF"}}],
                   appellantNationalitiesDescription="Afghanistan"
                  )
-
-    row_stateless = appellantDetaild_outputs["HU/00560/2025"]
+    # No mapped nationality
+    row_stateless = appellantDetails_outputs["HU/00560/2025"]
     assert_equals(row_stateless,
                   appellantStateless="hasNationality",
                   appellantNationalities=None,
                   appellantNationalitiesDescription="NO MAPPING REQUIRED"
                  )
 
-def test_deportation_order_options(appellantDetaild_outputs):
-    # Example: Check EA/01698/2024 -> CategoryId 48 triggers deportationOrderOptions
-    row = appellantDetaild_outputs["EA/01698/2024"]
+def test_deportation_order_options(appellantDetails_outputs):
+    """Check deportation order options for CategoryId 48."""
+    row = appellantDetails_outputs["EA/01698/2024"]
     assert_equals(row, deportationOrderOptions="See Categories & Case Flags")
 
-def test_missing_fields_are_none(appellantDetaild_outputs):
-    # Check that optional fields that are missing remain None
-    row = appellantDetaild_outputs["HU/00560/2025"]
+def test_missing_fields_are_none(appellantDetails_outputs):
+    """Ensure optional fields remain None if not present."""
+    row = appellantDetails_outputs["HU/00560/2025"]
     assert_all_null(row,
                     "Appellant_Email", "internalAppellantEmail",
                     "Appellant_Telephone", "internalAppellantMobileNumber",

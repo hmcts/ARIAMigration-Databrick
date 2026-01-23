@@ -31,3 +31,8 @@ stages:
         displayName: 'Run Prepare For Hearing Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/prepareForHearing.yml
+
+      - job: DecisionTests
+        displayName: 'Run Decision Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/decision.yml

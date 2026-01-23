@@ -124,7 +124,7 @@ def appellantDetaild_outputs(spark):
     bronze_HORef_cleansing =  spark.createDataFrame(bronze_HORef_cleansing_data, bronze_HORef_cleansing_schema)
 
     # Call the function under test
-    appellantDetails_content, _ = appellantDetails((silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing))
+    appellantDetails_content, _ = appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
 
     # Convert to dictionary keyed by CaseNo
     results = {row["CaseNo"]: row.asDict() for row in appellantDetails_content.collect()}

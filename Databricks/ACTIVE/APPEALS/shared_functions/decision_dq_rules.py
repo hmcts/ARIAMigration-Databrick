@@ -1,78 +1,36 @@
 def add_checks(checks={}):
+    checks = add_checks_hearing_details(checks)
+    checks = add_checks_document(checks)
     checks = add_checks_substantive_decision(checks)
     checks = add_checks_general_default(checks)
     checks = add_checks_general(checks)
-    checks = add_checks_hearing_details(checks)
-    checks = add_checks_document(checks)
-
+    
     return checks
 
 
 def add_checks_hearing_details(checks={}):
 
-    checks["valid_listinglength"] = ("""
-    (TimeEstimate IS NULL AND
-        element_at(listingLength, 'hours') IS NULL AND
-        element_at(listingLength, 'minutes') IS NULL
-    ) OR (
-        TimeEstimate IS NOT NULL AND
-        element_at(listingLength, 'hours') >=0 AND
-        element_at(listingLength, 'minutes') >=0
-    )
+    checks["valid_listCaseHearingLength"] = ("""
+    (
+        TimeEstimate = listCaseHearingLength[0]
+    ) 
     """)
 
-    checks["valid_hearingChannel"] = ("""
-    (
-    -- Case: VisitVisaType = 1
-    (
-        VisitVisaType = 1 AND
-        element_at(hearingChannel, 'code') = 'ONPPRS' AND
-        element_at(hearingChannel, 'label') = 'On The Papers'
-    )
-    )
-    OR
-    (
-    -- Case: VisitVisaType = 2
-    (
-        VisitVisaType = 2 AND
-        element_at(hearingChannel, 'code') = 'INTER' AND
-        element_at(hearingChannel, 'label') = 'In Person'
-    )
-    )
-    OR
-    (
-    -- Case: Other / NULL VisitVisaType → both code and label must be NULL
-    (
-        (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
-        element_at(hearingChannel, 'code') IS NULL AND
-        element_at(hearingChannel, 'label') IS NULL
-    )
-    )
-    """)
+    checks["valid_listCaseHearingDate"] = (
+        """
+        (
+            listCaseHearingDate = concat(date_format(HearingDate, 'yyyy-MM-dd'),'T',date_format(StartTime, 'HH:mm:ss'),'.000')
+        )
+        """)
 
-    checks["valid_witnessDetails"] = (
-        "(size(witnessDetails) = 0)"
+    checks["valid_listCaseHearingCentre"] = (
+        "(listCaseHearingCentre[0] = bronz_listCaseHearingCentre)"
+    )
+
+    checks["valid_listCaseHearingCentreAddress"] = (
+        "(listCaseHearingCentreAddress = bronz_listCaseHearingCentreAddress)"
     )
     
-    checks["listing_location_struct_consistent_when_matched"] = ("""
-    (
-    ListedCentre IS NULL
-    OR
-    (
-        listingLocation.code = locationCode AND
-        listingLocation.label = locationLabel
-    )
-    )
-    """)
-
-    # If no match, both fields in listingLocation must be NULL.
-    checks["valid_listinglocation_null_when_not_matched"] = ("""
-    (
-    ListedCentre IS NOT NULL
-    AND
-    (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
-    )
-    """)
     return checks
 
 def add_checks_document(checks={}):
@@ -106,19 +64,17 @@ def add_checks_general_default(checks={}):
     return checks
 
 
-
 def add_checks_general(checks={}):
 
     checks["valid_bundleFileNamePrefix"] = (
         """
         (
-            bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '_' || Appellant_Name
+            bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '-' || Appellant_Name
         )
         """
     )
 
     return checks
-
 
 
 if __name__ == "__main__":

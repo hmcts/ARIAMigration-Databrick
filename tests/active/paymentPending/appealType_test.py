@@ -111,58 +111,12 @@ def appealType_outputs(spark):
      "Revocation of a protection status",
      ccd_dynamic_list("revocationOfProtection", "Revocation of a protection status")),
     ]
-
-    silver_c_schema = T.StructType([
-        T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("CategoryId", T.IntegerType(), True)
-    ])
-
-    silver_c_data = [
-        # DA
-        ("DA/00001/2020", None),
-
-        # DC
-        ("DC/00002/2020", None),
-
-        # EA (CategoryId drives the rule)
-        ("EA/00003/2020", 10),   # NOT IN [47,48,49] => refusalOfEu
-        ("EA/00004/2020", 47),   # IN [47,48,49] => euSettlementScheme
-        ("EA/00005/2020", 48),   # IN [47,48,49] => euSettlementScheme
-        ("EA/00006/2020", 49),   # IN [47,48,49] => euSettlementScheme
-
-        # HU
-        ("HU/00007/2020", None),
-
-        # IA
-        ("IA/00008/2020", None),
-
-        # LD
-        ("LD/00009/2020", None),
-
-        # LE
-        ("LE/00010/2020", None),
-
-        # LH
-        ("LH/00011/2020", None),
-
-        # LP
-        ("LP/00012/2020", None),
-
-        # LR
-        ("LR/00013/2020", None),
-
-        # PA
-        ("PA/00014/2020", None),
-
-        # RP
-        ("RP/00015/2020", None)
-    ]
+        
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
-    silver_c =  spark.createDataFrame(silver_c_data, silver_c_schema)
 
     # Call the function under test
-    appealType_content, _ = appealType(silver_m1, silver_c)
+    appealType_content, _ = appealType(silver_m1)
 
     # Convert to dictionary keyed by CaseNo
     results = {row["CaseNo"]: row.asDict() for row in appealType_content.collect()}

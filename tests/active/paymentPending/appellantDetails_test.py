@@ -215,7 +215,7 @@ def test_appellant_address_fields(appellantDetails_outputs):
     
 def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
     row = appellantDetails_outputs["HU/00487/2025"]
-    normalized_nationalities = normalize_rows(row["appellantNationalities"])
+    normalized_nationalities = normalise_rows(row["appellantNationalities"])
     assert normalized_nationalities == [{'id': '4f7b9a0a-90fa-4258-a530-395aedebfc02',
                                          'value': {'code': 'AF'}}]
 

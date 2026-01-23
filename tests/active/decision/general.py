@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.decision import hearingDetails
+from Databricks.ACTIVE.APPEALS.shared_functions.decision import general
 from pyspark.sql import SparkSession
 import pytest
 
@@ -10,13 +10,13 @@ from pyspark.sql import functions as F, types as T
 def spark():
     return (
         SparkSession.builder
-        .appName("hearingDetailsTests")
+        .appName("generalTests")
         .getOrCreate()
     )
 
 ##### Testing the hearingDetails field grouping function #####
 @pytest.fixture(scope="session")
-def hearingDetails_outputs(spark):
+def general_outputs(spark):
 
     m1_schema = T.StructType([
     T.StructField("CaseNo", T.StringType(), True),
@@ -86,42 +86,16 @@ def hearingDetails_outputs(spark):
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_loc =  spark.createDataFrame(loc_data, loc_schema)
 
-    hearingDetails_content,_ = hearingDetails(df_m1,df_m3,df_loc)
-    results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
+    general_content,_ = general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    results = {row["CaseNo"]: row.asDict() for row in general_content.collect()}
     return results
 
-def test_listCaseHearingLength(spark,hearingDetails_outputs):
+def test_bundleFileNamePrefix(spark,general_outputs):
 
-    results = hearingDetails_outputs
+    results = general_outputs
 
-    assert results["CASE001"]["listCaseHearingLength"] == None
-    assert results["CASE006"]["listCaseHearingLength"] == [240]
-    assert results["CASE008"]["listCaseHearingLength"] == [None]
-    assert results["CASE011"]["listCaseHearingLength"] == [45]
+    assert results["CASE001"]["bundleFileNamePrefix"] == None
+    assert results["CASE006"]["bundleFileNamePrefix"] == "2026-12-03T13:00:00.000"
+    assert results["CASE008"]["bundleFileNamePrefix"] == "2024-10-02T10:00:00.000"
+    assert results["CASE011"]["bundleFileNamePrefix"] == "2025-11-02T12:00:00.999"
 
-def test_listCaseHearingDate(spark,hearingDetails_outputs):
-
-    results = hearingDetails_outputs
-
-    assert results["CASE001"]["listCaseHearingDate"] == None
-    assert results["CASE006"]["listCaseHearingDate"] == "2026-12-03T13:00:00.000"
-    assert results["CASE008"]["listCaseHearingDate"] == "2024-10-02T10:00:00.000"
-    assert results["CASE011"]["listCaseHearingDate"] == "2025-11-02T12:00:00.999"
-
-def test_listCaseHearingCentre(spark,hearingDetails_outputs):
-
-    results = hearingDetails_outputs
-
-    assert results["CASE001"]["listCaseHearingCentre"] == None
-    assert results["CASE006"]["listCaseHearingCentre"] == ["Scot"]
-    assert results["CASE008"]["listCaseHearingCentre"] == ["Nor"]
-    assert results["CASE011"]["listCaseHearingCentre"] == [None]
-
-def test_listCaseHearingCentreAddress(spark,hearingDetails_outputs):
-
-    results = hearingDetails_outputs
-
-    assert results["CASE001"]["listCaseHearingCentreAddress"] == None
-    assert results["CASE006"]["listCaseHearingCentreAddress"] == "456 asd"
-    assert results["CASE008"]["listCaseHearingCentreAddress"] == "954 bbb"
-    assert results["CASE011"]["listCaseHearingCentreAddress"] == None

@@ -235,7 +235,6 @@ def substantiveDecision(silver_m1):
 ##########              generalDefault          ###########
 ################################################################
 
-
 def generalDefault(silver_m1):
 
     general_df = L.generalDefault(silver_m1)
@@ -275,7 +274,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     general_df =  general_df.join(bundleFileNamePrefix_df, on="CaseNo", how="left").drop("Appellant_Name")
 
-    
     general_audit = (
         general_audit.alias("audit")
         .join(bundleFileNamePrefix_df.alias("bfp"), on="CaseNo", how="left")

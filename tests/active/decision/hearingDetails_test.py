@@ -49,8 +49,8 @@ def hearingDetails_outputs(spark):
         T.StructField("CaseStatus", T.IntegerType(), True),
         T.StructField("TimeEstimate", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
-        T.StructField("StartTime", T.StringType(), True),
         T.StructField("HearingDate", T.StringType(), True),
+        T.StructField("StartTime", T.StringType(), True),
     ])
 
     m3_data = [

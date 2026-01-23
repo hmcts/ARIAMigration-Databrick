@@ -98,3 +98,12 @@ def test_listCaseHearingDate(spark,hearingDetails_outputs):
     assert results["CASE006"]["listCaseHearingDate"] == "2026-12-03T13:00:00.000"
     assert results["CASE008"]["listCaseHearingDate"] == "2024-10-02T10:00:00.000"
     assert results["CASE011"]["listCaseHearingDate"] == "2025-11-02T12:00:00.999"
+
+def test_listCaseHearingCentre(spark,hearingDetails_outputs):
+
+    results = hearingDetails_outputs
+
+    assert results["CASE001"]["listCaseHearingCentre"] == "Bham"
+    assert results["CASE006"]["listCaseHearingCentre"] == "Scot"
+    assert results["CASE008"]["listCaseHearingCentre"] == "Nor"
+    assert results["CASE011"]["listCaseHearingCentre"] == None

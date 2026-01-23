@@ -158,12 +158,12 @@ def test_appellant_basic_names(appellantDetails_outputs):
     """Check that names are mapped correctly."""
     row = appellantDetails_outputs["HU/00487/2025"]
     assert_equals(row,
-                  AppellantName="RobinsonX",
-                  AppellantForenames="AdamX",
-                  appellantNameForDisplay="AdamX RobinsonX",
-                  caseNameHmctsInternal="AdamX RobinsonX",
-                  hmctsCaseNameInternal="AdamX RobinsonX"
-                 )
+        appellantFamilyName="RobinsonX",
+        appellantGivenNames="AdamX",
+        appellantNameForDisplay="AdamX RobinsonX",
+        caseNameHmctsInternal="AdamX RobinsonX",
+        hmctsCaseNameInternal="AdamX RobinsonX"
+    )
 
 def test_is_appellant_minor(appellantDetails_outputs):
     """Check minor vs adult based on BirthDate."""

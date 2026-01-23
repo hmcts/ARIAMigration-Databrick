@@ -30,17 +30,17 @@ def hearingDetails_outputs(spark):
     ])
 
     m1_data = [
-        ("CASE001", "AIP", "FTPA", None, 0, 0, True, 1),  # LanguageCode 1 - Spoken Language
-        ("CASE002", "AIP", "FTPA", None, 0, 0, False, 2),  # LanguageCode 5 - Spoken Language Manual Entry
-        ("CASE003", "AIP", "FTPA", None, 0, 0, True, 2),  # LanguageCode 6 - Sign Language
-        ("CASE004", "AIP", "FTPA", None, 0, 0, False, 2),  # LanguageCode 7 - Sign Language Manual Entry
+        ("CASE001", "AIP", "FTPA", None, 0, 0, True, 1),  
+        ("CASE002", "AIP", "FTPA", None, 0, 0, False, 2),  
+        ("CASE003", "AIP", "FTPA", None, 0, 0, True, 2),  
+        ("CASE004", "AIP", "FTPA", None, 0, 0, False, 2),  
         ("CASE005", "AIP", "FT", None, 0, 0, True, 3), 
-        ("CASE006", "AIP", "FT", None, 0, 0, True, 4),    # For m3 conditional tests - Additional Language Spoken + Spoken Manual
-        ("CASE007", "AIP", "FT", None, 0, 0, False, None),    # For m3 conditional tests - Additional Language Spoken + Sign
-        ("CASE008", "AIP", "FT", None, 0, 0, False, None),    # For m3 conditional tests - Additional Language Spoken + Sign Manual
-        ("CASE009", "AIP", "FT", None, 0, 0, None, 2),    # For m3 conditional tests - Additional Language Sign + Sign
-        ("CASE010", "AIP", "FT", None, 0, 0, None, 2),   # For m3 conditional tests - Additional Language Sign + Spoken Manual
-        ("CASE011", "AIP", "FT", None, 0, 0, True, 61)    # For m3 conditional tests - Additional Language Sign + Sign Manual
+        ("CASE006", "AIP", "FT", None, 0, 0, True, 4),    
+        ("CASE007", "AIP", "FT", None, 0, 0, False, None),    
+        ("CASE008", "AIP", "FT", None, 0, 0, False, None),    
+        ("CASE009", "AIP", "FT", None, 0, 0, None, 2),    
+        ("CASE010", "AIP", "FT", None, 0, 0, None, 2),  
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61)
         ]
 
     m3_schema = T.StructType([
@@ -67,15 +67,18 @@ def hearingDetails_outputs(spark):
     loc_schema = T.StructType([
         T.StructField("ListedCentre", T.StringType(), True),
         T.StructField("locationCode", T.StringType(), True),
-        T.StructField("locationLabel", T.StringType(), True)])
+        T.StructField("locationLabel", T.StringType(), True),
+        T.StructField("listCaseHearingCentre", T.StringType(), True),
+        T.StructField("listCaseHearingCentreAddress", T.StringType(), True)
+        ])
 
     loc_data = [
-        ("LOC001", "123", "Court1"),   # StatusId 1 Unused Additional Spoken Language Only
-        ("LOC002", "456", "Court2"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
-        ("LOC003", "789", "Court3"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
-        ("LOC004", None, "Court4"),   # Additional Sign Language (to Spoken + Sign)
-        ("LOC005", None, "Court5"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
-        ("LOC006", "xyz", "Court6"),   # Additional Sign Language (to Sign + Sign Manual)
+        ("LOC001", "123", "Court1","Bham","123 xyz"),   
+        ("LOC002", "456", "Court2","Man","123 abc"),   
+        ("LOC003", "789", "Court3","Scot","456 asd"),   
+        ("LOC004", None, "Court4","Cov","7676 jgfd"),  
+        ("LOC005", None, "Court5","Nor","954 bbb"),   
+        ("LOC006", "xyz", "Court6","ply","456 mmm"),  
         ]
     
 

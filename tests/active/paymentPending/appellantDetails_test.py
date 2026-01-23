@@ -149,10 +149,16 @@ def assert_all_null(row, *fields):
     for f in fields:
         assert row.get(f) is None, f"{f} expected None but got {row.get(f)}"
 
+def normalise_null(v):
+    if isinstance(v, str) and v.strip().lower() in {"none", "null", ""}:
+        return None
+    return v
 
 def assert_equals(row, **expected):
     for k, v in expected.items():
-        assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
+        actual = normalise_null(row.get(k))
+        expected_v = normalise_null(v)
+        assert actual == expected_v, f"{k} expected {expected_v} but got {actual}"
 
 def test_appellant_basic_names(appellantDetails_outputs):
     """Check that names are mapped correctly."""

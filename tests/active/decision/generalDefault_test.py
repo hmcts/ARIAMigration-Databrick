@@ -30,11 +30,6 @@ def generalDefault_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in generalDefault_content.collect()}
     return results
 
-        .withColumn("hmcts", lit("[userImage:hmcts.png]"))
-        .withColumn("stitchingStatus", lit("DONE"))
-        .withColumn("bundleConfiguration", lit("iac-hearing-bundle-config.yaml"))
-        .withColumn("decisionAndReasonsAvailable", lit("No"))
-
 def test_hmcts(spark,generalDefault_outputs):
 
     results = generalDefault_outputs

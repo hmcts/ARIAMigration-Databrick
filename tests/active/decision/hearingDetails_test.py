@@ -88,6 +88,7 @@ def hearingDetails_outputs(spark):
 
     hearingDetails_content,_ = hearingDetails(df_m1,df_m3,df_loc)
     results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
+    
     return results
 
 def test_listCaseHearingLength(spark,hearingDetails_outputs):

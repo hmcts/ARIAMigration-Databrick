@@ -66,7 +66,7 @@ def appellantDetails_outputs(spark):
         T.StructField("CasePrefix", T.StringType(), True),
         T.StructField("AppellantCountryId", T.IntegerType(), True),
         T.StructField("Relationship", T.StringType(), True),
-        T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
+        T.StructField("dv_countryGovUkOocAdminJ", T.StringType(), True),
         T.StructField("FCONumber", T.StringType(), True)
     ])
 
@@ -76,13 +76,13 @@ def appellantDetails_outputs(spark):
          None, None, None, "HU", 133, None, None, None),
         ("HU/00365/2025", "AIP", "euSettlementScheme", "SandersX", "AmandaX", "smithjohn@example.net", None,
          "4280 Michael Highway Suite 815X", "Stephanie AlleyX", "Port DanielX", "GibraltarX", None, "DD3 1HW",
-         None, None, None, "HU", 128, None, "GI", "XXXXXXX"),
+         None, None, None, "HU", 128, None, "Gibraltar", "XXXXXXX"),
         ("EA/03208/2023", "LR", "refusalOfEu", "PachecoX", "KiaraX", "chelsea42@example.net", None,
          "7706 Barbara Gateway Apt. 725X", "Daniel BurgsX", "North JillportX", None, None, "LS3M 4BX",
          None, None, None, "EA", 155, None, None, None),
         ("EA/01698/2024", "AIP", "euSettlementScheme", "ColemanX", "AlyssaX", "betty23@example.net", None,
          "06382 Bryan MountX", "Kimberly ThroughwayX", "ZacharyburghX", None, None, "B37 5LW",
-         None, None, "T1113940", "EA", 124, None, "ZH", None),
+         None, None, "T1113940", "EA", 124, None, None, None),
         ("HU/00560/2025", "LR", "refusalOfHumanRights", "MccallX", "ThomasX", None, None,
          None, None, None, None, None, None,
          None, None, None, "HU", 86, None, None, None),
@@ -115,10 +115,10 @@ def appellantDetails_outputs(spark):
     ])
 
     bronze_countryFromAddress_data = [
-        ("Trinidad and TobagoX", "TT"),
-        ("GibraltarX", "GI"),
-        ("North JillportX", "NJ"),
-        ("ZacharyburghX", "ZH")
+        ("Poland", "PL"),
+        ("Gibraltar", "GI"),
+        ("South Africa", "ZA"),
+        ("Zimbabwe", "WZ")
     ]
 
     bronze_HORef_cleansing_schema = T.StructType([

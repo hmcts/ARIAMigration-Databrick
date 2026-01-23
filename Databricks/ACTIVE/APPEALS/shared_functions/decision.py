@@ -70,7 +70,7 @@ def hearingDetails(silver_m1, silver_m3, bronze_listing_location):
             "HearingDateTime_ts",
             F.to_timestamp(
                 F.concat_ws(" ", F.col("hearing_date_str"), F.col("start_time_str")),
-                "yyyy-MM-dd HH:mm:ss"
+                "yyyy-MM-dd HH:mm:ss.SSS"
             )
         )
         .withColumn(

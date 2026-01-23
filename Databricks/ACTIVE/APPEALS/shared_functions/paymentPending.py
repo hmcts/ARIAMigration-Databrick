@@ -30,7 +30,7 @@ def appealType(silver_m1):
     aip_condition = (col("dv_representation") == "AIP") & (col("lu_appealType").isNotNull())
 
     df = silver_m1.select(
-        col("CaseNo"), 
+        col("CaseNo"),
         when(
             conditions,
             col("lu_appealType")
@@ -1173,7 +1173,6 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_
 getCountryApp_udf = udf(getCountryApp, StringType())
 
 
-# AppealType grouping
 def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,bronze_HORef_cleansing):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
@@ -1332,8 +1331,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             col("Appellant_Address5"), col("Appellant_Postcode")
         )
     ).otherwise(None)
-
-
     
     # Join bronze_HORef_cleansing to get CleansedHORef using CaseNo and coalesce(HORef, FCONumber)
     bronze_cleansing = bronze_HORef_cleansing.select(
@@ -1369,13 +1366,19 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
                                         getUkPostcodeUDF(col("Appellant_Postcode"))
                                     ).withColumn(
                                         "dv_countryGovUkOocAdminJ",
-                                        getCountryApp_udf(
-                                            col("lu_countryGovUkOocAdminJ").alias("country"),
-                                            col("ukPostcodeAppellant"),
-                                            col("appellantFullAddress"),
-                                            col("Appellant_Postcode")
-                                        )
+                                        getCountryLRUDF(
+                                        col("appellantFullAddress")
+                                            )
                                     )
+                                    # ).withColumn(
+                                    #     "dv_countryGovUkOocAdminJ",
+                                    #     getCountryApp_udf(
+                                    #         col("lu_countryGovUkOocAdminJ").alias("country"),
+                                    #         col("ukPostcodeAppellant"),
+                                    #         col("appellantFullAddress"),
+                                    #         col("Appellant_Postcode")
+                                    #     )
+                                    # )
 
 
     bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ",col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
@@ -1387,14 +1390,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         conditions & expr("array_contains(CategoryIdList, 38)"),
         col("countryGovUkOocAdminJ")
     ).otherwise(None)
-          
-
-    # # display(df)
-
-    # df.select("CaseNo", "appellantFullAddress", "ukPostcodeAppellant", 
-    #       when( col("lu_cfa_contryFromAddress").isNotNull(),col("lu_cfa_countryGovUkOocAdminJ"))
-    #       .otherwise(col("countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ")
-    #       ).display()
 
     # internalAppellantEmail logic
     internal_appellant_email_expr = when(
@@ -1468,16 +1463,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             when(conditions & deportation_condition ,
                 lit("Yes")
             ).when(conditions, lit("No")).otherwise(None).alias("deportationOrderOptions")
-            # internalAppellantEmail: IF AppellantEmail IS NULL = OMIT; ELSE Data from ARIA
-            # internalAppellantMobileNumber: IF AppellantTelephone IS NULL = OMIT; ELSE Data from ARIA
-            
-            # mobileNumber: same as internalAppellantMobileNumber, with conditions
-            # email: same as internalAppellantEmail, with conditions
         ).distinct()
-
-    # new_order = ["appellantFamilyName", "appellantGivenNames","appellantNameForDisplay", "appellantDateOfBirth", "isAppellantMinor", "caseNameHmctsInternal","hmctsCaseNameInternal", "internalAppellantEmail", "email", "internalAppellantMobileNumber", "mobileNumber", "appellantInUk", "appealOutOfCountry", "oocAppealAdminJ", "appellantHasFixedAddress", "appellantHasFixedAddressAdminJ", "appellantAddress", "addressLine1AdminJ", "addressLine2AdminJ", "addressLine3AdminJ", "addressLine4AdminJ", "countryGovUkOocAdminJ", "appellantStateless", "appellantNationalities", "appellantNationalitiesDescription", "deportationOrderOptions"]
-
-    # df = df.select(*new_order)
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
@@ -1651,7 +1637,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         ).distinct()
     
     return df, df_audit
-
 
 
 ################################################################

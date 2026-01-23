@@ -64,7 +64,7 @@ def hearingDetails(silver_m1, silver_m3, bronze_listing_location):
         )
         .withColumn(
             "start_time_str",
-            F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss")
+            F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss.SSS")
         )
         .withColumn(
             "HearingDateTime_ts",

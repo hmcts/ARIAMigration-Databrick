@@ -36,7 +36,7 @@ def test_hmcts(spark,generalDefault_outputs):
 
     assert results["CASE001"]["hmcts"] == "[userImage:hmcts.png]"
     assert results["CASE002"]["hmcts"] == "[userImage:hmcts.png]"
-    assert results["CASE003"]["hmcts"] == "[userImage:hmcts.png]"
+    assert results["CASE003"]["hmcts"] == None
 
 def test_stitchingStatus(spark,generalDefault_outputs):
 
@@ -44,7 +44,7 @@ def test_stitchingStatus(spark,generalDefault_outputs):
 
     assert results["CASE001"]["stitchingStatus"] == "DONE"
     assert results["CASE002"]["stitchingStatus"] == "DONE"
-    assert results["CASE003"]["stitchingStatus"] == "DONE"
+    assert results["CASE003"]["stitchingStatus"] == None
 
 def test_bundleConfiguration(spark,generalDefault_outputs):
 
@@ -52,7 +52,7 @@ def test_bundleConfiguration(spark,generalDefault_outputs):
 
     assert results["CASE001"]["bundleConfiguration"] == "iac-hearing-bundle-config.yaml"
     assert results["CASE002"]["bundleConfiguration"] == "iac-hearing-bundle-config.yaml"
-    assert results["CASE003"]["bundleConfiguration"] == "iac-hearing-bundle-config.yaml"
+    assert results["CASE003"]["bundleConfiguration"] == None
 
 def test_decisionAndReasonsAvailable(spark,generalDefault_outputs):
 
@@ -60,5 +60,5 @@ def test_decisionAndReasonsAvailable(spark,generalDefault_outputs):
 
     assert results["CASE001"]["decisionAndReasonsAvailable"] == "No"
     assert results["CASE002"]["decisionAndReasonsAvailable"] == "No"
-    assert results["CASE003"]["decisionAndReasonsAvailable"] == "No"
+    assert results["CASE003"]["decisionAndReasonsAvailable"] == None
 

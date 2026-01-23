@@ -9,10 +9,10 @@ Andorra,AD,AD
 United arab emirates,AE,AE
 Argentina,AR,AR
 Armenia,AM,AM
-American samoa,AS,AS
+American Samoa,AS,AS
 Antarctica,AQ,AQ
-French southern territories,TF,TF
-Antigua and barbuda,AG,AG
+French Southern Territories,TF,TF
+Antigua And Barbuda,AG,AG
 Australia,AU,AU
 Austria,AT,AT
 Azerbaijan,AZ,AZ
@@ -20,49 +20,49 @@ Burundi,BI,BI
 Belgium,BE,BE
 Benin,BJ,BJ
 "Bonaire, sint eustatius and saba",BQ,BQ
-Burkina faso,BF,BF
+Burkina Faso,BF,BF
 Bangladesh,BD,BD
 Bulgaria,BG,BG
 Bahrain,BH,BH
 Bahamas,BS,BS
-Bosnia and herzegovina,BA,BA
-Saint barthélemy,BL,BL
+Bosnia And Herzegovina,BA,BA
+Saint Barthélemy,BL,BL
 Belarus,BY,BY
 Belize,BZ,BZ
 Bermuda,BM,BM
-"Bolivia, plurinational state of",BO,BO
+"Bolivia, Plurinational State of",BO,BO
 Brazil,BR,BR
 Barbados,BB,BB
-Brunei darussalam,BN,BN
+Brunei Darussalam,BN,BN
 Bhutan,BT,BT
-Bouvet island,BV,BV
+Bouvet Island,BV,BV
 Botswana,BW,BW
-Central african republic,CF,CF
+Central African Republic,CF,CF
 Canada,CA,CA
-Cocos (keeling) islands,CC,CC
+Cocos (Keeling) Islands,CC,CC
 Switzerland,CH,CH
 Chile,CL,CL
 China,CN,CN
 Côte d'ivoire,CI,CI
 Cameroon,CM,CM
-"Congo, the democratic republic of the",CD,CD
+"Congo, The Democratic Republic of The",CD,CD
 Congo,CG,CG
-Cook islands,CK,CK
+Cook Islands,CK,CK
 Colombia,CO,CO
 Comoros,KM,KM
-Cabo verde,CV,CV
+Cabo Verde,CV,CV
 Costa rica,CR,CR
 Cuba,CU,CU
 Curaçao,CW,CW
-Christmas island,CX,CX
-Cayman islands,KY,KY
+Christmas Island,CX,CX
+Cayman Islands,KY,KY
 Cyprus,CY,CY
 Czechia,CZ,CZ
 Germany,DE,DE
 Djibouti,DJ,DJ
 Dominica,DM,DM
 Denmark,DK,DK
-Dominican republic,DO,DO
+Dominican Republic,DO,DO
 Algeria,DZ,DZ
 Ecuador,EC,EC
 Egypt,EG,EG
@@ -73,12 +73,12 @@ Estonia,EE,EE
 Ethiopia,ET,ET
 Finland,FI,FI
 Fiji,FJ,FJ
-Falkland islands (malvinas),FK,FK
+Falkland Islands (Malvinas),FK,FK
 France,FR,FR
-Faroe islands,FO,FO
-"Micronesia, federated states of",FM,FM
+Faroe Islands,FO,FO
+"Micronesia, Federated States of",FM,FM
 Gabon,GA,GA
-United kingdom,GB,GB
+United Kingdom,GB,GB
 Georgia,GE,GE
 Guernsey,GG,GG
 Ghana,GH,GH
@@ -86,27 +86,27 @@ Gibraltar,GI,GI
 Guinea,GN,GN
 Guadeloupe,GP,GP
 Gambia,GM,GM
-Guinea-bissau,GW,GW
+Guinea-Bissau,GW,GW
 Equatorial guinea,GQ,GQ
 Greece,GR,GR
 Grenada,GD,GD
 Greenland,GL,GL
 Guatemala,GT,GT
-French guiana,GF,GF
+French Guiana,GF,GF
 Guam,GU,GU
 Guyana,GY,GY
-Hong kong,HK,HK
-Heard island and mcdonald islands,HM,HM
+Hong Kong,HK,HK
+Heard Island and McDonald iIslands,HM,HM
 Honduras,HN,HN
 Croatia,HR,HR
 Haiti,HT,HT
 Hungary,HU,HU
 Indonesia,ID,ID
-Isle of man,IM,IM
+Isle of Man,IM,IM
 India,IN,IN
-British indian ocean territory,IO,IO
+British Indian Ocean Territory,IO,IO
 Ireland,IE,IE
-"Iran, islamic republic of",IR,IR
+"Iran, Islamic Republic of",IR,IR
 Iraq,IQ,IQ
 Iceland,IS,IS
 Israel,IL,IL
@@ -120,36 +120,36 @@ Kenya,KE,KE
 Kyrgyzstan,KG,KG
 Cambodia,KH,KH
 Kiribati,KI,KI
-Saint kitts and nevis,KN,KN
-"Korea, republic of",KR,KR
+Saint Kitts and Nevis,KN,KN
+"Korea, Republic of",KR,KR
 Kuwait,KW,KW
-Lao people's democratic republic,LA,LA
+Lao People's Democratic Republic,LA,LA
 Lebanon,LB,LB
 Liberia,LR,LR
 Libya,LY,LY
-Saint lucia,LC,LC
+Saint Lucia,LC,LC
 Liechtenstein,LI,LI
-Sri lanka,LK,LK
+Sri Lanka,LK,LK
 Lesotho,LS,LS
 Lithuania,LT,LT
 Luxembourg,LU,LU
 Latvia,LV,LV
 Macao,MO,MO
-Saint martin (french part),MF,MF
+Saint Martin (French part),MF,MF
 Morocco,MA,MA
 Monaco,MC,MC
-"Moldova, republic of",MD,MD
+"Moldova, Republic of",MD,MD
 Madagascar,MG,MG
 Maldives,MV,MV
 Mexico,MX,MX
-Marshall islands,MH,MH
-North macedonia,MK,MK
+Marshall Islands,MH,MH
+North Macedonia,MK,MK
 Mali,ML,ML
 Malta,MT,MT
 Myanmar,MM,MM
 Montenegro,ME,ME
 Mongolia,MN,MN
-Northern mariana islands,MP,MP
+Northern Mariana Islands,MP,MP
 Mozambique,MZ,MZ
 Mauritania,MR,MR
 Montserrat,MS,MS
@@ -159,9 +159,9 @@ Malawi,MW,MW
 Malaysia,MY,MY
 Mayotte,YT,YT
 Namibia,NA,NA
-New caledonia,NC,NC
+New Caledonia,NC,NC
 Niger,NE,NE
-Norfolk island,NF,NF
+Norfolk Island,NF,NF
 Nigeria,NG,NG
 Nicaragua,NI,NI
 Niue,NU,NU
@@ -169,7 +169,7 @@ Netherlands,NL,NL
 Norway,NO,NO
 Nepal,NP,NP
 Nauru,NR,NR
-New zealand,NZ,NZ
+New Zealand,NZ,NZ
 Oman,OM,OM
 Pakistan,PK,PK
 Panama,PA,PA
@@ -177,85 +177,86 @@ Pitcairn,PN,PN
 Peru,PE,PE
 Philippines,PH,PH
 Palau,PW,PW
-Papua new guinea,PG,PG
+Papua New Guinea,PG,PG
 Poland,PL,PL
-Puerto rico,PR,PR
-"Korea, democratic people's republic of",KP,KP
+Puerto Rico,PR,PR
+"Korea, Democratic People's Republic of",KP,KP
 Portugal,PT,PT
 Paraguay,PY,PY
-"Palestine, state of",PS,PS
-French polynesia,PF,PF
+"Palestine, State of",PS,PS
+French Polynesia,PF,PF
 Qatar,QA,QA
 Réunion,RE,RE
 Romania,RO,RO
-Russian federation,RU,RU
+Russian Federation,RU,RU
 Rwanda,RW,RW
-Saudi arabia,SA,SA
+Saudi Arabia,SA,SA
 Sudan,SD,SD
 Senegal,SN,SN
 Singapore,SG,SG
-South georgia and the south sandwich islands,GS,GS
-"Saint helena, ascension and tristan da cunha",SH,SH
-Svalbard and jan mayen,SJ,SJ
-Solomon islands,SB,SB
-Sierra leone,SL,SL
-El salvador,SV,SV
-San marino,SM,SM
+South Georgia and The South Sandwich Islands,GS,GS
+"Saint Helena, Ascension and Tristan da Cunha",SH,SH
+Svalbard and Jan Mayen,SJ,SJ
+Solomon Islands,SB,SB
+Sierra Leone,SL,SL
+El Salvador,SV,SV
+San Marino,SM,SM
 Somalia,SO,SO
-Saint pierre and miquelon,PM,PM
+Saint Pierre and Miquelon,PM,PM
 Serbia,RS,RS
-South sudan,SS,SS
-Sao tome and principe,ST,ST
+South Sudan,SS,SS
+Sao Tome and Principe,ST,ST
 Suriname,SR,SR
 Slovakia,SK,SK
 Slovenia,SI,SI
 Sweden,SE,SE
 Eswatini,SZ,SZ
-Sint maarten (dutch part),SX,SX
+Sint Maarten (Dutch part),SX,SX
 Seychelles,SC,SC
-Syrian arab republic,SY,SY
-Turks and caicos islands,TC,TC
+Syrian Arab Republic,SY,SY
+Turks and Caicos Islands,TC,TC
 Chad,TD,TD
 Togo,TG,TG
 Thailand,TH,TH
 Tajikistan,TJ,TJ
 Tokelau,TK,TK
 Turkmenistan,TM,TM
-Timor-leste,TL,TL
+Timor-Leste,TL,TL
 Tonga,TO,TO
-Trinidad and tobago,TT,TT
+Trinidad and Tobago,TT,TT
 Tunisia,TN,TN
 Türkiye,TR,TR
 Tuvalu,TV,TV
-"Taiwan, province of china",TW,TW
-"Tanzania, united republic of",TZ,TZ
+"Taiwan, Province of China",TW,TW
+"Tanzania, United Republic of",TZ,TZ
 Uganda,UG,UG
 Ukraine,UA,UA
-United states minor outlying islands,UM,UM
+United States Minor Outlying Islands,UM,UM
 Uruguay,UY,UY
 United states,US,US
 Uzbekistan,UZ,UZ
-Holy see (vatican city state),VA,VA
-Saint vincent and the grenadines,VC,VC
-"Venezuela, bolivarian republic of",VE,VE
-"Virgin islands, british",VG,VG
-"Virgin islands, u.s.",VI,VI
+Holy see (Vatican City State),VA,VA
+Saint Vincent and The Grenadines,VC,VC
+"Venezuela, Bolivarian Republic of",VE,VE
+"Virgin Islands, British",VG,VG
+"Virgin Islands, U.S.",VI,VI
 Viet nam,VN,VN
+Vietnam,VN,VN
 Vanuatu,VU,VU
-Wallis and futuna,WF,WF
+Wallis and Futuna,WF,WF
 Samoa,WS,WS
 Yemen,YE,YE
-South africa,ZA,ZA
+South Africa,ZA,ZA
 Zambia,ZM,ZM
 Zimbabwe,ZW,ZW
 Turkey,TR,TR
 Turkiye,TR,TR
 Russia,RU,RU
-Czech republic,CZ,CZ
-Usa,US,US
+Czech Republic,CZ,CZ
+USA,US,US
 Moldova,MD,MD
 Syria,SY,SY
-Ivory coast,CI,CI
+Ivory Coast,CI,CI
 D'ivoire,CI,CI
 Iran,IR,IR
 Uae,AE,AE
@@ -263,9 +264,9 @@ Irish republic,IE,IE
 Vietnam,VN,VN
 Kosovo,KO,KO
 Tanzania,TZ,TZ
-United states of america,US,US
+United States of America,US,US
 Taiwan,TW,TW
 Bolivia,BO,BO
-Uk,GB,GB
+UK,GB,GB
 Swaziland,SZ,SZ
 Palestinian,PS,PS

@@ -144,7 +144,7 @@ def general_outputs(spark):
     df_bhc =  spark.createDataFrame(bhc_data, bhc_schema)
     df_bdhc =  spark.createDataFrame(bdhc_data, bdhc_schema)
 
-    general_content,_ = D.general(df_m1, df_m2, df_m3, df_mh, df_bhc, df_bdhc)
+    general_content,_ = general(df_m1, df_m2, df_m3, df_mh, df_bhc, df_bdhc)
     results = {row["CaseNo"]: row.asDict() for row in general_content.collect()}
     
     return results

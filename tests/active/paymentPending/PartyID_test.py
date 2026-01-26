@@ -105,7 +105,7 @@ def test_sponsor_null_without_name(partyID_outputs):
 
 def test_no_ids_when_appeal_type_null(partyID_outputs):
     row = partyID_outputs["HU/00592/2025"]
-    assert row["appellantPartyId"] is None
+    assert is_uuid(row["appellantPartyId"]) #each case as an appealType. this should not be null
     assert row["legalRepIndividualPartyId"] is None
     assert row["legalRepOrganisationPartyId"] is None
     assert row["sponsorPartyId"] is None

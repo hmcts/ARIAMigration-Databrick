@@ -22,6 +22,11 @@ stages:
         steps:
           - template: ci_cd_templates/unit_tests/active/paymentPending.yml
 
+      - job: AppealSubmittedTests
+        displayName: 'Run Appeal Submitted Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/appealSubmitted.yml
+
       - job: ListingTests
         displayName: 'Run Listing Tests'
         steps:

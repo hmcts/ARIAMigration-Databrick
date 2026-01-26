@@ -68,7 +68,7 @@ def remissionTypes_outputs(spark):
          "This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.",
          "OMIT", "OMIT", "OMIT"),]
 
-    silver_m4_schema = T.StructType([T.StructField("CaseNo", T.StringType())])
+    silver_m4_schema = T.StructType([T.StructField("CaseNo", T.StringType())]) 
 
     silver_m4_data = [    
     ("EA/01001/2025",),

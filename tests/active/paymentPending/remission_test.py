@@ -70,8 +70,8 @@ def remissionTypes_outputs(spark):
 
     silver_m4_schema = T.StructType([T.StructField("CaseNo", T.StringType())])
 
-    silver_m4_data = [("EA/01001/2025", "EA/01002/2025", "EA/01003/2025",
-                        "HU/01004/2025", "PA/01005/2025")]
+    silver_m4_data = [("EA/01001/2025"), ("EA/01002/2025"), ("EA/01003/2025"),
+                        ("HU/01004/2025"), ("PA/01005/2025")]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
     silver_m4 = spark.createDataFrame(silver_m4_data, silver_m4_schema)

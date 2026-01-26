@@ -2137,7 +2137,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         when(col("feeRemissionType") == lit("OMIT"), None).otherwise(col("feeRemissionType"))
     ).withColumn(
         "exceptionalCircumstances",
-        when(col("exceptionalCircumstances") == lit("OMIT"), None).otherwise(col("feeRemissionType"))
+        when(col("exceptionalCircumstances") == lit("OMIT"), None).otherwise(col("exceptionalCircumstances"))
 
     ).withColumn(
         "legalAidAccountNumber",
@@ -2219,7 +2219,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         array(struct(*common_inputValues ,col("content.helpWithFeesReferenceNumber"), col("PaymentRemissionReasonNote"))).alias("helpWithFeesReferenceNumber_inputValues"),
         col("content.helpWithFeesReferenceNumber"),
         lit("yes").alias("helpWithFeesReferenceNumber_Transformed")
-    ).distinct()
+    # ).distinct()
 
     return df, df_audit
     

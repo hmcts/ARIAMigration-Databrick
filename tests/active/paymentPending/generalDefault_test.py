@@ -4,6 +4,14 @@ from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import generalDef
 import uuid
 
 @pytest.fixture(scope="session")
+def spark():
+    return (
+        SparkSession.builder
+        .appName("documentsTests")
+        .getOrCreate()
+    )
+
+@pytest.fixture(scope="session")
 def generalDefault_outputs(spark):
 
     m1_schema = T.StructType([

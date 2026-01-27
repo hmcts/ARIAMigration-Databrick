@@ -43,4 +43,4 @@ def test_case_state_is_constant(caseState_outputs):
     row = caseState_outputs["EA/01001/2025"]
     assert_equals(row,
         ariaDesiredState = "paymentPending",
-        ariaMigrationTaskDueDays = 14)
+        ariaMigrationTaskDueDays = '14')

@@ -22,7 +22,7 @@ def general_outputs(spark):
         T.StructField("Rep_Postcode", T.StringType(), True),
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.StringType(), True),
-        T.StructField("applicationChangeDesignatedHearingCentre", T.StringType(), True), 
+        T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True), 
     ])
 
     m1_data = [

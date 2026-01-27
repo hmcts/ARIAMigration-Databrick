@@ -40,7 +40,7 @@ def assert_equals(row, **expected):
         expected_v = normalise_null(v)
         assert actual == expected_v, f"{k} expected {expected_v} but got {actual}"
 
-def test_case_state_is_constant(caseState_outputs, desired_state):
+def test_case_state_is_constant(caseState_outputs):
     """Check that default case values are mapped accordingly."""
     row = caseState_outputs["EA/01001/2025"]
     assert_equals(row,

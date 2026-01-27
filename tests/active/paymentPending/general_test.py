@@ -274,12 +274,42 @@ def general_outputs(spark):
     ])
 
     bronze_hearing_centres_data = [
-        (520, "Birmingham IAC (Priory Courts)", None, "birmingham", "Birmingham", 231596, "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", {"region":"1","baseLocation":"231596"}),
-        (444, "Birmingham Magistrates Court (VLC)", None, "birmingham", "Birmingham", 231596, "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", {"region":"1","baseLocation":"231596"}),
-        (86, "Bradford", None, "bradford", "Bradford", 698118, "Bradford Tribunal Hearing Centre", "Bradford Tribunal Hearing Centre", "bradford", {"region":"1","baseLocation":"698118"}),
-        (512401, "Manchester Tribunal", None, "manchester", "Manchester", 512401, "Manchester Tribunal Hearing Centre - Piccadilly Exchange", "Manchester Tribunal Hearing Centre - Piccadilly Exchange", "manchester", {"region":"1","baseLocation":"512401"}),
-        (765324, "Taylor House", None, "taylorHouse", "Taylor House", 765324, "Taylor House Tribunal Hearing Centre", "Taylor House Tribunal Hearing Centre", "taylorHouse", {"region":"1","baseLocation":"765324"}),
-        (386417, "Hatton Cross", None, "hattonCross", "Hatton Cross", 386417, "Hatton Cross Tribunal Hearing Centre", "Hatton Cross Tribunal Hearing Centre", "hattonCross", {"region":"1","baseLocation":"386417"}),
+        (
+        520, "Birmingham IAC (Priory Courts)", None, "birmingham", "Birmingham",
+        231596, "Birmingham Civil And Family Justice Centre",
+        "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham",
+        {"region":"1","baseLocation":"231596"}
+    ),
+    (
+        444, "Birmingham Magistrates Court (VLC)", None, "birmingham", "Birmingham",
+        231596, "Birmingham Civil And Family Justice Centre",
+        "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham",
+        {"region":"1","baseLocation":"231596"}
+    ),
+    (
+        86, "Bradford", None, "bradford", "Bradford",
+        698118, "Bradford Tribunal Hearing Centre",
+        "Bradford Tribunal Hearing Centre", "bradford", "bradford",
+        {"region":"1","baseLocation":"698118"}
+    ),
+    (
+        512401, "Manchester Tribunal", None, "manchester", "Manchester",
+        512401, "Manchester Tribunal Hearing Centre - Piccadilly Exchange",
+        "Manchester Tribunal Hearing Centre - Piccadilly Exchange", "manchester", "manchester",
+        {"region":"1","baseLocation":"512401"}
+    ),
+    (
+        765324, "Taylor House", None, "taylorHouse", "Taylor House",
+        765324, "Taylor House Tribunal Hearing Centre",
+        "Taylor House Tribunal Hearing Centre", "taylorHouse", "taylorHouse",
+        {"region":"1","baseLocation":"765324"}
+    ),
+    (
+        386417, "Hatton Cross", None, "hattonCross", "Hatton Cross",
+        386417, "Hatton Cross Tribunal Hearing Centre",
+        "Hatton Cross Tribunal Hearing Centre", "hattonCross", "hattonCross",
+        {"region":"1","baseLocation":"386417"}
+    ),
     ]
 
     bronze_derive_hearing_centres_schema = T.StructType([

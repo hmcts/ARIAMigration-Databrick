@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    pipeline_pl_appealSubmitted_gold:
+      name: PL_appealSubmitted_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          node_type_id: Standard_D4ads_v5
+          driver_node_type_id: Standard_D4ads_v5
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE/APPEALS/GOLD_APPEAL_SUBMITTED_JSON"
+      target: appealSubmitted_gold
+      development: true

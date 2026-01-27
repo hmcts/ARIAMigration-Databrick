@@ -1936,36 +1936,36 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
 def paymentType(silver_m1):
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
-    payment_content = silver_m1.filter(conditions_all).select(
+    payment_content = silver_m1.select(
         col("CaseNo"),
-        when(col("VisitVisatype") == 1, 8000)
-            .when(col("VisitVisatype") == 2, 14000)
-            .otherwise("unknown").alias("feeAmountGbp"),
-        when(col("VisitVisatype") == 1, "Notice of Appeal - appellant consents without hearing A")
-            .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
-            .otherwise("unknown").alias("feeDescription"),
-        when(col("VisitVisatype") == 1, None)
-            .when(col("VisitVisatype") == 2, 140)
-            .otherwise("unknown").alias("feeWithHearing"),
-        when(col("VisitVisatype") == 1, 80)
-            .when(col("VisitVisatype") == 2, None)
-            .otherwise("unknown").alias("feeWithoutHearing"),
-        when(col("VisitVisatype") == 1, "Appeal determined without a hearing")
-            .when(col("VisitVisatype") == 2, "Appeal determined with a hearing")
-            .otherwise("unknown").alias("paymentDescription"),
-        lit("Yes").alias("feePaymentAppealType"),
-        lit("Payment pending").alias("paymentStatus"),
-        lit("2").alias("feeVersion"),
-        when(col("VisitVisatype") == 1, "decisionWithoutHearing")
-            .when(col("VisitVisatype") == 2, "decisionWithHearing")
-            .otherwise("unknown").alias("decisionHearingFeeOption"),
-        lit("No").alias("hasServiceRequestAlready")
+        when(conditions_all & (col("VisitVisaType") == 1), 8000)
+            .when(conditions_all & (col("VisitVisaType") == 2), 14000)
+            .alias("feeAmountGbp"),
+        when(conditions_all & (col("VisitVisaType") == 1), "Notice of Appeal - appellant consents without hearing A")
+            .when(conditions_all & (col("VisitVisaType") == 2), "Appeal determined with a hearing")
+            .alias("feeDescription"),
+        when(conditions_all & (col("VisitVisaType") == 1), None)
+            .when(conditions_all & (col("VisitVisaType") == 2), 140)
+            .alias("feeWithHearing"),
+        when(conditions_all & (col("VisitVisaType") == 1), 80)
+            .when(conditions_all & (col("VisitVisaType") == 2), None)
+            .alias("feeWithoutHearing"),
+        when(conditions_all & (col("VisitVisaType") == 1), "Appeal determined without a hearing")
+            .when(conditions_all & (col("VisitVisaType") == 2), "Appeal determined with a hearing")
+            .alias("paymentDescription"),
+        when(conditions_all, lit("Yes")).alias("feePaymentAppealType"),
+        when(conditions_all, lit("Payment Pending")).alias("paymentStatus"),
+        when(conditions_all, lit("2")).alias("feeVersion"),
+        when(conditions_all & (col("VisitVisaType") == 1), "decisionWithoutHearing")
+            .when(conditions_all & (col("VisitVisaType") == 2), "decisionWithHearing")
+            .alias("decisionHearingFeeOption"),
+        when(conditions_all, lit("No")).alias("hasServiceRequestAlready")
     )
 
-    payment_common_inputFields = [lit("VisitVisatype")]
-    payment_common_inputValues = [col("VisitVisatype")]
+    payment_common_inputFields = [lit("dv_CCDAppealType"), lit("VisitVisaType")]
+    payment_common_inputValues = [col("dv_CCDAppealType"), col("VisitVisaType")]
 
-    payment_audit = silver_m1.filter(conditions_all).join(payment_content, on="CaseNo").filter(conditions_all).select(
+    payment_audit = silver_m1.join(payment_content, on="CaseNo").select(
         col("CaseNo"),
 
         # feeAmountGbp
@@ -1999,20 +1999,20 @@ def paymentType(silver_m1):
         lit("yes").alias("paymentDescription_Transformation"),
 
         # feePaymentAppealType (literal, so empty arrays)
-        array().cast("array<struct<dummy:string>>").alias("feePaymentAppealType_inputFields"),
-        array().cast("array<struct<dummy:string>>").alias("feePaymentAppealType_inputValues"),
+        array(struct(lit("dv_CCDAppealType"))).alias("feePaymentAppealType_inputFields"),
+        array(struct(col("dv_CCDAppealType"))).alias("feePaymentAppealType_inputValues"),
         col("feePaymentAppealType"),
         lit("yes").alias("feePaymentAppealType_Transformation"),
 
         # paymentStatus (literal, so empty arrays)
-        array().cast("array<struct<dummy:string>>").alias("paymentStatus_inputFields"),
-        array().cast("array<struct<dummy:string>>").alias("paymentStatus_inputValues"),
+        array(struct(lit("dv_CCDAppealType"))).alias("paymentStatus_inputFields"),
+        array(struct(col("dv_CCDAppealType"))).alias("paymentStatus_inputValues"),
         col("paymentStatus"),
         lit("yes").alias("paymentStatus_Transformation"),
 
         # feeVersion (literal, so empty arrays)
-        array().cast("array<struct<dummy:string>>").alias("feeVersion_inputFields"),
-        array().cast("array<struct<dummy:string>>").alias("feeVersion_inputValues"),
+        array(struct(lit("dv_CCDAppealType"))).alias("feeVersion_inputFields"),
+        array(struct(col("dv_CCDAppealType"))).alias("feeVersion_inputValues"),
         col("feeVersion"),
         lit("yes").alias("feeVersion_Transformation"),
 
@@ -2023,8 +2023,8 @@ def paymentType(silver_m1):
         lit("yes").alias("decisionHearingFeeOption_Transformation"),
 
         # hasServiceRequestAlready (literal, so empty arrays)
-        array().cast("array<struct<dummy:string>>").alias("hasServiceRequestAlready_inputFields"),
-        array().cast("array<struct<dummy:string>>").alias("hasServiceRequestAlready_inputValues"),
+        array(struct(lit("dv_CCDAppealType"))).alias("hasServiceRequestAlready_inputFields"),
+        array(struct(col("dv_CCDAppealType"))).alias("hasServiceRequestAlready_inputValues"),
         col("hasServiceRequestAlready"),
         lit("yes").alias("hasServiceRequestAlready_Transformation")
     )

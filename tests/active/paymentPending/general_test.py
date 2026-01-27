@@ -157,42 +157,45 @@ def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
-def test_isServiceRequestTabVisibleConsideringRemissions(general_outputs):
+
+@pytest.mark.parametrize(
+    "case_no,expected_service_tab",
+    [
+        ("EA/10544/2022", "No"),
+        ("HU/00516/2025", "No"),
+        ("EA/04437/2020", "No"),
+        ("HU/00140/2024", "No"),
+        ("EA/03592/2023", "No"),
+        ("EA/02375/2024", "No"),
+    ]
+)
+def test_service_request_tab_visibility(general_outputs, case_no, expected_service_tab):
     """
-    Test 'isServiceRequestTabVisibleConsideringRemissions' with varied examples, including 'No'.
+    Test that the 'isServiceRequestTabVisibleConsideringRemissions' field
+    is correct for each case.
     """
-    results = general_outputs
+    output = general_outputs[case_no]
+    assert output["isServiceRequestTabVisibleConsideringRemissions"] == expected_service_tab, (
+        f"{case_no} failed service tab check"
+    )
 
-    # Expected values based on your example data
-    expected_values = {
-        "EA/10544/2022": "No",
-        "HU/00516/2025": "No",
-        "EA/04437/2020": "No",
-        "HU/00140/2024": "No",
-        "EA/03592/2023": "No",
-        "EA/02375/2024": "No",
-    }
-
-    for case_no, expected in expected_values.items():
-        assert results[case_no]["isServiceRequestTabVisibleConsideringRemissions"] == expected, \
-            f"Case {case_no}: expected {expected}, got {results[case_no]['isServiceRequestTabVisibleConsideringRemissions']}"
-
-def test_applicationChangeDesignatedHearingCentre(general_outputs):
+@pytest.mark.parametrize(
+    "case_no,expected_hearing_centre",
+    [
+        ("EA/10544/2022", "birmingham"),
+        ("HU/00516/2025", "bradford"),
+        ("EA/04437/2020", "manchester"),
+        ("HU/00140/2024", "hattonCross"),
+        ("EA/03592/2023", "taylorHouse"),
+        ("EA/02375/2024", None),  # null case
+    ]
+)
+def test_application_change_designated_hearing_centre(general_outputs, case_no, expected_hearing_centre):
     """
-    Test 'applicationChangeDesignatedHearingCentre' with multiple examples, including nulls and different hearing centres.
+    Test that the 'applicationChangeDesignatedHearingCentre' field
+    is correct for each case.
     """
-    results = general_outputs
-
-    # Expected values based on postcode / CentreId logic
-    expected_values = {
-        "EA/10544/2022": "birmingham",
-        "HU/00516/2025": "bradford",
-        "EA/04437/2020": "manchester",
-        "HU/00140/2024": "hattonCross",
-        "EA/03592/2023": "taylorHouse",
-        "EA/02375/2024": None,
-    }
-
-    for case_no, expected in expected_values.items():
-        actual = results[case_no]["applicationChangeDesignatedHearingCentre"]
-        assert actual == expected, f"Case {case_no}: expected {expected}, got {actual}"
+    output = general_outputs[case_no]
+    assert output["applicationChangeDesignatedHearingCentre"] == expected_hearing_centre, (
+        f"{case_no} failed hearing centre check"
+    )

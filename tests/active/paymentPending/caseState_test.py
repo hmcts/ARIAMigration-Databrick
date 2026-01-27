@@ -34,16 +34,15 @@ def caseState_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in caseState_content.collect()}
     return results
 
+def assert_equals(row, **expected):
+    for k, v in expected.items():
+        actual = normalise_null(row.get(k))
+        expected_v = normalise_null(v)
+        assert actual == expected_v, f"{k} expected {expected_v} but got {actual}"
 
-@pytest.mark.parametrize("desired_state", ["pendingPayment"])
-def test_case_state_is_constant(spark, desired_state):
-    silver_m1 = spark.createDataFrame(
-        [("EA/01001/2025",)], ["CaseNo"]
-    )
-
-    df = caseState(silver_m1, desired_state)
-    row = df.collect()[0]
-
-    assert row.ariaDesiredState == desired_state
-    assert row.ariaMigrationTaskDueDays == "14"
-
+def test_case_state_is_constant(caseState_outputs, desired_state):
+    """Check that default case values are mapped accordingly."""
+    row = caseState_outputs["EA/01001/2025"]
+    assert_equals(row,
+        ariaDesiredState = "paymentPending",
+        ariaMigrationTaskDueDays = 14)

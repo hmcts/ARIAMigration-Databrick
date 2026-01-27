@@ -22,15 +22,16 @@ def general_outputs(spark):
         T.StructField("Rep_Postcode", T.StringType(), True),
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.StringType(), True),
+        T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
     ])
 
     m1_data = [
-        ("EA/02375/2024", "AIP", "euSettlementScheme", 37, None, None, "0"),
-        ("HU/00496/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0"),
-        ("HU/00510/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0"),
-        ("EA/01319/2023", "LR", "euSettlementScheme", 1, "W6F 0ZD", None, "0"),
-        ("EA/01698/2024", "LR", "euSettlementScheme", 2, "TR52 9HX", None, "0"),
-        ("HU/00560/2025", "LR", "refusalOfHumanRights", 78, "G3 2PS", None, "0"),
+        ("EA/02375/2024", "AIP", "euSettlementScheme", 37, None, None, "0", None),
+        ("HU/00496/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0", None),
+        ("HU/00510/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0", None),
+        ("EA/01319/2023", "LR", "euSettlementScheme", 1, "W6F 0ZD", None, "0", None),
+        ("EA/01698/2024", "LR", "euSettlementScheme", 2, "TR52 9HX", None, "0", None),
+        ("HU/00560/2025", "LR", "refusalOfHumanRights", 78, "G3 2PS", None, "0", None),
     ]
 
     m2_schema = T.StructType([

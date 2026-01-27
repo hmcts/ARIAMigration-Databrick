@@ -158,44 +158,19 @@ def assert_equals(row, **expected):
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
 
-@pytest.mark.parametrize(
-    "case_no,expected_service_tab",
-    [
-        ("EA/10544/2022", "No"),
-        ("HU/00516/2025", "No"),
-        ("EA/04437/2020", "No"),
-        ("HU/00140/2024", "No"),
-        ("EA/03592/2023", "No"),
-        ("EA/02375/2024", "No"),
-    ]
-)
-def test_service_request_tab_visibility(general_outputs, case_no, expected_service_tab):
-    """
-    Test that the 'isServiceRequestTabVisibleConsideringRemissions' field
-    is correct for each case.
-    """
-    output = general_outputs[case_no]
-    assert output["isServiceRequestTabVisibleConsideringRemissions"] == expected_service_tab, (
-        f"{case_no} failed service tab check"
-    )
+def test_service_request_tab_visibility(general_outputs):
+    assert general_outputs["EA/10544/2022"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
+    assert general_outputs["HU/00516/2025"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
+    assert general_outputs["EA/04437/2020"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
+    assert general_outputs["HU/00140/2024"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
+    assert general_outputs["EA/03592/2023"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
+    assert general_outputs["EA/02375/2024"]["isServiceRequestTabVisibleConsideringRemissions"] == "No"
 
-@pytest.mark.parametrize(
-    "case_no,expected_hearing_centre",
-    [
-        ("EA/10544/2022", "birmingham"),
-        ("HU/00516/2025", "bradford"),
-        ("EA/04437/2020", "manchester"),
-        ("HU/00140/2024", "hattonCross"),
-        ("EA/03592/2023", "taylorHouse"),
-        ("EA/02375/2024", None),  # null case
-    ]
-)
-def test_application_change_designated_hearing_centre(general_outputs, case_no, expected_hearing_centre):
-    """
-    Test that the 'applicationChangeDesignatedHearingCentre' field
-    is correct for each case.
-    """
-    output = general_outputs[case_no]
-    assert output["applicationChangeDesignatedHearingCentre"] == expected_hearing_centre, (
-        f"{case_no} failed hearing centre check"
-    )
+
+def test_application_change_designated_hearing_centre(general_outputs):
+    assert general_outputs["EA/10544/2022"]["applicationChangeDesignatedHearingCentre"] == "birmingham"
+    assert general_outputs["HU/00516/2025"]["applicationChangeDesignatedHearingCentre"] == "bradford"
+    assert general_outputs["EA/04437/2020"]["applicationChangeDesignatedHearingCentre"] == "manchester"
+    assert general_outputs["HU/00140/2024"]["applicationChangeDesignatedHearingCentre"] == "hattonCross"
+    assert general_outputs["EA/03592/2023"]["applicationChangeDesignatedHearingCentre"] == "taylorHouse"
+    assert general_outputs["EA/02375/2024"]["applicationChangeDesignatedHearingCentre"] is None

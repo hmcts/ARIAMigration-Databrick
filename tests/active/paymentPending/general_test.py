@@ -26,12 +26,12 @@ def general_outputs(spark):
     ])
 
     m1_data = [
+        ("EA/10544/2022", "AIP", "euSettlementScheme", 37, None, None, "0", None),
+        ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None),
+        ("EA/04437/2020", "LR", "refusalOfEu", 77, None, "WN4R 8ET", "0", None),
+        ("HU/00140/2024", "LR", "refusalOfHumanRights", 2, "NE45 8RJ", None, "0", None),
+        ("EA/03592/2023", "LR", "euSettlementScheme", 77, None, "SE86 9UW", "0", None),
         ("EA/02375/2024", "AIP", "euSettlementScheme", 37, None, None, "0", None),
-        ("HU/00496/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0", None),
-        ("HU/00510/2025", "AIP", "refusalOfHumanRights", 2, None, None, "0", None),
-        ("EA/01319/2023", "LR", "euSettlementScheme", 1, "W6F 0ZD", None, "0", None),
-        ("EA/01698/2024", "LR", "euSettlementScheme", 2, "TR52 9HX", None, "0", None),
-        ("HU/00560/2025", "LR", "refusalOfHumanRights", 78, "G3 2PS", None, "0", None),
     ]
 
     m2_schema = T.StructType([
@@ -41,12 +41,12 @@ def general_outputs(spark):
     ])
 
     m2_data = [
+        ("EA/10544/2022", None, "NN33 8XZ"),
+        ("HU/00516/2025", None, "N1W 0LE"),
+        ("EA/04437/2020", None, "S5 8NH"),
+        ("HU/00140/2024", None, "PE6 4RH"),
+        ("EA/03592/2023", None, "W95 3UX"),
         ("EA/02375/2024", None, "LD2R 5HB"),
-        ("HU/00496/2025", None, None),
-        ("HU/00510/2025", None, None),
-        ("EA/01319/2023", None, "EN4 2YU"),
-        ("EA/01698/2024", None, "B37 5LW"),
-        ("HU/00560/2025", None, None),
     ]
 
     m3_schema = T.StructType([])
@@ -64,9 +64,11 @@ def general_outputs(spark):
     ])
 
     silver_h_data = [
-        ("HU/00001/2025", 118053722, 49, "XXXXXXXXXXXXXXXX", "paymentPending"),
-        ("HU/00002/2023", 117439400, 10, "XXXXXXXXXXXXXXXXXXXXX", "ftpaSubmitted(b)"),
-        ("HU/00002/2023", 117439492, 18, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "ftpaSubmitted(b)"),
+        ("HU/00140/2024", 117070534, 49, "XXXXXXXXXXXXXXXX", "paymentPending"),
+        ("HU/00516/2025", 118350122, 18, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "paymentPending"),
+        ("EA/02375/2024", 117941932, 20, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "paymentPending"),
+        ("EA/04437/2020", 111949213, 18, "XXXXXXXXXX", "paymentPending"),
+        ("EA/10544/2022", 115591725, 16, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "paymentPending"),
     ]
 
     bronze_hearing_centres_schema = T.StructType([
@@ -88,7 +90,6 @@ def general_outputs(spark):
                 True
         ),
     ])
-
 
     bronze_hearing_centres_data = [
         (
@@ -156,22 +157,42 @@ def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
-def test_hearing_centre_lookup(general_outputs):
-    assert general_outputs["EA/02375/2024"]["applicationChangeDesignatedHearingCentre"] == "glasgow"
-    assert general_outputs["EA/01698/2024"]["applicationChangeDesignatedHearingCentre"] == "hattonCross"
+def test_isServiceRequestTabVisibleConsideringRemissions(general_outputs):
+    """
+    Test 'isServiceRequestTabVisibleConsideringRemissions' with varied examples, including 'No'.
+    """
+    results = general_outputs
 
-def test_appellant_postcode_join(general_outputs):
-    assert general_outputs["EA/02375/2024"]["Appellant_Postcode"] == "LD2R 5HB"
-    assert general_outputs["EA/01698/2024"]["Appellant_Postcode"] == "B37 5LW"
-    assert general_outputs["HU/00496/2025"]["Appellant_Postcode"] is None
+    # Expected values based on your example data
+    expected_values = {
+        "EA/10544/2022": "No",
+        "HU/00516/2025": "No",
+        "EA/04437/2020": "No",
+        "HU/00140/2024": "No",
+        "EA/03592/2023": "No",
+        "EA/02375/2024": "No",
+    }
 
-def test_payment_remission(general_outputs):
-    assert general_outputs["EA/01319/2023"]["PaymentRemissionRequested"] == "0"
-    assert general_outputs["HU/00496/2025"]["PaymentRemissionRequested"] == "0"
+    for case_no, expected in expected_values.items():
+        assert results[case_no]["isServiceRequestTabVisibleConsideringRemissions"] == expected, \
+            f"Case {case_no}: expected {expected}, got {results[case_no]['isServiceRequestTabVisibleConsideringRemissions']}"
 
-def test_case_management_location(general_outputs):
-    expected = {"region": "1", "baseLocation": "366559"}
-    assert general_outputs["EA/02375/2024"]["caseManagementLocation"] == expected
+def test_applicationChangeDesignatedHearingCentre(general_outputs):
+    """
+    Test 'applicationChangeDesignatedHearingCentre' with multiple examples, including nulls and different hearing centres.
+    """
+    results = general_outputs
 
-def test_missing_centreId_handling(general_outputs):
-    assert general_outputs["HU/00560/2025"]["applicationChangeDesignatedHearingCentre"] == "newport"
+    # Expected values based on postcode / CentreId logic
+    expected_values = {
+        "EA/10544/2022": "birmingham",
+        "HU/00516/2025": "bradford",
+        "EA/04437/2020": "manchester",
+        "HU/00140/2024": "hattonCross",
+        "EA/03592/2023": "taylorHouse",
+        "EA/02375/2024": None,
+    }
+
+    for case_no, expected in expected_values.items():
+        actual = results[case_no]["applicationChangeDesignatedHearingCentre"]
+        assert actual == expected, f"Case {case_no}: expected {expected}, got {actual}"

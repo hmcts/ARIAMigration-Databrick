@@ -110,6 +110,10 @@ def general_outputs(spark):
         (
             86, "Bradford", None, "bradford", "Bradford","698118","Bradford Tribunal Hearing Centre", "Bradford Tribunal Hearing Centre", "bradford", "bradford", {"region":"1","baseLocation":"698118"}
         ),
+        (
+            37, "Birmingham Extra Court", None, "birmingham", "Birmingham", 231596, "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham", {"region":"1","baseLocation":"231596"}
+        ),
+
     ]
 
     bronze_derive_hearing_centres_schema = T.StructType([

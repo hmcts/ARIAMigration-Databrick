@@ -2538,18 +2538,34 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .when(col("h.der_prevFileLocation").isin('Castle Park Storage','Field House', 'Field House (TH)','UT (IAC) Cardiff CJC','UT (IAC) Hearing in Field House','UT (IAC) Hearing in Man CJC'), lit(None)).otherwise(col("bhc2.applicationChangeDesignatedHearingCentre"))
          .alias("applicationChangeDesignatedHearingCentre")
         )
-        
-    df = silver_m1.alias("m1").join(result_with_hearing_centre_df.alias("r"), ["CaseNo"], "left").filter(conditions_general).withColumn(
-        "isServiceRequestTabVisibleConsideringRemissions",
-        when(
-            (col("PaymentRemissionRequested").isNull()) | (col("PaymentRemissionRequested") == lit('2')),
-            "Yes"
-        ).otherwise("No")
-        ).select(
-            col("CaseNo"),
+
+    df = silver_m1.alias("m1") \
+        .join(result_with_hearing_centre_df.alias("r"), ["CaseNo"], "left") \
+        .filter(conditions_general) \
+        .withColumn(
             "isServiceRequestTabVisibleConsideringRemissions",
+            when(
+                (col("m1.PaymentRemissionRequested").isNull()) | (col("m1.PaymentRemissionRequested") == lit('2')),
+                "Yes"
+            ).otherwise("No")
+        ) \
+        .select(
+            col("CaseNo"),
+            col("isServiceRequestTabVisibleConsideringRemissions"),
             col("r.applicationChangeDesignatedHearingCentre")
         )
+        
+    # df = silver_m1.alias("m1").join(result_with_hearing_centre_df.alias("r"), ["CaseNo"], "left").filter(conditions_general).withColumn(
+    #     "isServiceRequestTabVisibleConsideringRemissions",
+    #     when(
+    #         (col("PaymentRemissionRequested").isNull()) | (col("PaymentRemissionRequested") == lit('2')),
+    #         "Yes"
+    #     ).otherwise("No")
+    #     ).select(
+    #         col("CaseNo"),
+    #         "isServiceRequestTabVisibleConsideringRemissions",
+    #         col("r.applicationChangeDesignatedHearingCentre")
+    #     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]

@@ -16,11 +16,13 @@ def caseState_outputs(spark):
 
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
+        T.StructField("dv_representation", T.StringType(), True),
+        T.StructField("lu_appealType", T.StringType(), True),
     ])
 
     m1_data = [
-        ("EA/01001/2025",),
-        ("HU/01004/2025",),
+        ("EA/01001/2025", "LR", "EA"),
+        ("HU/01004/2025", "LR", "HU"),
     ]
 
     silver_m1 = spark.createDataFrame(m1_data, m1_schema)

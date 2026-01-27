@@ -36,9 +36,7 @@ def caseState_outputs(spark):
 
 def assert_equals(row, **expected):
     for k, v in expected.items():
-        actual = normalise_null(row.get(k))
-        expected_v = normalise_null(v)
-        assert actual == expected_v, f"{k} expected {expected_v} but got {actual}"
+        assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
 def test_case_state_is_constant(caseState_outputs):
     """Check that default case values are mapped accordingly."""

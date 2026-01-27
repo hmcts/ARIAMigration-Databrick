@@ -147,7 +147,7 @@ def general_outputs(spark):
     bronze_derive_hearing_centres = spark.createDataFrame(bronze_derive_hearing_centres_data, bronze_derive_hearing_centres_schema)
 
 
-    general_content = general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    general_content, _ = general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
 
     results = {row["CaseNo"]: row.asDict() for row in general_content.collect()}
     return results

@@ -11,11 +11,11 @@ import pytest
 def spark():
     """Create a Spark session for testing."""
     return SparkSession.builder \
-        .appName("appealSubmitted_paymentType") \
+        .appName("appealSubmitted_remissionType") \
         .getOrCreate()
 
 
-class TestPaymentType:
+class TestAppealSubmittedRemissionType:
     CASE_NO_COLUMNS = StructType([
         StructField("CaseNo", StringType())
     ])

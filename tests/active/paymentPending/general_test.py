@@ -22,7 +22,7 @@ def general_outputs(spark):
         T.StructField("Rep_Postcode", T.StringType(), True),
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.StringType(), True),
-        T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
+        T.StructField("applicationChangeDesignatedHearingCentre", T.StringType(), True), 
     ])
 
     m1_data = [
@@ -92,22 +92,22 @@ def general_outputs(spark):
 
     bronze_hearing_centres_data = [
         (
-            540,"Alloa Sheriff Court",None,"glasgow","Glasgow","366559","Atlantic Quay - Glasgow","Atlantic Quay - Glasgow","alloaSherrif","glasgow",{"region":"1","baseLocation":"366559"},
+            540,"Alloa Sheriff Court",None,"glasgow","Glasgow","366559","Atlantic Quay - Glasgow","Atlantic Quay - Glasgow","alloaSherrif","glasgow",{"region":"1","baseLocation":"366559"}
         ),
         (
-            7, "Belfast", None, "glasgow", "Glasgow", "366559", "Atlantic Quay - Glasgow", "Atlantic Quay - Glasgow", "belfast", "glasgow", {"region":"1","baseLocation":"366559"},
+            7, "Belfast", None, "glasgow", "Glasgow", "366559", "Atlantic Quay - Glasgow", "Atlantic Quay - Glasgow", "belfast", "glasgow", {"region":"1","baseLocation":"366559"}
         ),
         (
-            421,"Belfast - Laganside", None, "glasgow", "Glasgow", "366559", "Atlantic Quay - Glasgow", "Atlantic Quay - Glasgow", "belfast", "glasgow", {"region":"1","baseLocation":"366559"},
+            421,"Belfast - Laganside", None, "glasgow", "Glasgow", "366559", "Atlantic Quay - Glasgow", "Atlantic Quay - Glasgow", "belfast", "glasgow", {"region":"1","baseLocation":"366559"}
         ),
         (
-            520, "Birmingham IAC (Priory Courts)", None, "birmingham", "Birmingham", "231596", "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham", {"region":"1","baseLocation":"231596"},
+            520, "Birmingham IAC (Priory Courts)", None, "birmingham", "Birmingham", "231596", "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham", {"region":"1","baseLocation":"231596"}
         ),
         (
-            444, "Birmingham Magistrates Court (VLC)", None, "birmingham", "Birmingham", "231596", "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham", {"region":"1","baseLocation":"231596"},
+            444, "Birmingham Magistrates Court (VLC)", None, "birmingham", "Birmingham", "231596", "Birmingham Civil And Family Justice Centre", "Birmingham Civil And Family Justice Centre", "birmingham", "birmingham", {"region":"1","baseLocation":"231596"}
         ),
         (
-            86, "Bradford", None, "bradford", "Bradford","698118","Bradford Tribunal Hearing Centre", "Bradford Tribunal Hearing Centre", "bradford", "bradford", {"region":"1","baseLocation":"698118"},
+            86, "Bradford", None, "bradford", "Bradford","698118","Bradford Tribunal Hearing Centre", "Bradford Tribunal Hearing Centre", "bradford", "bradford", {"region":"1","baseLocation":"698118"}
         ),
     ]
 

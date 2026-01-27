@@ -2539,7 +2539,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
          .alias("applicationChangeDesignatedHearingCentre")
         )
         
-    df = silver_m1.join(result_with_hearing_centre_df, ["CaseNo"], "left").filter(conditions_general).withColumn(
+    df = silver_m1.alias("m1").join(result_with_hearing_centre_df.alias("r"), ["CaseNo"], "left").filter(conditions_general).withColumn(
         "isServiceRequestTabVisibleConsideringRemissions",
         when(
             (col("PaymentRemissionRequested").isNull()) | (col("PaymentRemissionRequested") == lit('2')),
@@ -2548,7 +2548,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         ).select(
             col("CaseNo"),
             "isServiceRequestTabVisibleConsideringRemissions",
-            "applicationChangeDesignatedHearingCentre"
+            col("r.applicationChangeDesignatedHearingCentre")
         )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]

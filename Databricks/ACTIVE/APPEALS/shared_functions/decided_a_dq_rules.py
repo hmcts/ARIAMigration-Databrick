@@ -32,6 +32,30 @@ def add_checks_hearing_actuals(checks={}):
 
 def add_checks_substantive_decision(checks={}):
 
+    checks["valid_sendDecisionsAndReasonsDate"] = """
+        (
+            
+            DecisionDate IS NULL
+
+            OR
+
+           to_date(DecisionDate, 'dd/MM/yyyy') = sendDecisionsAndReasonsDate
+
+        )
+        """
+
+    checks["valid_appealDate"] = """
+    (
+        
+        DecisionDate IS NULL
+
+        OR
+
+        to_date(DecisionDate, 'dd/MM/yyyy') = appealDate
+
+    )
+    """
+
     checks["valid_anonymityOrder"] = ( "(anonymityOrder = 'No')")
 
     checks["valid_appealDecision"] = """
@@ -86,7 +110,6 @@ def add_checks_ftpa(checks={}):
         """
 
     return checks
-
 
 
 if __name__ == "__main__":

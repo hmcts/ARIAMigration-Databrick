@@ -12,6 +12,10 @@ except Exception:
   # fallback when running as a script in the same folder
   from tokenManager import IDAMTokenManager, S2S_Manager
 
+# Instantiate only one IDAMTokenManager instance per ccdFunctions import.
+idam_token_mgr = IDAMTokenManager(env="sbox")
+
+
 def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
     start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
@@ -115,7 +119,6 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     print(f"Starting processing case for {caseNo}")
 
     try:
-        idam_token_mgr = IDAMTokenManager(env="sbox")
         idam_token,uid = idam_token_mgr.get_token()
 
     except Exception as e:

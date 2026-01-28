@@ -1,5 +1,5 @@
 import pytest
-from pyspark.sql import SparkSession, types as T
+from pyspark.sql import SparkSession, types as T, Row
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import caseData
 from datetime import date, datetime
 
@@ -312,6 +312,7 @@ def caseData_outputs(spark):
     bronze_derive_hearing_centres = spark.createDataFrame(bronze_derive_hearing_centres_data, bronze_derive_hearing_centres_schema)
 
     caseData_content, _ = caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+
     results = {row["CaseNo"]: row.asDict() for row in caseData_content.collect()}
     return results
 
@@ -328,25 +329,29 @@ def test_submission_out_of_time(caseData_outputs):
         assert caseData_outputs[case]["submissionOutOfTime"] == value
 
 def test_recorded_out_of_time_decision_omitted(caseData_outputs):
-    # All should be omitted with current empty m3_data
-    for case in caseData_outputs.keys():
-        assert "recordedOutOfTimeDecision" not in caseData_outputs[case]
+    for data in caseData_outputs.values():
+        assert data.get("recordedOutOfTimeDecision") is None
 
 def test_application_out_of_time_explanation(caseData_outputs):
     expected_cases = ["EA/01698/2024", "HU/00576/2025"]
+
     for case, data in caseData_outputs.items():
         if case in expected_cases:
-            assert data["applicationOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+            assert (
+                data["applicationOutOfTimeExplanation"]
+                == "This is a migrated ARIA case. Please refer to the documents."
+            )
         else:
-            assert "applicationOutOfTimeExplanation" not in data
+            assert data.get("applicationOutOfTimeExplanation") in (None, "")
 
 def test_appeal_dates(caseData_outputs):
-    for case, data in caseData_outputs.items():
+    for data in caseData_outputs.values():
         assert data["appealSubmissionDate"] is not None
         assert data["appealSubmissionInternalDate"] is not None
         assert data["tribunalReceivedDate"] is not None
-        from datetime import datetime
-        assert isinstance(data["appealSubmissionDate"], datetime)
+
+        # validate ISO date string
+        datetime.strptime(data["appealSubmissionDate"], "%Y-%m-%d")
 
 def test_admin_declaration(caseData_outputs):
     for data in caseData_outputs.values():

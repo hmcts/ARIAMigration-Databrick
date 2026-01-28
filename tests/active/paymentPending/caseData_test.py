@@ -31,36 +31,47 @@ def caseData_outputs(spark):
         T.StructField("DateAppealReceived", T.TimestampType(), True),
         T.StructField("lu_hearingCentre", T.StringType(), True),
         T.StructField("lu_staffLocation", T.StringType(), True), 
+        T.StructField("lu_caseManagementLocation",                      
+                        T.StructType([
+                            T.StructField("region", T.StringType(), True),
+                            T.StructField("baseLocation", T.StringType(), True)
+                     ]), True),
     ])
 
     # Assign CentreId to match bronze_hearing_centres
     m1_data = [
-        # Standard – centre found via CentreId
+        # EA/10544/2022 – Birmingham
         ("EA/10544/2022", "AIP", "euSettlementScheme", 520, None, None, "0", None, False,
-        datetime(2022,10,20), datetime(2022,10,20), "birmingham", "Birmingham"),
+        datetime(2022,10,20), datetime(2022,10,20),
+        "birmingham", "Birmingham", {"region":"1","baseLocation":"231596"}),
 
-        # LR, Bradford
+        # HU/00516/2025 – Bradford
         ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None, False,
-        datetime(2025,2,28), datetime(2025,2,28), "bradford", "Bradford"),
+        datetime(2025,2,28), datetime(2025,2,28),
+        "bradford", "Bradford", {"region":None,"baseLocation":None}),
 
-        # Migrated ARIA case – applicationChangeDesignatedHearingCentre populated
+        # EA/01698/2024 – Hatton Cross (migrated ARIA)
         ("EA/01698/2024", "LR", "euSettlementScheme", 386417, None, None, "0",
         "This is an ARIA Migrated Case.", True,
-        datetime(2024,7,31), datetime(2024,7,31), "hattonCross", "Hatton Cross"),
+        datetime(2024,7,31), datetime(2024,7,31),
+        "hattonCross", "Hatton Cross", {"region":None,"baseLocation":None}),
 
-        # Manchester
+        # HU/00240/2022 – Manchester
         ("HU/00240/2022", "LR", "refusalOfHumanRights", 512401, None, "WN4R 8ET", "0", None, False,
-        datetime(2021,11,4), datetime(2021,11,4), "manchester", "Manchester"),
+        datetime(2021,11,4), datetime(2021,11,4),
+        "manchester", "Manchester", {"region":None,"baseLocation":None}),
 
-        # Taylor House
+        # HU/00576/2025 – Taylor House
         ("HU/00576/2025", "AIP", "refusalOfHumanRights", 765324, None, None, "0",
         "This is a migrated ARIA case. Please refer to the documents.", True,
-        datetime(2025,4,1), datetime(2025,4,1), "taylorHouse", "Taylor House"),
+        datetime(2025,4,1), datetime(2025,4,1),
+        "taylorHouse", "Taylor House", {"region":"1","baseLocation":"765324"}),
 
-        # Fully missing centre (matches last real sample)
+        # HU/00366/2025 – Fully missing
         ("HU/00366/2025", "AIP", "refusalOfHumanRights", None, None, None, "0",
         None, False,
-        datetime(2024,11,6), datetime(2024,11,6), None, None),
+        datetime(2024,11,6), datetime(2024,11,6),
+        None, None, {"region":None,"baseLocation":None}),
     ]
 
     m2_schema = T.StructType([

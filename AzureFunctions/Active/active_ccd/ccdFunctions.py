@@ -169,6 +169,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     print("Starting case creation")
 
     if start_response is None or start_response.status_code != 200 :
+        print(f"Start Response: {start_response}")
 
         status_code = start_response.status_code if start_response else "N/A"
         text = start_response.text if start_response else "No response from API" #clean this up 
@@ -199,6 +200,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         print(validate_case_response.text)
 
     if validate_case_response is None or validate_case_response.status_code not in {201,200}:
+        print(f"Validate Response: {validate_case_response}")
 
         status_code = validate_case_response.status_code if validate_case_response else "N/A"
         text = validate_case_response.text if validate_case_response else "No response from API"
@@ -222,6 +224,7 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     print(f"Submit case response = {submit_case_response}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201,200}:
+        print(f"Submit Response: {submit_case_response}")
 
         status_code = submit_case_response.status_code if submit_case_response else "N/A"
         text = submit_case_response.text if submit_case_response else "No response from API"

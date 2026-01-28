@@ -1938,16 +1938,16 @@ def paymentType(silver_m1):
 
     payment_content = silver_m1.select(
         col("CaseNo"),
-        when(conditions_all & (col("VisitVisaType") == 1), 8000)
-            .when(conditions_all & (col("VisitVisaType") == 2), 14000)
+        when(conditions_all & (col("VisitVisaType") == 1), "8000")
+            .when(conditions_all & (col("VisitVisaType") == 2), "14000")
             .alias("feeAmountGbp"),
         when(conditions_all & (col("VisitVisaType") == 1), "Notice of Appeal - appellant consents without hearing A")
             .when(conditions_all & (col("VisitVisaType") == 2), "Appeal determined with a hearing")
             .alias("feeDescription"),
         when(conditions_all & (col("VisitVisaType") == 1), None)
-            .when(conditions_all & (col("VisitVisaType") == 2), 140)
+            .when(conditions_all & (col("VisitVisaType") == 2), "140")
             .alias("feeWithHearing"),
-        when(conditions_all & (col("VisitVisaType") == 1), 80)
+        when(conditions_all & (col("VisitVisaType") == 1), "80")
             .when(conditions_all & (col("VisitVisaType") == 2), None)
             .alias("feeWithoutHearing"),
         when(conditions_all & (col("VisitVisaType") == 1), "Appeal determined without a hearing")

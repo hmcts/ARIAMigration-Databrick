@@ -65,31 +65,31 @@ def substantiveDecision(silver_m1,silver_m3):
 
 
     substantiveDecision_df, substantiveDecision_audit = D.substantiveDecision(silver_m1)
-
+    
     
     substantiveDecision_df = (
         substantiveDecision_df.alias("sd")
-        .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-        .select(
-            "sd.*",
-            # keep raw DecisionDate or convert to ISO string if needed
-            col("m3.DecisionDate").alias("sendDecisionsAndReasonsDate"),
-            col("m3.DecisionDate").alias("appealDate"),
+            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
+            .select(
+                col("sd.*"),
+                # Format dates as dd/MM/yyyy
+                date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
+                date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("appealDate"),
 
-            when(col("m3.Outcome") == 1, "Allowed")
-                .when(col("m3.Outcome") == 2, "Dismissed")
-                .otherwise(None)
-                .alias("appealDecision"),
+                # Outcome mapping
+                when(col("m3.Outcome") == 1, "Allowed")
+                    .when(col("m3.Outcome") == 2, "Dismissed")
+                    .otherwise(None)
+                    .alias("appealDecision"),
 
-            when(col("m3.Outcome") == 1, "Allowed")
-                .when(col("m3.Outcome") == 2, "Dismissed")
-                .otherwise(None)
-                .alias("isDecisionAllowed"),
+                when(col("m3.Outcome") == 1, "Allowed")
+                    .when(col("m3.Outcome") == 2, "Dismissed")
+                    .otherwise(None)
+                    .alias("isDecisionAllowed"),
 
-            lit("No").alias("anonymityOrder")
-        )
+                lit("No").alias("anonymityOrder")
+            )
     )
-
 
 
     substantiveDecision_audit = (
@@ -131,7 +131,6 @@ def substantiveDecision(silver_m1,silver_m3):
         )
     )
 
-        
     return substantiveDecision_df, substantiveDecision_audit
 
 ################################################################
@@ -157,16 +156,16 @@ def hearingActuals(silver_m3):
             F.create_map(
                 # key: "hours", value: hours calculation
                 F.lit("hours"),
-                F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int"))
-                .otherwise(F.floor(col("TimeEstimate").cast("int") / 60)),
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
+                .otherwise(F.floor(col("HearingDuration").cast("int") / 60)),
 
                 # key: "minutes", value: minutes calculation
                 F.lit("minutes"),
-                F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int"))
-                .otherwise(col("TimeEstimate").cast("int") % 60)
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
+                .otherwise(col("HearingDuration").cast("int") % 60)
             )
         )
-        .withColumn("attendingJudge",concat(col("Adj_Title"),lit(" "),col("Adj_Forenames"),lit(" "),col("Adj_Surname")))
+        .withColumn("attendingJudge",concat(col("Adj_Determination_Title"),lit(" "),col("Adj_Determination_Forenames"),lit(" "),col("Adj_Determination_Surname")))
         .select(
             col("CaseNo"),
             col("actualCaseHearingLength"),
@@ -176,13 +175,13 @@ def hearingActuals(silver_m3):
 
     hearingActuals_audit = hearingActuals_df.alias("ha").join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left").select(
         col("CaseNo"),
-        array(struct(lit("TimeEstimate"),lit("Outcome"))).alias("actualCaseHearingLength_inputFields"),
-        array(struct(col("TimeEstimate"),col("Outcome"))).alias("actualCaseHearingLength_inputValues"),
+        array(struct(lit("HearingDuration"),lit("Outcome"))).alias("actualCaseHearingLength_inputFields"),
+        array(struct(col("HearingDuration"),col("Outcome"))).alias("actualCaseHearingLength_inputValues"),
         col("actualCaseHearingLength").alias("actualCaseHearingLength"),
         lit("Yes").alias("actualCaseHearingLength_Transformation"),
 
-        array(struct(lit("Adj_Title"),lit("Adj_Forenames"),lit("Adj_Surname"),lit("Outcome"))).alias("attendingJudge_inputFields"),
-        array(struct(col("Adj_Title"),col("Adj_Forenames"),col("Adj_Surname"),col("Outcome"))).alias("attendingJudge_inputValues"),
+        array(struct(lit("Adj_Determination_Title"),lit("Adj_Determination_Forenames"),lit("Adj_Determination_Surname"),lit("Outcome"))).alias("attendingJudge_inputFields"),
+        array(struct(col("Adj_Determination_Title"),col("Adj_Determination_Forenames"),col("Adj_Determination_Surname"),col("Outcome"))).alias("attendingJudge_inputValues"),
         col("attendingJudge").alias("attendingJudge"),
         lit("Yes").alias("attendingJudge_Transformation"),
     )
@@ -196,7 +195,7 @@ def hearingActuals(silver_m3):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3):
+def ftpa(silver_m3,silver_c):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -204,24 +203,49 @@ def ftpa(silver_m3):
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-
     
-    ftpa_df = silver_m3_max_statusid.select(
-        col("CaseNo"),
-        when(col("CaseStatus") == 37, F.date_add(col("DecisionDate"), 14))
-        .when(col("CaseStatus") == 38, F.date_add(col("DecisionDate"), 28))
-        .otherwise(col("DecisionDate"))
-        .alias("ftpaApplicationDeadline"),
+    ftpa_df = (
+        silver_m3_max_statusid
+            .join(silver_c, on=["CaseNo"], how="left")
+            .select(
+                col("CaseNo"),
+                date_format(
+                    when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
+                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28))
+                    .otherwise(col("DecisionDate")),
+                    "dd/MM/yyyy"
+                ).alias("ftpaApplicationDeadline")
+            )
     )
 
-    ftpa_audit = ftpa_df.alias("ftpa").join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left").select(
-        col("CaseNo"),
-        array(struct(lit("CaseStatus"),lit("DecisionDate"),lit("Outcome"))).alias("ftpaApplicationDeadline_inputFields"),
-        array(struct(col("CaseStatus"),col("DecisionDate"),col("Outcome"))).alias("ftpaApplicationDeadline_inputValues"),
-        col("ftpaApplicationDeadline").alias("ftpaApplicationDeadline"),
-        lit("Yes").alias("ftpaApplicationDeadline_Transformation"),
-
+    # Build the audit DataFrame
+    ftpa_audit = (
+        ftpa_df.alias("ftpa")
+            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
+            .join(silver_c.alias("c"), on=["CaseNo"], how="left")
+            .select(
+                col("CaseNo"),
+                array(
+                    struct(
+                        lit("CategoryId"),
+                        lit("CaseStatus"),
+                        lit("DecisionDate"),
+                        lit("Outcome")
+                    )
+                ).alias("ftpaApplicationDeadline_inputFields"),
+                array(
+                    struct(
+                        col("CategoryId"),
+                        col("CaseStatus"),
+                        col("DecisionDate"),
+                        col("Outcome")
+                    )
+                ).alias("ftpaApplicationDeadline_inputValues"),
+                col("ftpaApplicationDeadline").alias("ftpaApplicationDeadline"),
+                lit("Yes").alias("ftpaApplicationDeadline_Transformation"),
+            )
     )
+
 
     return ftpa_df, ftpa_audit
 ################################################################

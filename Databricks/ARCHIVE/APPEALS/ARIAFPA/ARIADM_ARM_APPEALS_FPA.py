@@ -147,6 +147,7 @@ curated_storage = f"ingest{lz_key}curated{env_name}"
 checkpoint_storage = f"ingest{lz_key}xcutting{env_name}"
 raw_storage = f"ingest{lz_key}raw{env_name}"
 landing_storage = f"ingest{lz_key}landing{env_name}"
+external_storage = f"ingest{lz_key}external{env_name}"
 
 # Spark config for curated storage (Delta table)
 spark.conf.set(f"fs.azure.account.auth.type.{curated_storage}.dfs.core.windows.net", "OAuth")
@@ -175,6 +176,13 @@ spark.conf.set(f"fs.azure.account.oauth.provider.type.{landing_storage}.dfs.core
 spark.conf.set(f"fs.azure.account.oauth2.client.id.{landing_storage}.dfs.core.windows.net", client_id)
 spark.conf.set(f"fs.azure.account.oauth2.client.secret.{landing_storage}.dfs.core.windows.net", client_secret)
 spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{landing_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
+
+# Spark config for external storage
+spark.conf.set(f"fs.azure.account.auth.type.{external_storage}.dfs.core.windows.net", "OAuth")
+spark.conf.set(f"fs.azure.account.oauth.provider.type.{external_storage}.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
+spark.conf.set(f"fs.azure.account.oauth2.client.id.{external_storage}.dfs.core.windows.net", client_id)
+spark.conf.set(f"fs.azure.account.oauth2.client.secret.{external_storage}.dfs.core.windows.net", client_secret)
+spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{external_storage}.dfs.core.windows.net", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
 
 # COMMAND ----------
 
@@ -4523,12 +4531,12 @@ def silver_archive_metadata():
             .filter(col("ca.CaseAppellantRelationship").isNull())\
     .select(
         col('ac.CaseNo').alias('client_identifier'),
-        # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        # date_format(col('ac.DateOfApplicationDecision'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-        "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
+        date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+        date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+        # when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
+        # when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
+        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         #  when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')

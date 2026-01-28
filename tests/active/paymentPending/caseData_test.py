@@ -1,7 +1,7 @@
 import pytest
 from pyspark.sql import SparkSession, types as T
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import caseData
-from datetime import datetime
+from datetime import date, datetime
 
 @pytest.fixture(scope="session")
 def spark():
@@ -29,36 +29,37 @@ def caseData_outputs(spark):
         T.StructField("OutOfTimeIssue", T.BooleanType(), True),
         T.StructField("DateLodged", T.TimestampType(), True),
         T.StructField("DateAppealReceived", T.TimestampType(), True),
+        T.StructField("lu_hearingCentre", T.StringType(), True),
     ])
 
     # Assign CentreId to match bronze_hearing_centres
     m1_data = [
         # Standard – centre found via CentreId
         ("EA/10544/2022", "AIP", "euSettlementScheme", 520, None, None, "0", None, False,
-        datetime(2022,10,20), datetime(2022,10,20)),
+        datetime(2022,10,20), datetime(2022,10,20), "birmingham"),
 
         # LR, Bradford
         ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None, False,
-        datetime(2025,2,28), datetime(2025,2,28)),
+        datetime(2025,2,28), datetime(2025,2,28), "bradford"),
 
         # Migrated ARIA case – applicationChangeDesignatedHearingCentre populated
         ("EA/01698/2024", "LR", "euSettlementScheme", 386417, None, None, "0",
         "This is an ARIA Migrated Case.", True,
-        datetime(2024,7,31), datetime(2024,7,31)),
+        datetime(2024,7,31), datetime(2024,7,31), "hattonCross"),
 
         # Manchester
         ("HU/00240/2022", "LR", "refusalOfHumanRights", 512401, None, "WN4R 8ET", "0", None, False,
-        datetime(2021,11,4), datetime(2021,11,4)),
+        datetime(2021,11,4), datetime(2021,11,4), "manchester"),
 
         # Taylor House
         ("HU/00576/2025", "AIP", "refusalOfHumanRights", 765324, None, None, "0",
         "This is a migrated ARIA case. Please refer to the documents.", True,
-        datetime(2025,4,1), datetime(2025,4,1)),
+        datetime(2025,4,1), datetime(2025,4,1), "taylorHouse"),
 
         # Fully missing centre (matches last real sample)
         ("HU/00366/2025", "AIP", "refusalOfHumanRights", None, None, None, "0",
         None, False,
-        datetime(2024,11,6), datetime(2024,11,6)),
+        datetime(2024,11,6), datetime(2024,11,6), None),
     ]
 
     m2_schema = T.StructType([

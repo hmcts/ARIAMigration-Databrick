@@ -1138,11 +1138,13 @@ def silver_archive_metadata():
     df_final = (
         df_with_env.select(
             col("adj.AdjudicatorId").alias("client_identifier"),
-            date_format(
-                coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
-                "yyyy-MM-dd'T'HH:mm:ss'Z'"
-            ).alias("event_date"),
-            date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+            # date_format(
+            #     coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
+            #     "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            # ).alias("event_date"),
+            # date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
+            date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+            date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             lit("GBR").alias("region"),
             lit("ARIA").alias("publisher"),
             when(env_name == lit("sbox"), lit("ARIAJRDEV")).otherwise(lit("ARIAJR")).alias("record_class"),

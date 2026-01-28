@@ -1,18 +1,19 @@
-import importlib.util
-from pyspark.sql.functions import col, struct, lit, concat, array
+from pyspark.sql.functions import lit
 from . import paymentPending as PP
 from . import AwaitingEvidenceRespondant_a as AERa
 
+
 def generalDefault(silver_m1): 
     df_generalDefault = AERa.generalDefault(silver_m1)
-    
+
     df_generalDefault = (
         df_generalDefault
         .select("*",
                 lit("No").alias("uploadHomeOfficeBundleActionAvailable"))
     )
-            
+
     return df_generalDefault
+
 
 def documents(silver_m1): 
     documents_df, documents_audit = PP.documents(silver_m1)
@@ -24,6 +25,6 @@ def documents(silver_m1):
     )
     return documents_df, documents_audit
 
+
 if __name__ == "__main__":
     pass
-

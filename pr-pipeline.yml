@@ -27,6 +27,16 @@ stages:
         steps:
           - template: ci_cd_templates/unit_tests/active/appealSubmitted.yml
 
+      - job: AwaitingRespondentEvidenceATests
+        displayName: 'Run Appeal Submitted Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/awaitingRespondentEvidenceA.yml
+
+      - job: AwaitingRespondentEvidenceBTests
+        displayName: 'Run Appeal Submitted Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/awaitingRespondentEvidenceB.yml
+
       - job: ListingTests
         displayName: 'Run Listing Tests'
         steps:

@@ -16,7 +16,7 @@ def spark():
         .getOrCreate()
 
 
-class TestPaymentType:
+class TestAppealSubmittedPaymentType:
     CASE_NO_COLUMNS = StructType([
         StructField("CaseNo", StringType())
     ])

@@ -345,7 +345,6 @@ def test_appeal_dates(caseData_outputs):
         assert data["appealSubmissionDate"] is not None
         assert data["appealSubmissionInternalDate"] is not None
         assert data["tribunalReceivedDate"] is not None
-        # Optionally check type
         from datetime import datetime
         assert isinstance(data["appealSubmissionDate"], datetime)
 
@@ -364,7 +363,11 @@ def test_hearing_centres(caseData_outputs):
         data = caseData_outputs[case]
         assert data.get("hearingCentre") == hc
         assert data.get("staffLocation") == sl
-        assert data.get("caseManagementLocation") == cm
+        cm_actual = data.get("caseManagementLocation")
+        # Convert PySpark Row to dict if needed
+        if isinstance(cm_actual, Row):
+            cm_actual = cm_actual.asDict()
+        assert cm_actual == cm
 
 def test_appeal_was_not_submitted_reason(caseData_outputs):
     expected = {
@@ -389,4 +392,3 @@ def test_appellants_representation(caseData_outputs):
 def test_has_other_appeals(caseData_outputs):
     for data in caseData_outputs.values():
         assert data["hasOtherAppeals"] == "NotSure"
-

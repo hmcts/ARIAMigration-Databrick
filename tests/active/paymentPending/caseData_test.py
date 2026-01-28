@@ -1,7 +1,7 @@
 import pytest
 from pyspark.sql import SparkSession, types as T
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import caseData
-from datetime import date
+from datetime import datetime
 
 @pytest.fixture(scope="session")
 def spark():

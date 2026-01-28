@@ -35,8 +35,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
     
     return df_flagsLabels, df_audit_flagsLabels
 
-def legalRepDetails(silver_m1): 
-    df_legalRepDetails, df_audit_legalRepDetails = PP.legalRepDetails(silver_m1)
+def legalRepDetails(silver_m1, bronze_countryFromAddress): 
+    df_legalRepDetails, df_audit_legalRepDetails = PP.legalRepDetails(silver_m1, bronze_countryFromAddress)
     
     df_legalRepDetails = df_legalRepDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
     

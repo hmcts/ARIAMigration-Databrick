@@ -51,6 +51,25 @@ def caseData_outputs(spark):
             ), True)
         ]),
         True
+    ),
+    T.StructField(
+    "dv_caseManagementLocationRefData",
+    T.StructType([
+        T.StructField("region", T.StringType(), True),
+        T.StructField("baseLocation", T.StructType([
+            T.StructField("value", T.StructType([
+                T.StructField("code", T.StringType(), True),
+                T.StructField("label", T.StringType(), True)
+            ]), True),
+            T.StructField("list_items", T.ArrayType(
+                T.StructType([
+                    T.StructField("code", T.StringType(), True),
+                    T.StructField("label", T.StringType(), True)
+                ])
+            ), True)
+        ]), True)
+    ]),
+    True
     )
     ])
 
@@ -67,43 +86,62 @@ def caseData_outputs(spark):
         {"code": "649000", "label": "Yarls Wood Immigration And Asylum Hearing Centre"},
         {"code": "698118", "label": "Bradford Tribunal Hearing Centre"},
         {"code": "765324", "label": "Taylor House Tribunal Hearing Centre"}
-    ]
-}
+        ]
+    }
+
+    dv_caseManagementLocationRefData = {
+    "region": "1",
+    "baseLocation": {
+        "value": {"code": "231596", "label": "Birmingham Civil And Family Justice Centre"},
+        "list_items": [
+            {"code":"227101","label":"Newport Tribunal Centre - Columbus House"},
+            {"code":"231596","label":"Birmingham Civil And Family Justice Centre"},
+            {"code":"28837","label":"Harmondsworth Tribunal Hearing Centre"},
+            {"code":"366559","label":"Atlantic Quay - Glasgow"},
+            {"code":"366796","label":"Newcastle Civil And Family Courts And Tribunals Centre"},
+            {"code":"386417","label":"Hatton Cross Tribunal Hearing Centre"},
+            {"code":"512401","label":"Manchester Tribunal Hearing Centre - Piccadilly Exchange"},
+            {"code":"649000","label":"Yarls Wood Immigration And Asylum Hearing Centre"},
+            {"code":"698118","label":"Bradford Tribunal Hearing Centre"},
+            {"code":"765324","label":"Taylor House Tribunal Hearing Centre"}
+            ]
+        }
+    }
 
     # Assign CentreId to match bronze_hearing_centres
     m1_data = [
         # EA/10544/2022 – Birmingham
         ("EA/10544/2022", "AIP", "euSettlementScheme", 520, None, None, "0", None, False,
         datetime(2022,10,20), datetime(2022,10,20),
-        "birmingham", "Birmingham", {"region":"1","baseLocation":"231596"}, dv_hearingCentreDynamicList),
+        "birmingham", "Birmingham", {"region":"1","baseLocation":"231596"}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
 
         # HU/00516/2025 – Bradford
         ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None, False,
         datetime(2025,2,28), datetime(2025,2,28),
-        "bradford", "Bradford", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList),
+        "bradford", "Bradford", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
 
         # EA/01698/2024 – Hatton Cross (migrated ARIA)
         ("EA/01698/2024", "LR", "euSettlementScheme", 386417, None, None, "0",
         "This is an ARIA Migrated Case.", True,
         datetime(2024,7,31), datetime(2024,7,31),
-        "hattonCross", "Hatton Cross", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList),
+        "hattonCross", "Hatton Cross", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
 
         # HU/00240/2022 – Manchester
         ("HU/00240/2022", "LR", "refusalOfHumanRights", 512401, None, "WN4R 8ET", "0", None, False,
         datetime(2021,11,4), datetime(2021,11,4),
-        "manchester", "Manchester", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList),
+        "manchester", "Manchester", {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
 
         # HU/00576/2025 – Taylor House
         ("HU/00576/2025", "AIP", "refusalOfHumanRights", 765324, None, None, "0",
         "This is a migrated ARIA case. Please refer to the documents.", True,
         datetime(2025,4,1), datetime(2025,4,1),
-        "taylorHouse", "Taylor House", {"region":"1","baseLocation":"765324"}, dv_hearingCentreDynamicList),
+        "taylorHouse", "Taylor House", {"region":"1","baseLocation":"765324"}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
 
         # HU/00366/2025 – Fully missing
         ("HU/00366/2025", "AIP", "refusalOfHumanRights", None, None, None, "0",
         None, False,
         datetime(2024,11,6), datetime(2024,11,6),
-        None, None, {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList),
+        None, None, {"region":None,"baseLocation":None}, dv_hearingCentreDynamicList, dv_caseManagementLocationRefData),
     ]
 
     m2_schema = T.StructType([

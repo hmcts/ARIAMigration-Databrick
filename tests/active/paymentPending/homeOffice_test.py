@@ -1,7 +1,7 @@
 import pytest
 from pyspark.sql import SparkSession, types as T
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import homeOfficeDetails
-import uuid
+from datetime import date
 
 @pytest.fixture(scope="session")
 def spark():

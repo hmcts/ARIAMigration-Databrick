@@ -1,10 +1,9 @@
-from pyspark.sql.window import Window
-
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    max as spark_max, date_format, row_number,
+    max as spark_max, date_format,
     abs, sum as F_sum
 )
+from pyspark.sql.types import StringType
 
 from . import paymentPending as PP
 
@@ -75,7 +74,7 @@ def paymentType(silver_m1, silver_m4):
                 .when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 2), "decisionWithHearing")
                 .alias("rpDcAppealHearingOption"),
             when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).alias("paidDate"),
-            when(conditions_all, col("paidAmount")).alias("paidAmount"),
+            when(conditions_all, col("paidAmount")).cast(StringType()).alias("paidAmount"),
             when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).alias("additionalPaymentInfo"),
             when(conditions_all, col("payment_status.paymentStatus")).alias("dv_paymentStatus")
         ).select(
@@ -190,10 +189,10 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             .when((conditions_all) & (col("PaymentRemissionGranted") == 2), lit("This is a migrated case. The remission was rejected."))
         ).withColumn(
             "amountRemitted",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountRemitted"))
+            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountRemitted").cast(StringType()))
         ).withColumn(
             "amountLeftToPay",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountLeftToPay"))
+            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountLeftToPay").cast(StringType()))
         ).select("source.*", "remissionDecision", "remissionDecisionReason", "amountRemitted", "amountLeftToPay")
     )
 

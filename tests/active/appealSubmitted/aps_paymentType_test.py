@@ -243,10 +243,10 @@ class TestAppealSubmittedPaymentType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
-            assert resultList[0][0] == 100 and resultList[1][0] == 100 and resultList[2][0] == 100 and resultList[3][0] == 100
+            assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
             assert resultList[4][0] is None and resultList[5][0] is None
             assert resultList[6][0] is None and resultList[7][0] is None
-            assert resultList[8][0] == 500
+            assert resultList[8][0] == "500"
 
     def test_additionalPaymentInfo(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

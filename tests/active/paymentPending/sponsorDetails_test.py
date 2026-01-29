@@ -181,13 +181,13 @@ def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):
     # EA/00072/2025 has category 38 → sponsorAddress should be populated
     res = sponsorDetails_outputs["EA/00072/2025"]
     assert res["sponsorAddress"] is not None
-    assert "873 Hurst Parkways" in res["sponsorAddress"]
-    assert "Owens StravenueX" in res["sponsorAddress"]
+    assert "873 Hurst Parkways" in res["sponsorAddress"]["AddressLine1"]
+    assert "Owens StravenueX" in res["sponsorAddress"]["AddressLine2"]
 
     # HU/00447/2025 has category 38 → sponsorAddress should be populated
     res = sponsorDetails_outputs["HU/00447/2025"]
     assert res["sponsorAddress"] is not None
-    assert "64644 Michael Junction" in res["sponsorAddress"]
+    assert "64644 Michael Junction" in res["sponsorAddress"]["AddressLine1"]
 
 def test_sponsorAddress_none_when_no_category38(sponsorDetails_outputs):
     # EA/00490/2025 missing category 38 → sponsorAddress should be None
@@ -204,5 +204,5 @@ def test_sponsorAddress_multiple_lines(sponsorDetails_outputs):
     address = res["sponsorAddress"]
     assert address is not None
     # Check that the first part and postcode are included
-    assert "358 Carter Corners" in address
-    assert "UB4B 0LY" in address
+    assert "358 Carter Corners" in address["AddressLine1"]
+    assert "UB4B 0LY" in address["PostCode"]

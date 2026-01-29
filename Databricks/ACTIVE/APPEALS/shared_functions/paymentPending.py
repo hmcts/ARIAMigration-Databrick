@@ -2276,16 +2276,32 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAddress",
         when(
             (category_condition),
-            trim(
-                concat_ws(
-                    ", ",
+            # AddressUK CCD Type should be an object
+            # trim(
+            #     concat_ws(
+            #         ", ",
+            #         col("Sponsor_Address1"),
+            #         col("Sponsor_Address2"),
+            #         col("Sponsor_Address3"),
+            #         col("Sponsor_Address4"),
+            #         col("Sponsor_Address5"),
+            #         col("Sponsor_Postcode")
+            #     )
+            # )
+            struct(
+                # AddressLine1 is mandatory in CCD, fallback logic
+                coalesce(
                     col("Sponsor_Address1"),
                     col("Sponsor_Address2"),
                     col("Sponsor_Address3"),
                     col("Sponsor_Address4"),
-                    col("Sponsor_Address5"),
-                    col("Sponsor_Postcode")
-                )
+                    col("Sponsor_Address5")
+                ).alias("AddressLine1"),
+                col("Sponsor_Address2").alias("AddressLine2"),
+                col("Sponsor_Address3").alias("PostTown"),
+                col("Sponsor_Address4").alias("County"),
+                col("Sponsor_Address5").alias("Country"),
+                col("Sponsor_Postcode").alias("PostCode")
             )
         )
     ).withColumn(

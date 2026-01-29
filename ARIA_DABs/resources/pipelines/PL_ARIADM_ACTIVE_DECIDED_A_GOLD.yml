@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    pipeline_pl_decided_a_gold:
+      name: PL_decided_a_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          node_type_id: Standard_D8ads_v5
+          driver_node_type_id: Standard_D8ads_v5
+          autoscale:
+            min_workers: 4
+            max_workers: 16
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE/APPEALS/GOLD_DECIDED_A_JSON"
+      target: decided_a_gold
+      development: true

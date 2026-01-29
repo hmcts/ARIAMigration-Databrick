@@ -203,10 +203,12 @@ def ftpa(silver_m3,silver_c):
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+
+    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38))
     
     ftpa_df = (
         silver_m3_max_statusid
-            .join(silver_c, on=["CaseNo"], how="left")
+            .join(silver_c_filtered, on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 date_format(
@@ -222,7 +224,7 @@ def ftpa(silver_m3,silver_c):
     ftpa_audit = (
         ftpa_df.alias("ftpa")
             .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-            .join(silver_c.alias("c"), on=["CaseNo"], how="left")
+            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 array(

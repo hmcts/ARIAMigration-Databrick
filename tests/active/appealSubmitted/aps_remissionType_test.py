@@ -138,10 +138,10 @@ class TestAppealSubmittedRemissionType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("amountRemitted").collect()
 
-            assert resultList[0][0] == 100 and resultList[1][0] == 100 and resultList[2][0] == 100 and resultList[3][0] == 100
+            assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
             assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
             assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
-            assert resultList[10][0] == 500
+            assert resultList[10][0] == "500"
 
     def test_amountLeftToPay(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
@@ -186,7 +186,7 @@ class TestAppealSubmittedRemissionType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("amountLeftToPay").collect()
 
-            assert resultList[0][0] == 100 and resultList[1][0] == 100 and resultList[2][0] == 100 and resultList[3][0] == 100
+            assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
             assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
             assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
-            assert resultList[10][0] == 500
+            assert resultList[10][0] == "500"

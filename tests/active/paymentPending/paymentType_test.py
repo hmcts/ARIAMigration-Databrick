@@ -32,8 +32,8 @@ def paymentType_outputs(spark):
 def test_feeAmountGbp(spark, paymentType_outputs):
     results = paymentType_outputs
 
-    assert results["CASE001"]["feeAmountGbp"] == 8000
-    assert results["CASE002"]["feeAmountGbp"] == 14000
+    assert results["CASE001"]["feeAmountGbp"] == "8000"
+    assert results["CASE002"]["feeAmountGbp"] == "14000"
     assert results["CASE003"]["feeAmountGbp"] is None
     assert results["CASE004"]["feeAmountGbp"] is None
 
@@ -50,14 +50,14 @@ def test_feeDescription(spark, paymentType_outputs):
 def test_feeWithHearing(spark, paymentType_outputs):
     results = paymentType_outputs
     assert results["CASE001"]["feeWithHearing"] is None
-    assert results["CASE002"]["feeWithHearing"] == 140
+    assert results["CASE002"]["feeWithHearing"] == "140"
     assert results["CASE003"]["feeWithHearing"] is None
     assert results["CASE004"]["feeWithHearing"] is None
 
 
 def test_feeWithoutHearing(spark, paymentType_outputs):
     results = paymentType_outputs
-    assert results["CASE001"]["feeWithoutHearing"] == 80
+    assert results["CASE001"]["feeWithoutHearing"] == "80"
     assert results["CASE002"]["feeWithoutHearing"] is None
     assert results["CASE003"]["feeWithoutHearing"] is None
     assert results["CASE004"]["feeWithoutHearing"] is None

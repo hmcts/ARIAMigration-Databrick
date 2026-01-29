@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock, ANY
 from datetime import datetime, timedelta, timezone
-from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import start_case_creation, validate_case, submit_case, process_case
-from AzureFunctions.ACTIVE.active_ccd.tokenManager import IDAMTokenManager, S2S_Manager
+from AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions import start_case_creation, validate_case, submit_case, process_case
+from AzureFunctionsApp.ACTIVE.active_ccd.tokenManager import IDAMTokenManager, S2S_Manager
 
 #### FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was only done because we could not merge)#################
 
@@ -242,9 +242,9 @@ def mock_response(status_code,json_data=None, text=""):
 
 ### Succesfully sent a case payload ###
 @pytest.mark.usefixtures("mock_token_managers")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.submit_case")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.submit_case")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
 def test_process_funciton_success(mock_start_case_creation_response,
                                   mock_validate_case_response,
                                   mock_submit_case_response):
@@ -272,7 +272,7 @@ def test_process_funciton_success(mock_start_case_creation_response,
     assert results["Error"] is None
     
     ### failed to start case creation ###
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
 def test_process_case_start_case_fail(mock_start_case_creation):
     mock_start_case_response = mock_response(401,{"text":"bad response"})
     mock_start_case_creation.return_value = mock_start_case_response
@@ -289,8 +289,8 @@ def test_process_case_start_case_fail(mock_start_case_creation):
     assert results["Status"]=="ERROR"
     assert results["Error"] is not None
 
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
 def test_process_case_validation_fails(mock_start, mock_validate):
     mock_start.return_value = mock_response(200, {"token": "abc123"})
     mock_validate.return_value = mock_response(400, text="Invalid payload")
@@ -307,9 +307,9 @@ def test_process_case_validation_fails(mock_start, mock_validate):
     assert result["Status"] == "ERROR"
     assert result["Error"] is not None
 
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.submit_case")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.submit_case")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.validate_case")
+@patch("AzureFunctionsApp.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
 def test_process_case_submission_fails(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "abc123"})
     mock_validate.return_value = mock_response(201)

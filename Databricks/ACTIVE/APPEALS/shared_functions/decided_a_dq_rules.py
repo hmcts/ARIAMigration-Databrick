@@ -67,6 +67,7 @@ def add_checks_substantive_decision(checks={}):
             END
         )
         """
+        
     checks["valid_isDecisionAllowed"] = """
         (
         CASE

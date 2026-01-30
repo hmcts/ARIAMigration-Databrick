@@ -498,7 +498,7 @@ def base_DQRules():
           )
           OR
           (
-            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2)
+            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2))
             AND
             (feeWithHearing IS NULL)
           )
@@ -514,7 +514,7 @@ def base_DQRules():
           )
           OR
           (
-            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1)
+            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1))
             AND
             (feeWithoutHearing IS NULL)
           )

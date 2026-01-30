@@ -457,8 +457,28 @@ def base_DQRules():
     # # ARIADM-783 (payment)
     # ##############################
     checks["valid_feeAmountGbp"] = ( # fee amount is not null and is an int
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND ((feeAmountGbp IN (8000,14000) AND TRY_CAST(feeAmountGbp AS INT) IS NOT NULL) OR feeAmountGbp IS NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeAmountGbp IS NULL))"
-        )
+        """(
+          (
+            (
+              (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
+              AND
+              (feeAmountGbp = '8000')
+            )
+            OR
+            (
+              (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
+              AND
+              (feeAmountGbp = '14000')
+            )
+          )
+          OR
+          (
+            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR VisitVisaType NOT IN (1, 2))
+            AND
+            (feeAmountGbp IS NULL)
+          )
+        )"""
+    )
 
 
     checks["valid_feeDescription"] = ( #feeDescription is not null
@@ -470,19 +490,36 @@ def base_DQRules():
     # )
 
     checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND ( (feeWithHearing = 140 AND TRY_CAST(feeWithHearing AS INT) IS NOT NULL) OR (feeWithHearing IS NULL AND TRY_CAST(feeWithHearing AS INT) IS NULL) )) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeWithHearing IS NULL))"
+        """(
+          (
+            (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
+            AND
+            (feeWithHearing = '140')
+          )
+          OR
+          (
+            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2))
+            AND
+            (feeWithHearing IS NULL)
+          )
+        )"""
     )
-
-
-
 
     checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND ((feeWithoutHearing = 80 AND TRY_CAST(feeWithoutHearing AS INT) IS NOT NULL) OR (feeWithoutHearing IS NULL))) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeWithoutHearing IS NULL))"
+        """(
+          (
+            (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
+            AND
+            (feeWithoutHearing = '80')
+          )
+          OR
+          (
+            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1))
+            AND
+            (feeWithoutHearing IS NULL)
+          )
+        )"""
     )
-
-    # checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
-    #     "(feeWithoutHearing IS NOT NULL AND TRY_CAST(feeWithoutHearing AS INT) IS NOT NULL)"
-    # )
 
     checks["valid_paymentDescription"] = ( # paymentDescription is not null
     "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND paymentDescription IN ('Appeal determined without a hearing','Appeal determined with a hearing')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL))"

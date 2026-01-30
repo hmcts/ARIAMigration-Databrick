@@ -1,5 +1,5 @@
 import pytest
-from pyspark.sql import SparkSession, types as T
+from pyspark.sql import SparkSession, types as T, Row
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import legalRepDetails
 
 @pytest.fixture(scope="session")
@@ -194,7 +194,12 @@ def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
         legalRepHasAddress="No",
     )
 
-    assert row["legalRepAddressUK"] in ("", None)
+    assert row["legalRepAddressUK"]["AddressLine1"] in ("", None)
+    assert row["legalRepAddressUK"]["AddressLine2"] in ("", None)
+    assert row["legalRepAddressUK"]["PostTown"] in ("", None)
+    assert row["legalRepAddressUK"]["County"] in ("", None)
+    assert row["legalRepAddressUK"]["Country"] in ("", None)
+    assert row["legalRepAddressUK"]["PostCode"] in ("", None)
 
     assert_all_null(
         row,
@@ -207,6 +212,15 @@ def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
 
 def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/01475/2024"]
+    
+    expectedLegalRepAddressUkRow = Row(
+        AddressLine1='56292 Raymond TrafficwayX',
+        AddressLine2='Cheyenne SquareX',
+        PostTown='New MollyX',
+        County='ReunionX',
+        Country='MVX',
+        PostCode=None
+    )
 
     assert_equals(
         row,
@@ -215,7 +229,7 @@ def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Barnes-VargasX",
         legalRepEmail="rachel34@example.org",
         legalRepHasAddress="No",
-        legalRepAddressUK="56292 Raymond TrafficwayX Cheyenne SquareX New MollyX ReunionX MVX",
+        legalRepAddressUK=expectedLegalRepAddressUkRow,
     )
 
     assert_equals(
@@ -228,8 +242,18 @@ def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
 
     assert row["oocLrCountryGovUkAdminJ"] is None
 
+
 def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/02191/2024"]
+
+    expectedLegalRepAddressUkRow = Row(
+        AddressLine1='925 Lisa Plains Apt. 642X',
+        AddressLine2='Hill SquareX',
+        PostTown='LynchhavenX',
+        County='GuamX',
+        Country='NLX',
+        PostCode=None
+    )
 
     assert_equals(
         row,
@@ -238,7 +262,7 @@ def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Leon LLCX",
         legalRepEmail="jameskelly@example.com",
         legalRepHasAddress="No",
-        legalRepAddressUK="925 Lisa Plains Apt. 642X Hill SquareX LynchhavenX GuamX NLX",
+        legalRepAddressUK=expectedLegalRepAddressUkRow,
     )
 
     assert_equals(
@@ -249,6 +273,7 @@ def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
         oocAddressLine4="NLX",
         oocLrCountryGovUkAdminJ="GU",
     )
+
 
 def test_HU_02151_2024_no_address(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/02151/2024"]
@@ -262,7 +287,12 @@ def test_HU_02151_2024_no_address(legalRepDetails_outputs):
         legalRepHasAddress="No",
     )
 
-    assert row["legalRepAddressUK"] in ("", None)
+    assert row["legalRepAddressUK"]["AddressLine1"] in ("", None)
+    assert row["legalRepAddressUK"]["AddressLine2"] in ("", None)
+    assert row["legalRepAddressUK"]["PostTown"] in ("", None)
+    assert row["legalRepAddressUK"]["County"] in ("", None)
+    assert row["legalRepAddressUK"]["Country"] in ("", None)
+    assert row["legalRepAddressUK"]["PostCode"] in ("", None)
 
     assert_all_null(
         row,
@@ -273,8 +303,18 @@ def test_HU_02151_2024_no_address(legalRepDetails_outputs):
         "oocLrCountryGovUkAdminJ",
     )
 
+
 def test_HU_00539_2025_yes_even_repId_0(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/00539/2025"]
+
+    expectedLegalRepAddressUkRow = Row(
+        AddressLine1='209 Hampton TerraceX',
+        AddressLine2='Kimberly PassageX',
+        PostTown='ChristensenstadX',
+        County=None,
+        Country=None,
+        PostCode='IP4 2EJ'
+    )
 
     assert_equals(
         row,
@@ -283,7 +323,7 @@ def test_HU_00539_2025_yes_even_repId_0(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Mcmahon IncX",
         legalRepEmail="ptravis@example.org",
         legalRepHasAddress="Yes",
-        legalRepAddressUK="209 Hampton TerraceX Kimberly PassageX ChristensenstadX IP4 2EJ",
+        legalRepAddressUK=expectedLegalRepAddressUkRow,
     )
 
     assert_all_null(
@@ -295,8 +335,18 @@ def test_HU_00539_2025_yes_even_repId_0(legalRepDetails_outputs):
         "oocLrCountryGovUkAdminJ",
     )
 
+
 def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
     row = legalRepDetails_outputs["EA/03862/2020"]
+
+    expectedLegalRepAddressUkRow = Row(
+        AddressLine1='734 Carson Plains Apt. 731X',
+        AddressLine2='Rodgers ShoalX',
+        PostTown=None,
+        County=None,
+        Country=None,
+        PostCode='S65 7EB'
+    )
 
     assert_equals(
         row,
@@ -305,7 +355,7 @@ def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Walker, Greene and WhiteX",
         legalRepEmail="ynelson@example.org",
         legalRepHasAddress="Yes",
-        legalRepAddressUK="734 Carson Plains Apt. 731X Rodgers ShoalX S65 7EB",
+        legalRepAddressUK=expectedLegalRepAddressUkRow,
     )
 
     assert_all_null(

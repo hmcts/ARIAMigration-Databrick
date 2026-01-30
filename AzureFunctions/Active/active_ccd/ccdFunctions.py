@@ -61,13 +61,14 @@ def validate_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,
         "ignore_warning": True
         }
 
-        print(f"🔢 Validate posting payload: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
+        caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
+        print(f"🔢 Validate posting payload for {caseNo}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
 
         response = requests.post(validate_case_url, 
                                  headers=headers, 
                                  json=json_object)
 
-        print(f"🔢 Validate Response = {response.status_code}: {response.text}")
+        print(f"🔢 Validate Response for {caseNo}= {response.status_code}: {response.text}")
         return response
 
     except Exception as e:

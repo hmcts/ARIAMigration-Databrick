@@ -470,14 +470,11 @@ def base_DQRules():
     # )
 
     checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND ( (feeWithHearing = 140 AND TRY_CAST(feeWithHearing AS INT) IS NOT NULL) OR (feeWithHearing IS NULL AND TRY_CAST(feeWithHearing AS INT) IS NULL) )) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeWithHearing IS NULL))"
+        "(((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2) AND (feeWithHearing = '140')) OR ((dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType = 2)) AND (feeWithHearing IS NULL))"
     )
 
-
-
-
     checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND ((feeWithoutHearing = 80 AND TRY_CAST(feeWithoutHearing AS INT) IS NOT NULL) OR (feeWithoutHearing IS NULL))) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeWithoutHearing IS NULL))"
+        "(((dv_CCDAppealType IN ('EA','EU','HU','PA') AND (VisitVisaType = 1)) AND (feeWithHearing = '80')) OR ((dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType = 1)) AND (feeWithHearing IS NULL))"
     )
 
     # checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int

@@ -112,8 +112,8 @@ def substantiveDecision(silver_m1,silver_m3):
             lit("Yes").alias("appealDate_Transformation"),
 
             # ----- appealDecision -----
-            array(struct(lit("Outcome"),lit("CaseStatus"),lit("Outcome"))).alias("appealDecision_inputFields"),
-            array(struct(col("m3.Outcome"),col("CaseStatus"),col("Outcome"))).alias("appealDecision_inputValues"),
+            array(struct(lit("CaseStatus"),lit("Outcome"))).alias("appealDecision_inputFields"),
+            array(struct(col("CaseStatus"),col("Outcome"))).alias("appealDecision_inputValues"),
             col("content.appealDecision").alias("appealDecision"),
             lit("Yes").alias("appealDecision_Transformation"),
 

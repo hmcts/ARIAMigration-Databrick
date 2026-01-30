@@ -24,8 +24,9 @@ def add_checks_hearing_actuals(checks={}):
     
     checks["valid_attendingJudge"] = (
         """
-        (
-            attendingJudge = concat(Adj_Determination_Title, ' ', Adj_Determination_Forenames, ' ', Adj_Determination_Surname)
+        (   (attendingJudge IS NULL AND Adj_Determination_Title IS NULL AND Adj_Determination_Forenames IS NULL AND Adj_Determination_Surname IS NULL)
+            OR
+            (attendingJudge = concat(Adj_Determination_Title, ' ', Adj_Determination_Forenames, ' ', Adj_Determination_Surname))
         )
         """
     )
@@ -110,11 +111,16 @@ def add_checks_ftpa(checks={}):
     (
         DecisionDate IS NULL
         OR
-        CASE
-            WHEN CategoryId = 37 THEN date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            WHEN CategoryId = 38 THEN date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            ELSE DecisionDate = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-        END
+        date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        OR
+        date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        OR
+        date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        -- CASE
+        --     WHEN CategoryId = 37 THEN date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        --     WHEN CategoryId = 38 THEN date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        --     ELSE date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
+        -- END
     )
     """
 

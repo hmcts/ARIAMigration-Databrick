@@ -66,15 +66,20 @@ def substantiveDecision(silver_m1,silver_m3):
 
     substantiveDecision_df, substantiveDecision_audit = D.substantiveDecision(silver_m1)
     
-    
+    decision_ts = coalesce(
+        F.to_timestamp(col("m3.DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # e.g., +00:00
+        F.to_timestamp(col("m3.DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")     # e.g., Z or +01
+    )
+
     substantiveDecision_df = (
         substantiveDecision_df.alias("sd")
             .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
             .select(
                 col("sd.*"),
-                # Format dates as dd/MM/yyyy
-                date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
-                date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("appealDate"),
+
+                # Format dates as dd/MM/yyyy (after parsing the string with timezone)
+                date_format(decision_ts, "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
+                date_format(decision_ts, "dd/MM/yyyy").alias("appealDate"),
 
                 # Outcome mapping
                 when(col("m3.Outcome") == 1, "Allowed")
@@ -90,6 +95,31 @@ def substantiveDecision(silver_m1,silver_m3):
                 lit("No").alias("anonymityOrder")
             )
     )
+
+    
+    # substantiveDecision_df = (
+    #     substantiveDecision_df.alias("sd")
+    #         .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
+    #         .select(
+    #             col("sd.*"),
+    #             # Format dates as dd/MM/yyyy
+    #             date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
+    #             date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("appealDate"),
+
+    #             # Outcome mapping
+    #             when(col("m3.Outcome") == 1, "Allowed")
+    #                 .when(col("m3.Outcome") == 2, "Dismissed")
+    #                 .otherwise(None)
+    #                 .alias("appealDecision"),
+
+    #             when(col("m3.Outcome") == 1, "Allowed")
+    #                 .when(col("m3.Outcome") == 2, "Dismissed")
+    #                 .otherwise(None)
+    #                 .alias("isDecisionAllowed"),
+
+    #             lit("No").alias("anonymityOrder")
+    #         )
+    # )
 
 
     substantiveDecision_audit = (
@@ -144,7 +174,7 @@ def hearingActuals(silver_m3):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38,26) & col("Outcome").isin(1,2))
+    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37,38,26) & col("Outcome").isin(1,2))
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
@@ -204,7 +234,7 @@ def ftpa(silver_m3,silver_c):
     # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
-    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38))
+    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"),col("CategoryId")).distinct()
     
     ftpa_df = (
         silver_m3_max_statusid

@@ -109,14 +109,14 @@ def ftpa_outputs(spark):
     df_c =  spark.createDataFrame(c_data, c_schema)
 
 
-    general_content,_ = ftpa(df_m3, df_c)
-    results = {row["CaseNo"]: row.asDict() for row in general_content.collect()}
+    ftpa_content,_ = ftpa(df_m3, df_c)
+    results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     
     return results
 
-def test_ftpaApplicationDeadline(spark,general_outputs):
+def test_ftpaApplicationDeadline(spark,ftpa_outputs):
 
-    results = general_outputs
+    results = ftpa_outputs
 
     assert results["CASE005"]["ftpaApplicationDeadline"] == "16/11/2025"
     assert results["CASE006"]["ftpaApplicationDeadline"] == "31/12/2026"

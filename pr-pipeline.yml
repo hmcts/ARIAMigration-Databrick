@@ -51,3 +51,8 @@ stages:
         displayName: 'Run Decision Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/decision.yml
+
+      - job: DecidedATests
+        displayName: 'Run Decided_A Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/decided_a.yml

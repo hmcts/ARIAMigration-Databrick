@@ -95,9 +95,9 @@ def hearingActuals_outputs(spark):
     
     return results
 
-def test_actualCaseHearingLength(spark,hearingDetails_outputs):
+def test_actualCaseHearingLength(spark,hearingActuals_outputs):
 
-    results = hearingDetails_outputs
+    results = hearingActuals_outputs
 
     assert results["CASE005"]["actualCaseHearingLength"] == {'hours': 1, 'minutes': 0}
     assert results["CASE006"]["actualCaseHearingLength"] == {'hours': 4, 'minutes': 0}
@@ -105,9 +105,9 @@ def test_actualCaseHearingLength(spark,hearingDetails_outputs):
     assert results["CASE010"]["actualCaseHearingLength"] == {'hours': None, 'minutes': None}
     assert results["CASE011"]["actualCaseHearingLength"] == {'hours': 0, 'minutes': 45}
 
-def test_attendingJudge(spark,hearingDetails_outputs):
+def test_attendingJudge(spark,hearingActuals_outputs):
 
-    results = hearingDetails_outputs
+    results = hearingActuals_outputs
 
     assert results["CASE005"]["attendingJudge"] == 'Ms Doe Jane'
     assert results["CASE006"]["attendingJudge"] == 'Mr xyz John'

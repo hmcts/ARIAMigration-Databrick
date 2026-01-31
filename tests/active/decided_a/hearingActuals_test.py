@@ -54,17 +54,18 @@ def hearingActuals_outputs(spark):
         T.StructField("Adj_Determination_Title", T.StringType(), True),
         T.StructField("Adj_Determination_Forenames", T.StringType(), True),
         T.StructField("Adj_Determination_Surname", T.StringType(), True),
+        T.StructField("Outcome", T.IntegerType(), True),
     ])
 
     m3_data = [
-        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","Doe","John"),
-        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00","Ms","Doe","Jane"),   
-        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00","Mr","xyz","John"),   
-        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00","Mr","Doe","abc"),  
-        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Sir","Random","Guy"),  
-        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","John","Snow"),  
-        ("CASE010", 1, 38, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Miss","Sue","Pace"),  
-        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World")   
+        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","Doe","John",1),
+        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00","Ms","Doe","Jane",1),   
+        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00","Mr","xyz","John",2),   
+        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00","Mr","Doe","abc",2),  
+        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Sir","Random","Guy",None),  
+        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","John","Snow",3),  
+        ("CASE010", 1, 38, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00",None,None,None,1),  
+        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2)   
         ]   
 
     loc_schema = T.StructType([
@@ -98,18 +99,19 @@ def test_actualCaseHearingLength(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
 
-    assert results["CASE001"]["actualCaseHearingLength"] == None
-    assert results["CASE006"]["actualCaseHearingLength"] == [240]
-    assert results["CASE008"]["actualCaseHearingLength"] == [None]
-    assert results["CASE011"]["actualCaseHearingLength"] == [45]
+    assert results["CASE005"]["actualCaseHearingLength"] == {'hours': 1, 'minutes': 0}
+    assert results["CASE006"]["actualCaseHearingLength"] == {'hours': 4, 'minutes': 0}
+    assert results["CASE007"]["actualCaseHearingLength"] == {'hours': 6, 'minutes': 0}
+    assert results["CASE010"]["actualCaseHearingLength"] == {'hours': None, 'minutes': None}
+    assert results["CASE011"]["actualCaseHearingLength"] == {'hours': 0, 'minutes': 45}
 
 def test_attendingJudge(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
 
-    assert results["CASE001"]["attendingJudge"] == None
-    assert results["CASE006"]["attendingJudge"] == "2026-12-03T13:00:00.000"
-    assert results["CASE008"]["attendingJudge"] == "2024-10-02T10:00:00.000"
-    assert results["CASE011"]["attendingJudge"] == "2025-11-02T12:00:00.999"
+    assert results["CASE005"]["attendingJudge"] == 'Ms Doe Jane'
+    assert results["CASE006"]["attendingJudge"] == 'Mr xyz John'
+    assert results["CASE010"]["attendingJudge"] == None
+    assert results["CASE011"]["attendingJudge"] == 'Mr Hello World'
 
 

@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.decided_a import ftpa
+from Databricks.ACTIVE.APPEALS.shared_functions.decided_a import generalDefault
 from pyspark.sql import SparkSession
 import pytest
 

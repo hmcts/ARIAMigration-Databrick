@@ -140,7 +140,7 @@ class TestAppealSubmittedRemissionType:
 
             assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
             assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
-            assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
+            assert resultList[7][0] == "0" and resultList[8][0] == "0" and resultList[9][0] == "0"
             assert resultList[10][0] == "500"
 
     def test_amountLeftToPay(self, spark):
@@ -155,9 +155,9 @@ class TestAppealSubmittedRemissionType:
                 ("5", "RP", "AIP", 1),   # RP Case and valid conditions - none
                 ("6", "EA", "AIP", 0),   # PaymentRemissionGranted = 0 - none
                 ("7", "EA", "AIP", 2),   # PaymentRemissionGranted = 2 - none
-                ("8", "EA", "AIP", 1),   # SumTotalFee == 0 - none
-                ("9", "EA", "AIP", 1),   # TransactionId = 1 in ReferringTransactionId with TransactionTypeId 6 - none
-                ("10", "EA", "AIP", 1),  # TransactionId = 2 in ReferringTransactionId with TransactionTypeId 19 - none
+                ("8", "EA", "AIP", 1),   # SumTotalFee == 0 - 0 set
+                ("9", "EA", "AIP", 1),   # TransactionId = 1 in ReferringTransactionId with TransactionTypeId 6 - 0 set
+                ("10", "EA", "AIP", 1),  # TransactionId = 2 in ReferringTransactionId with TransactionTypeId 19 - 0 set
                 ("11", "EA", "AIP", 1)   # Multiple matching conditions - sum of amountLeftToPay
             ]
 
@@ -188,5 +188,5 @@ class TestAppealSubmittedRemissionType:
 
             assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
             assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
-            assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
+            assert resultList[7][0] == "0" and resultList[8][0] == "0" and resultList[9][0] == "0"
             assert resultList[10][0] == "500"

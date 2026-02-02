@@ -215,9 +215,9 @@ class TestAppealSubmittedPaymentType:
                 ("3", "HU", "AIP", 0, datetime(2000, 3, 10)),  # HU Case with valid condition - paidAmount set
                 ("4", "PA", "LR", 0, datetime(2000, 4, 15)),   # PA Case with valid condition - paidAmount set
                 ("5", "RP", "AIP", 0, datetime(2000, 1, 1)),   # RP Case - none
-                ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumTotalPay = 0 - none
-                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - none
-                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - none
+                ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumTotalPay = 0 - 0 set
+                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - 0 set
+                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - 0 set
                 ("9", "EA", "AIP", 0, datetime(2000, 1, 1))    # EA Case with valid condition and multiple transactions - sum paidAmount set
             ]
             m4_data = [
@@ -244,8 +244,8 @@ class TestAppealSubmittedPaymentType:
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
             assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
-            assert resultList[4][0] is None and resultList[5][0] is None
-            assert resultList[6][0] is None and resultList[7][0] is None
+            assert resultList[4][0] is None
+            assert resultList[5][0] == "0" and resultList[6][0] == "0" and resultList[7][0] == "0"
             assert resultList[8][0] == "500"
 
     def test_additionalPaymentInfo(self, spark):

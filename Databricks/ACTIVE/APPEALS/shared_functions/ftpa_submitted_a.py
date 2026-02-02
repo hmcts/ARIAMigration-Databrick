@@ -126,7 +126,6 @@ def ftpa(silver_m3,silver_c):
 
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     datereceived_ts = coalesce(
@@ -311,16 +310,75 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             .withColumn("isFtpaAppellantGroundsDocsVisibleInSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
             .withColumn("isFtpaAppellantEvidenceDocsVisibleInSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
             .withColumn("isFtpaAppellantOotExplanationVisibleInDecided",when(col("Party") == 1 & col("OutOfTime") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantOotExplanationVisibleInDecided",when(col("Party") == 1 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaAppellantOotExplanationVisibleInSubmitted",when(col("Party") == 1 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
+            .withColumn("ftpaRespondentSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaRespondentDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
+            .withColumn("isFtpaRespondentDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaRespondentOotDocsVisibleInDecided",when(col("Party") == 2 & col("OutOfTime") == 1, lit("No")).otherwise(None))
+            .withColumn("isFtpaRespondentOotDocsVisibleInSubmitted",when(col("Party") == 2 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaRespondentGroundsDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
+            .withColumn("isFtpaRespondentEvidenceDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
+            .withColumn("isFtpaRespondentGroundsDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaRespondentEvidenceDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
+            .withColumn("isFtpaRespondentOotExplanationVisibleInDecided",when(col("Party") == 2 & col("OutOfTime") == 1, lit("No")).otherwise(None))
+            .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted",when(col("Party") == 2 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
+    ).select(
+        col("CaseNo"),
+        col("ftpaAppellantSubmitted"),
+        col("isFtpaAppellantDocsVisibleInDecided"),
+        col("isFtpaAppellantDocsVisibleInSubmitted"),
+        col("isFtpaAppellantOotDocsVisibleInDecided"),
+        col("isFtpaAppellantOotDocsVisibleInSubmitted"),
+        col("isFtpaAppellantGroundsDocsVisibleInDecided"),
+        col("isFtpaAppellantEvidenceDocsVisibleInDecided"),
+        col("isFtpaAppellantGroundsDocsVisibleInSubmitted"),
+        col("isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
+        col("isFtpaAppellantOotExplanationVisibleInDecided"),
+        col("isFtpaAppellantOotExplanationVisibleInSubmitted"),
+        col("ftpaRespondentSubmitted"),
+        col("isFtpaRespondentDocsVisibleInDecided"),
+        col("isFtpaRespondentDocsVisibleInSubmitted"),
+        col("isFtpaRespondentOotDocsVisibleInDecided"),
+        col("isFtpaRespondentOotDocsVisibleInSubmitted"),
+        col("isFtpaRespondentGroundsDocsVisibleInDecided"),
+        col("isFtpaRespondentEvidenceDocsVisibleInDecided"),
+        col("isFtpaRespondentGroundsDocsVisibleInSubmitted"),
+        col("isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
+        col("isFtpaRespondentOotExplanationVisibleInDecided"),
+        col("isFtpaRespondentOotExplanationVisibleInSubmitted"),
+
     )
 
-    # general_df = (
-    #     general_df
-    #     .withColumn("appealDecisionAvailable", lit("Yes"))
-    # )
+    general_df = (
+        general_df.alias("gen").join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        .select(
+            "gen.*",
+            col("ftpaAppellantSubmitted"),
+            col("isFtpaAppellantDocsVisibleInDecided"),
+            col("isFtpaAppellantDocsVisibleInSubmitted"),
+            col("isFtpaAppellantOotDocsVisibleInDecided"),
+            col("isFtpaAppellantOotDocsVisibleInSubmitted"),
+            col("isFtpaAppellantGroundsDocsVisibleInDecided"),
+            col("isFtpaAppellantEvidenceDocsVisibleInDecided"),
+            col("isFtpaAppellantGroundsDocsVisibleInSubmitted"),
+            col("isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
+            col("isFtpaAppellantOotExplanationVisibleInDecided"),
+            col("isFtpaAppellantOotExplanationVisibleInSubmitted"),
+            col("ftpaRespondentSubmitted"),
+            col("isFtpaRespondentDocsVisibleInDecided"),
+            col("isFtpaRespondentDocsVisibleInSubmitted"),
+            col("isFtpaRespondentOotDocsVisibleInDecided"),
+            col("isFtpaRespondentOotDocsVisibleInSubmitted"),
+            col("isFtpaRespondentGroundsDocsVisibleInDecided"),
+            col("isFtpaRespondentEvidenceDocsVisibleInDecided"),
+            col("isFtpaRespondentGroundsDocsVisibleInSubmitted"),
+            col("isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
+            col("isFtpaRespondentOotExplanationVisibleInDecided"),
+            col("isFtpaRespondentOotExplanationVisibleInSubmitted"),
+        )
+    )
 
-    return general_df
-################################################################
+    return general_df, general_audit
 
 ################################################################
 

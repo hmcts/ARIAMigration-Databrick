@@ -15,7 +15,6 @@ except Exception:
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
 
-
 def start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token):
 
     start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
@@ -105,11 +104,11 @@ def submit_case(ccd_base_url,event_token, payloadData,jid,ctid,idam_token,uid,s2
         }
 
         caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
-        print(f"🔢 Submit payload for {caseNo}: submit_case_url = {submit_case_url} headers = {headers} json = {json_object}")
+        print(f"🔢 Submit payload for {caseNo}: submit_case_url = {submit_case_url} headers = {headers} json = {json_object}\n")
 
         response = requests.post(submit_case_url,headers=headers,json=json_object)
 
-        print(f"🔢 Submit Response status for {caseNo}: {response.status_code}:{response.text}")
+        print(f"🔢 Submit Response status for {caseNo}: {response.status_code}:{response.text}\n")
         return response
     
     except Exception as e:

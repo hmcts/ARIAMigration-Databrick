@@ -299,83 +299,317 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     silver_m3_content = (
         silver_m3_max_statusid
-            # Appellant fields
-            .withColumn("ftpaAppellantSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaAppellantDocsVisibleInDecided",when(col("Party") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantDocsVisibleInSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaAppellantOotDocsVisibleInDecided",when(col("Party") == 1 & col("OutOfTime") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantOotDocsVisibleInSubmitted",when(col("Party") == 1 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaAppellantGroundsDocsVisibleInDecided",when(col("Party") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantEvidenceDocsVisibleInDecided",when(col("Party") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantGroundsDocsVisibleInSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaAppellantEvidenceDocsVisibleInSubmitted",when(col("Party") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaAppellantOotExplanationVisibleInDecided",when(col("Party") == 1 & col("OutOfTime") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaAppellantOotExplanationVisibleInSubmitted",when(col("Party") == 1 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
-            .withColumn("ftpaRespondentSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaRespondentDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
-            .withColumn("isFtpaRespondentDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaRespondentOotDocsVisibleInDecided",when(col("Party") == 2 & col("OutOfTime") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaRespondentOotDocsVisibleInSubmitted",when(col("Party") == 2 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaRespondentGroundsDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
-            .withColumn("isFtpaRespondentEvidenceDocsVisibleInDecided",when(col("Party") == 2, lit("No")).otherwise(None))
-            .withColumn("isFtpaRespondentGroundsDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaRespondentEvidenceDocsVisibleInSubmitted",when(col("Party") == 2, lit("Yes")).otherwise(None))
-            .withColumn("isFtpaRespondentOotExplanationVisibleInDecided",when(col("Party") == 2 & col("OutOfTime") == 1, lit("No")).otherwise(None))
-            .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted",when(col("Party") == 2 & col("OutOfTime") == 1, lit("Yes")).otherwise(None))
-    ).select(
-        col("CaseNo"),
-        col("ftpaAppellantSubmitted"),
-        col("isFtpaAppellantDocsVisibleInDecided"),
-        col("isFtpaAppellantDocsVisibleInSubmitted"),
-        col("isFtpaAppellantOotDocsVisibleInDecided"),
-        col("isFtpaAppellantOotDocsVisibleInSubmitted"),
-        col("isFtpaAppellantGroundsDocsVisibleInDecided"),
-        col("isFtpaAppellantEvidenceDocsVisibleInDecided"),
-        col("isFtpaAppellantGroundsDocsVisibleInSubmitted"),
-        col("isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
-        col("isFtpaAppellantOotExplanationVisibleInDecided"),
-        col("isFtpaAppellantOotExplanationVisibleInSubmitted"),
-        col("ftpaRespondentSubmitted"),
-        col("isFtpaRespondentDocsVisibleInDecided"),
-        col("isFtpaRespondentDocsVisibleInSubmitted"),
-        col("isFtpaRespondentOotDocsVisibleInDecided"),
-        col("isFtpaRespondentOotDocsVisibleInSubmitted"),
-        col("isFtpaRespondentGroundsDocsVisibleInDecided"),
-        col("isFtpaRespondentEvidenceDocsVisibleInDecided"),
-        col("isFtpaRespondentGroundsDocsVisibleInSubmitted"),
-        col("isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
-        col("isFtpaRespondentOotExplanationVisibleInDecided"),
-        col("isFtpaRespondentOotExplanationVisibleInSubmitted"),
 
+            # ---------------------------
+            # Appellant FTPA visibility
+            # ---------------------------
+            .withColumn("ftpaAppellantSubmitted",
+                        when(col("Party") == 1, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaAppellantDocsVisibleInDecided",
+                        when(col("Party") == 1, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaAppellantDocsVisibleInSubmitted",
+                        when(col("Party") == 1, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaAppellantOotDocsVisibleInDecided",
+                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("No"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaAppellantOotDocsVisibleInSubmitted",
+                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("Yes"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaAppellantGroundsDocsVisibleInDecided",
+                        when(col("Party") == 1, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaAppellantEvidenceDocsVisibleInDecided",
+                        when(col("Party") == 1, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaAppellantGroundsDocsVisibleInSubmitted",
+                        when(col("Party") == 1, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaAppellantEvidenceDocsVisibleInSubmitted",
+                        when(col("Party") == 1, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaAppellantOotExplanationVisibleInDecided",
+                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("No"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaAppellantOotExplanationVisibleInSubmitted",
+                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("Yes"))
+                        .otherwise(None))
+
+            # ---------------------------
+            # Respondent FTPA visibility
+            # ---------------------------
+            .withColumn("ftpaRespondentSubmitted",
+                        when(col("Party") == 2, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaRespondentDocsVisibleInDecided",
+                        when(col("Party") == 2, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaRespondentDocsVisibleInSubmitted",
+                        when(col("Party") == 2, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaRespondentOotDocsVisibleInDecided",
+                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("No"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaRespondentOotDocsVisibleInSubmitted",
+                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("Yes"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaRespondentGroundsDocsVisibleInDecided",
+                        when(col("Party") == 2, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaRespondentEvidenceDocsVisibleInDecided",
+                        when(col("Party") == 2, lit("No")).otherwise(None))
+
+            .withColumn("isFtpaRespondentGroundsDocsVisibleInSubmitted",
+                        when(col("Party") == 2, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaRespondentEvidenceDocsVisibleInSubmitted",
+                        when(col("Party") == 2, lit("Yes")).otherwise(None))
+
+            .withColumn("isFtpaRespondentOotExplanationVisibleInDecided",
+                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("No"))
+                        .otherwise(None))
+
+            .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted",
+                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("Yes"))
+                        .otherwise(None))
     )
 
+    # Select only the needed columns
+    silver_m3_content = silver_m3_content.select(
+        "CaseNo",
+        "ftpaAppellantSubmitted",
+        "isFtpaAppellantDocsVisibleInDecided",
+        "isFtpaAppellantDocsVisibleInSubmitted",
+        "isFtpaAppellantOotDocsVisibleInDecided",
+        "isFtpaAppellantOotDocsVisibleInSubmitted",
+        "isFtpaAppellantGroundsDocsVisibleInDecided",
+        "isFtpaAppellantEvidenceDocsVisibleInDecided",
+        "isFtpaAppellantGroundsDocsVisibleInSubmitted",
+        "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
+        "isFtpaAppellantOotExplanationVisibleInDecided",
+        "isFtpaAppellantOotExplanationVisibleInSubmitted",
+
+        "ftpaRespondentSubmitted",
+        "isFtpaRespondentDocsVisibleInDecided",
+        "isFtpaRespondentDocsVisibleInSubmitted",
+        "isFtpaRespondentOotDocsVisibleInDecided",
+        "isFtpaRespondentOotDocsVisibleInSubmitted",
+        "isFtpaRespondentGroundsDocsVisibleInDecided",
+        "isFtpaRespondentEvidenceDocsVisibleInDecided",
+        "isFtpaRespondentGroundsDocsVisibleInSubmitted",
+        "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
+        "isFtpaRespondentOotExplanationVisibleInDecided",
+        "isFtpaRespondentOotExplanationVisibleInSubmitted",
+    )
+
+
+    
     general_df = (
-        general_df.alias("gen").join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
-        .select(
-            "gen.*",
-            col("ftpaAppellantSubmitted"),
-            col("isFtpaAppellantDocsVisibleInDecided"),
-            col("isFtpaAppellantDocsVisibleInSubmitted"),
-            col("isFtpaAppellantOotDocsVisibleInDecided"),
-            col("isFtpaAppellantOotDocsVisibleInSubmitted"),
-            col("isFtpaAppellantGroundsDocsVisibleInDecided"),
-            col("isFtpaAppellantEvidenceDocsVisibleInDecided"),
-            col("isFtpaAppellantGroundsDocsVisibleInSubmitted"),
-            col("isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
-            col("isFtpaAppellantOotExplanationVisibleInDecided"),
-            col("isFtpaAppellantOotExplanationVisibleInSubmitted"),
-            col("ftpaRespondentSubmitted"),
-            col("isFtpaRespondentDocsVisibleInDecided"),
-            col("isFtpaRespondentDocsVisibleInSubmitted"),
-            col("isFtpaRespondentOotDocsVisibleInDecided"),
-            col("isFtpaRespondentOotDocsVisibleInSubmitted"),
-            col("isFtpaRespondentGroundsDocsVisibleInDecided"),
-            col("isFtpaRespondentEvidenceDocsVisibleInDecided"),
-            col("isFtpaRespondentGroundsDocsVisibleInSubmitted"),
-            col("isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
-            col("isFtpaRespondentOotExplanationVisibleInDecided"),
-            col("isFtpaRespondentOotExplanationVisibleInSubmitted"),
-        )
+        general_df.alias("gen")
+            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+            .select(
+                col("gen.*"),
+
+                col("m3.ftpaAppellantSubmitted"),
+                col("m3.isFtpaAppellantDocsVisibleInDecided"),
+                col("m3.isFtpaAppellantDocsVisibleInSubmitted"),
+                col("m3.isFtpaAppellantOotDocsVisibleInDecided"),
+                col("m3.isFtpaAppellantOotDocsVisibleInSubmitted"),
+                col("m3.isFtpaAppellantGroundsDocsVisibleInDecided"),
+                col("m3.isFtpaAppellantEvidenceDocsVisibleInDecided"),
+                col("m3.isFtpaAppellantGroundsDocsVisibleInSubmitted"),
+                col("m3.isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
+                col("m3.isFtpaAppellantOotExplanationVisibleInDecided"),
+                col("m3.isFtpaAppellantOotExplanationVisibleInSubmitted"),
+
+                col("m3.ftpaRespondentSubmitted"),
+                col("m3.isFtpaRespondentDocsVisibleInDecided"),
+                col("m3.isFtpaRespondentDocsVisibleInSubmitted"),
+                col("m3.isFtpaRespondentOotDocsVisibleInDecided"),
+                col("m3.isFtpaRespondentOotDocsVisibleInSubmitted"),
+                col("m3.isFtpaRespondentGroundsDocsVisibleInDecided"),
+                col("m3.isFtpaRespondentEvidenceDocsVisibleInDecided"),
+                col("m3.isFtpaRespondentGroundsDocsVisibleInSubmitted"),
+                col("m3.isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
+                col("m3.isFtpaRespondentOotExplanationVisibleInDecided"),
+                col("m3.isFtpaRespondentOotExplanationVisibleInSubmitted"),
+            )
+    )
+
+
+    general_audit = (
+        general_audit.alias("audit")
+            .join(general_df.alias("gen"), on=["CaseNo"], how="left")
+            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
+            .select(
+                "audit.*",
+
+                # -------------------------------------------------------------
+                # 1. ftpaAppellantSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("ftpaAppellantSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("ftpaAppellantSubmitted_inputValues"),
+                col("ftpaAppellantSubmitted").alias("ftpaAppellantSubmitted_value"),
+                lit("Yes").alias("ftpaAppellantSubmitted_Transformation"),
+
+                # -------------------------------------------------------------
+                # 2. isFtpaAppellantDocsVisibleInDecided
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInDecided_inputValues"),
+                col("isFtpaAppellantDocsVisibleInDecided").alias("isFtpaAppellantDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantDocsVisibleInDecided_Transformation"),
+
+                # -------------------------------------------------------------
+                # 3. isFtpaAppellantDocsVisibleInSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaAppellantDocsVisibleInSubmitted").alias("isFtpaAppellantDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantDocsVisibleInSubmitted_Transformation"),
+
+                # -------------------------------------------------------------
+                # 4. isFtpaAppellantOotDocsVisibleInDecided
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputValues"),
+                col("isFtpaAppellantOotDocsVisibleInDecided").alias("isFtpaAppellantOotDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInDecided_Transformation"),
+
+                # -------------------------------------------------------------
+                # 5. isFtpaAppellantOotDocsVisibleInSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaAppellantOotDocsVisibleInSubmitted").alias("isFtpaAppellantOotDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInSubmitted_Transformation"),
+
+                # -------------------------------------------------------------
+                # 6. isFtpaAppellantGroundsDocsVisibleInDecided
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputValues"),
+                col("isFtpaAppellantGroundsDocsVisibleInDecided").alias("isFtpaAppellantGroundsDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInDecided_Transformation"),
+
+                # -------------------------------------------------------------
+                # 7. isFtpaAppellantEvidenceDocsVisibleInDecided
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputValues"),
+                col("isFtpaAppellantEvidenceDocsVisibleInDecided").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_Transformation"),
+
+                # -------------------------------------------------------------
+                # 8. isFtpaAppellantGroundsDocsVisibleInSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaAppellantGroundsDocsVisibleInSubmitted").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_Transformation"),
+
+                # -------------------------------------------------------------
+                # 9. isFtpaAppellantEvidenceDocsVisibleInSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaAppellantEvidenceDocsVisibleInSubmitted").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_Transformation"),
+
+                # -------------------------------------------------------------
+                # 10. isFtpaAppellantOotExplanationVisibleInDecided
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputValues"),
+                col("isFtpaAppellantOotExplanationVisibleInDecided").alias("isFtpaAppellantOotExplanationVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInDecided_Transformation"),
+
+                # -------------------------------------------------------------
+                # 11. isFtpaAppellantOotExplanationVisibleInSubmitted
+                # -------------------------------------------------------------
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputValues"),
+                col("isFtpaAppellantOotExplanationVisibleInSubmitted").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_Transformation"),
+
+
+                # -------------------------------------------------------------
+                # RESPONDENT FIELDS (12–21)
+                # -------------------------------------------------------------
+
+                # ftpaRespondentSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("ftpaRespondentSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("ftpaRespondentSubmitted_inputValues"),
+                col("ftpaRespondentSubmitted").alias("ftpaRespondentSubmitted_value"),
+                lit("Yes").alias("ftpaRespondentSubmitted_Transformation"),
+
+                # isFtpaRespondentDocsVisibleInDecided
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInDecided_inputValues"),
+                col("isFtpaRespondentDocsVisibleInDecided").alias("isFtpaRespondentDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentDocsVisibleInDecided_Transformation"),
+
+                # isFtpaRespondentDocsVisibleInSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaRespondentDocsVisibleInSubmitted").alias("isFtpaRespondentDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentDocsVisibleInSubmitted_Transformation"),
+
+                # isFtpaRespondentOotDocsVisibleInDecided
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputValues"),
+                col("isFtpaRespondentOotDocsVisibleInDecided").alias("isFtpaRespondentOotDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInDecided_Transformation"),
+
+                # isFtpaRespondentOotDocsVisibleInSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaRespondentOotDocsVisibleInSubmitted").alias("isFtpaRespondentOotDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInSubmitted_Transformation"),
+
+                # isFtpaRespondentGroundsDocsVisibleInDecided
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputValues"),
+                col("isFtpaRespondentGroundsDocsVisibleInDecided").alias("isFtpaRespondentGroundsDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInDecided_Transformation"),
+
+                # isFtpaRespondentEvidenceDocsVisibleInDecided
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputValues"),
+                col("isFtpaRespondentEvidenceDocsVisibleInDecided").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_Transformation"),
+
+                # isFtpaRespondentGroundsDocsVisibleInSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaRespondentGroundsDocsVisibleInSubmitted").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_Transformation"),
+
+                # isFtpaRespondentEvidenceDocsVisibleInSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputValues"),
+                col("isFtpaRespondentEvidenceDocsVisibleInSubmitted").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_Transformation"),
+
+                # isFtpaRespondentOotExplanationVisibleInDecided
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputValues"),
+                col("isFtpaRespondentOotExplanationVisibleInDecided").alias("isFtpaRespondentOotExplanationVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInDecided_Transformation"),
+
+                # isFtpaRespondentOotExplanationVisibleInSubmitted
+                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputFields"),
+                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputValues"),
+                col("isFtpaRespondentOotExplanationVisibleInSubmitted").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_Transformation"),
+            )
     )
 
     return general_df, general_audit

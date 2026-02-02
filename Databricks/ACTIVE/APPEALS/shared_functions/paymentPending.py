@@ -800,48 +800,53 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
             "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
         }))
     ).withColumn(
-    "legalRepEmail",
-    cleanEmailUDF(
-        coalesce(col("Rep_Email"), col("CaseRep_Email"), col("CaseRep_FileSpecific_Email")))
+        "legalRepEmail",
+            cleanEmailUDF(coalesce(col("Rep_Email"), col("CaseRep_Email"), col("CaseRep_FileSpecific_Email")))
     ).withColumn(
-        "legalRepAddressUK",               
-        when(col("RepresentativeId") == 0, concat_ws(" ",      #If Representiative (solicitor) lives outside UK
-        col("CaseRep_Address1"), col("CaseRep_Address2"),         #Concat non-null fields by space
-        col("CaseRep_Address3"), col("CaseRep_Address4"),
-        col("CaseRep_Address5"), col("CaseRep_Postcode")
-        
-        )).otherwise(concat_ws(" ",                              #If representative lives inside UK
-        col("Rep_Address1"), col("Rep_Address2"),                   #Concat non-null fields by space
-        col("Rep_Address3"), col("Rep_Address4"),
-        col("Rep_Address5"), col("Rep_Postcode")
-    ))
+        # TODO replace this block with the same column name overwrite defined on L903, after fixing the UDFs which use this column in string format.
+        "legalRepAddressUK",
+            when(col("RepresentativeId") == 0,
+                # If Representiative (solicitor) lives outside UK
+                # Concat non-null fields by space
+                concat_ws(" ",
+                    col("CaseRep_Address1"), col("CaseRep_Address2"),
+                    col("CaseRep_Address3"), col("CaseRep_Address4"),
+                    col("CaseRep_Address5"), col("CaseRep_Postcode")
+                )
+            ).otherwise(
+                # If representative lives inside UK
+                # Concat non-null fields by space
+                concat_ws(" ",
+                    col("Rep_Address1"), col("Rep_Address2"),
+                    col("Rep_Address3"), col("Rep_Address4"),
+                    col("Rep_Address5"), col("Rep_Postcode")
+                )
+            )
 
-    ## Apply UDFs to determine if the legalRep has a UK address - 1. pull postcode. UK postcode? 
     ).withColumn(
-    "ukPostcode",
-    getUkPostcodeUDF(col("CaseRep_Postcode"))
+        ## Apply UDFs to determine if the legalRep has a UK address - 1. pull postcode. UK postcode? 
+        "ukPostcode",
+            getUkPostcodeUDF(col("CaseRep_Postcode"))
 
-    ## Apply UDFs to determine if the legalRep has a UK address - 2. Pull country. Is the country United Kingdom?
     ).withColumn(
-    "countryFromAddress",
-    getCountryFromAddressUDF(col("legalRepAddressUK"))
+        ## Apply UDFs to determine if the legalRep has a UK address - 2. Pull country. Is the country United Kingdom?
+        "countryFromAddress",
+            getCountryFromAddressUDF(col("legalRepAddressUK"))
 
-    ## Apply UDFs to determine if the legalRep has a UK address - 3. Is the Postcode or country from the UK?
-    # ).withColumn(
-    # "legalRepHasAddress",
-    # legalRepHasAddressUDF(
-    #     col("RepresentativeId"),
-    #     col("ukPostcode"),
-    #     col("countryFromAddress")
-    # )
     ).withColumn(
-    "legalRepHasAddress",
-    when(col("RepresentativeId") > 0, "Yes")  # Active reps, always Yes
-    .when((col("RepresentativeId") == 0) & (col("ukPostcode") == "True"), "Yes")  # 0 + UK postcode
-    .when((col("RepresentativeId") == 0) & (col("countryFromAddress").contains("United Kingdom")), "Yes")  # 0 + UK country
-    .otherwise("No")  # everything else
-                                                                             
-    ).withColumn("legalRepAddressUK", col("legalRepAddressUK")
+        ## Apply UDFs to determine if the legalRep has a UK address - 3. Is the Postcode or country from the UK?
+        # ).withColumn(
+        # "legalRepHasAddress",
+        # legalRepHasAddressUDF(
+        #     col("RepresentativeId"),
+        #     col("ukPostcode"),
+        #     col("countryFromAddress")
+        # )
+        "legalRepHasAddress",
+            when(col("RepresentativeId") > 0, "Yes")  # Active reps, always Yes
+            .when((col("RepresentativeId") == 0) & (col("ukPostcode") == "True"), "Yes")  # 0 + UK postcode
+            .when((col("RepresentativeId") == 0) & (col("countryFromAddress").contains("United Kingdom")), "Yes")  # 0 + UK country
+            .otherwise("No")  # everything else
 
     ).withColumn("oocAddressLine1",
             when(col("legalRepHasAddress") == lit("Yes"), None)  # No address if legalRepHasAddress is No
@@ -889,12 +894,48 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
             )
         """)
                 )
-                 
+
     ).withColumn(
         "oocLrCountryGovUkAdminJ",
         when(col("legalRepHasAddress") == lit("Yes"), None)
         .otherwise(getCountryLRUDF(col("legalRepAddressUK")))     #Use UDF getCountryLR(). Sample data indicates function works.
-                 
+
+    ).withColumn("legalRepAddressUK",
+        # Overwrite above creation of legalRepAddressUK in String format with Complex type AddressUK.
+        when(col("RepresentativeId") == 0,
+            struct(
+                # AddressLine1 is mandatory in CCD, fallback logic
+                coalesce(
+                    col("CaseRep_Address1"),
+                    col("CaseRep_Address2"),
+                    col("CaseRep_Address3"),
+                    col("CaseRep_Address4"),
+                    col("CaseRep_Address5")
+                ).alias("AddressLine1"),
+                col("CaseRep_Address2").alias("AddressLine2"),
+                col("CaseRep_Address3").alias("PostTown"),
+                col("CaseRep_Address4").alias("County"),
+                col("CaseRep_Address5").alias("Country"),
+                col("CaseRep_Postcode").alias("PostCode")
+            )
+        ).otherwise(
+            struct(
+                # AddressLine1 is mandatory in CCD, fallback logic
+                coalesce(
+                    col("Rep_Address1"),
+                    col("Rep_Address2"),
+                    col("Rep_Address3"),
+                    col("Rep_Address4"),
+                    col("Rep_Address5")
+                ).alias("AddressLine1"),
+                col("Rep_Address2").alias("AddressLine2"),
+                col("Rep_Address3").alias("PostTown"),
+                col("Rep_Address4").alias("County"),
+                col("Rep_Address5").alias("Country"),
+                col("Rep_Postcode").alias("PostCode")
+            )
+        )
+
     ).select(
         col("CaseNo"),
         "legalRepGivenName",
@@ -1086,13 +1127,15 @@ def getCountryFromAddress(address):
 
     return ', '.join(countries_matched)
 
+
 getCountryFromAddressUDF = udf(getCountryFromAddress, StringType())
+
 
 # Step 5: UDF to decide if LR address is UK
 def legalRepHasAddress(repId, clean_postcode, country):
     if repId > 0:
         return "Yes"
-    
+
     if repId == 0:
         # 2a. UK postcode
         if clean_postcode == "True":
@@ -1121,7 +1164,9 @@ def legalRepHasAddress(repId, clean_postcode, country):
     #     return "No"
     # return "No"
 
+
 legalRepHasAddressUDF = udf(legalRepHasAddress, StringType())
+
 
 # ###################### UDF function to replace get_country_LR ######################
 
@@ -1129,13 +1174,13 @@ def getCountryLR(full_address):
 
     if full_address is None:
         return ''
-    
+
     address_clean = full_address.lower().translate(translator)
-    
+
     for idx, lower_country in enumerate(lower_countries):
         if lower_country in address_clean:
             return lower_country.title()
-    
+
     return ''
 
 getCountryLRUDF = udf(getCountryLR, StringType())
@@ -1938,16 +1983,16 @@ def paymentType(silver_m1):
 
     payment_content = silver_m1.select(
         col("CaseNo"),
-        when(conditions_all & (col("VisitVisaType") == 1), 8000)
-            .when(conditions_all & (col("VisitVisaType") == 2), 14000)
+        when(conditions_all & (col("VisitVisaType") == 1), "8000")
+            .when(conditions_all & (col("VisitVisaType") == 2), "14000")
             .alias("feeAmountGbp"),
         when(conditions_all & (col("VisitVisaType") == 1), "Notice of Appeal - appellant consents without hearing A")
             .when(conditions_all & (col("VisitVisaType") == 2), "Appeal determined with a hearing")
             .alias("feeDescription"),
         when(conditions_all & (col("VisitVisaType") == 1), None)
-            .when(conditions_all & (col("VisitVisaType") == 2), 140)
+            .when(conditions_all & (col("VisitVisaType") == 2), "140")
             .alias("feeWithHearing"),
-        when(conditions_all & (col("VisitVisaType") == 1), 80)
+        when(conditions_all & (col("VisitVisaType") == 1), "80")
             .when(conditions_all & (col("VisitVisaType") == 2), None)
             .alias("feeWithoutHearing"),
         when(conditions_all & (col("VisitVisaType") == 1), "Appeal determined without a hearing")
@@ -2276,16 +2321,32 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAddress",
         when(
             (category_condition),
-            trim(
-                concat_ws(
-                    ", ",
+            # AddressUK CCD Type should be an object
+            # trim(
+            #     concat_ws(
+            #         ", ",
+            #         col("Sponsor_Address1"),
+            #         col("Sponsor_Address2"),
+            #         col("Sponsor_Address3"),
+            #         col("Sponsor_Address4"),
+            #         col("Sponsor_Address5"),
+            #         col("Sponsor_Postcode")
+            #     )
+            # )
+            struct(
+                # AddressLine1 is mandatory in CCD, fallback logic
+                coalesce(
                     col("Sponsor_Address1"),
                     col("Sponsor_Address2"),
                     col("Sponsor_Address3"),
                     col("Sponsor_Address4"),
-                    col("Sponsor_Address5"),
-                    col("Sponsor_Postcode")
-                )
+                    col("Sponsor_Address5")
+                ).alias("AddressLine1"),
+                col("Sponsor_Address2").alias("AddressLine2"),
+                col("Sponsor_Address3").alias("PostTown"),
+                col("Sponsor_Address4").alias("County"),
+                col("Sponsor_Address5").alias("Country"),
+                col("Sponsor_Postcode").alias("PostCode")
             )
         )
     ).withColumn(

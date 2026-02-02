@@ -81,7 +81,7 @@ def test_feePaymentAppealType(spark, paymentType_outputs):
 def test_paymentStatus(spark, paymentType_outputs):
     results = paymentType_outputs
     for case in ["CASE001", "CASE002", "CASE003"]:
-        assert results[case]["paymentStatus"] == "Payment Pending"
+        assert results[case]["paymentStatus"] == "Payment pending"
     assert results["CASE004"]["paymentStatus"] is None
 
 

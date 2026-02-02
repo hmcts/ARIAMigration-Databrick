@@ -530,7 +530,7 @@ def base_DQRules():
     # )
 
     checks["valid_paymentStatus"] = ( # paymentStatus is not null
-      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
+      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus = 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
     )
 
     # checks["valid_paymentStatus"] = ( # paymentStatus is not null

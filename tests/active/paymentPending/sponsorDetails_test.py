@@ -56,7 +56,7 @@ def sponsorDetails_outputs(spark):
     # EA/00072/2025 → Has sponsor, full address, authorisation Yes
     # --------------------------------------------------
     ("EA/00072/2025", None, None, None, None, [47,38,11],
-     "OwenX", "HarryX", "matthewthompson@example.org", "01314960380", True,
+     "OwenX", "HarryX", "matthewthompson@example.org", "07314960380", True,
      None, None, None,
      "873 Hurst Parkways Suite 226X", "Owens StravenueX", None, None, None, "L7T 6AE",
      "AIP", "EA"),
@@ -147,7 +147,7 @@ def test_EA_00072_2025_has_sponsor_paymentPending(sponsorDetails_outputs):
     assert res["sponsorFamilyName"] == "OwenX"
     assert res["sponsorGivenNames"] == "HarryX"
     assert res["sponsorEmailAdminJ"] == "matthewthompson@example.org"
-    assert res["sponsorMobileNumberAdminJ"] == "01314960380"
+    assert res["sponsorMobileNumberAdminJ"] == "07314960380"
     assert res["sponsorAuthorisation"] == "Yes"
 
 def test_HU_00447_2025_has_sponsor_paymentPending(sponsorDetails_outputs):
@@ -174,7 +174,7 @@ def test_HU_00574_2023_has_sponsor_paymentPending(sponsorDetails_outputs):
     assert res["sponsorFamilyName"] == "LopezX"
     assert res["sponsorGivenNames"] == "BruceX"
     assert res["sponsorEmailAdminJ"] is None
-    assert res["sponsorMobileNumberAdminJ"] == "01414960600"
+    assert res["sponsorMobileNumberAdminJ"] is None
     assert res["sponsorAuthorisation"] == "Yes"
 
 def test_sponsorAddress_present_when_category38(sponsorDetails_outputs):

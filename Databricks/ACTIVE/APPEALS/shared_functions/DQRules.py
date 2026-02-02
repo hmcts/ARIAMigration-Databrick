@@ -636,7 +636,7 @@ def base_DQRules():
     )
 
     checks["valid_sponsorMobileNumberAdminJ"] = (
-        "((array_contains(valid_categoryIdList, 38) AND sponsorMobileNumberAdminJ IS NOT NULL) "
+        "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$'))"
         "OR (sponsorMobileNumberAdminJ IS NULL))"
     )
     # ##############################
@@ -703,7 +703,7 @@ def base_DQRules():
     )
 
     checks["valid_internalAppellantMobileNumber"] = (
-        "(internalAppellantMobileNumber RLIKE r'^(?=(?:\\D*\\d){7,15}\\D*$)\\+?(\\d[\\d-. ]+)?(\\([\\d-. ]+\\))?[\\d-. ]*\\d$' OR internalAppellantMobileNumber IS NULL)"
+        "(internalAppellantMobileNumber RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$' OR internalAppellantMobileNumber IS NULL)"
     )
 
     # ^(?=(?:\D*\d){7,15}\D*$)\+?(\d[\d-. ]+)?(\([\d-. ]+\))?[\d-. ]*\d$

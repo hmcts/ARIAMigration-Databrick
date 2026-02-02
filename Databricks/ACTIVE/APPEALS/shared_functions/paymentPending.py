@@ -743,8 +743,8 @@ cleanEmailUDF = udf(cleanEmail, StringType())
 def cleanPhoneNumber(PhoneNumber):
     if PhoneNumber is None:
         return None
-    
-    
+
+
     PhoneNumber = re.sub(r"\s+", "", PhoneNumber)             # 1. Remove internal whitespace
     PhoneNumber = re.sub(r"\s", "", PhoneNumber)              # 2. Remove internal whitespace
     PhoneNumber = re.sub(r"^\.", "", PhoneNumber)             # 3. Remove leading .
@@ -771,8 +771,29 @@ def cleanPhoneNumber(PhoneNumber):
     return PhoneNumber
 
 
-#Register the UDF
+# Register the UDF
 phoneNumberUDF = udf(cleanPhoneNumber, StringType())
+
+
+################################################################
+##########    mobile phone number regex check.       ###########
+################################################################
+
+def filterMobilePhoneNumber(PhoneNumber):
+    if PhoneNumber is None:
+        return None
+
+    cleanedPhoneNumber = cleanPhoneNumber(PhoneNumber)
+
+    mobile_number_pattern = re.compile("^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$")
+
+    if mobile_number_pattern.match(cleanedPhoneNumber):
+        return cleanedPhoneNumber
+    else:
+        return None
+
+
+filterMobilePhoneNumberUDF = udf(filterMobilePhoneNumber, StringType())
 
 
 ################################################################
@@ -1442,7 +1463,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
 
     # internalAppellantMobileNumber logic
     internal_appellant_mobile_number_expr = when(
-        conditions & col("Appellant_Telephone").isNotNull(), phoneNumberUDF(col("Appellant_Telephone"))
+        conditions & col("Appellant_Telephone").isNotNull(), filterMobilePhoneNumberUDF(col("Appellant_Telephone"))
     ).otherwise(None)
 
     # mobileNumber logic (same as internalAppellantMobileNumber)
@@ -2355,7 +2376,7 @@ def sponsorDetails(silver_m1, silver_c):
     ).withColumn(
         "sponsorMobileNumberAdminJ",
         when((category_condition),
-             phoneNumberUDF(col("Sponsor_Telephone")))
+             filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
     )
 
     df = grouped.select(

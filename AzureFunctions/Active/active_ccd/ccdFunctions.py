@@ -169,11 +169,16 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     start_response = start_case_creation(ccd_base_url,uid,jid,ctid,etid,idam_token,s2s_token)
     print("Starting case creation")
 
-    if start_response is None or start_response.status_code != 200 :
-
-        status_code = start_response.status_code if start_response else "N/A"
-        text = start_response.text if start_response else "No response from API" #clean this up 
-
+    if start_response is None or start_response.status_code != 200:
+        if start_response is not None:
+            status_code = start_response.status_code
+            text = start_response.text
+        else:
+            status_code = "N/A"
+            text = "No response from API"
+   
+        # status_code = start_response.status_code if start_response else "N/A"
+        # text = start_response.text if start_response else "No response from API" #clean this up 
         print(f"Case creation failed: {status_code} - {text}")
 
         result = {
@@ -200,9 +205,15 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
         print(validate_case_response.text)
 
     if validate_case_response is None or validate_case_response.status_code not in {201,200}:
+        if validate_case_response is not None:
+            status_code = validate_case_response.status_code
+            text = validate_case_response.text
+        else:
+            status_code = "N/A"
+            text = "No response from API"
 
-        status_code = validate_case_response.status_code if validate_case_response else "N/A"
-        text = validate_case_response.text if validate_case_response else "No response from API"
+        # status_code = validate_case_response.status_code if validate_case_response else "N/A"
+        # text = validate_case_response.text if validate_case_response else "No response from API"
         print(f"Case validation failed: {status_code} - {text}")
 
         result = {
@@ -223,9 +234,15 @@ def process_case(env,caseNo,payloadData,runId,state,PR_NUMBER):
     print(f"Submit case response = {submit_case_response}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201,200}:
+        if submit_case_response is not None:
+            status_code = submit_case_response.status_code
+            text = submit_case_response.text
+        else:
+            status_code = "N/A"
+            text = "No response from API"
 
-        status_code = submit_case_response.status_code if submit_case_response else "N/A"
-        text = submit_case_response.text if submit_case_response else "No response from API"
+        # status_code = submit_case_response.status_code if submit_case_response else "N/A"
+        # text = submit_case_response.text if submit_case_response else "No response from API"
         print(f"Case submission failed: {status_code} - {text}")
 
         result = {

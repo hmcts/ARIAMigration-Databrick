@@ -154,14 +154,14 @@ def general_outputs(spark):
     
     return results
 
-# def test_ftpaAppellantSubmitted(spark,general_outputs):
+def test_ftpaAppellantSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["ftpaAppellantSubmitted"] == "Yes"
-#     assert results["CASE006"]["ftpaAppellantSubmitted"] == "Yes"
-#     assert results["CASE007"]["ftpaAppellantSubmitted"] == None
-#     assert results["CASE010"]["ftpaAppellantSubmitted"] == "Yes"
+    assert results["CASE005"]["ftpaAppellantSubmitted"] == "Yes"
+    assert results["CASE006"]["ftpaAppellantSubmitted"] == "Yes"
+    assert results["CASE007"]["ftpaAppellantSubmitted"] == None
+    assert results["CASE010"]["ftpaAppellantSubmitted"] == "Yes"
 
 # def test_isFtpaAppellantDocsVisibleInDecided(spark,general_outputs):
 

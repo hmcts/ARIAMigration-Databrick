@@ -213,20 +213,20 @@ def base_DQRules():
       "OR ((dv_representation = 'LR' AND LEN(CaseRep_Address5) < 51) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
       "OR ((dv_representation = 'LR' AND LEN(CaseRep_Postcode) < 15) OR (dv_representation != 'LR' AND CaseRep_Postcode IS NULL))))"
     )   
-    checks["valid_oocAddressLine1"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as fields are null
-      "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL) OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
+    checks["valid_oocAddressLine1"] = ( 
+      "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
     )
-    checks["valid_oocAddressLine2"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as fields are null
-      "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL) OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
+    checks["valid_oocAddressLine2"] = ( 
+      "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
     )
-    checks["valid_oocAddressLine3"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as fields are null
-      "((dv_representation = 'LR' AND oocAddressLine3 IS NOT NULL) OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL))"
+    checks["valid_oocAddressLine3"] = ( 
+      "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
     )
-    checks["valid_oocAddressLine4"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as fields are null
-      "((dv_representation = 'LR' AND oocAddressLine4 IS NOT NULL) OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
+    checks["valid_oocAddressLine4"] = ( 
+      "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
     )
-    checks["valid_oocrCountryGovUkAdminJ"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as fields are null
-      "((dv_representation = 'LR' AND CaseRep_Address5 IS NOT NULL AND valid_countryGovUkOocAdminJ IS NOT NULL ) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
+    checks["valid_oocrCountryGovUkAdminJ"] = ( 
+      "((dv_representation = 'LR' AND legalRepHasAddress = 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
       )
 
     # ##############################

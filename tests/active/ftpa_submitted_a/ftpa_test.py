@@ -1,7 +1,7 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_a import ftpa
 from pyspark.sql import SparkSession
 import pytest
-
+from pyspark.sql import Row
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F, types as T
 
@@ -78,14 +78,71 @@ def ftpa_outputs(spark):
     
     return results
 
-def test_ftpaList(spark,ftpa_outputs):
+from pyspark.sql import Row
+
+def test_ftpaList(spark, ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation=None))]
-    assert results["CASE006"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='03/12/2026', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
-    assert results["CASE007"]["ftpaList"] == [Row(id='1',value=Row(ftpaApplicant='respondent',ftpaApplicationDate='03/08/2026',ftpaGroundsDocuments=[],ftpaEvidenceDocuments=[],ftpaOutOfTimeDocuments=[],ftpaOutOfTimeExplanation=None))]
-    assert results["CASE011"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='respondent', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
+    # CASE005 – appellant, no explanation
+    assert results["CASE005"]["ftpaList"] == [
+        Row(
+            id='1',
+            value=Row(
+                ftpaApplicant='appellant',
+                ftpaApplicationDate='02/11/2025',
+                ftpaGroundsDocuments=[],
+                ftpaEvidenceDocuments=[],
+                ftpaOutOfTimeDocuments=[],
+                ftpaOutOfTimeExplanation=None
+            )
+        )
+    ]
+
+    # CASE006 – appellant, explanation provided
+    assert results["CASE006"]["ftpaList"] == [
+        Row(
+            id='1',
+            value=Row(
+                ftpaApplicant='appellant',
+                ftpaApplicationDate='03/12/2026',
+                ftpaGroundsDocuments=[],
+                ftpaEvidenceDocuments=[],
+                ftpaOutOfTimeDocuments=[],
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+            )
+        )
+    ]
+
+    # CASE007 – respondent, no explanation
+    assert results["CASE007"]["ftpaList"] == [
+        Row(
+            id='1',
+            value=Row(
+                ftpaApplicant='respondent',
+                ftpaApplicationDate='03/08/2026',
+                ftpaGroundsDocuments=[],
+                ftpaEvidenceDocuments=[],
+                ftpaOutOfTimeDocuments=[],
+                ftpaOutOfTimeExplanation=None
+            )
+        )
+    ]
+
+    # CASE011 – respondent, explanation provided
+    assert results["CASE011"]["ftpaList"] == [
+        Row(
+            id='1',
+            value=Row(
+                ftpaApplicant='respondent',
+                ftpaApplicationDate='02/11/2025',
+                ftpaGroundsDocuments=[],
+                ftpaEvidenceDocuments=[],
+                ftpaOutOfTimeDocuments=[],
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+            )
+        )
+    ]
 
 def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
 

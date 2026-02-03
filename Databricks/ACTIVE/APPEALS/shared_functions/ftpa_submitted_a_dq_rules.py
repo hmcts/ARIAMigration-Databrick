@@ -269,13 +269,18 @@ def add_checks_ftpa(checks={}):
 
     #######Appellant#######
     checks["valid_ftpaAppellantApplicationDate"] = """(
+        ftpaAppellantApplicationDate IS NULL
+        OR
         CASE 
-            WHEN Party = 1 THEN ftpaAppellantApplicationDate = to_date(DateReceived, 'dd/MM/yyyy')
+            WHEN Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'dd/MM/yyyy') 
             ELSE ftpaAppellantApplicationDate IS NULL
         END
     )"""
 
+
     checks["valid_ftpaAppellantSubmissionOutOfTime"] = """(
+        ftpaAppellantSubmissionOutOfTime IS NULL
+        OR
         CASE 
             WHEN Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime = 'Yes'
             WHEN Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime = 'No'
@@ -285,7 +290,7 @@ def add_checks_ftpa(checks={}):
 
     checks["valid_ftpaAppellantOutOfTimeExplanation"] = """(
         CASE 
-            WHEN Party = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+            WHEN Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
             ELSE ftpaAppellantOutOfTimeExplanation IS NULL
         END
     )"""
@@ -294,7 +299,7 @@ def add_checks_ftpa(checks={}):
     #######Respondent#######
     checks["valid_ftpaRespondentApplicationDate"] = """(
         CASE 
-            WHEN Party = 2 THEN ftpaRespondentApplicationDate = to_date(DateReceived, 'dd/MM/yyyy')
+            WHEN Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'dd/MM/yyyy') 
             ELSE ftpaRespondentApplicationDate IS NULL
         END
     )"""
@@ -309,7 +314,7 @@ def add_checks_ftpa(checks={}):
 
     checks["valid_ftpaRespondentOutOfTimeExplanation"] = """(
         CASE 
-            WHEN Party = 2 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+            WHEN Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
             ELSE ftpaRespondentOutOfTimeExplanation IS NULL
         END
     )"""

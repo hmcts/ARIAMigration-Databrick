@@ -409,8 +409,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         "isFtpaRespondentOotExplanationVisibleInSubmitted",
     )
 
-
-    
     general_df = (
         general_df.alias("gen")
             .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
@@ -442,7 +440,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 col("m3.isFtpaRespondentOotExplanationVisibleInSubmitted"),
             )
     )
-
 
     general_audit = (
         general_audit.alias("audit")

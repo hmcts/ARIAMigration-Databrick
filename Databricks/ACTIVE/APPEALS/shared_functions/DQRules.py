@@ -197,21 +197,15 @@ def base_DQRules():
     )
 
     # ##############################
-    # # ARIADM-769 (legalRepDetails - Address logic)CaseRepAddress5
+    # # ARIADM-769 (legalRepDetails - Address logic)
     # ##############################
 
-    checks["valid_legalRepHasAddress_yes_no"] = ( #Omit non-LR records. NLE data will fail all expectations (55) as address are non-UK
+    checks["valid_legalRepHasAddress_yes_no"] = (
       "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
-      # "OR (dv_representation = 'LR' AND legalRepHasAddress = 'No')"
     )
-
-    checks["valid_legalRepHasAddressUK"]   = ( #Omit non-LR records. All fields are null, hence all expectations will fail. (55)
-      "(((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND LEN(oocAddressLine1) < 151) OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL)"
-      "OR ((dv_representation = 'LR' AND LEN(oocAddressLine2) < 51) OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))" 
-      "OR ((dv_representation = 'LR' AND LEN(oocAddressLine3) < 51) OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL))"
-      "OR ((dv_representation = 'LR' AND LEN(oocAddressLine4) < 51) OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
-      "OR ((dv_representation = 'LR' AND LEN(CaseRep_Address5) < 51) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
-      "OR ((dv_representation = 'LR' AND LEN(CaseRep_Postcode) < 15) OR (dv_representation != 'LR' AND CaseRep_Postcode IS NULL))))"
+    checks["valid_legalRepAddressUK"]   = ( 
+      "((dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
+      "OR (dv_representation != 'LR' and legalRepAddressUK IS NULL))"
     )   
     checks["valid_oocAddressLine1"] = ( 
       "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
@@ -604,48 +598,35 @@ def base_DQRules():
     ##############################
     # ARIADM-773 (SponsorDetails)
     ##############################
-
-    # IF CategoryId IN [38] = Include; ELSE OMIT
-    # IF SponsorName IS NOT NULL = Yes; ELSE No
     checks["valid_hasSponsor_yes_no"] = (
         "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor = 'Yes')"
-        "OR (NOT array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No')"
-        "OR (hasSponsor = 'No'))"
+        "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No'))"
+        "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
+        "OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)"
     )
-
-    # IF CategoryId IN [38] = Include; ELSE OMIT
     checks["valid_sponsorGivenNames_not_null"] = (
         "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
     )
 
-    # IF CategoryId IN [38] = Include; ELSE OMIT
     checks["valid_sponsorFamilyName_not_null"] = (
         "(((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL)))"
     )
 
-    # IF CategoryId IN [38] = Include; ELSE OMIT
-    # IF Sponsor_Authorisation IS 1 = Yes; ELSE No 
     checks["valid_sponsorAuthorisation_yes_no"] = (
-            "((array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAuthorisation IN('Yes', 'No'))" 
-            "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor = 'No' AND sponsorAuthorisation = 'No')"
-            "OR (sponsorAuthorisation = 'No'))"
+            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = True AND sponsorAuthorisation = 'Yes')" 
+            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = False AND sponsorAuthorisation = 'No')"
+            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)"
+            "OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)"
+            "OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL))"
     )
-
-    #     "((array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation = 1) AND sponsorAuthorisation = 'Yes') "
-    #     "OR (array_contains(valid_categoryIdList, 38) AND (Sponsor_Authorisation != 1 OR Sponsor_Authorisation IS NULL) AND sponsorAuthorisation = 'No') "
-    #     "OR (sponsorAuthorisation IS NULL))"
-    # )
 
     ############################################################
     # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
     ############################################################
-    # checks["valid_sponsorAddress_not_null"] = (
-    #     "((array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAddress IS NOT NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor = 'No' AND sponsorAddress IS NULL) OR (hasSponsor IS NULL and sponsorAddress IS NULL and sponsorGivenNames IS NULL AND sponsorFamilyName IS NULL AND sponsorAuthorisation IS NULL AND sponsorEmailAdminJ IS NULL AND sponsorMobileNumberAdminJ IS NULL))"
-    # )
-
     checks["valid_sponsorAddress_not_null"] = (
-        "((array_contains(valid_categoryIdList, 38) AND hasSponsor = 'Yes' AND sponsorAddress IS NOT NULL) OR ((hasSponsor = 'No' OR hasSponsor IS NULL) AND sponsorAddress IS NULL))"
+        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
     )
+    
     ##############################
     # ARIADM-778 (SponsorDetails)
     ##############################
@@ -671,6 +652,7 @@ def base_DQRules():
     # Only IF CategoryId IN [38] = Include; ELSE null
     checks["valid_appellantHasFixedAddressAdminJ"] = (
         "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
+        "OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)"
         "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL))"
     )
 
@@ -684,7 +666,7 @@ def base_DQRules():
 
     # addressLine2AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND at least one of the coalesce fields is not null; ELSE can be NULL
     checks["valid_addressLine2AdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND "
+        "( (array_contains(valid_categoryIdList, 38) AND "
         "(Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
         "AND addressLine2AdminJ IS NOT NULL) "
         "OR (addressLine2AdminJ IS NULL) )"
@@ -706,9 +688,8 @@ def base_DQRules():
         "OR ( addressLine4AdminJ IS NULL) )"
     )
 
-
     # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
-    checks["valid_countryGovUkOocAdminJ"] = ("(((array_contains(valid_categoryIdList, 38)) AND (countryGovUkOocAdminJ IS NOT NULL) AND (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW'))) OR (countryGovUkOocAdminJ IS NULL))")
+    checks["valid_countryGovUkOocAdminJ"] = ("(((array_contains(valid_categoryIdList, 38)) AND (countryGovUkOocAdminJ IS NOT NULL) AND (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'GU', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW'))) OR (countryGovUkOocAdminJ IS NULL))")
     ##############################
     # AARIADM-764 (appellantDetails)
     ##############################

@@ -366,3 +366,9 @@ def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
         "oocAddressLine4",
         "oocLrCountryGovUkAdminJ",
     )
+
+
+def test_localAuthorityPolicy(legalRepDetails_outputs):
+    assert legalRepDetails_outputs["EA/03862/2020"]["localAuthorityPolicy"] == Row(
+        Organisation=Row(OrganisationID=None, OrganisationName=None), OrgPolicyReference=None, OrgPolicyCaseAssignedRole='[LEGALREPRESENTATIVE]'
+    )

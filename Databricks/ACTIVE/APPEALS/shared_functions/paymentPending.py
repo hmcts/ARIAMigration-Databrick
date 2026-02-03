@@ -801,7 +801,6 @@ filterMobilePhoneNumberUDF = udf(filterMobilePhoneNumber, StringType())
 ################################################################
 
 ##Create legalRepDetails fields
-
 def legalRepDetails(silver_m1, bronze_countryFromAddress):
     conditions_legalRepDetails = (col("dv_representation") == 'LR') & (col("lu_appealType").isNotNull())
 
@@ -816,10 +815,14 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
         coalesce(col("Rep_Name"), col("CaseRep_Name"))                     #If RepName is null use CaseRepName
     ).withColumn(
         "localAuthorityPolicy",
-        lit(json.dumps({
-            "Organisation": {},
-            "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
-        }))
+        struct(
+            struct(
+                lit(None).cast(StringType()).alias("OrganisationID"),
+                lit(None).cast(StringType()).alias("OrganisationName")
+            ).alias("Organisation"),
+            lit(None).cast(StringType()).alias("OrgPolicyReference"),
+            lit("[LEGALREPRESENTATIVE]").alias("OrgPolicyCaseAssignedRole")
+        )
     ).withColumn(
         "legalRepEmail",
             cleanEmailUDF(coalesce(col("Rep_Email"), col("CaseRep_Email"), col("CaseRep_FileSpecific_Email")))

@@ -46,9 +46,9 @@ def paymentType(silver_m1, silver_m4):
             )
             .withColumn(
                 "paymentStatus",
-                when(col("SumAmount") > 0, lit("Payment Pending"))
+                when(col("SumAmount") > 0, lit("Payment pending"))
                 .when((col("SumAmount") == 0)
-                    & ((col("type.TransactionTypeId") == 19)), lit("Payment Pending"))
+                    & ((col("type.TransactionTypeId") == 19)), lit("Payment pending"))
                 .otherwise(lit("Paid"))
             ).select("max.CaseNo", "paymentStatus")
     )

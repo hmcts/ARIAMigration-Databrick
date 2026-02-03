@@ -74,8 +74,8 @@ class TestAppealSubmittedPaymentType:
                 ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumBalance = 0 - none
                 ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - none
                 ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - none
-                ("9", "EA", "AIP", 0, datetime(2000, 1, 1)),   # SUM(AMOUNT) > 0 = 'Payment Pending'
-                ("10", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 19 for MAX(TransactionId), = 'Payment Pending'
+                ("9", "EA", "AIP", 0, datetime(2000, 1, 1)),   # SUM(AMOUNT) > 0 = 'Payment pending'
+                ("10", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 19 for MAX(TransactionId), = 'Payment pending'
                 ("11", "EA", "AIP", 0, datetime(2000, 1, 1))   # SUM(AMOUNT) = 0 AND TransactionTypeId = 1 for MAX(TransactionId), = 'Paid'
             ]
             m4_data = [
@@ -105,7 +105,7 @@ class TestAppealSubmittedPaymentType:
 
             assert resultList[0][0] == "Paid" and resultList[1][0] == "Paid" and resultList[2][0] == "Paid" and resultList[3][0] == "Paid"
             assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None and resultList[7][0] is None
-            assert resultList[8][0] == "Payment Pending" and resultList[9][0] == "Payment Pending"
+            assert resultList[8][0] == "Payment pending" and resultList[9][0] == "Payment pending"
             assert resultList[10][0] == "Paid"
 
     def test_paAppealTypePaymentOption(self, spark):

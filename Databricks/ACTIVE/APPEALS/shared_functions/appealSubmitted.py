@@ -46,17 +46,21 @@ def paymentType(silver_m1, silver_m4):
             )
             .withColumn(
                 "paymentStatus",
-                when(col("SumAmount") > 0, lit("Payment Pending"))
+                when(col("SumAmount") > 0, lit("Payment pending"))
                 .when((col("SumAmount") == 0)
-                    & ((col("type.TransactionTypeId") == 19)), lit("Payment Pending"))
+                    & ((col("type.TransactionTypeId") == 19)), lit("Payment pending"))
                 .otherwise(lit("Paid"))
             ).select("max.CaseNo", "paymentStatus")
     )
     #########################################################################################
 
-    paid_amount = filtered_df.filter(col("SumTotalPay") == 1).groupBy("CaseNo").agg(
-        abs(F_sum(col("Amount"))).alias("paidAmount"),
-        collect_list(col("Amount")).alias("amountList")
+    paid_amount = (
+        filtered_df
+            .filter(col("SumTotalPay") == 1)
+            .groupBy("CaseNo").agg(
+                abs(F_sum(col("Amount"))).alias("paidAmount"),
+                collect_list(col("Amount")).alias("amountList")
+            )
     )
 
     payment_content_final = (
@@ -74,7 +78,10 @@ def paymentType(silver_m1, silver_m4):
                 .when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 2), "decisionWithHearing")
                 .alias("rpDcAppealHearingOption"),
             when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).alias("paidDate"),
-            when(conditions_all, col("paidAmount")).cast(IntegerType()).cast(StringType()).alias("paidAmount"),
+            when(conditions_all, (
+                when(col("paidAmount").isNotNull(), col("paidAmount")).otherwise(lit(0))
+                .cast(IntegerType()).cast(StringType())
+            )).alias("paidAmount"),
             when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).alias("additionalPaymentInfo"),
             when(conditions_all, col("payment_status.paymentStatus")).alias("dv_paymentStatus")
         ).select(
@@ -189,10 +196,16 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             .when((conditions_all) & (col("PaymentRemissionGranted") == 2), lit("This is a migrated case. The remission was rejected."))
         ).withColumn(
             "amountRemitted",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountRemitted").cast(IntegerType()).cast(StringType()))
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                when(col("amountRemitted").isNotNull(), col("amountRemitted")).otherwise(lit(0)).cast(IntegerType()).cast(StringType())
+            )
         ).withColumn(
             "amountLeftToPay",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), col("amountLeftToPay").cast(IntegerType()).cast(StringType()))
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                    when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay")).otherwise(lit(0)).cast(IntegerType()).cast(StringType())
+            )
         ).select("source.*", "remissionDecision", "remissionDecisionReason", "amountRemitted", "amountLeftToPay")
     )
 

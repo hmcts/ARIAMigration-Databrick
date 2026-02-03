@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.decided_a import generalDefault
+from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_a import generalDefault
 from pyspark.sql import SparkSession
 import pytest
 
@@ -30,12 +30,12 @@ def generalDefault_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in generalDefault_content.collect()}
     return results
 
-def test_appealDecisionAvailable(spark,generalDefault_outputs):
+def test_isFtpaListVisible(spark,generalDefault_outputs):
 
     results = generalDefault_outputs
 
-    assert results["CASE001"]["appealDecisionAvailable"] == "Yes"
-    assert results["CASE002"]["appealDecisionAvailable"] == "Yes"
-    assert results["CASE003"]["appealDecisionAvailable"] == "Yes"
+    assert results["CASE001"]["isFtpaListVisible"] == "Yes"
+    assert results["CASE002"]["isFtpaListVisible"] == "Yes"
+    assert results["CASE003"]["isFtpaListVisible"] == "Yes"
 
 

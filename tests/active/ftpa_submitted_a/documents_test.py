@@ -65,14 +65,14 @@ def documents_outputs(spark):
     ])
 
     m3_data = [
-        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","Doe","John",1,1),
-        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00","Ms","Doe","Jane",1,0),   
-        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00","Mr","xyz","John",2,1),   
-        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00","Mr","Doe","abc",2,1),  
-        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Sir","Random","Guy",None,1),  
-        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","John","Snow",2,0),  
-        ("CASE010", 1, 38, None, "LOC007",None,"1899-12-30T10:00:00.000+00:00",None,None,None,1,None),  
-        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2,1)   
+        ("CASE005", 1, 39, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","Doe","John",1,True),
+        ("CASE005", 2, 39, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00","Ms","Doe","Jane",1,False),   
+        ("CASE006", 1, 39, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00","Mr","xyz","John",1,True),   
+        ("CASE007", 1, 39, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00","Mr","Doe","abc",2,False),  
+        ("CASE008", 1, 39, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Sir","Random","Guy",None,True),  
+        ("CASE009", 1, 39, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","John","Snow",2,False),  
+        ("CASE010", 1, 39, None, "LOC007",None,"1899-12-30T10:00:00.000+00:00",None,None,None,1,None),  
+        ("CASE011", 1, 39, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2,True)   
         ]   
     
     df_m1 =  spark.createDataFrame(m1_data, m1_schema)
@@ -88,8 +88,75 @@ def test_ftpaAppellantDocuments(spark,documents_outputs):
 
     results = documents_outputs
 
-    assert results["CASE005"]["ftpaAppellantDocuments"] == "16/11/2025"
-    assert results["CASE006"]["ftpaAppellantDocuments"] == "31/12/2026"
-    assert results["CASE007"]["ftpaAppellantDocuments"] == '03/08/2026'
-    assert results["CASE010"]["ftpaAppellantDocuments"] == None
+    assert results["CASE005"]["ftpaAppellantDocuments"] == []
+    assert results["CASE006"]["ftpaAppellantDocuments"] == []
+    assert results["CASE007"]["ftpaAppellantDocuments"] == None
+    assert results["CASE010"]["ftpaAppellantDocuments"] == []
+
+
+def test_ftpaRespondentDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaRespondentDocuments"] == None
+    assert results["CASE006"]["ftpaRespondentDocuments"] == None
+    assert results["CASE007"]["ftpaRespondentDocuments"] == []
+    assert results["CASE011"]["ftpaRespondentDocuments"] == []
+
+
+def test_ftpaAppellantGroundsDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaAppellantGroundsDocuments"] == []
+    assert results["CASE006"]["ftpaAppellantGroundsDocuments"] == []
+    assert results["CASE007"]["ftpaAppellantGroundsDocuments"] == None
+    assert results["CASE010"]["ftpaAppellantGroundsDocuments"] == []
+
+def test_ftpaRespondentGroundsDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaRespondentGroundsDocuments"] == None
+    assert results["CASE006"]["ftpaRespondentGroundsDocuments"] == None
+    assert results["CASE007"]["ftpaRespondentGroundsDocuments"] == []
+    assert results["CASE011"]["ftpaRespondentGroundsDocuments"] == []
+
+
+def test_ftpaAppellantEvidenceDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaAppellantEvidenceDocuments"] == []
+    assert results["CASE006"]["ftpaAppellantEvidenceDocuments"] == []
+    assert results["CASE007"]["ftpaAppellantEvidenceDocuments"] == None
+    assert results["CASE010"]["ftpaAppellantEvidenceDocuments"] == []
+
+def test_ftpaRespondentEvidenceDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaRespondentEvidenceDocuments"] == None
+    assert results["CASE006"]["ftpaRespondentEvidenceDocuments"] == None
+    assert results["CASE007"]["ftpaRespondentEvidenceDocuments"] == []
+    assert results["CASE011"]["ftpaRespondentEvidenceDocuments"] == []
+
+
+def test_ftpaAppellantOutOfTimeDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaAppellantOutOfTimeDocuments"] == []
+    assert results["CASE006"]["ftpaAppellantOutOfTimeDocuments"] == []
+    assert results["CASE007"]["ftpaAppellantOutOfTimeDocuments"] == None
+    assert results["CASE010"]["ftpaAppellantOutOfTimeDocuments"] == []
+
+def test_ftpaRespondentEvidenceDocuments(spark,documents_outputs):
+
+    results = documents_outputs
+
+    assert results["CASE005"]["ftpaRespondentOutOfTimeDocuments"] == None
+    assert results["CASE006"]["ftpaRespondentOutOfTimeDocuments"] == None
+    assert results["CASE007"]["ftpaRespondentOutOfTimeDocuments"] == []
+    assert results["CASE011"]["ftpaRespondentOutOfTimeDocuments"] == []
 

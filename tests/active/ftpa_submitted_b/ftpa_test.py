@@ -51,7 +51,7 @@ def ftpa_outputs(spark):
         ("CASE008", 1, 39, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Sir","Random","Guy",1,1,1),  
         ("CASE009", 1, 39, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00","Mr","John","Snow",2,0,1),  
         ("CASE010", 1, 39, None, "LOC007",None,"1899-12-30T10:00:00.000+00:00",None,None,None,1,None,1),  
-        ("CASE011", 1, 39, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2,1,1)
+        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2,1,1)
         ]     
 
     c_schema = T.StructType([
@@ -91,19 +91,21 @@ def test_allocatedJudge(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["allocatedJudge"] == "No"
-    assert results["CASE006"]["allocatedJudge"] == "Yes"
-    assert results["CASE007"]["allocatedJudge"] == None
-    assert results["CASE010"]["allocatedJudge"] == None
+    assert results["CASE005"]["allocatedJudge"] == "Ms Doe Jane"
+    assert results["CASE006"]["allocatedJudge"] == "Mr xyz John"
+    assert results["CASE007"]["allocatedJudge"] == "Mr Doe abc"
+    assert results["CASE008"]["allocatedJudge"] == "Sir Random Guy"
+    assert results["CASE011"]["allocatedJudge"] == None
 
 def test_allocatedJudgeEdit(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["allocatedJudgeEdit"] == None
-    assert results["CASE006"]["allocatedJudgeEdit"] == "This is a migrated ARIA case. Please refer to the documents."
-    assert results["CASE007"]["allocatedJudgeEdit"] == None
-    assert results["CASE010"]["allocatedJudgeEdit"] == None
+    assert results["CASE005"]["allocatedJudgeEdit"] == "Ms Doe Jane"
+    assert results["CASE006"]["allocatedJudgeEdit"] == "Mr xyz John"
+    assert results["CASE007"]["allocatedJudgeEdit"] == "Mr Doe abc"
+    assert results["CASE008"]["allocatedJudgeEdit"] == "Sir Random Guy"
+    assert results["CASE011"]["allocatedJudgeEdit"] == None
 
 
 

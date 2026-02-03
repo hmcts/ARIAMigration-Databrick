@@ -1382,7 +1382,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         col("CaseNo"),
         coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
     )
-
     # oocAppealAdminJ logic
     ooc_appeal_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
@@ -1494,7 +1493,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             address_line2_adminj_expr.alias("addressLine2AdminJ"),
             address_line3_adminj_expr.alias("addressLine3AdminJ"),
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
-            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
+            when(country_gov_uk_ooc_adminj_expr == lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).alias("countryGovUkOocAdminJ"),
             appellant_stateless_expr.alias("appellantStateless"),
             when(
                 conditions,
@@ -2320,7 +2319,7 @@ def sponsorDetails(silver_m1, silver_c):
     ).withColumn(
         "sponsorAddress",
         when(
-            (category_condition),
+            (category_condition & name_condition),
             # AddressUK CCD Type should be an object
             # trim(
             #     concat_ws(
@@ -2367,7 +2366,7 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAddress",
         "sponsorEmailAdminJ",
         "sponsorMobileNumberAdminJ",
-        "sponsorAuthorisation",
+        "sponsorAuthorisation"
     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]

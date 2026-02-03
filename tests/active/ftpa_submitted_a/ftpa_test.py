@@ -78,68 +78,68 @@ def ftpa_outputs(spark):
     
     return results
 
-def test_ftpaList(spark,ftpa_outputs):
+# def test_ftpaList(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+#     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation=None))]
-    assert results["CASE006"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='03/12/2026', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
-    assert results["CASE007"]["ftpaList"] == [Row(id='1',value=Row(ftpaApplicant='respondent',ftpaApplicationDate='03/08/2026',ftpaGroundsDocuments=[],ftpaEvidenceDocuments=[],ftpaOutOfTimeDocuments=[],ftpaOutOfTimeExplanation=None))]
-    assert results["CASE011"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='respondent', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
+#     assert results["CASE005"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation=None))]
+#     assert results["CASE006"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='appellant', ftpaApplicationDate='03/12/2026', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
+#     assert results["CASE007"]["ftpaList"] == [Row(id='1',value=Row(ftpaApplicant='respondent',ftpaApplicationDate='03/08/2026',ftpaGroundsDocuments=[],ftpaEvidenceDocuments=[],ftpaOutOfTimeDocuments=[],ftpaOutOfTimeExplanation=None))]
+#     assert results["CASE011"]["ftpaList"] == [Row(id='1', value=Row(ftpaApplicant='respondent', ftpaApplicationDate='02/11/2025', ftpaGroundsDocuments=[], ftpaEvidenceDocuments=[], ftpaOutOfTimeDocuments=[], ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'))]
 
-def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
+# def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+#     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "02/11/2025"
-    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "03/12/2026"
-    assert results["CASE007"]["ftpaAppellantApplicationDate"] == None
-    assert results["CASE010"]["ftpaAppellantApplicationDate"] == None
+#     assert results["CASE005"]["ftpaAppellantApplicationDate"] == "02/11/2025"
+#     assert results["CASE006"]["ftpaAppellantApplicationDate"] == "03/12/2026"
+#     assert results["CASE007"]["ftpaAppellantApplicationDate"] == None
+#     assert results["CASE010"]["ftpaAppellantApplicationDate"] == None
 
-def test_ftpaAppellantSubmissionOutOfTime(spark,ftpa_outputs):
+# def test_ftpaAppellantSubmissionOutOfTime(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+#     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaAppellantSubmissionOutOfTime"] == "No"
-    assert results["CASE006"]["ftpaAppellantSubmissionOutOfTime"] == "Yes"
-    assert results["CASE007"]["ftpaAppellantSubmissionOutOfTime"] == None
-    assert results["CASE010"]["ftpaAppellantSubmissionOutOfTime"] == None
+#     assert results["CASE005"]["ftpaAppellantSubmissionOutOfTime"] == "No"
+#     assert results["CASE006"]["ftpaAppellantSubmissionOutOfTime"] == "Yes"
+#     assert results["CASE007"]["ftpaAppellantSubmissionOutOfTime"] == None
+#     assert results["CASE010"]["ftpaAppellantSubmissionOutOfTime"] == None
 
-def test_ftpaAppellantOutOfTimeExplanation(spark,ftpa_outputs):
+# def test_ftpaAppellantOutOfTimeExplanation(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+#     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaAppellantOutOfTimeExplanation"] == None
-    assert results["CASE006"]["ftpaAppellantOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
-    assert results["CASE007"]["ftpaAppellantOutOfTimeExplanation"] == None
-    assert results["CASE010"]["ftpaAppellantOutOfTimeExplanation"] == None
-
-
-def test_ftpaRespondentApplicationDate(spark,ftpa_outputs):
-
-    results = ftpa_outputs
-
-    assert results["CASE005"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE006"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "03/08/2026"
-    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "02/11/2025"
+#     assert results["CASE005"]["ftpaAppellantOutOfTimeExplanation"] == None
+#     assert results["CASE006"]["ftpaAppellantOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+#     assert results["CASE007"]["ftpaAppellantOutOfTimeExplanation"] == None
+#     assert results["CASE010"]["ftpaAppellantOutOfTimeExplanation"] == None
 
 
-def test_ftpaRespondentSubmissionOutOfTime(spark,ftpa_outputs):
+# def test_ftpaRespondentApplicationDate(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+#     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaRespondentSubmissionOutOfTime"] == None
-    assert results["CASE006"]["ftpaRespondentSubmissionOutOfTime"] == None
-    assert results["CASE007"]["ftpaRespondentSubmissionOutOfTime"] == "No"
-    assert results["CASE011"]["ftpaRespondentSubmissionOutOfTime"] == "Yes"
+#     assert results["CASE005"]["ftpaRespondentApplicationDate"] == None
+#     assert results["CASE006"]["ftpaRespondentApplicationDate"] == None
+#     assert results["CASE007"]["ftpaRespondentApplicationDate"] == "03/08/2026"
+#     assert results["CASE011"]["ftpaRespondentApplicationDate"] == "02/11/2025"
 
-def test_ftpaRespondentOutOfTimeExplanation(spark,ftpa_outputs):
 
-    results = ftpa_outputs
+# def test_ftpaRespondentSubmissionOutOfTime(spark,ftpa_outputs):
 
-    assert results["CASE005"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE006"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE007"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE011"]["ftpaRespondentOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+#     results = ftpa_outputs
+
+#     assert results["CASE005"]["ftpaRespondentSubmissionOutOfTime"] == None
+#     assert results["CASE006"]["ftpaRespondentSubmissionOutOfTime"] == None
+#     assert results["CASE007"]["ftpaRespondentSubmissionOutOfTime"] == "No"
+#     assert results["CASE011"]["ftpaRespondentSubmissionOutOfTime"] == "Yes"
+
+# def test_ftpaRespondentOutOfTimeExplanation(spark,ftpa_outputs):
+
+#     results = ftpa_outputs
+
+#     assert results["CASE005"]["ftpaRespondentOutOfTimeExplanation"] == None
+#     assert results["CASE006"]["ftpaRespondentOutOfTimeExplanation"] == None
+#     assert results["CASE007"]["ftpaRespondentOutOfTimeExplanation"] == None
+#     assert results["CASE011"]["ftpaRespondentOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
 

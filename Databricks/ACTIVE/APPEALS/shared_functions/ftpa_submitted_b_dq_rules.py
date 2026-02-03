@@ -3,8 +3,6 @@ def add_checks(checks={}):
     
     return checks
 
-
-
 def add_checks_ftpa(checks={}):
 
     checks["valid_allocatedJudge"] = (

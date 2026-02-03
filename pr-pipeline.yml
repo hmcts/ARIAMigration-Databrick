@@ -61,3 +61,8 @@ stages:
         displayName: 'Run FTPASubmitted_A Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/ftpa_submitted_a.yml
+
+      - job: FTPASubmittedBTests
+        displayName: 'Run FTPASubmitted_B Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/ftpa_submitted_b.yml

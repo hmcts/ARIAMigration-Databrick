@@ -163,201 +163,201 @@ def test_ftpaAppellantSubmitted(spark,general_outputs):
     assert results["CASE007"]["ftpaAppellantSubmitted"] == None
     assert results["CASE010"]["ftpaAppellantSubmitted"] == "Yes"
 
-# def test_isFtpaAppellantDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaAppellantDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
-#     assert results["CASE006"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
-#     assert results["CASE007"]["isFtpaAppellantDocsVisibleInDecided"] == None
-#     assert results["CASE010"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
+    assert results["CASE006"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
+    assert results["CASE007"]["isFtpaAppellantDocsVisibleInDecided"] == None
+    assert results["CASE010"]["isFtpaAppellantDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaAppellantDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaAppellantDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE006"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE007"]["isFtpaAppellantDocsVisibleInSubmitted"] == None
-#     assert results["CASE010"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE006"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE007"]["isFtpaAppellantDocsVisibleInSubmitted"] == None
+    assert results["CASE010"]["isFtpaAppellantDocsVisibleInSubmitted"] == "Yes"
 
 
-# def test_isFtpaAppellantOotDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaAppellantOotDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantOotDocsVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaAppellantOotDocsVisibleInDecided"] == "No"
-#     assert results["CASE007"]["isFtpaAppellantOotDocsVisibleInDecided"] == None
-#     assert results["CASE008"]["isFtpaAppellantOotDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaAppellantOotDocsVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaAppellantOotDocsVisibleInDecided"] == "No"
+    assert results["CASE007"]["isFtpaAppellantOotDocsVisibleInDecided"] == None
+    assert results["CASE008"]["isFtpaAppellantOotDocsVisibleInDecided"] == "No"
 
 
-# def test_isFtpaAppellantOotDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaAppellantOotDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE007"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == None
-#     assert results["CASE008"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE007"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == None
+    assert results["CASE008"]["isFtpaAppellantOotDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaAppellantGroundsDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaAppellantGroundsDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
-#     assert results["CASE006"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
-#     assert results["CASE007"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == None
-#     assert results["CASE008"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
+    assert results["CASE006"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
+    assert results["CASE007"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == None
+    assert results["CASE008"]["isFtpaAppellantGroundsDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaAppellantEvidenceDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaAppellantEvidenceDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
-#     assert results["CASE006"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
-#     assert results["CASE007"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == None
-#     assert results["CASE008"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
+    assert results["CASE006"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
+    assert results["CASE007"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == None
+    assert results["CASE008"]["isFtpaAppellantEvidenceDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaAppellantGroundsDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaAppellantGroundsDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE006"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE007"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == None
-#     assert results["CASE008"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE006"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE007"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == None
+    assert results["CASE008"]["isFtpaAppellantGroundsDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE006"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE007"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == None
-#     assert results["CASE008"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE006"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE007"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == None
+    assert results["CASE008"]["isFtpaAppellantEvidenceDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaAppellantOotExplanationVisibleInDecided(spark,general_outputs):
+def test_isFtpaAppellantOotExplanationVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantOotExplanationVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaAppellantOotExplanationVisibleInDecided"] == "No"
-#     assert results["CASE007"]["isFtpaAppellantOotExplanationVisibleInDecided"] == None
-#     assert results["CASE008"]["isFtpaAppellantOotExplanationVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaAppellantOotExplanationVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaAppellantOotExplanationVisibleInDecided"] == "No"
+    assert results["CASE007"]["isFtpaAppellantOotExplanationVisibleInDecided"] == None
+    assert results["CASE008"]["isFtpaAppellantOotExplanationVisibleInDecided"] == "No"
 
-# def test_isFtpaAppellantOotExplanationVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaAppellantOotExplanationVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == "Yes"
-#     assert results["CASE007"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == None
-#     assert results["CASE008"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == "Yes"
+    assert results["CASE007"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == None
+    assert results["CASE008"]["isFtpaAppellantOotExplanationVisibleInSubmitted"] == "Yes"
 
-# ###############################################################################################################
+###############################################################################################################
 
 
-# def test_ftpaRespondentSubmitted(spark,general_outputs):
+def test_ftpaRespondentSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["ftpaRespondentSubmitted"] == None
-#     assert results["CASE006"]["ftpaRespondentSubmitted"] == None
-#     assert results["CASE007"]["ftpaRespondentSubmitted"] == "Yes"
-#     assert results["CASE011"]["ftpaRespondentSubmitted"] == "Yes"
+    assert results["CASE005"]["ftpaRespondentSubmitted"] == None
+    assert results["CASE006"]["ftpaRespondentSubmitted"] == None
+    assert results["CASE007"]["ftpaRespondentSubmitted"] == "Yes"
+    assert results["CASE011"]["ftpaRespondentSubmitted"] == "Yes"
 
-# def test_isFtpaRespondentDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaRespondentDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentDocsVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaRespondentDocsVisibleInDecided"] == None
-#     assert results["CASE007"]["isFtpaRespondentDocsVisibleInDecided"] == "No"
-#     assert results["CASE011"]["isFtpaRespondentDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaRespondentDocsVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaRespondentDocsVisibleInDecided"] == None
+    assert results["CASE007"]["isFtpaRespondentDocsVisibleInDecided"] == "No"
+    assert results["CASE011"]["isFtpaRespondentDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaRespondentDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaRespondentDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentDocsVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaRespondentDocsVisibleInSubmitted"] == None
-#     assert results["CASE007"]["isFtpaRespondentDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE011"]["isFtpaRespondentDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaRespondentDocsVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaRespondentDocsVisibleInSubmitted"] == None
+    assert results["CASE007"]["isFtpaRespondentDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE011"]["isFtpaRespondentDocsVisibleInSubmitted"] == "Yes"
 
 
-# def test_isFtpaRespondentOotDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaRespondentOotDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
-#     assert results["CASE007"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
-#     assert results["CASE011"]["isFtpaRespondentOotDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
+    assert results["CASE007"]["isFtpaRespondentOotDocsVisibleInDecided"] == None
+    assert results["CASE011"]["isFtpaRespondentOotDocsVisibleInDecided"] == "No"
 
 
-# def test_isFtpaRespondentOotDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaRespondentOotDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
-#     assert results["CASE007"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
-#     assert results["CASE011"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
+    assert results["CASE007"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == None
+    assert results["CASE011"]["isFtpaRespondentOotDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaRespondentGroundsDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaRespondentGroundsDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == None
-#     assert results["CASE007"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == "No"
-#     assert results["CASE011"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == None
+    assert results["CASE007"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == "No"
+    assert results["CASE011"]["isFtpaRespondentGroundsDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaRespondentEvidenceDocsVisibleInDecided(spark,general_outputs):
+def test_isFtpaRespondentEvidenceDocsVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == None
-#     assert results["CASE007"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == "No"
-#     assert results["CASE011"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == None
+    assert results["CASE007"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == "No"
+    assert results["CASE011"]["isFtpaRespondentEvidenceDocsVisibleInDecided"] == "No"
 
-# def test_isFtpaRespondentGroundsDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaRespondentGroundsDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == None
-#     assert results["CASE007"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE011"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == None
+    assert results["CASE007"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE011"]["isFtpaRespondentGroundsDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == None
-#     assert results["CASE007"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == "Yes"
-#     assert results["CASE011"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == None
+    assert results["CASE007"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == "Yes"
+    assert results["CASE011"]["isFtpaRespondentEvidenceDocsVisibleInSubmitted"] == "Yes"
 
-# def test_isFtpaRespondentOotExplanationVisibleInDecided(spark,general_outputs):
+def test_isFtpaRespondentOotExplanationVisibleInDecided(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
-#     assert results["CASE006"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
-#     assert results["CASE007"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
-#     assert results["CASE011"]["isFtpaRespondentOotExplanationVisibleInDecided"] == "No"
+    assert results["CASE005"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
+    assert results["CASE006"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
+    assert results["CASE007"]["isFtpaRespondentOotExplanationVisibleInDecided"] == None
+    assert results["CASE011"]["isFtpaRespondentOotExplanationVisibleInDecided"] == "No"
 
-# def test_isFtpaRespondentOotExplanationVisibleInSubmitted(spark,general_outputs):
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted(spark,general_outputs):
 
-#     results = general_outputs
+    results = general_outputs
 
-#     assert results["CASE005"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
-#     assert results["CASE006"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
-#     assert results["CASE007"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
-#     assert results["CASE011"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == "Yes"
+    assert results["CASE005"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
+    assert results["CASE006"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
+    assert results["CASE007"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == None
+    assert results["CASE011"]["isFtpaRespondentOotExplanationVisibleInSubmitted"] == "Yes"
 
 
 

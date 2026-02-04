@@ -16,7 +16,6 @@ from pyspark.sql.functions import (
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains, nullif
 )
-
 from uk_postcodes_parsing import fix, postcode_utils
 
 ################################################################
@@ -926,7 +925,8 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
 
     ).withColumn("legalRepAddressUK",
         # Overwrite above creation of legalRepAddressUK in String format with Complex type AddressUK.
-        when(col("RepresentativeId") == 0,
+        when(col("legalRepHasAddress") == 'No', lit(None)
+        ).when(col("RepresentativeId") == 0,
             struct(
                 # AddressLine1 is mandatory in CCD, fallback logic
                 coalesce(
@@ -1517,7 +1517,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             address_line2_adminj_expr.alias("addressLine2AdminJ"),
             address_line3_adminj_expr.alias("addressLine3AdminJ"),
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
-            when(country_gov_uk_ooc_adminj_expr == lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).alias("countryGovUkOocAdminJ"),
+            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"), # when()== lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).
             appellant_stateless_expr.alias("appellantStateless"),
             when(
                 conditions,

@@ -201,10 +201,11 @@ def base_DQRules():
     # ##############################
 
     checks["valid_legalRepHasAddress_yes_no"] = (
-      "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
+      "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
     )
     checks["valid_legalRepAddressUK"]   = ( 
       "((dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
+      "OR (dv_representation = 'LR' AND legalRepHasAddress = 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)"
       "OR (dv_representation != 'LR' and legalRepAddressUK IS NULL))"
     )   
     checks["valid_oocAddressLine1"] = ( 

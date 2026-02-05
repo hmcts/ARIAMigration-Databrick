@@ -27,41 +27,81 @@ from pyspark.sql.functions import (
 ##########              ended          ###########
 ################################################################
 
-def ended(silver_m3):
+def ended(silver_m3, bronze_ended_state):
+    # Window to get the latest StatusId per CaseNo
+    window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
 
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-
-
-
+    # Filter based on CaseStatus and Outcome rules
     silver_m3_filtered = silver_m3.filter(
         (
-            (F.col("CaseStatus") == "10") & F.col("Outcome").isin(80,122,25,120,2,105,13)
+            (F.col("CaseStatus") == "10") & F.col("Outcome").isin(80, 122, 25, 120, 2, 105, 13)
         ) |
         (
             (F.col("CaseStatus") == "46") & (F.col("Outcome") == 31)
         ) |
         (
-            (F.col("CaseStatus") == "26") & F.col("Outcome").isin(80,13,25)
+            (F.col("CaseStatus") == "26") & F.col("Outcome").isin(80, 13, 25)
         ) |
         (
-            F.col("CaseStatus").isin("37","38") & F.col("Outcome").isin(80,13,25,72,125)
+            F.col("CaseStatus").isin("37", "38") & F.col("Outcome").isin(80, 13, 25, 72, 125)
         ) |
         (
             (F.col("CaseStatus") == "39") & (F.col("Outcome") == 25)
         ) |
         (
-            (F.col("CaseStatus") == "51") & F.col("Outcome").isin(0,94,93)
+            (F.col("CaseStatus") == "51") & F.col("Outcome").isin(0, 94, 93)
         ) |
         (
-            (F.col("CaseStatus") == "52") & F.col("Outcome").isin(91,95)
+            (F.col("CaseStatus") == "52") & F.col("Outcome").isin(91, 95)
         ) |
         (
-            (F.col("CaseStatus") == "36") & F.col("Outcome").isin(1,2,25)
+            (F.col("CaseStatus") == "36") & F.col("Outcome").isin(1, 2, 25)
         )
     )
 
-    silver_m3_ranked = silver_m3_filtered.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    # Rank and keep the latest record per CaseNo (highest StatusId)
+    silver_m3_ranked = silver_m3_filtered.withColumn("row_number", F.row_number().over(window_spec))
+    silver_m3_max_statusid = silver_m3_ranked.filter(F.col("row_number") == 1).drop("row_number")
+
+    # Build decision timestamp from DecisionDate, trying multiple formats
+    # Note: we add this as a column because it references DF columns
+    silver_with_decision_ts = silver_m3_max_statusid.withColumn(
+        "decision_ts",
+        F.coalesce(
+            F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # e.g., +00:00
+            F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")     # e.g., Z or +01
+        )
+    )
+
+    # Join with ended state and build final fields
+    ended_df = (
+        silver_with_decision_ts.alias("m3")
+        .join(bronze_ended_state.alias("es"), on=["CaseStatus", "Outcome"], how="left")
+        .withColumn(
+            "endAppealApproverType",
+            F.when(F.col("CaseStatus") == "46", F.lit("Judge")).otherwise(F.lit("Case Worker"))
+        )
+        .withColumn("endAppealApproverName",F.when(F.col("CaseStatus") == "46",
+                F.concat(F.col("Adj_Determination_Title"),F.lit(" "),F.col("Adj_Determination_Forenames"),F.lit(" "),F.col("Adj_Determination_Surname"))
+            ).otherwise(F.lit("This is a migrated ARIA case"))
+        )
+        .withColumn("endAppealDate", F.date_format(F.col("decision_ts"), "dd/MM/yyyy"))
+        .select(
+            F.col("CaseNo"),
+            col("CaseStatus"),
+            col("m3.Outcome"),
+            col("StatusId"),
+            F.col("es.endAppealOutcome"),
+            F.col("es.endAppealOutcomeReason"),
+            F.col("endAppealApproverType"),
+            F.col("endAppealApproverName"),
+            F.col("endAppealDate"),
+            F.col("es.stateBeforeEndAppeal"),
+        )
+    )
+
+    return ended_df
+
 
 
 ################################################################

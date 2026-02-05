@@ -1,11 +1,9 @@
 def add_checks(checks={}):
    
     checks = add_checks_ftpa(checks)
-
     checks = add_checks_ftpa_decided(checks)
 
     return checks
-
 
 def add_checks_ftpa(checks={}):
 
@@ -171,6 +169,8 @@ def add_checks_ftpa_decided(checks={}):
         )
         """
     )
+    
+    checks["valid_judgeAllocationExists"] = ( "(judgeAllocationExists = 'Yes')")
 
     return checks
 

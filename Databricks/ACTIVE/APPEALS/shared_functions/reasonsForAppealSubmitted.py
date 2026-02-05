@@ -3,7 +3,7 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, 
     current_timestamp, collect_set, first, array_contains, 
-    size, udf, coalesce, concat_ws, concat, trim, year,split,datediff, size, nullif, desc
+    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff, size, nullif, desc
 )
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -11,7 +11,6 @@ from . import paymentPending as PP
 from . import appealSubmitted as APS
 from . import AwaitingEvidenceRespondant_a as AERa
 from . import AwaitingEvidenceRespondant_a as AERb
-from . import caseUnderReview as CUR
 
 
 def appealType(silver_m1): 
@@ -97,15 +96,30 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
         when((col("CourtClerk_Title").isNotNull()) & (col("CourtClerk_Title") != ""),
             concat(lit("("), col("CourtClerk_Title"), lit(")"))).otherwise(lit(None))))
             )
- 
-    stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
- 
- 
+
+    stg_m6 = (
+        silver_m6
+            .withColumn("Transformed_Required", when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
+            .withColumn("ConcatJudgeDetails", concat_ws(
+                " ",
+                col("Judge_Surname"),
+                col("Judge_Forenames"),
+                when(col("Judge_Title").isNotNull(), "("),
+                col("Judge_Title"),
+                when(col("Judge_Title").isNotNull(), ")"),
+                when(col("Transformed_Required").isNotNull(), ":"), col("Transformed_Required")
+            ))
+            .groupBy("CaseNo")
+                .agg(
+                    concat_ws("\n", collect_list(col("ConcatJudgeDetails"))).alias("ConcatJudgeDetails_List"),
+                )
+    )
+
     final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",
-                                when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre")) #ListedCentre
+                                when(col("ListedCentre").isNull(), "N/A").otherwise(col("ListedCentre"))
                     ).withColumn("Hearing Date",
-                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate")) #KeyDate
+                                when(col("KeyDate").isNull(), "N/A").otherwise(col("KeyDate"))
                     ).withColumn("Hearing Type",
                                 when(col("HearingType").isNull(), "N/A").otherwise(col("HearingType"))
                     ).withColumn("Court",
@@ -138,29 +152,27 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
                                 when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
                     ).withColumn("Estimated Duration",
                                 when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate"))
-                    ).withColumn("Required/Incompatible Judicial Officers", concat_ws(" ", col("Judge_Surname"), col("Judge_Forenames")
-                    , when(col("Judge_Title").isNotNull(),"("),
-                    col("Judge_Title"),
-                    when(col("Judge_Title").isNotNull(),")"),
-                    when(col("Transformed_Required").isNotNull(),":"), col("Transformed_Required"))
+                    ).withColumn("Required/Incompatible Judicial Officers",
+                                when(col("ConcatJudgeDetails_List").isNotNull(), concat(lit("\n"), col("ConcatJudgeDetails_List")))
                     ).withColumn("Notes",
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
                                 concat(
-                                lit("Listed details from ARIA: "),
-                                lit("\n Hearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                lit("\n Hearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
-                                lit("\n Hearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
-                                lit("\n Court: "), coalesce(col("Court"), lit("N/A")),
-                                lit("\n List Type: "), coalesce(col("ListType"), lit("N/A")),
-                                lit("\n List Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
-                                lit("\n Judge First Tier: "), coalesce(col("Judge First Tier"), lit('')),
-                                lit("\n Court Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
-                                lit("\n Start Time: "), coalesce(col("Start Time"), lit("N/A")),
-                                lit("\n Estimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
-                                lit("\n Required/Incompatible Judicial Officers: "), coalesce(col("Required/Incompatible Judicial Officers"), lit("N/A")),
-                                lit("\n Notes: "), coalesce(col("Notes"), lit("N/A"))
-                            )
+                                    lit("Listed details from ARIA: "),
+                                    lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
+                                    lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
+                                    lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
+                                    lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
+                                    lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
+                                    lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
+                                    lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit('')),
+                                    lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
+                                    lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
+                                    lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
+                                    lit("\nRequired/Incompatible Judicial Officers: "),
+                                    coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
+                                    lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
+                                )
                                 
                     )
     additionalInstructionsTribunalResponse_schema_dict = {
@@ -282,7 +294,13 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, 
     return df_general, df_audit_general
 
 def generalDefault(silver_m1): 
-    df_generalDefault = CUR.generalDefault(silver_m1)
+    df_generalDefault = AERb.generalDefault(silver_m1)
+
+    df_generalDefault = (
+        df_generalDefault.join(silver_m1.alias("m1").select("CaseNo", "dv_representation"), on="CaseNo", how="left")
+            .filter(col("dv_representation") == "AIP")
+            .drop(col("dv_representation"))
+    )
     
     df_generalDefault = df_generalDefault.withColumn("changeDirectionDueDateActionAvailable", lit("Yes")
                                         ).withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes")
@@ -293,7 +311,7 @@ def generalDefault(silver_m1):
                 ).select('*',
                 # lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
                 lit("This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.").alias("reasonsForAppealDecision")
-                ).where(col("dv_representation") == 'AIP').distinct()
+                ).distinct()
 
     return df_generalDefault
 

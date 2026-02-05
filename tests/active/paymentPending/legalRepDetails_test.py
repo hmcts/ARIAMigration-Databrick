@@ -182,6 +182,7 @@ def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
 
+
 def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/00185/2025"]
 
@@ -194,12 +195,7 @@ def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
         legalRepHasAddress="No",
     )
 
-    assert row["legalRepAddressUK"]["AddressLine1"] in ("", None)
-    assert row["legalRepAddressUK"]["AddressLine2"] in ("", None)
-    assert row["legalRepAddressUK"]["PostTown"] in ("", None)
-    assert row["legalRepAddressUK"]["County"] in ("", None)
-    assert row["legalRepAddressUK"]["Country"] in ("", None)
-    assert row["legalRepAddressUK"]["PostCode"] in ("", None)
+    assert row["legalRepAddressUK"] is None
 
     assert_all_null(
         row,
@@ -212,15 +208,6 @@ def test_HU_00185_2025_no_address_null(legalRepDetails_outputs):
 
 def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/01475/2024"]
-    
-    expectedLegalRepAddressUkRow = Row(
-        AddressLine1='56292 Raymond TrafficwayX',
-        AddressLine2='Cheyenne SquareX',
-        PostTown='New MollyX',
-        County='ReunionX',
-        Country='MVX',
-        PostCode=None
-    )
 
     assert_equals(
         row,
@@ -229,7 +216,7 @@ def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Barnes-VargasX",
         legalRepEmail="rachel34@example.org",
         legalRepHasAddress="No",
-        legalRepAddressUK=expectedLegalRepAddressUkRow,
+        legalRepAddressUK=None,
     )
 
     assert_equals(
@@ -246,15 +233,6 @@ def test_HU_01475_2024_caseRep_address_ooc(legalRepDetails_outputs):
 def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
     row = legalRepDetails_outputs["HU/02191/2024"]
 
-    expectedLegalRepAddressUkRow = Row(
-        AddressLine1='925 Lisa Plains Apt. 642X',
-        AddressLine2='Hill SquareX',
-        PostTown='LynchhavenX',
-        County='GuamX',
-        Country='NLX',
-        PostCode=None
-    )
-
     assert_equals(
         row,
         legalRepGivenName="Douglas GutierrezX",
@@ -262,7 +240,7 @@ def test_HU_02191_2024_caseRep_nonUK_country(legalRepDetails_outputs):
         legalRepCompanyPaperJ="Leon LLCX",
         legalRepEmail="jameskelly@example.com",
         legalRepHasAddress="No",
-        legalRepAddressUK=expectedLegalRepAddressUkRow,
+        legalRepAddressUK=None,
     )
 
     assert_equals(
@@ -287,12 +265,7 @@ def test_HU_02151_2024_no_address(legalRepDetails_outputs):
         legalRepHasAddress="No",
     )
 
-    assert row["legalRepAddressUK"]["AddressLine1"] in ("", None)
-    assert row["legalRepAddressUK"]["AddressLine2"] in ("", None)
-    assert row["legalRepAddressUK"]["PostTown"] in ("", None)
-    assert row["legalRepAddressUK"]["County"] in ("", None)
-    assert row["legalRepAddressUK"]["Country"] in ("", None)
-    assert row["legalRepAddressUK"]["PostCode"] in ("", None)
+    assert row["legalRepAddressUK"] is None
 
     assert_all_null(
         row,

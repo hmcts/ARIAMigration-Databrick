@@ -24,6 +24,47 @@ from pyspark.sql.functions import (
 
 
 ################################################################
+##########              ended          ###########
+################################################################
+
+def ended(silver_m3):
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+
+
+    silver_m3_filtered = silver_m3.filter(
+        (
+            (F.col("CaseStatus") == "10") & F.col("Outcome").isin(80,122,25,120,2,105,13)
+        ) |
+        (
+            (F.col("CaseStatus") == "46") & (F.col("Outcome") == 31)
+        ) |
+        (
+            (F.col("CaseStatus") == "26") & F.col("Outcome").isin(80,13,25)
+        ) |
+        (
+            F.col("CaseStatus").isin("37","38") & F.col("Outcome").isin(80,13,25,72,125)
+        ) |
+        (
+            (F.col("CaseStatus") == "39") & (F.col("Outcome") == 25)
+        ) |
+        (
+            (F.col("CaseStatus") == "51") & F.col("Outcome").isin(0,94,93)
+        ) |
+        (
+            (F.col("CaseStatus") == "52") & F.col("Outcome").isin(91,95)
+        ) |
+        (
+            (F.col("CaseStatus") == "36") & F.col("Outcome").isin(1,2,25)
+        )
+    )
+
+    silver_m3_ranked = silver_m3_filtered.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+
+
+################################################################
 ##########              documents          ###########
 ################################################################
 
@@ -119,6 +160,35 @@ def documents(silver_m1,silver_m3):
 ################################################################
 
 def ftpa(silver_m3,silver_c):
+
+
+    silver_m3_filtered = silver_m3.filter(
+        (
+            (F.col("CaseStatus") == "10") & F.col("Outcome").isin(80,122,25,120,2,105,13)
+        ) |
+        (
+            (F.col("CaseStatus") == "46") & (F.col("Outcome") == 31)
+        ) |
+        (
+            (F.col("CaseStatus") == "26") & F.col("Outcome").isin(80,13,25)
+        ) |
+        (
+            F.col("CaseStatus").isin("37","38") & F.col("Outcome").isin(80,13,25,72,125)
+        ) |
+        (
+            (F.col("CaseStatus") == "39") & (F.col("Outcome") == 25)
+        ) |
+        (
+            (F.col("CaseStatus") == "51") & F.col("Outcome").isin(0,94,93)
+        ) |
+        (
+            (F.col("CaseStatus") == "52") & F.col("Outcome").isin(91,95)
+        ) |
+        (
+            (F.col("CaseStatus") == "36") & F.col("Outcome").isin(1,2,25)
+        )
+    )
+
 
     ftpa_df,ftpa_audit = DA.ftpa(silver_m3,silver_c)
 

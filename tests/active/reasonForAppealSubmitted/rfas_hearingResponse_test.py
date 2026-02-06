@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.caseUnderReview import hearingResponse
+from Databricks.ACTIVE.APPEALS.shared_functions.reasonsForAppealSubmitted import hearingResponse
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
@@ -12,11 +12,11 @@ import pytest
 def spark():
     """Create a Spark session for testing."""
     return SparkSession.builder \
-        .appName("caseUnderReview_hearingResponse") \
+        .appName("reasonForAppealSubmitted_hearingResponse") \
         .getOrCreate()
 
 
-class TestCaseUnderReviewHearingResponse:
+class TestReasonForAppealSubmittedHearingResponse:
     SILVER_M1_SCHEMA = StructType([
         StructField("CaseNo", StringType()),
         StructField("dv_representation", StringType()),
@@ -60,14 +60,14 @@ class TestCaseUnderReviewHearingResponse:
 
     def test_additionalInstructionsTribunalResponse(self, spark):
         silver_m1 = spark.createDataFrame([
-            ("1", "LR", "appeal"),
-            ("2", "LR", "appeal"),
-            ("3", "LR", "appeal"),
-            ("4", "LR", "appeal"),
-            ("5", "LR", "appeal"),
-            ("6", "LR", "appeal"),
-            ("7", "LR", "appeal"),
-            ("8", "AIP", "appeal")
+            ("1", "AIP", "appeal"),
+            ("2", "AIP", "appeal"),
+            ("3", "AIP", "appeal"),
+            ("4", "AIP", "appeal"),
+            ("5", "AIP", "appeal"),
+            ("6", "AIP", "appeal"),
+            ("7", "AIP", "appeal"),
+            ("8", "LR", "appeal")
         ], self.SILVER_M1_SCHEMA)
 
         silver_m3 = spark.createDataFrame([

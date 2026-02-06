@@ -86,7 +86,8 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         struct(col("il.languageCode").alias("code"), col("il.languageLabel").alias("label"))
                     ).when((col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory),
                         struct(col("ail.languageCode").alias("code"), col("ail.languageLabel").alias("label"))
-                    ).alias("value")
+                    ).alias("value"),
+                    spoken_languages_list_literal.alias("list_items")
                 )
             )
             .withColumn("lu_appellantInterpreterSignLanguageRefData",
@@ -95,7 +96,8 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         struct(col("il.languageCode").alias("code"), col("il.languageLabel").alias("label"))
                     ).when((col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory),
                         struct(col("ail.languageCode").alias("code"), col("ail.languageLabel").alias("label"))
-                    ).alias("value")
+                    ).alias("value"),
+                    sign_languages_list_literal.alias("list_items")
                 )
             )
             .withColumn("lu_spokenManualEntry",
@@ -158,9 +160,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when(spoken_language_ref_data_condition,
                             col("lu_appellantInterpreterSpokenLanguageRefData")
                         ).alias("languageRefData"),
-                        when(spoken_language_ref_data_condition,
-                            spoken_languages_list_literal
-                        ).alias("list_items"),
                         col("lu_spokenManualEntry").alias("languageManualEntry"),
                         when((array_size(col("lu_spokenManualEntry")) > 0),
                             col("lu_spokenManualEntryDescription")
@@ -174,9 +173,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                         when(sign_language_ref_data_condition,
                             col("lu_appellantInterpreterSignLanguageRefData")
                         ).alias("languageRefData"),
-                        when(sign_language_ref_data_condition,
-                            sign_languages_list_literal
-                        ).alias("list_items"),
                         col("lu_signManualEntry").alias("languageManualEntry"),
                         when((array_size(col("lu_signManualEntry")) > 0),
                             col("lu_signManualEntryDescription")

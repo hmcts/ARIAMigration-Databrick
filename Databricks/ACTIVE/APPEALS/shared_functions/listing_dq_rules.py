@@ -124,6 +124,8 @@ def add_checks_hearing_requirements(checks={}):
                                     AND
                                     (appellantInterpreterSpokenLanguage.languageRefData.value.label <=> valid_languageLabel)
                                     AND
+                                    (ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items) > 0)
+                                    AND
                                     (ARRAY_SIZE(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY())) <=> 0)
                                     AND
                                     (appellantInterpreterSpokenLanguage.languageManualEntryDescription IS NULL)
@@ -157,6 +159,8 @@ def add_checks_hearing_requirements(checks={}):
                                     (appellantInterpreterSpokenLanguage.languageRefData.value.code <=> valid_additionalLanguageCode)
                                     AND
                                     (appellantInterpreterSpokenLanguage.languageRefData.value.label <=> valid_additionalLanguageLabel)
+                                    AND
+                                    (ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items) > 0)
                                     AND
                                     (ARRAY_SIZE(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY())) <=> 0)
                                     AND
@@ -209,6 +213,8 @@ def add_checks_hearing_requirements(checks={}):
                                     AND
                                     (appellantInterpreterSignLanguage.languageRefData.value.label <=> valid_languageLabel)
                                     AND
+                                    (ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items) > 0)
+                                    AND
                                     (ARRAY_SIZE(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY())) <=> 0)
                                     AND
                                     (appellantInterpreterSignLanguage.languageManualEntryDescription IS NULL)
@@ -242,6 +248,8 @@ def add_checks_hearing_requirements(checks={}):
                                     (appellantInterpreterSignLanguage.languageRefData.value.code <=> valid_additionalLanguageCode)
                                     AND
                                     (appellantInterpreterSignLanguage.languageRefData.value.label <=> valid_additionalLanguageLabel)
+                                    AND
+                                    (ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items) > 0)
                                     AND
                                     (ARRAY_SIZE(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY())) <=> 0)
                                     AND

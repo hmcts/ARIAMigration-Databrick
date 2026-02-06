@@ -34,7 +34,7 @@ class TestListingDQChecks():
 
     LANGUAGE_MAP_TYPE = StructType([StructField("code", StringType()), StructField("label", StringType())])
 
-    LANGUAGE_REF_DATA_TYPE = StructType([StructField("value", LANGUAGE_MAP_TYPE)])
+    LANGUAGE_REF_DATA_TYPE = StructType([StructField("value", LANGUAGE_MAP_TYPE), StructField("list_items", ArrayType(LANGUAGE_MAP_TYPE))])
 
     APPELLANT_INTERPRETER_LANGUAGE_COLUMNS = StructType([
         StructField("CaseNo", StringType()),
@@ -43,13 +43,11 @@ class TestListingDQChecks():
         StructField("AdditionalLanguageId", IntegerType()),
         StructField("appellantInterpreterSpokenLanguage", StructType([
             StructField("languageRefData", LANGUAGE_REF_DATA_TYPE),
-            StructField("list_items", ArrayType(LANGUAGE_MAP_TYPE)),
             StructField("languageManualEntry", ArrayType(StringType())),
             StructField("languageManualEntryDescription", StringType())
         ])),
         StructField("appellantInterpreterSignLanguage", StructType([
             StructField("languageRefData", LANGUAGE_REF_DATA_TYPE),
-            StructField("list_items", ArrayType(LANGUAGE_MAP_TYPE)),
             StructField("languageManualEntry", ArrayType(StringType())),
             StructField("languageManualEntryDescription", StringType())
         ])),
@@ -107,14 +105,14 @@ class TestListingDQChecks():
             ("1", 1, 1, 2, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", "c", "d", None, None),                                                                   # Two languages - valid
             ("2", 1, 1, 3, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, desc"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", None, None, "Yes", "desc"),                                                           # One lanuage, 1 manual language - valid
             ("3", 1, 4, 3, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "desc, desc_two"}, None, "spokenLanguageInterpreter", None, None, "Yes", "desc", "spokenLanguageInterpreter", None, None, "Yes", "desc_two"),                                           # Two manual languages - valid
-            ("4", 1, 1, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, None, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),  # One language only - valid
+            ("4", 1, 1, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, None, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),  # One language only - valid
             ("5", 1, 3, 0, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "desc"}, None, "spokenLanguageInterpreter", None, None, "Yes", "desc", None, None, None, None, None),                                                                                   # One manual anguage only - valid
             ("6", 1, 0, 0, None, None, None, None, None, None, None, None, None, None, None, None),                                                                                                                                                                                   # No languages - valid
             ("7", 1, None, None, None, None, None, None, None, None, None, None, None, None, None, None),                                                                                                                                                                             # No languages since all null - valid
             ("8", 1, 0, 0, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "a, desc"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", None, None, "Yes", "desc"),                                                           # No languages, but languageRefData entry - invalid
-            ("9", 1, 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),    # LanguageIds set but no spoken languages - valid
+            ("9", 1, 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),    # LanguageIds set but no spoken languages - valid
             ("10", 1, 5, 6, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", "c", "d", None, None),                                                                      # Two LanguageId set but no spoken languages - valid
-            ("11", 1, 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, None, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # Sign languageId set but has spoken language - invalid
+            ("11", 1, 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, None, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # Sign languageId set but has spoken language - invalid
             ("12", 0, 1, 2, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", "c", "d", None, None)                                                                   # Interpreter is not needed by languages have been set - invalid
         ], self.APPELLANT_INTERPRETER_LANGUAGE_COLUMNS)
 
@@ -135,14 +133,14 @@ class TestListingDQChecks():
             ("1", 1, 1, 2, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", "c", "d", None, None),                                                                        # Two sign languages - valid
             ("2", 1, 1, 3, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, desc"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", None, None, "Yes", "desc"),                                                                # One sign lanuage, 1 manual sign language - valid
             ("3", 1, 4, 3, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "desc, desc_two"}, "signLanguageInterpreter", None, None, "Yes", "desc", "signLanguageInterpreter", None, None, "Yes", "desc_two"),                                                # Two manual sign languages - valid
-            ("4", 1, 1, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),     # One sign language only - valid
+            ("4", 1, 1, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, "signLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),     # One sign language only - valid
             ("5", 1, 3, 0, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "desc"}, "signLanguageInterpreter", None, None, "Yes", "desc", None, None, None, None, None),                                                                                      # One manual sign language only - valid
             ("6", 1, 0, 0, None, None, None, None, None, None, None, None, None, None, None, None),                                                                                                                                                                                    # No languages - valid
             ("7", 1, None, None, None, None, None, None, None, None, None, None, None, None, None, None),                                                                                                                                                                              # No languages since all null - valid
             ("8", 1, 0, 0, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, desc"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", None, None, "Yes", "b, desc"),                                                             # No languages, but languageRefData entry - invalid
-            ("9", 1, 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, None, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # LanguageIds set but no sign languages - valid
+            ("9", 1, 5, 0, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, None, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),   # LanguageIds set but no sign languages - valid
             ("10", 1, 5, 6, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, None, "spokenLanguageInterpreter", "a", "b", None, None, "spokenLanguageInterpreter", "c", "d", None, None),                                                                   # Two LanguageId set but no sign languages - valid
-            ("11", 1, 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}], "languageManualEntry": []}, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),  # Sign languageId set but has spoken language - invalid
+            ("11", 1, 5, 0, None, {"languageRefData": {"value": {"code": "a", "label": "b"}, "list_items": [{"code": "a", "label": "b"}, {"code": "c", "label": "d"}]}, "languageManualEntry": []}, "spokenLanguageInterpreter", "a", "b", None, None, None, None, None, None, None),  # Sign languageId set but has spoken language - invalid
             ("12", 0, 1, 2, None, {"languageManualEntry": ["Yes"], "languageManualEntryDescription": "b, d"}, "signLanguageInterpreter", "a", "b", None, None, "signLanguageInterpreter", "c", "d", None, None)                                                                        # Interpreter is not needed by language is set - invalid
         ], self.APPELLANT_INTERPRETER_LANGUAGE_COLUMNS)
 

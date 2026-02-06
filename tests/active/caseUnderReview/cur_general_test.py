@@ -30,7 +30,8 @@ class TestCaseUnderReviewGeneral:
 
         caseList = [
             ("1",),
-            ("2",)
+            ("2",),
+            ("3",)
         ]
 
         return spark.createDataFrame(caseList, AERB_COLUMNS)
@@ -40,8 +41,9 @@ class TestCaseUnderReviewGeneral:
             AERb.generalDefault.return_value = self.aerb_general_default_df(spark)
 
             silver_m1 = spark.createDataFrame([
-                ("1", "rep", "appeal"),
-                ("2", "rep", "appeal")
+                ("1", "LR", "appeal"),
+                ("2", "LR", "appeal"),
+                ("3", "AIP", "appeal")
             ], self.SILVER_M1_SCHEMA)
 
             df = generalDefault(silver_m1)
@@ -50,3 +52,4 @@ class TestCaseUnderReviewGeneral:
 
             assert caseArgumentAvailableList[0][0] == "Yes"
             assert caseArgumentAvailableList[1][0] == "Yes"
+            assert len(caseArgumentAvailableList) == 2

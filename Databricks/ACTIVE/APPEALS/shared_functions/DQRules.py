@@ -513,41 +513,29 @@ def base_DQRules():
         )"""
     )
 
-    checks["valid_paymentDescription"] = ( # paymentDescription is not null
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND paymentDescription IN ('Appeal determined without a hearing','Appeal determined with a hearing')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL))"
+    checks["valid_paymentDescription"] = (
+        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND paymentDescription = 'Appeal determined without a hearing')"
+        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND paymentDescription = 'Appeal determined with a hearing'))"
+        "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
     )
 
-    # checks["valid_paymentDescription"] = ( # paymentDescription is not null
-    #     "(paymentDescription IS NOT NULL)"
-    # )
-
-    checks["valid_paymentStatus"] = ( # paymentStatus is not null
+    checks["valid_paymentStatus"] = (
       "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus = 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
     )
 
-    # checks["valid_paymentStatus"] = ( # paymentStatus is not null
-    #   "(paymentStatus IS NOT NULL)"
-    # )
-
-    checks["valid_feeVersion"] = ( # feeVersion is not null
+    checks["valid_feeVersion"] = (
       "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feeVersion IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feeVersion IS NULL))"
     )
 
-    # checks["valid_feeVersion"] = ( # feeVersion is not null
-    #   "(feeVersion IS NOT NULL)"
-    # )
-
-    checks["valid_feePaymentAppealType"] = ( # feePaymentAppealType is not null
+    checks["valid_feePaymentAppealType"] = (
       "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NULL))"
     )
 
     checks["valid_decisionHearingFeeOption"] = (
-      "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IN ('decisionWithoutHearing','decisionWithHearing')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL))"
+        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND decisionHearingFeeOption = 'decisionWithoutHearing')"
+        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND decisionHearingFeeOption = 'decisionWithHearing'))"
+        "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
     )
-
-    # checks["valid_feePaymentAppealType"] = ( # feePaymentAppealType is not null
-    #   "(feePaymentAppealType IS NOT NULL)"
-    # )
 
     # ##############################
     # # ARIADM-785 (remissionTypes)

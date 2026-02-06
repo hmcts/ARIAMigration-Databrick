@@ -1712,63 +1712,130 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
 ################################################################
 
 # Function to clean reference numbers (HORef, FCONumber) according to business rules
+# def cleanReferenceNumber(ref):
+#     """
+#     Cleans a reference number string according to the following rules:
+#     - If ref is None, return None.
+#     - If ref starts with 'GWF', return as is (no cleaning).
+#     - Remove all spaces and special characters except '/'.
+#     - If ref contains '/', split into prefix and suffix:
+#         - If prefix contains no digits, ignore it.
+#         - Extract digits from prefix and suffix.
+#         - If suffix has <=3 digits, remove leading zeros.
+#         - Concatenate prefix digits and suffix digits.
+#     - If ref does not contain '/', extract all digits.
+#     - If the cleaned result is 8 digits, pad with leading zero to make 9 digits.
+#     - If the cleaned result is not 9 digits, return None.
+#     - Only return if cleaned result is exactly 9 digits.
+#     """
+#     if ref is None:
+#         return None
+#     ref = ref.strip()
+#     if ref.startswith("GWF"):
+#         return ref
+#     # Remove all spaces and special chars except /
+#     ref = re.sub(r"[^A-Za-z0-9/]", "", ref)
+#     # Split on /
+#     parts = ref.split("/")
+#     if len(parts) == 2:
+#         prefix, suffix = parts
+#         # If prefix is not all digits, ignore it (for ISLAMABAD/123456789, NEWDELHI/12345678, etc.)
+#         if not re.search(r"\d", prefix):
+#             prefix_digits = ""
+#         else:
+#             prefix_digits = re.sub(r"\D", "", prefix)
+#             if not prefix_digits and prefix:
+#                 prefix_digits = prefix
+#         suffix_digits = re.sub(r"\D", "", suffix)
+#         if not suffix_digits:
+#             return None
+#         # Remove leading zeros for suffix if <=3 digits
+#         if len(suffix_digits) <= 3:
+#             try:
+#                 suffix_digits = str(int(suffix_digits))
+#             except:
+#                 return None
+#         cleaned = prefix_digits + suffix_digits
+#     elif len(parts) == 1:
+#         digits = re.sub(r"\D", "", ref)
+#         cleaned = digits
+#     else:
+#         return None
+#     # If cleaned is 8 digits, pad to 9
+#     if len(cleaned) == 8:
+#         cleaned = "0" + cleaned
+#     elif len(cleaned) != 9:
+#         return None
+#     if re.fullmatch(r"\d{9}", cleaned):
+#         return cleaned
+#     return None
+
 def cleanReferenceNumber(ref):
+    import re
     """
-    Cleans a reference number string according to the following rules:
-    - If ref is None, return None.
-    - If ref starts with 'GWF', return as is (no cleaning).
-    - Remove all spaces and special characters except '/'.
-    - If ref contains '/', split into prefix and suffix:
-        - If prefix contains no digits, ignore it.
-        - Extract digits from prefix and suffix.
-        - If suffix has <=3 digits, remove leading zeros.
-        - Concatenate prefix digits and suffix digits.
-    - If ref does not contain '/', extract all digits.
-    - If the cleaned result is 8 digits, pad with leading zero to make 9 digits.
-    - If the cleaned result is not 9 digits, return None.
-    - Only return if cleaned result is exactly 9 digits.
+    1. Handling Short Reference Numbers e.g., "12345" -> "000012345"
+    2. Handling SHEF references e.g., "SHEF1/1234567" -> "001234567"
+    3. Handling UKPLa/UKVS reference formats e.g., "UKPLA/123456" -> "000123456"
+    4. Handling other letters and locations e.g., "CROYDONB/1234567" -> "001234567"
+    5. Handling special characters e.g., "1/1234567" -> "011234567"
+    6. Handling too many numbers e.g., N1234567/006 -> "012345676"
+    7. Handling too many numbers v2 e.g., "N1234567/015" -> "123456715"
+    8. Handling no reference number e.g., null or '' -> "000000000"
     """
-    if ref is None:
-        return None
-    ref = ref.strip()
-    if ref.startswith("GWF"):
-        return ref
-    # Remove all spaces and special chars except /
-    ref = re.sub(r"[^A-Za-z0-9/]", "", ref)
-    # Split on /
-    parts = ref.split("/")
-    if len(parts) == 2:
-        prefix, suffix = parts
-        # If prefix is not all digits, ignore it (for ISLAMABAD/123456789, NEWDELHI/12345678, etc.)
-        if not re.search(r"\d", prefix):
-            prefix_digits = ""
+
+    if ref is None or '':
+        return '000000000'
+
+    if len(ref) > 9 and len(ref) < 16:
+        no_letters = re.sub(r"[a-zA-Z]", "", ref)
+        parts = no_letters.rsplit("/", 1)
+
+        if len(parts) == 2:
+            left, right = parts
+            right = right.lstrip("0")
+            combined = left + right
+            return combined.rjust(9, '0')
         else:
-            prefix_digits = re.sub(r"\D", "", prefix)
-            if not prefix_digits and prefix:
-                prefix_digits = prefix
-        suffix_digits = re.sub(r"\D", "", suffix)
-        if not suffix_digits:
-            return None
-        # Remove leading zeros for suffix if <=3 digits
-        if len(suffix_digits) <= 3:
-            try:
-                suffix_digits = str(int(suffix_digits))
-            except:
-                return None
-        cleaned = prefix_digits + suffix_digits
-    elif len(parts) == 1:
-        digits = re.sub(r"\D", "", ref)
-        cleaned = digits
-    else:
-        return None
-    # If cleaned is 8 digits, pad to 9
-    if len(cleaned) == 8:
-        cleaned = "0" + cleaned
-    elif len(cleaned) != 9:
-        return None
-    if re.fullmatch(r"\d{9}", cleaned):
-        return cleaned
-    return None
+            combined = "".join(parts)
+            return combined.rjust(9, '0')
+
+        digits_only = re.sub(r"\D", "", combined)
+        return digits_only.rjust(9, '0')
+
+    if len(ref) < 9 and not ('GWF' in ref or 'HO' in ref):
+        return ref.rjust(9, '0')
+    
+    if ref.startswith("SHEF") and "/" in ref:
+        return ref.split("/", 1)[1].rjust(9, '0')
+    
+    if ref.startswith(('UKPLA' or 'UKVS')) and "/" in ref:
+        return ref.split("/", 1)[1].rjust(9, '0')
+    
+    match = re.match(r"^.*/(\d+)$", ref)
+    if match:
+        return match.group(1).rjust(9, '0')
+    
+    no_special_characters = re.sub(r"\D", "", ref)
+    if no_special_characters:
+        return no_special_characters.rjust(9, '0')
+
+    if len(ref) > 9 and len(ref) < 16:
+        no_letters = re.sub(r"[a-zA-Z]", "", ref)
+        parts = no_letters.rsplit("/", 1)
+
+        if len(parts) == 2:
+            left, right = parts
+            right = right.lstrip("0")
+            combined = left + right
+            return combined.rjust(9, '0')
+        else:
+            combined = "".join(parts)
+            return combined.rjust(9, '0')
+
+        digits_only = re.sub(r"\D", "", combined)
+        return digits_only.rjust(9, '0')
+    
+    return ref
 
 # Register the cleaning function as a Spark UDF
 cleanReferenceNumberUDF = udf(cleanReferenceNumber, StringType())

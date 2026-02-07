@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_a import ftpa
+from Databricks.ACTIVE.APPEALS.shared_functions.ended import ended
 from pyspark.sql import SparkSession
 import pytest
 from pyspark.sql import Row
@@ -14,9 +14,9 @@ def spark():
         .getOrCreate()
     )
 
-##### Testing the hearingDetails field grouping function #####
+##### Testing the ended field grouping function #####
 @pytest.fixture(scope="session")
-def ftpa_outputs(spark):
+def ended_outputs(spark):
 
 
     m3_schema = T.StructType([
@@ -27,9 +27,9 @@ def ftpa_outputs(spark):
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("DateReceived", T.StringType(), True),
         T.StructField("DecisionDate", T.StringType(), True),
-        T.StructField("Adj_Title", T.StringType(), True),
-        T.StructField("Adj_Forenames", T.StringType(), True),
-        T.StructField("Adj_Surname", T.StringType(), True),
+        T.StructField("Adj_Determination_Title", T.StringType(), True),
+        T.StructField("Adj_Determination_Forenames", T.StringType(), True),
+        T.StructField("Adj_Determination_Surname", T.StringType(), True),
         T.StructField("Party", T.IntegerType(), True),
         T.StructField("OutOfTime", T.IntegerType(), True),
         T.StructField("Outcome", T.IntegerType(), True),
@@ -54,12 +54,12 @@ def ftpa_outputs(spark):
         ("CASE011", 1, 39, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00","Mr","Hello","World",2,1,1)
         ]     
 
-    c_schema = T.StructType([
+    es_schema = T.StructType([
     T.StructField("CaseNo", T.StringType(), True),
     T.StructField("CategoryId", T.IntegerType(), True),
     ])
     
-    c_data = [
+    es_data = [
         ("CASE005", 37),  
         ("CASE006", 37),  
         ("CASE007", 37),  
@@ -70,133 +70,67 @@ def ftpa_outputs(spark):
         ]
     
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
-    df_c =  spark.createDataFrame(c_data, c_schema)
+    df_es =  spark.createDataFrame(es_data, es_schema)
 
 
-    ftpa_content,_ = ftpa(df_m3, df_c)
-    results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
+    ended_content,_ = ended(df_m3, df_es)
+    results = {row["CaseNo"]: row.asDict() for row in ended_content.collect()}
     
     return results
 
-from pyspark.sql import Row
+def test_endAppealOutcome(spark,ended_outputs):
 
-def test_ftpaList(spark, ftpa_outputs):
+    results = ended_outputs
 
-    results = ftpa_outputs
+    assert results["CASE005"]["endAppealOutcome"] == "02/11/2025"
+    assert results["CASE006"]["endAppealOutcome"] == "03/12/2026"
+    assert results["CASE007"]["endAppealOutcome"] == None
+    assert results["CASE010"]["endAppealOutcome"] == None
 
-    # CASE005 – appellant, no explanation
-    assert results["CASE005"]["ftpaList"] == [
-        Row(
-            id='1',
-            value=Row(
-                ftpaApplicant='appellant',
-                ftpaApplicationDate='02/11/2025',
-                ftpaGroundsDocuments=[],
-                ftpaEvidenceDocuments=[],
-                ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation=None
-            )
-        )
-    ]
+def test_endAppealOutcomeReason(spark,ended_outputs):
 
-    # CASE006 – appellant, explanation provided
-    assert results["CASE006"]["ftpaList"] == [
-        Row(
-            id='1',
-            value=Row(
-                ftpaApplicant='appellant',
-                ftpaApplicationDate='03/12/2026',
-                ftpaGroundsDocuments=[],
-                ftpaEvidenceDocuments=[],
-                ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
-            )
-        )
-    ]
+    results = ended_outputs
 
-    # CASE007 – respondent, no explanation
-    assert results["CASE007"]["ftpaList"] == [
-        Row(
-            id='1',
-            value=Row(
-                ftpaApplicant='respondent',
-                ftpaApplicationDate='03/08/2026',
-                ftpaGroundsDocuments=[],
-                ftpaEvidenceDocuments=[],
-                ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation=None
-            )
-        )
-    ]
+    assert results["CASE005"]["endAppealOutcomeReason"] == "No"
+    assert results["CASE006"]["endAppealOutcomeReason"] == "Yes"
+    assert results["CASE007"]["endAppealOutcomeReason"] == None
+    assert results["CASE010"]["endAppealOutcomeReason"] == None
 
-    # CASE011 – respondent, explanation provided
-    assert results["CASE011"]["ftpaList"] == [
-        Row(
-            id='1',
-            value=Row(
-                ftpaApplicant='respondent',
-                ftpaApplicationDate='02/11/2025',
-                ftpaGroundsDocuments=[],
-                ftpaEvidenceDocuments=[],
-                ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
-            )
-        )
-    ]
+def test_endAppealApproverType(spark,ended_outputs):
 
-def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
+    results = ended_outputs
 
-    results = ftpa_outputs
-
-    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "02/11/2025"
-    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "03/12/2026"
-    assert results["CASE007"]["ftpaAppellantApplicationDate"] == None
-    assert results["CASE010"]["ftpaAppellantApplicationDate"] == None
-
-def test_ftpaAppellantSubmissionOutOfTime(spark,ftpa_outputs):
-
-    results = ftpa_outputs
-
-    assert results["CASE005"]["ftpaAppellantSubmissionOutOfTime"] == "No"
-    assert results["CASE006"]["ftpaAppellantSubmissionOutOfTime"] == "Yes"
-    assert results["CASE007"]["ftpaAppellantSubmissionOutOfTime"] == None
-    assert results["CASE010"]["ftpaAppellantSubmissionOutOfTime"] == None
-
-def test_ftpaAppellantOutOfTimeExplanation(spark,ftpa_outputs):
-
-    results = ftpa_outputs
-
-    assert results["CASE005"]["ftpaAppellantOutOfTimeExplanation"] == None
-    assert results["CASE006"]["ftpaAppellantOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
-    assert results["CASE007"]["ftpaAppellantOutOfTimeExplanation"] == None
-    assert results["CASE010"]["ftpaAppellantOutOfTimeExplanation"] == None
+    assert results["CASE005"]["endAppealApproverType"] == None
+    assert results["CASE006"]["endAppealApproverType"] == "This is a migrated ARIA case. Please refer to the documents."
+    assert results["CASE007"]["endAppealApproverType"] == None
+    assert results["CASE010"]["endAppealApproverType"] == None
 
 
-def test_ftpaRespondentApplicationDate(spark,ftpa_outputs):
+def test_endAppealApproverName(spark,ended_outputs):
 
-    results = ftpa_outputs
+    results = ended_outputs
 
-    assert results["CASE005"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE006"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "03/08/2026"
-    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "02/11/2025"
+    assert results["CASE005"]["endAppealApproverName"] == None
+    assert results["CASE006"]["endAppealApproverName"] == None
+    assert results["CASE007"]["endAppealApproverName"] == "03/08/2026"
+    assert results["CASE011"]["endAppealApproverName"] == "02/11/2025"
 
 
-def test_ftpaRespondentSubmissionOutOfTime(spark,ftpa_outputs):
+def test_endAppealDate(spark,ended_outputs):
 
-    results = ftpa_outputs
+    results = ended_outputs
 
-    assert results["CASE005"]["ftpaRespondentSubmissionOutOfTime"] == None
-    assert results["CASE006"]["ftpaRespondentSubmissionOutOfTime"] == None
-    assert results["CASE007"]["ftpaRespondentSubmissionOutOfTime"] == "No"
-    assert results["CASE011"]["ftpaRespondentSubmissionOutOfTime"] == "Yes"
+    assert results["CASE005"]["endAppealDate"] == None
+    assert results["CASE006"]["endAppealDate"] == None
+    assert results["CASE007"]["endAppealDate"] == "No"
+    assert results["CASE011"]["endAppealDate"] == "Yes"
 
-def test_ftpaRespondentOutOfTimeExplanation(spark,ftpa_outputs):
+def test_stateBeforeEndAppeal(spark,ended_outputs):
 
-    results = ftpa_outputs
+    results = ended_outputs
 
-    assert results["CASE005"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE006"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE007"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE011"]["ftpaRespondentOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+    assert results["CASE005"]["stateBeforeEndAppeal"] == None
+    assert results["CASE006"]["stateBeforeEndAppeal"] == None
+    assert results["CASE007"]["stateBeforeEndAppeal"] == None
+    assert results["CASE011"]["stateBeforeEndAppeal"] == "This is a migrated ARIA case. Please refer to the documents."
 

@@ -31,7 +31,7 @@ from pyspark.sql.functions import (
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-def ended(silver_m3, bronze_ended_state):
+def ended(silver_m3, bronze_ended_states):
     # 1) Normalize numeric types explicitly (in-place casts)
     df = (
         silver_m3
@@ -112,10 +112,10 @@ def ended(silver_m3, bronze_ended_state):
     )
 
     # 6) Join with ended state and build final fields
-    #    Assumes bronze_ended_state has int CaseStatus and Outcome too.
+    #    Assumes bronze_ended_states has int CaseStatus and Outcome too.
     ended_df = (
         silver_with_decision_ts.alias("m3")
-        .join(bronze_ended_state.alias("es"), on=["CaseStatus", "Outcome"], how="left")
+        .join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")
         .withColumn(
             "endAppealApproverType",
             F.when(F.col("CaseStatus") == 46, F.lit("Judge")).otherwise(F.lit("Case Worker"))
@@ -146,7 +146,7 @@ def ended(silver_m3, bronze_ended_state):
     ended_audit = (
         ended_df.alias("content")
             .join(silver_with_decision_ts.alias("m3"), on="CaseNo", how="left")
-            .join(bronze_ended_state.alias("es"), on=["CaseStatus", "Outcome"], how="left")
+            .join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")
             .select(
                 "content.CaseNo",
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"),lit("endAppealOutcome"))).alias("endAppealOutcome_inputFields"),

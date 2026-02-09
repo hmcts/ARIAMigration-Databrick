@@ -3275,10 +3275,6 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Join Casesurety to master table
 
@@ -3616,7 +3612,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         bf_diary_code = ""
         if row.bfdiary_details is not None:
             for bfdiary in row.bfdiary_details or []:
-                bf_line = f"<tr><td id=\"midpadding\">{simple_date_format(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{bfdiary.DateCompleted}</td></tr>"
+                bf_line = f"<tr><td id=\"midpadding\">{simple_date_format(bfdiary.BFDate)}</td><td id=\"midpadding\">{bfdiary.BFTypeDescription}</td><td id=\"midpadding\">{bfdiary.Entry}</td><td id=\"midpadding\">{simple_date_format(bfdiary.DateCompleted)}</td></tr>"
                 bf_diary_code += bf_line + "\n"
             html = html.replace("{{bfdiaryPlaceholder}}", bf_diary_code)
         else:

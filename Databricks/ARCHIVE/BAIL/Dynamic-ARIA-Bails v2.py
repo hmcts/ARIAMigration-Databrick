@@ -3294,7 +3294,7 @@ case_surety_replacement = {
     "{{SponsorEmail}}": "CaseSuretyEmail",
     "{{AmountOfFinancialCondition}}": "AmountOfFinancialCondition",
     "{{SponsorSolicitor}}": "Solicitor",
-    "{{SponserDateLodged}}": "CaseSuretyDateLodged",
+    "{{SponsorDateLodged}}": "CaseSuretyDateLodged",
     "{{SponsorLocation}}": "Location",
     "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
 }
@@ -3308,8 +3308,17 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
     # read in all tables
     case_surety = dlt.read("bronze_case_surety_query")
 
+    case_surety = case_surety.withColumn(
+                                    "Solicitor_new",
+                                    when(col("Solicitor") == 0, lit(None))
+                                    .when(col("Solicitor") == 1, lit("Yes"))
+                                    .when(col("Solicitor") == 2, lit("No"))
+                                ).withColumn("CaseSuretyDateLodged", date_format(col("CaseSuretyDateLodged"), "yyyy-MM-dd")
+                                ).withColumn("AmountOfFinancialCondition", round(col("AmountOfFinancialCondition"), 2)
+                                ).withColumn("AmountOfTotalSecurity", round(col("AmountOfTotalSecurity"), 2))
+
     # Group and aggregate financial condition details
-    financial_condition_df = case_surety.groupBy(col("CaseNo")).agg(
+    financial_condition_df = case_surety.groupBy(trim(col("CaseNo")).alias("CaseNo")).agg(
         collect_list(
             struct(
                 col("SuretyId"),
@@ -3326,7 +3335,7 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
                 col("CaseSuretyPostcode"),
                 col("CaseSuretyDateLodged"),
                 col("Location"),
-                col("Solicitor"),
+                col("Solicitor_new").alias("Solicitor"),
                 col("CaseSuretyEmail"),
                 col("CaseSuretyTelephone")
             )
@@ -3838,11 +3847,9 @@ def create_html_column(row, html_template=bails_html_dyn):
         "{{SponsorEmail}}":"CaseSuretyEmail",
         "{{AmountOfFinancialCondition}}":"AmountOfFinancialCondition",
         "{{SponsorSolicitor}}":"Solicitor",
-        "{{SponserDateLodged}}":"CaseSuretyDateLodged",
+        "{{SponsorDateLodged}}":"CaseSuretyDateLodged",
         "{{SponsorLocation}}":"Location",
         "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
-        
-
     }
 
         financial_condition_code = ""
@@ -3871,14 +3878,10 @@ def create_html_column(row, html_template=bails_html_dyn):
         for cd_row in row.Case_detail:
             html = html.replace("{{HearingNotes}}",str(cd_row.AppealCaseNote))
 
-
-
         return html
     
     except Exception as e:
         return f"Failure Error: {e}"
-    
-
 
 # Register the UDF
 create_html_udf = udf(create_html_column, StringType())

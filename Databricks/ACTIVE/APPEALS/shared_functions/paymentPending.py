@@ -1285,7 +1285,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     # appealOutOfCountry logic
     appeal_out_of_country_expr = when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("Yes")
-    ).otherwise(None)
+    ).otherwise(lit("No"))
 
     # appellantStateless logic
     appellant_stateless_expr = when(

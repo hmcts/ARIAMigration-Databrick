@@ -195,6 +195,7 @@ def test_appellant_in_uk_and_ooc(appellantDetails_outputs):
     """Check appellant location flags and ooc admin."""
     # In UK
     assert_equals(appellantDetails_outputs["HU/00487/2025"], appellantInUk="Yes")
+    assert_equals(appellantDetails_outputs["HU/00487/2025"], appealOutOfCountry="No")
     # Out of country
     assert_equals(appellantDetails_outputs["HU/00365/2025"], appealOutOfCountry="Yes")
     # Out-of-country with HORef triggers adminJ

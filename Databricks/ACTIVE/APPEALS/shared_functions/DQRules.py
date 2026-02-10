@@ -93,15 +93,17 @@ def base_DQRules():
     # ##############################
     checks["valid_hearingCentre_in_allowed_values"] = """
     (
-        hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
+        (hearingCentre IS NOT NULL)
+        AND
+        (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
         'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 
-        'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
+        'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
     )
     """
     checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
     checks["valid_caseManagementLocation_region_and_baseLocation"] = """
     (
-      caseManagementLocation.region = '1' AND
+      caseManagementLocation.region <=> '1' AND
       caseManagementLocation.baseLocation IN (
         '231596', '698118', '366559', '386417', '512401',
         '227101', '765324', '366796', '324339', '649000',
@@ -204,24 +206,24 @@ def base_DQRules():
       "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
     )
     checks["valid_legalRepAddressUK"]   = ( 
-      "((dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
-      "OR (dv_representation = 'LR' AND legalRepHasAddress = 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)"
+      "((dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
+      "OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)"
       "OR (dv_representation != 'LR' and legalRepAddressUK IS NULL))"
     )   
     checks["valid_oocAddressLine1"] = ( 
-      "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
+      "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
     )
     checks["valid_oocAddressLine2"] = ( 
-      "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
+      "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
     )
     checks["valid_oocAddressLine3"] = ( 
-      "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
+      "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
     )
     checks["valid_oocAddressLine4"] = ( 
-      "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
+      "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
     )
     checks["valid_oocrCountryGovUkAdminJ"] = ( 
-      "((dv_representation = 'LR' AND legalRepHasAddress = 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
+      "((dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
       )
 
     # ##############################
@@ -276,7 +278,7 @@ def base_DQRules():
     # # ARIADM-710 (flagsLabels)
     # #############################
 
-    checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((dv_CCDAppealType = 'DA' AND isAriaMigratedFeeExemption = 'Yes') OR (dv_CCDAppealType != 'DA' AND isAriaMigratedFeeExemption = 'No'))"
+    checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((dv_CCDAppealType = 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (dv_CCDAppealType != 'DA' AND isAriaMigratedFeeExemption <=> 'No'))"
 
     # ##############################
     # # ARIADM-712 (flagsLabel)- caseFlags
@@ -439,13 +441,13 @@ def base_DQRules():
       "(appellantPartyId IS NOT NULL)"
       )
     checks["valid_legalRepIndividualPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-      "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation = 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation = 'Yes'))"
+      "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
       )
     checks["validlegalRepOrganisationPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-      "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation = 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation = 'Yes'))"
+      "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
       )
     checks["valid_sponsorPartyId_not_null"] = (
-      "((sponsorPartyId IS NOT NULL AND hasSponsor = 'Yes') OR (sponsorPartyId IS NULL and hasSponsor = 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
+      "((sponsorPartyId IS NOT NULL AND hasSponsor <=> 'Yes') OR (sponsorPartyId IS NULL and hasSponsor <=> 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
       )
 
     # ##############################
@@ -457,13 +459,13 @@ def base_DQRules():
             (
               (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
               AND
-              (feeAmountGbp = '8000')
+              (feeAmountGbp <=> '8000')
             )
             OR
             (
               (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
               AND
-              (feeAmountGbp = '14000')
+              (feeAmountGbp <=> '14000')
             )
           )
           OR
@@ -476,8 +478,8 @@ def base_DQRules():
     )
 
     checks["valid_feeDescription"] = (
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND feeDescription = 'Notice of Appeal - appellant consents without hearing A')"
-    "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND feeDescription = 'Appeal determined with a hearing'))"
+    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')"
+    "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing'))"
     "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)"
     )
 
@@ -486,7 +488,7 @@ def base_DQRules():
           (
             (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
             AND
-            (feeWithHearing = '140')
+            (feeWithHearing <=> '140')
           )
           OR
           (
@@ -502,7 +504,7 @@ def base_DQRules():
           (
             (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
             AND
-            (feeWithoutHearing = '80')
+            (feeWithoutHearing <=> '80')
           )
           OR
           (
@@ -514,13 +516,13 @@ def base_DQRules():
     )
 
     checks["valid_paymentDescription"] = (
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND paymentDescription = 'Appeal determined without a hearing')"
-        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND paymentDescription = 'Appeal determined with a hearing'))"
+        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')"
+        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing'))"
         "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
     )
 
     checks["valid_paymentStatus"] = (
-      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus = 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
+      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus <=> 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
     )
 
     checks["valid_feeVersion"] = (
@@ -532,8 +534,8 @@ def base_DQRules():
     )
 
     checks["valid_decisionHearingFeeOption"] = (
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND decisionHearingFeeOption = 'decisionWithoutHearing')"
-        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND decisionHearingFeeOption = 'decisionWithHearing'))"
+        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')"
+        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing'))"
         "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
     )
 
@@ -549,7 +551,7 @@ def base_DQRules():
         "("
         "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver')) "
         "OR "
-        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim = 'OMIT') AND remissionClaim IS NULL)"
+        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT') AND remissionClaim IS NULL)"
         ")"
     )
 
@@ -557,7 +559,7 @@ def base_DQRules():
         "("
         "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL) "
         "OR "
-        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType = 'OMIT') AND feeRemissionType IS NULL)"
+        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)"
         ")"
     )
 
@@ -566,29 +568,29 @@ def base_DQRules():
     # ##############################
 
     checks["valid_exceptionalCircumstances_not_null"] = (
-        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription = 'Oral Hearing Direction' AND remissionType = 'exceptionalCircumstancesremission' AND exceptionalCircumstances = 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription = 'Other' AND remissionType = 'exceptionalCircumstancesremission' AND exceptionalCircumstances = 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType != 'exceptionalCircumstancesremission' AND exceptionalCircumstances IS NULL))"
+        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Other' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'exceptionalCircumstancesremission') AND exceptionalCircumstances IS NULL))"
     ) 
 
     checks["valid_helpWithFeesReferenceNumber_not_null"] = (
-        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType != 'helpWithFees' AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
+        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'helpWithFees') AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
     ) 
 
     checks["valid_legalAidAccountNumber_not_null"] = (
-          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'legalAid' AND feeRemissionType = 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'asylumSupport' AND feeRemissionType = 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim != 'legalAid' AND feeRemissionType != 'Legal Aid' AND legalAidAccountNumber IS NULL))"
+          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'legalAid') AND NOT(feeRemissionType <=> 'Legal Aid') AND legalAidAccountNumber IS NULL))"
     ) 
 
     checks["valid_asylumSupportReference_not_null"] = (
-          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'asylumSupport' AND feeRemissionType = 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'legalAid' AND feeRemissionType = 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim != 'AsylumSupport' AND feeRemissionType != 'Asylum Support' AND asylumSupportReference IS NULL))"
+          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'AsylumSupport') AND NOT(feeRemissionType <=> 'Asylum Support') AND asylumSupportReference IS NULL))"
     ) 
 
     ##############################
     # ARIADM-773 (SponsorDetails)
     ##############################
     checks["valid_hasSponsor_yes_no"] = (
-        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor = 'Yes')"
-        "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No'))"
+        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')"
+        "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')"
         "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
-        "OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)"
+        "OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL))"
     )
     checks["valid_sponsorGivenNames_not_null"] = (
         "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
@@ -599,8 +601,8 @@ def base_DQRules():
     )
 
     checks["valid_sponsorAuthorisation_yes_no"] = (
-            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = True AND sponsorAuthorisation = 'Yes')" 
-            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = False AND sponsorAuthorisation = 'No')"
+            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')" 
+            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')"
             "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)"
             "OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)"
             "OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL))"
@@ -630,7 +632,7 @@ def base_DQRules():
     # ARIADM-762 (appellantDetails)
     # ##############################
     checks["valid_oocAppealAdminJ_values"] = (
-        "( ( (array_contains(valid_categoryIdList, 38) OR MainRespondentId = 4) "
+        "( ( (array_contains(valid_categoryIdList, 38) OR MainRespondentId <=> 4) "
         "AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none') ) "
         "OR (oocAppealAdminJ IS NULL) )"
     )

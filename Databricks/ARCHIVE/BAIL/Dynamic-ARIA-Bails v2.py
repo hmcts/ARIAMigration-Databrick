@@ -946,7 +946,8 @@ def bronze_bail_ac_ca_apt_country_detc():
             col("dc.Postcode").alias("DetentionCentrePostcode"),
             col("dc.Fax").alias("DetentionCentreFax"),
             # Country Fields
-            col("c.DoNotUseNationality")
+            col("c.DoNotUseNationality"),
+            col("c.Country")
     )
     )
 
@@ -1931,7 +1932,8 @@ def silver_m2():
                         .when(col("AppellantDetained") == 2,"IRC")
                         .when(col("AppellantDetained") == 3,"No")
                         .when(col("AppellantDetained") == 4,"Other")
-                        .otherwise("Unknown").alias("AppellantDetainedDesc"),"BaseBailType")
+                        .otherwise("Unknown").alias("AppellantDetainedDesc"),
+                        "BaseBailType")
     
 
     return df
@@ -2879,12 +2881,12 @@ stg_m1_m2_struct = struct(
     col("DetentionCentreAddress4"),
     col("DetentionCentreAddress5"),
     col("DetentionCentrePostcode"),
+    col("Country"),
     col("DetentionCentreFax"),
     col("DoNotUseNationality"),
     col("AppellantDetainedDesc"),
     col("AppealCategoriesDesc")
 )
-
 
 # COMMAND ----------
 
@@ -3409,13 +3411,7 @@ respondent_mapping = {
         "{{POU}}":"PouShortName",
         "{{RRrespondent}}":None
     }
-}
-
-
-
-
-
-        
+}        
 
 # COMMAND ----------
 
@@ -3507,6 +3503,18 @@ def final_staging_bails():
 
 # COMMAND ----------
 
+def resolve_address_line(cd_row, centre_col, appellant_col):
+    if cd_row.AppellantDetainedDesc in ("IMP", "IRC"):
+        return centre_col
+
+    elif cd_row.AppellantDetainedDesc == "No":
+        return appellant_col
+
+    elif cd_row.AppellantDetainedDesc == "Other":
+        return centre_col if centre_col is not None else appellant_col
+
+    return ""
+
 def create_html_column(row, html_template=bails_html_dyn):
     """
     For a given a single row, this function returns the final HTML string.
@@ -3524,7 +3532,6 @@ def create_html_column(row, html_template=bails_html_dyn):
         }
         for key, value in replacements.items():
             html = html.replace(key, str(value) if value is not None else "")
-
 
         # Replace placeholders with actual values
         for cd_row in row.Case_detail:
@@ -3554,13 +3561,14 @@ def create_html_column(row, html_template=bails_html_dyn):
 
             # Parties Tab - Applicant Section
             "{{Centre}}": cd_row.DetentionCentre,
-            "{{AddressLine1}}": cd_row.DetentionCentreAddress1,
-            "{{AddressLine2}}": cd_row.DetentionCentreAddress2,
-            "{{AddressLine3}}": cd_row.DetentionCentreAddress3,
-            "{{AddressLine4}}": cd_row.DetentionCentreAddress4,
-            "{{AddressLine5}}": cd_row.DetentionCentreAddress5,
-            "{{Postcode}}": cd_row.DetentionCentrePostcode,
-            "{{Country}}": cd_row.CountryOfTravelOrigin,
+            "{{AddressLine1}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress1, cd_row.AppellantAddress1),
+            "{{AddressLine2}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress2, cd_row.AppellantAddress2),
+            "{{AddressLine3}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress3, cd_row.AppellantAddress3),
+            "{{AddressLine4}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress4, cd_row.AppellantAddress4),
+            "{{AddressLine5}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress5, cd_row.AppellantAddress5),
+            "{{Postcode}}": resolve_address_line(cd_row, cd_row.DetentionCentrePostcode, cd_row.AppellantPostcode),
+            # ""{{"Country"}}: when(cd_row.AppellantDetained == 3, cd_row.Country).otherwise(lit(None))
+            "{{Country}}": cd_row.Country if cd_row.AppellantDetained == 3 else "",
             "{{phone}}": cd_row.AppellantTelephone,
             "{{email}}": cd_row.AppellantEmail,
             "{{PrisonRef}}": cd_row.AppellantPrisonRef,

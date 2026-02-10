@@ -3600,7 +3600,15 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{RepDxNo1}}": cd_row.RepDxNo1 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo1,
             "{{RepDxNo2}}": cd_row.RepDxNo2 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo2,
             "{{RepLAARefNo}}": "",
-            "{{RepLAACommission}}": cd_row.CaseRepLSCCommission
+            "{{RepLAACommission}}": cd_row.CaseRepLSCCommission,
+
+            ## File specific contact tab
+            "{{repRef}}": cd_row.FileSpecifcContact,
+            "{{repContact}}": cd_row.FileSpecificPhone,
+            "{{repPhone}}": cd_row.FileSpecificReference,
+            "{{repFax}}": cd_row.FileSpecificFax,
+            "{{repEmail}}": cd_row.FileSpecificEmail
+
         }
             for key, value in m1_replacement.items():
                 html = html.replace(key, str(value) if value is not None else "")

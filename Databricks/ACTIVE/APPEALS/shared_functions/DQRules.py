@@ -93,9 +93,11 @@ def base_DQRules():
     # ##############################
     checks["valid_hearingCentre_in_allowed_values"] = """
     (
-        hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
+        (hearingCentre IS NOT NULL)
+        AND
+        (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
         'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 
-        'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
+        'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
     )
     """
     checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"

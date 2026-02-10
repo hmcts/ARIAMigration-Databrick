@@ -3567,7 +3567,6 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{AddressLine4}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress4, cd_row.AppellantAddress4),
             "{{AddressLine5}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress5, cd_row.AppellantAddress5),
             "{{Postcode}}": resolve_address_line(cd_row, cd_row.DetentionCentrePostcode, cd_row.AppellantPostcode),
-            # ""{{"Country"}}: when(cd_row.AppellantDetained == 3, cd_row.Country).otherwise(lit(None))
             "{{Country}}": cd_row.Country if cd_row.AppellantDetained == 3 else "",
             "{{phone}}": cd_row.AppellantTelephone,
             "{{email}}": cd_row.AppellantEmail,
@@ -3686,6 +3685,8 @@ def create_html_column(row, html_template=bails_html_dyn):
                 for resp_placeholder, resp_field_name in current_respondent_mapping.items():
                     if resp_field_name:
                         value = cd_row[resp_field_name]
+                        if value is None:
+                            value = ""
                     else:
                         value = ""
                     html = html.replace(resp_placeholder,str(value))

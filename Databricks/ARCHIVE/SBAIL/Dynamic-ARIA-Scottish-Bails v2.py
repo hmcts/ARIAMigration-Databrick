@@ -3256,13 +3256,7 @@ respondent_mapping = {
         "{{POU}}":"PouShortName",
         "{{RRrespondent}}":None
     }
-}
-
-
-
-
-
-        
+}        
 
 # COMMAND ----------
 
@@ -3536,6 +3530,8 @@ def create_html_column(row, html_template=bails_html_dyn):
                 for resp_placeholder, resp_field_name in current_respondent_mapping.items():
                     if resp_field_name:
                         value = cd_row[resp_field_name]
+                        if value is None:
+                            value = ""
                     else:
                         value = ""
                     html = html.replace(resp_placeholder,str(value))

@@ -69,6 +69,7 @@ def ftpa_outputs(spark):
     # Useful debug if it fails again in pipeline:
     # print("ftpa_content rows:", ftpa_content.count())
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
+    print(results)
     return results
 
 

@@ -11,10 +11,10 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
 
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, 
+    col, when, lit, array, struct, collect_list,
+    max as spark_max, date_format, row_number, expr,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains, nullif
+    collect_set, current_timestamp, transform, first, array_contains, nullif, upper
 )
 from uk_postcodes_parsing import fix, postcode_utils
 
@@ -1280,6 +1280,12 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         conditions & (expr("array_contains(CategoryIdList, 37)")), lit("Yes")
     ).when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("No")
+    ).when(
+        conditions & (col("silver_m1.Detained").isin(1, 2, 4)), lit("Yes")
+    ).when(
+        conditions & (upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("Yes")
+    ).when(
+        conditions & ~(upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("No")
     ).otherwise(None)
 
     # appealOutOfCountry logic
@@ -1476,7 +1482,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     email_expr = internal_appellant_email_expr
 
     df = silver_m1.alias("silver_m1") \
-        .join(silver_m2_derived, ["CaseNo"], "left") \
+        .join(silver_m2_derived.alias("silver_m2"), ["CaseNo"], "left") \
         .join(silver_c_grouped, ["CaseNo"], "left") \
         .join(silver_m1_country_grouped, ["CaseNo"], "left") \
         .join(bronze_cleansing, ["CaseNo"], "left") \

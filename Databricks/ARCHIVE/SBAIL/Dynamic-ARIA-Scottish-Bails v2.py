@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor, col, date_format, count, explode, round, regexp_extract, max
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor, col, date_format, count, explode, round, regexp_extract, max, collect_set, collect_list
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -3095,30 +3095,33 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 @dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     
-
     m1_m2_m3_m4_m5_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m7_m8")
-
-
-    # # Linked Files
-
-    # read in all tables
-
     m6 = dlt.read("silver_sbail_m6_link")
 
-
-    m6_linked_files_df = m6.groupBy(col("CaseNo")).agg(
-        collect_list(
+    link_details = (
+    m6
+    .groupBy("LinkNo").agg(collect_set(
             struct(
-                col("LinkDetailComment"),
-                col("LinkNo"),
-                col("FullName"),
-            )).alias("linked_files_details"))
+                "CaseNo",
+                "FullName",
+                "LinkDetailComment")
+        ).alias("AllLinkedCases")))
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_linked_files_df, "CaseNo", "left")
+    df_link_files = m6.join(link_details, on="LinkNo", how="left")
 
+    m6_link_files = df_link_files.withColumn(
+        "linked_files_details",
+        expr("""
+            filter(
+                AllLinkedCases,
+                x -> x.CaseNo <> CaseNo
+            )
+        """)
+    )
+
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_link_files, "CaseNo", "left")
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
-
 
 # COMMAND ----------
 
@@ -3378,7 +3381,6 @@ def create_html_column(row, html_template=bails_html_dyn):
         for key, value in replacements.items():
             html = html.replace(key, str(value) if value is not None else "")
 
-
         # Replace placeholders with actual values
         for cd_row in row.Case_detail:
             # Second replacements dictionary
@@ -3413,7 +3415,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{AddressLine4}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress4, cd_row.AppellantAddress4),
             "{{AddressLine5}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress5, cd_row.AppellantAddress5),
             "{{Postcode}}": resolve_address_line(cd_row, cd_row.DetentionCentrePostcode, cd_row.AppellantPostcode),
-            "{{Country}}": cd_row.Country if cd_row.AppellantDetained == 3 else lit(None),
+            "{{Country}}": cd_row.Country if cd_row.AppellantDetained == 3 else "",
             "{{phone}}": cd_row.AppellantTelephone,
             "{{email}}": cd_row.AppellantEmail,
             "{{PrisonRef}}": cd_row.AppellantPrisonRef,
@@ -3453,6 +3455,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{repPhone}}": cd_row.FileSpecificReference,
             "{{repFax}}": cd_row.FileSpecificFax,
             "{{repEmail}}": cd_row.FileSpecificEmail
+
         }
             for key, value in m1_replacement.items():
                 html = html.replace(key, str(value) if value is not None else "")
@@ -3501,7 +3504,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         linked_files_code = ''
         if row.linked_files_details is not None:
             for likedfile in row.linked_files_details:
-                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.LinkNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
+                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.CaseNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
                 linked_files_code += linked_files_line + "\n"
             html = html.replace("{{LinkedFilesPlaceholder}}", linked_files_code)
         else:
@@ -3640,14 +3643,21 @@ def create_html_column(row, html_template=bails_html_dyn):
                         template = template.replace(label_placeholder, str(label_value))
                         template = template.replace(value_placeholder, str(name_value))
 
+
+
+                            
                     if status["CourtClerkUsher"]:
                         template = template.replace("{{courtclerkusherplaceholder}}",status["CourtClerkUsher"])
 
                     else:
                         template = template.replace("{{courtclerkusherplaceholder}}",'N/A')
 
+
+
+
                     code += template + "\n"
                     
+                        
                 else:
                     # logger.info(f"Mapping not found for CaseStatus: {case_status}, CaseNo: {row['m7.CaseNo']}")
                     continue
@@ -3656,6 +3666,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             html = html.replace("{{statusplaceholder}}",code)
         else:
             html = html.replace("{{statusplaceholder}}","")
+
 
         ## Add in Flag logic
         flag_list = []
@@ -3736,7 +3747,7 @@ def create_html_column(row, html_template=bails_html_dyn):
     
     except Exception as e:
         return f"Failure Error: {e}"
-    
+
 # Register the UDF
 create_html_udf = udf(create_html_column, StringType())
 
@@ -3768,10 +3779,6 @@ def create_sbails_html_content():
 
 
     return df
-
-# COMMAND ----------
-
-
 
 # COMMAND ----------
 

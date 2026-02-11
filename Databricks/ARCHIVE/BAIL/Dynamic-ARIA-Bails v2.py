@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, add_months
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, add_months, collect_set, collect_list
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -3250,26 +3250,31 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 @dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     
-
     m1_m2_m3_m4_m5_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m7_m8")
-
-
-    # # Linked Files
-
-    # read in all tables
-
     m6 = dlt.read("silver_bail_m6_link")
 
-
-    m6_linked_files_df = m6.groupBy(col("CaseNo")).agg(
-        collect_list(
+    link_details = (
+    m6
+    .groupBy("LinkNo").agg(collect_set(
             struct(
-                col("LinkDetailComment"),
-                col("LinkNo"),
-                col("FullName"),
-            )).alias("linked_files_details"))
+                "CaseNo",
+                "FullName",
+                "LinkDetailComment")
+        ).alias("AllLinkedCases")))
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_linked_files_df, "CaseNo", "left")
+    df_link_files = m6.join(link_details, on="LinkNo", how="left")
+
+    m6_link_files = df_link_files.withColumn(
+        "linked_files_details",
+        expr("""
+            filter(
+                AllLinkedCases,
+                x -> x.CaseNo <> CaseNo
+            )
+        """)
+    )
+
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_link_files, "CaseNo", "left")
 
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
@@ -3656,7 +3661,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         linked_files_code = ''
         if row.linked_files_details is not None:
             for likedfile in row.linked_files_details:
-                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.LinkNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
+                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.CaseNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
                 linked_files_code += linked_files_line + "\n"
             html = html.replace("{{LinkedFilesPlaceholder}}", linked_files_code)
         else:

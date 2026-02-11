@@ -111,6 +111,9 @@ def ftpa(silver_m3, silver_c):
             )
     )
 
+    # If upstream returned empty, base it on silver_m3_content instead
+    base_df = ftpa_df if ftpa_df.count() > 0 else silver_m3_content.select("CaseNo")
+
     joined = (
         ftpa_df.alias("ftpa")
             .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")

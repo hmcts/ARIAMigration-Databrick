@@ -34,16 +34,22 @@ def appellantDetails_outputs(spark):
         T.StructField("NationalityId", T.StringType(), True),
         T.StructField("lu_countryCode", T.StringType(), True),
         T.StructField("lu_appellantNationalitiesDescription", T.StringType(), True),
+        T.StructField("Detained", T.StringType(), True)
     ])
 
     m1_data = [
-        ("HU/00487/2025", "2025-03-07", "HU", "1961-05-18", "1", "AF", "Afghanistan"),
-        ("HU/00365/2025", "2024-11-06", "HU", "2017-05-06", "27", "BI", "Burundi"),
-        ("EA/03208/2023", "2023-09-15", "EA", "1995-07-23", "63", "GR", "Greece"),
-        ("EA/01698/2024", "2024-07-31", "EA", "2000-04-28", "94", "LR", "Liberia"),
-        ("HU/00560/2025", "2025-03-31", "HU", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
-        ("HU/00532/2025", "2025-03-24", "HU", "1983-08-08", "169", "TR", "Turkey"),
-        ("HU/00423/2025", "2025-02-21", "HU", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)")
+        ("HU/00487/2025", "2025-03-07", "HU", "1961-05-18", "1", "AF", "Afghanistan", 0),
+        ("HU/00365/2025", "2024-11-06", "HU", "2017-05-06", "27", "BI", "Burundi", 0),
+        ("EA/03208/2023", "2023-09-15", "EA", "1995-07-23", "63", "GR", "Greece", 0),
+        ("EA/01698/2024", "2024-07-31", "EA", "2000-04-28", "94", "LR", "Liberia", 0),
+        ("HU/00560/2025", "2025-03-31", "HU", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED", 0),
+        ("HU/00532/2025", "2025-03-24", "HU", "1983-08-08", "169", "TR", "Turkey", 0),
+        ("HU/00423/2025", "2025-02-21", "HU", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)", 0),
+        ("HU/00001/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British", 1),
+        ("HU/00002/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British", 2),
+        ("HU/00003/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British", 4),
+        ("HU/00004/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British", 0),
+        ("HU/00005/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British", 0)
     ]
 
     m2_schema = T.StructType([
@@ -91,6 +97,21 @@ def appellantDetails_outputs(spark):
          None, None, None, "HU", 152, None, None, None),
         ("HU/00423/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
          None, None, None, None, None, None,
+         None, None, None, "HU", 191, None, None, None),
+        ("HU/00001/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
+         None, None, None, None, None, None,
+         None, None, None, "HU", 191, None, None, None),
+        ("HU/00002/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
+         None, None, None, None, None, None,
+         None, None, None, "HU", 191, None, None, None),
+        ("HU/00003/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
+         None, None, None, None, None, None,
+         None, None, None, "HU", 191, None, None, None),
+        ("HU/00004/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
+         None, None, None, None, "UK", None,
+         None, None, None, "HU", 191, None, None, None),
+        ("HU/00005/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
+         None, None, None, None, "NotUK", None,
          None, None, None, "HU", 191, None, None, None)
     ]
 
@@ -261,3 +282,12 @@ def test_missing_fields_are_none(appellantDetails_outputs):
                     "appellantAddress", "addressLine1AdminJ", "addressLine2AdminJ",
                     "addressLine3AdminJ", "addressLine4AdminJ", "countryGovUkOocAdminJ"
                    )
+
+
+def test_appellant_in_uk_field_conditions(appellantDetails_outputs):
+    # No category 37 or 38
+    assert appellantDetails_outputs["HU/00001/2025"]["appellantInUk"] == "Yes"  # Detained 1
+    assert appellantDetails_outputs["HU/00002/2025"]["appellantInUk"] == "Yes"  # Detained 2
+    assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "Yes"  # Detained 4
+    assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # Appellant_Address5 in UK
+    assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # Appellant_Address5 not in UK

@@ -17,10 +17,8 @@ def spark():
 
 @pytest.fixture(scope="session")
 def ftpa_outputs(spark):
-
-    # NOTE: Keep schema aligned EXACTLY with the shared function expectations.
-    # dv_targetState is NOT used in ftpa_decided.ftpa() shown by you, so we don't include it.
-
+    
+    # ✅ Schema must match what ftpa_decided.ftpa() expects
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
@@ -37,21 +35,17 @@ def ftpa_outputs(spark):
         T.StructField("Outcome", T.IntegerType(), True),
     ])
 
-    # Only CaseStatus=39 is used by ftpa_decided.
-    # For CASE005 we add 2 rows with CaseStatus=39 so "latest StatusId" logic is tested.
+    # ✅ IMPORTANT: each row must have 13 values (same order as schema)
     m3_data = [
-        ("CASE005", 1, 39, 180, "LOC001", "2024-10-02T00:00:00.000+00:00", "2025-10-01T00:00:00.000+00:00", "Mr", "John", "Doe", 1, 0, 31),
-        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Ms", "Jane", "Doe", 1, 0, 30),
+        # CASE005: two rows to test latest StatusId selection (latest = StatusId 2)
+        ("CASE005", 1, 39, 180, "LOC001", datetime(2024, 10, 2), datetime(2025, 10, 1), "Mr", "John", "Doe", 1, 0, 31),
+        ("CASE005", 2, 39, 60,  "LOC002", datetime(2025, 11, 2), datetime(2025, 11, 2), "Ms", "Jane", "Doe", 1, 0, 30),
 
-        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "2026-12-03T00:00:00.000+00:00", "Mr", "John", "xyz", 1, 1, 31),
-
-        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2026-08-03T00:00:00.000+00:00", "Mr", "abc", "Doe", 2, 0, 14),
-
-        ("CASE008", 1, 39, None, "LOC005", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Sir", "Guy", "Random", 1, 0, 30),
-
-        ("CASE010", 1, 39, None, "LOC007", None, "2025-01-15T00:00:00.000+00:00", None, None, None, 1, None, 30),
-
-        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Mr", "World", "Hello", 2, 1, 30),
+        ("CASE006", 1, 39, 240, "LOC003", datetime(2026, 12, 3), datetime(2026, 12, 3), "Mr", "John", "xyz", 1, 1, 31),
+        ("CASE007", 1, 39, 360, "LOC004", datetime(2026, 8, 3),  datetime(2026, 8, 3),  "Mr", "abc",  "Doe", 2, 0, 14),
+        ("CASE008", 1, 39, None,"LOC005", datetime(2024, 10, 2), datetime(2024, 10, 2), "Sir","Guy",  "Random", 1, 0, 30),
+        ("CASE010", 1, 39, None,"LOC007", None,                  datetime(2025, 1, 15),  None, None, None, 1, None, 30),
+        ("CASE011", 1, 39, 45,  "LOC008", datetime(2025, 11, 2), datetime(2025, 11, 2), "Mr", "World","Hello", 2, 1, 30),
     ]
 
     c_schema = T.StructType([
@@ -71,21 +65,17 @@ def ftpa_outputs(spark):
     df_m3 = spark.createDataFrame(m3_data, m3_schema)
     df_c = spark.createDataFrame(c_data, c_schema)
 
-    # Ensure date_format() works reliably
-    df_m3 = (
-        df_m3
-        .withColumn("DecisionDate", F.to_timestamp("DecisionDate"))
-        .withColumn("DateReceived", F.to_timestamp("DateReceived"))
-    )
-
     ftpa_content, _ = ftpa(df_m3, df_c)
+
+    # Useful debug if it fails again in pipeline:
+    # print("ftpa_content rows:", ftpa_content.count())
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
 
     return results
 
 
 # ------------------------------------------------------------
-# ftpa_decided specific tests
+# Tests
 # ------------------------------------------------------------
 
 def test_ftpaApplicantType(ftpa_outputs):
@@ -99,7 +89,6 @@ def test_ftpaApplicantType(ftpa_outputs):
 
 def test_ftpaFirstDecision_and_FinalDecisionForDisplay(ftpa_outputs):
     r = ftpa_outputs
-
     assert r["CASE005"]["ftpaFirstDecision"] == "granted"
     assert r["CASE005"]["ftpaFinalDecisionForDisplay"] == "Granted"
 
@@ -112,7 +101,6 @@ def test_ftpaFirstDecision_and_FinalDecisionForDisplay(ftpa_outputs):
 
 def test_decision_dates_by_party(ftpa_outputs):
     r = ftpa_outputs
-
     assert r["CASE005"]["ftpaAppellantDecisionDate"] == "02/11/2025"
     assert r["CASE006"]["ftpaAppellantDecisionDate"] == "03/12/2026"
     assert r["CASE007"]["ftpaAppellantDecisionDate"] is None
@@ -125,7 +113,6 @@ def test_decision_dates_by_party(ftpa_outputs):
 
 def test_rj_outcome_types_by_party(ftpa_outputs):
     r = ftpa_outputs
-
     assert r["CASE005"]["ftpaAppellantRjDecisionOutcomeType"] == "granted"
     assert r["CASE005"]["ftpaRespondentRjDecisionOutcomeType"] is None
 
@@ -135,7 +122,6 @@ def test_rj_outcome_types_by_party(ftpa_outputs):
 
 def test_notice_of_decision_set_aside_flags(ftpa_outputs):
     r = ftpa_outputs
-
     assert r["CASE005"]["isFtpaAppellantNoticeOfDecisionSetAside"] == "No"
     assert r["CASE005"]["isFtpaRespondentNoticeOfDecisionSetAside"] is None
 

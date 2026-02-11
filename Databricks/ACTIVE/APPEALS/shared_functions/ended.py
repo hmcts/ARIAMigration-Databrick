@@ -183,6 +183,77 @@ def ended(silver_m3, bronze_ended_states):
 
     return ended_df,ended_audit
 
+################################################################
+##########              documents          ###########
+################################################################
+
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+def documents(silver_m1,silver_m3):
+
+    documents_df, documents_audit = FSA.documents(silver_m1,silver_m3)
+
+    df = (
+        silver_m3
+        .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))
+        .withColumn("Outcome", F.col("Outcome").cast("int"))
+        .withColumn("StatusId", F.col("StatusId").cast("long"))
+    )
+
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 72)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 72)
+        )
+    )
+
+    cond_state_4 = (
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 72)
+        )
+    )
+
+
+
+
+
+
+
+
 
 ################################################################   
 

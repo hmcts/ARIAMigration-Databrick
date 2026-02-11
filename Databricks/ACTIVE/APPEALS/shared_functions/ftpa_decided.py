@@ -33,8 +33,10 @@ def ftpa(silver_m3, silver_c):
 
     silver_m3 = (
         silver_m3
-            .withColumn("DateReceived", col("DateReceived").cast("string"))
-            .withColumn("DecisionDate", col("DecisionDate").cast("string"))
+            .withColumn(
+                "DateReceived",
+                F.date_format(col("DateReceived"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+            )
     )
 
 

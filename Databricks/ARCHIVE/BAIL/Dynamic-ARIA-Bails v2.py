@@ -2388,7 +2388,7 @@ case_status_mappings = {
     4: {  # Bail Application
         "{{BailApplicationStatusOfBail}}": "CaseStatusDescription",
         "{{BailApplicationDateOfApplication}}": "DateReceived",
-        "{{BailApplicationDateOfHearing}}": "DecisionDate",
+        "{{BailApplicationDateOfHearing}}": "Keydate",
         "{{BailApplicationFC}}": "FC",
         "{{BailApplicationInterpreterRequired}}": "InterpreterRequiredDesc",
         "{{BailApplicationDateOfOrder}}": "MiscDate2",

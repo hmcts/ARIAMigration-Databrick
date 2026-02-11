@@ -187,8 +187,6 @@ def ended(silver_m3, bronze_ended_states):
 ##########              documents          ###########
 ################################################################
 
-from pyspark.sql import functions as F
-from pyspark.sql.window import Window
 
 def documents(silver_m1,silver_m3):
 
@@ -218,7 +216,7 @@ def documents(silver_m1,silver_m3):
 
         (
             (F.col("CaseStatus") == 39) &
-            (F.col("Outcome") == 72)
+            (F.col("Outcome") == 25)
         )
     )
 
@@ -235,7 +233,7 @@ def documents(silver_m1,silver_m3):
 
         (
             (F.col("CaseStatus") == 39) &
-            (F.col("Outcome") == 72)
+            (F.col("Outcome") == 25)
         )
     )
 
@@ -243,15 +241,74 @@ def documents(silver_m1,silver_m3):
 
         (
             (F.col("CaseStatus") == 39) &
-            (F.col("Outcome") == 72)
+            (F.col("Outcome") == 25)
         )
+    )
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
+
+    silver_m3_filtered_state_3_4 = silver_m3.filter(cond_state_3_4)
+    silver_m3_ranked_state_3_4 = silver_m3_filtered_state_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_3_4 = silver_m3_ranked_state_3_4.filter(col("row_number") == 1).drop("row_number")
+
+    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
+    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+
+    
+    
+    documents_df = (
+        documents_df.alias("content")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .withColumn("respondentDocuments",when(cond_state_2_3_4, col("content.respondentDocuments")).otherwise(None))
+        .select("content.*", "respondentDocuments")
+    )
+
+    documents_df = (
+        documents_df.alias("content")
+        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+        .withColumn("hearingRequirements",when(cond_state_3_4, col("content.hearingRequirements")).otherwise(None))
+        .select("content.*", "hearingRequirements")
+    )
+
+    documents_df = (
+        documents_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .withColumn("hearingDocuments",when(cond_state_4, col("content.hearingDocuments")).otherwise(None))
+        .withColumn("letterBundleDocuments",when(cond_state_4, col("content.letterBundleDocuments")).otherwise(None))
+        .withColumn("caseBundles",when(cond_state_4, col("content.caseBundles")).otherwise(None))
+        .withColumn("finalDecisionAndReasonsDocuments",when(cond_state_4, col("content.finalDecisionAndReasonsDocuments")).otherwise(None))
+        .withColumn("ftpaAppellantDocuments",when(cond_state_4, col("content.ftpaAppellantDocuments")).otherwise(None))
+        .withColumn("ftpaRespondentDocuments",when(cond_state_4, col("content.ftpaRespondentDocuments")).otherwise(None))
+        .withColumn("ftpaAppellantGroundsDocuments",when(cond_state_4, col("content.ftpaAppellantGroundsDocuments")).otherwise(None))
+        .withColumn("ftpaRespondentGroundsDocuments",when(cond_state_4, col("content.ftpaRespondentGroundsDocuments")).otherwise(None))
+        .withColumn("ftpaAppellantEvidenceDocuments",when(cond_state_4, col("content.ftpaAppellantEvidenceDocuments")).otherwise(None))
+        .withColumn("ftpaRespondentEvidenceDocuments",when(cond_state_4, col("content.ftpaRespondentEvidenceDocuments")).otherwise(None))
+        .withColumn("ftpaAppellantOutOfTimeDocuments",when(cond_state_4, col("content.ftpaAppellantOutOfTimeDocuments")).otherwise(None))
+        .withColumn("ftpaRespondentOutOfTimeDocuments",when(cond_state_4, col("content.ftpaRespondentOutOfTimeDocuments")).otherwise(None))
+        .select("content.*", "hearingDocuments"
+                ,"letterBundleDocuments"
+                ,"caseBundles"
+                ,"finalDecisionAndReasonsDocuments"
+                ,"ftpaAppellantDocuments"
+                ,"ftpaRespondentDocuments"
+                ,"ftpaAppellantGroundsDocuments"
+                ,"ftpaRespondentGroundsDocuments"
+                ,"ftpaAppellantEvidenceDocuments"
+                ,"ftpaRespondentEvidenceDocuments"
+                ,"ftpaAppellantOutOfTimeDocuments"
+                ,"ftpaRespondentOutOfTimeDocuments"
+                ,"CaseStatus","Outcome")
     )
 
 
 
-
-
-
+    return documents_df, documents_audit
 
 
 

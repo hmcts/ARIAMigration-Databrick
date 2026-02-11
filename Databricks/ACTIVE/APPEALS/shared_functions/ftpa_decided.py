@@ -31,6 +31,13 @@ from pyspark.sql.functions import (
 
 def ftpa(silver_m3, silver_c):
 
+    silver_m3 = (
+        silver_m3
+            .withColumn("DateReceived", col("DateReceived").cast("string"))
+            .withColumn("DecisionDate", col("DecisionDate").cast("string"))
+    )
+
+
     ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())

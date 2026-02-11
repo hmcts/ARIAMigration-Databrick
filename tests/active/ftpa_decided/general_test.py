@@ -153,7 +153,7 @@ def general_outputs(spark):
 
 
 # =========================================================
-# ONLY NEW 7 columns (red) - expects "Yes"/"No"
+# ONLY NEW 7 columns - expects "Yes"/"No"
 # =========================================================
 
 def test_isAppellantFtpaDecisionVisibleToAll(spark, general_outputs):
@@ -172,12 +172,13 @@ def test_isRespondentFtpaDecisionVisibleToAll(spark, general_outputs):
     assert r["CASE011"]["isRespondentFtpaDecisionVisibleToAll"] == "Yes"
 
 
-def test_isDlrmSetAsideEnabled(spark, general_outputs):
+def test_isDlrnSetAsideEnabled(spark, general_outputs):
     r = general_outputs
-    assert r["CASE005"]["isDlrmSetAsideEnabled"] == "Yes"
-    assert r["CASE006"]["isDlrmSetAsideEnabled"] == "Yes"
-    assert r["CASE007"]["isDlrmSetAsideEnabled"] == "Yes"
-    assert r["CASE011"]["isDlrmSetAsideEnabled"] == "Yes"
+    # ✅ FIX: your shared function creates isDlrnSetAsideEnabled (not isDlrmSetAsideEnabled)
+    assert r["CASE005"]["isDlrnSetAsideEnabled"] == "Yes"
+    assert r["CASE006"]["isDlrnSetAsideEnabled"] == "Yes"
+    assert r["CASE007"]["isDlrnSetAsideEnabled"] == "Yes"
+    assert r["CASE011"]["isDlrnSetAsideEnabled"] == "Yes"
 
 
 def test_isFtpaAppellantDecided(spark, general_outputs):
@@ -206,7 +207,6 @@ def test_isReheardAppealEnabled(spark, general_outputs):
 
 def test_secondFtpaDecisionExists(spark, general_outputs):
     r = general_outputs
-    # Your code sets it as a constant "No"
     assert r["CASE005"]["secondFtpaDecisionExists"] == "No"
     assert r["CASE006"]["secondFtpaDecisionExists"] == "No"
     assert r["CASE007"]["secondFtpaDecisionExists"] == "No"

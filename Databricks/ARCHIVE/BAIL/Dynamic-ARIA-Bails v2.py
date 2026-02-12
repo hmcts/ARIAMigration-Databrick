@@ -2115,7 +2115,8 @@ def silver_m7():
 
     m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
 
-    m7_ref_df = m7_df.select(*m7_cleaned,
+    m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")   
+                        ).select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),

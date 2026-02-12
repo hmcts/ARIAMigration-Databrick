@@ -2303,7 +2303,7 @@ case_status_mappings = {
         "{{PaymentLiabilityAddressLine4}}": "SCAddress4",
         "{{PaymentLiabilityAddressLine5}}": "SCAddress5",
         "{{PaymentLiabilityPostcode}}": "SCPostcode",
-        "{{PaymentLiabilityNotes}}": "Notes2",
+        "{{PaymentLiabilityNotes}}": "StatusNotes2",
         "{{PaymentLiabilityDateOfDecision}}": "DecisionDate",
         "{{PaymentLiabilityOutcome}}": "OutcomeDescription",
         "{{livesAndSleepsAt}}": "LivesAndSleepsAt",

@@ -1970,7 +1970,8 @@ def silver_m7():
 
     m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
 
-    m7_ref_df = m7_df.select(*m7_cleaned,
+    m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")   
+                        ).select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),
@@ -2006,6 +2007,44 @@ def silver_m7():
 
 
     return df
+
+
+# COMMAND ----------
+
+# DBTITLE 1,***delete***
+# m7_df = spark.read.table("hive_metastore.aria_s_bails.bronze_sbail_status_sc_ra_cs").alias("m7")
+
+# m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
+
+# m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")
+#                 ).select(*m7_cleaned,
+#                     when(col("BailConditions") == 1,"Yes")
+#                     .when(col("BailConditions") == 2,"No")
+#                     .otherwise("Unknown").alias("BailConditionsDesc"),
+#                     when(col("InterpreterRequired") == 0 ,"Zero")
+#                     .when(col("InterpreterRequired") == 1 ,"One")
+#                     .when(col("InterpreterRequired") == 2 ,"Two")
+#                     .alias("InterpreterRequiredDesc"),
+#                     when(col("ResidenceOrder") == 1,"Yes")
+#                     .when(col("ResidenceOrder") == 2,"No")
+#                     .otherwise("Unknown").alias("ResidenceOrderDesc"),
+#                     when(col("ReportingOrder") == 1,"Yes")
+#                     .when(col("ReportingOrder") == 2,"No")
+#                     .otherwise("Unknown").alias("ReportingOrderDesc"),
+#                     when(col("BailedTimePlace") == 1,"Yes")
+#                     .when(col("BailedTimePlace") == 2,"No")
+#                     .otherwise("Unknown").alias("BailedTimePlaceDesc"),
+#                     when(col("BaileddateHearing") == 1,"Yes")
+#                     .when(col("BaileddateHearing") == 2,"No")
+#                     .otherwise("Unknown").alias("BaileddateHearingDesc"),
+#                     when(col("StatusParty") == 1,"Appellant")
+#                     .when(col("StatusParty") == 2,"Respondent")
+#                     .otherwise("Unknown").alias("StatusPartyDesc"),
+#                     round(col("TotalAmountOfFinancialCondition"),2).alias("TotalAmountOfFinancialCondition"),
+#                     round(col("TotalSecurity"),2).alias("TotalSecurity")
+
+# )
+# m7_ref_df.display()
 
 
 # COMMAND ----------

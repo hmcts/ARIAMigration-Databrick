@@ -291,7 +291,8 @@ def documents(silver_m1,silver_m3):
         .withColumn("ftpaRespondentEvidenceDocuments",when(cond_state_4, col("content.ftpaRespondentEvidenceDocuments")).otherwise(None))
         .withColumn("ftpaAppellantOutOfTimeDocuments",when(cond_state_4, col("content.ftpaAppellantOutOfTimeDocuments")).otherwise(None))
         .withColumn("ftpaRespondentOutOfTimeDocuments",when(cond_state_4, col("content.ftpaRespondentOutOfTimeDocuments")).otherwise(None))
-        .select("content.*", "hearingDocuments"
+        .select("content.*"
+                ,"hearingDocuments"
                 ,"letterBundleDocuments"
                 ,"caseBundles"
                 ,"finalDecisionAndReasonsDocuments"
@@ -395,7 +396,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 ,"physicalOrMentalHealthIssues"
                 ,"physicalOrMentalHealthIssuesDescription"
                 ,"pastExperiences"
-                <"pastExperiencesDescription"
+                ,"pastExperiencesDescription"
                 ,"multimediaEvidence"
                 ,"multimediaEvidenceDescription"
                 ,"singleSexCourt"
@@ -771,7 +772,7 @@ def ftpa(silver_m3, silver_c):
 
 def generalDefault(silver_m1,silver_m3):
 
-    generalDefault_df, generalDefault_audit = FSA.generalDefault(silver_m1)
+    generalDefault_df = FSA.generalDefault(silver_m1)
 
     df = (
         silver_m3
@@ -849,15 +850,15 @@ def generalDefault(silver_m1,silver_m3):
         .withColumn("directions",when(cond_state_2_3_4, col("content.directions")).otherwise(None))
         .withColumn("uploadHomeOfficeBundleAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleAvailable")).otherwise(None))
         .withColumn("uploadHomeOfficeBundleActionAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleActionAvailable")).otherwise(None))
-        .withColumn("caseArgumentAvailable",when(cond_state_2_3_4, col("content.caseArgumentAvailable")).otherwise(None))
-        .withColumn("reasonsForAppealDecision",when(cond_state_2_3_4, col("content.reasonsForAppealDecision")).otherwise(None))
+        # .withColumn("caseArgumentAvailable",when(cond_state_2_3_4, col("content.caseArgumentAvailable")).otherwise(None))
+        # .withColumn("reasonsForAppealDecision",when(cond_state_2_3_4, col("content.reasonsForAppealDecision")).otherwise(None))
         .select("content.*"
                 ,"directions"
                 ,"uploadHomeOfficeBundleAvailable"
                 ,"uploadHomeOfficeBundleActionAvailable"
-                ,"caseArgumentAvailable"
-                ,"reasonsForAppealDecision"
-                ,"CaseStatus","Outcome"
+                # ,"caseArgumentAvailable"
+                # ,"reasonsForAppealDecision"
+                # ,"CaseStatus","Outcome"
                 )
     )
 
@@ -883,7 +884,7 @@ def generalDefault(silver_m1,silver_m3):
                 ,"reviewHomeOfficeResponseByLegalRep"
                 ,"submitHearingRequirementsAvailable"
                 ,"uploadHomeOfficeAppealResponseActionAvailable"
-                ,"CaseStatus","Outcome"
+                # ,"CaseStatus","Outcome"
                 )
     )
 
@@ -905,7 +906,7 @@ def generalDefault(silver_m1,silver_m3):
                 )
     )
 
-    return generalDefault_df, generalDefault_audit
+    return generalDefault_df
 
 ################################################################
 ##########              general          ###########
@@ -923,6 +924,27 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
     cond_state_4 = (
 
         (
@@ -933,9 +955,23 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
+
     silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
     silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+
+    general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left" )
+                  .withColumn("caseArgumentAvailable", when(cond_state_2_3_4, col("content.caseArgumentAvailable")).otherwise(None))
+                  .withColumn("reasonsForAppealDecision", when(cond_state_2_3_4, col("content.reasonsForAppealDecision")).otherwise(None))
+                  .select( "content.*"
+                          ,"caseArgumentAvailable"
+                          ,"reasonsForAppealDecision" 
+                          )
+                  )
 
     
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left" )
@@ -977,30 +1013,31 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                   .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted", when(cond_state_4, col("content.isFtpaRespondentOotExplanationVisibleInSubmitted"))
                               .otherwise(None))
                   .select( "content.*"
-                          , "bundleFileNamePrefix"
-                          , "ftpaAppellantSubmitted"
-                          , "isFtpaAppellantDocsVisibleInDecided"
-                          , "isFtpaAppellantDocsVisibleInSubmitted"
-                          , "isFtpaAppellantOotDocsVisibleInDecided"
-                          , "isFtpaAppellantOotDocsVisibleInSubmitted"
-                          , "isFtpaAppellantGroundsDocsVisibleInDecided"
-                          , "isFtpaAppellantEvidenceDocsVisibleInDecided"
-                          , "isFtpaAppellantGroundsDocsVisibleInSubmitted"
-                          , "isFtpaAppellantEvidenceDocsVisibleInSubmitted"
-                          , "isFtpaAppellantOotExplanationVisibleInDecided"
-                          , "isFtpaAppellantOotExplanationVisibleInSubmitted"
-                          , "ftpaRespondentSubmitted"
-                          , "isFtpaRespondentDocsVisibleInDecided"
-                          , "isFtpaRespondentDocsVisibleInSubmitted"
-                          , "isFtpaRespondentOotDocsVisibleInDecided"
-                          , "isFtpaRespondentOotDocsVisibleInSubmitted"
-                          , "isFtpaRespondentGroundsDocsVisibleInDecided"
-                          , "isFtpaRespondentEvidenceDocsVisibleInDecided"
-                          , "isFtpaRespondentGroundsDocsVisibleInSubmitted"
-                          , "isFtpaRespondentEvidenceDocsVisibleInSubmitted"
-                          , "isFtpaRespondentOotExplanationVisibleInDecided"
-                          , "isFtpaRespondentOotExplanationVisibleInSubmitted"
-                          , "CaseStatus", "Outcome" 
+                          ,"bundleFileNamePrefix"
+                          ,"ftpaAppellantSubmitted"
+                          ,"isFtpaAppellantDocsVisibleInDecided"
+                          ,"isFtpaAppellantDocsVisibleInSubmitted"
+                          ,"isFtpaAppellantOotDocsVisibleInDecided"
+                          ,"isFtpaAppellantOotDocsVisibleInSubmitted"
+                          ,"isFtpaAppellantGroundsDocsVisibleInDecided"
+                          ,"isFtpaAppellantEvidenceDocsVisibleInDecided"
+                          ,"isFtpaAppellantGroundsDocsVisibleInSubmitted"
+                          ,"isFtpaAppellantEvidenceDocsVisibleInSubmitted"
+                          ,"isFtpaAppellantOotExplanationVisibleInDecided"
+                          ,"isFtpaAppellantOotExplanationVisibleInSubmitted"
+                          ,"ftpaRespondentSubmitted"
+                          ,"isFtpaRespondentDocsVisibleInDecided"
+                          ,"isFtpaRespondentDocsVisibleInSubmitted"
+                          ,"isFtpaRespondentOotDocsVisibleInDecided"
+                          ,"isFtpaRespondentOotDocsVisibleInSubmitted"
+                          ,"isFtpaRespondentGroundsDocsVisibleInDecided"
+                          ,"isFtpaRespondentEvidenceDocsVisibleInDecided"
+                          ,"isFtpaRespondentGroundsDocsVisibleInSubmitted"
+                          ,"isFtpaRespondentEvidenceDocsVisibleInSubmitted"
+                          ,"isFtpaRespondentOotExplanationVisibleInDecided"
+                          ,"isFtpaRespondentOotExplanationVisibleInSubmitted"
+                          ,"caseArgumentAvailable"
+                          ,"CaseStatus", "Outcome" 
                           ) 
                   )
 

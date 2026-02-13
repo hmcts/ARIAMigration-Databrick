@@ -18,7 +18,7 @@ class paymentPendingDQRules(DQRulesBase):
         # # ARIADM-671 (appealType)
         # ##############################
         checks["valid_appealtype_in_allowed_values"] = (
-            "(AppealType IN ('refusalOfHumanRights', 'refusalOfEu', 'deprivation', 'protection', 'revocationOfProtection', 'euSettlementScheme'))"
+            "(AppealType IS NOT NULL AND AppealType IN ('refusalOfHumanRights', 'refusalOfEu', 'deprivation', 'protection', 'revocationOfProtection', 'euSettlementScheme'))"
         )
 
         checks["valid_hmctsCaseCategory_not_null"] = "(hmctsCaseCategory IS NOT NULL)"
@@ -100,6 +100,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseManagementLocation_region_and_baseLocation"] = """
         (
         caseManagementLocation.region <=> '1' AND
+        caseManagementLocation.baseLocation IS NOT NULL AND
         caseManagementLocation.baseLocation IN (
             '231596', '698118', '366559', '386417', '512401',
             '227101', '765324', '366796', '324339', '649000',
@@ -225,7 +226,7 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         # # ARIADM-766 (appellantStateless)
         # ##############################
-        checks["valid_appellantStateless_values"] = ("(appellantStateless IN ('isStateless', 'hasNationality'))")
+        checks["valid_appellantStateless_values"] = ("(appellantStateless IS NOT NULL AND appellantStateless IN ('isStateless', 'hasNationality'))")
 
         checks["valid_appellantNationalitiesDescription_not_null"] = ("(appellantNationalitiesDescription IS NOT NULL)")
 
@@ -280,11 +281,12 @@ class paymentPendingDQRules(DQRulesBase):
         # # ARIADM-712 (flagsLabel)- caseFlags
         # ############################## #if (catId = 7,25 and flagcomment IS NULL) or (details IS NULL) or (catID != 7,25 and value provided for name)
         checks["valid_caseFlags_name_in_list"] = """((
-        EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)) 
-        OR (caseFlags.details IS NULL)
-        OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
-        (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
-            caseFlags.details[0].value.name))))"""
+            EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL))
+            OR (caseFlags.details IS NULL)
+            OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
+            (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
+                caseFlags.details[0].value.name))))
+        """
 
         # checks["valid_caseFlags_name_in_list"] = """
         # (
@@ -449,24 +451,24 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         # # ARIADM-783 (payment)
         # ##############################
-        checks["valid_feeAmountGbp"] = ( # fee amount is not null and is an int
+        checks["valid_feeAmountGbp"] = (  # fee amount is not null and is an int
             """(
             (
                 (
-                (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
                 AND
                 (feeAmountGbp <=> '8000')
                 )
                 OR
                 (
-                (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
                 AND
                 (feeAmountGbp <=> '14000')
                 )
             )
             OR
             (
-                (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR VisitVisaType NOT IN (1, 2))
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR VisitVisaType IS NULL OR VisitVisaType NOT IN (1, 2))
                 AND
                 (feeAmountGbp IS NULL)
             )
@@ -474,21 +476,21 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_feeDescription"] = (
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')"
-        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing'))"
-        "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')"
+            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing'))"
+            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)"
         )
 
         checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
             """(
             (
-                (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
                 AND
                 (feeWithHearing <=> '140')
             )
             OR
             (
-                (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2))
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2))
                 AND
                 (feeWithHearing IS NULL)
             )
@@ -498,13 +500,13 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
             """(
             (
-                (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
                 AND
                 (feeWithoutHearing <=> '80')
             )
             OR
             (
-                (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1))
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1))
                 AND
                 (feeWithoutHearing IS NULL)
             )
@@ -512,27 +514,27 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_paymentDescription"] = (
-            "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')"
-            "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing'))"
-            "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')"
+            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing'))"
+            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
         )
 
         checks["valid_paymentStatus"] = (
-        "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus <=> 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
+            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus <=> 'Payment pending')) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
         )
 
         checks["valid_feeVersion"] = (
-        "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feeVersion IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feeVersion IS NULL))"
+            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feeVersion IS NOT NULL)) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feeVersion IS NULL))"
         )
 
         checks["valid_feePaymentAppealType"] = (
-        "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NULL))"
+            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NOT NULL)) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NULL))"
         )
 
         checks["valid_decisionHearingFeeOption"] = (
-            "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')"
-            "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing'))"
-            "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')"
+            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing'))"
+            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
         )
 
         # ##############################
@@ -540,22 +542,21 @@ class paymentPendingDQRules(DQRulesBase):
         # ############################## 
 
         checks["valid_remissionType_in_list"] = (
-            "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission')) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)"
+            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission')) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)"
         )
 
         checks["valid_remissionClaim_in_list"] = (
             "("
-            "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver')) "
-            "OR "
-            "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT') AND remissionClaim IS NULL)"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')) AND (remissionClaim IS NOT NULL AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver')))"
+            "OR ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT') AND remissionClaim IS NULL)"
             ")"
         )
 
         checks["valid_feeRemissionType_not_null"] = (
             "("
-            "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL) "
+            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL) "
             "OR "
-            "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)"
+            "((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)"
             ")"
         )
 
@@ -564,19 +565,19 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_exceptionalCircumstances_not_null"] = (
-            "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Other' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'exceptionalCircumstancesremission') AND exceptionalCircumstances IS NULL))"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Other' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'exceptionalCircumstancesremission') AND exceptionalCircumstances IS NULL))"
         ) 
 
         checks["valid_helpWithFeesReferenceNumber_not_null"] = (
-            "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'helpWithFees') AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'helpWithFees') AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
         ) 
 
         checks["valid_legalAidAccountNumber_not_null"] = (
-            "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'legalAid') AND NOT(feeRemissionType <=> 'Legal Aid') AND legalAidAccountNumber IS NULL))"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'legalAid') AND NOT(feeRemissionType <=> 'Legal Aid') AND legalAidAccountNumber IS NULL))"
         ) 
 
         checks["valid_asylumSupportReference_not_null"] = (
-            "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'AsylumSupport') AND NOT(feeRemissionType <=> 'Asylum Support') AND asylumSupportReference IS NULL))"
+            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'AsylumSupport') AND NOT(feeRemissionType <=> 'Asylum Support') AND asylumSupportReference IS NULL))"
         ) 
 
         ##############################
@@ -629,13 +630,13 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         checks["valid_oocAppealAdminJ_values"] = (
             "( ( (array_contains(valid_categoryIdList, 38) OR MainRespondentId <=> 4) "
-            "AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none') ) "
+            "AND oocAppealAdminJ IS NOT NULL AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none') ) "
             "OR (oocAppealAdminJ IS NULL) )"
         )
 
         # Only IF CategoryId IN [38] = Include; ELSE null
         checks["valid_appellantHasFixedAddressAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
+            "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
             "OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)"
             "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL))"
         )

@@ -1463,6 +1463,28 @@ def generalDefault(silver_m1,silver_m3):
                 )
     )
 
+    # generalDefault_audit = (
+    #     generalDefault_df.alias("content")
+    #     .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+    #     .select("content.CaseNo",
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("directions_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("directions_inputValues"),
+    #             col("content.directions").alias("directions_value"),
+    #             lit("Yes").alias("directions_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeBundleAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeBundleAvailable_inputValues"),
+    #             col("content.uploadHomeOfficeBundleAvailable").alias("uploadHomeOfficeBundleAvailable_value"),
+    #             lit("Yes").alias("uploadHomeOfficeBundleAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeBundleActionAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeBundleActionAvailable_inputValues"),
+    #             col("content.uploadHomeOfficeBundleActionAvailable").alias("uploadHomeOfficeBundleActionAvailable_value"),
+    #             lit("Yes").alias("uploadHomeOfficeBundleActionAvailable_Transformed"),
+
+    #     )
+    # )
+
     generalDefault_df = (
         generalDefault_df.alias("content")
         .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
@@ -1488,6 +1510,59 @@ def generalDefault(silver_m1,silver_m3):
                 )
     )
 
+    # generalDefault_audit = (
+    #     generalDefault_df.alias("content")
+    #     .join(generalDefault_audit.alias("audit"), on="CaseNo", how="left")
+    #     .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+    #     .select("audit.*",
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealReviewOutcome_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealReviewOutcome_inputValues"),
+    #             col("content.appealReviewOutcome").alias("appealReviewOutcome_value"),
+    #             lit("Yes").alias("appealReviewOutcome_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealResponseAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealResponseAvailable_inputValues"),
+    #             col("content.appealResponseAvailable").alias("appealResponseAvailable_value"),
+    #             lit("Yes").alias("appealResponseAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewedHearingRequirements_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewedHearingRequirements_inputValues"),
+    #             col("content.reviewedHearingRequirements").alias("reviewedHearingRequirements_value"),
+    #             lit("Yes").alias("reviewedHearingRequirements_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("amendResponseActionAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("amendResponseActionAvailable_inputValues"),
+    #             col("content.amendResponseActionAvailable").alias("amendResponseActionAvailable_value"),
+    #             lit("Yes").alias("amendResponseActionAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("currentHearingDetailsVisible_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("currentHearingDetailsVisible_inputValues"),
+    #             col("content.currentHearingDetailsVisible").alias("currentHearingDetailsVisible_value"),
+    #             lit("Yes").alias("currentHearingDetailsVisible_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewResponseActionAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewResponseActionAvailable_inputValues"),
+    #             col("content.reviewResponseActionAvailable").alias("reviewResponseActionAvailable_value"),
+    #             lit("Yes").alias("reviewResponseActionAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewHomeOfficeResponseByLegalRep_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewHomeOfficeResponseByLegalRep_inputValues"),
+    #             col("content.reviewHomeOfficeResponseByLegalRep").alias("reviewHomeOfficeResponseByLegalRep_value"),
+    #             lit("Yes").alias("reviewHomeOfficeResponseByLegalRep_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("submitHearingRequirementsAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("submitHearingRequirementsAvailable_inputValues"),
+    #             col("content.submitHearingRequirementsAvailable").alias("submitHearingRequirementsAvailable_value"),
+    #             lit("Yes").alias("submitHearingRequirementsAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeAppealResponseActionAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeAppealResponseActionAvailable_inputValues"),
+    #             col("content.uploadHomeOfficeAppealResponseActionAvailable").alias("uploadHomeOfficeAppealResponseActionAvailable_value"),
+    #             lit("Yes").alias("uploadHomeOfficeAppealResponseActionAvailable_Transformed"),
+
+    #             )
+    # )
+
     generalDefault_df = (
         generalDefault_df.alias("content")
         .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
@@ -1504,6 +1579,39 @@ def generalDefault(silver_m1,silver_m3):
                 ,"isFtpaListVisible"
                 )
     )
+
+    # generalDefault_audit = (
+    #     generalDefault_df.alias("content")
+    #     .join(generalDefault_audit.alias("audit"), on="CaseNo", how="left")
+    #     .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+    #     .select("audit.*",
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hmcts_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hmcts_inputValues"),
+    #             col("content.hmcts").alias("hmcts_value"),
+    #             lit("Yes").alias("hmcts_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("stitchingStatus_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("stitchingStatus_inputValues"),
+    #             col("content.stitchingStatus").alias("stitchingStatus_value"),
+    #             lit("Yes").alias("stitchingStatus_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("bundleConfiguration_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("bundleConfiguration_inputValues"),
+    #             col("content.bundleConfiguration").alias("bundleConfiguration_value"),
+    #             lit("Yes").alias("bundleConfiguration_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealDecisionAvailable_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealDecisionAvailable_inputValues"),
+    #             col("content.appealDecisionAvailable").alias("appealDecisionAvailable_value"),
+    #             lit("Yes").alias("appealDecisionAvailable_Transformed"),
+
+    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaListVisible_inputFields"),
+    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaListVisible_inputValues"),
+    #             col("content.isFtpaListVisible").alias("isFtpaListVisible_value"),
+    #             lit("Yes").alias("isFtpaListVisible_Transformed"),
+
+    #     )
+    # )
 
     return generalDefault_df
 
@@ -1572,6 +1680,22 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           )
                   )
     
+    general_audit = (
+        general_df.alias("content")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
+                col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
+                lit("Yes").alias("caseArgumentAvailable_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reasonsForAppealDecision_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reasonsForAppealDecision_inputValues"),
+                col("content.reasonsForAppealDecision").alias("reasonsForAppealDecision_value"),
+                lit("Yes").alias("reasonsForAppealDecision_Transformed"),
+                )
+    )
+    
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left" )
                   .withColumn("bundleFileNamePrefix", when(cond_state_4, col("content.bundleFileNamePrefix")).otherwise(None)) 
                   .withColumn("ftpaAppellantSubmitted", when(cond_state_4, col("content.ftpaAppellantSubmitted")).otherwise(None)) 
@@ -1635,9 +1759,136 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           ,"isFtpaRespondentOotExplanationVisibleInDecided"
                           ,"isFtpaRespondentOotExplanationVisibleInSubmitted"
                           ,"caseArgumentAvailable"
-                          ,"CaseStatus", "Outcome" 
                           ) 
                   )
+    
+    general_audit = (
+        general_df.alias("content")
+        .join(general_audit.alias("audit"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("audit.*",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("bundleFileNamePrefix_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("bundleFileNamePrefix_inputValues"),
+                col("content.bundleFileNamePrefix").alias("bundleFileNamePrefix_value"),
+                lit("Yes").alias("bundleFileNamePrefix_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantSubmitted_inputValues"),
+                col("content.ftpaAppellantSubmitted").alias("ftpaAppellantSubmitted_value"),
+                lit("Yes").alias("ftpaAppellantSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaAppellantDocsVisibleInDecided").alias("isFtpaAppellantDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaAppellantDocsVisibleInSubmitted").alias("isFtpaAppellantDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaAppellantOotDocsVisibleInDecided").alias("isFtpaAppellantOotDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaAppellantOotDocsVisibleInSubmitted").alias("isFtpaAppellantOotDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaAppellantGroundsDocsVisibleInDecided").alias("isFtpaAppellantGroundsDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaAppellantEvidenceDocsVisibleInDecided").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaAppellantGroundsDocsVisibleInSubmitted").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaAppellantEvidenceDocsVisibleInSubmitted").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputValues"),
+                col("content.isFtpaAppellantOotExplanationVisibleInDecided").alias("isFtpaAppellantOotExplanationVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputValues"),
+                col("content.isFtpaAppellantOotExplanationVisibleInSubmitted").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentSubmitted_inputValues"),
+                col("content.ftpaRespondentSubmitted").alias("ftpaRespondentSubmitted_value"),
+                lit("Yes").alias("ftpaRespondentSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaRespondentDocsVisibleInDecided").alias("isFtpaRespondentDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaRespondentDocsVisibleInSubmitted").alias("isFtpaRespondentDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaRespondentOotDocsVisibleInDecided").alias("isFtpaRespondentOotDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaRespondentOotDocsVisibleInSubmitted").alias("isFtpaRespondentOotDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaRespondentGroundsDocsVisibleInDecided").alias("isFtpaRespondentGroundsDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputValues"),
+                col("content.isFtpaRespondentEvidenceDocsVisibleInDecided").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaRespondentGroundsDocsVisibleInSubmitted").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputValues"),
+                col("content.isFtpaRespondentEvidenceDocsVisibleInSubmitted").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputValues"),
+                col("content.isFtpaRespondentOotExplanationVisibleInDecided").alias("isFtpaRespondentOotExplanationVisibleInDecided_value"),
+                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInDecided_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputValues"),
+                col("content.isFtpaRespondentOotExplanationVisibleInSubmitted").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_value"),
+                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
+                col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
+                lit("Yes").alias("caseArgumentAvailable_Transformed"),
+
+        )
+    )
 
     return general_df, general_audit
 

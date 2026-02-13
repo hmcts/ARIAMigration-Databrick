@@ -269,11 +269,34 @@ def documents(silver_m1,silver_m3):
         .select("content.*", "respondentDocuments")
     )
 
+    documents_audit = (
+        documents_df.alias("content")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("respondentDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("respondentDocuments_inputValues"),
+                col("content.respondentDocuments").alias("respondentDocuments_value"),
+                lit("Yes").alias("respondentDocuments_Transformed"),
+                )
+    )
+
     documents_df = (
         documents_df.alias("content")
         .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("hearingRequirements",when(cond_state_3_4, col("content.hearingRequirements")).otherwise(None))
         .select("content.*", "hearingRequirements")
+    )
+
+    documents_audit = (
+        documents_df.alias("content")
+        .join(documents_audit.alias("audit"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("audit.*",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingRequirements_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingRequirements_inputValues"),
+                col("content.hearingRequirements").alias("hearingRequirements_value"),
+                lit("Yes").alias("hearingRequirements_Transformed"),
+                )
     )
 
     documents_df = (
@@ -304,9 +327,76 @@ def documents(silver_m1,silver_m3):
                 ,"ftpaRespondentEvidenceDocuments"
                 ,"ftpaAppellantOutOfTimeDocuments"
                 ,"ftpaRespondentOutOfTimeDocuments"
-                ,"CaseStatus","Outcome")
+                )
     )
 
+    documents_audit = (
+        documents_df.alias("content")
+        .join(documents_audit.alias("audit"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("audit.*",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingDocuments_inputValues"),
+                col("content.hearingDocuments").alias("hearingDocuments_value"),
+                lit("Yes").alias("hearingDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("letterBundleDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("letterBundleDocuments_inputValues"),
+                col("content.letterBundleDocuments").alias("letterBundleDocuments_value"),
+                lit("Yes").alias("letterBundleDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseBundles_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseBundles_inputValues"),
+                col("content.caseBundles").alias("caseBundles_value"),
+                lit("Yes").alias("caseBundles_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("finalDecisionAndReasonsDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("finalDecisionAndReasonsDocuments_inputValues"),
+                col("content.finalDecisionAndReasonsDocuments").alias("finalDecisionAndReasonsDocuments_value"),
+                lit("Yes").alias("finalDecisionAndReasonsDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantDocuments_inputValues"),
+                col("content.ftpaAppellantDocuments").alias("ftpaAppellantDocuments_value"),
+                lit("Yes").alias("ftpaAppellantDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentDocuments_inputValues"),
+                col("content.ftpaRespondentDocuments").alias("ftpaRespondentDocuments_value"),
+                lit("Yes").alias("ftpaRespondentDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantGroundsDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantGroundsDocuments_inputValues"),
+                col("content.ftpaAppellantGroundsDocuments").alias("ftpaAppellantGroundsDocuments_value"),
+                lit("Yes").alias("ftpaAppellantGroundsDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentGroundsDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentGroundsDocuments_inputValues"),
+                col("content.ftpaRespondentGroundsDocuments").alias("ftpaRespondentGroundsDocuments_value"),
+                lit("Yes").alias("ftpaRespondentGroundsDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantEvidenceDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantEvidenceDocuments_inputValues"),
+                col("content.ftpaAppellantEvidenceDocuments").alias("ftpaAppellantEvidenceDocuments_value"),
+                lit("Yes").alias("ftpaAppellantEvidenceDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentEvidenceDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentEvidenceDocuments_inputValues"),
+                col("content.ftpaRespondentEvidenceDocuments").alias("ftpaRespondentEvidenceDocuments_value"),
+                lit("Yes").alias("ftpaRespondentEvidenceDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantOutOfTimeDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantOutOfTimeDocuments_inputValues"),
+                col("content.ftpaAppellantOutOfTimeDocuments").alias("ftpaAppellantOutOfTimeDocuments_value"),
+                lit("Yes").alias("ftpaAppellantOutOfTimeDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentOutOfTimeDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentOutOfTimeDocuments_inputValues"),
+                col("content.ftpaRespondentOutOfTimeDocuments").alias("ftpaRespondentOutOfTimeDocuments_value"),
+                lit("Yes").alias("ftpaRespondentOutOfTimeDocuments_Transformed"),
+
+                )
+    )
 
 
     return documents_df, documents_audit
@@ -407,7 +497,149 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 ,"additionalRequests"
                 ,"additionalRequestsDescription"
                 ,"datesToAvoidYesNo"
-                ,"CaseStatus","Outcome"
+                )
+    )
+
+    hearingRequirements_audit = (
+        hearingRequirements_df.alias("content")
+        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAppellantAttendingTheHearing_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isAppellantAttendingTheHearing_inputValues"),
+                col("content.isAppellantAttendingTheHearing").alias("isAppellantAttendingTheHearing_value"),
+                lit("Yes").alias("isAppellantAttendingTheHearing_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAppellantGivingOralEvidence_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isAppellantGivingOralEvidence_inputValues"),
+                col("content.isAppellantGivingOralEvidence").alias("isAppellantGivingOralEvidence_value"),
+                lit("Yes").alias("isAppellantGivingOralEvidence_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isWitnessesAttending_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isWitnessesAttending_inputValues"),
+                col("content.isWitnessesAttending").alias("isWitnessesAttending_value"),
+                lit("Yes").alias("isWitnessesAttending_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isEvidenceFromOutsideUkOoc_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isEvidenceFromOutsideUkOoc_inputValues"),
+                col("content.isEvidenceFromOutsideUkOoc").alias("isEvidenceFromOutsideUkOoc_value"),
+                lit("Yes").alias("isEvidenceFromOutsideUkOoc_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isEvidenceFromOutsideUkInCountry_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isEvidenceFromOutsideUkInCountry_inputValues"),
+                col("content.isEvidenceFromOutsideUkInCountry").alias("isEvidenceFromOutsideUkInCountry_value"),
+                lit("Yes").alias("isEvidenceFromOutsideUkInCountry_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isInterpreterServicesNeeded_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isInterpreterServicesNeeded_inputValues"),
+                col("content.isInterpreterServicesNeeded").alias("isInterpreterServicesNeeded_value"),
+                lit("Yes").alias("isInterpreterServicesNeeded_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appellantInterpreterLanguageCategory_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appellantInterpreterLanguageCategory_inputValues"),
+                col("content.appellantInterpreterLanguageCategory").alias("appellantInterpreterLanguageCategory_value"),
+                lit("Yes").alias("appellantInterpreterLanguageCategory_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appellantInterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appellantInterpreterSpokenLanguage_inputValues"),
+                col("content.appellantInterpreterSpokenLanguage").alias("appellantInterpreterSpokenLanguage_value"),
+                lit("Yes").alias("appellantInterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appellantInterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appellantInterpreterSignLanguage_inputValues"),
+                col("content.appellantInterpreterSignLanguage").alias("appellantInterpreterSignLanguage_value"),
+                lit("Yes").alias("appellantInterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isHearingRoomNeeded_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isHearingRoomNeeded_inputValues"),
+                col("content.isHearingRoomNeeded").alias("isHearingRoomNeeded_value"),
+                lit("Yes").alias("isHearingRoomNeeded_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isHearingLoopNeeded_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isHearingLoopNeeded_inputValues"),
+                col("content.isHearingLoopNeeded").alias("isHearingLoopNeeded_value"),
+                lit("Yes").alias("isHearingLoopNeeded_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("remoteVideoCall_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("remoteVideoCall_inputValues"),
+                col("content.remoteVideoCall").alias("remoteVideoCall_value"),
+                lit("Yes").alias("remoteVideoCall_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("remoteVideoCallDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("remoteVideoCallDescription_inputValues"),
+                col("content.remoteVideoCallDescription").alias("remoteVideoCallDescription_value"),
+                lit("Yes").alias("remoteVideoCallDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("physicalOrMentalHealthIssues_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("physicalOrMentalHealthIssues_inputValues"),
+                col("content.physicalOrMentalHealthIssues").alias("physicalOrMentalHealthIssues_value"),
+                lit("Yes").alias("physicalOrMentalHealthIssues_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("physicalOrMentalHealthIssuesDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("physicalOrMentalHealthIssuesDescription_inputValues"),
+                col("content.physicalOrMentalHealthIssuesDescription").alias("physicalOrMentalHealthIssuesDescription_value"),
+                lit("Yes").alias("physicalOrMentalHealthIssuesDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("pastExperiences_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("pastExperiences_inputValues"),
+                col("content.pastExperiences").alias("pastExperiences_value"),
+                lit("Yes").alias("pastExperiences_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("pastExperiencesDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("pastExperiencesDescription_inputValues"),
+                col("content.pastExperiencesDescription").alias("pastExperiencesDescription_value"),
+                lit("Yes").alias("pastExperiencesDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("multimediaEvidence_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("multimediaEvidence_inputValues"),
+                col("content.multimediaEvidence").alias("multimediaEvidence_value"),
+                lit("Yes").alias("multimediaEvidence_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("multimediaEvidenceDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("multimediaEvidenceDescription_inputValues"),
+                col("content.multimediaEvidenceDescription").alias("multimediaEvidenceDescription_value"),
+                lit("Yes").alias("multimediaEvidenceDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("singleSexCourt_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("singleSexCourt_inputValues"),
+                col("content.singleSexCourt").alias("singleSexCourt_value"),
+                lit("Yes").alias("singleSexCourt_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("singleSexCourtType_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("singleSexCourtType_inputValues"),
+                col("content.singleSexCourtType").alias("singleSexCourtType_value"),
+                lit("Yes").alias("singleSexCourtType_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("singleSexCourtTypeDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("singleSexCourtTypeDescription_inputValues"),
+                col("content.singleSexCourtTypeDescription").alias("singleSexCourtTypeDescription_value"),
+                lit("Yes").alias("singleSexCourtTypeDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("inCameraCourt_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("inCameraCourt_inputValues"),
+                col("content.inCameraCourt").alias("inCameraCourt_value"),
+                lit("Yes").alias("inCameraCourt_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("inCameraCourtDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("inCameraCourtDescription_inputValues"),
+                col("content.inCameraCourtDescription").alias("inCameraCourtDescription_value"),
+                lit("Yes").alias("inCameraCourtDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("additionalRequests_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("additionalRequests_inputValues"),
+                col("content.additionalRequests").alias("additionalRequests_value"),
+                lit("Yes").alias("additionalRequests_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("additionalRequestsDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("additionalRequestsDescription_inputValues"),
+                col("content.additionalRequestsDescription").alias("additionalRequestsDescription_value"),
+                lit("Yes").alias("additionalRequestsDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("datesToAvoidYesNo_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("datesToAvoidYesNo_inputValues"),
+                col("content.datesToAvoidYesNo").alias("adatesToAvoidYesNo_value"),
+                lit("Yes").alias("datesToAvoidYesNo_Transformed"),
+
                 )
     )
 
@@ -444,8 +676,6 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
     silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
 
-    
-    
 
     hearingResponse_df = (
         hearingResponse_df.alias("content")
@@ -495,10 +725,126 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                 ,"otherDecisionForDisplay"
                 ,"isAdditionalInstructionAllowed"
                 ,"additionalInstructionsTribunalResponse"
-                ,"CaseStatus","Outcome"
                 )
     )
 
+    hearingResponse_audit = (
+        hearingResponse_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isRemoteHearing_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isRemoteHearing_inputValues"),
+                col("content.isRemoteHearing").alias("isRemoteHearing_value"),
+                lit("Yes").alias("isRemoteHearing_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAppealSuitableToFloat_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isAppealSuitableToFloat_inputValues"),
+                col("content.isAppealSuitableToFloat").alias("isAppealSuitableToFloat_value"),
+                lit("Yes").alias("isAppealSuitableToFloat_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isMultimediaAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isMultimediaAllowed_inputValues"),
+                col("content.isMultimediaAllowed").alias("isMultimediaAllowed_value"),
+                lit("Yes").alias("isMultimediaAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("multimediaTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("multimediaTribunalResponse_inputValues"),
+                col("content.multimediaTribunalResponse").alias("multimediaTribunalResponse_value"),
+                lit("Yes").alias("multimediaTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("multimediaDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("multimediaDecisionForDisplay_inputValues"),
+                col("content.multimediaDecisionForDisplay").alias("multimediaDecisionForDisplay_value"),
+                lit("Yes").alias("multimediaDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isInCameraCourtAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isInCameraCourtAllowed_inputValues"),
+                col("content.isInCameraCourtAllowed").alias("isInCameraCourtAllowed_value"),
+                lit("Yes").alias("isInCameraCourtAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("inCameraCourtTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("inCameraCourtTribunalResponse_inputValues"),
+                col("content.inCameraCourtTribunalResponse").alias("inCameraCourtTribunalResponse_value"),
+                lit("Yes").alias("inCameraCourtTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("inCameraCourtDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("inCameraCourtDecisionForDisplay_inputValues"),
+                col("content.inCameraCourtDecisionForDisplay").alias("inCameraCourtDecisionForDisplay_value"),
+                lit("Yes").alias("inCameraCourtDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isSingleSexCourtAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isSingleSexCourtAllowed_inputValues"),
+                col("content.isSingleSexCourtAllowed").alias("isSingleSexCourtAllowed_value"),
+                lit("Yes").alias("isSingleSexCourtAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("singleSexCourtTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("singleSexCourtTribunalResponse_inputValues"),
+                col("content.singleSexCourtTribunalResponse").alias("singleSexCourtTribunalResponse_value"),
+                lit("Yes").alias("singleSexCourtTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("singleSexCourtDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("singleSexCourtDecisionForDisplay_inputValues"),
+                col("content.singleSexCourtDecisionForDisplay").alias("singleSexCourtDecisionForDisplay_value"),
+                lit("Yes").alias("singleSexCourtDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isVulnerabilitiesAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isVulnerabilitiesAllowed_inputValues"),
+                col("content.isVulnerabilitiesAllowed").alias("isVulnerabilitiesAllowed_value"),
+                lit("Yes").alias("isVulnerabilitiesAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("vulnerabilitiesTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("vulnerabilitiesTribunalResponse_inputValues"),
+                col("content.vulnerabilitiesTribunalResponse").alias("vulnerabilitiesTribunalResponse_value"),
+                lit("Yes").alias("vulnerabilitiesTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("vulnerabilitiesDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("vulnerabilitiesDecisionForDisplay_inputValues"),
+                col("content.vulnerabilitiesDecisionForDisplay").alias("vulnerabilitiesDecisionForDisplay_value"),
+                lit("Yes").alias("vulnerabilitiesDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isRemoteHearingAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isRemoteHearingAllowed_inputValues"),
+                col("content.isRemoteHearingAllowed").alias("isRemoteHearingAllowed_value"),
+                lit("Yes").alias("isRemoteHearingAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("remoteVideoCallTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("remoteVideoCallTribunalResponse_inputValues"),
+                col("content.remoteVideoCallTribunalResponse").alias("remoteVideoCallTribunalResponse_value"),
+                lit("Yes").alias("remoteVideoCallTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("remoteHearingDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("remoteHearingDecisionForDisplay_inputValues"),
+                col("content.remoteHearingDecisionForDisplay").alias("remoteHearingDecisionForDisplay_value"),
+                lit("Yes").alias("remoteHearingDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAdditionalAdjustmentsAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isAdditionalAdjustmentsAllowed_inputValues"),
+                col("content.isAdditionalAdjustmentsAllowed").alias("isAdditionalAdjustmentsAllowed_value"),
+                lit("Yes").alias("isAdditionalAdjustmentsAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("additionalTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("additionalTribunalResponse_inputValues"),
+                col("content.additionalTribunalResponse").alias("additionalTribunalResponse_value"),
+                lit("Yes").alias("additionalTribunalResponse_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("otherDecisionForDisplay_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("otherDecisionForDisplay_inputValues"),
+                col("content.otherDecisionForDisplay").alias("otherDecisionForDisplay_value"),
+                lit("Yes").alias("otherDecisionForDisplay_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAdditionalInstructionAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isAdditionalInstructionAllowed_inputValues"),
+                col("content.isAdditionalInstructionAllowed").alias("isAdditionalInstructionAllowed_value"),
+                lit("Yes").alias("isAdditionalInstructionAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("additionalInstructionsTribunalResponse_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("additionalInstructionsTribunalResponse_inputValues"),
+                col("content.additionalInstructionsTribunalResponse").alias("additionalInstructionsTribunalResponse_value"),
+                lit("Yes").alias("additionalInstructionsTribunalResponse_Transformed"),
+        )
+    )
+    
     return hearingResponse_df, hearingResponse_audit
 
 ################################################################
@@ -596,8 +942,154 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 ,"listCaseHearingDate"
                 ,"listCaseHearingCentre"
                 ,"listCaseHearingCentreAddress"
-                ,"CaseStatus","Outcome"
                 )
+    )
+
+    hearingDetails_audit = (
+        hearingDetails_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listingLength_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listingLength_inputValues"),
+                col("content.listingLength").alias("listingLength_value"),
+                lit("Yes").alias("listingLength_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingChannel_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingChannel_inputValues"),
+                col("content.hearingChannel").alias("hearingChannel_value"),
+                lit("Yes").alias("hearingChannel_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witnessDetails_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witnessDetails_inputValues"),
+                col("content.witnessDetails").alias("witnessDetails_value"),
+                lit("Yes").alias("witnessDetails_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listingLocation_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listingLocation_inputValues"),
+                col("content.listingLocation").alias("listingLocation_value"),
+                lit("Yes").alias("listingLocation_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness1InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness1InterpreterSignLanguage_inputValues"),
+                col("content.witness1InterpreterSignLanguage").alias("witness1InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness1InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness2InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness2InterpreterSignLanguage_inputValues"),
+                col("content.witness2InterpreterSignLanguage").alias("witness2InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness2InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness3InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness3InterpreterSignLanguage_inputValues"),
+                col("content.witness3InterpreterSignLanguage").alias("witness3InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness3InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness4InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness4InterpreterSignLanguage_inputValues"),
+                col("content.witness4InterpreterSignLanguage").alias("witness4InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness4InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness5InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness5InterpreterSignLanguage_inputValues"),
+                col("content.witness5InterpreterSignLanguage").alias("witness5InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness5InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness6InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness6InterpreterSignLanguage_inputValues"),
+                col("content.witness6InterpreterSignLanguage").alias("witness6InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness6InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness7InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness7InterpreterSignLanguage_inputValues"),
+                col("content.witness7InterpreterSignLanguage").alias("witness7InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness7InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness8InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness8InterpreterSignLanguage_inputValues"),
+                col("content.witness8InterpreterSignLanguage").alias("witness8InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness8InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness9InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness9InterpreterSignLanguage_inputValues"),
+                col("content.witness9InterpreterSignLanguage").alias("witness9InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness9InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness10InterpreterSignLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness10InterpreterSignLanguage_inputValues"),
+                col("content.witness10InterpreterSignLanguage").alias("witness10InterpreterSignLanguage_value"),
+                lit("Yes").alias("witness10InterpreterSignLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness1InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness1InterpreterSpokenLanguage_inputValues"),
+                col("content.witness1InterpreterSpokenLanguage").alias("witness1InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness1InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness2InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness2InterpreterSpokenLanguage_inputValues"),
+                col("content.witness2InterpreterSpokenLanguage").alias("witness2InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness2InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness3InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness3InterpreterSpokenLanguage_inputValues"),
+                col("content.witness3InterpreterSpokenLanguage").alias("witness3InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness3InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness4InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness4InterpreterSpokenLanguage_inputValues"),
+                col("content.witness4InterpreterSpokenLanguage").alias("witness4InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness4InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness5InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness5InterpreterSpokenLanguage_inputValues"),
+                col("content.witness5InterpreterSpokenLanguage").alias("witness5InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness5InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness6InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness6InterpreterSpokenLanguage_inputValues"),
+                col("content.witness6InterpreterSpokenLanguage").alias("witness6InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness6InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness7InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness7InterpreterSpokenLanguage_inputValues"),
+                col("content.witness7InterpreterSpokenLanguage").alias("witness7InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness7InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness8InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness8InterpreterSpokenLanguage_inputValues"),
+                col("content.witness8InterpreterSpokenLanguage").alias("witness8InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness8InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness9InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness9InterpreterSpokenLanguage_inputValues"),
+                col("content.witness9InterpreterSpokenLanguage").alias("witness9InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness9InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("witness10InterpreterSpokenLanguage_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("witness10InterpreterSpokenLanguage_inputValues"),
+                col("content.witness10InterpreterSpokenLanguage").alias("witness10InterpreterSpokenLanguage_value"),
+                lit("Yes").alias("witness10InterpreterSpokenLanguage_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listCaseHearingLength_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listCaseHearingLength_inputValues"),
+                col("content.listCaseHearingLength").alias("listCaseHearingLength_value"),
+                lit("Yes").alias("listCaseHearingLength_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listCaseHearingDate_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listCaseHearingDate_inputValues"),
+                col("content.listCaseHearingDate").alias("listCaseHearingDate_value"),
+                lit("Yes").alias("listCaseHearingDate_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listCaseHearingCentre_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listCaseHearingCentre_inputValues"),
+                col("content.listCaseHearingCentre").alias("listCaseHearingCentre_value"),
+                lit("Yes").alias("listCaseHearingCentre_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listCaseHearingCentreAddress_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("listCaseHearingCentreAddress_inputValues"),
+                col("content.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
+                lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
+        )
     )
 
     return hearingDetails_df, hearingDetails_audit
@@ -655,8 +1147,59 @@ def substantiveDecision(silver_m1,silver_m3):
                 ,"appealDecision"
                 ,"isDecisionAllowed"
                 ,"anonymityOrder"
-                ,"CaseStatus","Outcome"
                 )
+    )
+
+    substantiveDecision_audit = (
+        substantiveDecision_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("scheduleOfIssuesAgreement_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("scheduleOfIssuesAgreement_inputValues"),
+                col("content.scheduleOfIssuesAgreement").alias("scheduleOfIssuesAgreement_value"),
+                lit("Yes").alias("scheduleOfIssuesAgreement_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("scheduleOfIssuesDisagreementDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("scheduleOfIssuesDisagreementDescription_inputValues"),
+                col("content.scheduleOfIssuesDisagreementDescription").alias("scheduleOfIssuesDisagreementDescription_value"),
+                lit("Yes").alias("scheduleOfIssuesDisagreementDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("immigrationHistoryAgreement_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("immigrationHistoryAgreement_inputValues"),
+                col("content.immigrationHistoryAgreement").alias("immigrationHistoryAgreement_value"),
+                lit("Yes").alias("immigrationHistoryAgreement_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("immigrationHistoryDisagreementDescription_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("immigrationHistoryDisagreementDescription_inputValues"),
+                col("content.immigrationHistoryDisagreementDescription").alias("immigrationHistoryDisagreementDescription_value"),
+                lit("Yes").alias("immigrationHistoryDisagreementDescription_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("sendDecisionsAndReasonsDate_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("sendDecisionsAndReasonsDate_inputValues"),
+                col("content.sendDecisionsAndReasonsDate").alias("sendDecisionsAndReasonsDate_value"),
+                lit("Yes").alias("sendDecisionsAndReasonsDate_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealDate_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealDate_inputValues"),
+                col("content.appealDate").alias("appealDate_value"),
+                lit("Yes").alias("appealDate_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealDecision_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealDecision_inputValues"),
+                col("content.appealDecision").alias("appealDecision_value"),
+                lit("Yes").alias("appealDecision_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isDecisionAllowed_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isDecisionAllowed_inputValues"),
+                col("content.isDecisionAllowed").alias("isDecisionAllowed_value"),
+                lit("Yes").alias("isDecisionAllowed_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("anonymityOrder_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("anonymityOrder_inputValues"),
+                col("content.anonymityOrder").alias("anonymityOrder_value"),
+                lit("Yes").alias("anonymityOrder_Transformed"),
+        )
     )
 
     return substantiveDecision_df, substantiveDecision_audit
@@ -701,8 +1244,24 @@ def hearingActuals(silver_m3):
         .select("content.*"
                 ,"attendingJudge"
                 ,"actualCaseHearingLength"
-                ,"CaseStatus","Outcome"
                 )
+    )
+
+    hearingActuals_audit = (
+        hearingActuals_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("attendingJudge_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("attendingJudge_inputValues"),
+                col("content.attendingJudge").alias("attendingJudge_value"),
+                lit("Yes").alias("attendingJudge_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("actualCaseHearingLength_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("actualCaseHearingLength_inputValues"),
+                col("content.actualCaseHearingLength").alias("actualCaseHearingLength_value"),
+                lit("Yes").alias("actualCaseHearingLength_Transformed"),
+        )
     )
 
     return hearingActuals_df, hearingActuals_audit
@@ -758,8 +1317,54 @@ def ftpa(silver_m3, silver_c):
                 ,"ftpaRespondentApplicationDate"
                 ,"ftpaRespondentSubmissionOutOfTime"
                 ,"ftpaRespondentOutOfTimeExplanation"
-                ,"CaseStatus","Outcome"
                 )
+    )
+
+    ftpa_audit = (
+        ftpa_df.alias("content")
+        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaApplicationDeadline_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaApplicationDeadline_inputValues"),
+                col("content.ftpaApplicationDeadline").alias("ftpaApplicationDeadline_value"),
+                lit("Yes").alias("ftpaApplicationDeadline_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaList_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaList_inputValues"),
+                col("content.ftpaList").alias("ftpaList_value"),
+                lit("Yes").alias("ftpaList_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantApplicationDate_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantApplicationDate_inputValues"),
+                col("content.ftpaAppellantApplicationDate").alias("ftpaAppellantApplicationDate_value"),
+                lit("Yes").alias("ftpaAppellantApplicationDate_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantSubmissionOutOfTime_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantSubmissionOutOfTime_inputValues"),
+                col("content.ftpaAppellantSubmissionOutOfTime").alias("ftpaAppellantSubmissionOutOfTime_value"),
+                lit("Yes").alias("ftpaAppellantSubmissionOutOfTime_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaAppellantOutOfTimeExplanation_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaAppellantOutOfTimeExplanation_inputValues"),
+                col("content.ftpaAppellantOutOfTimeExplanation").alias("ftpaAppellantOutOfTimeExplanation_value"),
+                lit("Yes").alias("ftpaAppellantOutOfTimeExplanation_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentApplicationDate_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentApplicationDate_inputValues"),
+                col("content.ftpaRespondentApplicationDate").alias("ftpaRespondentApplicationDate_value"),
+                lit("Yes").alias("ftpaRespondentApplicationDate_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentSubmissionOutOfTime_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentSubmissionOutOfTime_inputValues"),
+                col("content.ftpaRespondentSubmissionOutOfTime").alias("ftpaRespondentSubmissionOutOfTime_value"),
+                lit("Yes").alias("ftpaRespondentSubmissionOutOfTime_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaRespondentOutOfTimeExplanation_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("ftpaRespondentOutOfTimeExplanation_inputValues"),
+                col("content.ftpaRespondentOutOfTimeExplanation").alias("ftpaRespondentOutOfTimeExplanation_value"),
+                lit("Yes").alias("ftpaRespondentOutOfTimeExplanation_Transformed"),
+        )
     )
 
     return ftpa_df, ftpa_audit
@@ -829,7 +1434,6 @@ def generalDefault(silver_m1,silver_m3):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Add row_number to get the row with the highest StatusId per CaseNo
     silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
     silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
@@ -856,9 +1460,6 @@ def generalDefault(silver_m1,silver_m3):
                 ,"directions"
                 ,"uploadHomeOfficeBundleAvailable"
                 ,"uploadHomeOfficeBundleActionAvailable"
-                # ,"caseArgumentAvailable"
-                # ,"reasonsForAppealDecision"
-                # ,"CaseStatus","Outcome"
                 )
     )
 
@@ -884,7 +1485,6 @@ def generalDefault(silver_m1,silver_m3):
                 ,"reviewHomeOfficeResponseByLegalRep"
                 ,"submitHearingRequirementsAvailable"
                 ,"uploadHomeOfficeAppealResponseActionAvailable"
-                # ,"CaseStatus","Outcome"
                 )
     )
 
@@ -902,7 +1502,6 @@ def generalDefault(silver_m1,silver_m3):
                 ,"bundleConfiguration"
                 ,"appealDecisionAvailable"
                 ,"isFtpaListVisible"
-                ,"CaseStatus","Outcome"
                 )
     )
 
@@ -972,7 +1571,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           ,"reasonsForAppealDecision" 
                           )
                   )
-
     
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left" )
                   .withColumn("bundleFileNamePrefix", when(cond_state_4, col("content.bundleFileNamePrefix")).otherwise(None)) 

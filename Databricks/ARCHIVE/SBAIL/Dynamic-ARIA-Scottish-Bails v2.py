@@ -2011,44 +2011,6 @@ def silver_m7():
 
 # COMMAND ----------
 
-# DBTITLE 1,***delete***
-# m7_df = spark.read.table("hive_metastore.aria_s_bails.bronze_sbail_status_sc_ra_cs").alias("m7")
-
-# m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
-
-# m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")
-#                 ).select(*m7_cleaned,
-#                     when(col("BailConditions") == 1,"Yes")
-#                     .when(col("BailConditions") == 2,"No")
-#                     .otherwise("Unknown").alias("BailConditionsDesc"),
-#                     when(col("InterpreterRequired") == 0 ,"Zero")
-#                     .when(col("InterpreterRequired") == 1 ,"One")
-#                     .when(col("InterpreterRequired") == 2 ,"Two")
-#                     .alias("InterpreterRequiredDesc"),
-#                     when(col("ResidenceOrder") == 1,"Yes")
-#                     .when(col("ResidenceOrder") == 2,"No")
-#                     .otherwise("Unknown").alias("ResidenceOrderDesc"),
-#                     when(col("ReportingOrder") == 1,"Yes")
-#                     .when(col("ReportingOrder") == 2,"No")
-#                     .otherwise("Unknown").alias("ReportingOrderDesc"),
-#                     when(col("BailedTimePlace") == 1,"Yes")
-#                     .when(col("BailedTimePlace") == 2,"No")
-#                     .otherwise("Unknown").alias("BailedTimePlaceDesc"),
-#                     when(col("BaileddateHearing") == 1,"Yes")
-#                     .when(col("BaileddateHearing") == 2,"No")
-#                     .otherwise("Unknown").alias("BaileddateHearingDesc"),
-#                     when(col("StatusParty") == 1,"Appellant")
-#                     .when(col("StatusParty") == 2,"Respondent")
-#                     .otherwise("Unknown").alias("StatusPartyDesc"),
-#                     round(col("TotalAmountOfFinancialCondition"),2).alias("TotalAmountOfFinancialCondition"),
-#                     round(col("TotalSecurity"),2).alias("TotalSecurity")
-
-# )
-# m7_ref_df.display()
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## M8: silver_sbail_m8
 
@@ -2842,23 +2804,44 @@ def stg_m3_m7():
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
     m7 = dlt.read("silver_sbail_m7_status")
-    #we need to join this to a table below
+    
+    m7 = m7.withColumn(
+    "StatusParty",
+    when(col("StatusParty") == 0, lit(None)) 
+    .when(col("StatusParty") == 1, "Appellant")
+    .when(col("StatusParty") == 2, "Respondent")
+    .otherwise(col("StatusParty"))
+    )   
 
     adjournment_parents = m7.filter(col("CaseStatus") == 17) \
-    .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
-    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+    .select(col("AdjournmentParentStatusId").alias("ParentStatusId"), 
+            lit("Yes").alias("adjournmentFlag"), 
+            col("DateReceived").alias("adjDateOfApplication"), 
+            col("Keydate").alias("adjDateOfHearing"), 
+            col("StatusParty").alias("adjPartyMakingApp"), 
+            col("StatusNotes1").alias("adjDirections"), 
+            col("DecisionDate").alias("adjDateOfDecision"), 
+            col("OutcomeDescription").alias("adjOutcome"), 
+            col("StatusPromulgated").alias("adjdatePartiesNotified")) 
 
     adjourned_withdrawal_df = m7.join(
-        adjournment_parents,
+        adjournment_parents.alias("adjournment_parents"),
         m7.StatusId == adjournment_parents.ParentStatusId,
-        "inner")
+        "inner"
+        ).select(m7["*"], col("adjournmentFlag"), col("adjDateOfApplication"), col("adjDateOfHearing"), col("adjPartyMakingApp"), 
+        col("adjDirections"), col("adjDateOfDecision"), col("adjOutcome"), col("adjdatePartiesNotified"))
 
-    adjourned_withdrawal_new_df = m7.join(
-        adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
-        (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
-        (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+    adjourned_withdrawal_new_df = (
+        m7.alias("status")
+        .join(
+        adjourned_withdrawal_df.alias("adj"),
+        (col("status.CaseNo") == col("adj.CaseNo")) & (col("status.StatusId") == col("adj.StatusId")),
         "left")
-
+        .withColumn("adjDateOfApplication", date_format(col("adj.adjDateOfApplication"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfDecision", date_format(col("adj.adjDateOfDecision"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfHearing",date_format(col("adj.adjDateOfHearing"), "yyyy-MM-dd"))
+        .withColumn("adjdatePartiesNotified",date_format(col("adj.adjdatePartiesNotified"), "yyyy-MM-dd"))
+        .select("status.CaseNo", "status.StatusId", "status.CaseStatus", "status.DateReceived", "status.StatusNotes1", "status.Keydate", "status.MiscDate1", "status.MiscDate2", "status.MiscDate3", "status.StatusNotes2", "status.DecisionDate", "status.Outcome", "status.OutcomeDescription", "status.StatusPromulgated", "status.StatusParty", "status.ResidenceOrder", "status.ReportingOrder", "status.BailedTimePlace", "status.BaileddateHearing", "status.BaileddateHearingDesc", "status.InterpreterRequired", "status.BailConditions", "status.LivesAndSleepsAt", "status.AppearBefore", "status.ReportTo", "status.AdjournmentParentStatusId", "status.HearingCentre", "status.DecisionSentToHODate", "status.VideoLink", "status.WorkAndStudyRestriction", "status.StatusBailConditionTagging", "status.OtherCondition", "status.OutcomeReasons", "status.FC", "status.CaseStatusDescription", "status.ContactStatus", "status.SCCourtName","status.SCAddress1", "status.SCAddress2", "status.SCAddress3", "status.SCAddress4", "status.SCAddress5", "status.SCPostcode", "status.SCTelephone", "status.LanguageDescription", "status.ListTypeId", "status.ListType", "status.HearingTypeId", "status.HearingType", "status.Judiciary1Id", "status.Judiciary1Name", "status.Judiciary2Id", "status.Judiciary2Name", "status.Judiciary3Id", "status.Judiciary3Name", "status.BailConditionsDesc", "status.InterpreterRequiredDesc", "status.ResidenceOrderDesc", "status.ReportingOrderDesc", "status.BailedTimePlaceDesc", "status.StatusPartyDesc", "status.TotalAmountOfFinancialCondition", "status.TotalSecurity", "adjDateOfApplication", "adjDateOfHearing", "adjPartyMakingApp", "adjDirections", "adjDateOfDecision", "adjOutcome", "adjdatePartiesNotified", "adjournmentFlag"))
 
     # Get all columns in m3 not in m7
     m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
@@ -2866,10 +2849,10 @@ def stg_m3_m7():
     #replaced m7 with adjournmentdf
     status_tab = adjourned_withdrawal_new_df.alias("m7").join(
         pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
-        (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
-        how = "left"
-    ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
+        (col("m7.CaseNo") == col("m3.CaseNo")) &
+        (col("m7.StatusId") == col("m3.StatusId")),
+        how="left"
+    ).drop(col("m3.CaseNo"), col("m3.StatusId"))
 
     # create a nested list for the stausus table (m7_m3 tables)
     status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
@@ -2889,6 +2872,7 @@ def stg_m3_m7():
             sort_udf(collect_list(status_tab_struct)).alias("all_status_objects")
         )
     )
+
 
     return m7_m3_statuses
 

@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.dq_rules.dq_rules import DQRulesBase
+from .dq_rules import DQRulesBase
 
 
 class ftpaSubmittedBDQRules(DQRulesBase):

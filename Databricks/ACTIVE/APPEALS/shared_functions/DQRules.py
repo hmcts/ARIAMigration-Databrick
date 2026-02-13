@@ -1,9 +1,9 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.dq_rules import (
+from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules
 )
-from Databricks.ACTIVE.APPEALS.shared_functions.dq_rules.dq_rules import DQRulesBase
+from shared_functions.dq_rules.dq_rules import DQRulesBase
 
 
 def build_rule_expression(rules: dict) -> str:

@@ -56,10 +56,12 @@ def ftpa(silver_m3, silver_c):
     )
 
     silver_m3_max_statusid = (
-        silver_m3_ranked
-            .filter(col("row_number") == 1)
-            .drop("row_number")
-    )
+    silver_m3_ranked
+        .filter(col("row_number") == 1)
+        .drop("row_number")
+        .dropDuplicates(["CaseNo"])
+)
+
 
 
 

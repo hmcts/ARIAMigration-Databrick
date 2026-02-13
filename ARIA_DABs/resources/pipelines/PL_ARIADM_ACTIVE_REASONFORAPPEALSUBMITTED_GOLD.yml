@@ -1,7 +1,7 @@
 resources:
   pipelines:
-    pipeline_pl_reason_for_appeal_submitted_gold:
-      name: PL_reason_for_appeal_submitted_gold
+    pipeline_pl_reasonForAppealSubmitted_gold:
+      name: PL_reasonForAppealSubmitted_gold
       configuration:
         pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
       clusters:
@@ -15,5 +15,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_REASON_FOR_APPEAL_SUBMITTED_JSON"
-      target: reason_for_appeal_submitted_gold
+      target: reasonForAppealSubmitted_gold
       development: true

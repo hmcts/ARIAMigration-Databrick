@@ -1,9 +1,6 @@
-import importlib.util
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, 
-    current_timestamp, collect_set, first, array_contains, 
-    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff, size, nullif, desc
+    col, when, lit, array, struct, collect_list,
+    coalesce, concat_ws, concat, trim, nullif, desc
 )
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -13,84 +10,92 @@ from . import AwaitingEvidenceRespondant_a as AERa
 from . import AwaitingEvidenceRespondant_a as AERb
 
 
-def appealType(silver_m1): 
-    df_appealType, df_audit_appealType = PP.appealType(silver_m1) 
-    
+def appealType(silver_m1):
+    df_appealType, df_audit_appealType = PP.appealType(silver_m1)
+
     df_appealType = df_appealType.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_appealType, df_audit_appealType
 
-def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres): 
-    df_caseData, df_audit_caseData = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres) 
-    
+
+def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+    df_caseData, df_audit_caseData = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+
     df_caseData = df_caseData.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_caseData, df_audit_caseData
 
-def flagsLabels(silver_m1, silver_m2, silver_c): 
+
+def flagsLabels(silver_m1, silver_m2, silver_c):
     df_flagsLabels, df_audit_flagsLabels = PP.flagsLabels(silver_m1, silver_m2, silver_c)
-    
+
     df_flagsLabels = df_flagsLabels.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_flagsLabels, df_audit_flagsLabels
 
-def legalRepDetails(silver_m1, bronze_countryFromAddress): 
+
+def legalRepDetails(silver_m1, bronze_countryFromAddress):
     df_legalRepDetails, df_audit_legalRepDetails = PP.legalRepDetails(silver_m1, bronze_countryFromAddress)
-    
+
     df_legalRepDetails = df_legalRepDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_legalRepDetails, df_audit_legalRepDetails
 
-def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress,bronze_HORef_cleansing): 
-    df_appellantDetails, df_audit_apellantDetails = AERa.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress,bronze_HORef_cleansing)
-    
+
+def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
+    df_appellantDetails, df_audit_apellantDetails = AERa.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
+
     df_appellantDetails = df_appellantDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_appellantDetails, df_audit_apellantDetails
 
-def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing): 
+
+def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     df_homeOfficeDetails, df_audit_homeOfficeDetails = PP.homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing)
-    
+
     df_homeOfficeDetails = df_homeOfficeDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_homeOfficeDetails, df_audit_homeOfficeDetails
 
-def paymentType(silver_m1, silver_m4): 
+
+def paymentType(silver_m1, silver_m4):
     df_paymentType, df_audit_paymentType = APS.paymentType(silver_m1, silver_m4)
-    
+
     df_paymentType = df_paymentType.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_paymentType, df_audit_paymentType
 
-def partyID(silver_m1, silver_m3, silver_c): 
+
+def partyID(silver_m1, silver_m3, silver_c):
     df_partyID, df_audit_partyID = PP.partyID(silver_m1, silver_m3, silver_c)
-    
+
     df_partyID = df_partyID.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_partyID, df_audit_partyID
 
-def remissionTypes(silver_m1, bronze_remission_lookup_df,silver_m4): 
-    df_remissionTypes, df_audit_remissionTypes = APS.remissionTypes(silver_m1, bronze_remission_lookup_df,silver_m4)
-    
+
+def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
+    df_remissionTypes, df_audit_remissionTypes = APS.remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4)
+
     df_remissionTypes = df_remissionTypes.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_remissionTypes, df_audit_remissionTypes
 
-def sponsorDetails(silver_m1, silver_c): 
+
+def sponsorDetails(silver_m1, silver_c):
     df_sponsorDetails, df_audit_sponsorDetails = PP.sponsorDetails(silver_m1, silver_c)
-    
+
     df_sponsorDetails = df_sponsorDetails.join(
         silver_m1.select("CaseNo", "dv_representation"), ["CaseNo"], "left"
     ).select(*df_sponsorDetails.columns).where(col("dv_representation") == 'AIP').distinct()
-        
+
     return df_sponsorDetails, df_audit_sponsorDetails
 
-def hearingResponse(silver_m1,silver_m3, silver_m6):
-    
+
+def hearingResponse(silver_m1, silver_m3, silver_m6):
     window = Window.partitionBy("CaseNo").orderBy(desc("StatusId"))
-    df_stg = silver_m3.filter((F.col("CaseStatus").isin([37,38])) | (F.col("CaseStatus") == 26) & (F.col("Outcome") == 0)).withColumn("rn",F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
- 
- 
+    df_stg = silver_m3.filter((F.col("CaseStatus").isin([37, 38])) | (F.col("CaseStatus") == 26) & (F.col("Outcome") == 0)).withColumn("rn",F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
+
     m3_df = df_stg.withColumn("CourtClerkFull",
                                             when((col("CourtClerk_Surname").isNotNull()) & (col("CourtClerk_Surname") != ""), concat_ws(" ", col("CourtClerk_Surname"), col("CourtClerk_Forenames"),
         when((col("CourtClerk_Title").isNotNull()) & (col("CourtClerk_Title") != ""),
@@ -117,9 +122,9 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
 
     final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",
-                                when(col("ListedCentre").isNull(), "N/A").otherwise(col("ListedCentre"))
+                                when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre"))  # ListedCentre
                     ).withColumn("Hearing Date",
-                                when(col("KeyDate").isNull(), "N/A").otherwise(col("KeyDate"))
+                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate"))  # KeyDate
                     ).withColumn("Hearing Type",
                                 when(col("HearingType").isNull(), "N/A").otherwise(col("HearingType"))
                     ).withColumn("Court",
@@ -157,23 +162,24 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
                     ).withColumn("Notes",
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
-                                concat(
-                                    lit("Listed details from ARIA: "),
-                                    lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                    lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
-                                    lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
-                                    lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
-                                    lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
-                                    lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
-                                    lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit('')),
-                                    lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
-                                    lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
-                                    lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
-                                    lit("\nRequired/Incompatible Judicial Officers: "),
-                                    coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
-                                    lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
+                                when(col("CaseStatus").eqNullSafe(26),
+                                    concat(
+                                        lit("Listed details from ARIA: "),
+                                        lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
+                                        lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
+                                        lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
+                                        lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
+                                        lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
+                                        lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
+                                        lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit('')),
+                                        lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
+                                        lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
+                                        lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
+                                        lit("\nRequired/Incompatible Judicial Officers: "),
+                                        coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
+                                        lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
+                                    )
                                 )
-                                
                     )
     additionalInstructionsTribunalResponse_schema_dict = {
         "Hearing Centre": ["HearingCentre"],
@@ -197,11 +203,11 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
             "CourtClerk_Surname", "CourtClerk_Forenames", "CourtClerk_Title"
         ]
     }
- 
+
     content_df = final_df.select(
         col("CaseNo"),
         col("additionalInstructionsTribunalResponse")).where(col('dv_representation') == 'AIP')
- 
+
     df_audit = final_df.alias("f").join(silver_m1.alias("m1"), col("m1.CaseNo") == col("f.CaseNo"), "left").select(
         col("f.CaseNo"),
         col("f.additionalInstructionsTribunalResponse"),
@@ -286,14 +292,16 @@ def hearingResponse(silver_m1,silver_m3, silver_m6):
     )
     return content_df, df_audit
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres): 
+
+def general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres):
     df_general, df_audit_general = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres)
-    
+
     df_general = df_general.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_general, df_audit_general
 
-def generalDefault(silver_m1): 
+
+def generalDefault(silver_m1):
     df_generalDefault = AERb.generalDefault(silver_m1)
 
     df_generalDefault = (
@@ -301,7 +309,7 @@ def generalDefault(silver_m1):
             .filter(col("dv_representation") == "AIP")
             .drop(col("dv_representation"))
     )
-    
+
     df_generalDefault = df_generalDefault.withColumn("changeDirectionDueDateActionAvailable", lit("Yes")
                                         ).withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes")
                                         ).withColumn("uploadAdditionalEvidenceActionAvailable", lit("Yes")
@@ -315,13 +323,15 @@ def generalDefault(silver_m1):
 
     return df_generalDefault
 
-def documents(silver_m1): 
+
+def documents(silver_m1):
     AERb_documents = AERb.documents
     df_documents, df_audit_documents = AERb_documents(silver_m1)
-    
+
     df_documents = df_documents.select('*').where(col("dv_representation") == 'AIP').distinct()
-    
+
     return df_documents, df_audit_documents
+
 
 if __name__ == "__main__":
     pass

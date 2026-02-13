@@ -1,7 +1,7 @@
 resources:
   pipelines:
-    pipeline_pl_case_under_review_gold:
-      name: PL_case_under_review_gold
+    pipeline_pl_caseUnderReview_gold:
+      name: PL_caseUnderReview_gold
       configuration:
         pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
       clusters:
@@ -15,5 +15,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_CASE_UNDER_REVIEW_JSON"
-      target: case_under_review_gold
+      target: caseUnderReview_gold
       development: true

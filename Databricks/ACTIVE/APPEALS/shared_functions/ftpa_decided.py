@@ -8,6 +8,7 @@ import json
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
+from pyspark.sql.functions import broadcast
 
 from . import AwaitingEvidenceRespondant_b as AERb
 from . import listing as L
@@ -48,22 +49,16 @@ def ftpa(silver_m3, silver_c):
     # silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     # silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus") == 39)
-
     silver_m3_ranked = (
-        silver_m3_filtered_casestatus
+        silver_m3
             .withColumn("row_number", row_number().over(window_spec))
     )
 
     silver_m3_max_statusid = (
-    silver_m3_ranked
-        .filter(col("row_number") == 1)
-        .drop("row_number")
-        .dropDuplicates(["CaseNo"])
-)
-
-
-
+        silver_m3_ranked
+            .filter(col("row_number") == 1)
+            .drop("row_number")
+    )
 
     # Outcome mapping
     outcome_type = (
@@ -81,83 +76,108 @@ def ftpa(silver_m3, silver_c):
     )
 
     silver_m3_content = (
-        silver_m3_max_statusid
-            .withColumn(
-                "ftpaApplicantType",
+    silver_m3_max_statusid
+        .withColumn(
+            "ftpaApplicantType",
+            when(
+                col("CaseStatus") == 39,
                 when(col("Party") == 1, lit("appellant"))
                 .when(col("Party") == 2, lit("respondent"))
                 .otherwise(lit(None))
-            )
-            .withColumn("ftpaFirstDecision", outcome_type)
-            .withColumn(
-                "ftpaAppellantDecisionDate",
-                when(col("Party") == 1, date_format(col("DecisionDate"), "dd/MM/yyyy")).otherwise(lit(None))
-            )
-            .withColumn(
-                "ftpaRespondentDecisionDate",
-                when(col("Party") == 2, date_format(col("DecisionDate"), "dd/MM/yyyy")).otherwise(lit(None))
-            )
-            .withColumn("ftpaFinalDecisionForDisplay", outcome_display)
-            .withColumn(
-                "ftpaAppellantRjDecisionOutcomeType",
-                when(col("Party") == 1, outcome_type).otherwise(lit(None))
-            )
-            .withColumn(
-                "ftpaRespondentRjDecisionOutcomeType",
-                when(col("Party") == 2, outcome_type).otherwise(lit(None))
-            )
-            .withColumn(
-                "isFtpaAppellantNoticeOfDecisionSetAside",
-                when(col("Party") == 1, lit("No")).otherwise(lit(None))
-            )
-            .withColumn(
-                "isFtpaRespondentNoticeOfDecisionSetAside",
-                when(col("Party") == 2, lit("No")).otherwise(lit(None))
-            )
-            .select(
-                col("CaseNo"),
-                col("ftpaApplicantType"),
-                col("ftpaFirstDecision"),
-                col("ftpaAppellantDecisionDate"),
-                col("ftpaRespondentDecisionDate"),
-                col("ftpaFinalDecisionForDisplay"),
-                col("ftpaAppellantRjDecisionOutcomeType"),
-                col("ftpaRespondentRjDecisionOutcomeType"),
-                col("isFtpaAppellantNoticeOfDecisionSetAside"),
-                col("isFtpaRespondentNoticeOfDecisionSetAside"),
-            )
-    )
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaFirstDecision",
+            when(col("CaseStatus") == 39, outcome_type).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaAppellantDecisionDate",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 1),
+                date_format(col("DecisionDate"), "dd/MM/yyyy")
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaRespondentDecisionDate",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 2),
+                date_format(col("DecisionDate"), "dd/MM/yyyy")
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaFinalDecisionForDisplay",
+            when(col("CaseStatus") == 39, outcome_display).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaAppellantRjDecisionOutcomeType",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 1),
+                outcome_type
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "ftpaRespondentRjDecisionOutcomeType",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 2),
+                outcome_type
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "isFtpaAppellantNoticeOfDecisionSetAside",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 1),
+                lit("No")
+            ).otherwise(lit(None))
+        )
+        .withColumn(
+            "isFtpaRespondentNoticeOfDecisionSetAside",
+            when(
+                (col("CaseStatus") == 39) & (col("Party") == 2),
+                lit("No")
+            ).otherwise(lit(None))
+        )
+        .select(
+            col("CaseNo"),
+            col("ftpaApplicantType"),
+            col("ftpaFirstDecision"),
+            col("ftpaAppellantDecisionDate"),
+            col("ftpaRespondentDecisionDate"),
+            col("ftpaFinalDecisionForDisplay"),
+            col("ftpaAppellantRjDecisionOutcomeType"),
+            col("ftpaRespondentRjDecisionOutcomeType"),
+            col("isFtpaAppellantNoticeOfDecisionSetAside"),
+            col("isFtpaRespondentNoticeOfDecisionSetAside"),
+        )
+)
+
 
     # If upstream returned empty, base it on silver_m3_content instead
-    if ftpa_df.rdd.isEmpty():
-        return silver_m3_content, ftpa_audit.limit(0)
+    # if ftpa_df.rdd.isEmpty():
+    #     return silver_m3_content, ftpa_audit.limit(0)
 
-    joined = (
-        ftpa_df.alias("ftpa")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
-    )
-
-  
     ftpa_df = (
-        joined.select(
+    ftpa_df.alias("ftpa")
+        .join(silver_m3_content.alias("m3"), on="CaseNo", how="left")
+        .select(
             col("ftpa.*"),
-            col("m3.ftpaApplicantType").alias("ftpaApplicantType"),
-            col("m3.ftpaFirstDecision").alias("ftpaFirstDecision"),
-            col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate"),
-            col("m3.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate"),
-            col("m3.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay"),
-            col("m3.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType"),
-            col("m3.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType"),
-            col("m3.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside"),
-            col("m3.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside"),
+            col("m3.ftpaApplicantType"),
+            col("m3.ftpaFirstDecision"),
+            col("m3.ftpaAppellantDecisionDate"),
+            col("m3.ftpaRespondentDecisionDate"),
+            col("m3.ftpaFinalDecisionForDisplay"),
+            col("m3.ftpaAppellantRjDecisionOutcomeType"),
+            col("m3.ftpaRespondentRjDecisionOutcomeType"),
+            col("m3.isFtpaAppellantNoticeOfDecisionSetAside"),
+            col("m3.isFtpaRespondentNoticeOfDecisionSetAside"),
         )
-    )
+)
+
 
     ftpa_audit = (
         ftpa_audit.alias("audit")
             .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-            .join(silver_m3_max_statusid.alias("m3base"), on=["CaseNo"], how="left")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+            .join(broadcast(silver_m3_max_statusid).alias("m3base"), on=["CaseNo"], how="left")
+            .join(broadcast(silver_m3_content).alias("m3"), on=["CaseNo"], how="left")
             .select(
                 col("audit.*"),
 

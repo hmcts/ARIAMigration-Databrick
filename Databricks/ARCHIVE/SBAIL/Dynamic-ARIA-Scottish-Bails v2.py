@@ -2804,7 +2804,8 @@ def stg_m3_m7():
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
     m7 = dlt.read("silver_sbail_m7_status")
-        m7 = m7.withColumn(
+    
+    m7 = m7.withColumn(
     "StatusParty",
     when(col("StatusParty") == 0, lit(None)) 
     .when(col("StatusParty") == 1, "Appellant")

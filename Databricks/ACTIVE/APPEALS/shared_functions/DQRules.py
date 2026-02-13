@@ -22,7 +22,7 @@ def base_DQRules(state: str = "paymentPending"):
 
     state_flow = build_state_flow(state, [state])
 
-    # Add all checks in state
+    # Add all checks in state, errors if state not in mapping.
     for state_to_process in state_flow:
         checks = state_dq_rules_map(state_to_process).add_checks(checks)
 
@@ -30,42 +30,46 @@ def base_DQRules(state: str = "paymentPending"):
 
 
 def state_dq_rules_map(state: str) -> DQRulesBase:
-    match state:
-        case "paymentPending": return paymentpending_dq_rules.paymentPendingDQRules(),
-        case "appealSubmitted": return appealSubmitted_dq_rules.appealSubmittedDQRules(),
-        case "awaitingRespondentEvidence(a)": return awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules(),
-        case "awaitingRespondentEvidence(b)": return awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules(),
-        case "caseUnderReview": return caseUnderReview_dq_rules.caseUnderReviewDQRules(),
-        case "reasonForAppealSubmitted": return reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules(),
-        case "listing": return listing_dq_rules.listingDQRules(),
-        case "prepareForHearing": return prepareforhearing_dq_rules.prepareForHearingDQRules(),
-        case "decision": return decision_dq_rules.decisionDQRules(),
-        case "decided(a)": return decided_a_dq_rules.decidedADQRules(),
-        case "ftpaSubmitted(b)": return ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules(),
-        case "ftpaSubmitted(a)": return ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules(),
-        case "ftpaDecided": return DQRulesBase(),
-        case "ended": return DQRulesBase(),
-        case "remitted": return DQRulesBase(),
-        case _: return DQRulesBase()
+    dq_rules = {
+        "paymentPending": paymentpending_dq_rules.paymentPendingDQRules(),
+        "appealSubmitted": appealSubmitted_dq_rules.appealSubmittedDQRules(),
+        "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules(),
+        "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules(),
+        "caseUnderReview": caseUnderReview_dq_rules.caseUnderReviewDQRules(),
+        "reasonForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules(),
+        "listing": listing_dq_rules.listingDQRules(),
+        "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules(),
+        "decision": decision_dq_rules.decisionDQRules(),
+        "decided(a)": decided_a_dq_rules.decidedADQRules(),
+        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules(),
+        "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules(),
+        "ftpaDecided": None,
+        "ended": None,
+        "remitted": None
+    }
+
+    return dq_rules.get(state, None)
 
 
 def previous_state_map(state: str):
-    match state:
-        case "appealSubmitted":               return "paymentPending", 
-        case "awaitingRespondentEvidence(a)": return "appealSubmitted",
-        case "awaitingRespondentEvidence(b)": return "awaitingRespondentEvidence(a)",
-        case "caseUnderReview":               return "awaitingRespondentEvidence(b)",
-        case "reasonForAppealSubmitted":      return "awaitingRespondentEvidence(b)",
-        case "listing":                       return "awaitingRespondentEvidence(b)",
-        case "prepareForHearing":             return "listing",
-        case "decision":                      return "prepareHearing",
-        case "decided(a)":                    return "decision",
-        case "ftpaSubmitted(b)":              return "decided(a)",
-        case "ftpaSubmitted(a)":              return "ftpaSubmitted(b)",
-        case "ftpaDecided":                   return "ftpaSubmitted(a)",
-        case "ended":                         return "ftpaDecided",
-        case "remitted":                      return "ended"
-        case _:                               return None
+    previous_state = {
+        "appealSubmitted":               "paymentPending",
+        "awaitingRespondentEvidence(a)": "appealSubmitted",
+        "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
+        "caseUnderReview":               "awaitingRespondentEvidence(b)",
+        "reasonForAppealSubmitted":      "awaitingRespondentEvidence(b)",
+        "listing":                       "awaitingRespondentEvidence(b)",
+        "prepareForHearing":             "listing",
+        "decision":                      "prepareHearing",
+        "decided(a)":                    "decision",
+        "ftpaSubmitted(b)":              "decided(a)",
+        "ftpaSubmitted(a)":              "ftpaSubmitted(b)",
+        "ftpaDecided":                   "ftpaSubmitted(a)",
+        "ended":                         "ftpaDecided",
+        "remitted":                      "ended"
+    }
+
+    return previous_state.get(state, None)
 
 
 # Implement DQ checks based on previous state

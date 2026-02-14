@@ -1758,7 +1758,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           ,"isFtpaRespondentEvidenceDocsVisibleInSubmitted"
                           ,"isFtpaRespondentOotExplanationVisibleInDecided"
                           ,"isFtpaRespondentOotExplanationVisibleInSubmitted"
-                          ,"caseArgumentAvailable"
                           ) 
                   )
     
@@ -1882,10 +1881,10 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 col("content.isFtpaRespondentOotExplanationVisibleInSubmitted").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_value"),
                 lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_Transformed"),
 
-                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
-                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
-                col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
-                lit("Yes").alias("caseArgumentAvailable_Transformed"),
+                # array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
+                # array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
+                # col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
+                # lit("Yes").alias("caseArgumentAvailable_Transformed"),
 
         )
     )

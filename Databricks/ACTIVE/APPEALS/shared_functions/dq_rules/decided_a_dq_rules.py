@@ -3,16 +3,16 @@ from .dq_rules import DQRulesBase
 
 class decidedADQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_hearing_actuals(checks)
-        checks = self.add_checks_document(checks)
-        checks = self.add_checks_substantive_decision(checks)
-        checks = self.add_checks_general_default(checks)
-        checks = self.add_checks_ftpa(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_hearing_actuals()
+        checks = checks | self.get_checks_document()
+        checks = checks | self.get_checks_substantive_decision()
+        checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_ftpa()
 
         return checks
 
-    def add_checks_hearing_actuals(self, checks={}):
+    def get_checks_hearing_actuals(self, checks={}):
 
         checks["valid_actualCaseHearingLength"] = ("""
         (HearingDuration IS NULL AND
@@ -36,7 +36,7 @@ class decidedADQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_substantive_decision(self, checks={}):
+    def get_checks_substantive_decision(self, checks={}):
 
         checks["valid_sendDecisionsAndReasonsDate"] = """
         (
@@ -83,19 +83,19 @@ class decidedADQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_document(self, checks={}):
+    def get_checks_document(self, checks={}):
         checks["valid_finalDecisionAndReasonsDocuments"] = (
             "(size(finalDecisionAndReasonsDocuments) = 0)"
         )
         return checks
 
-    def add_checks_general_default(self, checks={}):
+    def get_checks_general_default(self, checks={}):
 
         checks["valid_appealDecisionAvailable"] = ("(appealDecisionAvailable = 'Yes')")
 
         return checks
 
-    def add_checks_ftpa(self, checks={}):
+    def get_checks_ftpa(self, checks={}):
 
         checks["valid_ftpaApplicationDeadline"] = """
         (

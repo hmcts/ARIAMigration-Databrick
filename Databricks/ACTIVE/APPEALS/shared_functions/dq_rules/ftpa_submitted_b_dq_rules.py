@@ -3,12 +3,12 @@ from .dq_rules import DQRulesBase
 
 class ftpaSubmittedBDQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_ftpa(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_ftpa()
 
         return checks
 
-    def add_checks_ftpa(self, checks={}):
+    def get_checks_ftpa(self, checks={}):
 
         checks["valid_allocatedJudge"] = (
             """

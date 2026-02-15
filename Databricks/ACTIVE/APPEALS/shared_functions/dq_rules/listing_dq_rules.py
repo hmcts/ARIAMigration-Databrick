@@ -3,15 +3,15 @@ from .dq_rules import DQRulesBase
 
 class listingDQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_hearing_requirements(checks)
-        checks = self.add_checks_general(checks)
-        checks = self.add_checks_general_default(checks)
-        checks = self.add_checks_document(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_hearing_requirements()
+        checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_document()
 
         return checks
 
-    def add_checks_hearing_requirements(self, checks={}):
+    def get_checks_hearing_requirements(self, checks={}):
         checks["valid_isAppellantAttendingTheHearing"] = (
             "(isAppellantAttendingTheHearing <=> 'Yes')"
         )
@@ -371,7 +371,7 @@ class listingDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_general(self, checks={}):
+    def get_checks_general(self, checks={}):
         checks["valid_caseArgumentAvailable"] = (
             """(
                 (dv_representation <=> 'LR' AND caseArgumentAvailable <=> 'Yes')
@@ -390,7 +390,7 @@ class listingDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_general_default(self, checks={}):
+    def get_checks_general_default(self, checks={}):
         checks["valid_appealReviewOutcome"] = (
             "(appealReviewOutcome <=> 'decisionMaintained')"
         )
@@ -429,7 +429,7 @@ class listingDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_document(self, checks={}):
+    def get_checks_document(self, checks={}):
         checks["valid_hearingRequirements"] = (
             "(ARRAY_SIZE(hearingRequirements) <=> 0)"
         )

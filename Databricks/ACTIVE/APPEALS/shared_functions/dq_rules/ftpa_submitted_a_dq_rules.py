@@ -3,15 +3,15 @@ from .dq_rules import DQRulesBase
 
 class ftpaSubmittedADQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_document(checks)
-        checks = self.add_checks_general(checks)
-        checks = self.add_checks_general_default(checks)
-        checks = self.add_checks_ftpa(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_document()
+        checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_ftpa()
 
         return checks
 
-    def add_checks_document(self, checks={}):
+    def get_checks_document(self, checks={}):
         checks["valid_ftpaAppellantDocuments"] = """(
             CASE
                 WHEN Party = 1 THEN size(ftpaAppellantDocuments) = 0
@@ -70,13 +70,13 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_general_default(self, checks={}):
+    def get_checks_general_default(self, checks={}):
 
         checks["valid_isFtpaListVisible"] = ("(isFtpaListVisible = 'Yes')")
 
         return checks
 
-    def add_checks_general(self, checks={}):
+    def get_checks_general(self, checks={}):
 
         ##### Appellant ######
         checks["valid_ftpaAppellantSubmitted"] = """(
@@ -236,7 +236,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_ftpa(self, checks={}):
+    def get_checks_ftpa(self, checks={}):
 
         checks["valid_ftpaList"] = """
             (CASE

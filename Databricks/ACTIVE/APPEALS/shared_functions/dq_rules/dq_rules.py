@@ -4,5 +4,5 @@ from abc import ABC, abstractmethod
 class DQRulesBase(ABC):
 
     @abstractmethod
-    def add_checks(checks={}):
+    def get_checks(self, checks={}):
         pass

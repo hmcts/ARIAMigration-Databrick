@@ -3,16 +3,16 @@ from .dq_rules import DQRulesBase
 
 class decisionDQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_hearing_details(checks)
-        checks = self.add_checks_document(checks)
-        checks = self.add_checks_substantive_decision(checks)
-        checks = self.add_checks_general_default(checks)
-        checks = self.add_checks_general(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_hearing_details()
+        checks = checks | self.get_checks_document()
+        checks = checks | self.get_checks_substantive_decision()
+        checks = checks | self.get_checks_general_default()
+        checks = checks | self.get_checks_general()
 
         return checks
 
-    def add_checks_hearing_details(self, checks={}):
+    def get_checks_hearing_details(self, checks={}):
 
         checks["valid_listCaseHearingLength"] = ("""
         (
@@ -37,13 +37,14 @@ class decisionDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_document(self, checks={}):
+    def get_checks_document(self, checks={}):
+        
         checks["valid_caseBundles"] = (
             "(size(caseBundles) = 0) "
         )
         return checks
 
-    def add_checks_substantive_decision(self, checks={}):
+    def get_checks_substantive_decision(self, checks={}):
 
         checks["valid_scheduleOfIssuesAgreement"] = ("(scheduleOfIssuesAgreement = 'No')")
 
@@ -55,7 +56,7 @@ class decisionDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_general_default(self, checks={}):
+    def get_checks_general_default(self, checks={}):
 
         checks["valid_hmcts"] = ("(hmcts = '[userImage:hmcts.png]')")
 
@@ -67,7 +68,7 @@ class decisionDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_general(self, checks={}):
+    def get_checks_general(self, checks={}):
 
         checks["valid_bundleFileNamePrefix"] = (
             """

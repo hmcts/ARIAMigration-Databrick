@@ -26,31 +26,31 @@ def base_DQRules(state: str = "paymentPending"):
 
     # Add all checks in state, errors if state not in mapping.
     for state_to_process in state_flow:
-        checks = state_dq_rules_map(state_to_process).add_checks(checks)
+        checks = checks | add_state_dq_rules(state_to_process, checks)
 
     return checks
 
 
-def state_dq_rules_map(state: str) -> DQRulesBase:
+def add_state_dq_rules(state: str, checks: dict) -> dict:
     dq_rules = {
-        "paymentPending": paymentpending_dq_rules.paymentPendingDQRules(),
-        "appealSubmitted": appealSubmitted_dq_rules.appealSubmittedDQRules(),
-        "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules(),
-        "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules(),
-        "caseUnderReview": caseUnderReview_dq_rules.caseUnderReviewDQRules(),
-        "reasonForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules(),
-        "listing": listing_dq_rules.listingDQRules(),
-        "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules(),
-        "decision": decision_dq_rules.decisionDQRules(),
-        "decided(a)": decided_a_dq_rules.decidedADQRules(),
-        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules(),
-        "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules(),
-        "ftpaDecided": None,
-        "ended": None,
-        "remitted": None
+        "paymentPending": paymentpending_dq_rules.paymentPendingDQRules().get_checks(),
+        "appealSubmitted": appealSubmitted_dq_rules.appealSubmittedDQRules().get_checks(),
+        "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules().get_checks(),
+        "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules().get_checks(),
+        "caseUnderReview": caseUnderReview_dq_rules.caseUnderReviewDQRules().get_checks(),
+        "reasonForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules().get_checks(),
+        "listing": listing_dq_rules.listingDQRules().get_checks(),
+        "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
+        "decision": decision_dq_rules.decisionDQRules().get_checks(),
+        "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
+        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
+        "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
+        "ftpaDecided": checks,
+        "ended": checks,
+        "remitted": checks
     }
 
-    return dq_rules.get(state, None)
+    return dq_rules.get(state, checks)
 
 
 def previous_state_map(state: str):
@@ -191,6 +191,25 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .drop("HearingCentre")
     )
 
+    # decided(a) - hearing actuals
+    valid_decided_outcome = (
+        silver_m3.filter(col("CaseStatus").isin(37, 38, 26) & col("Outcome").isin(1, 2))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select(col("CaseNo"), col("Outcome").alias("Outcome_SD"), col("HearingDuration"), col("Adj_Determination_Title"),
+                    col("Adj_Determination_Forenames"), col("Adj_Determination_Surname"), col("DecisionDate"))
+    )
+
+    # ftpaSubmitted - ftpa
+    valid_ftpa = (
+        silver_m3.filter(col("CaseStatus").isin(39))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select(col("CaseNo"), col("Party"), col("OutOfTime"), col("DateReceived"),
+                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
+            .distinct()
+    )
+
     return (
         df_final
             .join(valid_representation, on="CaseNo", how="left")
@@ -205,6 +224,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_hearing_requirements, on="CaseNo", how="left")
             .join(valid_languages, on="CaseNo", how="left")
             .join(valid_preparforhearing, on="CaseNo", how="left")
+            .join(valid_decided_outcome, on="CaseNo", how="left")
+            .join(valid_ftpa, on="CaseNo", how="left")
     )
 
 

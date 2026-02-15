@@ -3,12 +3,12 @@ from .dq_rules import DQRulesBase
 
 class appealSubmittedDQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_base_checks(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_base_checks()
 
         return checks
 
-    def add_base_checks(self, checks={}):
+    def get_base_checks(self, checks={}):
         checks["valid_paymentStatus"] = (
             """(
                 (

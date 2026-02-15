@@ -3,14 +3,14 @@ from .dq_rules import DQRulesBase
 
 class prepareForHearingDQRules(DQRulesBase):
 
-    def add_checks(self, checks={}):
-        checks = self.add_checks_hearing_response(checks)
-        checks = self.add_checks_hearing_details(checks)
-        checks = self.add_checks_document(checks)
+    def get_checks(self, checks={}):
+        checks = checks | self.get_checks_hearing_response()
+        checks = checks | self.get_checks_hearing_details()
+        checks = checks | self.get_checks_document()
 
         return checks
 
-    def add_checks_hearing_response(self, checks={}):
+    def get_checks_hearing_response(self, checks={}):
         checks["valid_isRemoteHearing"] = ("(isRemoteHearing = 'No')")
 
         checks["valid_isAppealSuitableToFloat"] = (
@@ -116,7 +116,7 @@ class prepareForHearingDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_hearing_details(self, checks={}):
+    def get_checks_hearing_details(self, checks={}):
 
         checks["valid_listinglength"] = ("""
         (TimeEstimate IS NULL AND
@@ -248,7 +248,7 @@ class prepareForHearingDQRules(DQRulesBase):
 
         return checks
 
-    def add_checks_document(self, checks={}):
+    def get_checks_document(self, checks={}):
         checks["valid_hearingDocuments"] = (
             "(size(hearingDocuments) = 0) "
         )

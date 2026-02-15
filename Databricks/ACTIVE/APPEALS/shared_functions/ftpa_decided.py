@@ -31,14 +31,7 @@ from pyspark.sql.functions import (
 
 def ftpa(silver_m3, silver_c):
 
-    silver_m3 = (
-        silver_m3
-            .withColumn(
-                "DateReceived",
-                F.date_format(col("DateReceived"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-            )
-    )
-
+  
     # Base ftpa fields from submitted_b (keeps judgeAllocation fields etc.)
     ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
 

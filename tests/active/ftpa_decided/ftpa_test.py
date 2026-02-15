@@ -25,8 +25,8 @@ def ftpa_outputs(spark):
         T.StructField("CaseStatus", T.IntegerType(), True),          # used for filter == 39
         T.StructField("HearingDuration", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
-        T.StructField("DateReceived", T.TimestampType(), True),
-        T.StructField("DecisionDate", T.TimestampType(), True),      # used in date_format()
+        T.StructField("DateReceived", T.StringType(), True),
+        T.StructField("DecisionDate", T.StringType(), True),      # used in date_format()
         T.StructField("Adj_Title", T.StringType(), True),
         T.StructField("Adj_Forenames", T.StringType(), True),
         T.StructField("Adj_Surname", T.StringType(), True),
@@ -64,6 +64,11 @@ def ftpa_outputs(spark):
 
     df_m3 = spark.createDataFrame(m3_data, m3_schema)
     df_c = spark.createDataFrame(c_data, c_schema)
+
+     df_m3 = df_m3.withColumn(
+        "DecisionDate",
+        F.to_timestamp("DecisionDate", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    )
 
     ftpa_content, _ = ftpa(df_m3, df_c)
 

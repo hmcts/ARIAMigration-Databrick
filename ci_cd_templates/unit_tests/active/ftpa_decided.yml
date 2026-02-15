@@ -1,0 +1,17 @@
+steps:
+  - task: UsePythonVersion@0
+    displayName: 'Use Python 3.x'
+    inputs:
+      versionSpec: '3.x'
+
+  - script: |
+      pip install uv
+      uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
+    displayName: 'Install dependencies'
+  
+  - script: |
+      echo "Running ftpa_decided unit tests"
+      pytest $(Build.SourcesDirectory)/tests/active/ftpa_decided \
+        --junitxml=$(Build.ArtifactStagingDirectory)/pytest-results.xml -v
+    displayName: 'Run ftpa_decided state pytest unit tests'
+  

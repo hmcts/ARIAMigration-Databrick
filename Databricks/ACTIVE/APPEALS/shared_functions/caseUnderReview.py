@@ -24,7 +24,7 @@ def generalDefault(silver_m1):
 def hearingResponse(silver_m1, silver_m3, silver_m6):
 
     window = Window.partitionBy("CaseNo").orderBy(desc("StatusId"))
-    df_stg = silver_m3.filter((F.col("CaseStatus").isin([37,38])) | (F.col("CaseStatus") == 26) & (F.col("Outcome") == 0)).withColumn("rn",F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
+    df_stg = silver_m3.filter((F.col("CaseStatus").isin([37, 38])) | (F.col("CaseStatus") == 26) & (F.col("Outcome") == 0)).withColumn("rn", F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
 
     m3_df = df_stg.withColumn("CourtClerkFull",
         when((col("CourtClerk_Surname").isNotNull()) & (col("CourtClerk_Surname") != ""), concat_ws(" ", col("CourtClerk_Surname"), col("CourtClerk_Forenames"),

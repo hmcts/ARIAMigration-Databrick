@@ -92,22 +92,24 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("Notes",
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
-                                concat(
-                                    lit("Listed details from ARIA: "),
-                                    lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                    lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
-                                    lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
-                                    lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
-                                    lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
-                                    lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
-                                    lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit("")),
-                                    lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
-                                    lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
-                                    lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
-                                    lit("\nRequired/Incompatible Judicial Officers: "),
-                                    coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
-                                    lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
-                                )          
+                                when(col("CaseStatus").eqNullSafe(26),
+                                    concat(
+                                        lit("Listed details from ARIA: "),
+                                        lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
+                                        lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
+                                        lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
+                                        lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
+                                        lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
+                                        lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
+                                        lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit("")),
+                                        lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
+                                        lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
+                                        lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
+                                        lit("\nRequired/Incompatible Judicial Officers: "),
+                                        coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
+                                        lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
+                                    )
+                                )
                     )
 
     additionalInstructionsTribunalResponse_schema_dict = {

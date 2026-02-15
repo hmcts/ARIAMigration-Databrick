@@ -10,18 +10,15 @@ from . import AwaitingEvidenceRespondant_b as AERb
 def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3.withColumn("row_num", row_number().over(window_spec))
-
-    silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (
+    silver_m3_filtered = silver_m3.filter(
+        (
             (
                 (col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
             ) | (
                 (col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))
             )
         )
-    )
+    ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 

@@ -132,19 +132,26 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
 
     # case under review and reason for appeal submitted - hearing response
-    valid_caseStatus_cur_rfas = silver_m3.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), row_number().over(window_spec).alias("rn")).filter(
-        (col("rn") == 1) & (col("CaseStatus").eqNullSafe(26))
-    ).drop("rn")
+    # cur_rfas_hearing_response_window_spec =  & ((col("CaseStatus").isin(37, 38)) | ((col("CaseStatus").eqNullSafe(26)) & (col("Outcome").eqNullSafe(0))))
+    valid_caseStatus_cur_rfas = (
+        silver_m3
+            .filter((col("CaseStatus").isin(37, 38)) | ((col("CaseStatus").eqNullSafe(26)) & (col("Outcome").eqNullSafe(0))))
+            .select(col("CaseNo"), col("CaseStatus").alias("hr_CaseStatus"), col("StatusId").alias("hr_StatusId"),
+                    row_number().over(window_spec).alias("rn")).filter((col("rn") == 1))
+            .drop("rn")
+    )
 
     # listing - languages
-    valid_caseStatus = silver_m3.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"), col("AdditionalLanguageId"), row_number().over(window_spec).alias("rn")).filter(
-        (col("rn") == 1) & (((col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))) | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))))
-    ).drop("rn")
-    valid_statusId = valid_caseStatus.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"))
+    valid_interpreter_caseStatus = silver_m3.filter(
+        (((col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))) | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))))
+    ).select(
+        col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"), col("AdditionalLanguageId"), row_number().over(window_spec).alias("rn")
+    ).filter(col("rn").eqNullSafe(1)).drop("rn")
+    valid_interpreter_statusId = valid_interpreter_caseStatus.select(col("CaseNo"), col("CaseStatus").alias("lang_CaseStatus"), col("StatusId").alias("lang_StatusId"), col("Outcome").alias("lang_Outcome"))
     valid_hearing_requirements = silver_m1.select(col("CaseNo"), col("Interpreter"), col("CourtPreference"), col("InCamera"))
     valid_languages = (
         silver_m1.alias("m1")
-            .join(valid_caseStatus.alias("m3"), on="CaseNo", how="left")
+            .join(valid_interpreter_caseStatus.alias("m3"), on="CaseNo", how="left")
             .join(bronze_interpreter_languages.alias("lu_language"), on=(col("m1.LanguageId") == col("lu_language.LanguageId")), how="left")
             .join(bronze_interpreter_languages.alias("lu_additional_language"), on=(col("m3.AdditionalLanguageId") == col("lu_additional_language.LanguageId")), how="left")
             .select(
@@ -193,7 +200,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_HORef_cleansing, on="CaseNo", how="left")
             .join(valid_reasonDescription, on="CaseNo", how="left")
             .join(valid_payment_type, on="CaseNo", how="left")
-            .join(valid_statusId, on="CaseNo", how="left")
+            .join(valid_caseStatus_cur_rfas, on="CaseNo", how="left")
+            .join(valid_interpreter_statusId, on="CaseNo", how="left")
             .join(valid_hearing_requirements, on="CaseNo", how="left")
             .join(valid_languages, on="CaseNo", how="left")
             .join(valid_preparforhearing, on="CaseNo", how="left")

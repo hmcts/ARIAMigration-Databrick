@@ -10,31 +10,11 @@ class caseUnderReviewDQRules(DQRulesBase):
 
     def add_base_checks(self, checks={}):
 
-        # The rule checks: if StatusId is the max for the CaseNo and ((CaseStatus in (37,38)) or (CaseStatus == 26 and Outcome == 0)), then additionalInstructionsTribunalResponse must not be null
-        checks["valid_additionalInstructionsTribunalResponse"] = """
-            (
-            (StatusId = max_StatusId AND
-                (
-                CaseStatus IN (37,38) OR
-                (CaseStatus = 26 AND Outcome = 0)
-                )
-            )
-            AND
-            (additionalInstructionsTribunalResponse IS NOT NULL)
-            AND
-            (dv_representation = 'LR')
-            )
-        """
-
+        # The rule checks: if StatusId is the max for the CaseNo and CaseStatus is 26, then additionalInstructionsTribunalResponse must not be null
         checks["valid_additionalInstructionsTribunalResponse"] = """
             (
                 (
-                    (StatusId <=> max_StatusId AND
-                    (
-                        CaseStatus IN (37,38) OR
-                        (CaseStatus <=> 26 AND Outcome <=> 0)
-                    )
-                    )
+                    (hr_CaseStatus <=> 26)
                     AND
                     (dv_representation <=> 'LR')
                     AND
@@ -43,13 +23,9 @@ class caseUnderReviewDQRules(DQRulesBase):
                 OR
                 (
                     (
-                    NOT(StatusId <=> max_StatusId)
-                    OR 
-                    CaseStatus NOT IN (37,38)
-                    OR 
-                    NOT(CaseStatus <=> 26 AND Outcome <=> 0)
-                    OR
-                    NOT(dv_representation <=> 'LR')
+                        (NOT(hr_CaseStatus <=> 26)
+                        OR
+                        (NOT(dv_representation <=> 'LR'))
                     )
                     AND
                     (additionalInstructionsTribunalResponse IS NULL)

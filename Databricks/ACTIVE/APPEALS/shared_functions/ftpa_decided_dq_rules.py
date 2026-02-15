@@ -1,14 +1,10 @@
 def add_checks(checks={}):
-   
     checks = add_checks_ftpa(checks)
-
     checks = add_checks_ftpa_decided(checks)
-
     return checks
 
 
 def add_checks_ftpa(checks={}):
-
     checks["valid_allocatedJudge"] = (
         """
         (
@@ -29,17 +25,12 @@ def add_checks_ftpa(checks={}):
         """
     )
 
-    checks["valid_judgeAllocationExists"] = ( "(judgeAllocationExists = 'Yes')" )
+    checks["valid_judgeAllocationExists"] = ("(judgeAllocationExists = 'Yes')")
 
     return checks
 
 
 def add_checks_ftpa_decided(checks={}):
-
-    # ---------------------------------------------------------
-    # Helper mapping (Outcome -> type)
-    # 30 -> granted, 31 -> refused, 14 -> notAdmitted
-    # ---------------------------------------------------------
     checks["valid_ftpaApplicantType"] = (
         """
         (
@@ -86,11 +77,17 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # Decision dates are dd/MM/yyyy and only populated for matching Party
     checks["valid_ftpaAppellantDecisionDate"] = (
         """
         (
-            (Party = 1 AND ftpaAppellantDecisionDate = date_format(DecisionDate, 'dd/MM/yyyy'))
+            (Party = 1 AND ftpaAppellantDecisionDate = date_format(
+                coalesce(
+                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
+                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
+                    cast(DecisionDate as timestamp)
+                ),
+                'dd/MM/yyyy'
+            ))
             OR
             (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
             OR
@@ -102,7 +99,14 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentDecisionDate"] = (
         """
         (
-            (Party = 2 AND ftpaRespondentDecisionDate = date_format(DecisionDate, 'dd/MM/yyyy'))
+            (Party = 2 AND ftpaRespondentDecisionDate = date_format(
+                coalesce(
+                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
+                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
+                    cast(DecisionDate as timestamp)
+                ),
+                'dd/MM/yyyy'
+            ))
             OR
             (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
             OR
@@ -111,7 +115,6 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # RJ outcome type only populated for matching party 
     checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
         """
         (

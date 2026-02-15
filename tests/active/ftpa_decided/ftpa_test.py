@@ -21,7 +21,7 @@ def ftpa_outputs(spark):
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
-        T.StructField("CaseStatus", T.StringType(), True),          # used for filter == 39
+        T.StructField("CaseStatus", T.IntegerType(), True),          # used for filter == 39
         T.StructField("HearingDuration", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("DateReceived", T.TimestampType(), True),
@@ -37,14 +37,14 @@ def ftpa_outputs(spark):
     # IMPORTANT: each row must have 13 values (same order as schema)
     m3_data = [
         # CASE005: two rows to test latest StatusId selection (latest = StatusId 2)
-        ("CASE005", 1, "39", 180, "LOC001", datetime(2024, 10, 2), datetime(2025, 10, 1), "Mr", "John", "Doe", 1, 0, 31),
-        ("CASE005", 2, "39", 60,  "LOC002", datetime(2025, 11, 2), datetime(2025, 11, 2), "Ms", "Jane", "Doe", 1, 0, 30),
+        ("CASE005", 1, 39, 180, "LOC001", datetime(2024, 10, 2), datetime(2025, 10, 1), "Mr", "John", "Doe", 1, 0, 31),
+        ("CASE005", 2, 39, 60,  "LOC002", datetime(2025, 11, 2), datetime(2025, 11, 2), "Ms", "Jane", "Doe", 1, 0, 30),
 
-        ("CASE006", 1, "39", 240, "LOC003", datetime(2026, 12, 3), datetime(2026, 12, 3), "Mr", "John", "xyz", 1, 1, 31),
-        ("CASE007", 1, "39", 360, "LOC004", datetime(2026, 8, 3),  datetime(2026, 8, 3),  "Mr", "abc",  "Doe", 2, 0, 14),
-        ("CASE008", 1, "39", None,"LOC005", datetime(2024, 10, 2), datetime(2024, 10, 2), "Sir","Guy",  "Random", 1, 0, 30),
-        ("CASE010", 1, "39", None,"LOC007", None,                  datetime(2025, 1, 15),  None, None, None, 1, None, 30),
-        ("CASE011", 1, "39", 45,  "LOC008", datetime(2025, 11, 2), datetime(2025, 11, 2), "Mr", "World","Hello", 2, 1, 30),
+        ("CASE006", 1, 39, 240, "LOC003", datetime(2026, 12, 3), datetime(2026, 12, 3), "Mr", "John", "xyz", 1, 1, 31),
+        ("CASE007", 1, 39, 360, "LOC004", datetime(2026, 8, 3),  datetime(2026, 8, 3),  "Mr", "abc",  "Doe", 2, 0, 14),
+        ("CASE008", 1, 39, None,"LOC005", datetime(2024, 10, 2), datetime(2024, 10, 2), "Sir","Guy",  "Random", 1, 0, 30),
+        ("CASE010", 1, 39, None,"LOC007", None,                  datetime(2025, 1, 15),  None, None, None, 1, None, 30),
+        ("CASE011", 1, 39, 45,  "LOC008", datetime(2025, 11, 2), datetime(2025, 11, 2), "Mr", "World","Hello", 2, 1, 30),
     ]
 
     c_schema = T.StructType([

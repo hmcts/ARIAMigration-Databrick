@@ -68,7 +68,7 @@ def general_outputs(spark):
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
-        T.StructField("CaseStatus", T.StringType(), True),
+        T.StructField("CaseStatus", T.IntegerType(), True),
         T.StructField("HearingDuration", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
         T.StructField("DateReceived", T.StringType(), True),
@@ -81,10 +81,10 @@ def general_outputs(spark):
     ])
 
     m3_data = [
-        ("CASE005", 2, "39", 60, "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe", "Jane", 1, 0),
-        ("CASE006", 1, "39", 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz", "John", 1, 1),
-        ("CASE007", 1, "39", 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe", "abc", 2, 0),
-        ("CASE011", 1, "39", 45, "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1),
+        ("CASE005", 2, 39, 60, "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe", "Jane", 1, 0),
+        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz", "John", 1, 1),
+        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe", "abc", 2, 0),
+        ("CASE011", 1, 39, 45, "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1),
     ]
 
     # ----------------------------

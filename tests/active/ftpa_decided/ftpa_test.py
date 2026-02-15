@@ -70,9 +70,9 @@ def ftpa_outputs(spark):
 
     # Cast DecisionDate to timestamp for ftpa_decided date_format(...)
     df_m3 = df_m3.withColumn(
-        "DecisionDate",
-        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-    )
+    "DecisionDate",
+    F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")  
+)
 
     ftpa_content, _ = ftpa(df_m3, df_c)
 

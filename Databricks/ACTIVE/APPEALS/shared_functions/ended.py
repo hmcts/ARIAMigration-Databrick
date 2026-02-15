@@ -205,7 +205,6 @@ def documents(silver_m1,silver_m3):
             (F.col("Outcome").isin(80, 25,13))
         ) |
         (
-            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
             (F.col("CaseStatus").isin(37, 38)) &
             (F.col("Outcome").isin(80,13,25))
         ) |

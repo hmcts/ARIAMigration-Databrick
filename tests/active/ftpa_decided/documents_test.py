@@ -38,17 +38,17 @@ def documents_outputs(spark):
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
-        T.StructField("CaseStatus", T.IntegerType(), True),
+        T.StructField("CaseStatus", T.StringType(), True),
         T.StructField("Party", T.IntegerType(), True),
     ])
 
     # Keep CaseStatus=39 and include both Party=1 and Party=2 cases
     m3_data = [
-        ("CASE005", 1, 39, 1),
-        ("CASE006", 1, 39, 1),
-        ("CASE007", 1, 39, 2),
-        ("CASE010", 1, 39, 1),
-        ("CASE011", 1, 39, 2),
+        ("CASE005", 1, "39", 1),
+        ("CASE006", 1, "39", 1),
+        ("CASE007", 1, "39", 2),
+        ("CASE010", 1, "39", 1),
+        ("CASE011", 1, "39", 2),
     ]
 
     df_m1 = spark.createDataFrame(m1_data, m1_schema)

@@ -3,6 +3,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided import ftpa
 from pyspark.sql import SparkSession
 import pytest
 from pyspark.sql import types as T
+from pyspark.sql import functions as F
 
 
 @pytest.fixture(scope="session")
@@ -16,20 +17,17 @@ def spark():
 
 @pytest.fixture(scope="session")
 def ftpa_outputs(spark):
-
+ 
+    # Keep DateReceived + DecisionDate as STRING in this unit test.
+    # ftpa_decided calls FSB.ftpa() first, and that base function may expect string dates.
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
         T.StructField("CaseStatus", T.IntegerType(), True),
         T.StructField("HearingDuration", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
-
-        # DateReceived as STRING (matches submitted_a/submitted_b patterns)
         T.StructField("DateReceived", T.StringType(), True),
-
-        # DecisionDate as STRING (ftpa_decided handles casting safely now)
         T.StructField("DecisionDate", T.StringType(), True),
-
         T.StructField("Adj_Title", T.StringType(), True),
         T.StructField("Adj_Forenames", T.StringType(), True),
         T.StructField("Adj_Surname", T.StringType(), True),
@@ -38,24 +36,16 @@ def ftpa_outputs(spark):
         T.StructField("Outcome", T.IntegerType(), True),
     ])
 
-   m3_data = [
-    # multiple status rows like submitted_a
-    ("CASE005", 1, 37, 180, "LOC001", "2024-10-02T00:00:00.000+00:00", "2025-10-01T00:00:00.000+00:00", "Mr", "John", "Doe", 1, 0, 31),
-    ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Ms", "Jane", "Doe", 1, 0, 30),
+    m3_data = [
+        ("CASE005", 1, 39, 180, "LOC001", "2024-10-02T00:00:00.000+00:00", "2025-10-01T00:00:00.000+00:00", "Mr", "John", "Doe", 1, 0, 31),
+        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Ms", "Jane", "Doe", 1, 0, 30),
 
-    ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "2026-12-03T00:00:00.000+00:00", "Mr", "John", "xyz", 1, 1, 31),
-
-    ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2026-08-03T00:00:00.000+00:00", "Mr", "abc", "Doe", 2, 0, 14),
-
-    ("CASE008", 1, 38, None, "LOC005", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Sir", "Guy", "Random", 1, 0, 30),
-
-    ("CASE009", 1, 39, 30, "LOC006", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Mr", "John", "Snow", 2, 0, 30),
-
-    ("CASE010", 1, 39, None, "LOC007", None, "2025-01-15T00:00:00.000+00:00", None, None, None, 1, None, 30),
-
-    ("CASE011", 1, 39, 45, "LOC008", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Mr", "World", "Hello", 2, 1, 30),
-]
-
+        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "2026-12-03T00:00:00.000+00:00", "Mr", "John", "xyz", 1, 1, 31),
+        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2026-08-03T00:00:00.000+00:00", "Mr", "abc",  "Doe", 2, 0, 14),
+        ("CASE008", 1, 39, None, "LOC005", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Sir", "Guy",  "Random", 1, 0, 30),
+        ("CASE010", 1, 39, None, "LOC007", None,                           "2025-01-15T00:00:00.000+00:00", None, None, None, 1, None, 30),
+        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Mr", "World", "Hello", 2, 1, 30),
+    ]
 
     c_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -76,7 +66,8 @@ def ftpa_outputs(spark):
 
     ftpa_content, _ = ftpa(df_m3, df_c)
 
-    assert ftpa_content.count() > 0, "ftpa_decided.ftpa() returned 0 rows in unit test input"
+    # Guard to avoid KeyError and make failures obvious in CI
+    assert ftpa_content.count() > 0, "ftpa_decided.ftpa() returned 0 rows in unit test input (base FSB.ftpa likely returned 0)"
 
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     return results

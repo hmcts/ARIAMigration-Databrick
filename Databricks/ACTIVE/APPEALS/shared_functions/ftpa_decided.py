@@ -1,28 +1,58 @@
-def ftpa(silver_m3, silver_c):
+from datetime import datetime
+import re
+import string
+import pycountry
+import pandas as pd
+import json
 
-    # ------------------------------------------------------------
-    # IMPORTANT:
-    # Do NOT mutate DateReceived / DecisionDate BEFORE base function call.
-    # Base logic (DA/FSB) relies on original schema/types.
-    # ------------------------------------------------------------
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+from pyspark.sql.types import StringType
+
+from . import AwaitingEvidenceRespondant_b as AERb
+from . import listing as L
+from . import prepareForHearing as PFH
+from . import decision as D
+from . import decided_a as DA
+from . import ftpa_submitted_a as FSA
+from . import ftpa_submitted_b as FSB
+
+from pyspark.sql.functions import (
+    col, when, lit, array, struct, collect_list,
+    max as spark_max, date_format, row_number, expr, regexp_replace,
+    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
+    collect_set, current_timestamp, transform, first, array_contains, rank,
+    create_map, map_from_entries, map_from_arrays
+)
+
+################################################################
+##########              ftpa (Field Group)          ###########
+################################################################
+
+def ftpa(silver_m3, silver_c):
+    """
+    Builds decided FTPA fields on top of ftpa_submitted_b.ftpa output.
+    IMPORTANT: Do not mutate DateReceived/DecisionDate before calling FSB.ftpa(),
+    because base logic may depend on original types.
+    """
 
     # Base ftpa fields (judge allocation etc.)
     ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Latest row per CaseNo (keep/remove CaseStatus filter based on business)
-    silver_m3_max_statusid = (
+    # Latest row per CaseNo (NO CaseStatus filter here; keep base behaviour stable for tests)
+    silver_m3_latest = (
         silver_m3
         .withColumn("row_number", row_number().over(window_spec))
         .filter(col("row_number") == 1)
         .drop("row_number")
     )
 
-    # submitted_a style parsing, but into a NEW column (do not overwrite)
+    # Safe DecisionDate timestamp parsing (string OR timestamp)
     decisiondate_ts = coalesce(
-        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # +00:00
-        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX"),    # Z or +01
+        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # e.g. +00:00
+        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX"),    # e.g. Z or +01
         col("DecisionDate").cast("timestamp")                                  # if already timestamp
     )
 
@@ -41,8 +71,9 @@ def ftpa(silver_m3, silver_c):
         .otherwise(lit(None))
     )
 
+    # Compute decided-only fields from latest m3 row
     silver_m3_content = (
-        silver_m3_max_statusid
+        silver_m3_latest
         .withColumn(
             "ftpaApplicantType",
             when(col("Party") == 1, lit("appellant"))
@@ -107,11 +138,11 @@ def ftpa(silver_m3, silver_c):
         )
     )
 
-    # Audit for decided-only fields
+    # Audit for decided-only fields (Derived)
     ftpa_audit = (
         ftpa_audit.alias("audit")
         .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-        .join(silver_m3_max_statusid.alias("m3base"), on=["CaseNo"], how="left")
+        .join(silver_m3_latest.alias("m3base"), on=["CaseNo"], how="left")
         .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
         .select(
             col("audit.*"),
@@ -164,3 +195,136 @@ def ftpa(silver_m3, silver_c):
     )
 
     return ftpa_df, ftpa_audit
+
+
+################################################################
+##########        documents (Document Field Group)    ###########
+################################################################
+
+def documents(silver_m1, silver_m3):
+    """
+    Decided documents = submitted_a documents + derived convenience arrays
+    """
+    df, df_audit = FSA.documents(silver_m1, silver_m3)
+
+    empty_str_array = array().cast("array<string>")
+
+    df = (
+        df
+        .withColumn("allFtpaAppellantDecisionDocs", coalesce(col("ftpaAppellantDocuments"), empty_str_array))
+        .withColumn("allFtpaRespondentDecisionDocs", coalesce(col("ftpaRespondentDocuments"), empty_str_array))
+        .withColumn("ftpaAppellantNoticeDocument", coalesce(col("finalDecisionAndReasonsDocuments"), empty_str_array))
+        .withColumn("ftpaRespondentNoticeDocument", coalesce(col("finalDecisionAndReasonsDocuments"), empty_str_array))
+    )
+
+    df_audit = (
+        df_audit
+        .withColumn("allFtpaAppellantDecisionDocs_inputFields", array(struct(lit("ftpaAppellantDocuments_value"))))
+        .withColumn("allFtpaAppellantDecisionDocs_inputValues", array(struct(col("ftpaAppellantDocuments_value"))))
+        .withColumn("allFtpaAppellantDecisionDocs_value", col("ftpaAppellantDocuments_value"))
+        .withColumn("allFtpaAppellantDecisionDocs_Transformation", lit("Derived"))
+
+        .withColumn("allFtpaRespondentDecisionDocs_inputFields", array(struct(lit("ftpaRespondentDocuments_value"))))
+        .withColumn("allFtpaRespondentDecisionDocs_inputValues", array(struct(col("ftpaRespondentDocuments_value"))))
+        .withColumn("allFtpaRespondentDecisionDocs_value", col("ftpaRespondentDocuments_value"))
+        .withColumn("allFtpaRespondentDecisionDocs_Transformation", lit("Derived"))
+
+        .withColumn("ftpaAppellantNoticeDocument_inputFields", array(struct(lit("finalDecisionAndReasonsDocuments_value"))))
+        .withColumn("ftpaAppellantNoticeDocument_inputValues", array(struct(col("finalDecisionAndReasonsDocuments_value"))))
+        .withColumn("ftpaAppellantNoticeDocument_value", col("finalDecisionAndReasonsDocuments_value"))
+        .withColumn("ftpaAppellantNoticeDocument_Transformation", lit("Derived"))
+
+        .withColumn("ftpaRespondentNoticeDocument_inputFields", array(struct(lit("finalDecisionAndReasonsDocuments_value"))))
+        .withColumn("ftpaRespondentNoticeDocument_inputValues", array(struct(col("finalDecisionAndReasonsDocuments_value"))))
+        .withColumn("ftpaRespondentNoticeDocument_value", col("finalDecisionAndReasonsDocuments_value"))
+        .withColumn("ftpaRespondentNoticeDocument_Transformation", lit("Derived"))
+    )
+
+    return df, df_audit
+
+
+################################################################
+##########          general (General Field Group)     ###########
+################################################################
+
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+    """
+    Decided general = submitted_a general + 7 decided flags (derived from latest Party)
+    """
+    df, df_audit = FSA.general(
+        silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres
+    )
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+    m3_latest = (
+        silver_m3
+        .withColumn("row_number", row_number().over(window_spec))
+        .filter(col("row_number") == 1)
+        .drop("row_number")
+        .select("CaseNo", "Party")
+        .alias("m3")
+    )
+
+    joined = df.alias("g").join(m3_latest, on=["CaseNo"], how="left")
+
+    df = (
+        joined
+        .select(col("g.*"), col("m3.Party").alias("Party"))
+        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isDlrnSetAsideEnabled", lit("Yes"))
+        .withColumn("isFtpaAppellantDecided", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isFtpaRespondentDecided", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isReheardAppealEnabled", lit("Yes"))
+        .withColumn("secondFtpaDecisionExists", lit("No"))
+        .drop("Party")
+    )
+
+    df_audit = (
+        df_audit.alias("audit")
+        .join(m3_latest.alias("m3"), on=["CaseNo"], how="left")
+        .select(
+            col("audit.*"),
+
+            array(struct(lit("Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputFields"),
+            array(struct(col("m3.Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputValues"),
+            when(col("m3.Party") == 1, lit("Yes")).otherwise(lit("No")).alias("isAppellantFtpaDecisionVisibleToAll_value"),
+            lit("Derived").alias("isAppellantFtpaDecisionVisibleToAll_Transformation"),
+
+            array(struct(lit("Party"))).alias("isRespondentFtpaDecisionVisibleToAll_inputFields"),
+            array(struct(col("m3.Party"))).alias("isRespondentFtpaDecisionVisibleToAll_inputValues"),
+            when(col("m3.Party") == 2, lit("Yes")).otherwise(lit("No")).alias("isRespondentFtpaDecisionVisibleToAll_value"),
+            lit("Derived").alias("isRespondentFtpaDecisionVisibleToAll_Transformation"),
+
+            array(struct(lit("Constant"))).alias("isDlrnSetAsideEnabled_inputFields"),
+            array(struct(lit("Yes"))).alias("isDlrnSetAsideEnabled_inputValues"),
+            lit("Yes").alias("isDlrnSetAsideEnabled_value"),
+            lit("Derived").alias("isDlrnSetAsideEnabled_Transformation"),
+
+            array(struct(lit("Party"))).alias("isFtpaAppellantDecided_inputFields"),
+            array(struct(col("m3.Party"))).alias("isFtpaAppellantDecided_inputValues"),
+            when(col("m3.Party") == 1, lit("Yes")).otherwise(lit("No")).alias("isFtpaAppellantDecided_value"),
+            lit("Derived").alias("isFtpaAppellantDecided_Transformation"),
+
+            array(struct(lit("Party"))).alias("isFtpaRespondentDecided_inputFields"),
+            array(struct(col("m3.Party"))).alias("isFtpaRespondentDecided_inputValues"),
+            when(col("m3.Party") == 2, lit("Yes")).otherwise(lit("No")).alias("isFtpaRespondentDecided_value"),
+            lit("Derived").alias("isFtpaRespondentDecided_Transformation"),
+
+            array(struct(lit("Constant"))).alias("isReheardAppealEnabled_inputFields"),
+            array(struct(lit("Yes"))).alias("isReheardAppealEnabled_inputValues"),
+            lit("Yes").alias("isReheardAppealEnabled_value"),
+            lit("Derived").alias("isReheardAppealEnabled_Transformation"),
+
+            array(struct(lit("Constant"))).alias("secondFtpaDecisionExists_inputFields"),
+            array(struct(lit("No"))).alias("secondFtpaDecisionExists_inputValues"),
+            lit("No").alias("secondFtpaDecisionExists_value"),
+            lit("Derived").alias("secondFtpaDecisionExists_Transformation"),
+        )
+    )
+
+    return df, df_audit
+
+
+if __name__ == "__main__":
+    pass

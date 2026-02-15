@@ -4,6 +4,8 @@ from shared_functions.dq_rules import (
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules
 )
 from shared_functions.dq_rules.dq_rules import DQRulesBase
+from pyspark.sql import Window
+from pyspark.sql.functions import coalesce, col, collect_list, lit, max, row_number, struct
 
 
 def build_rule_expression(rules: dict) -> str:
@@ -79,6 +81,123 @@ def build_state_flow(state: str, flow: list):
     if previous_state is None:
         return flow
     return build_state_flow(previous_state, [previous_state] + flow)
+
+
+def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,
+                                bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
+                                bronze_interpreter_languages, bronze_listing_location):
+
+    # Base inputs
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    valid_representation = silver_m1.select(
+        col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
+        col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
+        col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId")
+    )
+    valid_appealant_address = silver_m2.select(
+        col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
+        col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber")
+    ).filter(col("Relationship").isNull())
+    valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
+    valid_country_list = bronze_countries_postal_lookup_df.select(
+        col("countryGovUkOocAdminJ").alias("valid_countryGovUkOocAdminJ")
+    ).distinct()
+    valid_HORef_cleansing = bronze_HORef_cleansing.select(
+        col("CaseNo"), coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
+    )
+    valid_reasonDescription = (
+        silver_m1.alias("m1")
+            .join(bronze_remission_lookup_df, on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .select(
+                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", "ReasonDescription",
+                col("remissionClaim").alias("lu_remissionClaim"), col("feeRemissionType").alias("lu_feeRemissionType")
+            )
+    )
+
+    # appealSubmitted - payment and remission
+    lu_ref_txn = (
+        silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
+            .select("ReferringTransactionId")
+            .rdd.flatMap(lambda x: x).collect()
+    )
+    valid_payment_type = (
+        silver_m1.alias("m1").join(silver_m4.alias("m4"), on=["CaseNo"])
+            .groupBy("CaseNo").agg(
+                collect_list(struct(
+                    "m4.Amount", "m4.TransactionId", "m4.ReferringTransactionId", "m4.TransactionTypeId",
+                    "m4.Status", "m4.SumBalance", "m4.SumTotalPay", "m4.SumTotalFee"
+                )).alias("valid_transactionList")
+            ).withColumn("lu_ref_txn", lit(lu_ref_txn))
+    )
+
+    # case under review and reason for appeal submitted - hearing response
+    valid_caseStatus_cur_rfas = silver_m3.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), row_number().over(window_spec).alias("rn")).filter(
+        (col("rn") == 1) & (col("CaseStatus").eqNullSafe(26))
+    ).drop("rn")
+
+    # listing - languages
+    valid_caseStatus = silver_m3.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"), col("AdditionalLanguageId"), row_number().over(window_spec).alias("rn")).filter(
+        (col("rn") == 1) & (((col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))) | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))))
+    ).drop("rn")
+    valid_statusId = valid_caseStatus.select(col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"))
+    valid_hearing_requirements = silver_m1.select(col("CaseNo"), col("Interpreter"), col("CourtPreference"), col("InCamera"))
+    valid_languages = (
+        silver_m1.alias("m1")
+            .join(valid_caseStatus.alias("m3"), on="CaseNo", how="left")
+            .join(bronze_interpreter_languages.alias("lu_language"), on=(col("m1.LanguageId") == col("lu_language.LanguageId")), how="left")
+            .join(bronze_interpreter_languages.alias("lu_additional_language"), on=(col("m3.AdditionalLanguageId") == col("lu_additional_language.LanguageId")), how="left")
+            .select(
+                col("CaseNo"),
+                col("m1.LanguageId").alias("LanguageId"),
+                col("m3.AdditionalLanguageId").alias("AdditionalLanguageId"),
+                col("lu_language.appellantInterpreterLanguageCategory").alias("valid_languageCategory"),
+                col("lu_additional_language.appellantInterpreterLanguageCategory").alias("valid_additionalLanguageCategory"),
+                col("lu_language.languageCode").alias("valid_languageCode"),
+                col("lu_additional_language.languageCode").alias("valid_additionalLanguageCode"),
+                col("lu_language.languageLabel").alias("valid_languageLabel"),
+                col("lu_additional_language.languageLabel").alias("valid_additionalLanguageLabel"),
+                col("lu_language.manualEntry").alias("valid_manualEntry"),
+                col("lu_additional_language.manualEntry").alias("valid_additionalManualEntry"),
+                col("lu_language.manualEntryDescription").alias("valid_manualEntryDescription"),
+                col("lu_additional_language.manualEntryDescription").alias("valid_additionalManualEntryDescription")
+            )
+    )
+
+    # prepare for hearing - hearing response
+    df_m3_validation = (
+        silver_m3
+            .filter(col("CaseStatus").isin(37, 38))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1).drop("row_number")
+            .select(
+                "CaseNo", "HearingCentre", "TimeEstimate", "HearingDate", "HearingType", "CourtName", "ListType", "ListTypeId", "StartTime",
+                "Judge1FT_Surname", "Judge2FT_Surname", "Judge3FT_Surname", "Judge1FT_Forenames", "Judge2FT_Forenames", "Judge3FT_Forenames",
+                "Judge1FT_Title", "Judge2FT_Title", "Judge3FT_Title", "CourtClerk_Surname", "CourtClerk_Forenames", "CourtClerk_Title"
+            )
+    )
+    valid_preparforhearing = (
+        silver_m1.select("CaseNo")
+            .join(df_m3_validation, on="CaseNo", how="left")
+            .join(bronze_listing_location.select("ListedCentre", "locationCode", "locationLabel"), on=col("HearingCentre") == col("ListedCentre"), how="left")
+            .join(silver_m6.drop("dv_representation"), on="CaseNo", how="left")
+            .drop("HearingCentre")
+    )
+
+    return (
+        df_final
+            .join(valid_representation, on="CaseNo", how="left")
+            .join(valid_country_list, on=col("CaseRep_Address5") == col("valid_countryGovUkOocAdminJ"), how="left")
+            .join(valid_catagoryid_list, on="CaseNo", how="left")
+            .join(valid_appealant_address, on="CaseNo", how="left")
+            .join(valid_HORef_cleansing, on="CaseNo", how="left")
+            .join(valid_reasonDescription, on="CaseNo", how="left")
+            .join(valid_payment_type, on="CaseNo", how="left")
+            .join(valid_statusId, on="CaseNo", how="left")
+            .join(valid_hearing_requirements, on="CaseNo", how="left")
+            .join(valid_languages, on="CaseNo", how="left")
+            .join(valid_preparforhearing, on="CaseNo", how="left")
+    )
 
 
 if __name__ == "__main__":

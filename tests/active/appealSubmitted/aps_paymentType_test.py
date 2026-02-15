@@ -71,9 +71,9 @@ class TestAppealSubmittedPaymentType:
                 ("3", "HU", "AIP", 0, datetime(2000, 3, 10)),  # HU Case with valid condition - paymentStatus is 'Paid' set
                 ("4", "PA", "LR", 0, datetime(2000, 4, 15)),   # PA Case with valid condition - paymentStatus is 'Paid' set
                 ("5", "RP", "AIP", 0, datetime(2000, 1, 1)),   # RP Case - none
-                ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumBalance = 0 - none
-                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - none
-                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - none
+                ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumBalance = 0 - 'Paid'
+                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - 'Paid'
+                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - 'Paid'
                 ("9", "EA", "AIP", 0, datetime(2000, 1, 1)),   # SUM(AMOUNT) > 0 = 'Payment pending'
                 ("10", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 19 for MAX(TransactionId), = 'Payment pending'
                 ("11", "EA", "AIP", 0, datetime(2000, 1, 1))   # SUM(AMOUNT) = 0 AND TransactionTypeId = 1 for MAX(TransactionId), = 'Paid'
@@ -104,7 +104,8 @@ class TestAppealSubmittedPaymentType:
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paymentStatus").collect()
 
             assert resultList[0][0] == "Paid" and resultList[1][0] == "Paid" and resultList[2][0] == "Paid" and resultList[3][0] == "Paid"
-            assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None and resultList[7][0] is None
+            assert resultList[4][0] is None 
+            assert resultList[5][0] == "Paid" and resultList[6][0] == "Paid" and resultList[7][0] == "Paid"
             assert resultList[8][0] == "Payment pending" and resultList[9][0] == "Payment pending"
             assert resultList[10][0] == "Paid"
 

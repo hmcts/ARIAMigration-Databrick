@@ -39,14 +39,17 @@ def ftpa(silver_m3, silver_c):
             )
     )
 
-
+    # Base ftpa fields from submitted_b (keeps judgeAllocation fields etc.)
     ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    silver_m3_max_statusid = (
+        silver_m3
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .drop("row_number")
+    )
 
 
     # Outcome mapping
@@ -112,9 +115,6 @@ def ftpa(silver_m3, silver_c):
             )
     )
 
-    # If upstream returned empty, base it on silver_m3_content instead
-    if ftpa_df.rdd.isEmpty():
-        return silver_m3_content, ftpa_audit.limit(0)
 
     joined = (
         ftpa_df.alias("ftpa")

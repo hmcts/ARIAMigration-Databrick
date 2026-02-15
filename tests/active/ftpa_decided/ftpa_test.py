@@ -2,8 +2,9 @@ from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided import ftpa
 
 from pyspark.sql import SparkSession
 import pytest
-
-from pyspark.sql import functions as F, types as T
+from pyspark.sql import types as T
+from pyspark.sql import functions as F
+from datetime import datetime
 
 
 @pytest.fixture(scope="session")
@@ -18,15 +19,19 @@ def spark():
 @pytest.fixture(scope="session")
 def ftpa_outputs(spark):
 
-    # Schema must match what ftpa_decided.ftpa() expects
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
-        T.StructField("CaseStatus", T.IntegerType(), True),          # used for filter == 39
+        T.StructField("CaseStatus", T.IntegerType(), True),
         T.StructField("HearingDuration", T.IntegerType(), True),
         T.StructField("HearingCentre", T.StringType(), True),
+
+        # DateReceived as STRING (matches submitted_a/submitted_b patterns)
         T.StructField("DateReceived", T.StringType(), True),
-        T.StructField("DecisionDate", T.StringType(), True),      # used in date_format()
+
+        # DecisionDate as STRING, will cast to timestamp for date_format in ftpa_decided
+        T.StructField("DecisionDate", T.StringType(), True),
+
         T.StructField("Adj_Title", T.StringType(), True),
         T.StructField("Adj_Forenames", T.StringType(), True),
         T.StructField("Adj_Surname", T.StringType(), True),
@@ -35,17 +40,15 @@ def ftpa_outputs(spark):
         T.StructField("Outcome", T.IntegerType(), True),
     ])
 
-    # IMPORTANT: each row must have 13 values (same order as schema)
     m3_data = [
-        # CASE005: two rows to test latest StatusId selection (latest = StatusId 2)
-        ("CASE005", 1, 39, 180, "LOC001", datetime(2024, 10, 2), datetime(2025, 10, 1), "Mr", "John", "Doe", 1, 0, 31),
-        ("CASE005", 2, 39, 60,  "LOC002", datetime(2025, 11, 2), datetime(2025, 11, 2), "Ms", "Jane", "Doe", 1, 0, 30),
+        ("CASE005", 1, 39, 180, "LOC001", "2024-10-02T00:00:00.000+00:00", "2025-10-01T00:00:00.000+00:00", "Mr", "John", "Doe", 1, 0, 31),
+        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Ms", "Jane", "Doe", 1, 0, 30),
 
-        ("CASE006", 1, 39, 240, "LOC003", datetime(2026, 12, 3), datetime(2026, 12, 3), "Mr", "John", "xyz", 1, 1, 31),
-        ("CASE007", 1, 39, 360, "LOC004", datetime(2026, 8, 3),  datetime(2026, 8, 3),  "Mr", "abc",  "Doe", 2, 0, 14),
-        ("CASE008", 1, 39, None,"LOC005", datetime(2024, 10, 2), datetime(2024, 10, 2), "Sir","Guy",  "Random", 1, 0, 30),
-        ("CASE010", 1, 39, None,"LOC007", None,                  datetime(2025, 1, 15),  None, None, None, 1, None, 30),
-        ("CASE011", 1, 39, 45,  "LOC008", datetime(2025, 11, 2), datetime(2025, 11, 2), "Mr", "World","Hello", 2, 1, 30),
+        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "2026-12-03T00:00:00.000+00:00", "Mr", "John", "xyz", 1, 1, 31),
+        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2026-08-03T00:00:00.000+00:00", "Mr", "abc",  "Doe", 2, 0, 14),
+        ("CASE008", 1, 39, None,"LOC005", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Sir", "Guy",  "Random", 1, 0, 30),
+        ("CASE010", 1, 39, None,"LOC007", None,                           "2025-01-15T00:00:00.000+00:00", None, None, None, 1, None, 30),
+        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Mr", "World","Hello", 2, 1, 30),
     ]
 
     c_schema = T.StructType([
@@ -65,26 +68,19 @@ def ftpa_outputs(spark):
     df_m3 = spark.createDataFrame(m3_data, m3_schema)
     df_c = spark.createDataFrame(c_data, c_schema)
 
-     df_m3 = df_m3.withColumn(
+    # Cast DecisionDate to timestamp for ftpa_decided date_format(...)
+    df_m3 = df_m3.withColumn(
         "DecisionDate",
-        F.to_timestamp("DecisionDate", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     )
 
     ftpa_content, _ = ftpa(df_m3, df_c)
 
-       # Guard to avoid KeyError and make failures obvious in CI
     assert ftpa_content.count() > 0, "ftpa_decided.ftpa() returned 0 rows in unit test input"
 
-    # Useful debug if it fails again in pipeline:
-    # print("ftpa_content rows:", ftpa_content.count())
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
-
     return results
 
-
-# ------------------------------------------------------------
-# Tests
-# ------------------------------------------------------------
 
 def test_ftpaApplicantType(ftpa_outputs):
     r = ftpa_outputs

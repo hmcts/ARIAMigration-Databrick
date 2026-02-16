@@ -83,7 +83,9 @@ def paymentType(silver_m1, silver_m4):
                 .cast(IntegerType()).cast(StringType())
             )).alias("paidAmount"),
             when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).alias("additionalPaymentInfo"),
-            when(conditions_all, col("payment_status.paymentStatus")).alias("dv_paymentStatus")
+            when(conditions_all, (
+                when(col("payment_status.paymentStatus").isNotNull(), col("payment_status.paymentStatus")).otherwise(lit("Paid"))
+            )).alias("dv_paymentStatus")
         ).select(
             "CaseNo",
             "feeAmountGbp",

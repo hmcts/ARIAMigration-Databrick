@@ -18,7 +18,7 @@ def spark():
 def general_outputs(spark):
 
     # ----------------------------
-    # M1
+    # M1  (✅ add CaseStatus to avoid internal filters dropping rows)
     # ----------------------------
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -34,13 +34,14 @@ def general_outputs(spark):
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
+        T.StructField("CaseStatus", T.IntegerType(), True),  # ✅ added
     ])
 
     m1_data = [
-        ("CASE005", "AIP", "FT", None, 0, 0, True, 3, 5, "B12 0hf", "B12 0hf", 2, "Man"),
-        ("CASE006", "AIP", "FT", None, 0, 0, True, 4, 6, "B12 0hf", "B12 0hf", 4, "Man"),
-        ("CASE007", "AIP", "FT", None, 0, 0, False, None, 7, "B12 0hf", "B12 0hf", 0, "Man"),
-        ("CASE011", "AIP", "FT", None, 0, 0, True, 61, 0, "B12 0hf", "B12 0hf", 1, "Man"),
+        ("CASE005", "AIP", "FT", None, 0, 0, True, 3, 5, "B12 0hf", "B12 0hf", 2, "Man", 39),
+        ("CASE006", "AIP", "FT", None, 0, 0, True, 4, 6, "B12 0hf", "B12 0hf", 4, "Man", 39),
+        ("CASE007", "AIP", "FT", None, 0, 0, False, None, 7, "B12 0hf", "B12 0hf", 0, "Man", 39),
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61, 0, "B12 0hf", "B12 0hf", 1, "Man", 39),
     ]
 
     # ----------------------------
@@ -149,6 +150,10 @@ def general_outputs(spark):
     df_bdhc = spark.createDataFrame(bdhc_data, bdhc_schema)
 
     general_content, _ = general(df_m1, df_m2, df_m3, df_mh, df_bhc, df_bdhc)
+
+    # ✅ Guard for CI clarity
+    assert general_content.count() > 0, "ftpa_decided.general() returned 0 rows for unit test input"
+
     return {row["CaseNo"]: row.asDict() for row in general_content.collect()}
 
 
@@ -156,7 +161,7 @@ def general_outputs(spark):
 # ONLY NEW 7 columns - expects "Yes"/"No"
 # =========================================================
 
-def test_isAppellantFtpaDecisionVisibleToAll(spark, general_outputs):
+def test_isAppellantFtpaDecisionVisibleToAll(general_outputs):
     r = general_outputs
     assert r["CASE005"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
     assert r["CASE006"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
@@ -164,7 +169,7 @@ def test_isAppellantFtpaDecisionVisibleToAll(spark, general_outputs):
     assert r["CASE011"]["isAppellantFtpaDecisionVisibleToAll"] == "No"
 
 
-def test_isRespondentFtpaDecisionVisibleToAll(spark, general_outputs):
+def test_isRespondentFtpaDecisionVisibleToAll(general_outputs):
     r = general_outputs
     assert r["CASE005"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
     assert r["CASE006"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
@@ -172,16 +177,15 @@ def test_isRespondentFtpaDecisionVisibleToAll(spark, general_outputs):
     assert r["CASE011"]["isRespondentFtpaDecisionVisibleToAll"] == "Yes"
 
 
-def test_isDlrnSetAsideEnabled(spark, general_outputs):
+def test_isDlrnSetAsideEnabled(general_outputs):
     r = general_outputs
-    # ✅ FIX: your shared function creates isDlrnSetAsideEnabled (not isDlrmSetAsideEnabled)
     assert r["CASE005"]["isDlrnSetAsideEnabled"] == "Yes"
     assert r["CASE006"]["isDlrnSetAsideEnabled"] == "Yes"
     assert r["CASE007"]["isDlrnSetAsideEnabled"] == "Yes"
     assert r["CASE011"]["isDlrnSetAsideEnabled"] == "Yes"
 
 
-def test_isFtpaAppellantDecided(spark, general_outputs):
+def test_isFtpaAppellantDecided(general_outputs):
     r = general_outputs
     assert r["CASE005"]["isFtpaAppellantDecided"] == "Yes"
     assert r["CASE006"]["isFtpaAppellantDecided"] == "Yes"
@@ -189,7 +193,7 @@ def test_isFtpaAppellantDecided(spark, general_outputs):
     assert r["CASE011"]["isFtpaAppellantDecided"] == "No"
 
 
-def test_isFtpaRespondentDecided(spark, general_outputs):
+def test_isFtpaRespondentDecided(general_outputs):
     r = general_outputs
     assert r["CASE005"]["isFtpaRespondentDecided"] == "No"
     assert r["CASE006"]["isFtpaRespondentDecided"] == "No"
@@ -197,7 +201,7 @@ def test_isFtpaRespondentDecided(spark, general_outputs):
     assert r["CASE011"]["isFtpaRespondentDecided"] == "Yes"
 
 
-def test_isReheardAppealEnabled(spark, general_outputs):
+def test_isReheardAppealEnabled(general_outputs):
     r = general_outputs
     assert r["CASE005"]["isReheardAppealEnabled"] == "Yes"
     assert r["CASE006"]["isReheardAppealEnabled"] == "Yes"
@@ -205,7 +209,7 @@ def test_isReheardAppealEnabled(spark, general_outputs):
     assert r["CASE011"]["isReheardAppealEnabled"] == "Yes"
 
 
-def test_secondFtpaDecisionExists(spark, general_outputs):
+def test_secondFtpaDecisionExists(general_outputs):
     r = general_outputs
     assert r["CASE005"]["secondFtpaDecisionExists"] == "No"
     assert r["CASE006"]["secondFtpaDecisionExists"] == "No"

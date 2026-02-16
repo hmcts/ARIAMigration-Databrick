@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, add_months
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, add_months, collect_set, collect_list
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -2115,7 +2115,8 @@ def silver_m7():
 
     m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
 
-    m7_ref_df = m7_df.select(*m7_cleaned,
+    m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")   
+                        ).select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),
@@ -2388,7 +2389,7 @@ case_status_mappings = {
     4: {  # Bail Application
         "{{BailApplicationStatusOfBail}}": "CaseStatusDescription",
         "{{BailApplicationDateOfApplication}}": "DateReceived",
-        "{{BailApplicationDateOfHearing}}": "DecisionDate",
+        "{{BailApplicationDateOfHearing}}": "Keydate",
         "{{BailApplicationFC}}": "FC",
         "{{BailApplicationInterpreterRequired}}": "InterpreterRequiredDesc",
         "{{BailApplicationDateOfOrder}}": "MiscDate2",
@@ -2413,13 +2414,13 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}": "StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
         "{{HearingCentre}}":"HearingTypeDesc",
         "{{Court}}":"CourtName",
@@ -2455,7 +2456,7 @@ case_status_mappings = {
         "{{PaymentLiabilityAddressLine4}}": "SCAddress4",
         "{{PaymentLiabilityAddressLine5}}": "SCAddress5",
         "{{PaymentLiabilityPostcode}}": "SCPostcode",
-        "{{PaymentLiabilityNotes}}": "Notes2",
+        "{{PaymentLiabilityNotes}}": "StatusNotes2",
         "{{PaymentLiabilityDateOfDecision}}": "DecisionDate",
         "{{PaymentLiabilityOutcome}}": "OutcomeDescription",
         "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
@@ -2466,13 +2467,13 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
         "{{HearingCentre}}":"HearingTypeDesc",
         "{{Court}}":"CourtName",
@@ -2517,13 +2518,13 @@ case_status_mappings = {
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment - potentially remove values below dependent on Bella's reponse
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
     18: {  # Bail Renewal
         "{{BailRenewalStatusOfBail}}": "CaseStatusDescription",
@@ -2562,13 +2563,13 @@ case_status_mappings = {
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
     19: {  # Bail Variation
         "{{BailVariationStatusOfBail}}": "CaseStatusDescription",
@@ -2607,13 +2608,13 @@ case_status_mappings = {
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
 
     35: {
@@ -2650,17 +2651,17 @@ case_status_mappings = {
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
-
-
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     }
 }
+
+
 
 date_fields = {
     "DateReceived", "Keydate", "MiscDate1", "MiscDate2", "MiscDate3",
@@ -2928,16 +2929,9 @@ def stg_m1_m2():
 # COMMAND ----------
 
 @dlt.table(name="stg_m3_m7")
-def stg_m3_m7():
-
-
-                                                                                                                                    
-    # read in all tables
-
+def stg_m3_m7():                    
 
     m3 = dlt.read("silver_bail_m3_hearing_details")
-
-
 
     columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
 
@@ -2948,7 +2942,6 @@ def stg_m3_m7():
     pivoted_df = df_named.groupBy(*columns_to_group_by) \
         .pivot("Position",["3","10","11","12"]) \
         .agg(first("FullName")).withColumnRenamed("3", "CourtClerkUsher").withColumnRenamed("null", "NoPossition")
-
 
     for c in pivoted_df.columns:
         if c == "null":
@@ -2962,25 +2955,44 @@ def stg_m3_m7():
             new_col = c
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
-
     m7 = dlt.read("silver_bail_m7_status")
-    #we need to join this to a table below
+    m7 = m7.withColumn(
+    "StatusParty",
+    when(col("StatusParty") == 0, lit(None)) 
+    .when(col("StatusParty") == 1, "Appellant")
+    .when(col("StatusParty") == 2, "Respondent")
+    .otherwise(col("StatusParty"))
+    )   
 
     adjournment_parents = m7.filter(col("CaseStatus") == 17) \
-    .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
-    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+    .select(col("AdjournmentParentStatusId").alias("ParentStatusId"), 
+            lit("Yes").alias("adjournmentFlag"), 
+            col("DateReceived").alias("adjDateOfApplication"), 
+            col("Keydate").alias("adjDateOfHearing"), 
+            col("StatusParty").alias("adjPartyMakingApp"), 
+            col("StatusNotes1").alias("adjDirections"), 
+            col("DecisionDate").alias("adjDateOfDecision"), 
+            col("OutcomeDescription").alias("adjOutcome"), 
+            col("StatusPromulgated").alias("adjdatePartiesNotified")) 
 
     adjourned_withdrawal_df = m7.join(
-        adjournment_parents,
+        adjournment_parents.alias("adjournment_parents"),
         m7.StatusId == adjournment_parents.ParentStatusId,
-        "inner")
+        "inner"
+        ).select(m7["*"], col("adjournmentFlag"), col("adjDateOfApplication"), col("adjDateOfHearing"), col("adjPartyMakingApp"), 
+        col("adjDirections"), col("adjDateOfDecision"), col("adjOutcome"), col("adjdatePartiesNotified"))
 
-    adjourned_withdrawal_new_df = m7.join(
-        adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
-        (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
-        (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+    adjourned_withdrawal_new_df = (
+        m7.alias("status")
+        .join(
+        adjourned_withdrawal_df.alias("adj"),
+        (col("status.CaseNo") == col("adj.CaseNo")) & (col("status.StatusId") == col("adj.StatusId")),
         "left")
-
+        .withColumn("adjDateOfApplication", date_format(col("adj.adjDateOfApplication"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfDecision", date_format(col("adj.adjDateOfDecision"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfHearing",date_format(col("adj.adjDateOfHearing"), "yyyy-MM-dd"))
+        .withColumn("adjdatePartiesNotified",date_format(col("adj.adjdatePartiesNotified"), "yyyy-MM-dd"))
+        .select("status.CaseNo", "status.StatusId", "status.CaseStatus", "status.DateReceived", "status.StatusNotes1", "status.Keydate", "status.MiscDate1", "status.MiscDate2", "status.MiscDate3", "status.StatusNotes2", "status.DecisionDate", "status.Outcome", "status.OutcomeDescription", "status.StatusPromulgated", "status.StatusParty", "status.ResidenceOrder", "status.ReportingOrder", "status.BailedTimePlace", "status.BaileddateHearing", "status.BaileddateHearingDesc", "status.InterpreterRequired", "status.BailConditions", "status.LivesAndSleepsAt", "status.AppearBefore", "status.ReportTo", "status.AdjournmentParentStatusId", "status.HearingCentre", "status.DecisionSentToHODate", "status.VideoLink", "status.WorkAndStudyRestriction", "status.StatusBailConditionTagging", "status.OtherCondition", "status.OutcomeReasons", "status.FC", "status.CaseStatusDescription", "status.ContactStatus", "status.SCCourtName","status.SCAddress1", "status.SCAddress2", "status.SCAddress3", "status.SCAddress4", "status.SCAddress5", "status.SCPostcode", "status.SCTelephone", "status.LanguageDescription", "status.ListTypeId", "status.ListType", "status.HearingTypeId", "status.HearingType", "status.Judiciary1Id", "status.Judiciary1Name", "status.Judiciary2Id", "status.Judiciary2Name", "status.Judiciary3Id", "status.Judiciary3Name", "status.BailConditionsDesc", "status.InterpreterRequiredDesc", "status.ResidenceOrderDesc", "status.ReportingOrderDesc", "status.BailedTimePlaceDesc", "status.StatusPartyDesc", "status.TotalAmountOfFinancialCondition", "status.TotalSecurity", "adjDateOfApplication", "adjDateOfHearing", "adjPartyMakingApp", "adjDirections", "adjDateOfDecision", "adjOutcome", "adjdatePartiesNotified", "adjournmentFlag"))
 
     # Get all columns in m3 not in m7
     m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
@@ -2988,10 +3000,10 @@ def stg_m3_m7():
     #replaced m7 with adjournmentdf
     status_tab = adjourned_withdrawal_new_df.alias("m7").join(
         pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
-        (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
-        how = "left"
-    ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
+        (col("m7.CaseNo") == col("m3.CaseNo")) &
+        (col("m7.StatusId") == col("m3.StatusId")),
+        how="left"
+    ).drop(col("m3.CaseNo"), col("m3.StatusId"))
 
     # create a nested list for the stausus table (m7_m3 tables)
     status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
@@ -3045,16 +3057,10 @@ def m1_m2_m3_m7():
     m1_m2 = dlt.read("stg_m1_m2")
     final_m7_m3_statuses = dlt.read("stg_m7_m3_statuses")
 
-
-
-
     # Join status stab to main table m1_m2 table
     m1_m2_m3_m7_df = m1_m2.join(final_m7_m3_statuses, "CaseNo", "left_outer")
 
     return m1_m2_m3_m7_df
-
-
-
 
 # COMMAND ----------
 
@@ -3250,26 +3256,31 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 @dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     
-
     m1_m2_m3_m4_m5_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m7_m8")
-
-
-    # # Linked Files
-
-    # read in all tables
-
     m6 = dlt.read("silver_bail_m6_link")
 
-
-    m6_linked_files_df = m6.groupBy(col("CaseNo")).agg(
-        collect_list(
+    link_details = (
+    m6
+    .groupBy("LinkNo").agg(collect_set(
             struct(
-                col("LinkDetailComment"),
-                col("LinkNo"),
-                col("FullName"),
-            )).alias("linked_files_details"))
+                "CaseNo",
+                "FullName",
+                "LinkDetailComment")
+        ).alias("AllLinkedCases")))
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_linked_files_df, "CaseNo", "left")
+    df_link_files = m6.join(link_details, on="LinkNo", how="left")
+
+    m6_link_files = df_link_files.withColumn(
+        "linked_files_details",
+        expr("""
+            filter(
+                AllLinkedCases,
+                x -> x.CaseNo <> CaseNo
+            )
+        """)
+    )
+
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_link_files, "CaseNo", "left")
 
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
@@ -3656,7 +3667,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         linked_files_code = ''
         if row.linked_files_details is not None:
             for likedfile in row.linked_files_details:
-                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.LinkNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
+                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.CaseNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
                 linked_files_code += linked_files_line + "\n"
             html = html.replace("{{LinkedFilesPlaceholder}}", linked_files_code)
         else:

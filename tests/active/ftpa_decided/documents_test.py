@@ -17,24 +17,24 @@ def spark():
 @pytest.fixture(scope="session")
 def documents_outputs(spark):
 
-    # ---- Minimal M1 schema (not used by ftpa_decided.documents mapping directly,
-    # but required by FSA.documents signature) ----
+    # ---- Minimal M1 schema ----
+    # Add CaseStatus as nullable to avoid filters inside FSA.documents dropping rows
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("dv_representation", T.StringType(), True),
         T.StructField("lu_appealType", T.StringType(), True),
+        T.StructField("CaseStatus", T.IntegerType(), True),  # ✅ added (safe)
     ])
 
     m1_data = [
-        ("CASE005", "AIP", "FT"),
-        ("CASE006", "AIP", "FT"),
-        ("CASE007", "AIP", "FT"),
-        ("CASE010", "AIP", "FT"),
-        ("CASE011", "AIP", "FT"),
+        ("CASE005", "AIP", "FT", 39),
+        ("CASE006", "AIP", "FT", 39),
+        ("CASE007", "AIP", "FT", 39),
+        ("CASE010", "AIP", "FT", 39),
+        ("CASE011", "AIP", "FT", 39),
     ]
 
-    # ---- M3 schema MUST include Party/StatusId/CaseStatus to allow FSA.documents
-    # to build ftpaAppellantDocuments / ftpaRespondentDocuments etc. ----
+    # ---- Minimal M3 schema used by FSA.documents ----
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
@@ -42,7 +42,6 @@ def documents_outputs(spark):
         T.StructField("Party", T.IntegerType(), True),
     ])
 
-    # Keep CaseStatus=39 and include both Party=1 and Party=2 cases
     m3_data = [
         ("CASE005", 1, 39, 1),
         ("CASE006", 1, 39, 1),
@@ -55,6 +54,10 @@ def documents_outputs(spark):
     df_m3 = spark.createDataFrame(m3_data, m3_schema)
 
     documents_content, _ = documents(df_m1, df_m3)
+
+    # ✅ Guard so failures are obvious (instead of KeyError later)
+    assert documents_content.count() > 0, "ftpa_decided.documents() returned 0 rows for unit test input"
+
     results = {row["CaseNo"]: row.asDict() for row in documents_content.collect()}
     return results
 
@@ -66,14 +69,12 @@ def documents_outputs(spark):
 def test_allFtpaAppellantDecisionDocs_is_array_and_not_null(documents_outputs):
     r = documents_outputs
 
-    # should exist and never be null due to coalesce(..., empty array)
     assert r["CASE005"]["allFtpaAppellantDecisionDocs"] is not None
     assert r["CASE006"]["allFtpaAppellantDecisionDocs"] is not None
     assert r["CASE007"]["allFtpaAppellantDecisionDocs"] is not None
     assert r["CASE010"]["allFtpaAppellantDecisionDocs"] is not None
     assert r["CASE011"]["allFtpaAppellantDecisionDocs"] is not None
 
-    # in unit test data we did not attach any docs, so expect empty arrays
     assert r["CASE005"]["allFtpaAppellantDecisionDocs"] == []
     assert r["CASE006"]["allFtpaAppellantDecisionDocs"] == []
     assert r["CASE007"]["allFtpaAppellantDecisionDocs"] == []

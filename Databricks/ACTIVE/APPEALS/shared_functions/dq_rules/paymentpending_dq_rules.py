@@ -565,20 +565,58 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_exceptionalCircumstances_not_null"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Other' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'exceptionalCircumstancesremission') AND exceptionalCircumstances IS NULL))"
-        ) 
+            """
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.')
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Other' AND remissionType <=> 'exceptionalCircumstancesremission' AND exceptionalCircumstances <=> 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.')
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'exceptionalCircumstancesremission') AND exceptionalCircumstances IS NULL)
+                    OR
+                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND exceptionalCircumstances IS NULL)
+                )
+            """
+        )
 
         checks["valid_helpWithFeesReferenceNumber_not_null"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'helpWithFees') AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
-        ) 
+            """
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL)
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND NOT(remissionType <=> 'helpWithFees') AND helpWithFeesReferenceNumber IS NULL)
+                    OR
+                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND helpWithFeesReferenceNumber IS NULL)
+                )
+            """
+        )
 
         checks["valid_legalAidAccountNumber_not_null"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'legalAid') AND NOT(feeRemissionType <=> 'Legal Aid') AND legalAidAccountNumber IS NULL))"
-        ) 
+            """
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL)
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL)
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'legalAid') AND NOT(feeRemissionType <=> 'Legal Aid') AND legalAidAccountNumber IS NULL)
+                    OR
+                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND legalAidAccountNumber IS NULL)
+                )
+            """
+        )
 
         checks["valid_asylumSupportReference_not_null"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'AsylumSupport') AND NOT(feeRemissionType <=> 'Asylum Support') AND asylumSupportReference IS NULL))"
-        ) 
+            """
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL)
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL)
+                    OR
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND NOT(remissionClaim <=> 'AsylumSupport') AND NOT(feeRemissionType <=> 'Asylum Support') AND asylumSupportReference IS NULL)
+                    OR
+                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND asylumSupportReference IS NULL)
+                )
+            """
+        )
 
         ##############################
         # ARIADM-773 (SponsorDetails)

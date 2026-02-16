@@ -644,7 +644,7 @@ class paymentPendingDQRules(DQRulesBase):
             """(
                 (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
                 OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-                OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
+                OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
                 OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
             )"""
         )

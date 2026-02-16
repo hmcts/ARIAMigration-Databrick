@@ -202,27 +202,57 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_legalRepHasAddress_yes_no"] = (
             "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
         )
-        checks["valid_legalRepAddressUK"]   = ( 
+        checks["valid_legalRepAddressUK"] = (
             """(
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)
                 OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)
                 OR (dv_representation != 'LR' and legalRepAddressUK IS NULL)
             )"""
         )   
-        checks["valid_oocAddressLine1"] = ( 
-            "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
+        checks["valid_oocAddressLine1"] = (
+            """(
+                (dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No')
+                OR
+                (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes')
+                OR
+                (dv_representation != 'LR' AND oocAddressLine1 IS NULL)
+            )"""
         )
-        checks["valid_oocAddressLine2"] = ( 
-            "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
+        checks["valid_oocAddressLine2"] = (
+            """(
+                (dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No')
+                OR
+                (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes')
+                OR
+                (dv_representation != 'LR' AND oocAddressLine2 IS NULL)
+            )"""
         )
-        checks["valid_oocAddressLine3"] = ( 
-            "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
+        checks["valid_oocAddressLine3"] = (
+            """(
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No')
+                OR
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes')
+                OR
+                (dv_representation != 'LR' AND oocAddressLine3 IS NULL)
+            )"""
         )
-        checks["valid_oocAddressLine4"] = ( 
-            "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
+        checks["valid_oocAddressLine4"] = (
+            """(
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No')
+                OR
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes')
+                OR 
+                (dv_representation != 'LR' AND oocAddressLine4 IS NULL)
+            )"""
         )
-        checks["valid_oocrCountryGovUkAdminJ"] = ( 
-            "((dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
+        checks["valid_oocrCountryGovUkAdminJ"] = (
+            """(
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL)
+                OR
+                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL)
+                OR
+                (dv_representation != 'LR' AND CaseRep_Address5 IS NULL)
+            )"""
         )
 
         # ##############################

@@ -26,23 +26,23 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_appealTypeDescription_not_null"] = "(appealTypeDescription IS NOT NULL)"
         # Null Values as accepted values as where Representation = AIP
         checks["valid_caseManagementCategory_code_in_list_items"] = """
-        (
-        caseManagementCategory.value.code IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(caseManagementCategory.list_items, x -> x.code),
-            caseManagementCategory.value.code
-        )
-        )
+            (
+                caseManagementCategory.value.code IS NULL OR
+                ARRAY_CONTAINS(
+                    TRANSFORM(caseManagementCategory.list_items, x -> x.code),
+                    caseManagementCategory.value.code
+                )
+            )
         """
         
         checks["valid_caseManagementCategory_label_in_list_items"] = """
-        (
-        caseManagementCategory.value.label IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(caseManagementCategory.list_items, x -> x.label),
-            caseManagementCategory.value.label
-        )
-        )
+            (
+                caseManagementCategory.value.label IS NULL OR
+                ARRAY_CONTAINS(
+                    TRANSFORM(caseManagementCategory.list_items, x -> x.label),
+                    caseManagementCategory.value.label
+                )
+            )
         """
 
         # ##############################
@@ -99,49 +99,49 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
         checks["valid_caseManagementLocation_region_and_baseLocation"] = """
         (
-        caseManagementLocation.region <=> '1' AND
-        caseManagementLocation.baseLocation IS NOT NULL AND
-        caseManagementLocation.baseLocation IN (
-            '231596', '698118', '366559', '386417', '512401',
-            '227101', '765324', '366796', '324339', '649000',
-            '999971', '420587', '28837'
-        )
+            caseManagementLocation.region <=> '1' AND
+            caseManagementLocation.baseLocation IS NOT NULL AND
+            caseManagementLocation.baseLocation IN (
+                '231596', '698118', '366559', '386417', '512401',
+                '227101', '765324', '366796', '324339', '649000',
+                '999971', '420587', '28837'
+            )
         )
         """
         checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
         (
-        hearingCentreDynamicList.value.code IS NOT NULL AND
-        ARRAY_CONTAINS(
-            TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
-            hearingCentreDynamicList.value.code
-        )
+            hearingCentreDynamicList.value.code IS NOT NULL AND
+            ARRAY_CONTAINS(
+                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
+                hearingCentreDynamicList.value.code
+            )
         )
         """
         checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
         (
-        hearingCentreDynamicList.value.label IS NOT NULL AND
-        ARRAY_CONTAINS(
-            TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
-            hearingCentreDynamicList.value.label
-        )
+            hearingCentreDynamicList.value.label IS NOT NULL AND
+            ARRAY_CONTAINS(
+                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
+                hearingCentreDynamicList.value.label
+            )
         )
         """
         checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
         (
-        caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
-        ARRAY_CONTAINS(
-            TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
-            caseManagementLocationRefData.baseLocation.value.code
-        )
+            caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
+            ARRAY_CONTAINS(
+                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
+                caseManagementLocationRefData.baseLocation.value.code
+            )
         )
         """
         checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
         (
-        caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
-        ARRAY_CONTAINS(
-            TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
-            caseManagementLocationRefData.baseLocation.value.label
-        )
+            caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
+            ARRAY_CONTAINS(
+                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
+                caseManagementLocationRefData.baseLocation.value.label
+            )
         )
         """
         checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
@@ -200,27 +200,29 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_legalRepHasAddress_yes_no"] = (
-        "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
+            "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
         )
         checks["valid_legalRepAddressUK"]   = ( 
-        "((dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
-        "OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)"
-        "OR (dv_representation != 'LR' and legalRepAddressUK IS NULL))"
+            """(
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)
+                OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)
+                OR (dv_representation != 'LR' and legalRepAddressUK IS NULL)
+            )"""
         )   
         checks["valid_oocAddressLine1"] = ( 
-        "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
+            "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
         )
         checks["valid_oocAddressLine2"] = ( 
-        "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
+            "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
         )
         checks["valid_oocAddressLine3"] = ( 
-        "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
+            "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
         )
         checks["valid_oocAddressLine4"] = ( 
-        "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
+            "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress <=> 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
         )
         checks["valid_oocrCountryGovUkAdminJ"] = ( 
-        "((dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
+            "((dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
         )
 
         # ##############################
@@ -236,7 +238,7 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
         ##############################
 
-        # Only include if CategoryIdList contains 37; check for 'Yes' 
+        # Only include if CategoryIdList contains 37; check for 'Yes'
         checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
             "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
         )
@@ -280,13 +282,16 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         # # ARIADM-712 (flagsLabel)- caseFlags
         # ############################## #if (catId = 7,25 and flagcomment IS NULL) or (details IS NULL) or (catID != 7,25 and value provided for name)
-        checks["valid_caseFlags_name_in_list"] = """((
-            EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL))
-            OR (caseFlags.details IS NULL)
-            OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
-            (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
-                caseFlags.details[0].value.name))))
-        """
+        checks["valid_caseFlags_name_in_list"] = """(
+            (
+                EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL))
+                OR (caseFlags.details IS NULL)
+                OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
+                (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
+                    caseFlags.details[0].value.name
+                ))
+            )
+        )"""
 
         # checks["valid_caseFlags_name_in_list"] = """
         # (
@@ -299,20 +304,20 @@ class paymentPendingDQRules(DQRulesBase):
         # """
         checks["valid_caseFlags_pathId_in_list"] = """
         (
-        caseFlags.details IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(caseFlags.details, x -> x.value.path[0].id),
-            caseFlags.details[0].value.path[0].id
-        )
+            caseFlags.details IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(caseFlags.details, x -> x.value.path[0].id),
+                caseFlags.details[0].value.path[0].id
+            )
         )
         """
         checks["valid_caseFlags_flagCode_in_list"] = """
         (
-        caseFlags.details IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(caseFlags.details, x -> x.value.flagCode),
-            caseFlags.details[0].value.flagCode
-        )
+            caseFlags.details IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(caseFlags.details, x -> x.value.flagCode),
+                caseFlags.details[0].value.flagCode
+            )
         )
         """
         # IF CategoryId not in [7,8,24,25,31,32,41] or valid_categoryIdList is NULL or lu_HOANRef is NULL then caseFlags is NULL
@@ -369,11 +374,11 @@ class paymentPendingDQRules(DQRulesBase):
         """
         checks["valid_caseFlags_hearingRelevant_in_list"] = """
         (
-        caseFlags.details IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(caseFlags.details, x -> x.value.hearingRelevant),
-            caseFlags.details[0].value.hearingRelevant
-        )
+            caseFlags.details IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(caseFlags.details, x -> x.value.hearingRelevant),
+                caseFlags.details[0].value.hearingRelevant
+            )
         )
         """
 
@@ -383,51 +388,51 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_appellantLevelFlags_name_in_details"] = """
         (
-        appellantLevelFlags.details[0].value.name IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(appellantLevelFlags.details, x -> x.value.name),
-            appellantLevelFlags.details[0].value.name
-        )
+            appellantLevelFlags.details[0].value.name IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(appellantLevelFlags.details, x -> x.value.name),
+                appellantLevelFlags.details[0].value.name
+            )
         )
         """
 
         checks["valid_appellantLevelFlags_path_id_in_details"] = """
         (
-        appellantLevelFlags.details[0].value.path[0].id IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(appellantLevelFlags.details, x -> x.value.path[0].id),
-            appellantLevelFlags.details[0].value.path[0].id
-        )
+            appellantLevelFlags.details[0].value.path[0].id IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(appellantLevelFlags.details, x -> x.value.path[0].id),
+                appellantLevelFlags.details[0].value.path[0].id
+            )
         )
         """
 
         checks["valid_appellantLevelFlags_flagCode_in_details"] = """
         (
-        appellantLevelFlags.details[0].value.flagCode IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode),
-            appellantLevelFlags.details[0].value.flagCode
-        )
+            appellantLevelFlags.details[0].value.flagCode IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode),
+                appellantLevelFlags.details[0].value.flagCode
+            )
         )
         """
 
         checks["valid_appellantLevelFlags_flagComment_in_details"] = """
         (
-        appellantLevelFlags.details[0].value.flagComment IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(appellantLevelFlags.details, x -> x.value.flagComment),
-            appellantLevelFlags.details[0].value.flagComment
-        )
+            appellantLevelFlags.details[0].value.flagComment IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(appellantLevelFlags.details, x -> x.value.flagComment),
+                appellantLevelFlags.details[0].value.flagComment
+            )
         )
         """
 
         checks["valid_appellantLevelFlags_hearingRelevant_in_details"] = """
         (
-        appellantLevelFlags.details[0].value.hearingRelevant IS NULL OR
-        ARRAY_CONTAINS(
-            TRANSFORM(appellantLevelFlags.details, x -> x.value.hearingRelevant),
-            appellantLevelFlags.details[0].value.hearingRelevant
-        )
+            appellantLevelFlags.details[0].value.hearingRelevant IS NULL OR
+            ARRAY_CONTAINS(
+                TRANSFORM(appellantLevelFlags.details, x -> x.value.hearingRelevant),
+                appellantLevelFlags.details[0].value.hearingRelevant
+            )
         )
         """
 
@@ -436,16 +441,16 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_appellantPartyId_not_null"] = (
-        "(appellantPartyId IS NOT NULL)"
+            "(appellantPartyId IS NOT NULL)"
         )
         checks["valid_legalRepIndividualPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-        "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
+            "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
         checks["validlegalRepOrganisationPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-        "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
+            "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
         checks["valid_sponsorPartyId_not_null"] = (
-        "((sponsorPartyId IS NOT NULL AND hasSponsor <=> 'Yes') OR (sponsorPartyId IS NULL and hasSponsor <=> 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
+            "((sponsorPartyId IS NOT NULL AND hasSponsor <=> 'Yes') OR (sponsorPartyId IS NULL and hasSponsor <=> 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
         )
 
         # ##############################
@@ -476,9 +481,11 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_feeDescription"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')"
-            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing'))"
-            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)"
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')
+                OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing')
+                OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)
+            )"""
         )
 
         checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
@@ -514,9 +521,11 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_paymentDescription"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')"
-            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing'))"
-            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')
+                OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing')
+                OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)
+            )"""
         )
 
         checks["valid_paymentStatus"] = (
@@ -546,18 +555,26 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_remissionClaim_in_list"] = (
-            "("
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')) AND (remissionClaim IS NOT NULL AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver')))"
-            "OR ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT') AND remissionClaim IS NULL)"
-            ")"
+            """(
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+                    AND
+                    (remissionClaim IS NOT NULL AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver'))
+                )
+                OR
+                (
+                    (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT')
+                    AND remissionClaim IS NULL
+                )
+            )"""
         )
 
         checks["valid_feeRemissionType_not_null"] = (
-            "("
-            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL) "
-            "OR "
-            "((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)"
-            ")"
+            """(
+            (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
+            OR
+            ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)
+            )"""
         )
 
         # ##############################
@@ -622,25 +639,29 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-773 (SponsorDetails)
         ##############################
         checks["valid_hasSponsor_yes_no"] = (
-            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')"
-            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')"
-            "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
-            "OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL))"
+            """(
+                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
+                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
+                OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
+                OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
+            )"""
         )
         checks["valid_sponsorGivenNames_not_null"] = (
             "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
         )
 
         checks["valid_sponsorFamilyName_not_null"] = (
-            "(((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL)))"
+            "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
         )
 
         checks["valid_sponsorAuthorisation_yes_no"] = (
-                "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')" 
-                "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')"
-                "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)"
-                "OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)"
-                "OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL))"
+            """(
+                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
+                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
+                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
+                OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
+            )"""
         )
 
         ############################################################
@@ -654,61 +675,85 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-778 (SponsorDetails)
         ##############################
         checks["valid_sponsorEmailAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) "
-            "OR ( sponsorEmailAdminJ IS NULL))"
+            "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
         )
 
         checks["valid_sponsorMobileNumberAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$'))"
-            "OR (sponsorMobileNumberAdminJ IS NULL))"
+            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
         )
         # ##############################
         # ARIADM-760 (appellantDetails)
         # ARIADM-762 (appellantDetails)
         # ##############################
         checks["valid_oocAppealAdminJ_values"] = (
-            "( ( (array_contains(valid_categoryIdList, 38) OR MainRespondentId <=> 4) "
-            "AND oocAppealAdminJ IS NOT NULL AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none') ) "
-            "OR (oocAppealAdminJ IS NULL) )"
+            """(
+                (
+                    (array_contains(valid_categoryIdList, 38) OR MainRespondentId <=> 4)
+                    AND oocAppealAdminJ IS NOT NULL AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none')
+                )
+                OR (oocAppealAdminJ IS NULL)
+            )"""
         )
 
         # Only IF CategoryId IN [38] = Include; ELSE null
         checks["valid_appellantHasFixedAddressAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
-            "OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)"
-            "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL))"
+            """(
+                (array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No'))
+                OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL)
+            )"""
         )
 
         # addressLine1AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
         checks["valid_addressLine1AdminJ"] = (
-            "( (array_contains(valid_categoryIdList, 38) AND "
-            "(Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-            "AND addressLine1AdminJ IS NOT NULL) "
-            "OR (addressLine1AdminJ IS NULL) )"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38)
+                    AND
+                    (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) 
+                    AND
+                    addressLine1AdminJ IS NOT NULL
+                )
+                OR (addressLine1AdminJ IS NULL)
+            )"""
         )
 
         # addressLine2AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND at least one of the coalesce fields is not null; ELSE can be NULL
         checks["valid_addressLine2AdminJ"] = (
-            "( (array_contains(valid_categoryIdList, 38) AND "
-            "(Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-            "AND addressLine2AdminJ IS NOT NULL) "
-            "OR (addressLine2AdminJ IS NULL) )"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38)
+                    AND
+                    (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+                    AND
+                    addressLine2AdminJ IS NOT NULL
+                )
+                OR (addressLine2AdminJ IS NULL)
+            )"""
         )
 
         # addressLine3AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
         checks["valid_addressLine3AdminJ"] = (
-            "( (array_contains(valid_categoryIdList, 38) AND "
-            "(Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL) "
-            "AND addressLine3AdminJ IS NOT NULL) "
-            "OR ( addressLine3AdminJ IS NULL) )"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38) AND
+                    (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
+                    AND addressLine3AdminJ IS NOT NULL
+                )
+                OR (addressLine3AdminJ IS NULL)
+            )"""
         )
 
         # addressLine4AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
         checks["valid_addressLine4AdminJ"] = (
-            "( (array_contains(valid_categoryIdList, 38) AND "
-            "(Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-            "AND addressLine4AdminJ IS NOT NULL) "
-            "OR ( addressLine4AdminJ IS NULL) )"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38) AND
+                    (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+                    AND addressLine4AdminJ IS NOT NULL
+                )
+                OR (addressLine4AdminJ IS NULL)
+            )"""
         )
 
         # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
@@ -741,7 +786,7 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-        "(applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing') OR (applicationChangeDesignatedHearingCentre IS NULL))"
+            "(applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing') OR (applicationChangeDesignatedHearingCentre IS NULL))"
         )
         #########################################
         # ARIADM-788 and ARIADM-792 (homeOffice)
@@ -751,48 +796,66 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_decisionLetterReceivedDate_format"] = (
-        "( (decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$' "
-        "AND array_contains(valid_categoryIdList, 38)  "
-        "AND ((lu_HORef IS NULL OR lu_HORef not LIKE '%GWF%') "
-        "AND (HORef IS NULL OR HORef not LIKE '%GWF%') "
-        "AND (FCONumber IS NULL OR FCONumber not LIKE '%GWF%')) ) "
-        "OR (decisionLetterReceivedDate IS NULL) )"
+            """(
+                (
+                    decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                    AND array_contains(valid_categoryIdList, 38)
+                    AND (
+                        (lu_HORef IS NULL OR lu_HORef not LIKE '%GWF%')
+                        AND (HORef IS NULL OR HORef not LIKE '%GWF%')
+                        AND (FCONumber IS NULL OR FCONumber not LIKE '%GWF%')
+                    )
+                )
+                OR (decisionLetterReceivedDate IS NULL)
+            )"""
         )
 
         checks["valid_dateEntryClearanceDecision_format"] = (
-            "( (array_contains(valid_categoryIdList, 38) "
-            "AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-            "AND dateEntryClearanceDecision IS NOT NULL "
-            "AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') "
-            "OR (dateEntryClearanceDecision IS NULL) )"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38)
+                    AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    AND dateEntryClearanceDecision IS NOT NULL
+                    AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                )
+                OR (dateEntryClearanceDecision IS NULL)
+            )"""
         )
 
         checks["valid_homeOfficeReferenceNumber_not_null"] = (
-            "("
-            "(NOT array_contains(valid_categoryIdList, 38) "
-            "AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%') "
-            "AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL "
-            "AND homeOfficeReferenceNumber IS NOT NULL)"
-            "OR "
-            "( array_contains(valid_categoryIdList, 38) "
-            "OR (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-            # "OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL "
-            "OR homeOfficeReferenceNumber IS NULL)"
-            ")"
+            """(
+                (
+                    NOT array_contains(valid_categoryIdList, 38)
+                    AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
+                    AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
+                    AND homeOfficeReferenceNumber IS NOT NUL
+                )
+                OR
+                (
+                    array_contains(valid_categoryIdList, 38)
+                    OR (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
+                    OR homeOfficeReferenceNumber IS NULL
+                )
+            )"""
         )
 
         checks["valid_gwfReferenceNumber_not_null"] = (
-            "("
-            "( array_contains(valid_categoryIdList, 38) "
-            "AND  (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-            "AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL "
-            "AND gwfReferenceNumber IS NOT NULL)"
-            "OR "
-            "(NOT array_contains(valid_categoryIdList, 38) "
-            "OR (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%') "
-            "OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL "
-            "OR gwfReferenceNumber IS NULL)"
-            ")"
+            """(
+                (
+                    array_contains(valid_categoryIdList, 38)
+                    AND  (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
+                    AND gwfReferenceNumber IS NOT NULL
+                )
+                OR
+                (
+                    NOT array_contains(valid_categoryIdList, 38)
+                    OR (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
+                    OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
+                    OR gwfReferenceNumber IS NULL
+                )
+            )"""
         )
 
         #########################################

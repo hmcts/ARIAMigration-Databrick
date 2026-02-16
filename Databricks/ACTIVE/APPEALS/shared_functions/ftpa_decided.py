@@ -55,7 +55,6 @@ def ftpa(silver_m3, silver_c):
         Party=1 => appellant fields populated; respondent fields NULL
         Party=2 => respondent fields populated; appellant fields NULL
       - Date format: ISO 8601 date (yyyy-MM-dd)
-
     Also outputs source columns for validation/DQ:
         CaseStatus (int), Outcome (int), Party (int), DecisionDate
     """
@@ -258,58 +257,64 @@ def ftpa(silver_m3, silver_c):
     # - set-aside flags         -> m3_latest_cs39
     ftpa_audit = (
         ftpa_audit.alias("audit")
-            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-            .join(silver_m3_max_statusid.alias("m3base"), on=["CaseNo"], how="left")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
-            .select(
-                col("audit.*"),
+        .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
+        .join(m3_latest_cs39_outcome.alias("m3d"), on=["CaseNo"], how="left")
+        .join(m3_latest_cs39.alias("m3s"), on=["CaseNo"], how="left")
+        .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        .select(
+            col("audit.*"),
 
-                # --- NEW fields only ---
-                array(struct(lit("Party"))).alias("ftpaApplicantType_inputFields"),
-                array(struct(col("m3base.Party"))).alias("ftpaApplicantType_inputValues"),
-                col("m3.ftpaApplicantType").alias("ftpaApplicantType_value"),
-                lit("Yes").alias("ftpaApplicantType_Transformation"),
+            # ApplicantType (decision dataset)
+            array(struct(lit("Party"))).alias("ftpaApplicantType_inputFields"),
+            array(struct(col("m3d.Party"))).alias("ftpaApplicantType_inputValues"),
+            col("m3.ftpaApplicantType").alias("ftpaApplicantType_value"),
+            lit("Derived").alias("ftpaApplicantType_Transformation"),
 
-                array(struct(lit("Outcome"))).alias("ftpaFirstDecision_inputFields"),
-                array(struct(col("m3base.Outcome"))).alias("ftpaFirstDecision_inputValues"),
-                col("m3.ftpaFirstDecision").alias("ftpaFirstDecision_value"),
-                lit("Yes").alias("ftpaFirstDecision_Transformation"),
+            # FirstDecision (decision dataset)
+            array(struct(lit("Outcome"))).alias("ftpaFirstDecision_inputFields"),
+            array(struct(col("m3d.Outcome"))).alias("ftpaFirstDecision_inputValues"),
+            col("m3.ftpaFirstDecision").alias("ftpaFirstDecision_value"),
+            lit("Derived").alias("ftpaFirstDecision_Transformation"),
 
-                array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaAppellantDecisionDate_inputFields"),
-                array(struct(col("m3base.DecisionDate"), col("m3base.Party"))).alias("ftpaAppellantDecisionDate_inputValues"),
-                col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate_value"),
-                lit("Yes").alias("ftpaAppellantDecisionDate_Transformation"),
+            # Decision dates (decision dataset)
+            array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaAppellantDecisionDate_inputFields"),
+            array(struct(col("m3d.DecisionDate"), col("m3d.Party"))).alias("ftpaAppellantDecisionDate_inputValues"),
+            col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate_value"),
+            lit("Derived").alias("ftpaAppellantDecisionDate_Transformation"),
 
-                array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaRespondentDecisionDate_inputFields"),
-                array(struct(col("m3base.DecisionDate"), col("m3base.Party"))).alias("ftpaRespondentDecisionDate_inputValues"),
-                col("m3.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate_value"),
-                lit("Yes").alias("ftpaRespondentDecisionDate_Transformation"),
+            array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaRespondentDecisionDate_inputFields"),
+            array(struct(col("m3d.DecisionDate"), col("m3d.Party"))).alias("ftpaRespondentDecisionDate_inputValues"),
+            col("m3.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate_value"),
+            lit("Derived").alias("ftpaRespondentDecisionDate_Transformation"),
 
-                array(struct(lit("Outcome"))).alias("ftpaFinalDecisionForDisplay_inputFields"),
-                array(struct(col("m3base.Outcome"))).alias("ftpaFinalDecisionForDisplay_inputValues"),
-                col("m3.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay_value"),
-                lit("Yes").alias("ftpaFinalDecisionForDisplay_Transformation"),
+            # FinalDecisionForDisplay (decision dataset)
+            array(struct(lit("Outcome"))).alias("ftpaFinalDecisionForDisplay_inputFields"),
+            array(struct(col("m3d.Outcome"))).alias("ftpaFinalDecisionForDisplay_inputValues"),
+            col("m3.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay_value"),
+            lit("Derived").alias("ftpaFinalDecisionForDisplay_Transformation"),
 
-                array(struct(lit("Outcome"), lit("Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputFields"),
-                array(struct(col("m3base.Outcome"), col("m3base.Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputValues"),
-                col("m3.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType_value"),
-                lit("Yes").alias("ftpaAppellantRjDecisionOutcomeType_Transformation"),
+            # RJ outcome types (decision dataset)
+            array(struct(lit("Outcome"), lit("Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputFields"),
+            array(struct(col("m3d.Outcome"), col("m3d.Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputValues"),
+            col("m3.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType_value"),
+            lit("Derived").alias("ftpaAppellantRjDecisionOutcomeType_Transformation"),
 
-                array(struct(lit("Outcome"), lit("Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputFields"),
-                array(struct(col("m3base.Outcome"), col("m3base.Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputValues"),
-                col("m3.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType_value"),
-                lit("Yes").alias("ftpaRespondentRjDecisionOutcomeType_Transformation"),
+            array(struct(lit("Outcome"), lit("Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputFields"),
+            array(struct(col("m3d.Outcome"), col("m3d.Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputValues"),
+            col("m3.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType_value"),
+            lit("Derived").alias("ftpaRespondentRjDecisionOutcomeType_Transformation"),
 
-                array(struct(lit("Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputFields"),
-                array(struct(col("m3base.Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputValues"),
-                col("m3.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside_value"),
-                lit("Yes").alias("isFtpaAppellantNoticeOfDecisionSetAside_Transformation"),
+            # Set-aside flags (cs39 dataset)
+            array(struct(lit("Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputFields"),
+            array(struct(col("m3s.Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputValues"),
+            col("m3.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside_value"),
+            lit("Derived").alias("isFtpaAppellantNoticeOfDecisionSetAside_Transformation"),
 
-                array(struct(lit("Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputFields"),
-                array(struct(col("m3base.Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputValues"),
-                col("m3.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside_value"),
-                lit("Yes").alias("isFtpaRespondentNoticeOfDecisionSetAside_Transformation"),
-            )
+            array(struct(lit("Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputFields"),
+            array(struct(col("m3s.Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputValues"),
+            col("m3.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside_value"),
+            lit("Derived").alias("isFtpaRespondentNoticeOfDecisionSetAside_Transformation"),
+        )
     )
 
     return ftpa_df, ftpa_audit
@@ -319,7 +324,9 @@ def ftpa(silver_m3, silver_c):
 ################################################################
 
 def documents(silver_m1, silver_m3):
-
+    """
+    Decided documents = submitted_a documents + derived convenience arrays
+    """
     df, df_audit = FSA.documents(silver_m1, silver_m3)
 
     empty_str_array = array().cast("array<string>")
@@ -363,14 +370,16 @@ def documents(silver_m1, silver_m3):
 ################################################################
 
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-
-
+    """
+    Decided general = submitted_a general + 7 decided flags (derived from latest Party)
+    (Not part of the red fields in the screenshot; keeping existing agreed logic.)
+    """
     df, df_audit = FSA.general(
         silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres
     )
 
-    # We need latest status row per CaseNo to apply Party-based include/omit rules
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
     m3_latest = (
         silver_m3
         .withColumn("row_number", row_number().over(window_spec))
@@ -382,7 +391,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     joined = df.alias("g").join(m3_latest, on=["CaseNo"], how="left")
 
-    # Added ONLY the 7 new columns 
     df = (
         joined
         .select(col("g.*"), col("m3.Party").alias("Party"))
@@ -396,7 +404,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .drop("Party")
     )
 
-    # Added ONLY new audit columns
     df_audit = (
         df_audit.alias("audit")
         .join(m3_latest.alias("m3"), on=["CaseNo"], how="left")

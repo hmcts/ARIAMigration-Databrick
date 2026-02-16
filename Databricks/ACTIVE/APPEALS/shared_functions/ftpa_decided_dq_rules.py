@@ -111,9 +111,10 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # DecisionDate derivation (ISO yyyy-MM-dd) only when cs39 + outcome in scope and Party matches
-    # NOTE: Use safe parsing:
-    #   coalesce(to_timestamp(pattern1), to_timestamp(pattern2), cast(timestamp))
+    # ---------------------------------------------------------
+    # Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
+    # Only populated for matching Party
+    # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (
         """
         (

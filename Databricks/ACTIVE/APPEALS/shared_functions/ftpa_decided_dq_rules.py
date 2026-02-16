@@ -1,3 +1,14 @@
+# ============================================================
+# Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided_dq_rules
+#
+# PAWAN FIX:
+# - ftpa_decided shared function now outputs source columns as:
+#     ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
+# - Update DQ rules to use these new names to avoid ambiguity with
+#   validation joins that also add CaseStatus/Outcome/Party/DecisionDate.
+# - Keeps existing check names (so nothing else breaks).
+# ============================================================
+
 def add_checks(checks={}):
     checks = add_checks_ftpa(checks)
     checks = add_checks_ftpa_decided(checks)
@@ -35,23 +46,27 @@ def add_checks_ftpa_decided(checks={}):
 
     # ---------------------------------------------------------
     # Helper: make DecisionDate safe (string OR timestamp)
-    # We validate against ISO yyyy-MM-dd
+    # Validate against ISO yyyy-MM-dd
+    #
+    # PAWAN: use ftpa_src_DecisionDate (renamed source field)
     # ---------------------------------------------------------
-    decisiondate_iso = "date_format(coalesce(to_timestamp(DecisionDate), DecisionDate), 'yyyy-MM-dd')"
+    decisiondate_iso = "date_format(coalesce(to_timestamp(ftpa_src_DecisionDate), ftpa_src_DecisionDate), 'yyyy-MM-dd')"
 
     # ---------------------------------------------------------
     # Applicant type
+    #
+    # PAWAN: use ftpa_src_Party (renamed source field)
     # ---------------------------------------------------------
     checks["valid_ftpaApplicantType"] = (
         """
         (
-            (Party = 1 AND ftpaApplicantType = 'appellant')
+            (ftpa_src_Party = 1 AND ftpaApplicantType = 'appellant')
             OR
-            (Party = 2 AND ftpaApplicantType = 'respondent')
+            (ftpa_src_Party = 2 AND ftpaApplicantType = 'respondent')
             OR
-            (Party IS NULL AND ftpaApplicantType IS NULL)
+            (ftpa_src_Party IS NULL AND ftpaApplicantType IS NULL)
             OR
-            (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+            (ftpa_src_Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
         )
         """
     )
@@ -59,19 +74,21 @@ def add_checks_ftpa_decided(checks={}):
     # ---------------------------------------------------------
     # First decision (Outcome -> type)
     # 30 -> granted, 31 -> refused, 14 -> notAdmitted
+    #
+    # PAWAN: use ftpa_src_Outcome (renamed source field)
     # ---------------------------------------------------------
     checks["valid_ftpaFirstDecision"] = (
         """
         (
-            (Outcome = 30 AND ftpaFirstDecision = 'granted')
+            (ftpa_src_Outcome = 30 AND ftpaFirstDecision = 'granted')
             OR
-            (Outcome = 31 AND ftpaFirstDecision = 'refused')
+            (ftpa_src_Outcome = 31 AND ftpaFirstDecision = 'refused')
             OR
-            (Outcome = 14 AND ftpaFirstDecision = 'notAdmitted')
+            (ftpa_src_Outcome = 14 AND ftpaFirstDecision = 'notAdmitted')
             OR
-            (Outcome IS NULL AND ftpaFirstDecision IS NULL)
+            (ftpa_src_Outcome IS NULL AND ftpaFirstDecision IS NULL)
             OR
-            (Outcome NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
+            (ftpa_src_Outcome NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
         )
         """
     )
@@ -79,15 +96,15 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaFinalDecisionForDisplay"] = (
         """
         (
-            (Outcome = 30 AND ftpaFinalDecisionForDisplay = 'Granted')
+            (ftpa_src_Outcome = 30 AND ftpaFinalDecisionForDisplay = 'Granted')
             OR
-            (Outcome = 31 AND ftpaFinalDecisionForDisplay = 'Refused')
+            (ftpa_src_Outcome = 31 AND ftpaFinalDecisionForDisplay = 'Refused')
             OR
-            (Outcome = 14 AND ftpaFinalDecisionForDisplay = 'Not admitted')
+            (ftpa_src_Outcome = 14 AND ftpaFinalDecisionForDisplay = 'Not admitted')
             OR
-            (Outcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
+            (ftpa_src_Outcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
             OR
-            (Outcome NOT IN (30,31,14) AND ftpaFinalDecisionForDisplay IS NULL)
+            (ftpa_src_Outcome NOT IN (30,31,14) AND ftpaFinalDecisionForDisplay IS NULL)
         )
         """
     )
@@ -95,15 +112,17 @@ def add_checks_ftpa_decided(checks={}):
     # ---------------------------------------------------------
     # Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
     # Only populated for matching Party
+    #
+    # PAWAN: use ftpa_src_Party and ftpa_src_DecisionDate
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (
         f"""
         (
-            (Party = 1 AND ftpaAppellantDecisionDate = {decisiondate_iso})
+            (ftpa_src_Party = 1 AND ftpaAppellantDecisionDate = {decisiondate_iso})
             OR
-            (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
+            (ftpa_src_Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
             OR
-            (Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
+            (ftpa_src_Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
         )
         """
     )
@@ -111,32 +130,34 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentDecisionDate"] = (
         f"""
         (
-            (Party = 2 AND ftpaRespondentDecisionDate = {decisiondate_iso})
+            (ftpa_src_Party = 2 AND ftpaRespondentDecisionDate = {decisiondate_iso})
             OR
-            (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
+            (ftpa_src_Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
             OR
-            (Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
+            (ftpa_src_Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
         )
         """
     )
 
     # ---------------------------------------------------------
     # RJ outcome types only populated for matching Party
+    #
+    # PAWAN: use ftpa_src_Party and ftpa_src_Outcome
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 1 AND (
-                (Outcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
-                OR (Outcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
-                OR (Outcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
-                OR (Outcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-                OR (Outcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party = 1 AND (
+                (ftpa_src_Outcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+                OR (ftpa_src_Outcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+                OR (ftpa_src_Outcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+                OR (ftpa_src_Outcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+                OR (ftpa_src_Outcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
             ))
             OR
-            (Party <> 1 AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party <> 1 AND ftpaAppellantRjDecisionOutcomeType IS NULL)
             OR
-            (Party IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
         )
         """
     )
@@ -144,32 +165,34 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 2 AND (
-                (Outcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
-                OR (Outcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
-                OR (Outcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
-                OR (Outcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-                OR (Outcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party = 2 AND (
+                (ftpa_src_Outcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+                OR (ftpa_src_Outcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+                OR (ftpa_src_Outcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+                OR (ftpa_src_Outcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+                OR (ftpa_src_Outcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
             ))
             OR
-            (Party <> 2 AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party <> 2 AND ftpaRespondentRjDecisionOutcomeType IS NULL)
             OR
-            (Party IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            (ftpa_src_Party IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
         )
         """
     )
 
     # ---------------------------------------------------------
     # Set-aside flags (Party-driven)
+    #
+    # PAWAN: use ftpa_src_Party
     # ---------------------------------------------------------
     checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
         """
         (
-            (Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside = 'No')
+            (ftpa_src_Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside = 'No')
             OR
-            (Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+            (ftpa_src_Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
             OR
-            (Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+            (ftpa_src_Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
         )
         """
     )
@@ -177,11 +200,11 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = (
         """
         (
-            (Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside = 'No')
+            (ftpa_src_Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside = 'No')
             OR
-            (Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+            (ftpa_src_Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
             OR
-            (Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+            (ftpa_src_Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
         )
         """
     )

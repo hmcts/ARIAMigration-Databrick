@@ -11,6 +11,12 @@
 #       CaseStatus (int), Outcome (int), Party (int), DecisionDate
 #   - Prevents CaseStatus/Outcome/Party being NULL in stg_main_ftpa_Decided_validation
 #   - Keeps CaseStatus as INTEGER (NOT "39")
+#
+#  FIX (to avoid ambiguity in stg_main_ftpa_Decided_validation):
+#   - Rename source fields to unique names so they do NOT clash with
+#     validation joins that also add CaseStatus/Outcome/Party/DecisionDate.
+#   - New columns:
+#       ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
 # ============================================================
 
 from datetime import datetime
@@ -56,8 +62,9 @@ def ftpa(silver_m3, silver_c):
         Party=2 => respondent fields populated; appellant fields NULL
       - Date format: ISO 8601 date (yyyy-MM-dd)
 
-    ✅ Also outputs source columns for validation/DQ:
-        CaseStatus (int), Outcome (int), Party (int), DecisionDate
+      Also outputs source columns for validation/DQ :
+        ftpa_src_CaseStatus (int), ftpa_src_Outcome (int),
+        ftpa_src_Party (int), ftpa_src_DecisionDate
     """
 
     # Base ftpa fields (judge allocation etc.)
@@ -181,11 +188,8 @@ def ftpa(silver_m3, silver_c):
 
     # ------------------------------------------------------------
     # SOURCE FIELDS FOR VALIDATION / DQ TABLE
-    # Ensure final output contains:
-    #   CaseStatus (int), Outcome (int), Party (int), DecisionDate
-    # Outcome/DecisionDate come from outcome-filtered row when present.
-    # Party uses outcome-filtered Party if present else cs39 Party.
-    # CaseStatus remains integer 39 from cs39 set.
+    # Avoid ambiguity by using unique column names:
+    #   ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
     # ------------------------------------------------------------
     m3_source_fields = (
         m3_latest_cs39.alias("cs39")
@@ -203,10 +207,10 @@ def ftpa(silver_m3, silver_c):
         )
         .select(
             col("cs39.CaseNo").alias("CaseNo"),
-            col("cs39.CaseStatus").cast("int").alias("CaseStatus"),
-            col("cs39o.Outcome_outcome").cast("int").alias("Outcome"),
-            coalesce(col("cs39o.Party_outcome"), col("cs39.Party")).cast("int").alias("Party"),
-            coalesce(col("cs39o.DecisionDate_outcome"), col("cs39.DecisionDate")).alias("DecisionDate"),
+            col("cs39.CaseStatus").cast("int").alias("ftpa_src_CaseStatus"),
+            col("cs39o.Outcome_outcome").cast("int").alias("ftpa_src_Outcome"),
+            coalesce(col("cs39o.Party_outcome"), col("cs39.Party")).cast("int").alias("ftpa_src_Party"),
+            coalesce(col("cs39o.DecisionDate_outcome"), col("cs39.DecisionDate")).alias("ftpa_src_DecisionDate"),
         )
     )
 
@@ -214,7 +218,7 @@ def ftpa(silver_m3, silver_c):
     silver_m3_content = (
         decision_fields
         .join(set_aside_fields, on="CaseNo", how="left")
-        .join(m3_source_fields, on="CaseNo", how="left")  # ✅ added
+        .join(m3_source_fields, on="CaseNo", how="left")
     )
 
     # ------------------------------------------------------------
@@ -231,11 +235,11 @@ def ftpa(silver_m3, silver_c):
         .select(
             col("ftpa.*"),
 
-            # ✅ source columns for validation
-            col("m3.CaseStatus").alias("CaseStatus"),
-            col("m3.Outcome").alias("Outcome"),
-            col("m3.Party").alias("Party"),
-            col("m3.DecisionDate").alias("DecisionDate"),
+            # source columns for validation (renamed to avoid clashes in stg_main validation joins)
+            col("m3.ftpa_src_CaseStatus").alias("ftpa_src_CaseStatus"),
+            col("m3.ftpa_src_Outcome").alias("ftpa_src_Outcome"),
+            col("m3.ftpa_src_Party").alias("ftpa_src_Party"),
+            col("m3.ftpa_src_DecisionDate").alias("ftpa_src_DecisionDate"),
 
             # decided derived fields
             col("m3.ftpaApplicantType").alias("ftpaApplicantType"),

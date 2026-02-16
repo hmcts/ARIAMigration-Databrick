@@ -137,3 +137,24 @@ def test_notice_of_decision_set_aside_flags(ftpa_outputs):
 
     assert r["CASE007"]["isFtpaAppellantNoticeOfDecisionSetAside"] is None
     assert r["CASE007"]["isFtpaRespondentNoticeOfDecisionSetAside"] == "No"
+
+
+# ------------------------------------------------------------
+# Source field assertions (renamed to avoid ambiguity in DLT validation joins)
+# Columns added by ftpa_decided.ftpa():
+#   ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
+# ------------------------------------------------------------
+def test_ftpa_source_fields_present_and_correct(ftpa_outputs):
+    r = ftpa_outputs
+
+    # CASE005 -> latest outcome row is StatusId=2 (Outcome=30, Party=1, DecisionDate=2025-11-02...)
+    assert r["CASE005"]["ftpa_src_CaseStatus"] == 39
+    assert r["CASE005"]["ftpa_src_Outcome"] == 30
+    assert r["CASE005"]["ftpa_src_Party"] == 1
+    assert r["CASE005"]["ftpa_src_DecisionDate"] == "2025-11-02T00:00:00.000+00:00"
+
+    # CASE007 -> Outcome=14, Party=2
+    assert r["CASE007"]["ftpa_src_CaseStatus"] == 39
+    assert r["CASE007"]["ftpa_src_Outcome"] == 14
+    assert r["CASE007"]["ftpa_src_Party"] == 2
+    assert r["CASE007"]["ftpa_src_DecisionDate"] == "2026-08-03T00:00:00.000+00:00"

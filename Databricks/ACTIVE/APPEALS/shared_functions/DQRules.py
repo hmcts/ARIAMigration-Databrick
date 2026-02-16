@@ -12,8 +12,7 @@ def build_rule_expression(rules: dict) -> str:
     """
     Joins multiple rule expressions into one combined SQL expression.
     """
-    return "({0})".format(" AND ".join(rules.values()))
-    # return "({0})".format(" AND ".join(f"({rule})" for rule in rules.values()))
+    return "({0})".format(" AND ".join(f"({rule})" for rule in rules.values()))
 
 
 def base_DQRules(state: str = "paymentPending"):

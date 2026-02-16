@@ -330,11 +330,8 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres
     )
 
-    window_spec = (
-    Window.partitionBy("CaseNo")
-    .orderBy(col("StatusId").desc(), col("DecisionDate").desc_nulls_last())
-    )
-    
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
     m3_latest = (
         silver_m3
         .withColumn("row_number", row_number().over(window_spec))

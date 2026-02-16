@@ -25,8 +25,8 @@ def general_outputs(spark):
         T.StructField("dv_representation", T.StringType(), True),
         T.StructField("lu_appealType", T.StringType(), True),
         T.StructField("Sponsor_Name", T.StringType(), True),
-        T.StructField("Interpreter", T.IntegerType(), True),
-        T.StructField("CourtPreference", T.IntegerType(), True),
+        T.StructField("Interpreter", T.StringType(), True),
+        T.StructField("CourtPreference", T.StringType(), True),
         T.StructField("InCamera", T.BooleanType(), True),
         T.StructField("VisitVisaType", T.IntegerType(), True),
         T.StructField("CentreId", T.IntegerType(), True),
@@ -34,7 +34,7 @@ def general_outputs(spark):
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
-        T.StructField("CaseStatus", T.IntegerType(), True),  # ✅ added
+        T.StructField("CaseStatus", T.IntegerType(), True), 
     ])
 
     m1_data = [

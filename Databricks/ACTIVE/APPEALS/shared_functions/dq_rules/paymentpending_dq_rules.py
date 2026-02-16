@@ -34,7 +34,7 @@ class paymentPendingDQRules(DQRulesBase):
                 )
             )
         """
-        
+
         checks["valid_caseManagementCategory_label_in_list_items"] = """
             (
                 caseManagementCategory.value.label IS NULL OR
@@ -91,8 +91,8 @@ class paymentPendingDQRules(DQRulesBase):
         (
             (hearingCentre IS NOT NULL)
             AND
-            (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
-            'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 
+            (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
+            'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
             'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
         )
         """
@@ -541,9 +541,11 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_decisionHearingFeeOption"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')"
-            "OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing'))"
-            "OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')
+                OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing')
+                OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)
+            )"""
         )
 
         # ##############################
@@ -670,7 +672,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_sponsorAddress_not_null"] = (
             "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
         )
-        
+
         ##############################
         # ARIADM-778 (SponsorDetails)
         ##############################
@@ -710,7 +712,7 @@ class paymentPendingDQRules(DQRulesBase):
                 (
                     array_contains(valid_categoryIdList, 38)
                     AND
-                    (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) 
+                    (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
                     AND
                     addressLine1AdminJ IS NOT NULL
                 )
@@ -828,7 +830,7 @@ class paymentPendingDQRules(DQRulesBase):
                     NOT array_contains(valid_categoryIdList, 38)
                     AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
-                    AND homeOfficeReferenceNumber IS NOT NUL
+                    AND homeOfficeReferenceNumber IS NOT NULL
                 )
                 OR
                 (

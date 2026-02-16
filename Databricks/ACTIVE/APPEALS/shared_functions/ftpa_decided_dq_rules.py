@@ -1,3 +1,11 @@
+# ============================================================
+# Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided_dq_rules
+# FTPA Decided - DQ Rules
+#   - Decision/outcome fields: CaseStatus=39 AND Outcome IN (30,31,14)
+#   - Set-aside flags: CaseStatus=39 (no outcome filter)
+#   - Decision dates in ISO 8601 date format: yyyy-MM-dd
+# ============================================================
+
 def add_checks(checks={}):
     checks = add_checks_ftpa(checks)
     checks = add_checks_ftpa_decided(checks)
@@ -31,67 +39,102 @@ def add_checks_ftpa(checks={}):
 
 
 def add_checks_ftpa_decided(checks={}):
+    # ---------------------------------------------------------
+    # Helpers:
+    # - Decision/outcome fields only apply when:
+    #     CaseStatus = 39 AND Outcome IN (30,31,14)
+    # - DecisionDate output format: yyyy-MM-dd (ISO date)
+    # - Safe timestamp parsing for DecisionDate (string or timestamp)
+    # ---------------------------------------------------------
+
+    # Applicant type (only when cs39 + outcome in scope)
     checks["valid_ftpaApplicantType"] = (
         """
         (
-            (Party = 1 AND ftpaApplicantType = 'appellant')
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND (
+                    (Party = 1 AND ftpaApplicantType = 'appellant')
+                    OR (Party = 2 AND ftpaApplicantType = 'respondent')
+                    OR (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+                    OR (Party IS NULL AND ftpaApplicantType IS NULL)
+                )
+            )
             OR
-            (Party = 2 AND ftpaApplicantType = 'respondent')
-            OR
-            (Party IS NULL AND ftpaApplicantType IS NULL)
-            OR
-            (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+            (
+                NOT (CaseStatus = 39 AND Outcome IN (30,31,14))
+                AND ftpaApplicantType IS NULL
+            )
         )
         """
     )
 
+    # First decision (only when cs39 + outcome in scope)
     checks["valid_ftpaFirstDecision"] = (
         """
         (
-            (Outcome = 30 AND ftpaFirstDecision = 'granted')
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND (
+                    (Outcome = 30 AND ftpaFirstDecision = 'granted')
+                    OR (Outcome = 31 AND ftpaFirstDecision = 'refused')
+                    OR (Outcome = 14 AND ftpaFirstDecision = 'notAdmitted')
+                )
+            )
             OR
-            (Outcome = 31 AND ftpaFirstDecision = 'refused')
-            OR
-            (Outcome = 14 AND ftpaFirstDecision = 'notAdmitted')
-            OR
-            (Outcome IS NULL AND ftpaFirstDecision IS NULL)
-            OR
-            (Outcome NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
+            (
+                NOT (CaseStatus = 39 AND Outcome IN (30,31,14))
+                AND ftpaFirstDecision IS NULL
+            )
         )
         """
     )
 
+    # Final decision for display (only when cs39 + outcome in scope)
     checks["valid_ftpaFinalDecisionForDisplay"] = (
         """
         (
-            (Outcome = 30 AND ftpaFinalDecisionForDisplay = 'Granted')
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND (
+                    (Outcome = 30 AND ftpaFinalDecisionForDisplay = 'Granted')
+                    OR (Outcome = 31 AND ftpaFinalDecisionForDisplay = 'Refused')
+                    OR (Outcome = 14 AND ftpaFinalDecisionForDisplay = 'Not admitted')
+                )
+            )
             OR
-            (Outcome = 31 AND ftpaFinalDecisionForDisplay = 'Refused')
-            OR
-            (Outcome = 14 AND ftpaFinalDecisionForDisplay = 'Not admitted')
-            OR
-            (Outcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
-            OR
-            (Outcome NOT IN (30,31,14) AND ftpaFinalDecisionForDisplay IS NULL)
+            (
+                NOT (CaseStatus = 39 AND Outcome IN (30,31,14))
+                AND ftpaFinalDecisionForDisplay IS NULL
+            )
         )
         """
     )
 
+    # DecisionDate derivation (ISO yyyy-MM-dd) only when cs39 + outcome in scope and Party matches
+    # NOTE: Use safe parsing:
+    #   coalesce(to_timestamp(pattern1), to_timestamp(pattern2), cast(timestamp))
     checks["valid_ftpaAppellantDecisionDate"] = (
         """
         (
-            (Party = 1 AND ftpaAppellantDecisionDate = date_format(
-                coalesce(
-                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
-                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
-                    cast(DecisionDate as timestamp)
-                ),
-                'dd/MM/yyyy'
-            ))
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND Party = 1
+                AND ftpaAppellantDecisionDate = date_format(
+                    coalesce(
+                        to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
+                        to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
+                        cast(DecisionDate as timestamp)
+                    ),
+                    'yyyy-MM-dd'
+                )
+            )
             OR
-            (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
-            OR
-            (Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
+            (
+                -- If not Party=1 or not in scope => must be NULL
+                (Party <> 1 OR NOT (CaseStatus = 39 AND Outcome IN (30,31,14)) OR Party IS NULL)
+                AND ftpaAppellantDecisionDate IS NULL
+            )
         )
         """
     )
@@ -99,36 +142,45 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentDecisionDate"] = (
         """
         (
-            (Party = 2 AND ftpaRespondentDecisionDate = date_format(
-                coalesce(
-                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
-                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
-                    cast(DecisionDate as timestamp)
-                ),
-                'dd/MM/yyyy'
-            ))
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND Party = 2
+                AND ftpaRespondentDecisionDate = date_format(
+                    coalesce(
+                        to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),
+                        to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSX'),
+                        cast(DecisionDate as timestamp)
+                    ),
+                    'yyyy-MM-dd'
+                )
+            )
             OR
-            (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
-            OR
-            (Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
+            (
+                (Party <> 2 OR NOT (CaseStatus = 39 AND Outcome IN (30,31,14)) OR Party IS NULL)
+                AND ftpaRespondentDecisionDate IS NULL
+            )
         )
         """
     )
 
+    # RJ outcome types (only when cs39 + outcome in scope AND Party matches)
     checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 1 AND (
-                (Outcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
-                OR (Outcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
-                OR (Outcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
-                OR (Outcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-                OR (Outcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-            ))
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND Party = 1
+                AND (
+                    (Outcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+                    OR (Outcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+                    OR (Outcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+                )
+            )
             OR
-            (Party <> 1 AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-            OR
-            (Party IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            (
+                (Party <> 1 OR NOT (CaseStatus = 39 AND Outcome IN (30,31,14)) OR Party IS NULL)
+                AND ftpaAppellantRjDecisionOutcomeType IS NULL
+            )
         )
         """
     )
@@ -136,29 +188,38 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 2 AND (
-                (Outcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
-                OR (Outcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
-                OR (Outcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
-                OR (Outcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-                OR (Outcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-            ))
+            (
+                CaseStatus = 39 AND Outcome IN (30,31,14)
+                AND Party = 2
+                AND (
+                    (Outcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+                    OR (Outcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+                    OR (Outcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+                )
+            )
             OR
-            (Party <> 2 AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-            OR
-            (Party IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            (
+                (Party <> 2 OR NOT (CaseStatus = 39 AND Outcome IN (30,31,14)) OR Party IS NULL)
+                AND ftpaRespondentRjDecisionOutcomeType IS NULL
+            )
         )
         """
     )
 
+    # Set-aside flags (CaseStatus=39 only; NO outcome filter)
     checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
         """
         (
-            (Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside = 'No')
+            (
+                CaseStatus = 39
+                AND Party = 1
+                AND isFtpaAppellantNoticeOfDecisionSetAside = 'No'
+            )
             OR
-            (Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
-            OR
-            (Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+            (
+                (Party <> 1 OR CaseStatus <> 39 OR Party IS NULL OR CaseStatus IS NULL)
+                AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL
+            )
         )
         """
     )
@@ -166,11 +227,16 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = (
         """
         (
-            (Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside = 'No')
+            (
+                CaseStatus = 39
+                AND Party = 2
+                AND isFtpaRespondentNoticeOfDecisionSetAside = 'No'
+            )
             OR
-            (Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
-            OR
-            (Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+            (
+                (Party <> 2 OR CaseStatus <> 39 OR Party IS NULL OR CaseStatus IS NULL)
+                AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL
+            )
         )
         """
     )

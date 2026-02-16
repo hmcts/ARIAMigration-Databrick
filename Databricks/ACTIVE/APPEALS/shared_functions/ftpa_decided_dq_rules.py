@@ -1,9 +1,12 @@
 # ============================================================
 # Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided_dq_rules
-# FTPA Decided - DQ Rules
-#   - Decision/outcome fields: CaseStatus=39 AND Outcome IN (30,31,14)
-#   - Set-aside flags: CaseStatus=39 (no outcome filter)
-#   - Decision dates in ISO 8601 date format: yyyy-MM-dd
+#
+# PAWAN FIX:
+# - ftpa_decided shared function now outputs source columns as:
+#     ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
+# - Update DQ rules to use these new names to avoid ambiguity with
+#   validation joins that also add CaseStatus/Outcome/Party/DecisionDate.
+# - Keeps existing check names (so nothing else breaks).
 # ============================================================
 
 def add_checks(checks={}):
@@ -114,6 +117,8 @@ def add_checks_ftpa_decided(checks={}):
     # ---------------------------------------------------------
     # Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
     # Only populated for matching Party
+    #
+    # PAWAN: use ftpa_src_Party and ftpa_src_DecisionDate
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (
         """
@@ -136,7 +141,6 @@ def add_checks_ftpa_decided(checks={}):
                 (Party <> 1 OR NOT (CaseStatus = 39 AND Outcome IN (30,31,14)) OR Party IS NULL)
                 AND ftpaAppellantDecisionDate IS NULL
             )
-        )
         """
     )
 

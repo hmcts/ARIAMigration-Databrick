@@ -5,6 +5,12 @@
 #   - Uses MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14) for decision/outcome fields
 #   - Dates output in ISO 8601 date format: yyyy-MM-dd
 #   - Party include/omit logic per mapping (I/J columns)
+#
+# LATEST FIX MERGED:
+#   - Carry source fields into final output for validation table:
+#       CaseStatus (int), Outcome (int), Party (int), DecisionDate
+#   - Prevents CaseStatus/Outcome/Party being NULL in stg_main_ftpa_Decided_validation
+#   - Keeps CaseStatus as INTEGER (NOT "39")
 # ============================================================
 
 from datetime import datetime
@@ -40,7 +46,7 @@ from pyspark.sql.functions import (
 
 def ftpa(silver_m3, silver_c):
     """
-    Mapping alignment 
+    Mapping alignment
       - Decision/outcome fields (ftpaFirstDecision, DecisionDates, FinalDecisionForDisplay, RJ outcome types, ApplicantType)
         -> MAX(StatusId) WHERE CaseStatus=39 AND Outcome IN (30,31,14)
       - Set-aside flags
@@ -49,14 +55,18 @@ def ftpa(silver_m3, silver_c):
         Party=1 => appellant fields populated; respondent fields NULL
         Party=2 => respondent fields populated; appellant fields NULL
       - Date format: ISO 8601 date (yyyy-MM-dd)
+
+    Also outputs source columns for validation/DQ:
+        CaseStatus (int), Outcome (int), Party (int), DecisionDate
     """
 
     # Base ftpa fields (judge allocation etc.)
     ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
 
+    # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
     window_spec = (
-    Window.partitionBy("CaseNo")
-    .orderBy(col("StatusId").desc(), col("DecisionDate").desc_nulls_last())
+        Window.partitionBy("CaseNo")
+        .orderBy(col("StatusId").desc(), col("DecisionDate").desc_nulls_last())
     )
 
     # ------------------------------------------------------------
@@ -169,10 +179,42 @@ def ftpa(silver_m3, silver_c):
         )
     )
 
-    # Final decided content (merge both)
+    # ------------------------------------------------------------
+    # SOURCE FIELDS FOR VALIDATION / DQ TABLE
+    # Ensure final output contains:
+    #   CaseStatus (int), Outcome (int), Party (int), DecisionDate
+    # Outcome/DecisionDate come from outcome-filtered row when present.
+    # Party uses outcome-filtered Party if present else cs39 Party.
+    # CaseStatus remains integer 39 from cs39 set.
+    # ------------------------------------------------------------
+    m3_source_fields = (
+        m3_latest_cs39.alias("cs39")
+        .join(
+            m3_latest_cs39_outcome
+            .select(
+                col("CaseNo").alias("CaseNo"),
+                col("Outcome").alias("Outcome_outcome"),
+                col("DecisionDate").alias("DecisionDate_outcome"),
+                col("Party").alias("Party_outcome"),
+            )
+            .alias("cs39o"),
+            on="CaseNo",
+            how="left",
+        )
+        .select(
+            col("cs39.CaseNo").alias("CaseNo"),
+            col("cs39.CaseStatus").cast("int").alias("CaseStatus"),
+            col("cs39o.Outcome_outcome").cast("int").alias("Outcome"),
+            coalesce(col("cs39o.Party_outcome"), col("cs39.Party")).cast("int").alias("Party"),
+            coalesce(col("cs39o.DecisionDate_outcome"), col("cs39.DecisionDate")).alias("DecisionDate"),
+        )
+    )
+
+    # Final decided content (merge all)
     silver_m3_content = (
         decision_fields
         .join(set_aside_fields, on="CaseNo", how="left")
+        .join(m3_source_fields, on="CaseNo", how="left")  # ✅ added
     )
 
     # ------------------------------------------------------------
@@ -188,6 +230,14 @@ def ftpa(silver_m3, silver_c):
         .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
         .select(
             col("ftpa.*"),
+
+            # ✅ source columns for validation
+            col("m3.CaseStatus").alias("CaseStatus"),
+            col("m3.Outcome").alias("Outcome"),
+            col("m3.Party").alias("Party"),
+            col("m3.DecisionDate").alias("DecisionDate"),
+
+            # decided derived fields
             col("m3.ftpaApplicantType").alias("ftpaApplicantType"),
             col("m3.ftpaFirstDecision").alias("ftpaFirstDecision"),
             col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate"),

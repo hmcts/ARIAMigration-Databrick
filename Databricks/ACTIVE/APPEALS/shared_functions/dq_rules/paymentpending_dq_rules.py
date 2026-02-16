@@ -314,12 +314,17 @@ class paymentPendingDQRules(DQRulesBase):
         # ############################## #if (catId = 7,25 and flagcomment IS NULL) or (details IS NULL) or (catID != 7,25 and value provided for name)
         checks["valid_caseFlags_name_in_list"] = """(
             (
-                EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL))
-                OR (caseFlags.details IS NULL)
-                OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
-                (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
-                    caseFlags.details[0].value.name
-                ))
+                EXISTS(valid_categoryIdList, x -> x IN (7, 25))
+                AND
+                EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)
+            )
+            OR
+            (caseFlags.details IS NULL)
+            OR
+            (
+                NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25))
+                AND
+                ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name), caseFlags.details[0].value.name)
             )
         )"""
 

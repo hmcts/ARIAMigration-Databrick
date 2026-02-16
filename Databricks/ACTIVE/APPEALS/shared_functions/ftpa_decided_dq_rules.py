@@ -93,7 +93,7 @@ def add_checks_ftpa_decided(checks={}):
     )
 
     # ---------------------------------------------------------
-    # ✅ Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
+    # Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
     # Only populated for matching Party
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (

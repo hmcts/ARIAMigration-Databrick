@@ -364,7 +364,8 @@ class paymentPendingDQRules(DQRulesBase):
         (
             valid_categoryIdList IS NULL
             OR lu_HORef IS NULL
-            OR (
+            OR
+            (
                 NOT (
                     array_contains(valid_categoryIdList, 7) OR
                     array_contains(valid_categoryIdList, 8) OR
@@ -376,7 +377,8 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 AND caseFlags IS NULL
             )
-            OR (
+            OR
+            (
                 (
                     array_contains(valid_categoryIdList, 7) OR
                     array_contains(valid_categoryIdList, 8) OR
@@ -388,7 +390,8 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 AND lu_HORef IS NOT NULL
                 AND caseFlags IS NOT NULL
-                AND (
+                AND
+                (
                     (
                         (array_contains(valid_categoryIdList, 7) OR array_contains(valid_categoryIdList, 25))
                         AND exists(
@@ -396,7 +399,8 @@ class paymentPendingDQRules(DQRulesBase):
                             x -> x IS NULL
                         )
                     )
-                    OR (
+                    OR
+                    (
                         (array_contains(valid_categoryIdList, 8) OR array_contains(valid_categoryIdList, 24) OR array_contains(valid_categoryIdList, 31) OR array_contains(valid_categoryIdList, 32) OR array_contains(valid_categoryIdList, 41))
                         AND NOT exists(
                             TRANSFORM(caseFlags.details, x -> x.value.flagComment),
@@ -405,8 +409,7 @@ class paymentPendingDQRules(DQRulesBase):
                     )
                 )
             )
-        )
-        """
+        )"""
         checks["valid_caseFlags_hearingRelevant_in_list"] = """
         (
             caseFlags.details IS NULL OR
@@ -495,15 +498,15 @@ class paymentPendingDQRules(DQRulesBase):
             """(
             (
                 (
-                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
-                AND
-                (feeAmountGbp <=> '8000')
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
+                    AND
+                    (feeAmountGbp <=> '8000')
                 )
                 OR
                 (
-                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
-                AND
-                (feeAmountGbp <=> '14000')
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
+                    AND
+                    (feeAmountGbp <=> '14000')
                 )
             )
             OR
@@ -523,7 +526,7 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
-        checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
+        checks["valid_feeWithHearing"] = (  # feeWithHearing is not null and is an int
             """(
             (
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
@@ -588,7 +591,11 @@ class paymentPendingDQRules(DQRulesBase):
         # ############################## 
 
         checks["valid_remissionType_in_list"] = (
-            "(dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission')) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)"
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
+                OR
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
+            )"""
         )
 
         checks["valid_remissionClaim_in_list"] = (
@@ -608,9 +615,9 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_feeRemissionType_not_null"] = (
             """(
-            (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
-            OR
-            ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
+                OR
+                ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)
             )"""
         )
 

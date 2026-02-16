@@ -221,7 +221,6 @@ def documents(silver_m1,silver_m3):
 
     cond_state_3_4 = (
         (
-            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
             (F.col("CaseStatus").isin(37, 38)) &
             (F.col("Outcome").isin(80,13,25))
         ) |
@@ -229,7 +228,6 @@ def documents(silver_m1,silver_m3):
             (F.col("CaseStatus") == 38) &
             (F.col("Outcome") == 72)
         ) |
-
         (
             (F.col("CaseStatus") == 39) &
             (F.col("Outcome") == 25)
@@ -250,57 +248,12 @@ def documents(silver_m1,silver_m3):
     silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
     silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
-
-    silver_m3_filtered_state_3_4 = silver_m3.filter(cond_state_3_4)
-    silver_m3_ranked_state_3_4 = silver_m3_filtered_state_3_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_3_4 = silver_m3_ranked_state_3_4.filter(col("row_number") == 1).drop("row_number")
-
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
-
-    
     
     documents_df = (
         documents_df.alias("content")
         .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("respondentDocuments",when(cond_state_2_3_4, col("content.respondentDocuments")).otherwise(None))
-        .select("content.*", "respondentDocuments")
-    )
-
-    documents_audit = (
-        documents_df.alias("content")
-        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
-        .select("content.CaseNo",
-                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("respondentDocuments_inputFields"),
-                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("respondentDocuments_inputValues"),
-                col("content.respondentDocuments").alias("respondentDocuments_value"),
-                lit("Yes").alias("respondentDocuments_Transformed"),
-                )
-    )
-
-    documents_df = (
-        documents_df.alias("content")
-        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("hearingRequirements",when(cond_state_3_4, col("content.hearingRequirements")).otherwise(None))
-        .select("content.*", "hearingRequirements")
-    )
-
-    documents_audit = (
-        documents_df.alias("content")
-        .join(documents_audit.alias("audit"), on="CaseNo", how="left")
-        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
-        .select("audit.*",
-                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingRequirements_inputFields"),
-                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingRequirements_inputValues"),
-                col("content.hearingRequirements").alias("hearingRequirements_value"),
-                lit("Yes").alias("hearingRequirements_Transformed"),
-                )
-    )
-
-    documents_df = (
-        documents_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("hearingDocuments",when(cond_state_4, col("content.hearingDocuments")).otherwise(None))
         .withColumn("letterBundleDocuments",when(cond_state_4, col("content.letterBundleDocuments")).otherwise(None))
         .withColumn("caseBundles",when(cond_state_4, col("content.caseBundles")).otherwise(None))
@@ -314,6 +267,8 @@ def documents(silver_m1,silver_m3):
         .withColumn("ftpaAppellantOutOfTimeDocuments",when(cond_state_4, col("content.ftpaAppellantOutOfTimeDocuments")).otherwise(None))
         .withColumn("ftpaRespondentOutOfTimeDocuments",when(cond_state_4, col("content.ftpaRespondentOutOfTimeDocuments")).otherwise(None))
         .select("content.*"
+                ,"respondentDocuments"
+                ,"hearingRequirements"
                 ,"hearingDocuments"
                 ,"letterBundleDocuments"
                 ,"caseBundles"
@@ -331,9 +286,18 @@ def documents(silver_m1,silver_m3):
 
     documents_audit = (
         documents_df.alias("content")
-        .join(documents_audit.alias("audit"), on="CaseNo", how="left")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
-        .select("audit.*",
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("respondentDocuments_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("respondentDocuments_inputValues"),
+                col("content.respondentDocuments").alias("respondentDocuments_value"),
+                lit("Yes").alias("respondentDocuments_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingRequirements_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingRequirements_inputValues"),
+                col("content.hearingRequirements").alias("hearingRequirements_value"),
+                lit("Yes").alias("hearingRequirements_Transformed"),
+
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hearingDocuments_inputFields"),
                 array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hearingDocuments_inputValues"),
                 col("content.hearingDocuments").alias("hearingDocuments_value"),
@@ -397,7 +361,6 @@ def documents(silver_m1,silver_m3):
                 )
     )
 
-
     return documents_df, documents_audit
 
 ################################################################
@@ -414,9 +377,12 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
-    cond_state_3_4 = (
+    cond_state_2_3_4 = (
         (
-            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
             (F.col("CaseStatus").isin(37, 38)) &
             (F.col("Outcome").isin(80,13,25))
         ) |
@@ -431,16 +397,38 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         )
     )
 
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_4 = (
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_state_3_4 = silver_m3.filter(cond_state_3_4)
-    silver_m3_ranked_state_3_4 = silver_m3_filtered_state_3_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_3_4 = silver_m3_ranked_state_3_4.filter(col("row_number") == 1).drop("row_number")
-
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
     hearingRequirements_df = (
         hearingRequirements_df.alias("content")
-        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("isAppellantAttendingTheHearing",when(cond_state_3_4, col("content.isAppellantAttendingTheHearing")).otherwise(None))
         .withColumn("isAppellantGivingOralEvidence",when(cond_state_3_4, col("content.isAppellantGivingOralEvidence")).otherwise(None))
         .withColumn("isWitnessesAttending",when(cond_state_3_4, col("content.isWitnessesAttending")).otherwise(None))
@@ -501,7 +489,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
 
     hearingRequirements_audit = (
         hearingRequirements_df.alias("content")
-        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isAppellantAttendingTheHearing_inputFields"),
@@ -660,6 +648,41 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
     cond_state_4 = (
 
         (
@@ -670,15 +693,15 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
 
     hearingResponse_df = (
         hearingResponse_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("isRemoteHearing",when(cond_state_4, col("content.isRemoteHearing")).otherwise(None))
         .withColumn("isAppealSuitableToFloat",when(cond_state_4, col("content.isAppealSuitableToFloat")).otherwise(None))
         .withColumn("isMultimediaAllowed",when(cond_state_4, col("content.isMultimediaAllowed")).otherwise(None))
@@ -729,7 +752,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
 
     hearingResponse_audit = (
         hearingResponse_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isRemoteHearing_inputFields"),
@@ -863,6 +886,41 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
     cond_state_4 = (
 
         (
@@ -873,17 +931,15 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
     
-    
-
     hearingDetails_df = (
         hearingDetails_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("listingLength",when(cond_state_4, col("content.listingLength")).otherwise(None))
         .withColumn("hearingChannel",when(cond_state_4, col("content.hearingChannel")).otherwise(None))
         .withColumn("witnessDetails",when(cond_state_4, col("content.witnessDetails")).otherwise(None))
@@ -946,7 +1002,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 
     hearingDetails_audit = (
         hearingDetails_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("listingLength_inputFields"),
@@ -1109,6 +1165,41 @@ def substantiveDecision(silver_m1,silver_m3):
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
     cond_state_4 = (
 
         (
@@ -1119,14 +1210,15 @@ def substantiveDecision(silver_m1,silver_m3):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
     
     substantiveDecision_df = (
         substantiveDecision_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("scheduleOfIssuesAgreement",when(cond_state_4, col("content.scheduleOfIssuesAgreement")).otherwise(None))
         .withColumn("scheduleOfIssuesDisagreementDescription",when(cond_state_4, col("content.scheduleOfIssuesDisagreementDescription")).otherwise(None))
         .withColumn("immigrationHistoryAgreement",when(cond_state_4, col("content.immigrationHistoryAgreement")).otherwise(None))
@@ -1151,7 +1243,7 @@ def substantiveDecision(silver_m1,silver_m3):
 
     substantiveDecision_audit = (
         substantiveDecision_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("scheduleOfIssuesAgreement_inputFields"),
@@ -1208,7 +1300,6 @@ def substantiveDecision(silver_m1,silver_m3):
 ##########              hearingActuals          ###########
 ################################################################
 
-
 def hearingActuals(silver_m3):
 
     hearingActuals_df, hearingActuals_audit = DA.hearingActuals(silver_m3)
@@ -1218,6 +1309,41 @@ def hearingActuals(silver_m3):
         .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))
         .withColumn("Outcome", F.col("Outcome").cast("int"))
         .withColumn("StatusId", F.col("StatusId").cast("long"))
+    )
+
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
     )
 
     cond_state_4 = (
@@ -1230,14 +1356,15 @@ def hearingActuals(silver_m3):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
     
     hearingActuals_df = (
         hearingActuals_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("attendingJudge",when(cond_state_4, col("content.attendingJudge")).otherwise(None))
         .withColumn("actualCaseHearingLength",when(cond_state_4, col("content.actualCaseHearingLength")).otherwise(None))
         .select("content.*"
@@ -1248,7 +1375,7 @@ def hearingActuals(silver_m3):
 
     hearingActuals_audit = (
         hearingActuals_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("attendingJudge_inputFields"),
@@ -1281,6 +1408,41 @@ def ftpa(silver_m3, silver_c):
         .withColumn("StatusId", F.col("StatusId").cast("long"))
     )
 
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
     cond_state_4 = (
 
         (
@@ -1291,14 +1453,14 @@ def ftpa(silver_m3, silver_c):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
-    
     ftpa_df = (
         ftpa_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .withColumn("ftpaApplicationDeadline",when(cond_state_4, col("content.ftpaApplicationDeadline")).otherwise(None))
         .withColumn("ftpaList",when(cond_state_4, col("content.ftpaList")).otherwise(None))
         .withColumn("ftpaAppellantApplicationDate",when(cond_state_4, col("content.ftpaAppellantApplicationDate")).otherwise(None))
@@ -1321,7 +1483,7 @@ def ftpa(silver_m3, silver_c):
 
     ftpa_audit = (
         ftpa_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("ftpaApplicationDeadline_inputFields"),
@@ -1391,6 +1553,118 @@ def generalDefault(silver_m1,silver_m3):
             (F.col("Outcome").isin(80, 25,13))
         ) |
         (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_3_4 = (
+        (
+            (F.col("CaseStatus").isin(37, 38)) &
+            (F.col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (F.col("CaseStatus") == 38) &
+            (F.col("Outcome") == 72)
+        ) |
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    cond_state_4 = (
+
+        (
+            (F.col("CaseStatus") == 39) &
+            (F.col("Outcome") == 25)
+        )
+    )
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
+
+    
+    generalDefault_df = (
+        generalDefault_df.alias("content")
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .withColumn("directions",when(cond_state_2_3_4, col("content.directions")).otherwise(None))
+        .withColumn("uploadHomeOfficeBundleAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleAvailable")).otherwise(None))
+        .withColumn("uploadHomeOfficeBundleActionAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleActionAvailable")).otherwise(None))
+        .withColumn("appealReviewOutcome",when(cond_state_3_4, col("content.appealReviewOutcome")).otherwise(None))
+        .withColumn("appealResponseAvailable",when(cond_state_3_4, col("content.appealResponseAvailable")).otherwise(None))
+        .withColumn("reviewedHearingRequirements",when(cond_state_3_4, col("content.reviewedHearingRequirements")).otherwise(None))
+        .withColumn("amendResponseActionAvailable",when(cond_state_3_4, col("content.amendResponseActionAvailable")).otherwise(None))
+        .withColumn("currentHearingDetailsVisible",when(cond_state_3_4, col("content.currentHearingDetailsVisible")).otherwise(None))
+        .withColumn("reviewResponseActionAvailable",when(cond_state_3_4, col("content.reviewResponseActionAvailable")).otherwise(None))
+        .withColumn("reviewHomeOfficeResponseByLegalRep",when(cond_state_3_4, col("content.reviewHomeOfficeResponseByLegalRep")).otherwise(None))
+        .withColumn("submitHearingRequirementsAvailable",when(cond_state_3_4, col("content.submitHearingRequirementsAvailable")).otherwise(None))
+        .withColumn("uploadHomeOfficeAppealResponseActionAvailable",when(cond_state_3_4, col("content.uploadHomeOfficeAppealResponseActionAvailable")).otherwise(None))
+        .withColumn("hmcts",when(cond_state_4, col("content.hmcts")).otherwise(None))
+        .withColumn("stitchingStatus",when(cond_state_4, col("content.stitchingStatus")).otherwise(None))
+        .withColumn("bundleConfiguration",when(cond_state_4, col("content.bundleConfiguration")).otherwise(None))
+        .withColumn("appealDecisionAvailable",when(cond_state_4, col("content.appealDecisionAvailable")).otherwise(None))
+        .withColumn("isFtpaListVisible",when(cond_state_4, col("content.isFtpaListVisible")).otherwise(None))
+
+        .select("content.*"
+                ,"directions"
+                ,"uploadHomeOfficeBundleAvailable"
+                ,"uploadHomeOfficeBundleActionAvailable"
+                ,"appealReviewOutcome"
+                ,"appealResponseAvailable"
+                ,"reviewedHearingRequirements"
+                ,"amendResponseActionAvailable"
+                ,"currentHearingDetailsVisible"
+                ,"reviewResponseActionAvailable"
+                ,"reviewHomeOfficeResponseByLegalRep"
+                ,"submitHearingRequirementsAvailable"
+                ,"uploadHomeOfficeAppealResponseActionAvailable"
+                ,"hmcts"
+                ,"stitchingStatus"
+                ,"bundleConfiguration"
+                ,"appealDecisionAvailable"
+                ,"isFtpaListVisible"
+                )
+    )
+
+
+    return generalDefault_df
+
+################################################################
+##########              general          ###########
+################################################################
+
+
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+
+    general_df, general_audit = FSA.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+
+    df = (
+        silver_m3
+        .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))
+        .withColumn("Outcome", F.col("Outcome").cast("int"))
+        .withColumn("StatusId", F.col("StatusId").cast("long"))
+    )
+
+    cond_state_2_3_4 = (
+        (
+            (F.col("CaseStatus") == 26) &
+            (F.col("Outcome").isin(80, 25,13))
+        ) |
+        (
             # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
             (F.col("CaseStatus").isin(37, 38)) &
             (F.col("Outcome").isin(80,13,25))
@@ -1437,265 +1711,11 @@ def generalDefault(silver_m1,silver_m3):
     silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
-    silver_m3_filtered_state_3_4 = silver_m3.filter(cond_state_3_4)
-    silver_m3_ranked_state_3_4 = silver_m3_filtered_state_3_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_3_4 = silver_m3_ranked_state_3_4.filter(col("row_number") == 1).drop("row_number")
-
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
-
     
-    
-    generalDefault_df = (
-        generalDefault_df.alias("content")
-        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
-        .withColumn("directions",when(cond_state_2_3_4, col("content.directions")).otherwise(None))
-        .withColumn("uploadHomeOfficeBundleAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleAvailable")).otherwise(None))
-        .withColumn("uploadHomeOfficeBundleActionAvailable",when(cond_state_2_3_4, col("content.uploadHomeOfficeBundleActionAvailable")).otherwise(None))
-        # .withColumn("caseArgumentAvailable",when(cond_state_2_3_4, col("content.caseArgumentAvailable")).otherwise(None))
-        # .withColumn("reasonsForAppealDecision",when(cond_state_2_3_4, col("content.reasonsForAppealDecision")).otherwise(None))
-        .select("content.*"
-                ,"directions"
-                ,"uploadHomeOfficeBundleAvailable"
-                ,"uploadHomeOfficeBundleActionAvailable"
-                )
-    )
-
-    # generalDefault_audit = (
-    #     generalDefault_df.alias("content")
-    #     .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
-    #     .select("content.CaseNo",
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("directions_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("directions_inputValues"),
-    #             col("content.directions").alias("directions_value"),
-    #             lit("Yes").alias("directions_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeBundleAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeBundleAvailable_inputValues"),
-    #             col("content.uploadHomeOfficeBundleAvailable").alias("uploadHomeOfficeBundleAvailable_value"),
-    #             lit("Yes").alias("uploadHomeOfficeBundleAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeBundleActionAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeBundleActionAvailable_inputValues"),
-    #             col("content.uploadHomeOfficeBundleActionAvailable").alias("uploadHomeOfficeBundleActionAvailable_value"),
-    #             lit("Yes").alias("uploadHomeOfficeBundleActionAvailable_Transformed"),
-
-    #     )
-    # )
-
-    generalDefault_df = (
-        generalDefault_df.alias("content")
-        .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
-        .withColumn("appealReviewOutcome",when(cond_state_3_4, col("content.appealReviewOutcome")).otherwise(None))
-        .withColumn("appealResponseAvailable",when(cond_state_3_4, col("content.appealResponseAvailable")).otherwise(None))
-        .withColumn("reviewedHearingRequirements",when(cond_state_3_4, col("content.reviewedHearingRequirements")).otherwise(None))
-        .withColumn("amendResponseActionAvailable",when(cond_state_3_4, col("content.amendResponseActionAvailable")).otherwise(None))
-        .withColumn("currentHearingDetailsVisible",when(cond_state_3_4, col("content.currentHearingDetailsVisible")).otherwise(None))
-        .withColumn("reviewResponseActionAvailable",when(cond_state_3_4, col("content.reviewResponseActionAvailable")).otherwise(None))
-        .withColumn("reviewHomeOfficeResponseByLegalRep",when(cond_state_3_4, col("content.reviewHomeOfficeResponseByLegalRep")).otherwise(None))
-        .withColumn("submitHearingRequirementsAvailable",when(cond_state_3_4, col("content.submitHearingRequirementsAvailable")).otherwise(None))
-        .withColumn("uploadHomeOfficeAppealResponseActionAvailable",when(cond_state_3_4, col("content.uploadHomeOfficeAppealResponseActionAvailable")).otherwise(None))
-        .select("content.*"
-                ,"appealReviewOutcome"
-                ,"appealResponseAvailable"
-                ,"reviewedHearingRequirements"
-                ,"amendResponseActionAvailable"
-                ,"currentHearingDetailsVisible"
-                ,"reviewResponseActionAvailable"
-                ,"reviewHomeOfficeResponseByLegalRep"
-                ,"submitHearingRequirementsAvailable"
-                ,"uploadHomeOfficeAppealResponseActionAvailable"
-                )
-    )
-
-    # generalDefault_audit = (
-    #     generalDefault_df.alias("content")
-    #     .join(generalDefault_audit.alias("audit"), on="CaseNo", how="left")
-    #     .join(silver_m3_max_statusid_state_3_4.alias("m3"), on="CaseNo", how="left")
-    #     .select("audit.*",
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealReviewOutcome_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealReviewOutcome_inputValues"),
-    #             col("content.appealReviewOutcome").alias("appealReviewOutcome_value"),
-    #             lit("Yes").alias("appealReviewOutcome_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealResponseAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealResponseAvailable_inputValues"),
-    #             col("content.appealResponseAvailable").alias("appealResponseAvailable_value"),
-    #             lit("Yes").alias("appealResponseAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewedHearingRequirements_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewedHearingRequirements_inputValues"),
-    #             col("content.reviewedHearingRequirements").alias("reviewedHearingRequirements_value"),
-    #             lit("Yes").alias("reviewedHearingRequirements_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("amendResponseActionAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("amendResponseActionAvailable_inputValues"),
-    #             col("content.amendResponseActionAvailable").alias("amendResponseActionAvailable_value"),
-    #             lit("Yes").alias("amendResponseActionAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("currentHearingDetailsVisible_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("currentHearingDetailsVisible_inputValues"),
-    #             col("content.currentHearingDetailsVisible").alias("currentHearingDetailsVisible_value"),
-    #             lit("Yes").alias("currentHearingDetailsVisible_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewResponseActionAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewResponseActionAvailable_inputValues"),
-    #             col("content.reviewResponseActionAvailable").alias("reviewResponseActionAvailable_value"),
-    #             lit("Yes").alias("reviewResponseActionAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reviewHomeOfficeResponseByLegalRep_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reviewHomeOfficeResponseByLegalRep_inputValues"),
-    #             col("content.reviewHomeOfficeResponseByLegalRep").alias("reviewHomeOfficeResponseByLegalRep_value"),
-    #             lit("Yes").alias("reviewHomeOfficeResponseByLegalRep_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("submitHearingRequirementsAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("submitHearingRequirementsAvailable_inputValues"),
-    #             col("content.submitHearingRequirementsAvailable").alias("submitHearingRequirementsAvailable_value"),
-    #             lit("Yes").alias("submitHearingRequirementsAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("uploadHomeOfficeAppealResponseActionAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("uploadHomeOfficeAppealResponseActionAvailable_inputValues"),
-    #             col("content.uploadHomeOfficeAppealResponseActionAvailable").alias("uploadHomeOfficeAppealResponseActionAvailable_value"),
-    #             lit("Yes").alias("uploadHomeOfficeAppealResponseActionAvailable_Transformed"),
-
-    #             )
-    # )
-
-    generalDefault_df = (
-        generalDefault_df.alias("content")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
-        .withColumn("hmcts",when(cond_state_4, col("content.hmcts")).otherwise(None))
-        .withColumn("stitchingStatus",when(cond_state_4, col("content.stitchingStatus")).otherwise(None))
-        .withColumn("bundleConfiguration",when(cond_state_4, col("content.bundleConfiguration")).otherwise(None))
-        .withColumn("appealDecisionAvailable",when(cond_state_4, col("content.appealDecisionAvailable")).otherwise(None))
-        .withColumn("isFtpaListVisible",when(cond_state_4, col("content.isFtpaListVisible")).otherwise(None))
-        .select("content.*"
-                ,"hmcts"
-                ,"stitchingStatus"
-                ,"bundleConfiguration"
-                ,"appealDecisionAvailable"
-                ,"isFtpaListVisible"
-                )
-    )
-
-    # generalDefault_audit = (
-    #     generalDefault_df.alias("content")
-    #     .join(generalDefault_audit.alias("audit"), on="CaseNo", how="left")
-    #     .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
-    #     .select("audit.*",
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("hmcts_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("hmcts_inputValues"),
-    #             col("content.hmcts").alias("hmcts_value"),
-    #             lit("Yes").alias("hmcts_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("stitchingStatus_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("stitchingStatus_inputValues"),
-    #             col("content.stitchingStatus").alias("stitchingStatus_value"),
-    #             lit("Yes").alias("stitchingStatus_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("bundleConfiguration_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("bundleConfiguration_inputValues"),
-    #             col("content.bundleConfiguration").alias("bundleConfiguration_value"),
-    #             lit("Yes").alias("bundleConfiguration_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("appealDecisionAvailable_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("appealDecisionAvailable_inputValues"),
-    #             col("content.appealDecisionAvailable").alias("appealDecisionAvailable_value"),
-    #             lit("Yes").alias("appealDecisionAvailable_Transformed"),
-
-    #             array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("isFtpaListVisible_inputFields"),
-    #             array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaListVisible_inputValues"),
-    #             col("content.isFtpaListVisible").alias("isFtpaListVisible_value"),
-    #             lit("Yes").alias("isFtpaListVisible_Transformed"),
-
-    #     )
-    # )
-
-    return generalDefault_df
-
-################################################################
-##########              general          ###########
-################################################################
-
-
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-
-    general_df, general_audit = FSA.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
-
-    df = (
-        silver_m3
-        .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))
-        .withColumn("Outcome", F.col("Outcome").cast("int"))
-        .withColumn("StatusId", F.col("StatusId").cast("long"))
-    )
-
-    cond_state_2_3_4 = (
-        (
-            (F.col("CaseStatus") == 26) &
-            (F.col("Outcome").isin(80, 25,13))
-        ) |
-        (
-            # t.CaseStatus = 46 AND t.Outcome = 31 AND sa.CaseStatus IN (10,51,52)
-            (F.col("CaseStatus").isin(37, 38)) &
-            (F.col("Outcome").isin(80,13,25))
-        ) |
-        (
-            (F.col("CaseStatus") == 38) &
-            (F.col("Outcome") == 72)
-        ) |
-
-        (
-            (F.col("CaseStatus") == 39) &
-            (F.col("Outcome") == 25)
-        )
-    )
-
-    cond_state_4 = (
-
-        (
-            (F.col("CaseStatus") == 39) &
-            (F.col("Outcome") == 25)
-        )
-    )
-
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
-    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
-
-    silver_m3_filtered_state_4 = silver_m3.filter(cond_state_4)
-    silver_m3_ranked_state_4 = silver_m3_filtered_state_4.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid_state_4 = silver_m3_ranked_state_4.filter(col("row_number") == 1).drop("row_number")
 
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left" )
                   .withColumn("caseArgumentAvailable", when(cond_state_2_3_4, col("content.caseArgumentAvailable")).otherwise(None))
                   .withColumn("reasonsForAppealDecision", when(cond_state_2_3_4, col("content.reasonsForAppealDecision")).otherwise(None))
-                  .select( "content.*"
-                          ,"caseArgumentAvailable"
-                          ,"reasonsForAppealDecision" 
-                          )
-                  )
-    
-    general_audit = (
-        general_df.alias("content")
-        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
-        .select("content.CaseNo",
-                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
-                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
-                col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
-                lit("Yes").alias("caseArgumentAvailable_Transformed"),
-
-                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reasonsForAppealDecision_inputFields"),
-                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reasonsForAppealDecision_inputValues"),
-                col("content.reasonsForAppealDecision").alias("reasonsForAppealDecision_value"),
-                lit("Yes").alias("reasonsForAppealDecision_Transformed"),
-                )
-    )
-    
-    general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left" )
                   .withColumn("bundleFileNamePrefix", when(cond_state_4, col("content.bundleFileNamePrefix")).otherwise(None)) 
                   .withColumn("ftpaAppellantSubmitted", when(cond_state_4, col("content.ftpaAppellantSubmitted")).otherwise(None)) 
                   .withColumn("isFtpaAppellantDocsVisibleInDecided", when(cond_state_4, col("content.isFtpaAppellantDocsVisibleInDecided")).otherwise(None)) 
@@ -1734,6 +1754,8 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                   .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted", when(cond_state_4, col("content.isFtpaRespondentOotExplanationVisibleInSubmitted"))
                               .otherwise(None))
                   .select( "content.*"
+                          ,"caseArgumentAvailable"
+                          ,"reasonsForAppealDecision"
                           ,"bundleFileNamePrefix"
                           ,"ftpaAppellantSubmitted"
                           ,"isFtpaAppellantDocsVisibleInDecided"
@@ -1757,14 +1779,23 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           ,"isFtpaRespondentEvidenceDocsVisibleInSubmitted"
                           ,"isFtpaRespondentOotExplanationVisibleInDecided"
                           ,"isFtpaRespondentOotExplanationVisibleInSubmitted"
-                          ) 
+                          )
                   )
     
     general_audit = (
         general_df.alias("content")
-        .join(general_audit.alias("audit"), on="CaseNo", how="left")
-        .join(silver_m3_max_statusid_state_4.alias("m3"), on="CaseNo", how="left")
-        .select("audit.*",
+        .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .select("content.CaseNo",
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
+                col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
+                lit("Yes").alias("caseArgumentAvailable_Transformed"),
+
+                array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("reasonsForAppealDecision_inputFields"),
+                array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("reasonsForAppealDecision_inputValues"),
+                col("content.reasonsForAppealDecision").alias("reasonsForAppealDecision_value"),
+                lit("Yes").alias("reasonsForAppealDecision_Transformed"),
+
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("bundleFileNamePrefix_inputFields"),
                 array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("bundleFileNamePrefix_inputValues"),
                 col("content.bundleFileNamePrefix").alias("bundleFileNamePrefix_value"),
@@ -1879,14 +1910,9 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputValues"),
                 col("content.isFtpaRespondentOotExplanationVisibleInSubmitted").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_value"),
                 lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_Transformed"),
-
-                # array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
-                # array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
-                # col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
-                # lit("Yes").alias("caseArgumentAvailable_Transformed"),
-
-        )
+                )
     )
+    
 
     return general_df, general_audit
 

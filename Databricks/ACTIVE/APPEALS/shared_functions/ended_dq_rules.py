@@ -585,23 +585,19 @@ def add_checks_hearingDetails(checks=None):
     )
     """
 
-    
+
     checks["valid_listCaseHearingCentre"] = """
     (
         CASE 
             WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
                 ARRAY_SORT(COALESCE(listCaseHearingCentre, ARRAY())) =
-                ARRAY_SORT(
-                    COALESCE(
-                        FROM_JSON(bronz_listCaseHearingCentre_ended, 'ARRAY<STRING>'),
-                        ARRAY()
-                    )
-                )
+                ARRAY_SORT(COALESCE(listCaseHearingCentre_ended, ARRAY()))
             ELSE
                 SIZE(COALESCE(listCaseHearingCentre, ARRAY())) = 0
         END
     )
     """
+
 
 
     checks["valid_listCaseHearingCentreAddress"] = """
@@ -610,7 +606,7 @@ def add_checks_hearingDetails(checks=None):
             WHEN (
                 (CaseStatus_ended = 39 AND Outcome_ended = 25)
             ) THEN
-                coalesce(listCaseHearingCentreAddress, '') = coalesce(bronz_listCaseHearingCentreAddress_ended, '')
+                coalesce(listCaseHearingCentreAddress, '') = coalesce(listCaseHearingCentreAddress_ended, '')
             ELSE
                 listCaseHearingCentreAddress IS NULL
         END

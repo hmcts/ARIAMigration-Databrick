@@ -16,7 +16,9 @@ from pyspark.sql.types import (
     IntegerType,
     DateType,
     ArrayType,
-    BooleanType
+    BooleanType,
+    Row, 
+    StringType
 )
 
 import re
@@ -5639,6 +5641,154 @@ def test_defaultValues(test_df):
 #######################
 #hearingCentre Init code
 #######################
+def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, test_from_state="paymentPending"):
+    from pyspark.sql import functions as F
+    from pyspark.sql.window import Window
+    from pyspark.sql.types import StringType, StructType, StructField
 
+    # mapping dictionaries
+    postcode_mappings = {
+        "bradford": ["BD", "DN", "HD", "HG", "HU", "HX", "LS", "S", "WF", "YO"],
+        "manchester": ["BB", "BL", "CH", "CW", "FY", "LL", "ST", "L", "LA", "M", "OL", "PR", "SK", "WA", "WN"],
+        "newport": ["BA", "BS", "CF", "DT", "EX", "HR", "LD", "NP", "PL", "SA", "SN", "SP", "TA", "TQ", "TR"],
+        "taylorHouse": ["AL", "BN", "BR", "CB", "CM", "CO", "CR", "CT", "DA", "E", "EC", "EN", "IG", "IP", "ME", "N", "NR", "NW", "RH", "RM", "SE", "SG", "SS", "TN", "W", "WC"],
+        "newcastle": ["CA", "DH", "DL", "NE", "SR", "TS"],
+        "birmingham": ["B", "CV", "DE", "DY", "GL", "HP", "LE", "LN", "LU", "MK", "NG", "NN", "OX", "PE", "RG", "SY", "TF", "WD", "WR", "WS", "WV"],
+        "hattonCross": ["BH", "GU", "HA", "KT", "PO", "SL", "SM", "SO", "SW", "TW", "UB"],
+        "glasgow": ["AB", "DD", "DG", "EH", "FK", "G", "HS", "IV", "KA", "KW", "KY", "ML", "PA", "PH", "TD", "ZE", "BT"]
+    }
+
+    redirection_locations = [
+        "Arnhem House", "Arnhem House (Exceptions)", "Loughborough", 
+        "North Shields (Kings Court)", "Not known at this time", 
+        "Castle Park Storage", "Field House", "Field House (TH)",
+        "UT (IAC) Cardiff CJC", "UT (IAC) Hearing in Field House", "UT (IAC) Hearing in Man CJC"
+    ]
+
+    fixed_mappings = {
+        "Alloa Sheriff Court": "glasgow", "Belfast": "glasgow", "Belfast - Laganside": "glasgow",
+        "Birmingham IAC (Priory Courts)": "birmingham", "Birmingham Magistrates Court (VLC)": "birmingham",
+        "Bradford": "bradford", "Glasgow (Eagle Building)": "glasgow", "Glasgow (Tribunals Centre)": "glasgow",
+        "Harmondsworth": "hattonCross", "Hatton Cross": "hattonCross", "Hatton Cross (Fast Track)": "hattonCross",
+        "Hendon Magistrates Court (HX)": "hattonCross", "Maidstone Crown Court": "hattonCross",
+        "Manchester (The Lowry)": "manchester", "Manchester (Piccadilly)": "manchester",
+        "Newcastle CFCTC": "newcastle", "Newport (Columbus House)": "newport", "Nottingham Justice Centre": "birmingham",
+        "Tameside Magistartes Court": "manchester", "Taylor House": "taylorHouse", "Taylor House (Field House)": "taylorHouse",
+        "Taylor House (HX)": "taylorHouse", "Yarl's Wood": "taylorHouse", "ZZ(DNU)Birmingham IAC Sheldon Court": "birmingham",
+        "UT (IAC) Birmingham CJC": "birmingham"
+    }
+
+    master_requirements = {
+        "glasgow": ("Glasgow", '{"region":"1","baseLocation":"366559"}', "Atlantic Quay - Glasgow"),
+        "birmingham": ("Birmingham", '{"region":"1","baseLocation":"231596"}', "Birmingham Civil And Family Justice Centre"),
+        "bradford": ("Bradford", '{"region":"1","baseLocation":"698118"}', "Bradford Tribunal Hearing Centre"),
+        "hattonCross": ("Hatton Cross", '{"region":"1","baseLocation":"386417"}', "Hatton Cross Tribunal Hearing Centre"),
+        "manchester": ("Manchester", '{"region":"1","baseLocation":"512401"}', "Manchester Tribunal Hearing Centre - Piccadilly Exchange"),
+        "newcastle": ("Newcastle", '{"region":"1","baseLocation":"366796"}', "Newcastle Civil And Family Courts And Tribunals Centre"),
+        "newport": ("Newport", '{"region":"1","baseLocation":"227101"}', "Newport Tribunal Centre - Columbus House"),
+        "taylorHouse": ("Taylor House", '{"region":"1","baseLocation":"765324"}', "Taylor House Tribunal Hearing Centre")
+    }
+
+    # postcode and udf mappings
+    def map_pc(postcode):
+        if postcode is None: return None
+        pc = postcode.replace(" ", "").upper()
+        f2, f1 = pc[:2], pc[:1]
+        for centre, codes in postcode_mappings.items():
+            if any(f2 == code for code in codes if len(code) == 2): return centre
+        for centre, codes in postcode_mappings.items():
+            if any(f1 == code for code in codes if len(code) == 1): return centre
+        return None
+
+    map_pc_udf = F.udf(map_pc, StringType())
+    mapping_expr = F.create_map([F.lit(x) for x in sum(fixed_mappings.items(), ())])
+    staff_map = F.create_map([F.lit(x) for x in sum([(k, v[0]) for k, v in master_requirements.items()], ())])
+    cml_json_map = F.create_map([F.lit(x) for x in sum([(k, v[1]) for k, v in master_requirements.items()], ())])
+    ref_map = F.create_map([F.lit(x) for x in sum([(k, v[2]) for k, v in master_requirements.items()], ())])
+    
+    cml_schema = StructType([
+        StructField("baseLocation", StringType(), True),
+        StructField("region", StringType(), True)
+    ])
+
+    # test dataframe construction
+    m1 = M1_silver.filter(F.col("dv_targetState") == test_from_state).distinct()
+    m2 = M2_silver.filter(F.col("Relationship").isNull())
+    
+    # win = Window.partitionBy("CaseNo").orderBy(F.col("HistoryId").desc())
+    # h_latest = H_silver.filter(F.col("HistType") == 6)\
+    #     .filter(~F.col("Comment").like("%Castle Park Storage%") & ~F.col("Comment").like("%Field House%") & ~F.col("Comment").like("%UT (IAC)%"))\
+    #     .withColumn("rn", F.row_number().over(win))\
+    #     .filter(F.col("rn") == 1)\
+    #     .select("CaseNo", "Comment", F.split(F.col("Comment"), ',')[0].alias("der_prevFileLocation"))
+
+    case_list = [row.CaseNo for row in m1.select("CaseNo").collect()]
+
+    h_relevant = H_silver.filter(F.col("CaseNo").isin(case_list)) \
+                         .filter(F.col("HistType") == 6) \
+                         .filter(~F.col("Comment").like("%Castle Park Storage%") & 
+                                 ~F.col("Comment").like("%Field House%") & 
+                                 ~F.col("Comment").like("%UT (IAC)%"))
+
+    win = Window.partitionBy("CaseNo").orderBy(F.col("HistoryId").desc())
+    h_latest = h_relevant.withColumn("rn", F.row_number().over(win)) \
+                         .filter(F.col("rn") == 1) \
+                         .select("CaseNo", "Comment", F.split(F.col("Comment"), ',')[0].alias("der_prevFileLocation"))
+
+    # aliasing JSON columns to avoid ambiguity
+    json_clean = json_data.select(
+        F.col("appealReferenceNumber"),
+        F.col("hearingCentre").alias("json_hearingCentre"),
+        F.col("staffLocation").alias("json_staffLocation"),
+        F.col("caseManagementLocation").alias("json_caseManagementLocation"),
+        F.col("selectedHearingCentreRefData").alias("json_selectedHearingCentreRefData")
+    )
+
+    # applying logic
+    df = m1.join(bhc, "CentreId", "left") \
+           .join(h_latest, "CaseNo", "left") \
+           .join(m2, "CaseNo", "left") \
+           .join(json_clean, m1["CaseNo"] == json_clean["appealReferenceNumber"], "left")
+
+    df = df.withColumn("pc_mapped", 
+        F.when((F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull()),
+               F.coalesce(map_pc_udf(F.coalesce("Rep_Postcode", "CaseRep_Postcode", "Appellant_Postcode")), F.lit("newport"))
+        ).otherwise(F.lit("newport"))
+    ).withColumn("Expected_HC", 
+        F.when(F.col("prevFileLocation").isin(redirection_locations),
+               F.when(F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull(), F.col("pc_mapped"))
+                .otherwise(mapping_expr[F.col("der_prevFileLocation")])
+        ).otherwise(mapping_expr[F.col("prevFileLocation")])
+    )
+
+    # auditing 
+    audit = df.withColumn("Expected_Staff", staff_map[F.col("Expected_HC")])\
+              .withColumn("Expected_RefData", ref_map[F.col("Expected_HC")])\
+              .withColumn("Expected_CML", F.from_json(cml_json_map[F.col("Expected_HC")], cml_schema))\
+              .withColumn("Validation_Status", F.when(
+                  (F.col("json_hearingCentre") == F.col("Expected_HC")) & 
+                  (F.col("json_staffLocation") == F.col("Expected_Staff")) &
+                  (F.col("json_selectedHearingCentreRefData") == F.col("Expected_RefData")) &
+                  (F.col("json_caseManagementLocation") == F.col("Expected_CML")), "PASS").otherwise("FAIL"))
+
+    # gathering results
+    results = []
+    all_cases = audit.collect()
+    
+    for r in all_cases:
+        if r['Validation_Status'] == "PASS":
+            msg = f"Case {r['CaseNo']} passed: all hearingCentre related fields match requirements."
+            results.append(TestResult("payloadAudit", "PASS", msg, test_from_state))
+        else:
+            errs = []
+            if r['json_hearingCentre'] != r['Expected_HC']: errs.append("hearingCentre")
+            if r['json_staffLocation'] != r['Expected_Staff']: errs.append("staffLocation")
+            if r['json_selectedHearingCentreRefData'] != r['Expected_RefData']: errs.append("refData")
+            if r['json_caseManagementLocation'] != r['Expected_CML']: errs.append("caseManagementLoc")
+            
+            msg = f"Case {r['CaseNo']} Failures in: {', '.join(errs)}. Expected: {r['Expected_HC']}, Got: {r['json_hearingCentre']}"
+            results.append(TestResult("payloadAudit", "FAIL", msg, test_from_state))
+            
+    return results
 
 

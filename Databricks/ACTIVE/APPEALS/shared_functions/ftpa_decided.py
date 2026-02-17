@@ -100,13 +100,6 @@ def ftpa(silver_m3, silver_c):
         .drop("rn")
     )
 
-    # Safe DecisionDate parsing (string OR timestamp)
-    decisiondate_ts = coalesce(
-        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # +00:00
-        F.to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX"),    # Z or +01
-        col("DecisionDate").cast("timestamp")                                 # already timestamp
-    )
-
     # Outcome mapping (I/J)
     outcome_type = (
         when(col("Outcome") == 30, lit("granted"))
@@ -139,11 +132,11 @@ def ftpa(silver_m3, silver_c):
         # Dates are ISO 8601 date only (yyyy-MM-dd)
         .withColumn(
             "ftpaAppellantDecisionDate",
-            when(col("Party") == 1, date_format(decisiondate_ts, "yyyy-MM-dd")).otherwise(lit(None))
+            when(col("Party") == 1, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
         )
         .withColumn(
             "ftpaRespondentDecisionDate",
-            when(col("Party") == 2, date_format(decisiondate_ts, "yyyy-MM-dd")).otherwise(lit(None))
+            when(col("Party") == 2, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
         )
 
         .withColumn(
@@ -225,8 +218,8 @@ def ftpa(silver_m3, silver_c):
     # FALLBACK (UNIT TEST SAFE):
     # If base FSB.ftpa() returns 0 rows, return decided-only content.
     # ------------------------------------------------------------
-    if ftpa_df.limit(1).count() == 0:
-        return silver_m3_content, ftpa_audit.limit(0)
+    # if ftpa_df.limit(1).count() == 0:
+        # return silver_m3_content, ftpa_audit.limit(0)
 
     # Join decided fields onto base ftpa_df
     ftpa_df = (

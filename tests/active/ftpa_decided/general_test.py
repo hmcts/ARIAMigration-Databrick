@@ -1,8 +1,13 @@
+# tests/active/ftpa_decided/general_test.py
+
 from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided import general
 
 from pyspark.sql import SparkSession
 import pytest
 from pyspark.sql import types as T
+
+# PAWAN: required spark functions (avoid NameError if used in future edits/tests)
+from pyspark.sql.functions import col, lit  # noqa: F401
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +23,7 @@ def spark():
 def general_outputs(spark):
 
     # ----------------------------
-    # M1  (✅ add CaseStatus to avoid internal filters dropping rows)
+    # M1
     # ----------------------------
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -34,7 +39,10 @@ def general_outputs(spark):
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
-        T.StructField("CaseStatus", T.IntegerType(), True),  # ✅ added
+
+        # PAWAN: keep CaseStatus column as your existing unit test expects it
+        # (even if general() doesn't use it directly, don't remove - avoids future filter/schema mismatch)
+        T.StructField("CaseStatus", T.IntegerType(), True),
     ])
 
     m1_data = [
@@ -62,9 +70,8 @@ def general_outputs(spark):
     ]
 
     # ----------------------------
-    # M3 (CaseStatus=39 used to pick latest Party)
-    # CASE005/CASE006 -> Party=1 (Appellant)
-    # CASE007/CASE011 -> Party=2 (Respondent)
+    # M3
+    # (general() picks latest Party by StatusId desc)
     # ----------------------------
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -82,10 +89,10 @@ def general_outputs(spark):
     ])
 
     m3_data = [
-        ("CASE005", 2, 39, 60, "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe", "Jane", 1, 0),
-        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz", "John", 1, 1),
-        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe", "abc", 2, 0),
-        ("CASE011", 1, 39, 45, "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1),
+        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe",   "Jane",  1, 0),
+        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz",   "John",  1, 1),
+        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe",   "abc",   2, 0),
+        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1),
     ]
 
     # ----------------------------
@@ -102,10 +109,10 @@ def general_outputs(spark):
     ])
 
     bhc_data = [
-        (5, "123", "Court1", "Bham", "123 xyz", "Man", "1st cond"),
-        (6, "456", "Court2", "Man", "123 abc", "Bham", "2nd cond"),
-        (7, "789", "Court3", "Scot", "456 asd", "Cov", "3rd cond"),
-        (0, None, "Court4", "Cov", "7676 jgfd", "Scot", "4th cond"),
+        (5, "123", "Court1", "Bham", "123 xyz", "Man",  "1st cond"),
+        (6, "456", "Court2", "Man",  "123 abc", "Bham", "2nd cond"),
+        (7, "789", "Court3", "Scot", "456 asd", "Cov",  "3rd cond"),
+        (0, None,  "Court4", "Cov",  "7676 jgfd", "Scot", "4th cond"),
     ]
 
     # ----------------------------
@@ -151,7 +158,7 @@ def general_outputs(spark):
 
     general_content, _ = general(df_m1, df_m2, df_m3, df_mh, df_bhc, df_bdhc)
 
-    # ✅ Guard for CI clarity
+    # Guard for CI clarity
     assert general_content.count() > 0, "ftpa_decided.general() returned 0 rows for unit test input"
 
     return {row["CaseNo"]: row.asDict() for row in general_content.collect()}

@@ -1,17 +1,23 @@
+import logging
 from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules
 )
-from shared_functions.dq_rules.dq_rules import DQRulesBase
 from pyspark.sql import Window
-from pyspark.sql.functions import coalesce, col, collect_list, lit, max, row_number, struct
+from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_rule_expression(rules: dict) -> str:
     """
     Joins multiple rule expressions into one combined SQL expression.
     """
+    if len(rules.values()) == 0:
+        logger.warning("No DQ rules found.")
+        return ""
 
     return "({0})".format(" AND ".join(f"({rule})" for rule in rules.values()))
 
@@ -39,7 +45,7 @@ def add_state_dq_rules(state: str) -> dict:
         "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules().get_checks(),
         "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules().get_checks(),
         "caseUnderReview": caseUnderReview_dq_rules.caseUnderReviewDQRules().get_checks(),
-        "reasonForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules().get_checks(),
+        "reasonsForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules().get_checks(),
         "listing": listing_dq_rules.listingDQRules().get_checks(),
         "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
         "decision": decision_dq_rules.decisionDQRules().get_checks(),
@@ -60,7 +66,7 @@ def previous_state_map(state: str):
         "awaitingRespondentEvidence(a)": "appealSubmitted",
         "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
         "caseUnderReview":               "awaitingRespondentEvidence(b)",
-        "reasonForAppealSubmitted":      "awaitingRespondentEvidence(b)",
+        "reasonsForAppealSubmitted":     "awaitingRespondentEvidence(b)",
         "listing":                       "awaitingRespondentEvidence(b)",
         "prepareForHearing":             "listing",
         "decision":                      "prepareHearing",

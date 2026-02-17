@@ -1,7 +1,5 @@
 # ============================================================
 # Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided_dq_rules
-#
-# PAWAN FIX:
 # - ftpa_decided shared function now outputs source columns as:
 #     ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
 # - Update DQ rules to use these new names to avoid ambiguity with
@@ -50,7 +48,12 @@ def add_checks_ftpa_decided(checks={}):
     # - Safe timestamp parsing for DecisionDate (string or timestamp)
     # ---------------------------------------------------------
 
-    # Applicant type (only when cs39 + outcome in scope)
+    decisiondate_iso = "date_format(ftpa_src_DecisionDate, 'yyyy-MM-dd')"
+
+    # ---------------------------------------------------------
+    # Applicant type
+    # use ftpa_src_Party (renamed source field)
+    # ---------------------------------------------------------
     checks["valid_ftpaApplicantType"] = (
         """
         (
@@ -72,7 +75,11 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # First decision (only when cs39 + outcome in scope)
+    # ---------------------------------------------------------
+    # First decision (Outcome -> type)
+    # 30 -> granted, 31 -> refused, 14 -> notAdmitted
+    # use ftpa_src_Outcome (renamed source field)
+    # ---------------------------------------------------------
     checks["valid_ftpaFirstDecision"] = (
         """
         (
@@ -117,8 +124,7 @@ def add_checks_ftpa_decided(checks={}):
     # ---------------------------------------------------------
     # Decision dates are ISO yyyy-MM-dd (not dd/MM/yyyy)
     # Only populated for matching Party
-    #
-    # PAWAN: use ftpa_src_Party and ftpa_src_DecisionDate
+    # use ftpa_src_Party and ftpa_src_DecisionDate
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (
         """
@@ -168,7 +174,10 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # RJ outcome types (only when cs39 + outcome in scope AND Party matches)
+    # ---------------------------------------------------------
+    # RJ outcome types only populated for matching Party
+    # use ftpa_src_Party and ftpa_src_Outcome
+    # ---------------------------------------------------------
     checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
         """
         (
@@ -211,7 +220,10 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # Set-aside flags (CaseStatus=39 only; NO outcome filter)
+    # ---------------------------------------------------------
+    # Set-aside flags (Party-driven)
+    # use ftpa_src_Party
+    # ---------------------------------------------------------
     checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
         """
         (

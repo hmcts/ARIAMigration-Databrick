@@ -5610,11 +5610,26 @@ def test_defaultValues(test_df):
     }
 
     failed_field_names = []
+    results_list = []
 
     for field, expected in expected_defaults.items():
         condition = (col(field) != expected)
         if test_df.filter(condition).count() > 0:
-            failed_field_names.append(field)
+            results_list.append(TestResult(
+                field, 
+                "FAIL", 
+                f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+        else:
+            results_list.append(TestResult(
+                field, 
+                "PASS", 
+                f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
 
     for field, contains_val in expected_arrays.items():
         if contains_val:
@@ -5623,19 +5638,24 @@ def test_defaultValues(test_df):
             condition = (size(col(field)) != 0)
             
         if test_df.filter(condition).count() > 0:
-            failed_field_names.append(field)
+            results_list.append(TestResult(
+                field, 
+                "FAIL", 
+                f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+        else:
+            results_list.append(TestResult(
+                field, 
+                "PASS", 
+                f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
 
-    if len(failed_field_names) > 0:
-        list_of_fail_field_names = ", ".join(failed_field_names)
-        
-        return TestResult(
-            "defaultMappings", 
-            "FAIL", 
-            f"Failed default mapping test: {len(list_of_fail_field_names)} records failed. Fields: [{list_of_fail_field_names}]", 
-            test_from_state
-        )
-    else:
-        return TestResult("defaultMappings", "PASS", "All defaults match.", test_from_state)
+    return results_list
+
 
 ############################################################################################
 #######################

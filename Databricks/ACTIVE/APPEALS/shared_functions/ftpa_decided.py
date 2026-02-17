@@ -88,16 +88,16 @@ def ftpa(silver_m3, silver_c):
     )
 
     # ------------------------------------------------------------
-    # (Decision/outcome fields):
+    # F COLUMN (Decision/outcome fields):
     # MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14)
     # ------------------------------------------------------------
-    m3_latest_cs39_outcome = (
-        silver_m3
-        .filter((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
-        .withColumn("rn", row_number().over(window_spec))
-        .filter(col("rn") == 1)
-        .drop("rn")
-    )
+    # m3_latest_cs39_outcome = (
+    #     silver_m3
+    #     .filter((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
+    #     .withColumn("rn", row_number().over(window_spec))
+    #     .filter(col("rn") == 1)
+    #     .drop("rn")
+    # )
 
     # Outcome mapping (I/J)
     outcome_type = (
@@ -107,144 +107,65 @@ def ftpa(silver_m3, silver_c):
         .otherwise(lit(None))
     )
 
-    outcome_display = (
-        when(col("Outcome") == 30, lit("Granted"))
-        .when(col("Outcome") == 31, lit("Refused"))
-        .when(col("Outcome") == 14, lit("Not admitted"))
-        .otherwise(lit(None))
-    )
+    # outcome_display = (
+    #     when(col("Outcome") == 30, lit("Granted"))
+    #     .when(col("Outcome") == 31, lit("Refused"))
+    #     .when(col("Outcome") == 14, lit("Not admitted"))
+    #     .otherwise(lit(None))
+    # )
 
     # ------------------------------------------------------------
     # Decision/outcome-driven decided fields (cs39 + outcome in 30/31/14)
     # ------------------------------------------------------------
-    decision_fields = (
-        m3_latest_cs39_outcome
-        .withColumn(
-            "ftpaApplicantType",
-            when(col("Party") == 1, lit("appellant"))
-            .when(col("Party") == 2, lit("respondent"))
-            .otherwise(lit(None))
-        )
-        .withColumn("ftpaFirstDecision", outcome_type)
-        .withColumn("ftpaFinalDecisionForDisplay", outcome_display)
-
-        # Dates are ISO 8601 date only (yyyy-MM-dd)
-        .withColumn(
-            "ftpaAppellantDecisionDate",
-            when(col("Party") == 1, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-        )
-        .withColumn(
-            "ftpaRespondentDecisionDate",
-            when(col("Party") == 2, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-        )
-
-        .withColumn(
-            "ftpaAppellantRjDecisionOutcomeType",
-            when(col("Party") == 1, outcome_type).otherwise(lit(None))
-        )
-        .withColumn(
-            "ftpaRespondentRjDecisionOutcomeType",
-            when(col("Party") == 2, outcome_type).otherwise(lit(None))
-        )
-        .select(
-            col("CaseNo"),
-            col("ftpaApplicantType"),
-            col("ftpaFirstDecision"),
-            col("ftpaAppellantDecisionDate"),
-            col("ftpaRespondentDecisionDate"),
-            col("ftpaFinalDecisionForDisplay"),
-            col("ftpaAppellantRjDecisionOutcomeType"),
-            col("ftpaRespondentRjDecisionOutcomeType"),
-        )
-    )
-
-    # ------------------------------------------------------------
-    # Party-driven set-aside flags (cs39 only; NO outcome filter)
-    # ------------------------------------------------------------
-    set_aside_fields = (
-        m3_latest_cs39
-        .withColumn(
-            "isFtpaAppellantNoticeOfDecisionSetAside",
-            when(col("Party") == 1, lit("No")).otherwise(lit(None))
-        )
-        .withColumn(
-            "isFtpaRespondentNoticeOfDecisionSetAside",
-            when(col("Party") == 2, lit("No")).otherwise(lit(None))
-        )
-        .select(
-            col("CaseNo"),
-            col("isFtpaAppellantNoticeOfDecisionSetAside"),
-            col("isFtpaRespondentNoticeOfDecisionSetAside"),
-        )
-    )
-
-    # ------------------------------------------------------------
-    # SOURCE FIELDS FOR VALIDATION / DQ TABLE
-    # Avoid ambiguity by using unique column names:
-    #   ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
-    # ------------------------------------------------------------
-    m3_source_fields = (
-        m3_latest_cs39.alias("cs39")
-        .join(
-            m3_latest_cs39_outcome
-            .select(
-                col("CaseNo").alias("CaseNo"),
-                col("Outcome").alias("Outcome_outcome"),
-                col("DecisionDate").alias("DecisionDate_outcome"),
-                col("Party").alias("Party_outcome"),
+    ftpaDec_df = (
+            m3_latest_cs39.join(ftpa_df, on=["CaseNo"], how="left")
+            .withColumn(
+                "ftpaApplicantType",
+                when(col("Party") == 1, lit("appellant"))
+                .when(col("Party") == 2, lit("respondent"))
+                .otherwise(lit(None))
             )
-            .alias("cs39o"),
-            on="CaseNo",
-            how="left",
+            .withColumn("ftpaFirstDecision", outcome_type)
+
+            .withColumn(
+                "ftpaAppellantDecisionDate",
+                when(col("Party") == 1, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
+            )
+            .withColumn(
+                "ftpaRespondentDecisionDate",
+                when(col("Party") == 2, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
+            )
+            
+            .withColumn("ftpaFinalDecisionForDisplay", outcome_type)
+            .withColumn("ftpaAppellantRjDecisionOutcomeType", outcome_type)
+            .withColumn("ftpaRespondentRjDecisionOutcomeType", outcome_type)
+            .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("Party") == 1, lit("No")).otherwise(lit(None)))
+            .withColumn("isFtpaRespondentNoticeOfDecisionSetAside", when(col("Party") == 2, lit("No")).otherwise(lit(None)))
+
+            .select(
+                col("CaseNo"),
+                col("ftpaApplicationDeadline"),
+                col("ftpaList"),
+                col("ftpaAppellantApplicationDate"),
+                col("ftpaAppellantSubmissionOutOfTime"),
+                col("ftpaAppellantOutOfTimeExplanation"),
+                col("ftpaRespondentApplicationDate"),
+                col("ftpaRespondentSubmissionOutOfTime"),
+                col("ftpaRespondentOutOfTimeExplanation"),
+                col("judgeAllocationExists"),
+                col("allocatedJudge"),
+                col("allocatedJudgeEdit"),
+                col("ftpaApplicantType"),
+                col("ftpaFirstDecision"),
+                col("ftpaAppellantDecisionDate"),
+                col("ftpaRespondentDecisionDate"),
+                col("ftpaFinalDecisionForDisplay"),
+                col("ftpaAppellantRjDecisionOutcomeType"),
+                col("ftpaRespondentRjDecisionOutcomeType"),
+                col("isFtpaAppellantNoticeOfDecisionSetAside"),
+                col("isFtpaRespondentNoticeOfDecisionSetAside")
+            )
         )
-        .select(
-            col("cs39.CaseNo").alias("CaseNo"),
-            col("cs39.CaseStatus").cast("int").alias("ftpa_src_CaseStatus"),
-            col("cs39o.Outcome_outcome").cast("int").alias("ftpa_src_Outcome"),
-            coalesce(col("cs39o.Party_outcome"), col("cs39.Party")).cast("int").alias("ftpa_src_Party"),
-            coalesce(col("cs39o.DecisionDate_outcome"), col("cs39.DecisionDate")).alias("ftpa_src_DecisionDate"),
-        )
-    )
-
-    # Final decided content (merge all)
-    silver_m3_content = (
-        decision_fields
-        .join(set_aside_fields, on="CaseNo", how="left")
-        .join(m3_source_fields, on="CaseNo", how="left")
-    )
-
-    # ------------------------------------------------------------
-    # FALLBACK (UNIT TEST SAFE):
-    # If base FSB.ftpa() returns 0 rows, return decided-only content.
-    # ------------------------------------------------------------
-    # if ftpa_df.limit(1).count() == 0:
-        # return silver_m3_content, ftpa_audit.limit(0)
-
-    # Join decided fields onto base ftpa_df
-    ftpa_df = (
-        ftpa_df.alias("ftpa")
-        .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
-        .select(
-            col("ftpa.*"),
-
-            # source columns for validation (renamed to avoid clashes in stg_main validation joins)
-            col("m3.ftpa_src_CaseStatus").alias("ftpa_src_CaseStatus"),
-            col("m3.ftpa_src_Outcome").alias("ftpa_src_Outcome"),
-            col("m3.ftpa_src_Party").alias("ftpa_src_Party"),
-            col("m3.ftpa_src_DecisionDate").alias("ftpa_src_DecisionDate"),
-
-            # decided derived fields
-            col("m3.ftpaApplicantType").alias("ftpaApplicantType"),
-            col("m3.ftpaFirstDecision").alias("ftpaFirstDecision"),
-            col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate"),
-            col("m3.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate"),
-            col("m3.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay"),
-            col("m3.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType"),
-            col("m3.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType"),
-            col("m3.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside"),
-            col("m3.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside"),
-        )
-    )
 
     # ---------------------------
     # Audit for decided-only fields
@@ -252,69 +173,69 @@ def ftpa(silver_m3, silver_c):
     # Use the correct "base" dataset for each field group:
     # - decision/outcome fields -> m3_latest_cs39_outcome
     # - set-aside flags         -> m3_latest_cs39
+
     ftpa_audit = (
-        ftpa_audit.alias("audit")
-        .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-        .join(m3_latest_cs39_outcome.alias("m3d"), on=["CaseNo"], how="left")
+        # ftpa_audit.alias("audit")
+        ftpaDec_df.alias("content")
         .join(m3_latest_cs39.alias("m3s"), on=["CaseNo"], how="left")
-        .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
         .select(
-            col("audit.*"),
+            # col("audit.*"),
+            col("CaseNo"),
 
             # ApplicantType (decision dataset)
             array(struct(lit("Party"))).alias("ftpaApplicantType_inputFields"),
-            array(struct(col("m3d.Party"))).alias("ftpaApplicantType_inputValues"),
-            col("m3.ftpaApplicantType").alias("ftpaApplicantType_value"),
+            array(struct(col("m3s.Party"))).alias("ftpaApplicantType_inputValues"),
+            col("content.ftpaApplicantType").alias("ftpaApplicantType_value"),
             lit("Derived").alias("ftpaApplicantType_Transformation"),
 
             # FirstDecision (decision dataset)
             array(struct(lit("Outcome"))).alias("ftpaFirstDecision_inputFields"),
-            array(struct(col("m3d.Outcome"))).alias("ftpaFirstDecision_inputValues"),
-            col("m3.ftpaFirstDecision").alias("ftpaFirstDecision_value"),
+            array(struct(col("m3s.Outcome"))).alias("ftpaFirstDecision_inputValues"),
+            col("content.ftpaFirstDecision").alias("ftpaFirstDecision_value"),
             lit("Derived").alias("ftpaFirstDecision_Transformation"),
 
             # Decision dates (decision dataset)
             array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaAppellantDecisionDate_inputFields"),
-            array(struct(col("m3d.DecisionDate"), col("m3d.Party"))).alias("ftpaAppellantDecisionDate_inputValues"),
-            col("m3.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate_value"),
+            array(struct(col("m3s.DecisionDate"), col("m3s.Party"))).alias("ftpaAppellantDecisionDate_inputValues"),
+            col("content.ftpaAppellantDecisionDate").alias("ftpaAppellantDecisionDate_value"),
             lit("Derived").alias("ftpaAppellantDecisionDate_Transformation"),
 
             array(struct(lit("DecisionDate"), lit("Party"))).alias("ftpaRespondentDecisionDate_inputFields"),
-            array(struct(col("m3d.DecisionDate"), col("m3d.Party"))).alias("ftpaRespondentDecisionDate_inputValues"),
-            col("m3.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate_value"),
+            array(struct(col("m3s.DecisionDate"), col("m3s.Party"))).alias("ftpaRespondentDecisionDate_inputValues"),
+            col("content.ftpaRespondentDecisionDate").alias("ftpaRespondentDecisionDate_value"),
             lit("Derived").alias("ftpaRespondentDecisionDate_Transformation"),
 
             # FinalDecisionForDisplay (decision dataset)
             array(struct(lit("Outcome"))).alias("ftpaFinalDecisionForDisplay_inputFields"),
-            array(struct(col("m3d.Outcome"))).alias("ftpaFinalDecisionForDisplay_inputValues"),
-            col("m3.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay_value"),
+            array(struct(col("m3s.Outcome"))).alias("ftpaFinalDecisionForDisplay_inputValues"),
+            col("content.ftpaFinalDecisionForDisplay").alias("ftpaFinalDecisionForDisplay_value"),
             lit("Derived").alias("ftpaFinalDecisionForDisplay_Transformation"),
 
             # RJ outcome types (decision dataset)
             array(struct(lit("Outcome"), lit("Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputFields"),
-            array(struct(col("m3d.Outcome"), col("m3d.Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputValues"),
-            col("m3.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType_value"),
+            array(struct(col("m3s.Outcome"), col("m3s.Party"))).alias("ftpaAppellantRjDecisionOutcomeType_inputValues"),
+            col("content.ftpaAppellantRjDecisionOutcomeType").alias("ftpaAppellantRjDecisionOutcomeType_value"),
             lit("Derived").alias("ftpaAppellantRjDecisionOutcomeType_Transformation"),
 
             array(struct(lit("Outcome"), lit("Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputFields"),
-            array(struct(col("m3d.Outcome"), col("m3d.Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputValues"),
-            col("m3.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType_value"),
+            array(struct(col("m3s.Outcome"), col("m3s.Party"))).alias("ftpaRespondentRjDecisionOutcomeType_inputValues"),
+            col("content.ftpaRespondentRjDecisionOutcomeType").alias("ftpaRespondentRjDecisionOutcomeType_value"),
             lit("Derived").alias("ftpaRespondentRjDecisionOutcomeType_Transformation"),
 
             # Set-aside flags (cs39 dataset)
             array(struct(lit("Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputFields"),
             array(struct(col("m3s.Party"))).alias("isFtpaAppellantNoticeOfDecisionSetAside_inputValues"),
-            col("m3.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside_value"),
+            col("content.isFtpaAppellantNoticeOfDecisionSetAside").alias("isFtpaAppellantNoticeOfDecisionSetAside_value"),
             lit("Derived").alias("isFtpaAppellantNoticeOfDecisionSetAside_Transformation"),
 
             array(struct(lit("Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputFields"),
             array(struct(col("m3s.Party"))).alias("isFtpaRespondentNoticeOfDecisionSetAside_inputValues"),
-            col("m3.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside_value"),
+            col("content.isFtpaRespondentNoticeOfDecisionSetAside").alias("isFtpaRespondentNoticeOfDecisionSetAside_value"),
             lit("Derived").alias("isFtpaRespondentNoticeOfDecisionSetAside_Transformation"),
         )
     )
 
-    return ftpa_df, ftpa_audit
+    return ftpaDec_df, ftpa_audit
 
 ################################################################
 ##########        documents (Document Field Group)    ###########

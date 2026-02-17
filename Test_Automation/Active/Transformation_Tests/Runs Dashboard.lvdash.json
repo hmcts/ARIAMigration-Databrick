@@ -1,0 +1,165 @@
+{
+  "datasets": [
+    {
+      "name": "76ed896b",
+      "displayName": "runs",
+      "queryLines": [
+        "SELECT\r\n",
+        "    r.run_id,\r\n",
+        "    r.run_user,\r\n",
+        "    r.run_start_datetime,\r\n",
+        "    r.run_end_datetime,\r\n",
+        "    r.run_status,\r\n",
+        "    res.test_name,\r\n",
+        "    res.status,\r\n",
+        "    res.message\r\n",
+        "FROM test_automation_runs r\r\n",
+        "INNER JOIN test_automation_results res\r\n",
+        "    ON r.run_id = res.run_id\r\n",
+        "ORDER BY r.run_start_datetime DESC;\r\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "65b19ad2",
+      "displayName": "Untitled page",
+      "layout": [
+        {
+          "widget": {
+            "name": "run-status-distribution",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "76ed896b",
+                  "fields": [
+                    {
+                      "name": "run_status",
+                      "expression": "`run_status`"
+                    },
+                    {
+                      "name": "count(run_id)",
+                      "expression": "COUNT(`run_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "title": "Run Status Distribution",
+                "showTitle": true
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "run_status",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "count(run_id)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 0,
+            "width": 9,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "eaf73af9",
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {},
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 4,
+            "width": 8,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "09424148",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "76ed896b",
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {}
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 5,
+            "width": 9,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "9fa7b6ff",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "b59154b4",
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {},
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

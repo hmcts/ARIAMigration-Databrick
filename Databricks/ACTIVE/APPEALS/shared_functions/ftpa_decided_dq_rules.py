@@ -4,7 +4,7 @@
 #     ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
 # - Update DQ rules to use these new names to avoid ambiguity with
 #   validation joins that also add CaseStatus/Outcome/Party/DecisionDate.
-# - Keeps existing check names (so nothing else breaks).
+# - Keeps existing check names (so nothing else breaks)
 # ============================================================
 
 def add_checks(checks={}):

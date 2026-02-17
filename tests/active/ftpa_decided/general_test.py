@@ -133,7 +133,7 @@ def general_outputs(spark):
     ]
 
     # ----------------------------
-    # bronze_derive_hearing_centres (bdhc)
+    # bronze_derive_hearing_centres 
     # ----------------------------
     bdhc_schema = T.StructType([
         T.StructField("selectedHearingCentreRefData", T.StringType(), True),

@@ -88,7 +88,7 @@ def ftpa(silver_m3, silver_c):
     )
 
     # ------------------------------------------------------------
-    # F COLUMN (Decision/outcome fields):
+    # (Decision/outcome fields):
     # MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14)
     # ------------------------------------------------------------
     m3_latest_cs39_outcome = (

@@ -1,10 +1,10 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided import ftpa
-import Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_b as FSB  # PAWAN
+import Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_b as FSB 
 
 from pyspark.sql import SparkSession
 import pytest
 from pyspark.sql import types as T
-from pyspark.sql import functions as F  # PAWAN
+from pyspark.sql import functions as F 
 
 
 @pytest.fixture(scope="session")

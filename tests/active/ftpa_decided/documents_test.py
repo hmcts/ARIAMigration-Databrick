@@ -23,7 +23,7 @@ def documents_outputs(spark):
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("dv_representation", T.StringType(), True),
         T.StructField("lu_appealType", T.StringType(), True),
-        T.StructField("CaseStatus", T.IntegerType(), True),  # ✅ added (safe)
+        T.StructField("CaseStatus", T.IntegerType(), True),  
     ])
 
     m1_data = [

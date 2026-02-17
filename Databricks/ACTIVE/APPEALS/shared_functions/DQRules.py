@@ -1,786 +1,234 @@
+from shared_functions.dq_rules import (
+    paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
+    caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
+    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules
+)
+from shared_functions.dq_rules.dq_rules import DQRulesBase
+from pyspark.sql import Window
+from pyspark.sql.functions import coalesce, col, collect_list, lit, max, row_number, struct
+
+
 def build_rule_expression(rules: dict) -> str:
     """
     Joins multiple rule expressions into one combined SQL expression.
     """
-    return "({0})".format(" AND ".join(rules.values()))
+
+    return "({0})".format(" AND ".join(f"({rule})" for rule in rules.values()))
 
 
-def base_DQRules():
+def base_DQRules(state: str = "paymentPending"):
     """
     Return a dictionary of the DQ rules to be used in the expectations
-    
     """
 
     checks = {}
-    
-    # ##############################
-    # # ARIADM-669 (appealType)
-    # ##############################
-    checks["valid_appealReferenceNumber_not_null"] = "(appealReferenceNumber IS NOT NULL)"
 
-    # ##############################
-    # # ARIADM-671 (appealType)
-    # ##############################
-    checks["valid_appealtype_in_allowed_values"] = (
-        "(AppealType IN ('refusalOfHumanRights', 'refusalOfEu', 'deprivation', 'protection', 'revocationOfProtection', 'euSettlementScheme'))"
-    )
+    state_flow = build_state_flow(state, [state])
 
-    checks["valid_hmctsCaseCategory_not_null"] = "(hmctsCaseCategory IS NOT NULL)"
+    # Add all checks in state, errors if state not in mapping.
+    for state_to_process in state_flow:
+        checks = checks | add_state_dq_rules(state_to_process)
 
-    checks["valid_appealTypeDescription_not_null"] = "(appealTypeDescription IS NOT NULL)"
-    # Null Values as accepted values as where Representation = AIP
-    checks["valid_caseManagementCategory_code_in_list_items"] = """
-    (
-      caseManagementCategory.value.code IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseManagementCategory.list_items, x -> x.code),
-        caseManagementCategory.value.code
-      )
-    )
-    """
-    
-    checks["valid_caseManagementCategory_label_in_list_items"] = """
-    (
-      caseManagementCategory.value.label IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseManagementCategory.list_items, x -> x.label),
-        caseManagementCategory.value.label
-      )
-    )
-    """
-
-    # ##############################
-    # # ARIADM-673 (caseData)
-
-    # \d is a regular expression (regex) metacharacter that matches any single digit from 0 to 9.
-    # "yyyy-mm-ddTHH:mm:ssZ" r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'" for ISO 8601 datetime format
-    # "yyyy-MM-dd" r'^\d{4}-\d{2}-\d{2}$' for ISO 8601 date format
-    ##############################
-    checks["valid_appealSubmissionDate_format"] = (
-        "(appealSubmissionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
-    )
-    checks["valid_appealSubmissionInternalDate_format"] = (
-        "(appealSubmissionInternalDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
-    )
-    checks["valid_tribunalReceivedDate_format"] = (
-        "(tribunalReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
-    )
-
-    # ##############################
-    # # ARIADM-675 (caseData)
-    # ##############################
-    checks["valid_appellantsRepresentation_yes_no"] = (
-        "(appellantsRepresentation IS NOT NULL AND appellantsRepresentation IN ('Yes', 'No'))"
-    )
-    checks["valid_submissionOutOfTime_yes_no"] = (
-        "(submissionOutOfTime IS NOT NULL AND submissionOutOfTime IN ('Yes', 'No'))"
-    )
-    checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
-        "(recordedOutOfTimeDecision IS NULL OR recordedOutOfTimeDecision IN ('Yes', 'No'))"
-    )
-    checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
-        "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
-    )
-
-
-
-    # checks["valid_applicationOutOfTimeExplanation_yes_no_or_null"] = (
-    #     "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation IN ('Yes', 'No'))"
-    # )
-
-    # ##############################
-    # # ARIADM-708 (CaseData)
-    # ##############################
-    checks["valid_hearingCentre_in_allowed_values"] = """
-    (
-        hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross', 
-        'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 
-        'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
-    )
-    """
-    checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
-    checks["valid_caseManagementLocation_region_and_baseLocation"] = """
-    (
-      caseManagementLocation.region = '1' AND
-      caseManagementLocation.baseLocation IN (
-        '231596', '698118', '366559', '386417', '512401',
-        '227101', '765324', '366796', '324339', '649000',
-        '999971', '420587', '28837'
-      )
-    )
-    """
-    checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
-    (
-      hearingCentreDynamicList.value.code IS NOT NULL AND
-      ARRAY_CONTAINS(
-        TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
-        hearingCentreDynamicList.value.code
-      )
-    )
-    """
-    checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
-    (
-      hearingCentreDynamicList.value.label IS NOT NULL AND
-      ARRAY_CONTAINS(
-        TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
-        hearingCentreDynamicList.value.label
-      )
-    )
-    """
-    checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
-    (
-      caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
-      ARRAY_CONTAINS(
-        TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
-        caseManagementLocationRefData.baseLocation.value.code
-      )
-    )
-    """
-    checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
-    (
-      caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
-      ARRAY_CONTAINS(
-        TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
-        caseManagementLocationRefData.baseLocation.value.label
-      )
-    )
-    """
-    checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
-
-
-    # ##############################
-    # # ARIADM-768 (legalRepDetails)
-    # # Null Values as accepted values as where Representation = AIP
-    # ##############################
-
-    checks["valid_legalRepGivenName_not_null"] = "((dv_representation = 'LR' AND legalRepGivenName IS NOT NULL) OR (dv_representation != 'LR' AND legalRepGivenName IS NULL))"
-
-    checks["valid_legalRepFamilyNamePaperJ_not_null"] = "((dv_representation = 'LR' AND legalRepFamilyNamePaperJ IS NOT NULL) OR (dv_representation != 'LR' AND legalRepFamilyNamePaperJ IS NULL))"
-
-    checks["valid_legalRepCompanyPaperJ_not_null"] = "((dv_representation = 'LR' AND legalRepCompanyPaperJ IS NOT NULL) OR (dv_representation != 'LR' AND legalRepCompanyPaperJ IS NULL))"
-
-
-    # ##############################
-    # # ARIADM-756 (appellantDetails)
-    # ##############################
-    checks["valid_appellantFamilyName_not_null"] = "(appellantFamilyName IS NOT NULL)"
-    checks["valid_appellantGivenNames_not_null"] = "(appellantGivenNames IS NOT NULL)"
-    checks["valid_appellantNameForDisplay_not_null"] = "(appellantNameForDisplay IS NOT NULL)"
-
-    checks["valid_appellantDateOfBirth_format"] = (
-        "(appellantDateOfBirth RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
-    )
-    checks["valid_caseNameHmctsInternal_not_null"] = "(caseNameHmctsInternal IS NOT NULL)"
-    checks["valid_hmctsCaseNameInternal_not_null"] = "(hmctsCaseNameInternal IS NOT NULL)"
-
-    # ##############################
-    # # ARIADM-771 (AppealType - legalRepDetails)
-    # ##############################
-
-    checks["valid_legalrepEmail_not_null"] = "((dv_representation = 'LR' AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (dv_representation != 'LR' AND legalRepEmail IS NULL))"
-
-    # ##############################
-    # # ARIADM-758 (appellantDetails)
-    # ##############################
-
-    checks["valid_isAppellantMinor_yes_no"] = (
-        "(isAppellantMinor IS NOT NULL AND isAppellantMinor IN ('Yes', 'No'))"
-    )
-    checks["valid_deportationOrderOptions_yes_no"] = (
-        "(deportationOrderOptions IS NULL OR deportationOrderOptions IN ('Yes', 'No'))"
-    )
-    checks["valid_appellantInUk_yes_no"] = (
-        "(appellantInUk IS  NULL OR appellantInUk IN ('Yes', 'No'))"
-    )
-    checks["valid_appealOutOfCountry_yes_no"] = (
-        "(appealOutOfCountry IS  NULL OR appealOutOfCountry IN ('Yes', 'No'))"
-    )
-
-    # ##############################
-    # # ARIADM-769 (legalRepDetails - Address logic)
-    # ##############################
-
-    checks["valid_legalRepHasAddress_yes_no"] = (
-      "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
-    )
-    checks["valid_legalRepAddressUK"]   = ( 
-      "((dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND RepresentativeId >= 0 AND legalRepAddressUK IS NOT NULL)"
-      "OR (dv_representation = 'LR' AND legalRepHasAddress = 'No' AND RepresentativeId >= 0 AND legalRepAddressUK IS NULL)"
-      "OR (dv_representation != 'LR' and legalRepAddressUK IS NULL))"
-    )   
-    checks["valid_oocAddressLine1"] = ( 
-      "((dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine1 IS NULL))"
-    )
-    checks["valid_oocAddressLine2"] = ( 
-      "((dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine2 IS NULL))"
-    )
-    checks["valid_oocAddressLine3"] = ( 
-      "((dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine3 IS NOT NULL OR oocAddressLine3 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine3 IS NULL ))"
-    )
-    checks["valid_oocAddressLine4"] = ( 
-      "((dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'No') OR (dv_representation = 'LR' AND (oocAddressLine4 IS NOT NULL OR oocAddressLine4 IS NULL) AND legalRepHasAddress = 'Yes') OR (dv_representation != 'LR' AND oocAddressLine4 IS NULL))"
-    )
-    checks["valid_oocrCountryGovUkAdminJ"] = ( 
-      "((dv_representation = 'LR' AND legalRepHasAddress = 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL) OR (dv_representation = 'LR' AND legalRepHasAddress = 'Yes' AND oocLrCountryGovUkAdminJ IS NULL) OR (dv_representation != 'LR' AND CaseRep_Address5 IS NULL))"
-      )
-
-    # ##############################
-    # # ARIADM-766 (appellantStateless)
-    # ##############################
-    checks["valid_appellantStateless_values"] = ("(appellantStateless IN ('isStateless', 'hasNationality'))")
-
-    checks["valid_appellantNationalitiesDescription_not_null"] = ("(appellantNationalitiesDescription IS NOT NULL)")
-
-    checks["valid_appellantNationalities_not_null"] = ("(appellantNationalities IS NOT NULL)")
-
-    ##############################
-    # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
-    ##############################
-
-    # Only include if CategoryIdList contains 37; check for 'Yes' 
-    checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
-    )
-
-    # Only include if array_contains(valid_categoryIdList, 37)
-    checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) )"
-    )
-    checks["valid_appellantAddress_AddressLine2_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL))"
-    )
-    checks["valid_appellantAddress_AddressLine3_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL) )"
-    )
-    checks["valid_appellantAddress_PostTown_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL) )"
-    )
-    checks["valid_appellantAddress_County_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL) )"
-    )
-    checks["valid_appellantAddress_PostCode_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL) )"
-    )
-    checks["valid_appellantAddress_Country_length"] = (
-        "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
-    )
-
-
-    # #############################
-    # # ARIADM-709 (flagsLabels)
-    # #############################
-
-    # checks["valid_journeyType_aip_orNull"] = "((dv_representation = 'AIP' AND journeyType = 'aip') OR (dv_representation != 'AIP' AND journeyType IS NULL))"
-
-    # #############################
-    # # ARIADM-710 (flagsLabels)
-    # #############################
-
-    checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((dv_CCDAppealType = 'DA' AND isAriaMigratedFeeExemption = 'Yes') OR (dv_CCDAppealType != 'DA' AND isAriaMigratedFeeExemption = 'No'))"
-
-    # ##############################
-    # # ARIADM-712 (flagsLabel)- caseFlags
-    # ############################## #if (catId = 7,25 and flagcomment IS NULL) or (details IS NULL) or (catID != 7,25 and value provided for name)
-    checks["valid_caseFlags_name_in_list"] = """((
-      EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)) 
-      OR (caseFlags.details IS NULL)
-      OR (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)) AND
-      (ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name),
-        caseFlags.details[0].value.name))))"""
-
-    # checks["valid_caseFlags_name_in_list"] = """
-    # (
-    #   (array_contains(valid_categoryIdList, (7, 25)) OR caseFlags.details IS NULL OR
-    #   ARRAY_CONTAINS(
-    #     TRANSFORM(caseFlags.details, x -> x.value.name),
-    #     caseFlags.details[0].value.name
-    #   )
-    # )
-    # """
-    checks["valid_caseFlags_pathId_in_list"] = """
-    (
-      caseFlags.details IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseFlags.details, x -> x.value.path[0].id),
-        caseFlags.details[0].value.path[0].id
-      )
-    )
-    """
-    checks["valid_caseFlags_flagCode_in_list"] = """
-    (
-      caseFlags.details IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseFlags.details, x -> x.value.flagCode),
-        caseFlags.details[0].value.flagCode
-      )
-    )
-    """
-    # IF CategoryId not in [7,8,24,25,31,32,41] or valid_categoryIdList is NULL or lu_HOANRef is NULL then caseFlags is NULL
-    # IF CategoryId in [7,8,24,25,31,32,41] and lu_HOANRef is not NULL then caseFlags is not NULL
-    # IF CategoryId in [7,25] and lu_HOANRef is not NULL, then all flagComment are NULL
-    # IF CategoryId in [8,24,31,32,41] and lu_HOANRef is not NULL, then all flagComment are NOT NULL
-
-    checks["valid_caseFlags_flagComment_in_list"] = """
-    (
-        valid_categoryIdList IS NULL
-        OR lu_HORef IS NULL
-        OR (
-            NOT (
-                array_contains(valid_categoryIdList, 7) OR
-                array_contains(valid_categoryIdList, 8) OR
-                array_contains(valid_categoryIdList, 24) OR
-                array_contains(valid_categoryIdList, 25) OR
-                array_contains(valid_categoryIdList, 31) OR
-                array_contains(valid_categoryIdList, 32) OR
-                array_contains(valid_categoryIdList, 41)
-            )
-            AND caseFlags IS NULL
-        )
-        OR (
-            (
-                array_contains(valid_categoryIdList, 7) OR
-                array_contains(valid_categoryIdList, 8) OR
-                array_contains(valid_categoryIdList, 24) OR
-                array_contains(valid_categoryIdList, 25) OR
-                array_contains(valid_categoryIdList, 31) OR
-                array_contains(valid_categoryIdList, 32) OR
-                array_contains(valid_categoryIdList, 41)
-            )
-            AND lu_HORef IS NOT NULL
-            AND caseFlags IS NOT NULL
-            AND (
-                (
-                    (array_contains(valid_categoryIdList, 7) OR array_contains(valid_categoryIdList, 25))
-                    AND exists(
-                        TRANSFORM(caseFlags.details, x -> x.value.flagComment),
-                        x -> x IS NULL
-                    )
-                )
-                OR (
-                    (array_contains(valid_categoryIdList, 8) OR array_contains(valid_categoryIdList, 24) OR array_contains(valid_categoryIdList, 31) OR array_contains(valid_categoryIdList, 32) OR array_contains(valid_categoryIdList, 41))
-                    AND NOT exists(
-                        TRANSFORM(caseFlags.details, x -> x.value.flagComment),
-                        x -> x IS NULL
-                    )
-                )
-            )
-        )
-    )
-    """
-    checks["valid_caseFlags_hearingRelevant_in_list"] = """
-    (
-      caseFlags.details IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(caseFlags.details, x -> x.value.hearingRelevant),
-        caseFlags.details[0].value.hearingRelevant
-      )
-    )
-    """
-
-    # ##############################
-    # # ARIADM-712 (flagsLabel)- appellantLevelFlags
-    # ##############################
-
-    checks["valid_appellantLevelFlags_name_in_details"] = """
-    (
-      appellantLevelFlags.details[0].value.name IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(appellantLevelFlags.details, x -> x.value.name),
-        appellantLevelFlags.details[0].value.name
-      )
-    )
-    """
-
-    checks["valid_appellantLevelFlags_path_id_in_details"] = """
-    (
-      appellantLevelFlags.details[0].value.path[0].id IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(appellantLevelFlags.details, x -> x.value.path[0].id),
-        appellantLevelFlags.details[0].value.path[0].id
-      )
-    )
-    """
-
-    checks["valid_appellantLevelFlags_flagCode_in_details"] = """
-    (
-      appellantLevelFlags.details[0].value.flagCode IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode),
-        appellantLevelFlags.details[0].value.flagCode
-      )
-    )
-    """
-
-    checks["valid_appellantLevelFlags_flagComment_in_details"] = """
-    (
-      appellantLevelFlags.details[0].value.flagComment IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(appellantLevelFlags.details, x -> x.value.flagComment),
-        appellantLevelFlags.details[0].value.flagComment
-      )
-    )
-    """
-
-    checks["valid_appellantLevelFlags_hearingRelevant_in_details"] = """
-    (
-      appellantLevelFlags.details[0].value.hearingRelevant IS NULL OR
-      ARRAY_CONTAINS(
-        TRANSFORM(appellantLevelFlags.details, x -> x.value.hearingRelevant),
-        appellantLevelFlags.details[0].value.hearingRelevant
-      )
-    )
-    """
-
-    # ##############################
-    # # ARIADM-780 (PartyID)
-    # ##############################
-
-    checks["valid_appellantPartyId_not_null"] = (
-      "(appellantPartyId IS NOT NULL)"
-      )
-    checks["valid_legalRepIndividualPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-      "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation = 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation = 'Yes'))"
-      )
-    checks["validlegalRepOrganisationPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
-      "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation = 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation = 'Yes'))"
-      )
-    checks["valid_sponsorPartyId_not_null"] = (
-      "((sponsorPartyId IS NOT NULL AND hasSponsor = 'Yes') OR (sponsorPartyId IS NULL and hasSponsor = 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
-      )
-
-    # ##############################
-    # # ARIADM-783 (payment)
-    # ##############################
-    checks["valid_feeAmountGbp"] = ( # fee amount is not null and is an int
-        """(
-          (
-            (
-              (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
-              AND
-              (feeAmountGbp = '8000')
-            )
-            OR
-            (
-              (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
-              AND
-              (feeAmountGbp = '14000')
-            )
-          )
-          OR
-          (
-            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR VisitVisaType NOT IN (1, 2))
-            AND
-            (feeAmountGbp IS NULL)
-          )
-        )"""
-    )
-
-    checks["valid_feeDescription"] = (
-    "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND feeDescription = 'Notice of Appeal - appellant consents without hearing A')"
-    "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND feeDescription = 'Appeal determined with a hearing'))"
-    "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)"
-    )
-
-    checks["valid_feeWithHearing"] = ( # feeWithHearing is not null and is an int
-        """(
-          (
-            (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2)
-            AND
-            (feeWithHearing = '140')
-          )
-          OR
-          (
-            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 2))
-            AND
-            (feeWithHearing IS NULL)
-          )
-        )"""
-    )
-
-    checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
-        """(
-          (
-            (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
-            AND
-            (feeWithoutHearing = '80')
-          )
-          OR
-          (
-            (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') OR NOT(VisitVisaType <=> 1))
-            AND
-            (feeWithoutHearing IS NULL)
-          )
-        )"""
-    )
-
-    checks["valid_paymentDescription"] = (
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND paymentDescription = 'Appeal determined without a hearing')"
-        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND paymentDescription = 'Appeal determined with a hearing'))"
-        "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)"
-    )
-
-    checks["valid_paymentStatus"] = (
-      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus = 'Payment pending')) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))"
-    )
-
-    checks["valid_feeVersion"] = (
-      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feeVersion IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feeVersion IS NULL))"
-    )
-
-    checks["valid_feePaymentAppealType"] = (
-      "(dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NOT NULL)) OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NULL))"
-    )
-
-    checks["valid_decisionHearingFeeOption"] = (
-        "((dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 1 AND decisionHearingFeeOption = 'decisionWithoutHearing')"
-        "OR (dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType = 2 AND decisionHearingFeeOption = 'decisionWithHearing'))"
-        "OR (dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)"
-    )
-
-    # ##############################
-    # # ARIADM-785 (remissionTypes)
-    # ############################## 
-
-    checks["valid_remissionType_in_list"] = (
-        "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission')) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)"
-    )
-
-    checks["valid_remissionClaim_in_list"] = (
-        "("
-        "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver')) "
-        "OR "
-        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim = 'OMIT') AND remissionClaim IS NULL)"
-        ")"
-    )
-
-    checks["valid_feeRemissionType_not_null"] = (
-        "("
-        "(dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL) "
-        "OR "
-        "((dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType = 'OMIT') AND feeRemissionType IS NULL)"
-        ")"
-    )
-
-    # ##############################
-    # # ARIADM-786 (remissionTypes)
-    # ##############################
-
-    checks["valid_exceptionalCircumstances_not_null"] = (
-        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription = 'Oral Hearing Direction' AND remissionType = 'exceptionalCircumstancesremission' AND exceptionalCircumstances = 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription = 'Other' AND remissionType = 'exceptionalCircumstancesremission' AND exceptionalCircumstances = 'This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.') OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND exceptionalCircumstances IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType != 'exceptionalCircumstancesremission' AND exceptionalCircumstances IS NULL))"
-    ) 
-
-    checks["valid_helpWithFeesReferenceNumber_not_null"] = (
-        "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType != 'helpWithFees' AND helpWithFeesReferenceNumber IS NULL) OR (dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND helpWithFeesReferenceNumber IS NULL))"
-    ) 
-
-    checks["valid_legalAidAccountNumber_not_null"] = (
-          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'legalAid' AND feeRemissionType = 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND legalAidAccountNumber IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'asylumSupport' AND feeRemissionType = 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim != 'legalAid' AND feeRemissionType != 'Legal Aid' AND legalAidAccountNumber IS NULL))"
-    ) 
-
-    checks["valid_asylumSupportReference_not_null"] = (
-          "((dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'asylumSupport' AND feeRemissionType = 'Asylum Support' AND asylumSupportReference IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'noRemission' AND remissionClaim IS NULL AND feeRemissionType IS NULL AND asylumSupportReference IS NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim = 'legalAid' AND feeRemissionType = 'Legal Aid' AND legalAidAccountNumber IS NOT NULL) OR (dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType = 'hoWaiverRemission' AND remissionClaim != 'AsylumSupport' AND feeRemissionType != 'Asylum Support' AND asylumSupportReference IS NULL))"
-    ) 
-
-    ##############################
-    # ARIADM-773 (SponsorDetails)
-    ##############################
-    checks["valid_hasSponsor_yes_no"] = (
-        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor = 'Yes')"
-        "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor = 'No'))"
-        "OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)"
-        "OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)"
-    )
-    checks["valid_sponsorGivenNames_not_null"] = (
-        "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-    )
-
-    checks["valid_sponsorFamilyName_not_null"] = (
-        "(((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL)))"
-    )
-
-    checks["valid_sponsorAuthorisation_yes_no"] = (
-            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = True AND sponsorAuthorisation = 'Yes')" 
-            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation = False AND sponsorAuthorisation = 'No')"
-            "OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)"
-            "OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)"
-            "OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL))"
-    )
-
-    ############################################################
-    # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-    ############################################################
-    checks["valid_sponsorAddress_not_null"] = (
-        "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
-    )
-    
-    ##############################
-    # ARIADM-778 (SponsorDetails)
-    ##############################
-    checks["valid_sponsorEmailAdminJ"] = (
-        "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) "
-        "OR ( sponsorEmailAdminJ IS NULL))"
-    )
-
-    checks["valid_sponsorMobileNumberAdminJ"] = (
-        "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$'))"
-        "OR (sponsorMobileNumberAdminJ IS NULL))"
-    )
-    # ##############################
-    # ARIADM-760 (appellantDetails)
-    # ARIADM-762 (appellantDetails)
-    # ##############################
-    checks["valid_oocAppealAdminJ_values"] = (
-        "( ( (array_contains(valid_categoryIdList, 38) OR MainRespondentId = 4) "
-        "AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none') ) "
-        "OR (oocAppealAdminJ IS NULL) )"
-    )
-
-    # Only IF CategoryId IN [38] = Include; ELSE null
-    checks["valid_appellantHasFixedAddressAdminJ"] = (
-        "((array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IN ('Yes', 'No')) "
-        "OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)"
-        "OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL))"
-    )
-
-    # addressLine1AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-    checks["valid_addressLine1AdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND "
-        "(Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-        "AND addressLine1AdminJ IS NOT NULL) "
-        "OR (addressLine1AdminJ IS NULL) )"
-    )
-
-    # addressLine2AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND at least one of the coalesce fields is not null; ELSE can be NULL
-    checks["valid_addressLine2AdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND "
-        "(Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-        "AND addressLine2AdminJ IS NOT NULL) "
-        "OR (addressLine2AdminJ IS NULL) )"
-    )
-
-    # addressLine3AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-    checks["valid_addressLine3AdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND "
-        "(Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL) "
-        "AND addressLine3AdminJ IS NOT NULL) "
-        "OR ( addressLine3AdminJ IS NULL) )"
-    )
-
-    # addressLine4AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-    checks["valid_addressLine4AdminJ"] = (
-        "( (array_contains(valid_categoryIdList, 38) AND "
-        "(Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL) "
-        "AND addressLine4AdminJ IS NOT NULL) "
-        "OR ( addressLine4AdminJ IS NULL) )"
-    )
-
-    # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
-    checks["valid_countryGovUkOocAdminJ"] = ("(((array_contains(valid_categoryIdList, 38)) AND (countryGovUkOocAdminJ IS NOT NULL) AND (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW'))) OR (countryGovUkOocAdminJ IS NULL))")
-    ##############################
-    # AARIADM-764 (appellantDetails)
-    ##############################
-    # ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ 
-    checks["valid_internalAppellantEmail_format"] = (
-        "( internalAppellantEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR internalAppellantEmail IS NULL)"
-    )
-
-    checks["valid_email_format"] = (
-        "(email RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR email IS NULL)"
-    )
-
-    checks["valid_internalAppellantMobileNumber"] = (
-        "(internalAppellantMobileNumber RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$' OR internalAppellantMobileNumber IS NULL)"
-    )
-
-    # ^(?=(?:\D*\d){7,15}\D*$)\+?(\d[\d-. ]+)?(\([\d-. ]+\))?[\d-. ]*\d$
-    checks["valid_mobileNumber"] = (
-        "(mobileNumber RLIKE r'^(?=(?:\\D*\\d){7,15}\\D*$)\\+?(\\d[\\d-. ]+)?(\\([\\d-. ]+\\))?[\\d-. ]*\\d$' OR mobileNumber IS NULL)"
-    )
-    ##############################
-    # ARIADM-778 (General)
-    ##############################
-    checks["isServiceRequestTabVisibleConsideringRemissions_yes_no"] = (
-        "(isServiceRequestTabVisibleConsideringRemissions IS NOT NULL AND isServiceRequestTabVisibleConsideringRemissions IN ('Yes', 'No'))"
-    )
-
-    checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-      "(applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing') OR (applicationChangeDesignatedHearingCentre IS NULL))"
-    )
-    #########################################
-    # ARIADM-788 and ARIADM-792 (homeOffice)
-    #########################################
-    checks["valid_homeOfficeDecisionDate_format"] = (
-        "((array_contains(valid_categoryIdList, 37) AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
-    )
-
-    checks["valid_decisionLetterReceivedDate_format"] = (
-      "( (decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$' "
-      "AND array_contains(valid_categoryIdList, 38)  "
-      "AND ((lu_HORef IS NULL OR lu_HORef not LIKE '%GWF%') "
-      "AND (HORef IS NULL OR HORef not LIKE '%GWF%') "
-      "AND (FCONumber IS NULL OR FCONumber not LIKE '%GWF%')) ) "
-      "OR (decisionLetterReceivedDate IS NULL) )"
-    )
-
-    checks["valid_dateEntryClearanceDecision_format"] = (
-        "( (array_contains(valid_categoryIdList, 38) "
-        "AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-        "AND dateEntryClearanceDecision IS NOT NULL "
-        "AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') "
-        "OR (dateEntryClearanceDecision IS NULL) )"
-    )
-
-    checks["valid_homeOfficeReferenceNumber_not_null"] = (
-        "("
-        "(NOT array_contains(valid_categoryIdList, 38) "
-        "AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%') "
-        "AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL "
-        "AND homeOfficeReferenceNumber IS NOT NULL)"
-        "OR "
-        "( array_contains(valid_categoryIdList, 38) "
-        "OR (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-        # "OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL "
-        "OR homeOfficeReferenceNumber IS NULL)"
-        ")"
-    )
-
-    checks["valid_gwfReferenceNumber_not_null"] = (
-        "("
-        "( array_contains(valid_categoryIdList, 38) "
-        "AND  (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%') "
-        "AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL "
-        "AND gwfReferenceNumber IS NOT NULL)"
-        "OR "
-        "(NOT array_contains(valid_categoryIdList, 38) "
-        "OR (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%') "
-        "OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL "
-        "OR gwfReferenceNumber IS NULL)"
-        ")"
-    )
-
-    #########################################
-    # ARIADM-799 (Documents)
-    #########################################
-
-    checks["valid_uploadTheAppealFormDocs"] = (
-      "(uploadTheAppealFormDocs IS NOT NULL)"
-    )
-
-    checks["valid_caseNotes"] = (
-      "(caseNotes IS NOT NULL)"
-    )
-
-    checks["valid_tribunalDocuments"] = (
-      "(tribunalDocuments IS NOT NULL)"
-    )
-
-    checks["valid_legalRepresentativeDocuments"] = (
-      "(legalRepresentativeDocuments IS NOT NULL)"
-    )
-    
     return checks
+
+
+def add_state_dq_rules(state: str) -> dict:
+    dq_rules = {
+        "paymentPending": paymentpending_dq_rules.paymentPendingDQRules().get_checks(),
+        "appealSubmitted": appealSubmitted_dq_rules.appealSubmittedDQRules().get_checks(),
+        "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules().get_checks(),
+        "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules().get_checks(),
+        "caseUnderReview": caseUnderReview_dq_rules.caseUnderReviewDQRules().get_checks(),
+        "reasonForAppealSubmitted": reasonsForAppealSubmitted_dq_rules.reasonsForAppealSubmittedDQRules().get_checks(),
+        "listing": listing_dq_rules.listingDQRules().get_checks(),
+        "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
+        "decision": decision_dq_rules.decisionDQRules().get_checks(),
+        "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
+        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
+        "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
+        "ftpaDecided": {},
+        "ended": {},
+        "remitted": {}
+    }
+
+    return dq_rules.get(state, {})
+
+
+def previous_state_map(state: str):
+    previous_state = {
+        "appealSubmitted":               "paymentPending",
+        "awaitingRespondentEvidence(a)": "appealSubmitted",
+        "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
+        "caseUnderReview":               "awaitingRespondentEvidence(b)",
+        "reasonForAppealSubmitted":      "awaitingRespondentEvidence(b)",
+        "listing":                       "awaitingRespondentEvidence(b)",
+        "prepareForHearing":             "listing",
+        "decision":                      "prepareHearing",
+        "decided(a)":                    "decision",
+        "ftpaSubmitted(b)":              "decided(a)",
+        "ftpaSubmitted(a)":              "ftpaSubmitted(b)",
+        "ftpaDecided":                   "ftpaSubmitted(a)",
+        "ended":                         "ftpaDecided",
+        "remitted":                      "ended"
+    }
+
+    return previous_state.get(state, None)
+
+
+# Implement DQ checks based on previous state
+def build_state_flow(state: str, flow: list):
+    # Define the previous state for the given state
+    previous_state = previous_state_map(state)
+    if previous_state is None:
+        return flow
+    return build_state_flow(previous_state, [previous_state] + flow)
+
+
+def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,
+                                bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
+                                bronze_interpreter_languages, bronze_listing_location):
+
+    # Base inputs
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    valid_representation = silver_m1.select(
+        col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
+        col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
+        col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
+    )
+    valid_appealant_address = silver_m2.select(
+        col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
+        col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber")
+    ).filter(col("Relationship").isNull())
+    valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
+    valid_country_list = bronze_countries_postal_lookup_df.select(
+        col("countryGovUkOocAdminJ").alias("valid_countryGovUkOocAdminJ")
+    ).distinct()
+    valid_HORef_cleansing = bronze_HORef_cleansing.select(
+        col("CaseNo"), coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
+    )
+    valid_reasonDescription = (
+        silver_m1.alias("m1")
+            .join(bronze_remission_lookup_df, on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .select(
+                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", "ReasonDescription",
+                col("remissionClaim").alias("lu_remissionClaim"), col("feeRemissionType").alias("lu_feeRemissionType")
+            )
+    )
+
+    # appealSubmitted - payment and remission
+    lu_ref_txn = (
+        silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
+            .select("ReferringTransactionId")
+            .rdd.flatMap(lambda x: x).collect()
+    )
+    valid_payment_type = (
+        silver_m1.alias("m1").join(silver_m4.alias("m4"), on=["CaseNo"])
+            .groupBy("CaseNo").agg(
+                collect_list(struct(
+                    "m4.Amount", "m4.TransactionId", "m4.ReferringTransactionId", "m4.TransactionTypeId",
+                    "m4.Status", "m4.SumBalance", "m4.SumTotalPay", "m4.SumTotalFee"
+                )).alias("valid_transactionList")
+            ).withColumn("lu_ref_txn", lit(lu_ref_txn))
+    )
+
+    # case under review and reason for appeal submitted - hearing response
+    # cur_rfas_hearing_response_window_spec =  & ((col("CaseStatus").isin(37, 38)) | ((col("CaseStatus").eqNullSafe(26)) & (col("Outcome").eqNullSafe(0))))
+    valid_caseStatus_cur_rfas = (
+        silver_m3
+            .filter((col("CaseStatus").isin(37, 38)) | ((col("CaseStatus").eqNullSafe(26)) & (col("Outcome").eqNullSafe(0))))
+            .select(col("CaseNo"), col("CaseStatus").alias("hr_CaseStatus"), col("StatusId").alias("hr_StatusId"),
+                    row_number().over(window_spec).alias("rn")).filter((col("rn") == 1))
+            .drop("rn")
+    )
+
+    # listing - languages
+    valid_interpreter_caseStatus = silver_m3.filter(
+        (((col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))) | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))))
+    ).select(
+        col("CaseNo"), col("CaseStatus"), col("StatusId"), col("Outcome"), col("AdditionalLanguageId"), row_number().over(window_spec).alias("rn")
+    ).filter(col("rn").eqNullSafe(1)).drop("rn")
+    valid_interpreter_statusId = valid_interpreter_caseStatus.select(col("CaseNo"), col("CaseStatus").alias("lang_CaseStatus"), col("StatusId").alias("lang_StatusId"), col("Outcome").alias("lang_Outcome"))
+    valid_hearing_requirements = silver_m1.select(col("CaseNo"), col("Interpreter"), col("CourtPreference"), col("InCamera"))
+    valid_languages = (
+        silver_m1.alias("m1")
+            .join(valid_interpreter_caseStatus.alias("m3"), on="CaseNo", how="left")
+            .join(bronze_interpreter_languages.alias("lu_language"), on=(col("m1.LanguageId") == col("lu_language.LanguageId")), how="left")
+            .join(bronze_interpreter_languages.alias("lu_additional_language"), on=(col("m3.AdditionalLanguageId") == col("lu_additional_language.LanguageId")), how="left")
+            .select(
+                col("CaseNo"),
+                col("m1.LanguageId").alias("LanguageId"),
+                col("m3.AdditionalLanguageId").alias("AdditionalLanguageId"),
+                col("lu_language.appellantInterpreterLanguageCategory").alias("valid_languageCategory"),
+                col("lu_additional_language.appellantInterpreterLanguageCategory").alias("valid_additionalLanguageCategory"),
+                col("lu_language.languageCode").alias("valid_languageCode"),
+                col("lu_additional_language.languageCode").alias("valid_additionalLanguageCode"),
+                col("lu_language.languageLabel").alias("valid_languageLabel"),
+                col("lu_additional_language.languageLabel").alias("valid_additionalLanguageLabel"),
+                col("lu_language.manualEntry").alias("valid_manualEntry"),
+                col("lu_additional_language.manualEntry").alias("valid_additionalManualEntry"),
+                col("lu_language.manualEntryDescription").alias("valid_manualEntryDescription"),
+                col("lu_additional_language.manualEntryDescription").alias("valid_additionalManualEntryDescription")
+            )
+    )
+
+    # prepare for hearing - hearing response
+    df_m3_validation = (
+        silver_m3
+            .filter(col("CaseStatus").isin(37, 38))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1).drop("row_number")
+            .select(
+                "CaseNo", "HearingCentre", "TimeEstimate", "HearingDate", "HearingType", "CourtName", "ListType", "ListTypeId", "StartTime",
+                "Judge1FT_Surname", "Judge2FT_Surname", "Judge3FT_Surname", "Judge1FT_Forenames", "Judge2FT_Forenames", "Judge3FT_Forenames",
+                "Judge1FT_Title", "Judge2FT_Title", "Judge3FT_Title", "CourtClerk_Surname", "CourtClerk_Forenames", "CourtClerk_Title"
+            )
+    )
+    valid_preparforhearing = (
+        silver_m1.select("CaseNo")
+            .join(df_m3_validation, on="CaseNo", how="left")
+            .join(bronze_listing_location.select("ListedCentre", "locationCode", "locationLabel"), on=col("HearingCentre") == col("ListedCentre"), how="left")
+            .join(silver_m6.drop("dv_representation"), on="CaseNo", how="left")
+            .drop("HearingCentre")
+    )
+
+    # decided(a) - hearing actuals
+    valid_decided_outcome = (
+        silver_m3.filter(col("CaseStatus").isin(37, 38, 26) & col("Outcome").isin(1, 2))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select(col("CaseNo"), col("Outcome").alias("Outcome_SD"), col("HearingDuration"), col("Adj_Determination_Title"),
+                    col("Adj_Determination_Forenames"), col("Adj_Determination_Surname"), col("DecisionDate"))
+    )
+
+    # ftpaSubmitted - ftpa
+    valid_ftpa = (
+        silver_m3.filter(col("CaseStatus").isin(39))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select(col("CaseNo"), col("Party"), col("OutOfTime"), col("DateReceived"),
+                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
+            .distinct()
+    )
+
+    return (
+        df_final
+            .join(valid_representation, on="CaseNo", how="left")
+            .join(valid_country_list, on=col("CaseRep_Address5") == col("valid_countryGovUkOocAdminJ"), how="left")
+            .join(valid_catagoryid_list, on="CaseNo", how="left")
+            .join(valid_appealant_address, on="CaseNo", how="left")
+            .join(valid_HORef_cleansing, on="CaseNo", how="left")
+            .join(valid_reasonDescription, on="CaseNo", how="left")
+            .join(valid_payment_type, on="CaseNo", how="left")
+            .join(valid_caseStatus_cur_rfas, on="CaseNo", how="left")
+            .join(valid_interpreter_statusId, on="CaseNo", how="left")
+            .join(valid_hearing_requirements, on="CaseNo", how="left")
+            .join(valid_languages, on="CaseNo", how="left")
+            .join(valid_preparforhearing, on="CaseNo", how="left")
+            .join(valid_decided_outcome, on="CaseNo", how="left")
+            .join(valid_ftpa, on="CaseNo", how="left")
+    )
 
 
 if __name__ == "__main__":
     pass
-

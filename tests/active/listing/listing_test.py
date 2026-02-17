@@ -181,56 +181,56 @@ class TestListingState():
 
     def test_hearing_requirements_m3_conditional_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 0
-            ("2", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 27
-            ("3", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 37
-            ("4", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 39
-            ("5", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 40
-            ("6", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 50
-            ("7", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 0
-            ("8", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 27
-            ("9", "AIP", "FT", None, 0, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 37
-            ("10", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 39
-            ("11", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 40
-            ("12", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 50
-            ("13", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 40
-            ("14", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 52
-            ("15", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
-            ("16", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
-            ("17", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
-            ("18", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
-            ("19", "AIP", "FT", None, 0, 0, 0, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
-            ("20", "AIP", "FT", None, 0, 0, 0, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
+            ("1", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 0
+            ("2", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 27
+            ("3", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 37
+            ("4", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 39
+            ("5", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 40
+            ("6", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 50
+            ("7", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 0
+            ("8", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 27
+            ("9", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 37
+            ("10", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 39
+            ("11", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 40
+            ("12", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 50
+            ("13", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 40
+            ("14", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 52
+            ("15", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
+            ("16", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
+            ("17", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
+            ("18", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
+            ("19", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
+            ("20", "AIP", "FT", None, 1, 0, 0, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
 
         ]
 
         m3_data = [
-            ("1", 1, 37, 0, 0),    # CaseStatus = 37 AND Outcome = 0
-            ("2", 1, 37, 27, 0),   # CaseStatus = 37 AND Outcome = 27
-            ("3", 1, 37, 37, 0),   # CaseStatus = 37 AND Outcome = 37
-            ("4", 1, 37, 39, 0),   # CaseStatus = 37 AND Outcome = 39
-            ("5", 1, 37, 40, 0),   # CaseStatus = 37 AND Outcome = 40
-            ("6", 1, 37, 50, 0),   # CaseStatus = 37 AND Outcome = 50
-            ("7", 1, 38, 0, 0),    # CaseStatus = 38 AND Outcome = 0
-            ("8", 1, 38, 27, 0),   # CaseStatus = 38 AND Outcome = 27
-            ("9", 1, 38, 37, 0),   # CaseStatus = 38 AND Outcome = 37
-            ("10", 1, 38, 39, 0),  # CaseStatus = 38 AND Outcome = 39
-            ("11", 1, 38, 40, 0),  # CaseStatus = 38 AND Outcome = 40
-            ("12", 1, 38, 50, 0),  # CaseStatus = 38 AND Outcome = 50
-            ("13", 1, 26, 37, 0),  # CaseStatus = 26 AND Outcome = 40
-            ("14", 1, 26, 52, 0),  # CaseStatus = 26 AND Outcome = 52
-            ("15", 1, 39, 0, 0),   # Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
-            ("16", 1, 37, 52, 0),  # Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
-            ("17", 1, 26, 0, 0),   # Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
-            ("18", 1, 0, 1, 0),    # Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
-            ("19", 1, 0, 0, 0),    # StatusId 1 Does Not Match
-            ("19", 2, 37, 0, 0),   # StatusId 2 CaseStatus = 37 AND Outcome = 0
-            ("19", 3, 0, 50, 0),   # StatusId 3 Does Not Match
-            ("19", 4, 37, 50, 0),  # StatusId 4 Updated CaseStatus = 37 AND Outcome = 50
-            ("19", 5, 50, 50, 0),  # StatusId 5 Does Not Match
-            ("20", 1, 38, 0, 0),   # CaseStatus and Outcome update test: StatusId 1 CaseStatus = 38 AND Outcome = 0
-            ("20", 2, 37, 50, 0),  # CaseStatus and Outcome update test: StatusId 2 CaseStatus = 37 AND Outcome = 50
-            ("20", 3, 26, 40, 0),  # CaseStatus and Outcome update test: StatusId 3 CaseStatus = 26 AND Outcome = 40
+            ("1", 1, 37, 0, 1),    # CaseStatus = 37 AND Outcome = 0
+            ("2", 1, 37, 27, 1),   # CaseStatus = 37 AND Outcome = 27
+            ("3", 1, 37, 37, 1),   # CaseStatus = 37 AND Outcome = 37
+            ("4", 1, 37, 39, 1),   # CaseStatus = 37 AND Outcome = 39
+            ("5", 1, 37, 40, 1),   # CaseStatus = 37 AND Outcome = 40
+            ("6", 1, 37, 50, 1),   # CaseStatus = 37 AND Outcome = 50
+            ("7", 1, 38, 0, 1),    # CaseStatus = 38 AND Outcome = 0
+            ("8", 1, 38, 27, 1),   # CaseStatus = 38 AND Outcome = 27
+            ("9", 1, 38, 37, 1),   # CaseStatus = 38 AND Outcome = 37
+            ("10", 1, 38, 39, 1),  # CaseStatus = 38 AND Outcome = 39
+            ("11", 1, 38, 40, 1),  # CaseStatus = 38 AND Outcome = 40
+            ("12", 1, 38, 50, 1),  # CaseStatus = 38 AND Outcome = 50
+            ("13", 1, 26, 37, 1),  # CaseStatus = 26 AND Outcome = 40
+            ("14", 1, 26, 52, 1),  # CaseStatus = 26 AND Outcome = 52
+            ("15", 1, 39, 0, 1),   # Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
+            ("16", 1, 37, 52, 1),  # Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
+            ("17", 1, 26, 0, 1),   # Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
+            ("18", 1, 0, 1, 1),    # Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
+            ("19", 1, 0, 0, 1),    # StatusId 1 Does Not Match
+            ("19", 2, 37, 0, 2),   # StatusId 2 CaseStatus = 37 AND Outcome = 0
+            ("19", 3, 0, 50, 3),   # StatusId 3 Does Not Match
+            ("19", 4, 37, 50, 4),  # StatusId 4 Updated CaseStatus = 37 AND Outcome = 50
+            ("19", 5, 50, 50, 5),  # StatusId 5 Does Not Match
+            ("20", 1, 38, 0, 1),   # CaseStatus and Outcome update test: StatusId 1 CaseStatus = 38 AND Outcome = 0
+            ("20", 2, 37, 50, 2),  # CaseStatus and Outcome update test: StatusId 2 CaseStatus = 37 AND Outcome = 50
+            ("20", 3, 26, 40, 3),  # CaseStatus and Outcome update test: StatusId 3 CaseStatus = 26 AND Outcome = 40
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)

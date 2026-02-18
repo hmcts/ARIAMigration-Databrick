@@ -23,7 +23,7 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
                     OR
                     (
                         (
-                            (NOT(hr_CaseStatus <=> 26)
+                            (NOT(hr_CaseStatus <=> 26))
                             OR
                             (NOT(dv_representation <=> 'AIP'))
                         )

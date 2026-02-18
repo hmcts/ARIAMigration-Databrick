@@ -11,7 +11,7 @@ import pytest
 def spark():
     """Create a Spark session for testing."""
     return SparkSession.builder \
-        .appName("reasonForAppealSubmitted_general") \
+        .appName("reasonsForAppealSubmitted_general") \
         .getOrCreate()
 
 

@@ -4,92 +4,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql import functions as F
 from pyspark.sql import Window
-from . import paymentPending as PP
-from . import appealSubmitted as APS
-from . import AwaitingEvidenceRespondant_a as AERa
-from . import AwaitingEvidenceRespondant_a as AERb
-
-
-def appealType(silver_m1):
-    df_appealType, df_audit_appealType = PP.appealType(silver_m1)
-
-    df_appealType = df_appealType.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_appealType, df_audit_appealType
-
-
-def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-    df_caseData, df_audit_caseData = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
-
-    df_caseData = df_caseData.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_caseData, df_audit_caseData
-
-
-def flagsLabels(silver_m1, silver_m2, silver_c):
-    df_flagsLabels, df_audit_flagsLabels = PP.flagsLabels(silver_m1, silver_m2, silver_c)
-
-    df_flagsLabels = df_flagsLabels.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_flagsLabels, df_audit_flagsLabels
-
-
-def legalRepDetails(silver_m1, bronze_countryFromAddress):
-    df_legalRepDetails, df_audit_legalRepDetails = PP.legalRepDetails(silver_m1, bronze_countryFromAddress)
-
-    df_legalRepDetails = df_legalRepDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_legalRepDetails, df_audit_legalRepDetails
-
-
-def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
-    df_appellantDetails, df_audit_apellantDetails = AERa.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
-
-    df_appellantDetails = df_appellantDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_appellantDetails, df_audit_apellantDetails
-
-
-def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
-    df_homeOfficeDetails, df_audit_homeOfficeDetails = PP.homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing)
-
-    df_homeOfficeDetails = df_homeOfficeDetails.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_homeOfficeDetails, df_audit_homeOfficeDetails
-
-
-def paymentType(silver_m1, silver_m4):
-    df_paymentType, df_audit_paymentType = APS.paymentType(silver_m1, silver_m4)
-
-    df_paymentType = df_paymentType.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_paymentType, df_audit_paymentType
-
-
-def partyID(silver_m1, silver_m3, silver_c):
-    df_partyID, df_audit_partyID = PP.partyID(silver_m1, silver_m3, silver_c)
-
-    df_partyID = df_partyID.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_partyID, df_audit_partyID
-
-
-def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
-    df_remissionTypes, df_audit_remissionTypes = APS.remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4)
-
-    df_remissionTypes = df_remissionTypes.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_remissionTypes, df_audit_remissionTypes
-
-
-def sponsorDetails(silver_m1, silver_c):
-    df_sponsorDetails, df_audit_sponsorDetails = PP.sponsorDetails(silver_m1, silver_c)
-
-    df_sponsorDetails = df_sponsorDetails.join(
-        silver_m1.select("CaseNo", "dv_representation"), ["CaseNo"], "left"
-    ).select(*df_sponsorDetails.columns).where(col("dv_representation") == 'AIP').distinct()
-
-    return df_sponsorDetails, df_audit_sponsorDetails
+from . import AwaitingEvidenceRespondant_b as AERb
 
 
 def hearingResponse(silver_m1, silver_m3, silver_m6):
@@ -293,14 +208,6 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
     return content_df, df_audit
 
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres):
-    df_general, df_audit_general = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bnronze_hearing_centres, bronze_derive_hearing_centres)
-
-    df_general = df_general.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_general, df_audit_general
-
-
 def generalDefault(silver_m1):
     df_generalDefault = AERb.generalDefault(silver_m1)
 
@@ -322,15 +229,6 @@ def generalDefault(silver_m1):
                 ).distinct()
 
     return df_generalDefault
-
-
-def documents(silver_m1):
-    AERb_documents = AERb.documents
-    df_documents, df_audit_documents = AERb_documents(silver_m1)
-
-    df_documents = df_documents.select('*').where(col("dv_representation") == 'AIP').distinct()
-
-    return df_documents, df_audit_documents
 
 
 if __name__ == "__main__":

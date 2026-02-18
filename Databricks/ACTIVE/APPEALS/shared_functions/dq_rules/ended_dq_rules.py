@@ -58,7 +58,7 @@ class endedDQRules(DQRulesBase):
         return checks
 
 
-    def get_checks_document(checks=None):
+    def get_checks_document(self, checks={}):
 
         checks["valid_respondentDocuments"] = """
         (
@@ -249,7 +249,7 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-    def get_checks_hearingDetails(checks=None):
+    def get_checks_hearingDetails(self, checks={}):
 
         checks["valid_listingLength"] = """
         (
@@ -732,18 +732,18 @@ class endedDQRules(DQRulesBase):
 
     def get_checks_hearingActuals(self, checks={}):
 
-        checks["valid_attendingJudge"] = """
-        (
-            CASE 
-                WHEN (
-                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN
-                    coalesce(attendingJudge, '') = coalesce(attendingJudge_ended, '')
-                ELSE
-                    attendingJudge IS NULL
-            END
-        )
-        """
+        # checks["valid_attendingJudge"] = """
+        # (
+        #     CASE 
+        #         WHEN (
+        #             (CaseStatus_ended = 39 AND Outcome_ended = 25)
+        #         ) THEN
+        #             coalesce(attendingJudge, '') = coalesce(attendingJudge_ended, '')
+        #         ELSE
+        #             attendingJudge IS NULL
+        #     END
+        # )
+        # """
 
         checks["valid_actualCaseHearingLength"] = """
         (
@@ -1590,7 +1590,7 @@ class endedDQRules(DQRulesBase):
         
 
 
-    def get_checks_general(checks=None):
+    def get_checks_general(self, checks={}):
 
         checks["valid_directions"] = """
         (

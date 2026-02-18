@@ -5,9 +5,10 @@ from shared_functions.dq_rules import (
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct
+from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp
 from pyspark.sql.types import ArrayType, LongType
 
+import shared_functions.ended as E
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +92,10 @@ def build_state_flow(state: str, flow: list):
     return build_state_flow(previous_state, [previous_state] + flow)
 
 
-def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,
+def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,silver_h,
                                 bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
-                                bronze_interpreter_languages, bronze_listing_location,bronze_ended_states):
+                                bronze_interpreter_languages, bronze_listing_location,bronze_ended_states,
+                                bronze_hearing_centres, bronze_derive_hearing_centres):
 
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
@@ -221,6 +223,97 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                     col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
             .distinct()
     )
+#################################################################################################
+
+###############################Ended State New Columns###########################################
+
+    df_ended_dq = (silver_m3.withColumn("CaseStatus", col("CaseStatus").cast("int")).withColumn("Outcome", col("Outcome").cast("int"))
+        .withColumn("StatusId", col("StatusId").cast("long")))
+
+    # 2) Build "exists in the same case" flag for sa.CaseStatus IN (10,51,52)
+    has_10_51_52 = (df_ended_dq.groupBy("CaseNo").agg(max(when(col("CaseStatus").isin(10, 51, 52), lit(1)).otherwise(lit(0))).alias("has_10_51_52_in_case")))
+    df_with_flag = df_ended_dq.join(has_10_51_52, on="CaseNo", how="left")
+
+    # 3) Apply the full filter equivalent to your SQL WHERE
+    cond = (((col("CaseStatus") == 10) & col("Outcome").isin(80, 122, 25, 120, 2, 105, 13)) |
+        ((col("CaseStatus") == 46) & (col("Outcome") == 31) & (col("has_10_51_52_in_case") == 1)) |
+        ( (col("CaseStatus") == 26) & col("Outcome").isin(80, 13, 25)) |
+        (col("CaseStatus").isin(37, 38) & col("Outcome").isin(80, 13, 25, 72, 125)) |
+        ((col("CaseStatus") == 39) & (col("Outcome") == 25)) |
+        ((col("CaseStatus") == 51) & col("Outcome").isin(0, 94, 93)) |
+        ((col("CaseStatus") == 52) & col("Outcome").isin(91, 95)) |
+        ((col("CaseStatus") == 36) & col("Outcome").isin(1, 2, 25))
+    )
+
+    filtered = df_with_flag.filter(cond)
+
+    m3_net_df = (filtered.withColumn("rn", row_number().over(window_spec)).filter(col("rn") == 1).drop("rn", "has_10_51_52_in_case"))
+
+    # 5) Build decision_ts robustly and format end date
+    valid_ended_new_columns = m3_net_df.alias("m3").join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")\
+            .withColumn("decision_ts",date_format(coalesce(to_timestamp(col("DecisionDate")), 
+            to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
+            to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")), "dd/MM/yyyy")
+    ).select(col("CaseNo"),col("decision_ts"),col("m3.CaseStatus").alias("CaseStatus_end"),col("m3.Outcome").alias("Outcome_end"),col("StatusId").alias("StatusId_end"),col("es.endAppealOutcome").alias("endAppealOutcome_end"),col("es.endAppealOutcomeReason").alias("endAppealOutcomeReason_end"),col("es.stateBeforeEndAppeal").alias("stateBeforeEndAppeal_end"),col("Adj_Determination_Title").alias("Adj_Determination_Title_end"),col("Adj_Determination_Forenames").alias("Adj_Determination_Forenames_end"),col("Adj_Determination_Surname").alias("Adj_Determination_Surname_end"))
+
+  ######################Ended State Update Columns#######################################
+    df = (
+            silver_m3
+            .withColumn("CaseStatus", col("CaseStatus").cast("int"))
+            .withColumn("Outcome", col("Outcome").cast("int"))
+            .withColumn("StatusId", col("StatusId").cast("long"))
+        )
+    cond_state_2_3_4 = (
+        (
+            (col("CaseStatus") == 26) &
+            (col("Outcome").isin(80, 25,13))
+        ) |
+        (
+            (col("CaseStatus").isin(37, 38)) &
+            (col("Outcome").isin(80,13,25))
+        ) |
+        (
+            (col("CaseStatus") == 38) &
+            (col("Outcome") == 72)
+        ) |
+        (
+            (col("CaseStatus") == 39) &
+            (col("Outcome") == 25)
+        )
+    )
+
+    # Add row_number to get the row with the highest StatusId per CaseNo
+    silver_m3_filtered_state_2_3_4 = silver_m3.filter(cond_state_2_3_4)
+    silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number").select(col("CaseNo"),col("StatusId"),col("CaseStatus"),col("Outcome"))
+
+    df_documents, df_documents_audit = E.documents(silver_m1,silver_m3)
+    df_ftpa, df_ftpa_audit = E.ftpa(silver_m3,silver_c)
+    df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    df_generalDefault = E.generalDefault(silver_m1,silver_m3)
+    df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
+    df_hearingResponse, df_hearingResponse_audit = E.hearingResponse(silver_m1, silver_m3, silver_m6)
+    df_hearingDetails, df_hearingDetails_audit = E.hearingDetails(silver_m1,silver_m3,bronze_listing_location)
+    df_hearingActuals, df_hearingActuals_audit = E.hearingActuals(silver_m3)
+    df_substantiveDecision, df_substantiveDecision_audit = E.substantiveDecision(silver_m1,silver_m3)
+
+    df_ended_update_dq = (
+        df_documents
+            .join(df_ftpa, on="CaseNo", how="left")
+            .join(df_general, on="CaseNo", how="left")
+            .join(df_generalDefault, on="CaseNo", how="left")
+            .join(df_hearingRequirements, on="CaseNo", how="left")
+            .join(df_hearingResponse, on="CaseNo", how="left")
+            .join(df_hearingDetails, on="CaseNo", how="left")
+            .join(df_hearingActuals, on="CaseNo", how="left")
+            .join(df_substantiveDecision, on="CaseNo", how="left")
+            .join(silver_m3_max_statusid_state_2_3_4, on="CaseNo", how="left")
+    )
+
+    df_ended_update_dq = df_ended_update_dq.toDF(*[col + "_ended" for col in df_ended_update_dq.columns])
+    valid_ended_updated_columns = df_ended_update_dq.withColumnRenamed("CaseNo_ended","CaseNo")
+
+###################################################################################################
 
     #ftpa submitted
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
@@ -272,9 +365,14 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_preparforhearing, on="CaseNo", how="left")
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
+<<<<<<< HEAD
             .join(cs_39_46_outcome_14_30_31, on="CaseNo", how="left")
             .join(valid_cs39, on="CaseNo", how="left")
             .join(cs39_out14_30_31_outcome, on="CaseNo", how="left")
+=======
+            .join(valid_ended_new_columns, on="CaseNo", how="left")
+            .join(valid_ended_updated_columns, on="CaseNo", how="left")
+>>>>>>> 61a65e9 (fixed dq rules)
     )
 
 

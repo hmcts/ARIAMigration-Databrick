@@ -73,7 +73,7 @@ def ftpa(silver_m3, silver_c):
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
     window_spec = (
         Window.partitionBy("CaseNo")
-        .orderBy(col("StatusId").desc(), col("DecisionDate").desc_nulls_last())
+        .orderBy(col("StatusId").desc())#, col("DecisionDate").desc_nulls_last())
     )
 
     # ------------------------------------------------------------
@@ -303,26 +303,35 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     m3_latest = (
         silver_m3
         .withColumn("row_number", row_number().over(window_spec))
-        .filter(col("row_number") == 1)
+        .filter((col("row_number") == 1) & (col("CaseStatus") == 39))
         .drop("row_number")
-        .select("CaseNo", "Party")
-        .alias("m3")
+        .select("CaseNo", "Party", "Outcome", "CaseStatus")
+        .alias("m3_latest")
     )
 
-    joined = df.alias("g").join(m3_latest, on=["CaseNo"], how="left")
+    joined = (
+        df.alias("g")
+        .join(m3_latest, on=["CaseNo"], how="left")
+        # .join(silver_m3.alias("m3"), on=["CaseNo"], how="left")
+    )
 
     df = (
         joined
-        .select(col("g.*"), col("m3.Party").alias("Party"))
+        .select(
+            [col("g.*"), col("Party"), col("CaseStatus"), col("Outcome")]
+        )
         .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
         .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
         .withColumn("isDlrnSetAsideEnabled", lit("Yes"))
-        .withColumn("isFtpaAppellantDecided", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
-        .withColumn("isFtpaRespondentDecided", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isFtpaAppellantDecided", lit("Yes"))
+        .withColumn("isFtpaRespondentDecided", lit("Yes"))
         .withColumn("isReheardAppealEnabled", lit("Yes"))
-        .withColumn("secondFtpaDecisionExists", lit("No"))
-        .drop("Party")
-    )
+        .withColumn(
+            "secondFtpaDecisionExists",
+            when((col("CaseStatus") == 46) & (col("Outcome") == 31), lit("Yes")).otherwise(lit("No"))
+        )
+        .drop("Party", "CaseStatus", "Outcome")
+    ).distinct()
 
     df_audit = (
         df_audit.alias("audit")

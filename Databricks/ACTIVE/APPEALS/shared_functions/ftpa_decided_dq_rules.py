@@ -86,11 +86,11 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaFinalDecisionForDisplay"] = (
         """
         (
-            (FtpaDecOutcome = 30 AND ftpaFinalDecisionForDisplay = 'Granted')
+            (FtpaDecOutcome = 30 AND ftpaFinalDecisionForDisplay = 'granted')
             OR
-            (FtpaDecOutcome = 31 AND ftpaFinalDecisionForDisplay = 'Refused')
+            (FtpaDecOutcome = 31 AND ftpaFinalDecisionForDisplay = 'refused')
             OR
-            (FtpaDecOutcome = 14 AND ftpaFinalDecisionForDisplay = 'Not admitted')
+            (FtpaDecOutcome = 14 AND ftpaFinalDecisionForDisplay = 'notAdmitted')
             OR
             (FtpaDecOutcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
             OR
@@ -105,7 +105,7 @@ def add_checks_ftpa_decided(checks={}):
     # use Party and ftpa_src_DecisionDate
     # ---------------------------------------------------------
     checks["valid_ftpaAppellantDecisionDate"] = (
-        f"""
+        """
         (
             (Party = 1 AND ftpaAppellantDecisionDate IS NOT NULL)
             OR
@@ -117,7 +117,7 @@ def add_checks_ftpa_decided(checks={}):
     )
 
     checks["valid_ftpaRespondentDecisionDate"] = (
-        f"""
+        """
         (
             (Party = 2 AND ftpaRespondentDecisionDate IS NOT NULL)
             OR
@@ -135,17 +135,11 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 1 AND (
-                (FtpaDecOutcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
-                OR (FtpaDecOutcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
-                OR (FtpaDecOutcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
-                OR (FtpaDecOutcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-                OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-            ))
-            OR
-            (Party <> 1 AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-            OR
-            (Party IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            (FtpaDecOutcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+            OR (FtpaDecOutcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+            OR (FtpaDecOutcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+            OR (FtpaDecOutcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+            OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
         )
         """
     )
@@ -153,17 +147,11 @@ def add_checks_ftpa_decided(checks={}):
     checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
         """
         (
-            (Party = 2 AND (
-                (FtpaDecOutcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
-                OR (FtpaDecOutcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
-                OR (FtpaDecOutcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
-                OR (FtpaDecOutcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-                OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-            ))
-            OR
-            (Party <> 2 AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-            OR
-            (Party IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            (FtpaDecOutcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+            OR (FtpaDecOutcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+            OR (FtpaDecOutcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+            OR (FtpaDecOutcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+            OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
         )
         """
     )

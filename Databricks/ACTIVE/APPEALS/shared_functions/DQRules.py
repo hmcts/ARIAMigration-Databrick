@@ -2,7 +2,7 @@ import logging
 from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
-    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules
+    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct
@@ -54,7 +54,7 @@ def add_state_dq_rules(state: str) -> dict:
         "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
         "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
         "ftpaDecided": ftpaDecided_dq_rules.ftpaDecidedDQRules().get_checks(),
-        "ended": {},
+        "ended": ended_dq_rules.endedDQRules().get_checks(),
         "remitted": {}
     }
 

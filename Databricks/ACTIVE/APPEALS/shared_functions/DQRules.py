@@ -222,6 +222,11 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .distinct()
     )
 
+    #ftpaDecided 
+    silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin(39) & col("Outcome").isin([30, 31, 14]))
+    ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))
+    valid_ftpaDecided_outcome = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("FtpaDecOutcome"))
+
     return (
         df_final
             .join(valid_representation, on="CaseNo", how="left")
@@ -238,6 +243,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_preparforhearing, on="CaseNo", how="left")
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
+            .join(valid_ftpaDecided_outcome, on="CaseNo", how="left")
     )
 
 

@@ -6,6 +6,7 @@ from shared_functions.dq_rules import (
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct
+from pyspark.sql.types import ArrayType, LongType
 
 
 logger = logging.getLogger(__name__)
@@ -126,8 +127,10 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     lu_ref_txn = (
         silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
             .select("ReferringTransactionId")
-            .rdd.flatMap(lambda x: x).collect()
-    )
+            .where(col("ReferringTransactionId").isNotNull())
+            .rdd.flatMap(lambda x: x)
+            .collect()
+    ) or []
     valid_payment_type = (
         silver_m1.alias("m1").join(silver_m4.alias("m4"), on=["CaseNo"])
             .groupBy("CaseNo").agg(
@@ -135,7 +138,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                     "m4.Amount", "m4.TransactionId", "m4.ReferringTransactionId", "m4.TransactionTypeId",
                     "m4.Status", "m4.SumBalance", "m4.SumTotalPay", "m4.SumTotalFee"
                 )).alias("valid_transactionList")
-            ).withColumn("lu_ref_txn", lit(lu_ref_txn))
+            ).withColumn("lu_ref_txn", lit(lu_ref_txn).cast(ArrayType(LongType())))
     )
 
     # case under review and reason for appeal submitted - hearing response
@@ -194,7 +197,6 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
             .join(bronze_listing_location.select("ListedCentre", "locationCode", "locationLabel"), on=col("HearingCentre") == col("ListedCentre"), how="left")
-            .join(silver_m6.drop("dv_representation"), on="CaseNo", how="left")
             .drop("HearingCentre")
     )
 

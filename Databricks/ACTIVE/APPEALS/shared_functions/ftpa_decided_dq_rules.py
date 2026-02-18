@@ -14,6 +14,7 @@ def add_checks(checks={}):
 
 
 def add_checks_ftpa(checks={}):
+
     checks["valid_allocatedJudge"] = (
         """
         (
@@ -40,13 +41,6 @@ def add_checks_ftpa(checks={}):
 
 
 def add_checks_ftpa_decided(checks={}):
-    # ---------------------------------------------------------
-    # Helpers:
-    # - Decision/outcome fields only apply when:
-    #     CaseStatus = 39 AND Outcome IN (30,31,14)
-    # - DecisionDate output format: yyyy-MM-dd (ISO date)
-    # - Safe timestamp parsing for DecisionDate (string or timestamp)
-    # ---------------------------------------------------------
 
     # decisiondate_iso = "date_format(ftpa_src_DecisionDate, 'yyyy-MM-dd')"
 
@@ -89,7 +83,6 @@ def add_checks_ftpa_decided(checks={}):
         """
     )
 
-    # Final decision for display (only when cs39 + outcome in scope)
     checks["valid_ftpaFinalDecisionForDisplay"] = (
         """
         (
@@ -190,9 +183,6 @@ def add_checks_ftpa_decided(checks={}):
         )
         """
     )
-    
-    checks["valid_judgeAllocationExists"] = ( "(judgeAllocationExists = 'Yes')")
-
 
     return checks
 

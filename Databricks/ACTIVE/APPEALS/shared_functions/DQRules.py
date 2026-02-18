@@ -222,6 +222,27 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .distinct()
     )
 
+    #ftpa submitted
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
+    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+
+    df_m6_validation = silver_m6.drop("dv_targetState")
+    df_m1_validation = silver_m1.select("CaseNo","VisitVisaType")
+    df_ll_validation = bronze_listing_location.select(col("ListedCentre"),col("locationCode"),col("locationLabel"),col("listCaseHearingCentre").alias("bronz_listCaseHearingCentre"),col("listCaseHearingCentreAddress").alias("bronz_listCaseHearingCentreAddress"))
+
+    silver_m3_filtered_outcome = silver_m3.filter(col("CaseStatus").isin(37, 38,26) & col("Outcome").isin(1,2))
+    silver_m3_outcome_ranked = silver_m3_filtered_outcome.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_outcome_ranked = silver_m3_outcome_ranked.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("Outcome_SD")
+                                ,col("HearingDuration"),col("Adj_Determination_Title"),col("Adj_Determination_Forenames")
+                                ,col("Adj_Determination_Surname"),col("DecisionDate"))
+    
+    silver_m3_filtered_fpta = silver_m3.filter(col("CaseStatus").isin(39))
+    silver_m3_ftpa_ranked = silver_m3_filtered_fpta.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_ftpa_ranked = silver_m3_ftpa_ranked.filter(col("row_number") == 1).select(col("CaseNo"),col("Party"),col("OutOfTime"),col("DateReceived"),
+                                                                                        col("Adj_Title"),col("Adj_Forenames"),col("Adj_Surname")).distinct()
+
     #ftpaDecided 
     silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin(39) & col("Outcome").isin([30, 31, 14]))
     ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))
@@ -244,6 +265,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
             .join(valid_ftpaDecided_outcome, on="CaseNo", how="left")
+            .join(silver_m3_outcome_ranked, on="CaseNo", how="left")
+            .join(silver_m3_ftpa_ranked, on="CaseNo", how="left")
     )
 
 

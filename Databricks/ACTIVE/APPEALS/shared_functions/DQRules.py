@@ -194,7 +194,6 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
             .join(bronze_listing_location.select("ListedCentre", "locationCode", "locationLabel"), on=col("HearingCentre") == col("ListedCentre"), how="left")
-            .join(silver_m6.drop("dv_representation"), on="CaseNo", how="left")
             .drop("HearingCentre")
     )
 

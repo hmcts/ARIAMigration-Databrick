@@ -14,9 +14,9 @@ from . import listing as L
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    max as spark_max, date_format, row_number, expr, 
+    max as spark_max, date_format, row_number, expr, nullif,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    collect_set, current_timestamp, transform, first, array_contains, rank, create_map, map_from_entries, map_from_arrays
 )
 
 

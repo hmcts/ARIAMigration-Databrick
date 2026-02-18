@@ -322,7 +322,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         )
         .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
         .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
-        .withColumn("isDlrnSetAsideEnabled", lit("Yes"))
+        .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
         .withColumn("isFtpaAppellantDecided", lit("Yes"))
         .withColumn("isFtpaRespondentDecided", lit("Yes"))
         .withColumn("isReheardAppealEnabled", lit("Yes"))

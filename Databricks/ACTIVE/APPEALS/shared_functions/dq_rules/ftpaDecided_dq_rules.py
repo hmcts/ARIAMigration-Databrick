@@ -9,123 +9,356 @@ class ftpaDecidedDQRules(DQRulesBase):
 
     def get_checks_ftpaDecided(self, checks={}):
 
+        # checks["valid_ftpaApplicantType"] = (
+        #     """
+        #     (
+        #         (Party = 1 AND ftpaApplicantType = 'appellant')
+        #         OR
+        #         (Party = 2 AND ftpaApplicantType = 'respondent')
+        #         OR
+        #         (Party IS NULL AND ftpaApplicantType IS NULL)
+        #         OR
+        #         (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+        #     )
+        #     """
+        # )
+
         checks["valid_ftpaApplicantType"] = (
-            """
+        """
+        (
             (
-                (Party = 1 AND ftpaApplicantType = 'appellant')
-                OR
-                (Party = 2 AND ftpaApplicantType = 'respondent')
-                OR
-                (Party IS NULL AND ftpaApplicantType IS NULL)
-                OR
-                (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+                (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                AND
+                (
+                    (Party = 1 AND ftpaApplicantType = 'appellant')
+                    OR
+                    (Party = 2 AND ftpaApplicantType = 'respondent')
+                    OR
+                    (Party NOT IN (1,2) AND ftpaApplicantType IS NULL)
+                    OR
+                    (Party IS NULL AND ftpaApplicantType IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                AND ftpaApplicantType IS NULL
+            )
+        )
+        """
         )
 
+        # checks["valid_ftpaFirstDecision"] = (
+        #     """
+        #     (
+                # (FtpaDecOutcome = 30 AND ftpaFirstDecision = 'granted')
+                # OR
+                # (FtpaDecOutcome = 31 AND ftpaFirstDecision = 'refused')
+                # OR
+                # (FtpaDecOutcome = 14 AND ftpaFirstDecision = 'notAdmitted')
+                # OR
+                # (FtpaDecOutcome IS NULL AND ftpaFirstDecision IS NULL)
+                # OR
+                # (FtpaDecOutcome NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_ftpaFirstDecision"] = (
-            """
+        """
+        (
             (
-                (FtpaDecOutcome = 30 AND ftpaFirstDecision = 'granted')
-                OR
-                (FtpaDecOutcome = 31 AND ftpaFirstDecision = 'refused')
-                OR
-                (FtpaDecOutcome = 14 AND ftpaFirstDecision = 'notAdmitted')
-                OR
-                (FtpaDecOutcome IS NULL AND ftpaFirstDecision IS NULL)
-                OR
-                (FtpaDecOutcome NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
+                (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                AND
+                (
+                    (outcome_14_30_31_cs_39 = 30 AND ftpaFirstDecision = 'granted')
+                    OR
+                    (outcome_14_30_31_cs_39 = 31 AND ftpaFirstDecision = 'refused')
+                    OR
+                    (outcome_14_30_31_cs_39 = 14 AND ftpaFirstDecision = 'notAdmitted')
+                    OR
+                    (outcome_14_30_31_cs_39 IS NULL AND ftpaFirstDecision IS NULL)
+                    OR
+                    (outcome_14_30_31_cs_39 NOT IN (30,31,14) AND ftpaFirstDecision IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                AND ftpaFirstDecision IS NULL
+            )
         )
+        """
+        )
+
+        # checks["valid_ftpaFinalDecisionForDisplay"] = (
+        #     """
+        #     (
+        #         (FtpaDecOutcome = 30 AND ftpaFinalDecisionForDisplay = 'granted')
+        #         OR
+        #         (FtpaDecOutcome = 31 AND ftpaFinalDecisionForDisplay = 'refused')
+        #         OR
+        #         (FtpaDecOutcome = 14 AND ftpaFinalDecisionForDisplay = 'notAdmitted')
+        #         OR
+        #         (FtpaDecOutcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
+        #         OR
+        #         (FtpaDecOutcome NOT IN (30,31,14) AND ftpaFinalDecisionForDisplay IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_ftpaFinalDecisionForDisplay"] = (
             """
             (
-                (FtpaDecOutcome = 30 AND ftpaFinalDecisionForDisplay = 'granted')
+                (
+                    (
+                        (cs_39_46_outcome_30_31_14 = 39 AND outcome_14_30_31_cs_39_46 IN (30,31,14))
+                        OR
+                        (cs_39_46_outcome_30_31_14 = 46 AND outcome_14_30_31_cs_39_46 = 31)
+                    )
+                    AND
+                    (
+                        (outcome_14_30_31_cs_39_46 = 30 AND ftpaFinalDecisionForDisplay = 'granted')
+                        OR
+                        (outcome_14_30_31_cs_39_46 = 31 AND ftpaFinalDecisionForDisplay = 'refused')
+                        OR
+                        (outcome_14_30_31_cs_39_46 = 14 AND ftpaFinalDecisionForDisplay = 'notAdmitted')
+                    )
+                )
                 OR
-                (FtpaDecOutcome = 31 AND ftpaFinalDecisionForDisplay = 'refused')
-                OR
-                (FtpaDecOutcome = 14 AND ftpaFinalDecisionForDisplay = 'notAdmitted')
-                OR
-                (FtpaDecOutcome IS NULL AND ftpaFinalDecisionForDisplay IS NULL)
-                OR
-                (FtpaDecOutcome NOT IN (30,31,14) AND ftpaFinalDecisionForDisplay IS NULL)
+                (
+                    NOT (
+                        (cs_39_46_outcome_30_31_14 = 39 OR outcome_14_30_31_cs_39_46 IN (30,31,14))
+                        OR
+                        (cs_39_46_outcome_30_31_14 = 46 OR outcome_14_30_31_cs_39_46 = 31)
+                    )
+                    AND ftpaFinalDecisionForDisplay IS NULL
+                )
             )
             """
         )
+
+
+        # checks["valid_ftpaAppellantDecisionDate"] = (
+        #     """
+        #     (
+                # (Party = 1 AND ftpaAppellantDecisionDate IS NOT NULL)
+                # OR
+                # (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
+                # OR
+                # (Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_ftpaAppellantDecisionDate"] = (
-            """
+        """
+        (
             (
-                (Party = 1 AND ftpaAppellantDecisionDate IS NOT NULL)
-                OR
-                (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
-                OR
-                (Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
+                (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                AND
+                (
+                    (Party = 1 AND ftpaAppellantDecisionDate IS NOT NULL)
+                    OR
+                    (Party <> 1 AND ftpaAppellantDecisionDate IS NULL)
+                    OR
+                    (Party IS NULL AND ftpaAppellantDecisionDate IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                AND ftpaAppellantDecisionDate IS NULL
+            )
+        )
+        """
         )
 
+        # checks["valid_ftpaRespondentDecisionDate"] = (
+        #     """
+        #     (
+        #         (Party = 2 AND ftpaRespondentDecisionDate IS NOT NULL)
+        #         OR
+        #         (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
+        #         OR
+        #         (Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
+        #     )
+        #     """
+        # )
+
         checks["valid_ftpaRespondentDecisionDate"] = (
-            """
+        """
+        (
             (
-                (Party = 2 AND ftpaRespondentDecisionDate IS NOT NULL)
-                OR
-                (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
-                OR
-                (Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
+                (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                AND
+                (
+                    (Party = 2 AND ftpaRespondentDecisionDate IS NOT NULL)
+                    OR
+                    (Party <> 2 AND ftpaRespondentDecisionDate IS NULL)
+                    OR
+                    (Party IS NULL AND ftpaRespondentDecisionDate IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                AND ftpaRespondentDecisionDate IS NULL
+            )
         )
+        """
+        )
+
+        # checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
+        #     """
+        #     (
+        #         (FtpaDecOutcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+        #         OR (FtpaDecOutcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+        #         OR (FtpaDecOutcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+        #         OR (FtpaDecOutcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+        #         OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
             """
             (
-                (FtpaDecOutcome = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
-                OR (FtpaDecOutcome = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
-                OR (FtpaDecOutcome = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
-                OR (FtpaDecOutcome IS NULL AND ftpaAppellantRjDecisionOutcomeType IS NULL)
-                OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaAppellantRjDecisionOutcomeType IS NULL)
+                (
+                    (
+                        (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                    )
+                    AND
+                    (
+                        (outcome_14_30_31_cs_39 = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+                        OR
+                        (outcome_14_30_31_cs_39 = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+                        OR
+                        (outcome_14_30_31_cs_39 = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+                    )
+                )
+                OR
+                (
+                    NOT (
+                        (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                    )
+                    AND ftpaAppellantRjDecisionOutcomeType IS NULL
+                )
             )
             """
         )
+
+        # checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
+        #     """
+        #     (
+        #         (FtpaDecOutcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+        #         OR (FtpaDecOutcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+        #         OR (FtpaDecOutcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+        #         OR (FtpaDecOutcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+        #         OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
             """
             (
-                (FtpaDecOutcome = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
-                OR (FtpaDecOutcome = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
-                OR (FtpaDecOutcome = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
-                OR (FtpaDecOutcome IS NULL AND ftpaRespondentRjDecisionOutcomeType IS NULL)
-                OR (FtpaDecOutcome NOT IN (30,31,14) AND ftpaRespondentRjDecisionOutcomeType IS NULL)
+                (
+                    (
+                        (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14))
+                    )
+                    AND
+                    (
+                        (outcome_14_30_31_cs_39 = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+                        OR
+                        (outcome_14_30_31_cs_39 = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+                        OR
+                        (outcome_14_30_31_cs_39 = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+                    )
+                )
+                OR
+                (
+                    NOT (
+                        (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                    )
+                    AND ftpaRespondentRjDecisionOutcomeType IS NULL
+                )
             )
             """
         )
+
+
+
+        # checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
+        #     """
+        #     (
+        #         (Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside = 'No')
+        #         OR
+        #         (Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+        #         OR
+        #         (Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+        #     )
+        #     """
+        # )
 
         checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
-            """
+        """
+        (
             (
-                (Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside = 'No')
-                OR
-                (Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
-                OR
-                (Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+                (dq_cs39_status = 39)
+                AND
+                (
+                    (Party = 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NOT NULL)
+                    OR
+                    (Party <> 1 AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+                    OR
+                    (Party IS NULL AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (dq_cs39_status = 39)
+                AND isFtpaAppellantNoticeOfDecisionSetAside IS NULL
+            )
+        )
+        """
         )
 
+        # checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = (
+        #     """
+        #     (
+        #         (Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside = 'No')
+        #         OR
+        #         (Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+        #         OR
+        #         (Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+        #     )
+        #     """
+        # )
+
         checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = (
-            """
+        """
+        (
             (
-                (Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside = 'No')
-                OR
-                (Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
-                OR
-                (Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+                (dq_cs39_status = 39)
+                AND
+                (
+                    (Party = 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NOT NULL)
+                    OR
+                    (Party <> 2 AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+                    OR
+                    (Party IS NULL AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL)
+                )
             )
-            """
+            OR
+            (
+                NOT (dq_cs39_status = 39)
+                AND isFtpaRespondentNoticeOfDecisionSetAside IS NULL
+            )
         )
+        """
+        )
+
+
 
         return checks

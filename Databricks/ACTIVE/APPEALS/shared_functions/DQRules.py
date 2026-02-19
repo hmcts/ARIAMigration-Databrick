@@ -235,10 +235,26 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .drop("HearingCentre")
     )
     
-    #ftpaDecided 
-    silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin(39) & col("Outcome").isin([30, 31, 14]))
+    #ftpaDecided - outcome in 30,31,14. status in 39,46
+    silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin([39,46]) & col("Outcome").isin([30, 31, 14]))
     ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))
-    valid_ftpaDecided_outcome = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("FtpaDecOutcome"), col("CaseStatus").alias("ftpaCaseStatus"))
+    cs_39_46_outcome_14_30_31 = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("outcome_14_30_31_cs_39_46"), col("CaseStatus").alias("cs_39_46_outcome_30_31_14"))
+
+    #ftpaDecided - status in 39
+    silver_m3_filtered_cs39 = silver_m3.filter(col("CaseStatus") == 39)
+    cs39_ranked = (silver_m3_filtered_cs39.withColumn("row_number", row_number().over(window_spec)))
+    valid_cs39 = (cs39_ranked.filter(col("row_number") == 1).select(
+                                                col("CaseNo"),
+                                                col("CaseStatus").alias("dq_cs39_status"),
+                                                col("Outcome").alias("dq_cs39_outcome"),
+                                                col("StatusId").alias("dq_cs39_statusId")))
+    
+    #ftpaDecided - status in 39. outcome in 14, 30, 31
+    silver_m3_filtered_cs39_out14_30_31 = silver_m3.filter(col("CaseStatus").isin([39]) & col("Outcome").isin([30, 31, 14]))
+    silver_m3_filtered_cs39_out14_30_31_ranked = silver_m3_filtered_cs39_out14_30_31.withColumn("row_number", row_number().over(window_spec))
+    cs39_out14_30_31_outcome = silver_m3_filtered_cs39_out14_30_31_ranked.filter(col("row_number") == 1
+                                                ).select(col("CaseNo"), col("Outcome").alias("outcome_14_30_31_cs_39"), 
+                                                col("CaseStatus").alias("cs_39_outcome_14_30_31"))
 
     return (
         df_final
@@ -256,7 +272,9 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_preparforhearing, on="CaseNo", how="left")
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
-            .join(valid_ftpaDecided_outcome, on="CaseNo", how="left")
+            .join(cs_39_46_outcome_14_30_31, on="CaseNo", how="left")
+            .join(valid_cs39, on="CaseNo", how="left")
+            .join(cs39_out14_30_31_outcome, on="CaseNo", how="left")
     )
 
 

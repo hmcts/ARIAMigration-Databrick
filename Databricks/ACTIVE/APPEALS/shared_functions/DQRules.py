@@ -365,14 +365,11 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_preparforhearing, on="CaseNo", how="left")
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
-<<<<<<< HEAD
             .join(cs_39_46_outcome_14_30_31, on="CaseNo", how="left")
             .join(valid_cs39, on="CaseNo", how="left")
             .join(cs39_out14_30_31_outcome, on="CaseNo", how="left")
-=======
             .join(valid_ended_new_columns, on="CaseNo", how="left")
             .join(valid_ended_updated_columns, on="CaseNo", how="left")
->>>>>>> 61a65e9 (fixed dq rules)
     )
 
 

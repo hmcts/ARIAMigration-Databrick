@@ -27,13 +27,13 @@ class decisionDQRules(DQRulesBase):
             )
             """)
 
-        # checks["valid_listCaseHearingCentre"] = (
-        #     "(listCaseHearingCentre[0] = bronze_listCaseHearingCentre)"
-        # )
+        checks["valid_listCaseHearingCentre"] = (
+            "(listCaseHearingCentre[0] = bronze_listCaseHearingCentre)"
+        )
 
-        # checks["valid_listCaseHearingCentreAddress"] = (
-        #     "(listCaseHearingCentreAddress = bronze_listCaseHearingCentreAddress)"
-        # )
+        checks["valid_listCaseHearingCentreAddress"] = (
+            "(listCaseHearingCentreAddress = bronze_listCaseHearingCentreAddress)"
+        )
 
         return checks
 

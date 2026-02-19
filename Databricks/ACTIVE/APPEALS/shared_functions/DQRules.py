@@ -238,7 +238,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     #ftpaDecided 
     silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin(39) & col("Outcome").isin([30, 31, 14]))
     ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))
-    valid_ftpaDecided_outcome = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("FtpaDecOutcome"))
+    valid_ftpaDecided_outcome = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("FtpaDecOutcome"), col("CaseStatus").alias("ftpaCaseStatus"))
 
     return (
         df_final

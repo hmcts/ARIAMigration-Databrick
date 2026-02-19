@@ -142,6 +142,10 @@ def ftpa(silver_m3, silver_c):
             .withColumn("ftpaRespondentRjDecisionOutcomeType", outcome_type)
             .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("Party") == 1, lit("No")).otherwise(lit(None)))
             .withColumn("isFtpaRespondentNoticeOfDecisionSetAside", when(col("Party") == 2, lit("No")).otherwise(lit(None)))
+            #copying logic from submitted b for 3 fields below. 3 cases not pulling through for some reason
+            .withColumn("judgeAllocationExists",lit("Yes"))
+            .withColumn("allocatedJudge",concat(col("Adj_Title"),lit(" "),col("Adj_Forenames"),lit(" "),col("Adj_Surname")))
+            .withColumn("allocatedJudgeEdit",concat(col("Adj_Title"),lit(" "),col("Adj_Forenames"),lit(" "),col("Adj_Surname")))
 
             .select(
                 col("CaseNo"),

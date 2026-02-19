@@ -9,29 +9,6 @@ class ftpaDecidedDQRules(DQRulesBase):
 
     def get_checks_ftpaDecided(self, checks={}):
 
-        checks["valid_allocatedJudge"] = (
-            """
-            (
-                (allocatedJudge IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
-                OR
-                (allocatedJudge IS NOT NULL)
-            )
-            """
-        )
-#                (allocatedJudge = concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
-        checks["valid_allocatedJudgeEdit"] = (
-            """
-            (
-                (allocatedJudgeEdit IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
-                OR
-                (allocatedJudgeEdit IS NOT NULL)
-            )
-            """
-        )
-#                    allocatedJudgeEdit = concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
-        checks["valid_judgeAllocationExists"] = ("(judgeAllocationExists = 'Yes')")
-
-
         checks["valid_ftpaApplicantType"] = (
             """
             (

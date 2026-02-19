@@ -72,9 +72,9 @@ def previous_state_map(state: str):
         "prepareForHearing":             "listing",
         "decision":                      "prepareHearing",
         "decided(a)":                    "decision",
-        "ftpaSubmitted(b)":              "decided(a)",
-        "ftpaSubmitted(a)":              "ftpaSubmitted(b)",
-        "ftpaDecided":                   "ftpaSubmitted(a)",
+        "ftpaSubmitted(a)":              "decided(a)",
+        "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
+        "ftpaDecided":                   "ftpaSubmitted(b)",
         "ended":                         "ftpaDecided",
         "remitted":                      "ended"
     }
@@ -104,7 +104,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
     )
     valid_appealant_address = silver_m2.select(
-        col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
+        col("CaseNo"), col("Appellant_Name"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
         col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber")
     ).filter(col("Relationship").isNull())
     valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
@@ -193,10 +193,13 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                 "Judge1FT_Title", "Judge2FT_Title", "Judge3FT_Title", "CourtClerk_Surname", "CourtClerk_Forenames", "CourtClerk_Title"
             )
     )
+
     valid_preparforhearing = (
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
-            .join(bronze_listing_location.select("ListedCentre", "locationCode", "locationLabel"), on=col("HearingCentre") == col("ListedCentre"), how="left")
+            .join(bronze_listing_location
+                .select(col("ListedCentre"), col("locationCode"), col("locationLabel"), col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"), col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")),
+                on=col("HearingCentre") == col("ListedCentre"), how="left")
             .drop("HearingCentre")
     )
 

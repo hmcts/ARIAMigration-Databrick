@@ -53,13 +53,13 @@ class paymentPendingDQRules(DQRulesBase):
         # "yyyy-MM-dd" r'^\d{4}-\d{2}-\d{2}$' for ISO 8601 date format
         ##############################
         checks["valid_appealSubmissionDate_format"] = (
-            "(appealSubmissionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
+            "(appealSubmissionDate IS NOT NULL AND appealSubmissionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
         checks["valid_appealSubmissionInternalDate_format"] = (
-            "(appealSubmissionInternalDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
+            "(appealSubmissionInternalDate IS NOT NULL AND appealSubmissionInternalDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
         checks["valid_tribunalReceivedDate_format"] = (
-            "(tribunalReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
+            "(tribunalReceivedDate IS NOT NULL AND tribunalReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
 
         # ##############################
@@ -167,7 +167,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_appellantNameForDisplay_not_null"] = "(appellantNameForDisplay IS NOT NULL)"
 
         checks["valid_appellantDateOfBirth_format"] = (
-            "(appellantDateOfBirth RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
+            "(appellantDateOfBirth IS NOT NULL AND appellantDateOfBirth RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
         checks["valid_caseNameHmctsInternal_not_null"] = "(caseNameHmctsInternal IS NOT NULL)"
         checks["valid_hmctsCaseNameInternal_not_null"] = "(hmctsCaseNameInternal IS NOT NULL)"
@@ -176,7 +176,7 @@ class paymentPendingDQRules(DQRulesBase):
         # # ARIADM-771 (AppealType - legalRepDetails)
         # ##############################
 
-        checks["valid_legalrepEmail_not_null"] = "((dv_representation = 'LR' AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (dv_representation != 'LR' AND legalRepEmail IS NULL))"
+        checks["valid_legalrepEmail_not_null"] = "((dv_representation = 'LR' AND legalRepEmail IS NOT NULL AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (dv_representation != 'LR' AND legalRepEmail IS NULL))"
 
         # ##############################
         # # ARIADM-758 (appellantDetails)
@@ -756,7 +756,7 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_sponsorMobileNumberAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
+            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
         )
         # ##############################
         # ARIADM-760 (appellantDetails)
@@ -840,20 +840,20 @@ class paymentPendingDQRules(DQRulesBase):
         ##############################
         # ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ 
         checks["valid_internalAppellantEmail_format"] = (
-            "( internalAppellantEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR internalAppellantEmail IS NULL)"
+            "(internalAppellantEmail IS NOT NULL AND internalAppellantEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR internalAppellantEmail IS NULL)"
         )
 
         checks["valid_email_format"] = (
-            "(email RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR email IS NULL)"
+            "(email IS NOT NULL AND email RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR email IS NULL)"
         )
 
         checks["valid_internalAppellantMobileNumber"] = (
-            "(internalAppellantMobileNumber RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$' OR internalAppellantMobileNumber IS NULL)"
+            "(internalAppellantMobileNumber IS NOT NULL AND internalAppellantMobileNumber RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$' OR internalAppellantMobileNumber IS NULL)"
         )
 
         # ^(?=(?:\D*\d){7,15}\D*$)\+?(\d[\d-. ]+)?(\([\d-. ]+\))?[\d-. ]*\d$
         checks["valid_mobileNumber"] = (
-            "(mobileNumber RLIKE r'^(?=(?:\\D*\\d){7,15}\\D*$)\\+?(\\d[\\d-. ]+)?(\\([\\d-. ]+\\))?[\\d-. ]*\\d$' OR mobileNumber IS NULL)"
+            "(mobileNumber IS NOT NULL AND mobileNumber RLIKE r'^(?=(?:\\D*\\d){7,15}\\D*$)\\+?(\\d[\\d-. ]+)?(\\([\\d-. ]+\\))?[\\d-. ]*\\d$' OR mobileNumber IS NULL)"
         )
         ##############################
         # ARIADM-778 (General)
@@ -863,7 +863,13 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-            "(applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing') OR (applicationChangeDesignatedHearingCentre IS NULL))"
+            """(
+                ((applicationChangeDesignatedHearingCentre IS NOT NULL)
+                AND 
+                (applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
+                )
+                OR (applicationChangeDesignatedHearingCentre IS NULL)
+            )"""
         )
         #########################################
         # ARIADM-788 and ARIADM-792 (homeOffice)

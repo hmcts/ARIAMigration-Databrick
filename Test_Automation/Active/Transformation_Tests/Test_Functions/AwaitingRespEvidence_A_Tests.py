@@ -14,7 +14,6 @@ test_from_state = "awaitingRespondentEvidence(a)"
 
 
 
-
 ############################################################################################
 #######################
 #default mapping Init code
@@ -92,3 +91,58 @@ def test_defaultValues(test_df, fields_to_exclude):
     except Exception as e:
         error_message = str(e)        
         return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
+    
+
+
+############################################################################################
+#######################
+#appellant details init code
+#######################
+def test_appellant_details_init(json, M2_bronze):
+    try:
+        json = json.select(
+            "appealReferenceNumber",
+            "appellantFullName"
+        )
+        M2_bronze = M2_bronze.select(
+            "CaseNo",
+            "Appellant_Forenames",
+            "Appellant_Name"
+        )
+        test_df = json.join(
+            M2_bronze,
+            json["appealReferenceNumber"] == M2_bronze["CaseNo"],
+            "inner"
+        )
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("appellantDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+ 
+
+# appellantFullName - Where M2.AppellantForenames + ' ' + M2.AppellantName = = appellantFullName    
+#######################
+
+def test_appellantFullName_test1(test_df):
+    try:
+        if test_df.filter(
+        (col("Appellant_Forenames").isNotNull()) & 
+        (col("Appellant_Name").isNotNull())   
+        ).count() == 0:
+            return TestResult("appellantFullName", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        acceptance_criteria = test_df.filter(
+            (col("Appellant_Forenames")) + " " + (col("Appellant_Name")) != (col("appellantFullName"))
+        )
+
+        if acceptance_criteria.count() != 0:
+            return TestResult("appellantFullName", "FAIL", f"appellantFullName acceptance criteria failed: found{acceptance_criteria.count()}cases where AppellantForenames + AppellantName = appellantFullName", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appellantFullName", "PASS", "appellantFullName acceptance criteria passed: found all cases where AppellantForenames + AppellantName = appellantFullName", test_from_state, inspect.stack()[0].function)   
+    
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("appellantFullName", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)       
+   
+   
+   

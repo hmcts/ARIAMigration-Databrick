@@ -51,8 +51,8 @@ def add_state_dq_rules(state: str) -> dict:
         "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
         "decision": decision_dq_rules.decisionDQRules().get_checks(),
         "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
+        "fptaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
         "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
-        "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
         "ftpaDecided": {},
         "ended": {},
         "remitted": {}
@@ -72,8 +72,8 @@ def previous_state_map(state: str):
         "prepareForHearing":             "listing",
         "decision":                      "prepareHearing",
         "decided(a)":                    "decision",
-        "ftpaSubmitted(a)":              "decided(a)",
-        "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
+        "fptaSubmitted(a)":              "decided(a)",
+        "ftpaSubmitted(b)":              "fptaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
         "ended":                         "ftpaDecided",
         "remitted":                      "ended"

@@ -51,8 +51,8 @@ def add_state_dq_rules(state: str) -> dict:
         "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
         "decision": decision_dq_rules.decisionDQRules().get_checks(),
         "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
-        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
         "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
+        "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
         "ftpaDecided": {},
         "ended": {},
         "remitted": {}

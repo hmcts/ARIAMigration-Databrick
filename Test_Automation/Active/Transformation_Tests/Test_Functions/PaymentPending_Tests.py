@@ -6245,7 +6245,7 @@ def test_default_mapping_init(json):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("defaults", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 def test_defaultValues(test_df):
     try:
@@ -6291,8 +6291,7 @@ def test_defaultValues(test_df):
             "tribunalDocuments": None,
             "legalRepresentativeDocuments": None
         }
-
-        failed_field_names = []
+        
         results_list = []
 
         for field, expected in expected_defaults.items():
@@ -6340,7 +6339,7 @@ def test_defaultValues(test_df):
         return results_list
     except Exception as e:
         error_message = str(e)        
-        return TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
 
 
 

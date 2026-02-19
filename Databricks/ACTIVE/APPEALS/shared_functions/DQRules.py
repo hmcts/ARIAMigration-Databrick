@@ -72,9 +72,9 @@ def previous_state_map(state: str):
         "prepareForHearing":             "listing",
         "decision":                      "prepareHearing",
         "decided(a)":                    "decision",
-        "ftpaSubmitted(b)":              "decided(a)",
-        "ftpaSubmitted(a)":              "ftpaSubmitted(b)",
-        "ftpaDecided":                   "ftpaSubmitted(a)",
+        "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
+        "ftpaSubmitted(a)":              "decided(a)",
+        "ftpaDecided":                   "ftpaSubmitted(b)",
         "ended":                         "ftpaDecided",
         "remitted":                      "ended"
     }

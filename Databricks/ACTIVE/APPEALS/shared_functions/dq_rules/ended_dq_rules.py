@@ -732,18 +732,18 @@ class endedDQRules(DQRulesBase):
 
     def get_checks_hearingActuals(self, checks={}):
 
-        # checks["valid_attendingJudge"] = """
-        # (
-        #     CASE 
-        #         WHEN (
-        #             (CaseStatus_ended = 39 AND Outcome_ended = 25)
-        #         ) THEN
-        #             coalesce(attendingJudge, '') = coalesce(attendingJudge_ended, '')
-        #         ELSE
-        #             attendingJudge IS NULL
-        #     END
-        # )
-        # """
+        checks["valid_attendingJudge"] = """
+        (
+            CASE 
+                WHEN (
+                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
+                ) THEN
+                    coalesce(attendingJudge, '') = coalesce(attendingJudge_ended, '')
+                ELSE
+                    attendingJudge IS NULL
+            END
+        )
+        """
 
         checks["valid_actualCaseHearingLength"] = """
         (

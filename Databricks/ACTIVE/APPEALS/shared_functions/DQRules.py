@@ -2,7 +2,7 @@ import logging
 from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
-    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules
+    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct
@@ -53,7 +53,7 @@ def add_state_dq_rules(state: str) -> dict:
         "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
         "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
         "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
-        "ftpaDecided": {},
+        "ftpaDecided": ftpaDecided_dq_rules.ftpaDecidedDQRules().get_checks(),
         "ended": {},
         "remitted": {}
     }
@@ -104,8 +104,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
     )
     valid_appealant_address = silver_m2.select(
-        col("CaseNo"), col("Appellant_Name"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
-        col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber")
+        col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
+        col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber"), col("Appellant_Name")
     ).filter(col("Relationship").isNull())
     valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
     valid_country_list = bronze_countries_postal_lookup_df.select(
@@ -222,6 +222,40 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .distinct()
     )
 
+    #ftpa submitted
+    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
+    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+
+    valid_preparforhearing = (
+        silver_m1.select("CaseNo")
+            .join(df_m3_validation, on="CaseNo", how="left")
+            .join(bronze_listing_location.select(col("ListedCentre"),col("locationCode"),col("locationLabel"),col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"),col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")), on=col("HearingCentre") == col("ListedCentre"), how="left")
+            .drop("HearingCentre")
+    )
+    
+    #ftpaDecided - outcome in 30,31,14. status in 39,46
+    silver_m3_filtered_fptaDec = silver_m3.filter(col("CaseStatus").isin([39,46]) & col("Outcome").isin([30, 31, 14]))
+    ftpaDecided_outcome = silver_m3_filtered_fptaDec.withColumn("row_number", row_number().over(window_spec))
+    cs_39_46_outcome_14_30_31 = ftpaDecided_outcome.filter(col("row_number") == 1).select(col("CaseNo"), col("Outcome").alias("outcome_14_30_31_cs_39_46"), col("CaseStatus").alias("cs_39_46_outcome_30_31_14"))
+
+    #ftpaDecided - status in 39
+    silver_m3_filtered_cs39 = silver_m3.filter(col("CaseStatus") == 39)
+    cs39_ranked = (silver_m3_filtered_cs39.withColumn("row_number", row_number().over(window_spec)))
+    valid_cs39 = (cs39_ranked.filter(col("row_number") == 1).select(
+                                                col("CaseNo"),
+                                                col("CaseStatus").alias("dq_cs39_status"),
+                                                col("Outcome").alias("dq_cs39_outcome"),
+                                                col("Party").alias("dq_cs39_party")))
+    
+    #ftpaDecided - status in 39. outcome in 14, 30, 31
+    silver_m3_filtered_cs39_out14_30_31 = silver_m3.filter(col("CaseStatus").isin([39]) & col("Outcome").isin([30, 31, 14]))
+    silver_m3_filtered_cs39_out14_30_31_ranked = silver_m3_filtered_cs39_out14_30_31.withColumn("row_number", row_number().over(window_spec))
+    cs39_out14_30_31_outcome = silver_m3_filtered_cs39_out14_30_31_ranked.filter(col("row_number") == 1
+                                                ).select(col("CaseNo"), col("Outcome").alias("outcome_14_30_31_cs_39"), 
+                                                col("CaseStatus").alias("cs_39_outcome_14_30_31"),
+                                                col("Party").alias("cs39_party_14_30_31"))
+
     return (
         df_final
             .join(valid_representation, on="CaseNo", how="left")
@@ -238,6 +272,9 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_preparforhearing, on="CaseNo", how="left")
             .join(valid_decided_outcome, on="CaseNo", how="left")
             .join(valid_ftpa, on="CaseNo", how="left")
+            .join(cs_39_46_outcome_14_30_31, on="CaseNo", how="left")
+            .join(valid_cs39, on="CaseNo", how="left")
+            .join(cs39_out14_30_31_outcome, on="CaseNo", how="left")
     )
 
 

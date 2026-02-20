@@ -31,13 +31,10 @@ def ftpa_outputs(spark):
     ])
 
     m3_data = [
-        # Case with Party=2, Outcome=31 (respondent decision)
-        ("HU/01897/2024", 1, 39, 60, "LOC001", "2025-09-01", "2025-09-12", "Mr", "John", "Doe", 2, 0, 31),
-        # Case with no decision (null Outcome)
-        ("PA/01921/2025", 1, 39, 45, "LOC002", "2025-09-01", None, "Ms", "Jane", "Doe", 1, 0, None),
-        # Another no decision
-        ("PA/03789/2024", 1, 39, 30, "LOC003", "2024-10-02", None, "Mr", "Guy", "Random", 1, 0, None),
-        ("PA/03885/2024", 1, 39, None, "LOC004", "2024-11-02", None, "Sir", "Alex", "Smith", 1, 0, None),
+        ("HU/01897/2024", 1, 39, 60, "LOC001", "2025-09-01T00:00:00.000+00:00", "2025-09-12T00:00:00.000+00:00", "Mr", "John", "Doe", 2, 0, 31),
+        ("PA/01921/2025", 1, 39, 45, "LOC002", "2025-09-01T00:00:00.000+00:00", None, "Ms", "Jane", "Doe", 1, 0, None),
+        ("PA/03789/2024", 1, 39, 30, "LOC003", "2025-10-02T00:00:00.000+00:00", None, "Mr", "Guy", "Random", 1, 0, None),
+        ("PA/03885/2024", 1, 39, None, "LOC004", "2025-11-02T00:00:00.000+00:00", None, "Sir", "Alex", "Smith", 1, 0, None),
     ]
 
     c_schema = T.StructType([

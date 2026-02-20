@@ -136,12 +136,11 @@ def ftpa(silver_m3, silver_c):
 
             .withColumn(
                 "ftpaAppellantDecisionDate",
-                when(col("outcome.Party") == 1, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-            )
+                when(col("outcome.Party") == 1, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None)))
+            
             .withColumn(
                 "ftpaRespondentDecisionDate",
-                when(col("outcome.Party") == 2, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-            )
+                when(col("outcome.Party") == 2, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None)))
             
             .withColumn("ftpaFinalDecisionForDisplay", when(col("ftpaFinalDescOutcome.Outcome") == 30, lit("granted"))
                                             .when(col("ftpaFinalDescOutcome.Outcome") == 31, lit("refused"))
@@ -179,6 +178,11 @@ def ftpa(silver_m3, silver_c):
                 col("judgeAllocationExists"),
                 col("allocatedJudge"),
                 col("allocatedJudgeEdit"),
+                # col("outcome.Outcome"),
+                # col("no_outcome.Outcome"),
+                # col("ftpaFinalDescOutcome.Outcome"),
+                # col("outcome.Party"),
+                # col("no_outcome.Party"),
                 col("ftpaApplicantType"),
                 col("ftpaFirstDecision"),
                 col("ftpaAppellantDecisionDate"),

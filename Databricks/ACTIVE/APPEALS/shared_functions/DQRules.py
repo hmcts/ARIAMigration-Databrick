@@ -231,7 +231,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_preparforhearing = (
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")
-            .join(bronze_listing_location.select(col("ListedCentre"),col("locationCode"),col("locationLabel"),col("listCaseHearingCentre").alias("bronz_listCaseHearingCentre"),col("listCaseHearingCentreAddress").alias("bronz_listCaseHearingCentreAddress")), on=col("HearingCentre") == col("ListedCentre"), how="left")
+            .join(bronze_listing_location.select(col("ListedCentre"),col("locationCode"),col("locationLabel"),col("listCaseHearingCentre").alias("bronze_listCaseHearingCentre"),col("listCaseHearingCentreAddress").alias("bronze_listCaseHearingCentreAddress")), on=col("HearingCentre") == col("ListedCentre"), how="left")
             .drop("HearingCentre")
     )
     
@@ -247,14 +247,15 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                                                 col("CaseNo"),
                                                 col("CaseStatus").alias("dq_cs39_status"),
                                                 col("Outcome").alias("dq_cs39_outcome"),
-                                                col("StatusId").alias("dq_cs39_statusId")))
+                                                col("Party").alias("dq_cs39_party")))
     
     #ftpaDecided - status in 39. outcome in 14, 30, 31
     silver_m3_filtered_cs39_out14_30_31 = silver_m3.filter(col("CaseStatus").isin([39]) & col("Outcome").isin([30, 31, 14]))
     silver_m3_filtered_cs39_out14_30_31_ranked = silver_m3_filtered_cs39_out14_30_31.withColumn("row_number", row_number().over(window_spec))
     cs39_out14_30_31_outcome = silver_m3_filtered_cs39_out14_30_31_ranked.filter(col("row_number") == 1
                                                 ).select(col("CaseNo"), col("Outcome").alias("outcome_14_30_31_cs_39"), 
-                                                col("CaseStatus").alias("cs_39_outcome_14_30_31"))
+                                                col("CaseStatus").alias("cs_39_outcome_14_30_31"),
+                                                col("Party").alias("cs39_party_14_30_31"))
 
     return (
         df_final

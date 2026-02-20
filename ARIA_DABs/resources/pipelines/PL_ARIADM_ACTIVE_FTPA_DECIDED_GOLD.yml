@@ -11,12 +11,12 @@ resources:
           driver_node_type_id: Standard_D8ads_v5
           autoscale:
             min_workers: 4
-            max_workers: 16
+            max_workers: 8
             mode: ENHANCED
 
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_FTPA_DECIDED_JSON"
 
-      target: ftpa_decided_gold
+      target: ftpadecided_gold
       development: true

@@ -1,10 +1,7 @@
 from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided import ftpa
-import Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_b as FSB 
-
 from pyspark.sql import SparkSession
 import pytest
 from pyspark.sql import types as T
-from pyspark.sql import functions as F 
 
 
 @pytest.fixture(scope="session")
@@ -15,11 +12,8 @@ def spark():
         .getOrCreate()
     )
 
-
 @pytest.fixture(scope="session")
 def ftpa_outputs(spark):
-    # Keep DateReceived + DecisionDate as STRING in the raw test data,
-    # but cast DecisionDate to TIMESTAMP to match ftpa_decided.py logic (Andrew change).
 
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -40,13 +34,10 @@ def ftpa_outputs(spark):
     m3_data = [
         ("CASE005", 1, 39, 180, "LOC001", "2024-10-02T00:00:00.000+00:00", "2025-10-01T00:00:00.000+00:00", "Mr", "John", "Doe", 1, 0, 31),
         ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Ms", "Jane", "Doe", 1, 0, 30),
-
         ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "2026-12-03T00:00:00.000+00:00", "Mr", "John", "xyz", 1, 1, 31),
         ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2026-08-03T00:00:00.000+00:00", "Mr", "abc",  "Doe", 2, 0, 14),
         ("CASE008", 1, 39, None, "LOC005", "2024-10-02T00:00:00.000+00:00", "2024-10-02T00:00:00.000+00:00", "Sir", "Guy",  "Random", 1, 0, 30),
-
         ("CASE010", 1, 39, None, "LOC007", None, "2025-01-15T00:00:00.000+00:00", None, None, None, 1, None, 30),
-
         ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "2025-11-02T00:00:00.000+00:00", "Mr", "World", "Hello", 2, 1, 30),
     ]
 
@@ -64,38 +55,13 @@ def ftpa_outputs(spark):
         ("CASE011", 37),
     ]
 
-    df_m3 = spark.createDataFrame(m3_data, m3_schema)
-    df_c = spark.createDataFrame(c_data, c_schema)
+    silver_m3 = spark.createDataFrame(m3_data, m3_schema)
+    silver_c = spark.createDataFrame(c_data, c_schema)
 
-    # ------------------------------------------------------------
-    # cast DecisionDate to TIMESTAMP (so date_format works)
-    # ------------------------------------------------------------
-    df_m3 = df_m3.withColumn(
-        "DecisionDate",
-        F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-    )
-
-    def _mock_fsb_ftpa(silver_m3, silver_c):
-        base = (
-            silver_m3.select("CaseNo").distinct()
-            .withColumn("judgeAllocationExists", F.lit("Yes"))
-            .withColumn("allocatedJudge", F.lit(None).cast("string"))
-            .withColumn("allocatedJudgeEdit", F.lit(None).cast("string"))
-        )
-        audit = base.limit(0)
-        return base, audit
-
-    FSB.ftpa = _mock_fsb_ftpa  # monkeypatch
-
-    ftpa_content, _ = ftpa(df_m3, df_c)
-
-    assert ftpa_content.count() > 0, (
-        "ftpa_decided.ftpa() returned 0 rows in unit test input."
-    )
+    ftpa_content, _ = ftpa(silver_m3, silver_c)
 
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     return results
-
 
 def test_ftpaApplicantType(ftpa_outputs):
     r = ftpa_outputs

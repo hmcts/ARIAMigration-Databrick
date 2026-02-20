@@ -92,15 +92,6 @@ def ftpa(silver_m3, silver_c):
     # F COLUMN (Decision/outcome fields):
     # MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14)
     # ------------------------------------------------------------
-<<<<<<< HEAD
-    # m3_latest_cs39_outcome = (
-    #     silver_m3
-    #     .filter((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
-    #     .withColumn("rn", row_number().over(window_spec))
-    #     .filter(col("rn") == 1)
-    #     .drop("rn")
-    # )
-=======
     m3_latest_cs39_outcome = (
         silver_m3
         .filter((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
@@ -118,7 +109,6 @@ def ftpa(silver_m3, silver_c):
         .filter(col("rn") == 1)
         .drop("rn")
     )
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
 
     # Outcome mapping (I/J)
     outcome_type = (
@@ -128,45 +118,10 @@ def ftpa(silver_m3, silver_c):
         .otherwise(lit(None))
     )
 
-<<<<<<< HEAD
-    # outcome_display = (
-    #     when(col("Outcome") == 30, lit("Granted"))
-    #     .when(col("Outcome") == 31, lit("Refused"))
-    #     .when(col("Outcome") == 14, lit("Not admitted"))
-    #     .otherwise(lit(None))
-    # )
-
-=======
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
     # ------------------------------------------------------------
     # Decision/outcome-driven decided fields (cs39 + outcome in 30/31/14)
     # ------------------------------------------------------------
     ftpaDec_df = (
-<<<<<<< HEAD
-            m3_latest_cs39.join(ftpa_df, on=["CaseNo"], how="left")
-            .withColumn(
-                "ftpaApplicantType",
-                when(col("Party") == 1, lit("appellant"))
-                .when(col("Party") == 2, lit("respondent"))
-                .otherwise(lit(None))
-            )
-            .withColumn("ftpaFirstDecision", outcome_type)
-
-            .withColumn(
-                "ftpaAppellantDecisionDate",
-                when(col("Party") == 1, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-            )
-            .withColumn(
-                "ftpaRespondentDecisionDate",
-                when(col("Party") == 2, date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None))
-            )
-            
-            .withColumn("ftpaFinalDecisionForDisplay", outcome_type)
-            .withColumn("ftpaAppellantRjDecisionOutcomeType", outcome_type)
-            .withColumn("ftpaRespondentRjDecisionOutcomeType", outcome_type)
-            .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("Party") == 1, lit("No")).otherwise(lit(None)))
-            .withColumn("isFtpaRespondentNoticeOfDecisionSetAside", when(col("Party") == 2, lit("No")).otherwise(lit(None)))
-=======
             m3_latest_cs39.alias("no_outcome").join(ftpa_df, on=["CaseNo"], how="left").join(m3_latest_cs39_outcome.alias("outcome"), on=["CaseNo"], how="left").join(ftpaFinalDecisionForDisplay.alias("ftpaFinalDescOutcome"), on=["CaseNo"], how="left")
             .withColumn(
                 "ftpaApplicantType",
@@ -209,7 +164,6 @@ def ftpa(silver_m3, silver_c):
             .withColumn("judgeAllocationExists",lit("Yes"))
             .withColumn("allocatedJudge",concat(col("no_outcome.Adj_Title"),lit(" "),col("no_outcome.Adj_Forenames"),lit(" "),col("no_outcome.Adj_Surname")))
             .withColumn("allocatedJudgeEdit",concat(col("no_outcome.Adj_Title"),lit(" "),col("no_outcome.Adj_Forenames"),lit(" "),col("no_outcome.Adj_Surname")))
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
 
             .select(
                 col("CaseNo"),
@@ -224,14 +178,11 @@ def ftpa(silver_m3, silver_c):
                 col("judgeAllocationExists"),
                 col("allocatedJudge"),
                 col("allocatedJudgeEdit"),
-<<<<<<< HEAD
-=======
                 # col("outcome.Outcome"),
                 # col("no_outcome.Outcome"),
                 # col("ftpaFinalDescOutcome.Outcome"),
                 # col("outcome.Party"),
                 # col("no_outcome.Party"),
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
                 col("ftpaApplicantType"),
                 col("ftpaFirstDecision"),
                 col("ftpaAppellantDecisionDate"),
@@ -398,11 +349,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         )
         .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
         .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
-<<<<<<< HEAD
-        .withColumn("isDlrnSetAsideEnabled", lit("Yes"))
-=======
         .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
         .withColumn("isFtpaAppellantDecided", lit("Yes"))
         .withColumn("isFtpaRespondentDecided", lit("Yes"))
         .withColumn("isReheardAppealEnabled", lit("Yes"))

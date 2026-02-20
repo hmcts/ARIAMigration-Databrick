@@ -39,14 +39,7 @@ def general_outputs(spark):
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
-<<<<<<< HEAD
-
-        # PAWAN: keep CaseStatus column as your existing unit test expects it
-        # (even if general() doesn't use it directly, don't remove - avoids future filter/schema mismatch)
-        T.StructField("CaseStatus", T.IntegerType(), True),
-=======
         T.StructField("CaseStatus", T.IntegerType(), True), 
->>>>>>> 81c328919074ab88278bee650351f09f679d7495
     ])
 
     m1_data = [

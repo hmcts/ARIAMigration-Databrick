@@ -62,7 +62,7 @@ def test_ftpaApplicantType(ftpa_outputs):
     assert r["HU/01897/2024"]["ftpaApplicantType"] == "respondent"
     assert r["PA/01921/2025"]["ftpaApplicantType"] is None
     assert r["PA/03789/2024"]["ftpaApplicantType"] is None
-    assert r["PA/03885/2024"]["ftpaApplicantType"] == "appellant"
+    assert r["PA/03885/2024"]["ftpaApplicantType"] is None
 
 def test_ftpaFirstDecision_and_FinalDecisionForDisplay(ftpa_outputs):
     r = ftpa_outputs

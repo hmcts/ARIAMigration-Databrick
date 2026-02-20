@@ -223,7 +223,6 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
 
     #ftpa submitted
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
     silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")

@@ -37,7 +37,7 @@ resources:
             notebook_path: "/Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON"
             source: WORKSPACE
             base_parameters:
-              state: ftpa_decided
+              state: ftpaDecided
 
       queue:
         enabled: true

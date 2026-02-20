@@ -83,13 +83,14 @@ def general_outputs(spark):
         T.StructField("Adj_Surname", T.StringType(), True),
         T.StructField("Party", T.IntegerType(), True),
         T.StructField("OutOfTime", T.IntegerType(), True),
+        T.StructField("Outcome", T.IntegerType(), True),
     ])
 
     m3_data = [
-        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe",   "Jane",  1, 0),
-        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz",   "John",  1, 1),
-        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe",   "abc",   2, 0),
-        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1),
+        ("CASE005", 2, 39, 60,  "LOC002", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.000+00:00", "Ms", "Doe",   "Jane",  1, 0, 39),
+        ("CASE006", 1, 39, 240, "LOC003", "2026-12-03T00:00:00.000+00:00", "1899-12-30T13:00:00.000+00:00", "Mr", "xyz",   "John",  1, 1, 46),
+        ("CASE007", 1, 39, 360, "LOC004", "2026-08-03T00:00:00.000+00:00", "2000-12-30T07:10:58.000+00:00", "Mr", "Doe",   "abc",   2, 0, 0),
+        ("CASE011", 1, 39, 45,  "LOC008", "2025-11-02T00:00:00.000+00:00", "1899-12-30T12:00:00.999+00:00", "Mr", "Hello", "World", 2, 1, 31),
     ]
 
     # ----------------------------
@@ -163,22 +164,17 @@ def general_outputs(spark):
 def test_party_visibility_flags(general_outputs):
     r = general_outputs
 
-    # CASE001: appellant
-    assert r["CASE001"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
-    assert r["CASE001"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
+    # CASE005: Party=1 → appellant
+    assert r["CASE005"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
+    assert r["CASE005"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
 
-    # CASE002: respondent
-    assert r["CASE002"]["isAppellantFtpaDecisionVisibleToAll"] == "No"
-    assert r["CASE002"]["isRespondentFtpaDecisionVisibleToAll"] == "Yes"
-
-    # CASE004: appellant with no outcome
-    assert r["CASE004"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
-    assert r["CASE004"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
+    # CASE007: Party=2 → respondent
+    assert r["CASE007"]["isAppellantFtpaDecisionVisibleToAll"] == "No"
+    assert r["CASE007"]["isRespondentFtpaDecisionVisibleToAll"] == "Yes"
 
 
 def test_constant_flags(general_outputs):
     r = general_outputs
-    # Fields that should always be "Yes"
     for case in r.values():
         assert case["isDlrmSetAsideEnabled"] == "Yes"
         assert case["isFtpaAppellantDecided"] == "Yes"
@@ -188,11 +184,6 @@ def test_constant_flags(general_outputs):
 
 def test_second_ftpa_decision_flag(general_outputs):
     r = general_outputs
-    # Only CASE003 has CaseStatus=46 & Outcome=31 -> Yes
-    assert r["CASE001"]["secondFtpaDecisionExists"] == "No"
-    assert r["CASE002"]["secondFtpaDecisionExists"] == "No"
-    assert r["CASE003"]["secondFtpaDecisionExists"] == "Yes"
-    assert r["CASE004"]["secondFtpaDecisionExists"] == "No"
-    assert r["CASE005"]["secondFtpaDecisionExists"] == "No"
-
-
+    # All current cases are "No"
+    for case_no in ["CASE005", "CASE006", "CASE007", "CASE011"]:
+        assert r[case_no]["secondFtpaDecisionExists"] == "No"

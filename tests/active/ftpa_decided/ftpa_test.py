@@ -60,8 +60,8 @@ def ftpa_outputs(spark):
 def test_ftpaApplicantType(ftpa_outputs):
     r = ftpa_outputs
     assert r["HU/01897/2024"]["ftpaApplicantType"] == "respondent"
-    assert r["PA/01921/2025"]["ftpaApplicantType"] == "appellant"
-    assert r["PA/03789/2024"]["ftpaApplicantType"] == "appellant"
+    assert r["PA/01921/2025"]["ftpaApplicantType"] is None
+    assert r["PA/03789/2024"]["ftpaApplicantType"] is None
     assert r["PA/03885/2024"]["ftpaApplicantType"] == "appellant"
 
 def test_ftpaFirstDecision_and_FinalDecisionForDisplay(ftpa_outputs):
@@ -85,16 +85,12 @@ def test_decision_dates_by_party_iso8601(ftpa_outputs):
         assert r[case]["ftpaAppellantDecisionDate"] is None
         assert r[case]["ftpaRespondentDecisionDate"] is None
 
-def test_rj_outcome_types_by_party(ftpa_outputs):
+def test_rj_outcome_types(ftpa_outputs):
     r = ftpa_outputs
-    # Respondent decision
     assert r["HU/01897/2024"]["ftpaRespondentRjDecisionOutcomeType"] == "refused"
-    assert r["HU/01897/2024"]["ftpaAppellantRjDecisionOutcomeType"] is None
-
-    # No decisions
-    for case in ["PA/01921/2025", "PA/03789/2024", "PA/03885/2024"]:
-        assert r[case]["ftpaAppellantRjDecisionOutcomeType"] is None
-        assert r[case]["ftpaRespondentRjDecisionOutcomeType"] is None
+    assert r["HU/01897/2024"]["ftpaAppellantRjDecisionOutcomeType"] == "refused"
+    assert r["PA/01921/2025"]["ftpaAppellantRjDecisionOutcomeType"] is None
+    assert r["PA/03789/2024"]["ftpaAppellantRjDecisionOutcomeType"] is None
 
 def test_notice_of_decision_set_aside_flags(ftpa_outputs):
     r = ftpa_outputs

@@ -109,9 +109,9 @@ class TestAppealSubmittedRemissionType:
                 ("5", "RP", "AIP", 1),   # RP Case and valid conditions - none
                 ("6", "EA", "AIP", 0),   # PaymentRemissionGranted = 0 - none
                 ("7", "EA", "AIP", 2),   # PaymentRemissionGranted = 2 - none
-                ("8", "EA", "AIP", 1),   # TransactionTypeId != 5 - none
-                ("9", "EA", "AIP", 1),   # Status == 3 - none
-                ("10", "EA", "AIP", 1),  # TransactionTypeId != 5 and Status == 3 - none
+                ("8", "EA", "AIP", 1),   # TransactionTypeId != 5 - 0 set
+                ("9", "EA", "AIP", 1),   # Status == 3 - 0 set
+                ("10", "EA", "AIP", 1),  # TransactionTypeId != 5 and Status == 3 - 0 set
                 ("11", "EA", "AIP", 1)   # Multiple matching conditions - sum of amountRemitted
             ]
 

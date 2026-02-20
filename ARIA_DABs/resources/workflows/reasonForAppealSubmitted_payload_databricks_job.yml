@@ -1,38 +1,38 @@
 resources:
   jobs:
-    ftpa_submitted_b_payload_databricks_job:
-      name: ftpa_submitted_b_payload_databricks_job
+    reasonsForAppealSubmitted_payload_databricks_job:
+      name: reasonsForAppealSubmitted_payload_databricks_job
       job_clusters:
-        - job_cluster_key: ftpa_submitted_b_payload_databricks_job
+        - job_cluster_key: reasonsForAppealSubmitted_payload_databricks_job
           new_cluster:
             spark_version: 14.3.x-scala2.12
             node_type_id: Standard_D8ds_v5
             num_workers: 8
       tasks:
         - task_key: run-my-wheel
-          job_cluster_key: ftpa_submitted_b_payload_databricks_job
+          job_cluster_key: reasonsForAppealSubmitted_payload_databricks_job
           python_wheel_task:
             entry_point: main
             package_name: shared_functions
           libraries: 
             - whl: "dbfs:/FileStore/packages/shared_functions-0.6.6-py3-none-any.whl"
 
-        - task_key: DLT_ftpa_submitted_b
+        - task_key: DLT_reasonsForAppealSubmitted
           depends_on:
             - task_key: run-my-wheel
           pipeline_task:
-            pipeline_id: ${resources.pipelines.pipeline_pl_ftpa_submitted_b_gold.id}
+            pipeline_id: ${resources.pipelines.pipeline_pl_reasonsForAppealSubmitted_gold.id}
             full_refresh: true
                 
         - task_key: active_publish_EH_HTML_JSON
           depends_on: 
-            - task_key: DLT_ftpa_submitted_b
-          job_cluster_key: ftpa_submitted_b_payload_databricks_job
+            - task_key: DLT_reasonsForAppealSubmitted
+          job_cluster_key: reasonsForAppealSubmitted_payload_databricks_job
           notebook_task:
             notebook_path: "/Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON"
             source: WORKSPACE
             base_parameters:
-              state: ftpaSubmitted(b)
+              state: reasonsForAppealSubmitted
 
       queue:
         enabled: true

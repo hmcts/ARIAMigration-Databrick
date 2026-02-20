@@ -11,10 +11,10 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
 
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, 
+    col, when, lit, array, struct, collect_list,
+    max as spark_max, date_format, row_number, expr,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains, nullif
+    collect_set, current_timestamp, transform, first, array_contains, nullif, upper
 )
 from uk_postcodes_parsing import fix, postcode_utils
 
@@ -1242,7 +1242,7 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_
 getCountryApp_udf = udf(getCountryApp, StringType())
 
 
-def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,bronze_HORef_cleansing):
+def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
     # Create DataFrame with CaseNo and list of CategoryId
@@ -1250,14 +1250,14 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
 
     # Create DataFrame with CaseNo and collection of lu_countryCode from silver_m1
     silver_m1_country_grouped = silver_m1.groupBy("CaseNo").agg(
-    transform(
-        collect_list(col("lu_countryCode")),
-        lambda code: struct(
-            expr("uuid()").alias("id"),
-            struct(code.alias("code")).alias("value")
-        )
-    ).alias("appellantNationalities"),
-    collect_list(col("lu_countryCode")).alias("lu_countryCodeList")
+        transform(
+            collect_list(col("lu_countryCode")),
+            lambda code: struct(
+                expr("uuid()").alias("id"),
+                struct(code.alias("code")).alias("value")
+            )
+        ).alias("appellantNationalities"),
+        collect_list(col("lu_countryCode")).alias("lu_countryCodeList")
     )
 
     # isAppellantMinor: BirthDate > (DateLodged - 18 years) using year subtraction
@@ -1280,12 +1280,18 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
         conditions & (expr("array_contains(CategoryIdList, 37)")), lit("Yes")
     ).when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("No")
+    ).when(
+        conditions & (col("silver_m2.Detained").isin(1, 2, 4)), lit("Yes")
+    ).when(
+        conditions & (upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("Yes")
+    ).when(
+        conditions & ~(upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("No")
     ).otherwise(None)
 
     # appealOutOfCountry logic
     appeal_out_of_country_expr = when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("Yes")
-    ).otherwise(None)
+    ).otherwise(lit("No"))
 
     # appellantStateless logic
     appellant_stateless_expr = when(
@@ -1385,11 +1391,12 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     ).otherwise(None)
 
     address_line3_adminj_expr = when(
-    conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address3").isNotNull() | col("Appellant_Address4").isNotNull()),
-    concat_ws(
-        ", ",
-        col("Appellant_Address3"), col("Appellant_Address4")
-    )).otherwise(None)
+        conditions & expr("array_contains(CategoryIdList, 38)") & (col("Appellant_Address3").isNotNull() | col("Appellant_Address4").isNotNull()),
+            concat_ws(
+                ", ",
+                col("Appellant_Address3"), col("Appellant_Address4")
+            )
+    ).otherwise(None)
 
     # addressLine4AdminJ logic
     # IF CategoryId IN [38] = Include; ELSE OMIT
@@ -1410,33 +1417,30 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     ooc_appeal_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
         when(
-              (col("lu_HORef").like("%GWF%")) |
-              (col("HORef").like("%GWF%")) |
-              (col("FCONumber").like("%GWF%"))
-        
-        , lit("entryClearanceDecision")).otherwise(lit("none"))
+            (col("lu_HORef").like("%GWF%")) | (col("HORef").like("%GWF%")) | (col("FCONumber").like("%GWF%")),
+            lit("entryClearanceDecision")).otherwise(lit("none")
+        )
     ).otherwise(None)
 
     silver_m2 = silver_m2.filter(col("Relationship").isNull())
 
-    silver_m2_derived = silver_m2.withColumn(
-                                        "appellantFullAddress",
-                                        concat_ws(",",
-                                            col("Appellant_Address1"),
-                                            col("Appellant_Address2"),
-                                            col("Appellant_Address3"),
-                                            col("Appellant_Address4"),
-                                            col("Appellant_Address5"),
-                                            col("Appellant_Postcode")
-                                        )
+    silver_m2_derived = silver_m2.withColumn("appellantFullAddress",
+                                            concat_ws(",",
+                                                col("Appellant_Address1"),
+                                                col("Appellant_Address2"),
+                                                col("Appellant_Address3"),
+                                                col("Appellant_Address4"),
+                                                col("Appellant_Address5"),
+                                                col("Appellant_Postcode")
+                                            )
                                     ).withColumn(
                                         "ukPostcodeAppellant",
                                         getUkPostcodeUDF(col("Appellant_Postcode"))
                                     ).withColumn(
                                         "dv_countryGovUkOocAdminJ",
                                         getCountryLRUDF(
-                                        col("appellantFullAddress")
-                                            )
+                                            col("appellantFullAddress")
+                                        )
                                     )
                                     # ).withColumn(
                                     #     "dv_countryGovUkOocAdminJ",
@@ -1448,12 +1452,11 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
                                     #     )
                                     # )
 
+    bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
 
-    bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ",col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
-
-    silver_m2_derived = silver_m2_derived.alias('main').join(bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left").select("main.*",  when( col("lu_cfa_contryFromAddress").isNotNull(),col("lu_cfa_countryGovUkOocAdminJ"))
+    silver_m2_derived = silver_m2_derived.alias('main').join(bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left").select("main.*", when(col("lu_cfa_contryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
           .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
-    
+
     country_gov_uk_ooc_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
         col("countryGovUkOocAdminJ")
@@ -1476,7 +1479,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
     email_expr = internal_appellant_email_expr
 
     df = silver_m1.alias("silver_m1") \
-        .join(silver_m2_derived, ["CaseNo"], "left") \
+        .join(silver_m2_derived.alias("silver_m2"), ["CaseNo"], "left") \
         .join(silver_c_grouped, ["CaseNo"], "left") \
         .join(silver_m1_country_grouped, ["CaseNo"], "left") \
         .join(bronze_cleansing, ["CaseNo"], "left") \
@@ -1494,7 +1497,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
                  concat(col("Appellant_Forenames"), lit(" "), col("Appellant_Name"))
             ).otherwise(None).alias("appellantNameForDisplay"),
             when(conditions,
-                 date_format(col("BirthDate"),"yyyy-MM-dd")
+                 date_format(col("BirthDate"), "yyyy-MM-dd")
             ).otherwise(None).alias("appellantDateOfBirth"),
             is_minor_expr.alias("isAppellantMinor"),
             when(conditions,
@@ -1517,7 +1520,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
             address_line2_adminj_expr.alias("addressLine2AdminJ"),
             address_line3_adminj_expr.alias("addressLine3AdminJ"),
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
-            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"), # when()== lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).
+            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),  # when()== lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).
             appellant_stateless_expr.alias("appellantStateless"),
             when(
                 conditions,
@@ -1527,8 +1530,10 @@ def appellantDetails(silver_m1, silver_m2, silver_c,bronze_countryFromAddress,br
                     lit(None)
                 ).otherwise(col("appellantNationalities"))
             ).otherwise(lit(None)).alias("appellantNationalities"),
-            when(conditions, col("lu_appellantNationalitiesDescription")).otherwise(None).alias("appellantNationalitiesDescription"),
-            when(conditions & deportation_condition ,
+            when(conditions,
+                 when(col("lu_appellantNationalitiesDescription").eqNullSafe("NO MAPPING REQUIRED"), lit(None)).otherwise(col("lu_appellantNationalitiesDescription"))
+            ).otherwise(None).alias("appellantNationalitiesDescription"),
+            when(conditions & deportation_condition,
                 lit("Yes")
             ).when(conditions, lit("No")).otherwise(None).alias("deportationOrderOptions")
         ).distinct()

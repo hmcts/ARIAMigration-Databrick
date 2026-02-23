@@ -31,7 +31,10 @@ from pyspark.sql.functions import (
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-def ended(silver_m3, bronze_ended_states):
+def ended(silver_m1, silver_m3, bronze_ended_states):
+
+    df_representation = silver_m1.select("CaseNo", "dv_representation", "lu_appealType").distinct()
+
     # 1) Normalize numeric types explicitly (in-place casts)
     df = (
         silver_m3
@@ -116,6 +119,7 @@ def ended(silver_m3, bronze_ended_states):
     ended_df = (
         silver_with_decision_ts.alias("m3")
         .join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")
+        .join(df_representation.alias("rep"), on="CaseNo", how="left")
         .withColumn(
             "endAppealApproverType",
             F.when(F.col("CaseStatus") == 46, F.lit("Judge")).otherwise(F.lit("Case Worker"))
@@ -125,21 +129,39 @@ def ended(silver_m3, bronze_ended_states):
             F.when(
                 F.col("CaseStatus") == 46,
                 F.concat(
-                    F.col("Adj_Determination_Title"), F.lit(" "),
-                    F.col("Adj_Determination_Forenames"), F.lit(" "),
-                    F.col("Adj_Determination_Surname")
+                    F.col("Adj_Determination_Surname"), F.lit(" "),
+                    F.col("Adj_Determination_Forenames"), F.lit(" ("),
+                    F.col("Adj_Determination_Title"), F.lit(")"),
                 )
             ).otherwise(F.lit("This is a migrated ARIA case"))
         )
-        .withColumn("endAppealDate", F.date_format(F.col("decision_ts"), "dd/MM/yyyy"))
-        .select(
+        .withColumn("endAppealDate", F.date_format(F.col("decision_ts"), "yyyy-MM-dd"))
+        
+        .withColumn(
+            "stateBeforeEndAppeal",
+            F.when(
+                (F.col("CaseStatus") == 26) &
+                (F.col("Outcome").isin(13, 80, 25)) &
+                (F.col("dv_representation") == "LR"),
+                "caseUnderReview"
+            )
+            .when(
+                (F.col("CaseStatus") == 26) &
+                (F.col("Outcome").isin(13, 80, 25)) &
+                (F.col("dv_representation") == "AIP"),
+                "reasonsForAppealSubmitted"
+            )
+            .otherwise(F.col("es.stateBeforeEndAppeal"))
+        )
+
+                .select(
             F.col("CaseNo"),
             F.col("es.endAppealOutcome"),
             F.col("es.endAppealOutcomeReason"),
             F.col("endAppealApproverType"),
             F.col("endAppealApproverName"),
             F.col("endAppealDate"),
-            F.col("es.stateBeforeEndAppeal"),
+            F.col("stateBeforeEndAppeal"),
         )
     )
 

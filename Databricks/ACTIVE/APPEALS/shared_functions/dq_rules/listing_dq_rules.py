@@ -423,8 +423,24 @@ class listingDQRules(DQRulesBase):
             "(submitHearingRequirementsAvailable <=> 'Yes')"
         )
 
+        checks["valid_uploadHomeOfficeBundleAvailable"] = (
+            "(uploadHomeOfficeBundleAvailable <=> 'No')"
+        )
+
         checks["valid_uploadHomeOfficeAppealResponseActionAvailable"] = (
             "(uploadHomeOfficeAppealResponseActionAvailable <=> 'No')"
+        )
+
+        checks["valid_markEvidenceAsReviewedActionAvailable"] = (
+            "(markEvidenceAsReviewedActionAvailable <=> 'Yes')"
+        )
+
+        checks["valid_uploadAdditionalEvidenceActionAvailable"] = (
+            "(uploadAdditionalEvidenceActionAvailable <=> 'Yes')"
+        )
+
+        checks["valid_uploadAdditionalEvidenceHomeOfficeActionAvailable"] = (
+            "(uploadAdditionalEvidenceHomeOfficeActionAvailable <=> 'Yes')"
         )
 
         return checks

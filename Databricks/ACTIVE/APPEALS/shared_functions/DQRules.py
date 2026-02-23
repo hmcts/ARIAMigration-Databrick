@@ -250,11 +250,44 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     m3_net_df = (filtered.withColumn("rn", row_number().over(window_spec)).filter(col("rn") == 1).drop("rn", "has_10_51_52_in_case"))
 
     # 5) Build decision_ts robustly and format end date
-    valid_ended_new_columns = m3_net_df.alias("m3").join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")\
-            .withColumn("decision_ts",date_format(coalesce(to_timestamp(col("DecisionDate")), 
-            to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
-            to_timestamp(col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")), "dd/MM/yyyy")
-    ).select(col("CaseNo"),col("decision_ts"),col("m3.CaseStatus").alias("CaseStatus_end"),col("m3.Outcome").alias("Outcome_end"),col("StatusId").alias("StatusId_end"),col("es.endAppealOutcome").alias("endAppealOutcome_end"),col("es.endAppealOutcomeReason").alias("endAppealOutcomeReason_end"),col("es.stateBeforeEndAppeal").alias("stateBeforeEndAppeal_end"),col("Adj_Determination_Title").alias("Adj_Determination_Title_end"),col("Adj_Determination_Forenames").alias("Adj_Determination_Forenames_end"),col("Adj_Determination_Surname").alias("Adj_Determination_Surname_end"))
+    
+    valid_ended_new_columns = (
+        m3_net_df.alias("m3")
+        .join(bronze_ended_states.alias("es"), on=["CaseStatus", "Outcome"], how="left")
+        .join(
+            silver_m1.select("CaseNo", "dv_representation", "lu_appealType").alias("m1"),
+            on="CaseNo",
+            how="left"
+        )
+        # Compute decision_ts BEFORE narrowing columns; qualify source as m3.DecisionDate
+        .withColumn(
+            "decision_ts",
+            date_format(
+                coalesce(
+                    to_timestamp(col("m3.DecisionDate")),
+                    to_timestamp(col("m3.DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
+                    to_timestamp(col("m3.DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                ),
+                "yyyy-MM-dd"
+            )
+        )
+        .select(
+            col("CaseNo"),
+            col("decision_ts"),
+            col("m3.CaseStatus").alias("CaseStatus_end"),
+            col("m3.Outcome").alias("Outcome_end"),
+            col("StatusId").alias("StatusId_end"),
+            col("es.endAppealOutcome").alias("endAppealOutcome_end"),
+            col("es.endAppealOutcomeReason").alias("endAppealOutcomeReason_end"),
+            col("es.stateBeforeEndAppeal").alias("stateBeforeEndAppeal_end"),
+            col("Adj_Determination_Title").alias("Adj_Determination_Title_end"),
+            col("Adj_Determination_Forenames").alias("Adj_Determination_Forenames_end"),
+            col("Adj_Determination_Surname").alias("Adj_Determination_Surname_end"),
+            # If you actually intended dv_representation_ended, rename it here:
+            col("m1.dv_representation").alias("dv_representation_ended")
+        )
+    )
+
 
   ######################Ended State Update Columns#######################################
     df = (

@@ -20,15 +20,56 @@ class endedDQRules(DQRulesBase):
     def get_checks_ended(self, checks={}):
 
         checks["valid_endAppealOutcome"] = """(
-            endAppealOutcome = endAppealOutcome_end
-            OR
-            (endAppealOutcome IS NULL AND endAppealOutcome_end IS NULL)
+            
+
+            CASE
+                WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
+                WHEN CaseStatus_end in(10) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
+                WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
+                
+                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No Valid Appeal"
+
+                WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
+
+                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck Out"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck Out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck Out" 
+                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck Out" 
+
+                ELSE endAppealOutcome IS NULL
+
+            END
         )"""
 
         checks["valid_endAppealOutcomeReason"] = """(
-            endAppealOutcomeReason = endAppealOutcomeReason_end
-            OR
-            (endAppealOutcomeReason IS NULL AND endAppealOutcomeReason_end IS NULL)
+            
+            CASE
+                WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | No Valid Appeal."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Withdrawn."
+                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Withdrawn."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Withdrawn."
+                WHEN CaseStatus_end = 52 AND Outcome_end = 91 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt."
+                WHEN CaseStatus_end = 52 AND Outcome_end = 95 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Write Off."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 93 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
+                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
+                
+                ELSE endAppealOutcomeReason IS NULL
+
+            END
+            
         )"""
 
         checks["valid_endAppealApproverType"] = """(
@@ -40,7 +81,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_endAppealApproverName"] = """(
             CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat(Adj_Determination_Title_end, ' ', Adj_Determination_Forenames_end, ' ', Adj_Determination_Surname_end)
+                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,' ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
                 ELSE endAppealApproverName = 'This is a migrated ARIA case'
             END
         )"""
@@ -50,9 +91,22 @@ class endedDQRules(DQRulesBase):
         )"""
 
         checks["valid_stateBeforeEndAppeal"] = """(
-            stateBeforeEndAppeal = stateBeforeEndAppeal_end
-            OR
-            (stateBeforeEndAppeal IS NULL AND stateBeforeEndAppeal_end IS NULL)
+            
+            CASE
+                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25) THEN stateBeforeEndAppeal = "listing"
+                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
+                WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end = 51 AND Outcome_end in (94,93) THEN stateBeforeEndAppeal = "pendingPayment"
+                WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal = "pendingPayment"
+                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
+                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
+                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
+
+                ELSE stateBeforeEndAppeal IS NULL
+
+            END
+
         )"""
 
         return checks

@@ -1241,7 +1241,6 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_
 
 getCountryApp_udf = udf(getCountryApp, StringType())
 
-
 def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
@@ -1425,7 +1424,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     silver_m2 = silver_m2.filter(col("Relationship").isNull())
 
     silver_m2_derived = silver_m2.withColumn("appellantFullAddress",
-                                            concat_ws(",",
+                                            concat_ws(", ",
                                                 col("Appellant_Address1"),
                                                 col("Appellant_Address2"),
                                                 col("Appellant_Address3"),
@@ -1438,17 +1437,17 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
                                         getUkPostcodeUDF(col("Appellant_Postcode"))
                                     ).withColumn(
                                         "dv_countryGovUkOocAdminJ",
-                                        getCountryLRUDF(
-                                            col("appellantFullAddress")
+                                        getCountryApp_udf(
+                                            col("lu_countryGovUkOocAdminJ").alias("country"),
+                                            col("ukPostcodeAppellant"),
+                                            col("appellantFullAddress"),
+                                            col("Appellant_Postcode")
                                         )
                                     )
                                     # ).withColumn(
                                     #     "dv_countryGovUkOocAdminJ",
-                                    #     getCountryApp_udf(
-                                    #         col("lu_countryGovUkOocAdminJ").alias("country"),
-                                    #         col("ukPostcodeAppellant"),
-                                    #         col("appellantFullAddress"),
-                                    #         col("Appellant_Postcode")
+                                    #     getCountryLRUDF(
+                                    #         col("appellantFullAddress")
                                     #     )
                                     # )
 

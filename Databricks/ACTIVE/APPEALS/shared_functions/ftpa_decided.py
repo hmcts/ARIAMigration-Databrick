@@ -1,24 +1,3 @@
-# ============================================================
-# Databricks.ACTIVE.APPEALS.shared_functions.ftpa_decided
-# FTPA Decided (shared functions)
-#   - Uses MAX(StatusId) WHERE CaseStatus = 39 for Party-driven fields
-#   - Uses MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14) for decision/outcome fields
-#   - Dates output in ISO 8601 date format: yyyy-MM-dd
-#   - Party include/omit logic per mapping (I/J columns)
-#
-# LATEST FIX MERGED:
-#   - Carry source fields into final output for validation table:
-#       CaseStatus (int), Outcome (int), Party (int), DecisionDate
-#   - Prevents CaseStatus/Outcome/Party being NULL in stg_main_ftpa_Decided_validation
-#   - Keeps CaseStatus as INTEGER (NOT "39")
-#
-#  FIX (to avoid ambiguity in stg_main_ftpa_Decided_validation):
-#   - Rename source fields to unique names so they do NOT clash with
-#     validation joins that also add CaseStatus/Outcome/Party/DecisionDate.
-#   - New columns:
-#       ftpa_src_CaseStatus, ftpa_src_Outcome, ftpa_src_Party, ftpa_src_DecisionDate
-# ============================================================
-
 from datetime import datetime
 import re
 import string

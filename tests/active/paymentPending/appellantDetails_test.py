@@ -71,7 +71,7 @@ def appellantDetails_outputs(spark):
         T.StructField("CasePrefix", T.StringType(), True),
         T.StructField("AppellantCountryId", T.IntegerType(), True),
         T.StructField("Relationship", T.StringType(), True),
-        T.StructField("dv_countryGovUkOocAdminJ", T.StringType(), True),
+        T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
         T.StructField("FCONumber", T.StringType(), True),
         T.StructField("Detained", T.StringType(), True)
     ])
@@ -82,7 +82,7 @@ def appellantDetails_outputs(spark):
          None, None, None, "HU", 133, None, None, None, 0),
         ("HU/00365/2025", "AIP", "euSettlementScheme", "SandersX", "AmandaX", "smithjohn@example.net", None,
          "4280 Michael Highway Suite 815X", "Stephanie AlleyX", "Port DanielX", "GibraltarX", None, "DD3 1HW",
-         None, None, None, "HU", 128, None, "Gibraltar", "XXXXXXX", 0),
+         None, None, None, "HU", 128, None, "GI", "XXXXXXX", 0),
         ("EA/03208/2023", "LR", "refusalOfEu", "PachecoX", "KiaraX", "chelsea42@example.net", None,
          "7706 Barbara Gateway Apt. 725X", "Daniel BurgsX", "North JillportX", None, None, "LS3M 4BX",
          None, None, None, "EA", 155, None, None, None, 0),

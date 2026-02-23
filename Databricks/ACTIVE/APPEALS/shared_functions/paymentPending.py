@@ -1458,7 +1458,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     country_gov_uk_ooc_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
-        col("countryGovUkOocAdminJ")
+        when(col("countryGovUkOocAdminJ") == lit("ZZ"), lit(None)).otherwise(col("countryGovUkOocAdminJ"))
     ).otherwise(None)
 
     # internalAppellantEmail logic
@@ -1519,7 +1519,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             address_line2_adminj_expr.alias("addressLine2AdminJ"),
             address_line3_adminj_expr.alias("addressLine3AdminJ"),
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
-            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),  # when()== lit(""), lit(None)).otherwise(country_gov_uk_ooc_adminj_expr).
+            country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
             appellant_stateless_expr.alias("appellantStateless"),
             when(
                 conditions,

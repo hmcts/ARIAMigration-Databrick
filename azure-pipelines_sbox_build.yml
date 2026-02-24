@@ -17,7 +17,7 @@ parameters:
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-        states: ['active_ccd'] # Active Function State
+        states: ['active_ccd', 'active_caselink_ccd'] # Active Function State
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -44,7 +44,7 @@ parameters:
         dependsOn: sbox_aria
         pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-        states: ['active_ccd'] # Active Function State
+        states: ['active_ccd', 'active_caselink_ccd'] # Active Function State
         landing_zones:
           - landing_zone: '00'
             databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
@@ -178,12 +178,12 @@ stages:
             steps:
               - script: |
                   pip install --upgrade pip
-                  pip install -r AzureFunctions/Active/${{ state }}/requirements.txt \
+                  pip install -r AzureFunctions/ACTIVE/${{ state }}/requirements.txt \
                     --target="./AzureFunctions/.python_packages_${{ state }}/lib/site-packages"
                 displayName: 'Install dependencies for ${{ state }}'
               - task: PublishBuildArtifacts@1
                 inputs:
-                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/Active/${{ state }}'
+                  PathtoPublish: '$(Build.SourcesDirectory)/AzureFunctions/ACTIVE/${{ state }}'
                   ArtifactName: 'functionapp-${{ state }}'
                   publishLocation: 'Container'
                 displayName: 'Publish Function App for ${{ state }}'
@@ -236,7 +236,7 @@ stages:
                   inputs:
                     connectedServiceNameARM: ${{ deployment.service_connection }}
                     appType: 'functionAppLinux'
-                    appName: 'af-active-ccd-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01'
+                    appName: "af-${{ replace(state, '_', '-') }}-${{ deployment.environment }}${{ lz.landing_zone }}-uks-dlrm-01"
                     package: '$(Pipeline.Workspace)/functionapp-${{ state }}'
                     deploymentMethod: 'zipDeploy'
                   displayName: 'Deploy ${{ state }} to ${{ deployment.environment }} LZ${{ lz.landing_zone }}'
@@ -279,6 +279,7 @@ stages:
         displayName: 'Deploy HTML and Databricks for ${{ deployment.environment }} LZ${{ lz.landing_zone }}'
         dependsOn:
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_ccd
+          - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_caselink_ccd
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_bails
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_apluta
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_td

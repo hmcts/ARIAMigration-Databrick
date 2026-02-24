@@ -1,9 +1,10 @@
 import json
+import logging
 import requests
 from datetime import datetime, timezone
 
 # tokenManager lives in the same package. When this module is imported by the
-# Functions host the package root will be `AzureFunctions.Active.active_ccd`.
+# Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
 # Use a robust import that works both when running under the Functions host
 # (package import) and when running the module directly (script import).
 try:
@@ -13,20 +14,20 @@ except Exception:
     # fallback when running as a script in the same folder
     from tokenManager import IDAMTokenManager, S2S_Manager
 
+logger = logging.getLogger(__name__)
+
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
 
 
-def start_case_creation(
-        ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token):
-    start_case_endpoint = (
-        f"/caseworkers/{uid}/jurisdictions/{jid}"
-        f"/case-types/{ctid}/event-triggers/{etid}/token"
-    )
+def start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token):
+    start_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
     start_case_creation_url = f"{ccd_base_url}{start_case_endpoint}"
 
+    print(f"CCD start creation url: {start_case_creation_url}")
+
     headers = {
-        "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
+        "Authorization": f"Bearer {idam_token}",  # IDAM user JWT
         "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -40,14 +41,11 @@ def start_case_creation(
         return None
 
 
-def validate_case(
-        ccd_base_url, event_token, payloadData,
-        jid, ctid, idam_token, uid, s2s_token):
-    validate_case_endpoint = (
-        f"/caseworkers/{uid}/jurisdictions/{jid}"
-        f"/case-types/{ctid}/validate"
-    )
+def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
+    validate_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
     validate_case_url = f"{ccd_base_url}{validate_case_endpoint}"
+
+    print(f"CCD validate url: {validate_case_url}")
 
     headers = {
         "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
@@ -70,26 +68,12 @@ def validate_case(
             "ignore_warning": True,
         }
 
-        caseNo = (
-            json_object.get("data", {})
-                .get("appealReferenceNumber", "N/A")
-        )
-        print(
-            f"🔢 Validate posting payload for {caseNo}: "
-            f"validate_case_url = {validate_case_url} "
-            f"headers = {headers} json = {json_object}"
-        )
+        caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
+        print(f"🔢 Validate posting payload for {caseNo}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
 
-        response = requests.post(
-            validate_case_url,
-            headers=headers,
-            json=json_object,
-        )
+        response = requests.post(validate_case_url, headers=headers, json=json_object)
 
-        print(
-            f"🔢 Validate Response for {caseNo}= "
-            f"{response.status_code}: {response.text}"
-        )
+        print(f"🔢 Validate Response for {caseNo}= {response.status_code}: {response.text}")
         return response
 
     except Exception as e:
@@ -97,12 +81,11 @@ def validate_case(
         return None
 
 
-def submit_case(
-        ccd_base_url, event_token, payloadData,
-        jid, ctid, idam_token, uid, s2s_token):
-    submit_case_endpoint = (
-        f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases"
-    )
+def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
+    submit_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases"
+    submit_case_url = ccd_base_url + submit_case_endpoint
+
+    print(f"CCD submission url: {submit_case_url}")
 
     headers = {
         "Authorization": f"Bearer {idam_token}",        # IDAM user JWT
@@ -110,8 +93,6 @@ def submit_case(
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
-
-    submit_case_url = ccd_base_url + submit_case_endpoint
 
     if isinstance(payloadData, str):
         try:
@@ -129,24 +110,12 @@ def submit_case(
             "ignore_warning": True,
         }
 
-        caseNo = (
-            json_object.get("data", {})
-                .get("appealReferenceNumber", "N/A")
-        )
-        print(
-            f"🔢 Submit payload for {caseNo}: "
-            f"submit_case_url = {submit_case_url} "
-            f"headers = {headers} json = {json_object}\n"
-        )
+        caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
+        print(f"🔢 Submit payload for {caseNo}: submit_case_url = {submit_case_url} headers = {headers} json = {json_object}\n")
 
-        response = requests.post(
-            submit_case_url, headers=headers, json=json_object
-        )
+        response = requests.post(submit_case_url, headers=headers, json=json_object)
 
-        print(
-            f"🔢 Submit Response status for {caseNo}: "
-            f"{response.status_code}:{response.text}\n"
-        )
+        print(f"🔢 Submit Response status for {caseNo}: {response.status_code}:{response.text}\n")
         return response
 
     except Exception as e:
@@ -191,13 +160,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_NUMBER):
     etid = "ariaCreateCase"
 
     urls = {
-        "sbox": (
-            f"https://ccd-data-store-api-ia-case-api-pr-{PR_NUMBER}"
-            ".preview.platform.hmcts.net"
-        ),
-        "stg": (
-            "http://ccd-data-store-api-aat.service.core-compute-aat.internal"
-        ),
+        "sbox": f"https://ccd-data-store-api-ia-case-api-ynot-pr-1.preview.platform.hmcts.net",
+        "stg": "http://ccd-data-store-api-aat.service.core-compute-aat.internal",
         "prod": None,
     }
 
@@ -210,10 +174,9 @@ def process_case(env, caseNo, payloadData, runId, state, PR_NUMBER):
 
     # start case creation
 
-    start_response = start_case_creation(
-        ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token
-    )
     print("Starting case creation")
+    start_response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
+    print("Started case creation = {start_response}")
 
     if start_response is None or start_response.status_code != 200:
         if start_response is not None:
@@ -237,30 +200,19 @@ def process_case(env, caseNo, payloadData, runId, state, PR_NUMBER):
 
     else:
         event_token = start_response.json()["token"]
-        print(
-            f"Case creation started for case {caseNo} "
-            f"with event token {event_token}"
-        )
+        print(f"Case creation started for case {caseNo} with event token {event_token}")
 
     # validate case
-    validate_case_response = validate_case(
-        ccd_base_url, event_token, payloadData,
-        jid, ctid, idam_token, uid, s2s_token
-    )
+    print("Starting validate case")
+    validate_case_response = validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    print(f"Validation response for case {caseNo}: {validate_case_response.status_code}")
 
-    print(
-        f"Validation response for case {caseNo}: "
-        f"{validate_case_response.status_code}"
-    )
     try:
         print(json.dumps(validate_case_response.json(), indent=2))
     except Exception:
         print(validate_case_response.text)
 
-    if (
-        validate_case_response is None
-        or validate_case_response.status_code not in {201, 200}
-    ):
+    if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         if validate_case_response is not None:
             status_code = validate_case_response.status_code
             text = validate_case_response.text
@@ -284,16 +236,11 @@ def process_case(env, caseNo, payloadData, runId, state, PR_NUMBER):
         print(f"Validation passed for case {caseNo}")
 
     # submit case
-    submit_case_response = submit_case(
-        ccd_base_url, event_token, payloadData,
-        jid, ctid, idam_token, uid, s2s_token
-    )
-    print(f"Submit case response = {submit_case_response}")
+    print("Starting submit case")
+    submit_case_response = submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    print("Submitted case response = {submit_case_response}")
 
-    if (
-        submit_case_response is None
-        or submit_case_response.status_code not in {201, 200}
-    ):
+    if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         if submit_case_response is not None:
             status_code = submit_case_response.status_code
             text = submit_case_response.text
@@ -324,10 +271,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_NUMBER):
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],
         }
-        print(
-            f"✅ Case {caseNo} submitted successfully with CCD Case ID: "
-            f"{submit_case_response.json()['id']}"
-        )
+        print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result
 
 

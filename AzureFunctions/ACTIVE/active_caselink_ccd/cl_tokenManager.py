@@ -39,10 +39,7 @@ class IDAMTokenManager:
         # Databricks utility to retrieve secrets from Key Vault.
         # need to change this to use kv client
         credentials = DefaultAzureCredential()
-        kv_client = SecretClient(
-            vault_url=f"https://{key_vault}.vault.azure.net/",
-            credential=credentials
-        )
+        kv_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credentials)
         self.client_id = kv_client.get_secret("idam-client-id").value
         self.client_secret = kv_client.get_secret("idam-secret").value
         self.username = kv_client.get_secret("system-username").value
@@ -65,15 +62,10 @@ class IDAMTokenManager:
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        idam_response = requests.post(
-            self.token_url, headers=headers, data=data
-        )
+        idam_response = requests.post(self.token_url, headers=headers, data=data)
 
         if idam_response.status_code != 200:
-            raise RuntimeError(
-                f"Token request failed: "
-                f"{idam_response.status_code} {idam_response.text}"
-            )
+            raise RuntimeError(f"Token request failed: {idam_response.status_code} {idam_response.text}")
 
         payload = idam_response.json()
 
@@ -95,9 +87,7 @@ class IDAMTokenManager:
         if not self._token or not self._expiration_time:
             return True
 
-        return (
-            datetime.now(timezone.utc) >= (self._expiration_time - self.skew)
-        )
+        return datetime.now(timezone.utc) >= (self._expiration_time - self.skew)
 
     def get_token(self):
         if not self._needs_refresh():
@@ -106,9 +96,7 @@ class IDAMTokenManager:
         # other blocks will have to wait
         with self._lock:
             if self._needs_refresh():
-                self._token, self._expiration_time, self._uid = (
-                    self._fetch_token()
-                )
+                self._token, self._expiration_time, self._uid = self._fetch_token()
             return self._token, self._uid
 
     def _fetch_uid(self, idam_token):
@@ -122,10 +110,7 @@ class IDAMTokenManager:
         try:
             payload = idam_response.json()
         except ValueError:
-            raise RuntimeError(
-                f"UID endpoint did not return valid JSON: "
-                f"{idam_response.text}"
-            )
+            raise RuntimeError(f"UID endpoint did not return valid JSON: {idam_response.text}")
         # get the uid from the json
         uid = payload.get("uid")
         if not uid:
@@ -148,10 +133,7 @@ class S2S_Manager():
         self._skew = skew
 
         # ----- Environment config (host + key vault) -----
-        s2s_base = (
-            "http://rpe-service-auth-provider-aat"
-            ".service.core-compute-aat.internal"
-        )
+        s2s_base = "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal"
         urls = {
             "sbox": {
                 "s2s_host": s2s_base,
@@ -176,10 +158,7 @@ class S2S_Manager():
         # need to change this to use kv client
 
         credentials = DefaultAzureCredential()
-        kv_client = SecretClient(
-            vault_url=f"https://{key_vault}.vault.azure.net/",
-            credential=credentials
-        )
+        kv_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credentials)
 
         self._s2s_secret = kv_client.get_secret("s2s-secret").value
 
@@ -205,24 +184,17 @@ class S2S_Manager():
                 }
             )
         except Exception as e:
-            raise EOFError(
-                f"Error reuesting service to service token: {e}"
-            )
+            raise EOFError(f"Error reuesting service to service token: {e}")
         # Ensure you get a 200 response else raise an error
         if s2s_response.status_code != 200:
-            raise RuntimeError(
-                f"Error requesting service to service token: "
-                f"{s2s_response.text}"
-            )
+            raise RuntimeError(f"Error requesting service to service token: {s2s_response.text}")
 
         # Extract token from response
         try:
             payload = s2s_response.text.strip()
             # s2s_token = payload.get("token")
         except Exception as e:
-            raise RuntimeError(
-                f"Error extracting service to service token: {e}"
-            )
+            raise RuntimeError(f"Error extracting service to service token: {e}")
 
         self.expire_time = now + timedelta(seconds=int(self._skew))
         self._s2s_token = payload

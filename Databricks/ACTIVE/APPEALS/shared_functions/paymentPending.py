@@ -1458,7 +1458,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     country_gov_uk_ooc_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
-        when(col("countryGovUkOocAdminJ") == lit("ZZ"), lit(None)).otherwise(col("countryGovUkOocAdminJ"))
+        when(col("countryGovUkOocAdminJ").isin(["NO MAPPING REQUIRED"]), lit(None)).otherwise(col("countryGovUkOocAdminJ"))
     ).otherwise(None)
 
     # internalAppellantEmail logic

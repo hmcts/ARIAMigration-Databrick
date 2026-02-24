@@ -106,7 +106,7 @@
 107,Mauritanian,MR
 108,Mauritian,MU
 109,Mexican,MX
-110,Micronesian,FM
+110,Micronesian,NO MAPPING REQUIRED
 111,Moldavian,MD
 112,Monegasque,MC
 113,Mongolian,MN
@@ -191,7 +191,7 @@
 193,Bhutanese,BT
 194,Puerto Rican,PR
 195,"Hong Kong, Inhabitant Of",HK
-196,British Overseas Citizen,BC
+196,British Overseas Citizen,NO MAPPING REQUIRED
 197,Irish,IE
 198,Palestinian,PS
 199,DRC National,CD
@@ -205,6 +205,6 @@
 207,British National (Overseas),NO MAPPING REQUIRED
 208,Serb,RS
 209,Montenegrin,ME
-211,Stateless,ZZ
+211,Stateless,NO MAPPING REQUIRED
 212,Taiwanese,TW
 213,Kosovan,KO

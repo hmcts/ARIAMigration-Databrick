@@ -92,7 +92,7 @@ PaymentPendingTypes = {
     's94bStatus': 'string',
     'selectedHearingCentreRefData': 'string',
     'sendDirectionActionAvailable': 'string',
-    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>',
+    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',
     'staffLocation': 'string',
     'submissionOutOfTime': 'string',
     'submitNotificationStatus': 'string',

@@ -71,4 +71,8 @@ stages:
         displayName: 'Run FTPA Decided Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/ftpa_decided.yml
-
+          
+      - job: EndedTests
+        displayName: 'Run Ended Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/ended.yml

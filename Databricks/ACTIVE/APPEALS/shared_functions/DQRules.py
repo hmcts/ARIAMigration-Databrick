@@ -8,7 +8,8 @@ from pyspark.sql import Window
 from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp
 from pyspark.sql.types import ArrayType, LongType
 
-import shared_functions.ended as E
+# import shared_functions.ended as E
+from . import ended as E
 
 logger = logging.getLogger(__name__)
 

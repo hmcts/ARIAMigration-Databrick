@@ -38,6 +38,7 @@ def ended_outputs(spark):
         T.StructField("stateBeforeEndAppeal", T.StringType(), True),
     ])
 
+
     m3_data = [
         # Case A: Should PASS and select the (46,31) row due to max StatusId + existence rule satisfied via CaseStatus=10
         # Provide adjudicator fields for name concatenation
@@ -71,10 +72,36 @@ def ended_outputs(spark):
         T.StructField("Adj_Determination_Surname", T.StringType(), True),
     ])
 
+    
+    m1_data = [
+        # Cases already present in your m3_data
+        ("A1", "LR",  "PIP"),
+        ("B1", "AIP", "PIP"),
+        ("C1", "LR",  "ESA"),
+        ("D1", None,  "UC"),   # None allowed, ensures join still works
+        ("E1", "AIP", "PIP"),
+        ("F1", "LR",  "ESA"),
+        ("G1", "AIP", "UC"),
+        ("H1", "LR",  "PIP"),
+
+        # Optional: include these only if you also add matching m3 rows with CaseStatus=26
+        # to actually exercise the LR/AIP override paths:
+        ("I1", "LR",  "PIP"),   # → should map to 'caseUnderReview' when (26, 13/25/80)
+        ("J1", "AIP", "PIP"),   # → should map to 'reasonsForAppealSubmitted' when (26, 13/25/80)
+        ("K1", "Other", "PIP"), # → fallback to bronze state for (26, 13/25/80)
+    ]
+
+    m1_schema = T.StructType([
+        T.StructField("CaseNo",             T.StringType(),  False),
+        T.StructField("dv_representation",  T.StringType(),  True),
+        T.StructField("lu_appealType",      T.StringType(),  True),
+    ])
+
+    df_m1 = spark.createDataFrame(m1_data, m1_schema)
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_es =  spark.createDataFrame(es_data, es_schema)
 
-    ended_content,_ = ended(df_m3, df_es)
+    ended_content,_ = ended(df_m1,df_m3, df_es)
     results = {row["CaseNo"]: row.asDict() for row in ended_content.collect()}
     
     return results

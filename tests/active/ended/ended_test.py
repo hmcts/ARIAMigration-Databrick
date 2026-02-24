@@ -145,7 +145,7 @@ def test_endAppealApproverName(spark,ended_outputs):
 
     results = ended_outputs
 
-    assert results["A1"]["endAppealApproverName"] == 'Dr Alice Brown'
+    assert results["A1"]["endAppealApproverName"] == 'Brown Alice (Dr)'
     assert results["C1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["E1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["F1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
@@ -157,12 +157,12 @@ def test_endAppealDate(spark,ended_outputs):
 
     results = ended_outputs
 
-    assert results["A1"]["endAppealDate"] == '04/03/2024'
-    assert results["C1"]["endAppealDate"] == '02/12/2023'
-    assert results["E1"]["endAppealDate"] == '05/08/2022'
-    assert results["F1"]["endAppealDate"] == '06/05/2024'
-    assert results["G1"]["endAppealDate"] == '01/06/2024'
-    assert results["H1"]["endAppealDate"] == '01/07/2024'
+    assert results["A1"]["endAppealDate"] == '2024-03-04'
+    assert results["C1"]["endAppealDate"] == '2023-12-02'
+    assert results["E1"]["endAppealDate"] == '2022-08-05'
+    assert results["F1"]["endAppealDate"] == '2024-05-06'
+    assert results["G1"]["endAppealDate"] == '2024-06-01'
+    assert results["H1"]["endAppealDate"] == '2024-07-01'
 
 def test_stateBeforeEndAppeal(spark,ended_outputs):
 

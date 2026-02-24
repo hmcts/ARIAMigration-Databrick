@@ -21,50 +21,98 @@ test_from_state = "appealSubmitted"
 #######################
 #default mapping Init code
 #######################
-def test_default_mapping_init(json):
+def test_default_mapping_init(json, M1_silver):
     try:
         test_df = json.select(
+            "appealReferenceNumber",
             "paAppealTypePaymentOption",
             "paAppealTypeAipPaymentOption",
             "additionalPaymentInfo"
         )
+
+        M1_silver = M1_silver.select(
+            "CaseNo",
+            "dv_representation"
+        )
+
+        test_df = test_df.join(
+            M1_silver,
+            json["appealReferenceNumber"] == M1_silver["CaseNo"],
+            "inner"
+        ).drop(M1_silver["CaseNo"])
+
         return test_df, True
     except Exception as e:
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
-def test_defaultValues(test_df,fields_to_exclude):
+def test_defaultValues(test_df):
     try:
-        expected_defaults = {
-            "paAppealTypePaymentOption": "payLater",
-            "paAppealTypeAipPaymentOption": "payLater",
-            "additionalPaymentInfo": "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes."
-        }
-
         results_list = []
 
-        for field, expected in expected_defaults.items():
-            if field in fields_to_exclude:
-                continue
-            condition = (col(field) != expected)
-            if test_df.filter(condition).count() > 0:
-                results_list.append(TestResult(
-                    field, 
-                    "FAIL", 
-                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
-                    test_from_state,
-                    inspect.stack()[0].function
-                ))
-            else:
-                results_list.append(TestResult(
-                    field, 
-                    "PASS", 
-                    f"Checked Default Mapping for : {field} - found correct value : {expected}", 
-                    test_from_state,
-                    inspect.stack()[0].function
-                ))
+        acceptance_critera_lr = test_df.filter(
+            ((col("dv_representation") == "LR") & (col("paAppealTypePaymentOption") != "payLater"))
+        )
 
+        acceptance_critera_aip = test_df.filter(
+            ((col("dv_representation") == "AIP") & (col("paAppealTypeAipPaymentOption") != "payLater"))
+        )
 
+        acceptance_critera_payment = test_df.filter(
+            (col("additionalPaymentInfo") != "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")
+        )
+
+        if acceptance_critera_lr.count() != 0:
+            results_list.append(TestResult(
+                "paAppealTypePaymentOption", 
+                "FAIL", 
+                f"Failed to check Default Mapping for : paAppealTypePaymentOption - expected : 'payLater' - found {acceptance_critera_lr.count()} records not matching", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+        else:
+            results_list.append(TestResult(
+                "paAppealTypePaymentOption", 
+                "PASS", 
+                f"Checked Default Mapping for : paAppealTypePaymentOption - found correct value", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+
+        if acceptance_critera_aip.count() != 0:
+            results_list.append(TestResult(
+                "paAppealTypeAipPaymentOption", 
+                "FAIL", 
+                f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'payLater' - found {acceptance_critera_aip.count()} records not matching", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+        else:
+            results_list.append(TestResult(
+                "paAppealTypeAipPaymentOption", 
+                "PASS", 
+                f"Checked Default Mapping for : paAppealTypeAipPaymentOption - found correct value", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+
+        if acceptance_critera_payment.count() != 0:
+            results_list.append(TestResult(
+                "additionalPaymentInfo", 
+                "FAIL", 
+                f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.' - found {acceptance_critera_payment.count()} records not matching", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+        else:
+            results_list.append(TestResult(
+                "additionalPaymentInfo", 
+                "PASS", 
+                f"Checked Default Mapping for : acceptance_critera_payment - found correct value", 
+                test_from_state,
+                inspect.stack()[0].function
+            ))
+            
         return results_list
     except Exception as e:
         error_message = str(e)        
@@ -570,7 +618,7 @@ def test_remission_init(json, M1_bronze, M4_bronze):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("payment", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None,TestResult("remission", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # remissionDecision - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and remissionDecision = “approved”
@@ -826,3 +874,91 @@ def test_amountLeftToPay_test3(test_df):
         error_message = str(e)
         return TestResult("amountLeftToPay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+# amountRemitted - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) == amountRemitted
+#######################
+def test_amountRemitted_test1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))) &
+            (col("PaymentRemissionGranted") == 1)
+            ).count() == 0:
+            return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        case_window = Window.partitionBy("CaseNo")
+
+        acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
+        .filter(
+        (
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
+            (col("PaymentRemissionGranted") == 1)
+        ) & 
+        (
+            (col("Total_Amount").cast("decimal(18,2)") != col("amountRemitted").cast("decimal(18,2)"))
+        )
+        )
+
+        if acceptance_critera.count() != 0:
+            return TestResult("amountRemitted","FAIL", f"amountRemitted acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) != amountRemitted", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("amountRemitted","PASS", "amountRemitted acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have Sum(M4.Amount) == amountRemitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("amountRemitted", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# amountRemitted - Where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountRemitted is not null
+#######################
+def test_amountRemitted_test2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
+            (col("PaymentRemissionGranted") != 1)
+            ).count() == 0:
+            return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(
+        (
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
+            (col("PaymentRemissionGranted") != 1)
+        ) &
+            col("amountRemitted").isNotNull()
+        )
+
+        if acceptance_critera.count() != 0:
+            return TestResult("amountRemitted","FAIL", f"amountRemitted acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountRemitted is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("amountRemitted","PASS", "amountRemitted acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 have amountRemitted is null", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("amountRemitted", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# amountRemitted - Where Appeal Type != EA,EU,HU,PA + PaymentRemissionGranted == 1 and amountRemitted is not null
+#######################
+def test_amountRemitted_test3(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))) &
+            (col("PaymentRemissionGranted") == 1)
+            ).count() == 0:
+            return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(
+        (
+            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))) &
+            (col("PaymentRemissionGranted") == 1)
+        ) &
+            col("amountRemitted").isNotNull()
+        )
+
+        if acceptance_critera.count() != 0:
+            return TestResult("amountRemitted","FAIL", f"amountRemitted acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type != EA,EU,HU,PA + PaymentRemissionGranted == 1 and amountRemitted is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("amountRemitted","PASS", "amountRemitted acceptance criteria pass: all rows where Appeal Type != EA,EU,HU,PA + PaymentRemissionGranted == 1 have amountRemitted is null", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("amountRemitted", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

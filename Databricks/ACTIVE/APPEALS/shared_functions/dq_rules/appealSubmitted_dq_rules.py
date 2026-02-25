@@ -9,71 +9,71 @@ class appealSubmittedDQRules(DQRulesBase):
         return checks
 
     def get_base_checks(self, checks={}):
-        checks["valid_paymentStatus"] = (
-            """(
-                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND paymentStatus IS NOT NULL)
-                OR
-                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA')) AND paymentStatus IS NULL)
-                )
-            """
-        )
-
         # checks["valid_paymentStatus"] = (
         #     """(
-        #         (
-        #             (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA'))
-        #             AND
-        #             (paymentStatus <=> (
-        #                 IF(
-        #                 (
-        #                     (
-        #                         AGGREGATE(
-        #                             TRANSFORM(valid_transactionList, x ->
-        #                             CASE
-        #                                 WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
-        #                                 THEN x.Amount
-        #                                 ELSE 0
-        #                             END
-        #                             ),
-        #                             CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-        #                         ) > 0
-        #                     )
-        #                     OR
-        #                     (
-        #                         (
-        #                             AGGREGATE(
-        #                             TRANSFORM(valid_transactionList, x ->
-        #                                 CASE
-        #                                 WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
-        #                                 THEN x.Amount
-        #                                 ELSE 0
-        #                                 END
-        #                             ),
-        #                             CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-        #                             ) = 0
-        #                         )
-        #                         AND
-        #                         (
-        #                             ELEMENT_AT(
-        #                                 ARRAY_SORT(
-        #                                     FILTER(
-        #                                         valid_transactionList, x -> CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))
-        #                                     ), (a, b) -> b.TransactionId - a.TransactionId
-        #                                 ), 1
-        #                             ).TransactionTypeId = 19
-        #                         )
-        #                     )
-        #                 ),
-        #                 'Payment pending',
-        #                 'Paid'
-        #                 )
-        #             ))
-        #         )
+        #             (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND paymentStatus IS NOT NULL)
         #         OR
         #             ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA')) AND paymentStatus IS NULL)
         #         )
         #     """
         # )
+
+        checks["valid_paymentStatus"] = (
+            """(
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA'))
+                    AND
+                    (paymentStatus <=> (
+                        IF(
+                        (
+                            (
+                                AGGREGATE(
+                                    TRANSFORM(valid_transactionList, x ->
+                                    CASE
+                                        WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                                        THEN x.Amount
+                                        ELSE 0
+                                    END
+                                    ),
+                                    CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
+                                ) > 0
+                            )
+                            OR
+                            (
+                                (
+                                    AGGREGATE(
+                                    TRANSFORM(valid_transactionList, x ->
+                                        CASE
+                                        WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                                        THEN x.Amount
+                                        ELSE 0
+                                        END
+                                    ),
+                                    CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
+                                    ) = 0
+                                )
+                                AND
+                                (
+                                    ELEMENT_AT(
+                                        ARRAY_SORT(
+                                            FILTER(
+                                                valid_transactionList, x -> CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))
+                                            ), (a, b) -> b.TransactionId - a.TransactionId
+                                        ), 1
+                                    ).TransactionTypeId = 19
+                                )
+                            )
+                        ),
+                        'Payment pending',
+                        'Paid'
+                        )
+                    ))
+                )
+                OR
+                    ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA')) AND paymentStatus IS NULL)
+                )
+            """
+        )
 
 
         checks["valid_paAppealTypePaymentOption"] = (

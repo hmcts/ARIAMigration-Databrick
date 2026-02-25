@@ -128,7 +128,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     # appealSubmitted - payment and remission
     lu_ref_txn = (
-        silver_m4.alias("m4").filter(col("TransactionTypeId").isin(6, 19)).distinct()
+        silver_m4.alias("m4").filter(~col("TransactionTypeId").isin(6, 19)).distinct()
             .select("ReferringTransactionId")
             .where(col("ReferringTransactionId").isNotNull())
             .rdd.flatMap(lambda x: x)

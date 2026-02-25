@@ -17,36 +17,38 @@ def paymentType(silver_m1, silver_m4):
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
-    # Subquery with ReferringTransactionId
-    ref_txn_df = silver_m4.filter(
-        ~col("TransactionTypeId").isin(6, 19)
-    ).select("ReferringTransactionId").distinct()
-
-    filtered_df = (
-        silver_m4.alias("m4")
-        .join(
-            ref_txn_df.alias("ref_txn"),
-            col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"),
-            "left"
-        )
-        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
+    ref_txn_df = (
+        silver_m4
+            .filter(~col("TransactionTypeId").isin(6, 19))
+            .select("ReferringTransactionId")
+            .where(col("ReferringTransactionId").isNotNull())
+            .distinct()
     )
 
-    filtered_df = (
-        filtered_df.groupBy("CaseNo") 
+    filtered_rows = (
+        silver_m4.alias("t")
+            .join(
+                ref_txn_df.alias("r"),
+                col("t.TransactionId") == col("r.ReferringTransactionId"),
+                "left"
+            )
+    )
+
+    valid_cases = (
+    filtered_rows
+        .groupBy("CaseNo")
         .agg(
-            sum_(when(col("TransactionTypeID") == 3, 1).otherwise(0)).alias("type3_count")
-        ) 
+            sum_(when(col("TransactionTypeId") == 3, 1).otherwise(0)).alias("type3_count")
+        )
         .filter(col("type3_count") > 0)
+        .select("CaseNo")
     )
 
-    filtered_df = (
-        filtered_df
-        .join(
-            silver_m4.select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay"), on="CaseNo", how="inner")
+    final_filtered_df = (
+        filtered_rows
+            .join(valid_cases, "CaseNo", "inner")
     )
 
-    # Aggregate and determine payment status
     payment_status = (
         silver_m4
         .alias("max")
@@ -68,7 +70,7 @@ def paymentType(silver_m1, silver_m4):
     )
 
     paid_amount = (
-        filtered_df
+        final_filtered_df
         .filter(col("SumTotalPay") == 1)
         .groupBy("CaseNo").agg(
             abs(sum_(col("Amount"))).alias("paidAmount"),
@@ -122,7 +124,6 @@ def paymentType(silver_m1, silver_m4):
             "additionalPaymentInfo"
         )
     )
-
     payment_audit_final = (
         payment_audit.alias("audit")
         .join(paid_amount.alias("paid_amount"), ["CaseNo"], "left")

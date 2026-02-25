@@ -98,10 +98,10 @@ def paymentType(silver_m1, silver_m4):
                 when(col("paidAmount").isNotNull(), col("paidAmount")).otherwise(lit(0))
                 .cast(IntegerType()).cast(StringType())
             )).alias("paidAmount"),
-            when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).alias("additionalPaymentInfo"),
+            when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise(lit(None)).alias("additionalPaymentInfo"),
             when(conditions_all, (
                 when(col("payment_status.paymentStatus").isNotNull(), col("payment_status.paymentStatus")).otherwise(lit("Paid"))
-            )).alias("dv_paymentStatus")
+            )).otherwise(lit(None)).alias("dv_paymentStatus")
         ).select(
             "CaseNo",
             "feeAmountGbp",

@@ -30,8 +30,6 @@ from models.test_result import TestResult
 #Not working to set default value,
 # TestResult.DEFAULT_TEST_FROM_STATE = "paymentPending"
 
-#Temp solution : using variable below, when each testresult instance is created, to tag with where test run from
-test_from_state = "paymentPending"
 
 #######################
 #sponsorDetails Init Code

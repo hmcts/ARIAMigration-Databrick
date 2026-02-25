@@ -30,6 +30,7 @@ from models.test_result import TestResult
 #Not working to set default value,
 # TestResult.DEFAULT_TEST_FROM_STATE = "paymentPending"
 
+test_from_state = "paymentPending"
 
 #######################
 #sponsorDetails Init Code

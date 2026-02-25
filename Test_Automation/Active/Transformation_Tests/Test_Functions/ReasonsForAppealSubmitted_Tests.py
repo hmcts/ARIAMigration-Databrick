@@ -9,7 +9,7 @@ import inspect
 #Import Test Results class
 from models.test_result import TestResult
 
-
+test_from_state = "reasonsForAppealSubmitted"
 
 ############################################################################################
 #######################

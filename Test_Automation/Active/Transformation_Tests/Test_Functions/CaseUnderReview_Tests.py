@@ -10,13 +10,13 @@ import inspect
 from models.test_result import TestResult
 
 #Temp solution : using variable below, when each testresult instance is created, to tag with where test run from
-test_from_state = "CHANGEME"
+test_from_state = "caseUnderReview"
 
 def testcase1():    
-    return TestResult("testcasefield", "FAIL", f"CHANGEME - test 1 complete", test_from_state, inspect.stack()[0].function)
+    return TestResult("testcasefield", "FAIL", f"caseUnderReview - test 1 complete", test_from_state, inspect.stack()[0].function)
 
 def testcase2():    
-    return TestResult("testcasefield", "PASS", f"CHANGEME - test 2 complete", test_from_state, inspect.stack()[0].function)
+    return TestResult("testcasefield", "PASS", f"caseUnderReview - test 2 complete", test_from_state, inspect.stack()[0].function)
 
 
 

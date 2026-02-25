@@ -206,3 +206,26 @@ def test_sponsorAddress_multiple_lines(sponsorDetails_outputs):
     # Check that the first part and postcode are included
     assert "358 Carter Corners" in address["AddressLine1"]
     assert "UB4B 0LY" in address["PostCode"]
+
+def test_sponsorNameForDisplay(spark,sponsorDetails_outputs):
+
+    results = sponsorDetails_outputs
+
+    assert results["EA/00490/2025"]["sponsorNameForDisplay"] is None
+    assert results["EA/00072/2025"]["sponsorNameForDisplay"] == 'HarryX OwenX'
+    assert results["HU/00447/2025"]["sponsorNameForDisplay"] == 'TashaX FisherX'
+    assert results["EA/00061/2025"]["sponsorNameForDisplay"] == 'UnknownX UnknownX'
+    assert results["HU/00574/2023"]["sponsorNameForDisplay"] == 'BruceX LopezX'
+
+def test_sponsorAddressForDisplay(spark,sponsorDetails_outputs):
+
+    results = sponsorDetails_outputs
+
+    assert results["EA/00490/2025"]["sponsorAddressForDisplay"] is None
+    assert results["EA/00072/2025"]["sponsorAddressForDisplay"] == '873 Hurst Parkways Suite 226X\r\nOwens StravenueX\r\nL7T 6AE'
+    assert results["HU/00447/2025"]["sponsorAddressForDisplay"] == '64644 Michael Junction Suite 48X\r\nKathryn MeadowX\r\nG30 7NJ'
+    assert results["EA/00061/2025"]["sponsorAddressForDisplay"] == ''
+    assert results["HU/00574/2023"]["sponsorAddressForDisplay"] == '358 Carter Corners Suite 044X\r\nWells FordX\r\nUB4B 0LY'
+
+
+

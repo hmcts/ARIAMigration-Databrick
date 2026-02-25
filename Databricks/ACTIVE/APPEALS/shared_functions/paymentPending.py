@@ -2451,7 +2451,29 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorMobileNumberAdminJ",
         when((category_condition),
              filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
+    ).withColumn(
+        "sponsorNameForDisplay",
+        when(
+            name_condition,
+            concat(col("Sponsor_Forenames"), lit(" "), col("Sponsor_Name"))
+        ).otherwise(lit(None))
+    ).withColumn(
+        "sponsorAddressForDisplay",
+        when(
+            name_condition,
+            concat_ws(
+                "\r\n",
+                col("Sponsor_Address1"),
+                col("Sponsor_Address2"),
+                col("Sponsor_Address3"),
+                col("Sponsor_Address4"),
+                col("Sponsor_Address5"),
+                col("Sponsor_Postcode")
+            )
+        ).otherwise(lit(None))
     )
+
+
 
     df = grouped.select(
         "CaseNo",
@@ -2461,7 +2483,9 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAddress",
         "sponsorEmailAdminJ",
         "sponsorMobileNumberAdminJ",
-        "sponsorAuthorisation"
+        "sponsorAuthorisation",
+        "sponsorNameForDisplay",
+        "sponsorAddressForDisplay"
     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
@@ -2511,7 +2535,19 @@ def sponsorDetails(silver_m1, silver_c):
         array(struct(*common_inputFields, lit("audit.Sponsor_Telephone"), lit("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputFields"),
         array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputValues"),
         col("content.sponsorMobileNumberAdminJ"),
-        lit("yes").alias("sponsorMobileNumberAdminJ_Transformation")
+        lit("yes").alias("sponsorMobileNumberAdminJ_Transformation"),
+
+        #audit sponsorNameForDisplay
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("Sponsor_Forenames"))).alias("sponsorNameForDisplay_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("audit.Sponsor_Forenames"))).alias("sponsorNameForDisplay_inputValues"),
+        col("content.sponsorNameForDisplay"),
+        lit("yes").alias("sponsorNameForDisplay_Transformation"),
+
+        #audit sponsorAddressForDisplay
+        array(struct(*common_inputFields, lit("audit.Sponsor_Address1"), lit("audit.Sponsor_Address2"), lit("audit.Sponsor_Address3"), lit("audit.Sponsor_Address4"), lit("audit.Sponsor_Address5"), lit("audit.Sponsor_Postcode"))).alias("sponsorAddressForDisplay_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Address1"), col("audit.Sponsor_Address2"), col("audit.Sponsor_Address3"), col("audit.Sponsor_Address4"), col("audit.Sponsor_Address5"), col("audit.Sponsor_Postcode"))).alias("sponsorAddressForDisplay_inputValues"),
+        col("content.sponsorAddressForDisplay"),
+        lit("yes").alias("sponsorAddressForDisplay_Transformation"),
     )
 
     return df, df_audit

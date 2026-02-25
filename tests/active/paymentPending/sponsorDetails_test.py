@@ -222,10 +222,10 @@ def test_sponsorAddressForDisplay(spark,sponsorDetails_outputs):
     results = sponsorDetails_outputs
 
     assert results["EA/00490/2025"]["sponsorAddressForDisplay"] is None
-    assert results["EA/00072/2025"]["sponsorAddressForDisplay"] == '873 Hurst Parkways Suite 226X Owens StravenueX L7T 6AE'
-    assert results["HU/00447/2025"]["sponsorAddressForDisplay"] == '64644 Michael Junction Suite 48X Kathryn MeadowX G30 7NJ'
+    assert results["EA/00072/2025"]["sponsorAddressForDisplay"] == '873 Hurst Parkways Suite 226X\r\nOwens StravenueX\r\nL7T 6AE'
+    assert results["HU/00447/2025"]["sponsorAddressForDisplay"] == '64644 Michael Junction Suite 48X\r\nKathryn MeadowX\r\nG30 7NJ'
     assert results["EA/00061/2025"]["sponsorAddressForDisplay"] == ''
-    assert results["HU/00574/2023"]["sponsorAddressForDisplay"] == '358 Carter Corners Suite 044X Wells FordX UB4B 0LY'
+    assert results["HU/00574/2023"]["sponsorAddressForDisplay"] == '358 Carter Corners Suite 044X\r\nWells FordX\r\nUB4B 0LY'
 
 
 

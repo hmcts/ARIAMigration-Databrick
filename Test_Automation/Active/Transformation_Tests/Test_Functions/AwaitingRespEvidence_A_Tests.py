@@ -9,9 +9,6 @@ import inspect
 #Import Test Results class
 from models.test_result import TestResult
 
-#Temp solution : using variable below, when each testresult instance is created, to tag with where test run from
-test_from_state = "awaitingRespondentEvidence(a)"
-
 
 
 ############################################################################################

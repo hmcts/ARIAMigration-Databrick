@@ -19,9 +19,6 @@ class TestResult:
     test_name: str=""    
     
 
-#Temp solution : using variable below, when each testresult instance is created, to tag with where test run from
-test_from_state = "awaitingRespondentEvidence(b)"
-
 
 
 ############################################################################################

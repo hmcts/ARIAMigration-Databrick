@@ -748,6 +748,14 @@ class paymentPendingDQRules(DQRulesBase):
             "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
         )
 
+        checks["valid_sponsorAddressForDisplay"] = (
+            "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
+        )
+
+        checks["valid_sponsorNameForDisplay"] = (
+            "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
+        )
+
         ##############################
         # ARIADM-778 (SponsorDetails)
         ##############################

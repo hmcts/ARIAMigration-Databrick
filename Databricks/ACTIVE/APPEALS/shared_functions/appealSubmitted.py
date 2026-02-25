@@ -1,7 +1,7 @@
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
     max as spark_max, date_format,
-    abs, sum as F_sum
+    abs, sum as F_sum, sum as sum_
 )
 from pyspark.sql.types import IntegerType, StringType
 
@@ -17,59 +17,75 @@ def paymentType(silver_m1, silver_m4):
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
-    ############################
-    # ARIADM-908 (paymentStatus)
-    ############################
     # Subquery with ReferringTransactionId
     ref_txn_df = silver_m4.filter(
-        col("TransactionTypeId").isin(6, 19)
+        ~col("TransactionTypeId").isin(6, 19)
     ).select("ReferringTransactionId").distinct()
 
-    # Use left anti join to remove matches
     filtered_df = (
         silver_m4.alias("m4")
-            .join(ref_txn_df.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
-            .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
+        .join(
+            ref_txn_df.alias("ref_txn"),
+            col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"),
+            "left"
+        )
+        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
+    )
+
+    filtered_df = (
+        filtered_df.groupBy("CaseNo") 
+        .agg(
+            sum_(when(col("TransactionTypeID") == 3, 1).otherwise(0)).alias("type3_count")
+        ) 
+        .filter(col("type3_count") > 0)
+    )
+
+    filtered_df = (
+        filtered_df
+        .join(
+            silver_m4.select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay"), on="CaseNo", how="inner")
     )
 
     # Aggregate and determine payment status
     payment_status = (
-        filtered_df
-            .alias("max")
-            .filter(col("SumBalance") == 1)
-            .groupBy("CaseNo").agg(
-                F_sum("Amount").alias("SumAmount"),
-                spark_max(col("TransactionId")).alias("MaxTransactionId")
-            ).join(
-                filtered_df.alias("type").select("CaseNo", "TransactionTypeId", "TransactionId"),
-                    on=((col("max.CaseNo") == col("type.CaseNo")) & (col("MaxTransactionId") == col("type.TransactionId")))
-            )
-            .withColumn(
-                "paymentStatus",
-                when(col("SumAmount") > 0, lit("Payment pending"))
-                .when((col("SumAmount") == 0)
-                    & ((col("type.TransactionTypeId") == 19)), lit("Payment pending"))
-                .otherwise(lit("Paid"))
-            ).select("max.CaseNo", "paymentStatus")
+        silver_m4
+        .alias("max")
+        .filter(col("SumBalance") == 1)
+        .groupBy("CaseNo").agg(
+            sum_("Amount").alias("SumAmount"),
+            spark_max(col("TransactionId")).alias("MaxTransactionId")
+        ).join(
+            silver_m4.alias("type").select("CaseNo", "TransactionTypeId", "TransactionId"),
+            on=((col("max.CaseNo") == col("type.CaseNo")) & (col("MaxTransactionId") == col("type.TransactionId")))
+        )
+        .withColumn(
+            "paymentStatus",
+            when(col("SumAmount") > 0, lit("Payment pending"))
+            .when((col("SumAmount") == 0)
+                  & ((col("type.TransactionTypeId") == 19)), lit("Payment pending"))
+            .otherwise(lit("Paid"))
+        ).select("max.CaseNo", "paymentStatus")
     )
-    #########################################################################################
 
     paid_amount = (
         filtered_df
-            .filter(col("SumTotalPay") == 1)
-            .groupBy("CaseNo").agg(
-                abs(F_sum(col("Amount"))).alias("paidAmount"),
-                collect_list(col("Amount")).alias("amountList")
-            )
+        .filter(col("SumTotalPay") == 1)
+        .groupBy("CaseNo").agg(
+            abs(sum_(col("Amount"))).alias("paidAmount"),
+            collect_list(col("Amount")).alias("amountList")
+        )
     )
 
     payment_content_final = (
         payment_content.alias("payment_content")
+        # .join(silver_m4, ["CaseNo"], "left")
         .join(silver_m1, ["CaseNo"], "left")
         .join(paid_amount, ["CaseNo"], "left")
         .join(payment_status.alias("payment_status"), ["CaseNo"], "left")
         .select(
             "payment_content.*",
+            # col("TransactionTypeId"),
+            # col("TransactionId"),
             when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"), lit("payLater"))
                 .alias("paAppealTypePaymentOption"),
             when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "AIP"), lit("payLater"))

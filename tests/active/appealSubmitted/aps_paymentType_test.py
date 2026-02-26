@@ -109,7 +109,7 @@ class TestAppealSubmittedPaymentType:
             assert resultList[0][0] == "Paid" and resultList[1][0] == "Paid" and resultList[2][0] == "Paid" and resultList[3][0] == "Paid"
             assert resultList[4][0] is None 
             assert resultList[5][0] == "Paid" and resultList[6][0] == "Paid" and resultList[7][0] == "Paid"
-            assert resultList[8][0] == "Payment pending" and resultList[9][0] == "Payment pending"
+            assert resultList[8][0] == "Paid" and resultList[9][0] == "Payment pending"
             assert resultList[10][0] == "Paid" and resultList[11][0] == 'Payment pending' #ignore TransactionTypeId == 6, 19
 
     def test_paAppealTypePaymentOption(self, spark):

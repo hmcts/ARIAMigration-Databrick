@@ -230,7 +230,7 @@ class TestAppealSubmittedPaymentType:
                 ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
                 ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("2", 3, 3, 100.0, 0, 1, 3),    # valid condition
-                ("3", 1, 3, 100.0, 0, 1, 3),    # valid condition
+                ("3", 2, 3, 100.0, 0, 1, 2),    # valid condition
                 ("4", 2, 1, 100.0, 0, 1, 3),    # valid condition
                 ("5", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("6", 3, 1, 100.0, 0, 0, 3),    # SumTotalPay = 0

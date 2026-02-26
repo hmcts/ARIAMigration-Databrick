@@ -16,23 +16,28 @@ class decisionDQRules(DQRulesBase):
 
         checks["valid_listCaseHearingLength"] = ("""
         (
-            TimeEstimate = listCaseHearingLength[0]
+            CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
         )
         """)
 
         checks["valid_listCaseHearingDate"] = (
             """
             (
-                listCaseHearingDate = concat(date_format(HearingDate, 'yyyy-MM-dd'),'T',date_format(StartTime, 'HH:mm:ss'),'.000')
+                listCaseHearingDate <=>
+                    CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+                        CASE
+                        WHEN StartTime IS NULL THEN '00:00:00.000'
+                        ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+                        END)
             )
             """)
 
         checks["valid_listCaseHearingCentre"] = (
-            "(listCaseHearingCentre[0] = bronze_listCaseHearingCentre)"
+            "(listCaseHearingCentre <=> bronze_listCaseHearingCentre)"
         )
 
         checks["valid_listCaseHearingCentreAddress"] = (
-            "(listCaseHearingCentreAddress = bronze_listCaseHearingCentreAddress)"
+            "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress)"
         )
 
         return checks

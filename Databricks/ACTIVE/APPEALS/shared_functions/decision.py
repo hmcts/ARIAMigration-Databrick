@@ -49,23 +49,44 @@ def hearingDetails(silver_m1, silver_m3, bronze_listing_location):
         .drop("row_number")
     )
 
+    allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
     # Enrich with location mapping and build output fields
     silver_m3_enriched = (
         silver_m3_max_statusid.alias("m3")
         .join(bronze_listing_location.alias("location"),on=F.col("m3.HearingCentre") == F.col("location.ListedCentre"),how="left")
         # Array output required: [240]
-        .withColumn("listCaseHearingLength", F.array(F.col("m3.TimeEstimate")))
+        # .withColumn("listCaseHearingLength", F.array(F.col("m3.TimeEstimate")))
+        .withColumn(
+            "listCaseHearingLength",
+            F.array_min(
+                F.transform(
+                    F.array(*[F.lit(x) for x in allowed]),
+                    lambda x: F.struct(
+                        F.abs(x - F.col("m3.TimeEstimate").cast("int")).alias("dist"),
+                        x.alias("value")
+                    )
+                )
+            ).getField("value").cast("string")
+        )
 
         # Build datetime string:
         # Date from HearingDate + Time from StartTime -> yyyy-MM-dd'T'HH:mm:ss.SSS (NO +00:00)
-        .withColumn(
+        
+    .withColumn(
             "hearing_date_str",
             F.date_format(F.to_timestamp(F.col("m3.HearingDate")), "yyyy-MM-dd")
         )
+        # Extract time OR default "00:00:00.000"
         .withColumn(
             "start_time_str",
-            F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss.SSS")
+            F.when(
+                F.col("m3.StartTime").isNull(),
+                F.lit("00:00:00.000")
+            ).otherwise(
+                F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss.SSS")
+            )
         )
+        # Build timestamp safely
         .withColumn(
             "HearingDateTime_ts",
             F.to_timestamp(
@@ -73,14 +94,16 @@ def hearingDetails(silver_m1, silver_m3, bronze_listing_location):
                 "yyyy-MM-dd HH:mm:ss.SSS"
             )
         )
+        # Append timezone +00:00 in final ISO string
         .withColumn(
             "listCaseHearingDate",
-            F.date_format(F.col("HearingDateTime_ts"), "yyyy-MM-dd'T'HH:mm:ss.SSS")
+                F.date_format(F.col("HearingDateTime_ts"), "yyyy-MM-dd'T'HH:mm:ss.SSS")
         )
         .drop("hearing_date_str", "start_time_str", "HearingDateTime_ts")
 
+
         # Centre values (keep as array to match earlier pattern)
-        .withColumn("listCaseHearingCentre", F.array(F.col("location.listCaseHearingCentre")))
+        .withColumn("listCaseHearingCentre", F.col("location.listCaseHearingCentre"))
 
         # Address (keep as-is; change to array(...) if your target schema expects array)
         .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))

@@ -36,7 +36,7 @@ def paymentType(silver_m1, silver_m4):
     filtered_rows = silver_m4.alias("t").join(
         ref_txn_df.alias("r"),
         col("t.TransactionId") == col("r.ReferringTransactionId"),
-        "left",
+        "left_anti", #not in
     )
 
     valid_cases = (
@@ -235,7 +235,6 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     df_final, df_audit = PP.remissionTypes(
         silver_m1, bronze_remission_lookup_df, silver_m4
     )
-
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
     amount_remitted = (
@@ -247,10 +246,10 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         )
     )
 
-    ######################################################################
     ref_txn_df = (
         silver_m4.filter(col("TransactionTypeId").isin(6, 19))
         .select("ReferringTransactionId")
+        .where(col("ReferringTransactionId").isNotNull())
         .distinct()
     )
 
@@ -273,7 +272,6 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             collect_list(col("Amount")).alias("amountLeftToPayList"),
         )
     )
-    #################################################################
 
     df_final = (
         df_final.alias("source")
@@ -305,7 +303,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             when(
                 (conditions_all) & (col("PaymentRemissionGranted") == 1),
                 when(col("amountRemitted").isNotNull(), col("amountRemitted"))
-                .otherwise(lit(0))
+                .otherwise(lit(None))
                 .cast(IntegerType())
                 .cast(StringType()),
             ),
@@ -315,7 +313,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             when(
                 (conditions_all) & (col("PaymentRemissionGranted") == 1),
                 when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay"))
-                .otherwise(lit(None)) #was 0 -> Bella recommends null
+                .otherwise(lit(None))
                 .cast(IntegerType())
                 .cast(StringType()),
             ),

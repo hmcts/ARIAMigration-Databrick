@@ -9,14 +9,6 @@ class appealSubmittedDQRules(DQRulesBase):
         return checks
 
     def get_base_checks(self, checks={}):
-        # checks["valid_paymentStatus"] = (
-        #     """(
-        #             (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND paymentStatus IS NOT NULL)
-        #         OR
-        #             ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA')) AND paymentStatus IS NULL)
-        #         )
-        #     """
-        # )
 
         checks["valid_paymentStatus"] = (
             """(
@@ -30,7 +22,7 @@ class appealSubmittedDQRules(DQRulesBase):
                                 AGGREGATE(
                                     TRANSFORM(valid_transactionList, x ->
                                     CASE
-                                        WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                                        WHEN (CAST(x.SumBalance AS INT) = 1)
                                         THEN x.Amount
                                         ELSE 0
                                     END
@@ -44,7 +36,7 @@ class appealSubmittedDQRules(DQRulesBase):
                                     AGGREGATE(
                                     TRANSFORM(valid_transactionList, x ->
                                         CASE
-                                        WHEN (CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                                        WHEN (CAST(x.SumBalance AS INT) = 1)
                                         THEN x.Amount
                                         ELSE 0
                                         END
@@ -54,12 +46,15 @@ class appealSubmittedDQRules(DQRulesBase):
                                 )
                                 AND
                                 (
+                                    (
                                     ELEMENT_AT(
                                         ARRAY_SORT(
                                             FILTER(
-                                                valid_transactionList, x -> CAST(x.SumBalance AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))
-                                            ), (a, b) -> b.TransactionId - a.TransactionId
-                                        ), 1
+                                                valid_transactionList, x -> CAST(x.SumBalance AS INT) = 1),
+                                            (a, b) -> b.TransactionId - a.TransactionId
+                                        ),
+                                        1
+                                    )
                                     ).TransactionTypeId = 19
                                 )
                             )
@@ -277,9 +272,9 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND
                     (amountLeftToPay <=> (
                         CAST(CAST(AGGREGATE(
-                        TRANSFORM(valid_transactionList, x ->
+                        TRANSFORM(valid_transactionList1, x ->
                             CASE
-                            WHEN (CAST(x.SumTotalFee AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn, x.TransactionId)))
+                            WHEN (CAST(x.SumTotalFee AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn1, x.TransactionId)))
                             THEN x.Amount
                             ELSE 0
                             END

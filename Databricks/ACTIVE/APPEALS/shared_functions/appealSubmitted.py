@@ -1,7 +1,15 @@
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list,
-    max as spark_max, date_format,
-    abs, sum as F_sum, sum as sum_
+    col,
+    when,
+    lit,
+    array,
+    struct,
+    collect_list,
+    max as spark_max,
+    date_format,
+    abs,
+    sum as F_sum,
+    sum as sum_,
 )
 from pyspark.sql.types import IntegerType, StringType
 
@@ -12,69 +20,73 @@ from . import paymentPending as PP
 #########         paymentType Function              ###########
 ###############################################################
 
+
 def paymentType(silver_m1, silver_m4):
     payment_content, payment_audit = PP.paymentType(silver_m1)
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
     ref_txn_df = (
-        silver_m4
-            .filter(~col("TransactionTypeId").isin(6, 19))
-            .select("ReferringTransactionId")
-            .where(col("ReferringTransactionId").isNotNull())
-            .distinct()
+        silver_m4.filter(~col("TransactionTypeId").isin(6, 19))
+        .select("ReferringTransactionId")
+        .where(col("ReferringTransactionId").isNotNull())
+        .distinct()
     )
 
-    filtered_rows = (
-        silver_m4.alias("t")
-            .join(
-                ref_txn_df.alias("r"),
-                col("t.TransactionId") == col("r.ReferringTransactionId"),
-                "left"
-            )
+    filtered_rows = silver_m4.alias("t").join(
+        ref_txn_df.alias("r"),
+        col("t.TransactionId") == col("r.ReferringTransactionId"),
+        "left",
     )
 
     valid_cases = (
-    filtered_rows
-        .groupBy("CaseNo")
+        filtered_rows.groupBy("CaseNo")
         .agg(
-            sum_(when(col("TransactionTypeId") == 3, 1).otherwise(0)).alias("type3_count")
+            sum_(when(col("TransactionTypeId") == 3, 1).otherwise(0)).alias(
+                "type3_count"
+            )
         )
         .filter(col("type3_count") > 0)
         .select("CaseNo")
     )
 
-    final_filtered_df = (
-        filtered_rows
-            .join(valid_cases, "CaseNo", "inner")
-    )
+    final_filtered_df = filtered_rows.join(valid_cases, "CaseNo", "inner")
 
     payment_status = (
-        silver_m4
-        .alias("max")
+        silver_m4.alias("max")
         .filter(col("SumBalance") == 1)
-        .groupBy("CaseNo").agg(
+        .groupBy("CaseNo")
+        .agg(
             sum_("Amount").alias("SumAmount"),
-            spark_max(col("TransactionId")).alias("MaxTransactionId")
-        ).join(
-            silver_m4.alias("type").select("CaseNo", "TransactionTypeId", "TransactionId"),
-            on=((col("max.CaseNo") == col("type.CaseNo")) & (col("MaxTransactionId") == col("type.TransactionId")))
+            spark_max(col("TransactionId")).alias("MaxTransactionId"),
+        )
+        .join(
+            silver_m4.alias("type").select(
+                "CaseNo", "TransactionTypeId", "TransactionId"
+            ),
+            on=(
+                (col("max.CaseNo") == col("type.CaseNo"))
+                & (col("MaxTransactionId") == col("type.TransactionId"))
+            ),
         )
         .withColumn(
             "paymentStatus",
             when(col("SumAmount") > 0, lit("Payment pending"))
-            .when((col("SumAmount") == 0)
-                  & ((col("type.TransactionTypeId") == 19)), lit("Payment pending"))
-            .otherwise(lit("Paid"))
-        ).select("max.CaseNo", "paymentStatus")
+            .when(
+                (col("SumAmount") == 0) & ((col("type.TransactionTypeId") == 19)),
+                lit("Payment pending"),
+            )
+            .otherwise(lit("Paid")),
+        )
+        .select("max.CaseNo", "paymentStatus")
     )
 
     paid_amount = (
-        final_filtered_df
-        .filter(col("SumTotalPay") == 1)
-        .groupBy("CaseNo").agg(
+        final_filtered_df.filter(col("SumTotalPay") == 1)
+        .groupBy("CaseNo")
+        .agg(
             abs(sum_(col("Amount"))).alias("paidAmount"),
-            collect_list(col("Amount")).alias("amountList")
+            collect_list(col("Amount")).alias("amountList"),
         )
     )
 
@@ -88,23 +100,58 @@ def paymentType(silver_m1, silver_m4):
             "payment_content.*",
             # col("TransactionTypeId"),
             # col("TransactionId"),
-            when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"), lit("payLater"))
-                .alias("paAppealTypePaymentOption"),
-            when((col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "AIP"), lit("payLater"))
-                .alias("paAppealTypeAipPaymentOption"),
-            when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 1), "decisionWithoutHearing")
-                .when((col("dv_CCDAppealType").isin(["DC", "RP"])) & (col("VisitVisatype") == 2), "decisionWithHearing")
-                .alias("rpDcAppealHearingOption"),
-            when(conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")).alias("paidDate"),
-            when(conditions_all, (
-                when(col("paidAmount").isNotNull(), col("paidAmount")).otherwise(lit(0))
-                .cast(IntegerType()).cast(StringType())
-            )).alias("paidAmount"),
-            when(conditions_all, lit("This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")).otherwise(lit(None)).alias("additionalPaymentInfo"),
-            when(conditions_all, (
-                when(col("payment_status.paymentStatus").isNotNull(), col("payment_status.paymentStatus")).otherwise(lit("Paid"))
-            )).otherwise(lit(None)).alias("dv_paymentStatus")
-        ).select(
+            when(
+                (col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"),
+                lit("payLater"),
+            ).alias("paAppealTypePaymentOption"),
+            when(
+                (col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "AIP"),
+                lit("payLater"),
+            ).alias("paAppealTypeAipPaymentOption"),
+            when(
+                (col("dv_CCDAppealType").isin(["DC", "RP"]))
+                & (col("VisitVisatype") == 1),
+                "decisionWithoutHearing",
+            )
+            .when(
+                (col("dv_CCDAppealType").isin(["DC", "RP"]))
+                & (col("VisitVisatype") == 2),
+                "decisionWithHearing",
+            )
+            .alias("rpDcAppealHearingOption"),
+            when(
+                conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")
+            ).alias("paidDate"),
+            when(
+                conditions_all,
+                (
+                    when(col("paidAmount").isNotNull(), col("paidAmount"))
+                    .otherwise(lit(0))
+                    .cast(IntegerType())
+                    .cast(StringType())
+                ),
+            ).alias("paidAmount"),
+            when(
+                conditions_all,
+                lit(
+                    "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes."
+                ),
+            )
+            .otherwise(lit(None))
+            .alias("additionalPaymentInfo"),
+            when(
+                conditions_all,
+                (
+                    when(
+                        col("payment_status.paymentStatus").isNotNull(),
+                        col("payment_status.paymentStatus"),
+                    ).otherwise(lit("Paid"))
+                ),
+            )
+            .otherwise(lit(None))
+            .alias("dv_paymentStatus"),
+        )
+        .select(
             "CaseNo",
             "feeAmountGbp",
             "feeDescription",
@@ -121,7 +168,7 @@ def paymentType(silver_m1, silver_m4):
             "rpDcAppealHearingOption",
             "paidDate",
             "paidAmount",
-            "additionalPaymentInfo"
+            "additionalPaymentInfo",
         )
     )
     payment_audit_final = (
@@ -129,36 +176,53 @@ def paymentType(silver_m1, silver_m4):
         .join(paid_amount.alias("paid_amount"), ["CaseNo"], "left")
         .join(payment_content_final.alias("payment_content"), ["CaseNo"], "left")
         .join(silver_m1, ["CaseNo"], "left")
-        .select("audit.*",
+        .select(
+            "audit.*",
             # paAppealTypePaymentOption
-            array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias("paAppealTypePaymentOption_inputFields"),
-            array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias("paAppealTypePaymentOption_inputValues"),
+            array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias(
+                "paAppealTypePaymentOption_inputFields"
+            ),
+            array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias(
+                "paAppealTypePaymentOption_inputValues"
+            ),
             col("payment_content.paAppealTypePaymentOption"),
             lit("yes").alias("paAppealTypePaymentOption_Transformation"),
-
             # paAppealTypeAipPaymentOption
-            array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias("paAppealTypeAipPaymentOption_inputFields"),
-            array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias("paAppealTypeAipPaymentOption_inputValues"),
+            array(struct(lit("dv_CCDAppealType"), lit("dv_representation"))).alias(
+                "paAppealTypeAipPaymentOption_inputFields"
+            ),
+            array(struct(col("dv_CCDAppealType"), col("dv_representation"))).alias(
+                "paAppealTypeAipPaymentOption_inputValues"
+            ),
             col("payment_content.paAppealTypeAipPaymentOption"),
             lit("yes").alias("paAppealTypeAipPaymentOption_Transformation"),
-
             # rpDcAppealHearingOption
-            array(struct(lit("dv_CCDAppealType"), lit("VisitVisaType"))).alias("rpDcAppealHearingOption_inputFields"),
-            array(struct(col("dv_CCDAppealType"), col("VisitVisaType"))).alias("rpDcAppealHearingOption_inputValues"),
+            array(struct(lit("dv_CCDAppealType"), lit("VisitVisaType"))).alias(
+                "rpDcAppealHearingOption_inputFields"
+            ),
+            array(struct(col("dv_CCDAppealType"), col("VisitVisaType"))).alias(
+                "rpDcAppealHearingOption_inputValues"
+            ),
             col("payment_content.rpDcAppealHearingOption"),
             lit("yes").alias("rpDcAppealHearingOption_Transformation"),
-
             # paidDate
-            array(struct(lit("dv_CCDAppealType"), lit("DateCorrectFeeReceived"))).alias("paidDate_inputFields"),
-            array(struct(col("dv_CCDAppealType"), col("DateCorrectFeeReceived"))).alias("paidDate_inputValues"),
+            array(struct(lit("dv_CCDAppealType"), lit("DateCorrectFeeReceived"))).alias(
+                "paidDate_inputFields"
+            ),
+            array(struct(col("dv_CCDAppealType"), col("DateCorrectFeeReceived"))).alias(
+                "paidDate_inputValues"
+            ),
             col("payment_content.paidDate"),
             lit("yes").alias("paidDate_Transformation"),
-
             # paidAmount
-            array(struct(lit("dv_CCDAppealType"), lit("paid_amount"))).alias("paidAmount_inputFields"),
-            array(struct(col("dv_CCDAppealType"), col("paid_amount.amountList"))).alias("paidAmount_inputValues"),
+            array(struct(lit("dv_CCDAppealType"), lit("paid_amount"))).alias(
+                "paidAmount_inputFields"
+            ),
+            array(struct(col("dv_CCDAppealType"), col("paid_amount.amountList"))).alias(
+                "paidAmount_inputValues"
+            ),
             col("payment_content.paidAmount"),
-            lit("yes").alias("paidAmount_Transformation")
+            lit("yes").alias("paidAmount_Transformation"),
         )
     )
 
@@ -169,34 +233,48 @@ def paymentType(silver_m1, silver_m4):
 ##########        remissionTypes Function            ###########
 ################################################################
 
+
 def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
-    df_final, df_audit = PP.remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4)
+    df_final, df_audit = PP.remissionTypes(
+        silver_m1, bronze_remission_lookup_df, silver_m4
+    )
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
     amount_remitted = (
         silver_m4.filter((col("TransactionTypeId") == 5) & (col("Status") != 3))
-            .groupBy("CaseNo")
-            .agg(abs(F_sum(col("Amount"))).alias("amountRemitted"), collect_list(col("Amount")).alias("amountRemittedList"))
+        .groupBy("CaseNo")
+        .agg(
+            abs(F_sum(col("Amount"))).alias("amountRemitted"),
+            collect_list(col("Amount")).alias("amountRemittedList"),
+        )
     )
 
     ######################################################################
-    ref_txn_df = silver_m4.filter(
-        col("TransactionTypeId").isin(6, 19)
-    ).select("ReferringTransactionId").distinct()
+    ref_txn_df = (
+        silver_m4.filter(col("TransactionTypeId").isin(6, 19))
+        .select("ReferringTransactionId")
+        .distinct()
+    )
 
     # Use left anti join to remove matches
     filtered_df = (
         silver_m4.alias("m4")
-            .join(ref_txn_df.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
-            .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumTotalFee")
+        .join(
+            ref_txn_df.alias("ref_txn"),
+            col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"),
+            "left_anti",
+        )
+        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumTotalFee")
     )
 
     amount_left_to_pay = (
-        filtered_df
-            .filter(col("SumTotalFee") == 1)
-            .groupBy("CaseNo")
-            .agg(F_sum(col("Amount")).alias("amountLeftToPay"), collect_list(col("Amount")).alias("amountLeftToPayList"))
+        filtered_df.filter(col("SumTotalFee") == 1)
+        .groupBy("CaseNo")
+        .agg(
+            F_sum(col("Amount")).alias("amountLeftToPay"),
+            collect_list(col("Amount")).alias("amountLeftToPayList"),
+        )
     )
     #################################################################
 
@@ -207,56 +285,103 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         .join(amount_left_to_pay, ["CaseNo"], "left")
         .withColumn(
             "remissionDecision",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), lit("approved"))
-            .when((conditions_all) & (col("PaymentRemissionGranted") == 2), lit("rejected"))
-        ).withColumn(
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                lit("approved"),
+            ).when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 2),
+                lit("rejected"),
+            ),
+        )
+        .withColumn(
             "remissionDecisionReason",
-            when((conditions_all) & (col("PaymentRemissionGranted") == 1), lit("This is a migrated case. The remission was granted."))
-            .when((conditions_all) & (col("PaymentRemissionGranted") == 2), lit("This is a migrated case. The remission was rejected."))
-        ).withColumn(
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                lit("This is a migrated case. The remission was granted."),
+            ).when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 2),
+                lit("This is a migrated case. The remission was rejected."),
+            ),
+        )
+        .withColumn(
             "amountRemitted",
             when(
                 (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                when(col("amountRemitted").isNotNull(), col("amountRemitted")).otherwise(lit(0)).cast(IntegerType()).cast(StringType())
-            )
-        ).withColumn(
+                when(col("amountRemitted").isNotNull(), col("amountRemitted"))
+                .otherwise(lit(0))
+                .cast(IntegerType())
+                .cast(StringType()),
+            ),
+        )
+        .withColumn(
             "amountLeftToPay",
             when(
                 (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                    when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay")).otherwise(lit(0)).cast(IntegerType()).cast(StringType())
-            )
-        ).select("source.*", "remissionDecision", "remissionDecisionReason", "amountRemitted", "amountLeftToPay")
+                when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay"))
+                .otherwise(lit(None)) #was 0 -> Bella recommends null
+                .cast(IntegerType())
+                .cast(StringType()),
+            ),
+        )
+        .select(
+            "source.*",
+            "remissionDecision",
+            "remissionDecisionReason",
+            "amountRemitted",
+            "amountLeftToPay",
+        )
     )
 
     common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
-    common_inputValues = [col("m1_audit.dv_CCDAppealType"), col("m1_audit.dv_representation")]
+    common_inputValues = [
+        col("m1_audit.dv_CCDAppealType"),
+        col("m1_audit.dv_representation"),
+    ]
 
     df_audit = (
-        df_audit.alias('audit')
+        df_audit.alias("audit")
         .join(df_final.alias("content"), ["CaseNo"], "left")
         .join(amount_remitted.alias("amount_remitted"), ["CaseNo"], "left")
         .join(amount_left_to_pay.alias("amount_left_to_pay"), ["CaseNo"], "left")
         .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
-        .select("audit.*",
-            array(struct(*common_inputFields, lit("content.remissionDecision"))).alias("remissionDecision_inputFields"),
-            array(struct(*common_inputValues, col("content.remissionDecision"))).alias("remissionDecision_inputValues"),
+        .select(
+            "audit.*",
+            array(struct(*common_inputFields, lit("content.remissionDecision"))).alias(
+                "remissionDecision_inputFields"
+            ),
+            array(struct(*common_inputValues, col("content.remissionDecision"))).alias(
+                "remissionDecision_inputValues"
+            ),
             col("content.remissionDecision"),
             lit("yes").alias("remissionDecision_Transformed"),
-
-            array(struct(*common_inputFields, lit("content.remissionDecisionReason"))).alias("remissionDecisionReason_inputFields"),
-            array(struct(*common_inputValues, col("content.remissionDecisionReason"))).alias("remissionDecisionReason_inputValues"),
+            array(
+                struct(*common_inputFields, lit("content.remissionDecisionReason"))
+            ).alias("remissionDecisionReason_inputFields"),
+            array(
+                struct(*common_inputValues, col("content.remissionDecisionReason"))
+            ).alias("remissionDecisionReason_inputValues"),
             col("content.remissionDecisionReason"),
             lit("yes").alias("remissionDecisionReason_Transformed"),
-
-            array(struct(*common_inputFields, lit("amount_remitted.amountRemittedList"))).alias("amountRemitted_inputFields"),
-            array(struct(*common_inputValues, col("amount_remitted.amountRemittedList"))).alias("amountRemitted_inputValues"),
+            array(
+                struct(*common_inputFields, lit("amount_remitted.amountRemittedList"))
+            ).alias("amountRemitted_inputFields"),
+            array(
+                struct(*common_inputValues, col("amount_remitted.amountRemittedList"))
+            ).alias("amountRemitted_inputValues"),
             col("content.amountRemitted"),
             lit("yes").alias("amountRemitted_Transformed"),
-
-            array(struct(*common_inputFields, lit("amount_left_to_pay.amountLeftToPayList"))).alias("amountLeftToPay_inputFields"),
-            array(struct(*common_inputValues, col("amount_left_to_pay.amountLeftToPayList"))).alias("amountLeftToPay_inputValues"),
+            array(
+                struct(
+                    *common_inputFields, lit("amount_left_to_pay.amountLeftToPayList")
+                )
+            ).alias("amountLeftToPay_inputFields"),
+            array(
+                struct(
+                    *common_inputValues, col("amount_left_to_pay.amountLeftToPayList")
+                )
+            ).alias("amountLeftToPay_inputValues"),
             col("content.amountLeftToPay"),
-            lit("yes").alias("amountLeftToPay_Transformed")
+            lit("yes").alias("amountLeftToPay_Transformed"),
         )
     )
 

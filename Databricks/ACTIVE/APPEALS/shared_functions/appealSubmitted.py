@@ -52,8 +52,21 @@ def paymentType(silver_m1, silver_m4):
 
     final_filtered_df = filtered_rows.join(valid_cases, "CaseNo", "inner")
 
+    ref_txn_df1 = (
+        silver_m4.filter(col("TransactionTypeId").isin(6, 19))
+        .select("ReferringTransactionId")
+        .where(col("ReferringTransactionId").isNotNull())
+        .distinct()
+    )
+
+    ref_txn_df1 = (
+        silver_m4.alias("m4")
+            .join(ref_txn_df.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
+            .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
+    )
+
     payment_status = (
-        silver_m4.alias("max")
+        ref_txn_df1.alias("max")
         .filter(col("SumBalance") == 1)
         .groupBy("CaseNo")
         .agg(
@@ -61,7 +74,7 @@ def paymentType(silver_m1, silver_m4):
             spark_max(col("TransactionId")).alias("MaxTransactionId"),
         )
         .join(
-            silver_m4.alias("type").select(
+            ref_txn_df1.alias("type").select(
                 "CaseNo", "TransactionTypeId", "TransactionId"
             ),
             on=(

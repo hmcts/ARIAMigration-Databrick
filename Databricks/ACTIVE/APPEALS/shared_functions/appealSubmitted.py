@@ -92,14 +92,11 @@ def paymentType(silver_m1, silver_m4):
 
     payment_content_final = (
         payment_content.alias("payment_content")
-        # .join(silver_m4, ["CaseNo"], "left")
         .join(silver_m1, ["CaseNo"], "left")
         .join(paid_amount, ["CaseNo"], "left")
         .join(payment_status.alias("payment_status"), ["CaseNo"], "left")
         .select(
             "payment_content.*",
-            # col("TransactionTypeId"),
-            # col("TransactionId"),
             when(
                 (col("dv_CCDAppealType") == "PA") & (col("dv_representation") == "LR"),
                 lit("payLater"),

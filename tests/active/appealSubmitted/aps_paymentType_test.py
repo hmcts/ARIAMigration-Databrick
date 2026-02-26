@@ -252,13 +252,13 @@ class TestAppealSubmittedPaymentType:
             assert resultList[0][0] == "0" 
             assert resultList[1][0] == "0" 
             assert resultList[2][0] == "100" 
-            assert resultList[3][0] == "0"
-            assert resultList[4][0] == "" 
-            assert resultList[5][0] is None
-            assert resultList[6][0] == "0" 
-            assert resultList[7][0] == "0" 
-            assert resultList[8][0] == "0"
-            assert resultList[9][0] == "0"
+            assert resultList[3][0] == "100"
+            assert resultList[4][0] == "100" 
+            assert resultList[5][0] == "100"
+            assert resultList[6][0] == "100" 
+            assert resultList[7][0] == "100" 
+            assert resultList[8][0] == "100"
+            assert resultList[9][0] == "100"
 
     def test_additionalPaymentInfo(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

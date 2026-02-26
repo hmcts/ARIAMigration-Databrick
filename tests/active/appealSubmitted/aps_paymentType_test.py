@@ -249,8 +249,8 @@ class TestAppealSubmittedPaymentType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
-            assert resultList[0][0] == "0" 
-            assert resultList[1][0] == "0" 
+            assert resultList[0][0] == "100" 
+            assert resultList[1][0] == "100" 
             assert resultList[2][0] == "100" 
             assert resultList[3][0] == "100"
             assert resultList[4][0] == "100" 

@@ -228,7 +228,7 @@ class TestAppealSubmittedPaymentType:
             m4_data = [
                 ("98", 1, 6, 100.0, 0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
                 ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("100", 1, 3, 100.0, 0, 1, 2)  ,  # TransactionTypeId = 3, ReferringTransationId = 2, SumTotalPay > 0
+                ("100", 1, 3, 100.0, 0, 1, 3),  # TransactionTypeId = 3, ReferringTransationId = 2, SumTotalPay > 0
                 ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("2", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("3", 3, 1, 100.0, 0, 1, 3),    # valid condition
@@ -251,7 +251,7 @@ class TestAppealSubmittedPaymentType:
 
             assert resultList[0][0] == "0" 
             assert resultList[1][0] == "0" 
-            assert resultList[3][0] == "100" 
+            assert resultList[2][0] == "100" 
             assert resultList[3][0] == "100" 
             assert resultList[4][0] == "100"
             assert resultList[5][0] is None

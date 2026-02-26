@@ -224,9 +224,11 @@ class TestAppealSubmittedPaymentType:
                 ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - 0 set
                 ("9", "EA", "AIP", 0, datetime(2000, 1, 1))    # EA Case with valid condition and multiple transactions - sum paidAmount set
             ]
+
             m4_data = [
                 ("98", 1, 6, 100.0, 0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
                 ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
+                ("100", 1, 3, 100.0, 0, 1, 2)  ,  # TransactionTypeId = 3, ReferringTransationId = 2, SumTotalPay > 0
                 ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("2", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("3", 3, 1, 100.0, 0, 1, 3),    # valid condition
@@ -247,10 +249,10 @@ class TestAppealSubmittedPaymentType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
-            assert resultList[0][0] == "100" and resultList[1][0] == "100" and resultList[2][0] == "100" and resultList[3][0] == "100"
-            assert resultList[4][0] is None
-            assert resultList[5][0] == "0" and resultList[6][0] == "0" and resultList[7][0] == "0"
-            assert resultList[8][0] == "500"
+            assert resultList[0][0] == "0" and resultList[1][0] == "0" and resultList[2][0] == "100" and resultList[3][0] == "0"
+            assert resultList[4][0] == "" and resultList[5][0] is None
+            assert resultList[6][0] == "0" and resultList[7][0] == "0" and resultList[8][0] == "0"
+            assert resultList[9][0] == "0"
 
     def test_additionalPaymentInfo(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

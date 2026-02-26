@@ -228,9 +228,8 @@ class TestAppealSubmittedPaymentType:
             m4_data = [
                 ("98", 1, 6, 100.0, 0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
                 ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("100", 1, 3, 100.0, 0, 1, 3),  # TransactionTypeId = 3, ReferringTransationId = 2, SumTotalPay > 0
                 ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
-                ("2", 3, 1, 100.0, 0, 1, 3),    # valid condition
+                ("2", 3, 3, 100.0, 0, 1, 3),    # valid condition
                 ("3", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("4", 3, 1, 100.0, 0, 1, 3),    # valid condition
                 ("5", 3, 1, 100.0, 0, 1, 3),    # valid condition
@@ -239,7 +238,7 @@ class TestAppealSubmittedPaymentType:
                 ("8", 2, 1, 100.0, 0, 1, 3),    # TransactionId = 2
                 ("9", 3, 1, 100.0, 0, 1, 3),    # valid condition for same case
                 ("9", 3, 1, 150.0, 0, 1, 3),    # valid condition for same case
-                ("9", 3, 1, 250.0, 0, 1, 3)     # valid condition for same case
+                ("9", 3, 3, 250.0, 0, 1, 3)     # valid condition for same case
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -251,13 +250,13 @@ class TestAppealSubmittedPaymentType:
 
             assert resultList[0][0] == "0" 
             assert resultList[1][0] == "0" 
-            # assert resultList[2][0] == "100" 
+            assert resultList[2][0] == "100" 
             assert resultList[3][0] == "0" 
             assert resultList[4][0] is None
             assert resultList[5][0] == "0"
             assert resultList[6][0] == "0"
             assert resultList[7][0] == "0" 
-            assert resultList[8][0] == "0"
+            assert resultList[8][0] == "250"
             # assert resultList[9][0] == "500"
 
     def test_additionalPaymentInfo(self, spark):

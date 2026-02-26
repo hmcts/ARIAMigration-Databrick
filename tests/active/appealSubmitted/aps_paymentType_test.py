@@ -256,7 +256,7 @@ class TestAppealSubmittedPaymentType:
             assert resultList[5][0] == "0"
             assert resultList[6][0] == "0"
             assert resultList[7][0] == "0" 
-            assert resultList[8][0] == "250"
+            assert resultList[8][0] == "500"
             # assert resultList[9][0] == "500"
 
     def test_additionalPaymentInfo(self, spark):

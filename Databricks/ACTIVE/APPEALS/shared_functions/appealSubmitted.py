@@ -66,7 +66,7 @@ def paymentType(silver_m1, silver_m4):
     )
 
     payment_status = (
-        ref_txn_df1.alias("max")
+        silver_m4.alias("max")
         .filter(col("SumBalance") == 1)
         .groupBy("CaseNo")
         .agg(

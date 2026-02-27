@@ -96,9 +96,9 @@ def test_listCaseHearingLength(spark,hearingDetails_outputs):
     results = hearingDetails_outputs
 
     assert results["CASE001"]["listCaseHearingLength"] == None
-    assert results["CASE006"]["listCaseHearingLength"] == 240
+    assert results["CASE006"]["listCaseHearingLength"] == '240'
     assert results["CASE008"]["listCaseHearingLength"] == None
-    assert results["CASE011"]["listCaseHearingLength"] == 45
+    assert results["CASE011"]["listCaseHearingLength"] == '45'
 
 def test_listCaseHearingDate(spark,hearingDetails_outputs):
 

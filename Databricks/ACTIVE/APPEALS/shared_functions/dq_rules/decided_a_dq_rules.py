@@ -99,18 +99,16 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_ftpaApplicationDeadline"] = """
         (
-            DecisionDate IS NULL
-            OR
-            to_date(date_add(DecisionDate, 14), 'yyyy-MM-dd') = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            OR
-            date_add(DecisionDate, 28), 'yyyy-MM-dd') = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            OR
-            date_add(DecisionDate, 0), 'yyyy-MM-dd') = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            -- CASE
-            --     WHEN CategoryId = 37 THEN date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            --     WHEN CategoryId = 38 THEN date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            --     ELSE date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline, 'yyyy-MM-dd')
-            -- END
+            
+                DecisionDate IS NULL
+                OR
+                to_date(date_add(DecisionDate, 14)) = to_date(ftpaApplicationDeadline)
+                OR
+                to_date(date_add(DecisionDate, 28)) = to_date(ftpaApplicationDeadline)
+                OR
+                to_date(date_add(DecisionDate, 0))  = to_date(ftpaApplicationDeadline)
+
+
         )
         """
 

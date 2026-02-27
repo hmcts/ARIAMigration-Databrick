@@ -192,7 +192,7 @@ def hearingActuals(silver_m3):
                 # key: "minutes", value: minutes calculation
                 F.lit("minutes"),
                 F.when(col("HearingDuration").isNull(), F.lit(None).cast("string"))
-                .otherwise((F.col("HearingDuration").cast("int") % 60)).cast("string)
+                .otherwise((F.col("HearingDuration").cast("int") % 60)).cast("string")
 
             )
         )

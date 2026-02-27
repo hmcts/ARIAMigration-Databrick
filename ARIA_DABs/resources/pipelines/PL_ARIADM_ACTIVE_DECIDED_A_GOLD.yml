@@ -15,5 +15,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_DECIDED_A_JSON"
-      target: decided_a_gold
+      target: decidedA_gold
       development: true

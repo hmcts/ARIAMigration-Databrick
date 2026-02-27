@@ -15,5 +15,5 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_FTPA_SUBMITTED_A_JSON"
-      target: ftpa_submitted_a_gold
+      target: ftpaSubmittedA_gold
       development: true

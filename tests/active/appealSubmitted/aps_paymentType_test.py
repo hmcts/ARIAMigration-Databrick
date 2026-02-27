@@ -149,7 +149,7 @@ class TestAppealSubmittedPaymentType:
                 ("6", "PA", "AIP", 0, datetime(2000, 1, 1))   # PA and AIP Case - sets paAppealTypeAipPaymentOption
             ]
 
-            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA) 
             silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
 
             df, df_audit = paymentType(silver_m1, silver_m4)

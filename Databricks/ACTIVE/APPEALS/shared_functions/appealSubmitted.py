@@ -8,7 +8,6 @@ from pyspark.sql.functions import (
     max as spark_max,
     date_format,
     abs,
-    sum as F_sum,
     sum as sum_,
 )
 from pyspark.sql.types import IntegerType, StringType
@@ -254,7 +253,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         silver_m4.filter((col("TransactionTypeId") == 5) & (col("Status") != 3))
         .groupBy("CaseNo")
         .agg(
-            abs(F_sum(col("Amount"))).alias("amountRemitted"),
+            abs(sum_(col("Amount"))).alias("amountRemitted"),
             collect_list(col("Amount")).alias("amountRemittedList"),
         )
     )
@@ -281,7 +280,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         filtered_df.filter(col("SumTotalFee") == 1)
         .groupBy("CaseNo")
         .agg(
-            F_sum(col("Amount")).alias("amountLeftToPay"),
+            sum_(col("Amount")).alias("amountLeftToPay"),
             collect_list(col("Amount")).alias("amountLeftToPayList"),
         )
     )

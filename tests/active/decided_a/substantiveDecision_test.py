@@ -73,16 +73,16 @@ def test_sendDecisionsAndReasonsDate(spark,substantiveDecision_outputs):
 
     results = substantiveDecision_outputs
 
-    assert results["CASE001"]["sendDecisionsAndReasonsDate"] == "02/10/2024"
-    assert results["CASE002"]["sendDecisionsAndReasonsDate"] == "02/11/2025"
+    assert results["CASE001"]["sendDecisionsAndReasonsDate"] == "2024-10-02"
+    assert results["CASE002"]["sendDecisionsAndReasonsDate"] == "2025-11-02"
     assert results["CASE003"]["sendDecisionsAndReasonsDate"] == None
 
 def test_appealDate(spark,substantiveDecision_outputs):
 
     results = substantiveDecision_outputs
 
-    assert results["CASE001"]["appealDate"] == "02/10/2024"
-    assert results["CASE002"]["appealDate"] == "02/11/2025"
+    assert results["CASE001"]["appealDate"] == "2024-10-02"
+    assert results["CASE002"]["appealDate"] == "2025-11-02"
     assert results["CASE003"]["appealDate"] == None
 
 def test_appealDecision(spark,substantiveDecision_outputs):
@@ -97,7 +97,7 @@ def test_isDecisionAllowed(spark,substantiveDecision_outputs):
 
     results = substantiveDecision_outputs
 
-    assert results["CASE001"]["isDecisionAllowed"] == "Allowed"
-    assert results["CASE002"]["isDecisionAllowed"] == "Dismissed"
+    assert results["CASE001"]["isDecisionAllowed"] == "allowed"
+    assert results["CASE002"]["isDecisionAllowed"] == "dismissed"
     assert results["CASE003"]["isDecisionAllowed"] == None
 

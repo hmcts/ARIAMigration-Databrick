@@ -78,8 +78,8 @@ def substantiveDecision(silver_m1,silver_m3):
                 col("sd.*"),
 
                 # Format dates as dd/MM/yyyy (after parsing the string with timezone)
-                date_format(decision_ts, "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
-                date_format(decision_ts, "dd/MM/yyyy").alias("appealDate"),
+                date_format(decision_ts, "yyyy-MM-dd").alias("sendDecisionsAndReasonsDate"),
+                date_format(decision_ts, "yyyy-MM-dd").alias("appealDate"),
 
                 # Outcome mapping
                 when(col("m3.Outcome") == 1, "Allowed")
@@ -87,8 +87,8 @@ def substantiveDecision(silver_m1,silver_m3):
                     .otherwise(None)
                     .alias("appealDecision"),
 
-                when(col("m3.Outcome") == 1, "Allowed")
-                    .when(col("m3.Outcome") == 2, "Dismissed")
+                when(col("m3.Outcome") == 1, "allowed")
+                    .when(col("m3.Outcome") == 2, "dismissed")
                     .otherwise(None)
                     .alias("isDecisionAllowed"),
 
@@ -186,13 +186,14 @@ def hearingActuals(silver_m3):
             F.create_map(
                 # key: "hours", value: hours calculation
                 F.lit("hours"),
-                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
-                .otherwise(F.floor(col("HearingDuration").cast("int") / 60)),
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("string"))
+                .otherwise(F.floor(col("HearingDuration").cast("int") / 60).cast("string")),
 
                 # key: "minutes", value: minutes calculation
                 F.lit("minutes"),
-                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
-                .otherwise(col("HearingDuration").cast("int") % 60)
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("string"))
+                .otherwise((F.col("HearingDuration").cast("int") % 60)).cast("string)
+
             )
         )
         .withColumn("attendingJudge",concat(col("Adj_Determination_Title"),lit(" "),col("Adj_Determination_Forenames"),lit(" "),col("Adj_Determination_Surname")))
@@ -245,7 +246,7 @@ def ftpa(silver_m3,silver_c):
                     when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
                     .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28))
                     .otherwise(col("DecisionDate")),
-                    "dd/MM/yyyy"
+                    "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )
     )

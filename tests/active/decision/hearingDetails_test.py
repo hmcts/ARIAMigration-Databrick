@@ -114,8 +114,8 @@ def test_listCaseHearingCentre(spark,hearingDetails_outputs):
     results = hearingDetails_outputs
 
     assert results["CASE001"]["listCaseHearingCentre"] == None
-    assert results["CASE006"]["listCaseHearingCentre"] == ["Scot"]
-    assert results["CASE008"]["listCaseHearingCentre"] == ["Nor"]
+    assert results["CASE006"]["listCaseHearingCentre"] == "Scot"
+    assert results["CASE008"]["listCaseHearingCentre"] == "Nor"
     assert results["CASE011"]["listCaseHearingCentre"] == [None]
 
 def test_listCaseHearingCentreAddress(spark,hearingDetails_outputs):

@@ -5,7 +5,8 @@ from shared_functions.dq_rules import (
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp
+from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp, 
+                                   array_min,transform, array, abs)
 from pyspark.sql.types import ArrayType, LongType
 
 # import shared_functions.ended as E
@@ -202,19 +203,33 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             )
     )
 
+    allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
     # prepare for hearing - hearing response
     df_m3_validation = (
         silver_m3
             .filter(col("CaseStatus").isin(37, 38))
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1).drop("row_number")
+            .withColumn(
+                "roundedTimeEstimate",
+                array_min(
+                    transform(
+                        array(*[lit(x) for x in allowed]),
+                        lambda x: struct(
+                            abs(x - col("TimeEstimate").cast("int")).alias("dist"),
+                            x.alias("value")
+                        )
+                    )
+                ).getField("value")
+            )
             .select(
-                "CaseNo", "HearingCentre", "TimeEstimate", "HearingDate", "HearingType", "CourtName", "ListType", "ListTypeId", "StartTime",
+                "CaseNo", "HearingCentre", "roundedTimeEstimate", "HearingDate", "HearingType", "CourtName", "ListType", "ListTypeId", "StartTime",
                 "Judge1FT_Surname", "Judge2FT_Surname", "Judge3FT_Surname", "Judge1FT_Forenames", "Judge2FT_Forenames", "Judge3FT_Forenames",
                 "Judge1FT_Title", "Judge2FT_Title", "Judge3FT_Title", "CourtClerk_Surname", "CourtClerk_Forenames", "CourtClerk_Title"
             )
     )
 
+        
     valid_preparforhearing = (
         silver_m1.select("CaseNo")
             .join(df_m3_validation, on="CaseNo", how="left")

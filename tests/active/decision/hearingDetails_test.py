@@ -96,9 +96,9 @@ def test_listCaseHearingLength(spark,hearingDetails_outputs):
     results = hearingDetails_outputs
 
     assert results["CASE001"]["listCaseHearingLength"] == None
-    assert results["CASE006"]["listCaseHearingLength"] == [240]
-    assert results["CASE008"]["listCaseHearingLength"] == [None]
-    assert results["CASE011"]["listCaseHearingLength"] == [45]
+    assert results["CASE006"]["listCaseHearingLength"] == 240
+    assert results["CASE008"]["listCaseHearingLength"] == None
+    assert results["CASE011"]["listCaseHearingLength"] == 45
 
 def test_listCaseHearingDate(spark,hearingDetails_outputs):
 
@@ -116,7 +116,7 @@ def test_listCaseHearingCentre(spark,hearingDetails_outputs):
     assert results["CASE001"]["listCaseHearingCentre"] == None
     assert results["CASE006"]["listCaseHearingCentre"] == "Scot"
     assert results["CASE008"]["listCaseHearingCentre"] == "Nor"
-    assert results["CASE011"]["listCaseHearingCentre"] == [None]
+    assert results["CASE011"]["listCaseHearingCentre"] == None
 
 def test_listCaseHearingCentreAddress(spark,hearingDetails_outputs):
 

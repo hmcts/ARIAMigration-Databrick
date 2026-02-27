@@ -90,7 +90,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='appellant',
-                ftpaApplicationDate='02/11/2025',
+                ftpaApplicationDate='2025-11-02',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -105,7 +105,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='appellant',
-                ftpaApplicationDate='03/12/2026',
+                ftpaApplicationDate='2026-12-03',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -120,7 +120,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='respondent',
-                ftpaApplicationDate='03/08/2026',
+                ftpaApplicationDate='2026-08-03',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -135,7 +135,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='respondent',
-                ftpaApplicationDate='02/11/2025',
+                ftpaApplicationDate='2025-11-02',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -148,8 +148,8 @@ def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "02/11/2025"
-    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "03/12/2026"
+    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "2025-11-02"
+    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "2026-12-03"
     assert results["CASE007"]["ftpaAppellantApplicationDate"] == None
     assert results["CASE010"]["ftpaAppellantApplicationDate"] == None
 
@@ -178,8 +178,8 @@ def test_ftpaRespondentApplicationDate(spark,ftpa_outputs):
 
     assert results["CASE005"]["ftpaRespondentApplicationDate"] == None
     assert results["CASE006"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "03/08/2026"
-    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "02/11/2025"
+    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "2026-08-03"
+    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "2025-11-02"
 
 
 def test_ftpaRespondentSubmissionOutOfTime(spark,ftpa_outputs):

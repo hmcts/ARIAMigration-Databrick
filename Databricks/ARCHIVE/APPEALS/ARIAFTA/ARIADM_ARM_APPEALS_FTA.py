@@ -934,7 +934,11 @@ comment="Delta Live Table ARIA AppealTypeCategory.",
 path=f"{raw_mnt}/raw_stmcases"
 )
 def raw_stmcases():
-    return read_latest_parquet("STMCases", "tv_stmcases", "ARIA_ARM_APPEALS") 
+    return read_latest_parquet("STMCases", "tv_stmcases", "ARIA_ARM_APPEALS")
+
+@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_mnt}/raw_department")
+def bail_raw_appeal_cases():
+    return read_latest_parquet("Department","tv_department","ARIA_ARM_APPEALS")
 
 
 # COMMAND ----------
@@ -1017,6 +1021,8 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             dlt.read("raw_embassy").alias("e"),
             col("cr.RespondentId") == col("e.EmbassyId"),
             "left_outer"
+        ).join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer"
+        ).join(dlt.read("raw_hearingCentre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer"
         ).select(
             # Appeal Case columns
             trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
@@ -1069,6 +1075,8 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             # col("r.Sdx").alias("RespondentSdx"),
             
             # File Location columns
+            col("hc.Description").alias("FileLocationHearingCentre"),
+            col("dp.Description").alias("FileLocationDepartment"),
             col("fl.Note").alias("FileLocationNote"),
             col("fl.TransferDate").alias("FileLocationTransferDate"),
             
@@ -3098,7 +3106,7 @@ def silver_appealcase_detail():
         # "ap.RespondentFax",
         # "ap.RespondentTelephone",
         # "ap.RespondentSdx",
-        "ap.FileLocationNote",
+        # "ap.FileLocationNote",
         "ap.FileLocationTransferDate",
         "ap.RepresentativeRef",
         # "ap.CaseRepName",
@@ -3136,6 +3144,9 @@ def silver_appealcase_detail():
         # "ap.RepDXNo2",
         "ap.Language",
         # "ap.DoNotUseLanguage",
+        "ap.FileLocationHearingCentre",
+        "ap.FileLocationDepartment",
+        "ap.FileLocationNote",
         when(col("ap.RepresentativeId") == 0, col("CaseRepName")).otherwise(col("RepName")).alias("RepresentativeName"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepAddress1")).otherwise(col("RepAddress1")).alias("RepresentativeAddress1"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepAddress2")).otherwise(col("RepAddress2")).alias("RepresentativeAddress2"),
@@ -3147,7 +3158,8 @@ def silver_appealcase_detail():
         when(col("ap.RepresentativeId") == 0, col("CaseRepFax")).otherwise(col("RepFax")).alias("RepresentativeFax"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepEmail")).otherwise(col("RepEmail")).alias("RepresentativeEmail"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo1")).otherwise(col("RepDXNo1")).alias("RepresentativeDXNo1"),
-        when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo2")).otherwise(col("RepDXNo2")).alias("RepresentativeDXNo2")
+        when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo2")).otherwise(col("RepDXNo2")).alias("RepresentativeDXNo2"),
+        concat_ws(", ", col("ap.FileLocationHearingCentre"), col("ap.FileLocationDepartment"), col("ap.FileLocationNote")).alias("fileLocation")
     )
 
     return joined_df
@@ -3489,7 +3501,7 @@ def silver_history_detail():
         .withColumn("row_num", row_number().over(Window.partitionBy("CaseNo").orderBy(col("HistDate").desc())))\
                             .filter(col("row_num") == 1)\
                             .drop("row_num")\
-        .select(col("CaseNo"), col("HistoryComment").alias("fileLocation"))
+        .select(col("CaseNo"), col("HistoryComment").alias("fileLocation1"))
 
     # display(file_location_df)
 
@@ -3509,7 +3521,7 @@ def silver_history_detail():
             "HistoryId",
             "CaseNo",
             "HistDate",
-            "fileLocation",
+            "fileLocation1",
             "lastDocument",
             "HistType",
             "HistoryComment",
@@ -5302,7 +5314,7 @@ def stg_statichtml_data():
 
     # Get the latest history details
     window_spec = Window.partitionBy("CaseNo").orderBy(col("HistDate").desc())
-    df_latest_history_details = df_history_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", "lastDocument", "fileLocation")
+    df_latest_history_details = df_history_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", "lastDocument", "fileLocation1")
 
     # Get the latest status details
     window_spec = Window.partitionBy("CaseNo").orderBy(col("KeyDate").desc())
@@ -6152,7 +6164,7 @@ def stg_apl_combined():
     )
 
     df_history = dlt.read("silver_history_detail").groupBy("CaseNo").agg(
-        collect_list(struct('HistoryId', 'CaseNo', 'HistDate', 'fileLocation', 'lastDocument', 'HistType', 'HistoryComment','DeletedByUser', 'StatusId', 'UserName', 'UserType', 'Fullname', 'Extension', 'DoNotUse', 'HistTypeDescription')).alias("HistoryDetails")
+        collect_list(struct('HistoryId', 'CaseNo', 'HistDate', 'fileLocation1', 'lastDocument', 'HistType', 'HistoryComment','DeletedByUser', 'StatusId', 'UserName', 'UserType', 'Fullname', 'Extension', 'DoNotUse', 'HistTypeDescription')).alias("HistoryDetails")
     )
 
     df_humanright = dlt.read("silver_humanright_detail").groupBy("CaseNo").agg(

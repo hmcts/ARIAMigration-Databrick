@@ -14,7 +14,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
             """
             (   (allocatedJudge IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
                 OR
-                (allocatedJudge = concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
             )
             """
         )
@@ -23,7 +23,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
             """
             (   (allocatedJudgeEdit IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
                 OR
-                (allocatedJudgeEdit = concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
             )
             """
         )

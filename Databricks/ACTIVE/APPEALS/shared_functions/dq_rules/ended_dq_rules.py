@@ -623,9 +623,9 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN             
-                    COALESCE(listCaseHearingLength, ARRAY()) = COALESCE(listCaseHearingLength_ended, ARRAY())
+                    listCaseHearingLength <=> listCaseHearingLength_ended
                 ELSE
-                    SIZE(COALESCE(listCaseHearingLength, ARRAY())) = 0
+                    listCaseHearingLength IS NULL
             END
         )
         """
@@ -637,7 +637,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(listCaseHearingDate, '') = coalesce(listCaseHearingDate_ended, '')
+                    coalesce(listCaseHearingDate, '') <=> coalesce(listCaseHearingDate_ended, '')
                 ELSE
                     listCaseHearingDate IS NULL
             END
@@ -649,10 +649,9 @@ class endedDQRules(DQRulesBase):
         (
             CASE 
                 WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
-                    ARRAY_SORT(COALESCE(listCaseHearingCentre, ARRAY())) =
-                    ARRAY_SORT(COALESCE(listCaseHearingCentre_ended, ARRAY()))
+                    listCaseHearingCentre <=> listCaseHearingCentre_ended
                 ELSE
-                    SIZE(COALESCE(listCaseHearingCentre, ARRAY())) = 0
+                    listCaseHearingCentre IS NULL
             END
         )
         """

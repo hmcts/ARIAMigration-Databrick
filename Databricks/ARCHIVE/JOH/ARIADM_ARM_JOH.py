@@ -1249,7 +1249,7 @@ def generate_html(row, html_template=html_template):
             "{{Title}}": row.Title or "",
             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
-            "{{Telephone}}": row.ContactTelephone or "",
+            "{{Telephone}}": row.Telephone or "",
             # "{{ContactDetails}}": row.ContactDetails or "",
             "{{ContactDetails}}": (row.ContactDetails or "").replace("\n", ", "),
             "{{DesignatedCentre}}": row.DesignatedCentre or "",

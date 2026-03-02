@@ -676,3 +676,371 @@ def test_inCameraCourtDescription_test2(test_df):
     except Exception as e:
         error_message = str(e)
         return TestResult("inCameraCourtDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+
+############################################################################################
+#######################
+#language tests Init code
+#######################
+def test_languages_init(json, M1_bronze):
+    try:
+        json = json.select(
+            col("appealReferenceNumber"),
+            col("appellantInterpreterLanguageCategory"),
+            col("appellantInterpreterSpokenLanguage")
+            # ,
+            # col("appellantInterpreterSignLanguage")
+        )
+
+        M1_bronze = M1_bronze.select(
+            col("CaseNo"),
+            col("LanguageId")
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            M1_bronze["CaseNo"] == json["appealReferenceNumber"],
+            "inner"
+).drop(M1_bronze["CaseNo"])
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage, appellantInterpreterSignLanguage", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+    
+def test_languageInterpreterMapping(test_df):
+    language_requirements = {
+    1: ("spokenLanguageInterpreter", "fra", "French", [], None),
+    2: ("spokenLanguageInterpreter", "deu", "German", [], None),
+    3: ("spokenLanguageInterpreter", "ach", "Acholi", [], None),
+    4: ("spokenLanguageInterpreter", "aka", "Akan", [], None),
+    5: ("spokenLanguageInterpreter", "afr", "Afrikaans", [], None),
+    6: ("spokenLanguageInterpreter", "sqi", "Albanian", [], None),
+    7: ("spokenLanguageInterpreter", "amh", "Amharic", [], None),
+    8: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bajuni"),
+    9: ("spokenLanguageInterpreter", "ara", "Arabic", [], None),
+    10: ("spokenLanguageInterpreter", "ara-ana", "Arabic North African", [], None),
+    11: ("spokenLanguageInterpreter", "ara-ame", "Arabic Middle Eastern", [], None),
+    12: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ashanti"),
+    13: ("spokenLanguageInterpreter", "aii", "Assyrian", [], None),
+    14: ("spokenLanguageInterpreter", "teo", "Ateso", [], None),
+    15: ("spokenLanguageInterpreter", "bjs", "Bajan (West Indian)", [], None),
+    16: ("spokenLanguageInterpreter", "bal", "Baluchi", [], None),
+    17: ("spokenLanguageInterpreter", "bam", "Bambara", [], None),
+    18: ("spokenLanguageInterpreter", "bel", "Belorussian", [], None),
+    19: ("spokenLanguageInterpreter", "ben", "Bengali", [], None),
+    20: ("spokenLanguageInterpreter", "bin", "Benin/Edo", [], None),
+    21: ("spokenLanguageInterpreter", "ber", "Berber", [], None),
+    22: ("spokenLanguageInterpreter", "abr", "Brong", [], None),
+    23: ("spokenLanguageInterpreter", "bul", "Bulgarian", [], None),
+    24: ("spokenLanguageInterpreter", "yue", "Cantonese", [], None),
+    25: ("spokenLanguageInterpreter", "ceb", "Cebuano", [], None),
+    26: ("spokenLanguageInterpreter", "ces", "Czech", [], None),
+    27: ("spokenLanguageInterpreter", "prs", "Dari", [], None),
+    28: ("spokenLanguageInterpreter", "din", "Dinka", [], None),
+    29: ("spokenLanguageInterpreter", "dyu", "Dioula", [], None),
+    30: ("spokenLanguageInterpreter", "bin", "Benin/Edo", [], None),
+    31: ("spokenLanguageInterpreter", "ewe", "Ewe", [], None),
+    32: ("spokenLanguageInterpreter", "fat", "Fanti", [], None),
+    33: ("spokenLanguageInterpreter", "fas", "Farsi", [], None),
+    34: ("spokenLanguageInterpreter", "fra-faf", "French African", [], None),
+    35: ("spokenLanguageInterpreter", "fra-far", "French Arabic", [], None),
+    36: ("spokenLanguageInterpreter", "gaa", "Ga", [], None),
+    37: ("spokenLanguageInterpreter", "ell", "Greek", [], None),
+    38: ("spokenLanguageInterpreter", "guj", "Gujarati", [], None),
+    39: ("spokenLanguageInterpreter", "sgw", "Gurage", [], None),
+    40: ("spokenLanguageInterpreter", "hak", "Hakka", [], None),
+    41: ("spokenLanguageInterpreter", "hau", "Hausa", [], None),
+    42: ("spokenLanguageInterpreter", "heb", "Hebrew", [], None),
+    43: ("spokenLanguageInterpreter", "hin", "Hindi", [], None),
+    44: ("spokenLanguageInterpreter", "hnd", "Hindko", [], None),
+    45: ("spokenLanguageInterpreter", "ibo", "Igbo (Also Known As Ibo)", [], None),
+    46: ("spokenLanguageInterpreter", "ilo", "Ilocano", [], None),
+    47: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ishan"),
+    48: ("spokenLanguageInterpreter", "ita", "Italian", [], None),
+    49: ("spokenLanguageInterpreter", "jam", "Jamaican", [], None),
+    50: ("spokenLanguageInterpreter", "jpn", "Japanese", [], None),
+    51: ("spokenLanguageInterpreter", None, None, ["Yes"], "Karaninka"),
+    52: ("spokenLanguageInterpreter", "kas", "Kashmiri", [], None),
+    53: ("spokenLanguageInterpreter", "kck", "Khalanga", [], None),
+    54: ("spokenLanguageInterpreter", "kon", "Kikongo", [], None),
+    55: ("spokenLanguageInterpreter", "kik", "Kikuyu", [], None),
+    56: ("spokenLanguageInterpreter", "kin", "Kinyarwandan", [], None),
+    57: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kisakata"),
+    58: ("spokenLanguageInterpreter", "knn", "Konkani", [], None),
+    59: ("spokenLanguageInterpreter", "kri", "Krio (Sierra Leone)", [], None),
+    60: ("spokenLanguageInterpreter", "kru", "Kru", [], None),
+    61: ("spokenLanguageInterpreter", "kur-kkr", "Kurdish kurmanji", [], None),
+    62: ("spokenLanguageInterpreter", "kur-ksr", "Kurdish Sorani", [], None),
+    63: ("spokenLanguageInterpreter", "kfr", "Kutchi", [], None),
+    64: ("spokenLanguageInterpreter", "laj", "Lango", [], None),
+    65: ("spokenLanguageInterpreter", "lin", "Lingala", [], None),
+    66: ("spokenLanguageInterpreter", "lit", "Lithuanian", [], None),
+    67: ("spokenLanguageInterpreter", "lug", "Lugandan", [], None),
+    68: ("spokenLanguageInterpreter", "luo", "Luo", [], None),
+    69: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lunyankole"),
+    70: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lutoro"),
+    71: ("spokenLanguageInterpreter", "mku", "Malinke", [], None),
+    72: ("spokenLanguageInterpreter", "cmn", "Mandarin", [], None),
+    73: ("spokenLanguageInterpreter", "mnk", "Mandinka", [], None),
+    74: ("spokenLanguageInterpreter", "mar", "Marathi", [], None),
+    75: ("spokenLanguageInterpreter", "men", "Mende", [], None),
+    76: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mirpuri"),
+    77: ("spokenLanguageInterpreter", "ron-fmo", "Moldovan", [], None),
+    78: ("spokenLanguageInterpreter", "mon", "Mongolian", [], None),
+    79: ("spokenLanguageInterpreter", "nde", "Ndebele", [], None),
+    80: ("spokenLanguageInterpreter", "nep", "Nepali", [], None),
+    81: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ngwa"),
+    82: ("spokenLanguageInterpreter", "nzi", "Nzima", [], None),
+    83: ("spokenLanguageInterpreter", "orm", "Oromo", [], None),
+    84: ("spokenLanguageInterpreter", "pat", "Patois", [], None),
+    85: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pidgin English"),
+    86: ("spokenLanguageInterpreter", "pol", "Polish", [], None),
+    87: ("spokenLanguageInterpreter", "por", "Portuguese", [], None),
+    88: ("spokenLanguageInterpreter", "pan-pji", "Punjabi Indian", [], None),
+    89: ("spokenLanguageInterpreter", "pus", "Pushtu (Also Known As Pashto)", [], None),
+    90: ("spokenLanguageInterpreter", "ron", "Romanian", [], None),
+    91: ("spokenLanguageInterpreter", "rus", "Russian", [], None),
+    92: ("spokenLanguageInterpreter", "krn", "Sarpo", [], None),
+    93: ("spokenLanguageInterpreter", "hbs", "Serbo-Croatian", [], None),
+    94: ("spokenLanguageInterpreter", "sna", "Shona", [], None),
+    95: ("spokenLanguageInterpreter", "snd", "Sindhi", [], None),
+    96: ("spokenLanguageInterpreter", "sin", "Sinhalese", [], None),
+    97: ("spokenLanguageInterpreter", "slk", "Slovak", [], None),
+    98: ("spokenLanguageInterpreter", "som", "Somali", [], None),
+    99: ("spokenLanguageInterpreter", "spa", "Spanish", [], None),
+    100: ("spokenLanguageInterpreter", "sus", "Susu", [], None),
+    101: ("spokenLanguageInterpreter", "swa", "Swahili", [], None),
+    102: ("spokenLanguageInterpreter", "syl", "Sylheti", [], None),
+    103: ("spokenLanguageInterpreter", "tgl", "Tagalog", [], None),
+    104: ("spokenLanguageInterpreter", "tai", "Taiwanese", [], None),
+    105: ("spokenLanguageInterpreter", "tam", "Tamil", [], None),
+    106: ("spokenLanguageInterpreter", "tem", "Temne", [], None),
+    107: ("spokenLanguageInterpreter", "tha", "Thai", [], None),
+    108: ("spokenLanguageInterpreter", "tig", "Tigre", [], None),
+    109: ("spokenLanguageInterpreter", "tir", "Tigrinya", [], None),
+    110: ("spokenLanguageInterpreter", "tur", "Turkish", [], None),
+    111: ("spokenLanguageInterpreter", "twi", "Twi", [], None),
+    112: ("spokenLanguageInterpreter", "ukr", "Ukrainian", [], None),
+    113: ("spokenLanguageInterpreter", "urd", "Urdu", [], None),
+    114: ("spokenLanguageInterpreter", "urh", "Urohobo", [], None),
+    115: ("spokenLanguageInterpreter", "vie", "Vietnamese", [], None),
+    116: ("spokenLanguageInterpreter", "wol", "Wolof", [], None),
+    117: ("spokenLanguageInterpreter", "xho", "Xhosa", [], None),
+    118: ("spokenLanguageInterpreter", "yor", "Yoruba", [], None),
+    119: ("spokenLanguageInterpreter", "zul", "Zulu", [], None),
+    120: ("spokenLanguageInterpreter", "hye", "Armenian", [], None),
+    121: ("spokenLanguageInterpreter", "swa-sbv", "Swahili Bravanese", [], None),
+    122: ("spokenLanguageInterpreter", "zho-hok", "Hokkein", [], None),
+    123: ("spokenLanguageInterpreter", "cpf", "Creole (French)", [], None),
+    124: ("spokenLanguageInterpreter", "efi", "Efik", [], None),
+    125: ("spokenLanguageInterpreter", "ibb", "Ibibio", [], None),
+    126: ("spokenLanguageInterpreter", "est", "Estonian", [], None),
+    127: ("spokenLanguageInterpreter", "kur-fey", "Feyli", [], None),
+    128: ("spokenLanguageInterpreter", "ind", "Indonesian", [], None),
+    129: ("spokenLanguageInterpreter", "jav", "Javanese", [], None),
+    130: ("spokenLanguageInterpreter", "kor", "Korean", [], None),
+    131: ("signLanguageInterpreter", "sign-lps", "Lipspeaker", [], None),
+    132: ("spokenLanguageInterpreter", "mkd", "Macedonian", [], None),
+    133: ("spokenLanguageInterpreter", "fij", "Fijian", [], None),
+    134: ("spokenLanguageInterpreter", "bfz", "Pahari", [], None),
+    135: ("spokenLanguageInterpreter", None, None, ["Yes"], "Hendko"),
+    136: ("signLanguageInterpreter", "bfi", "British Sign Language (BSL)", [], None),
+    137: ("spokenLanguageInterpreter", "bnt-kic", "Kichagga", [], None),
+    138: ("spokenLanguageInterpreter", "pag", "Pangasinan", [], None),
+    139: ("spokenLanguageInterpreter", "ful", "Fula", [], None),
+    140: ("spokenLanguageInterpreter", None, None, ["Yes"], "Sarahuleh"),
+    141: ("spokenLanguageInterpreter", None, None, ["Yes"], "Putonghue"),
+    143: ("spokenLanguageInterpreter", "wol", "Wolof", [], None),
+    144: ("spokenLanguageInterpreter", "tel", "Telugu", [], None),
+    145: ("spokenLanguageInterpreter", "crp", "Creole (Spanish)", [], None),
+    146: ("spokenLanguageInterpreter", "cpp", "Creole (Portuguese)", [], None),
+    147: ("spokenLanguageInterpreter", "pan-pjp", "Punjabi Pakistani", [], None),
+    148: ("signLanguageInterpreter", "sign-sse", "Speech Supported English (SSE)", [], None),
+    149: ("signLanguageInterpreter", None, None, ["Yes"], "Sign Language (Others)"),
+    150: ("spokenLanguageInterpreter", "arq", "Algerian", [], None),
+    151: ("spokenLanguageInterpreter", "mya", "Burmese", [], None),
+    152: ("spokenLanguageInterpreter", "hun", "Hungarian", [], None),
+    153: ("spokenLanguageInterpreter", "xog", "Lusoga", [], None),
+    154: ("spokenLanguageInterpreter", "msa", "Malay", [], None),
+    155: ("spokenLanguageInterpreter", "mal", "Malayalam", [], None),
+    156: ("spokenLanguageInterpreter", None, None, ["Yes"], "NavsarispokenLanguageInterpreter"),
+    157: ("spokenLanguageInterpreter", "pam", "Pampangan", [], None),
+    158: ("spokenLanguageInterpreter", "rom", "Romany", [], None),
+    159: ("spokenLanguageInterpreter", "swe", "Swedish", [], None),
+    160: ("spokenLanguageInterpreter", "don", "Toura", [], None),
+    161: ("spokenLanguageInterpreter", "cym", "Welsh", [], None),
+    162: ("spokenLanguageInterpreter", None, None, ["Yes"], "Senegal (French) Olof Dialect"),
+    163: ("spokenLanguageInterpreter", "swa-skb", "Swahili Kibajuni", [], None),
+    164: ("spokenLanguageInterpreter", "swh", "Kiswahili", [], None),
+    165: ("spokenLanguageInterpreter", None, None, ["Yes"], "Banjuni"),
+    166: ("spokenLanguageInterpreter", "vsa", "Visayan", [], None),
+    167: ("spokenLanguageInterpreter", "rmm", "Roma", [], None),
+    168: ("spokenLanguageInterpreter", "lav", "Latvian", [], None),
+    169: ("spokenLanguageInterpreter", "kat", "Georgian", [], None),
+    170: ("spokenLanguageInterpreter", "ben-bsy", "Bengali Sylheti", [], None),
+    171: ("spokenLanguageInterpreter", "pan", "Punjabi", [], None),
+    172: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lugisa"),
+    173: ("spokenLanguageInterpreter", "cgg", "Rukiga", [], None),
+    174: ("spokenLanguageInterpreter", "luo-lky", "Luo Kenyan", [], None),
+    175: ("spokenLanguageInterpreter", "luo-llg", "Luo Lango", [], None),
+    176: ("spokenLanguageInterpreter", "luo-lah", "Luo Acholi", [], None),
+    177: ("spokenLanguageInterpreter", "aze", "Azerbajani (aka Nth Azari)", [], None),
+    178: ("spokenLanguageInterpreter", "ctg", "Chittagonain", [], None),
+    179: ("spokenLanguageInterpreter", None, None, ["Yes"], "Cambellpuri"),
+    180: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    181: ("spokenLanguageInterpreter", "gjk", "Kachi", [], None),
+    182: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bharuchi"),
+    183: ("spokenLanguageInterpreter", None, None, ["Yes"], "Emakhuna"),
+    184: ("spokenLanguageInterpreter", "glg", "Galician", [], None),
+    185: ("spokenLanguageInterpreter", "cpe", "Creole (English)", [], None),
+    186: ("spokenLanguageInterpreter", None, None, ["Yes"], "Azari"),
+    187: ("spokenLanguageInterpreter", "nyo", "Runyoro", [], None),
+    188: ("spokenLanguageInterpreter", None, None, ["Yes"], "Guran"),
+    189: ("spokenLanguageInterpreter", "ara-mag", "Maghreb", [], None),
+    190: ("spokenLanguageInterpreter", None, None, ["Yes"], "Training"),
+    191: ("spokenLanguageInterpreter", "nor", "Norwegian", [], None),
+    192: ("spokenLanguageInterpreter", "ttj", "Rutoro", [], None),
+    193: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kurundi"),
+    194: ("spokenLanguageInterpreter", "nld-nfl", "Flemish", [], None),
+    195: ("spokenLanguageInterpreter", "uzb", "Uzbek", [], None),
+    196: ("spokenLanguageInterpreter", "btn", "Bhutanese", [], None),
+    197: ("spokenLanguageInterpreter", "nya", "Chichewa", [], None),
+    198: ("spokenLanguageInterpreter", "run", "Kirundi", [], None),
+    199: ("spokenLanguageInterpreter", "bem", "Benba (Bemba)", [], None),
+    200: ("spokenLanguageInterpreter", "swa-skb", "Swahili Kibajuni", [], None),
+    201: ("spokenLanguageInterpreter", "min", "Mina", [], None),
+    202: ("spokenLanguageInterpreter", "khm", "Khmer", [], None),
+    203: ("spokenLanguageInterpreter", "bih", "Bihari", [], None),
+    204: ("spokenLanguageInterpreter", "dua", "Douala", [], None),
+    205: ("spokenLanguageInterpreter", "ewo", "Ewondo", [], None),
+    206: ("spokenLanguageInterpreter", "bas", "Bassa", [], None),
+    207: ("spokenLanguageInterpreter", "bod", "Tibetan", [], None),
+    208: ("spokenLanguageInterpreter", "scl", "Shina", [], None),
+    209: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pothohari"),
+    210: ("spokenLanguageInterpreter", "slv", "Slovenian", [], None),
+    211: ("spokenLanguageInterpreter", "hac", "Gorani", [], None),
+    212: ("spokenLanguageInterpreter", "lub", "Luba (Tshiluba)", [], None),
+    213: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    214: ("spokenLanguageInterpreter", "tuk", "Turkmen", [], None),
+    215: ("spokenLanguageInterpreter", "kir", "Kyrgyz", [], None),
+    216: ("spokenLanguageInterpreter", "mkw", "Monokutuba", [], None),
+    217: ("spokenLanguageInterpreter", "byn", "Bilin", [], None),
+    218: ("spokenLanguageInterpreter", "tsn", "Setswana", [], None),
+    219: ("spokenLanguageInterpreter", "bas", "Bassa", [], None),
+    220: ("spokenLanguageInterpreter", "uig", "Uighur", [], None),
+    221: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pathwari"),
+    222: ("spokenLanguageInterpreter", None, None, ["Yes"], "Fur (Sudanese)"),
+    223: ("spokenLanguageInterpreter", "nld", "Dutch", [], None),
+    224: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kosovan"),
+    225: ("spokenLanguageInterpreter", None, None, ["Yes"], "Afreerhamar"),
+    226: ("spokenLanguageInterpreter", "che", "Chechen", [], None),
+    227: ("spokenLanguageInterpreter", None, None, ["Yes"], "Khymer Khymer"),
+    228: ("spokenLanguageInterpreter", "zza", "Zaza", [], None),
+    229: ("spokenLanguageInterpreter", "dan", "Danish", [], None),
+    230: ("spokenLanguageInterpreter", "zag", "Zaghawa", [], None),
+    231: ("spokenLanguageInterpreter", "div", "Maldivian", [], None),
+    232: ("signLanguageInterpreter", "sign-pst", "Palantypist / Speech to text", [], None),
+    233: ("signLanguageInterpreter", "sign-dfr", "Deaf Relay", [], None),
+    234: ("signLanguageInterpreter", "ase", "American Sign Language (ASL)", [], None),
+    235: ("signLanguageInterpreter", "sign-hos", "Hands on signing", [], None),
+    236: ("signLanguageInterpreter", "sign-lps", "Lipspeaker", [], None),
+    237: ("signLanguageInterpreter", "sign-mkn", "Makaton", [], None),
+    238: ("signLanguageInterpreter", "sign-dma", "Deafblind manual alphabet", [], None),
+    239: ("signLanguageInterpreter", "sign-ntr", "Notetaker", [], None),
+    240: ("signLanguageInterpreter", "sign-vfs", "Visual frame signing", [], None),
+    241: ("signLanguageInterpreter", "ils", "International Sign (IS)", [], None),
+    242: ("spokenLanguageInterpreter", "iso", "Isoko", [], None),
+    243: ("spokenLanguageInterpreter", "her", "Herero", [], None),
+    244: ("spokenLanguageInterpreter", "mlt", "Maltese", [], None),
+    245: ("spokenLanguageInterpreter", "skr", "Saraiki (Seraiki)", [], None),
+    246: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kalabari"),
+    247: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kinyamulenge"),
+    249: ("spokenLanguageInterpreter", None, None, ["Yes"], "Wobe"),
+    250: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mauritian"),
+    251: ("spokenLanguageInterpreter", "mnk", "Mandinka", [], None),
+    252: ("spokenLanguageInterpreter", None, None, ["Yes"], "Gaelic"),
+    253: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bosnian"),
+    254: ("spokenLanguageInterpreter", None, None, ["Yes"], "Filipino"),
+    255: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mauritian Creole"),
+    256: ("spokenLanguageInterpreter", None, None, ["Yes"], "Yiddish"),
+    257: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pular"),
+    258: ("spokenLanguageInterpreter", None, None, ["Yes"], "Runyankole"),
+    259: ("spokenLanguageInterpreter", None, None, ["Yes"], "Gurung"),
+    260: ("spokenLanguageInterpreter", None, None, ["Yes"], "Karen"),
+    261: ("spokenLanguageInterpreter", "tam", "Tamil", [], None),
+    262: ("spokenLanguageInterpreter", None, None, ["Yes"], "Rotana"),
+    263: ("spokenLanguageInterpreter", None, None, ["Yes"], "Spanish Hispanic"),
+    264: ("spokenLanguageInterpreter", None, None, ["Yes"], "Spanish Latin"),
+    265: ("spokenLanguageInterpreter", None, None, ["Yes"], "Tetum")
+    }
+
+    try:
+        results_list = []
+        cols = test_df.columns
+        rows = test_df.collect()
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            lang_id = row['LanguageId']
+            
+            if lang_id == 0:
+                category = row['appellantInterpreterLanguageCategory'] if 'appellantInterpreterLanguageCategory' in cols else None
+                if category is None or (isinstance(category, list) and len(category) == 0):
+                    # results_list.append(f"PASS - {case_no}: ID 0 (No Interpreter)")
+                    continue
+                else:
+                    results_list.append(f"FAIL - {case_no}: ID 0 expected null, found {category}")
+                
+
+            req = language_requirements.get(lang_id)
+            if not req:
+                results_list.append(f"FAIL - {case_no}: No requirement for ID {lang_id}")
+                continue
+            
+            req_category, req_code, req_label, req_manual, req_desc = req
+            field_name = "appellantInterpreterSpokenLanguage" if req_category == 'spokenLanguageInterpreter' else "appellantInterpreterSignLanguage"
+            target_data = row[field_name] if field_name in cols else None
+
+            if target_data is None:
+                results_list.append(f"FAIL - {case_no}: ID {lang_id} field {field_name} is null")
+                continue
+
+            # ensure we are working with a dictionary
+            d = target_data.asDict(recursive=True)
+
+            actual_ref = d.get('languageRefData') or {}
+            actual_val = actual_ref.get('value') or {}
+            actual_code = actual_val.get('code')
+            actual_label = actual_val.get('label')
+            actual_manual = d.get('languageManualEntry') or []
+            actual_desc = d.get('languageManualEntryDescription')
+
+            # comparison
+            errors = []
+            if actual_code != req_code: 
+                errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
+            if actual_label != req_label: 
+                errors.append(f"Label: Expected '{req_label}', Found '{actual_label}'")
+            if actual_manual != req_manual: 
+                errors.append(f"ManualList: Expected {req_manual}, Found {actual_manual}")
+            if actual_desc != req_desc: 
+                errors.append(f"ManualDesc: Expected '{req_desc}', Found '{actual_desc}'")
+
+            if not errors:
+                # results_list.append(f"PASS - {case_no}: ID {lang_id} mapped correctly")
+                continue
+            else:
+                # Joining with a clear separator for readability
+                results_list.append(f"FAIL - {case_no} (ID {lang_id}): " + " | ".join(errors))
+
+        if results_list != []:
+            formatted_results = "|||".join(results_list)
+            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria failed: found {len(results_list)} rows which failed. {formatted_results}"
+            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", message, test_from_state, inspect.stack()[0].function)
+        else:
+            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria passed: all rows meet mapping document requirements."
+            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","PASS", message, test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", f"Crash in test: {str(e)}", test_from_state, inspect.stack()[0].function)
+

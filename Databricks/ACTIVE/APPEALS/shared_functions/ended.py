@@ -156,7 +156,9 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
 
                 .select(
             F.col("CaseNo"),
-            F.col("es.endAppealOutcome"),
+            F.when(F.col("es.endAppealOutcome") == "Struck Out", "Struck out")
+                .otherwise(F.col("es.endAppealOutcome"))
+                .alias("endAppealOutcome"),
             F.col("es.endAppealOutcomeReason"),
             F.col("endAppealApproverType"),
             F.col("endAppealApproverName"),

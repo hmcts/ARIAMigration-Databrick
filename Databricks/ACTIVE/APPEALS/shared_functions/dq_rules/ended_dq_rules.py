@@ -31,10 +31,10 @@ class endedDQRules(DQRulesBase):
 
                 WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
 
-                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck Out"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck Out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck Out" 
-                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck Out" 
+                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
 
                 ELSE endAppealOutcome IS NULL
 

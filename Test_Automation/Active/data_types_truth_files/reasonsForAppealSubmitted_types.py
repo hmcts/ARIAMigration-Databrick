@@ -1,4 +1,4 @@
-caseUnderReviewTypes = {
+ReasonsForAppealSubmittedTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -92,7 +92,7 @@ caseUnderReviewTypes = {
     's94bStatus': 'string',
     'selectedHearingCentreRefData': 'string',
     'sendDirectionActionAvailable': 'string',
-    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',
+    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,PostCode:string,PostTown:string>',
     'staffLocation': 'string',
     'submissionOutOfTime': 'string',
     'submitNotificationStatus': 'string',
@@ -146,7 +146,8 @@ caseUnderReviewTypes = {
     'uploadHomeOfficeBundleActionAvailable': 'string',
     'additionalInstructionsTribunalResponse': 'string',
     'sponsorAddressForDisplay': 'string',
-    'sponsorNameForDisplay': 'string'
+    'sponsorNameForDisplay': 'string',
+    'uploadHomeOfficeBundleActionAvailable': 'string'
 
 
 }

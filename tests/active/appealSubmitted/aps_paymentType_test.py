@@ -226,19 +226,19 @@ class TestAppealSubmittedPaymentType:
             ]
 
             m4_data = [
-                ("98", 1, 6, 100.0, 0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
-                ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
-                ("2", 3, 3, 100.0, 0, 1, 3),    # valid condition
-                ("3", 2, 3, 100.0, 0, 1, 1),    # valid condition
-                ("4", 2, 1, 100.0, 0, 1, 3),    # valid condition
-                ("5", 3, 1, 100.0, 0, 1, 3),    # valid condition
-                ("6", 3, 1, 100.0, 0, 0, 3),    # SumTotalPay = 0
-                ("7", 1, 1, 100.0, 0, 1, 3),    # TransactionId = 1
-                ("8", 2, 1, 100.0, 0, 1, 3),    # TransactionId = 2
-                ("9", 3, 1, 100.0, 0, 1, 3),    # valid condition for same case
-                ("9", 3, 1, 150.0, 0, 1, 3),    # valid condition for same case
-                ("9", 3, 3, 250.0, 0, 1, 3)     # valid condition for same case
+                ("98", 1, 6, 100.0, False, True, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
+                ("99", 1, 19, 100.0, False, True, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
+                ("1", 3, 1, 100.0, False, True, 3),    # valid condition
+                ("2", 3, 3, 100.0, False, True, 3),    # valid condition
+                ("3", 2, 3, 100.0, False, True, 1),    # valid condition
+                ("4", 2, 1, 100.0, False, True, 3),    # valid condition
+                ("5", 3, 1, 100.0, False, True, 3),    # valid condition
+                ("6", 3, 1, 100.0, False, False, 3),    # SumTotalPay = 0
+                ("7", 1, 1, 100.0, False, True, 3),    # TransactionId = 1
+                ("8", 2, 1, 100.0, False, True, 3),    # TransactionId = 2
+                ("9", 3, 1, 100.0, False, True, 3),    # valid condition for same case
+                ("9", 3, 1, 150.0, False, True, 3),    # valid condition for same case
+                ("9", 3, 3, 250.0, False, True, 3)     # valid condition for same case
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)

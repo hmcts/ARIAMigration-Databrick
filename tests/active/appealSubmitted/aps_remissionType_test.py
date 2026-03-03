@@ -116,19 +116,19 @@ class TestAppealSubmittedRemissionType:
             ]
 
             m4_data = [
-                ("1", 1, 5, 1, 100.0, 1, 1),   # EA Case
-                ("2", 1, 5, 1, 100.0, 1, 1),   # EU Case
-                ("3", 1, 5, 1, 100.0, 1, 1),   # HU Case
-                ("4", 1, 5, 1, 100.0, 1, 1),   # PA Case
-                ("5", 1, 5, 1, 100.0, 1, 1),   # RP Case
-                ("6", 1, 5, 1, 100.0, 1, 1),   # PaymentRemissionGranted = 0
-                ("7", 1, 5, 1, 100.0, 1, 1),   # PaymentRemissionGranted = 2
-                ("8", 1, 1, 1, 100.0, 1, 1),   # TransactionTypeId != 5
-                ("9", 1, 5, 3, 100.0, 1, 1),   # Status == 3
-                ("10", 1, 1, 3, 100.0, 1, 1),  # TransactionTypeId != 5 and Status == 3
-                ("11", 1, 5, 1, 100.0, 1, 1),  # Multiple valid
-                ("11", 1, 5, 1, 150.0, 1, 1),  # Multiple valid
-                ("11", 1, 5, 1, 250.0, 1, 1)   # Multiple valid
+                ("1", 1, 5, 1, 100.0, True, 1),   # EA Case
+                ("2", 1, 5, 1, 100.0, True, 1),   # EU Case
+                ("3", 1, 5, 1, 100.0, True, 1),   # HU Case
+                ("4", 1, 5, 1, 100.0, True, 1),   # PA Case
+                ("5", 1, 5, 1, 100.0, True, 1),   # RP Case
+                ("6", 1, 5, 1, 100.0, True, 1),   # PaymentRemissionGranted = 0
+                ("7", 1, 5, 1, 100.0, True, 1),   # PaymentRemissionGranted = 2
+                ("8", 1, 1, 1, 100.0, True, 1),   # TransactionTypeId != 5
+                ("9", 1, 5, 3, 100.0, True, 1),   # Status == 3
+                ("10", 1, 1, 3, 100.0, True, 1),  # TransactionTypeId != 5 and Status == 3
+                ("11", 1, 5, 1, 100.0, True, 1),  # Multiple valid
+                ("11", 1, 5, 1, 150.0, True, 1),  # Multiple valid
+                ("11", 1, 5, 1, 250.0, True, 1)   # Multiple valid
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -162,21 +162,21 @@ class TestAppealSubmittedRemissionType:
             ]
 
             m4_data = [
-                ("98", 3, 6, 1, 100.0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
-                ("99", 3, 19, 1, 100.0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("1", 3, 1, 1, 100.0, 1, 3),    # EA Case
-                ("2", 3, 1, 1, 100.0, 1, 3),    # EU Case
-                ("3", 3, 1, 1, 100.0, 1, 3),    # HU Case
-                ("4", 3, 1, 1, 100.0, 1, 3),    # PA Case
-                ("5", 3, 1, 1, 100.0, 1, 3),    # RP Case
-                ("6", 3, 1, 1, 100.0, 1, 3),    # PaymentRemissionGranted = 0
-                ("7", 3, 1, 1, 100.0, 1, 3),    # PaymentRemissionGranted = 2
-                ("8", 3, 1, 1, 100.0, 0, 3),    # SumTotalFee = 0
-                ("9", 1, 1, 3, 100.0, 1, 3),    # TransactionId 1 - for CaseNo98
-                ("10", 2, 1, 3, 100.0, 1, 3),   # TransactionId 2 - for CaseNo 99
-                ("11", 3, 1, 1, 100.0, 1, 3),   # Multiple valid
-                ("11", 3, 1, 1, 150.0, 1, 3),   # Multiple valid
-                ("11", 3, 1, 1, 250.0, 1, 3)    # Multiple valid
+                ("98", 3, 6, 1, 100.0, True, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
+                ("99", 3, 19, 1, 100.0, True, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
+                ("1", 3, 1, 1, 100.0, True, 3),    # EA Case
+                ("2", 3, 1, 1, 100.0, True, 3),    # EU Case
+                ("3", 3, 1, 1, 100.0, True, 3),    # HU Case
+                ("4", 3, 1, 1, 100.0, True, 3),    # PA Case
+                ("5", 3, 1, 1, 100.0, True, 3),    # RP Case
+                ("6", 3, 1, 1, 100.0, True, 3),    # PaymentRemissionGranted = 0
+                ("7", 3, 1, 1, 100.0, True, 3),    # PaymentRemissionGranted = 2
+                ("8", 3, 1, 1, 100.0, False, 3),    # SumTotalFee = 0
+                ("9", 1, 1, 3, 100.0, True, 3),    # TransactionId 1 - for CaseNo98
+                ("10", 2, 1, 3, 100.0, True, 3),   # TransactionId 2 - for CaseNo 99
+                ("11", 3, 1, 1, 100.0, True, 3),   # Multiple valid
+                ("11", 3, 1, 1, 150.0, True, 3),   # Multiple valid
+                ("11", 3, 1, 1, 250.0, True, 3)    # Multiple valid
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)

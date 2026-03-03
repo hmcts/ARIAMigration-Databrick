@@ -3,7 +3,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted import paymentTy
 from datetime import datetime
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType, BooleanType
 from unittest.mock import patch
 import pytest
 
@@ -34,8 +34,8 @@ class TestAppealSubmittedPaymentType:
         StructField("TransactionId", IntegerType()),
         StructField("TransactionTypeId", IntegerType()),
         StructField("Amount", DoubleType()),
-        StructField("SumBalance", IntegerType()),
-        StructField("SumTotalPay", IntegerType()),
+        StructField("SumBalance", BooleanType()),
+        StructField("SumTotalPay", BooleanType()),
         StructField("ReferringTransactionId", IntegerType())
     ])
 

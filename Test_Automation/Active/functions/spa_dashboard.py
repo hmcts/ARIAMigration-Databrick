@@ -1,12 +1,6 @@
 # dashboard.py
 # Single-page HTML dashboard (Runs + Run Details + Compare) for Databricks notebooks.
-# Brace-safe (no f-string curly brace escaping needed)
-#
-# Notebook usage:
-#   import importlib, src.dashboard as dashboard
-#   importlib.reload(dashboard)
-#   html_path, html_str = dashboard.generate_dashboard_single_page()
-#   displayHTML(html_str)
+# Brace-safe: uses placeholders + .replace() rather than f-string HTML.
 
 from functions.db_utils import get_runs, get_results
 from datetime import datetime
@@ -30,26 +24,13 @@ def _safe_dt_str(v):
 
 
 def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
-    """
-    Generates ONE HTML page that includes:
-      - Runs table (sortable/searchable)
-      - Run details view (summary + pie + all test results)
-      - Compare view (pick two runs, row-numbered diff table)
-    Column order (Runs):
-      Run ID | Status | Pass | Fail | Total | User | Start | End | State Under Test | Automation | Tag
-    Width tweaks:
-      - Run ID 20% thinner (144px)
-      - State Under Test +25% wider (193px)
-      - Automation ~25% narrower (120px)
-      - Pass/Fail/Total thin
-    """
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
     runs_pdf = get_runs().toPandas()
 
     runs_list = []
-    all_results = {}  # run_id -> list[dict] (all test results for that run)
+    all_results = {}  # run_id -> list[dict] of all test results
 
     for _, run in runs_pdf.iterrows():
         run_id = run.get("run_id")
@@ -74,10 +55,9 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
                 "total_tests": total_tests,
             }
         )
-        runs_list.append(run_dict)
 
-        # Store ALL test results for the run in the single-page HTML (can be large!)
-        all_results[str(run_id)] = json.loads(results_pdf.to_json(orient="records", date_format="iso"))
+        runs_list.append(run_dict)
+        all_results[str(run_id)] = json.loads(results_pdf.to_json(orient="records"))
 
     runs_json = json.dumps(runs_list)
     all_results_json = json.dumps(all_results)
@@ -94,8 +74,6 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
   body { margin:0; font-family: Arial; background:#fff; }
@@ -127,8 +105,8 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     font-weight:bold;
     color:#333;
   }
-
   .tab.active { background:#ffffff; }
+
   .panel { display:none; padding:20px; }
   .panel.active { display:block; }
 
@@ -156,56 +134,34 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   }
   button:hover { background:#f5f5f5; }
 
-  /* Runs table width constraints */
-  td.col-runid, th.col-runid { width:144px; max-width:144px; overflow-wrap:anywhere; }
-  td.col-user,  th.col-user  { width:144px; max-width:144px; overflow-wrap:anywhere; }
-  td.col-state, th.col-state { width:193px; max-width:193px; overflow-wrap:anywhere; } /* +25% */
-  td.col-auto,  th.col-auto  { width:120px; max-width:120px; overflow-wrap:anywhere; } /* -25%-ish */
+  /* Runs Overview widths */
+  td.col-user, th.col-user {
+    width:120px; max-width:120px; overflow-wrap:anywhere;
+  }
+
+  td.col-state, th.col-state {
+    width:156px; max-width:156px; overflow-wrap:anywhere;
+  }
 
   td.col-pass, th.col-pass,
   td.col-fail, th.col-fail,
   td.col-total, th.col-total {
-    width:55px;
-    max-width:55px;
-    text-align:center;
+    width:45px; max-width:45px; text-align:center;
   }
 
-  /* Run details layout */
-  .split {
-    display:flex;
-    flex-wrap:wrap;
-    gap:22px;
-    margin: 14px 0 18px 0;
+  /* Run Details widths */
+  td.col-resultid, th.col-resultid { width:70px; max-width:70px; overflow-wrap:anywhere; }
+  td.col-runid2,  th.col-runid2  { width:70px; max-width:70px; overflow-wrap:anywhere; }
+
+  td.col-testfield, th.col-testfield {
+    width:150px; max-width:150px; overflow-wrap:anywhere;
   }
 
-  .left {
-    flex: 1 1 280px;
-    max-width: 460px;
+  td.col-teststate, th.col-teststate {
+    width:150px; max-width:150px; overflow-wrap:anywhere;
   }
 
-  .right {
-    width: 280px;
-    height: 280px;
-  }
-
-  .card {
-    border:1px solid #ddd;
-    border-radius:8px;
-    background:#f9f9f9;
-    padding:12px;
-  }
-
-  .kv {
-    display:flex;
-    gap:10px;
-    padding:4px 0;
-    border-bottom:1px dashed #e2e2e2;
-  }
-  .kv:last-child { border-bottom:none; }
-  .k { min-width:150px; font-weight:bold; color:#333; }
-  .v { flex:1; overflow-wrap:anywhere; color:#111; }
-
-  /* Compare table styling */
+  /* Compare table */
   table.compare {
     border-collapse: collapse;
     width: 100%;
@@ -239,63 +195,49 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     <table id="runsTable" class="display" style="width:100%;">
       <thead>
         <tr>
-          <th class="col-runid">Run ID</th>
+          <th>Run ID</th>
+          <th class="col-user">User</th>
           <th>Status</th>
           <th class="col-pass">Pass</th>
           <th class="col-fail">Fail</th>
           <th class="col-total">Total</th>
-          <th class="col-user">User</th>
           <th>Start</th>
           <th>End</th>
           <th class="col-state">State Under Test</th>
-          <th class="col-auto">Automation</th>
+          <th>Automation</th>
           <th>Tag</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
-
-    <p style="margin-top:10px; color:#555;">
-      Tip: click a Run ID to open the <b>Run Details</b> tab.
-    </p>
   </div>
 
   <!-- RUN DETAILS -->
   <div id="panel-run" class="panel">
     <div class="toolbar">
       <button id="backToRunsBtn">⬅ Back to Runs</button>
-      <button id="downloadRunExcelBtn">📥 Download Excel (this run)</button>
       <span id="runTitle" style="font-weight:bold;"></span>
     </div>
 
-    <div id="runDetailsWrap" style="display:none;">
-      <div class="split">
-        <div class="left">
-          <div class="card" id="runSummaryCard"></div>
-        </div>
-        <div class="right">
-          <canvas id="pieChart"></canvas>
-        </div>
-      </div>
+    <div id="runEmpty" style="display:block; color:#555;">
+      Click a <b>Run ID</b> on the Runs tab to view all test results.
+    </div>
 
+    <div id="runDetailsWrap" style="display:none;">
       <table id="resultsTable" class="display" style="width:100%;">
         <thead>
           <tr>
-            <th>Result ID</th>
-            <th>Run ID</th>
+            <th class="col-resultid">Result ID</th>
+            <th class="col-runid2">Run ID</th>
             <th>Test Name</th>
-            <th>Test Field</th>
-            <th>Test From State</th>
             <th>Status</th>
+            <th class="col-testfield">Test Field</th>
+            <th class="col-teststate">Test From State</th>
             <th>Message</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
-    </div>
-
-    <div id="runEmpty" style="display:block; color:#555;">
-      Select a run from the <b>Runs</b> tab to view details.
     </div>
   </div>
 
@@ -320,7 +262,6 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   const runsData = __RUNS_JSON__;
   const allResults = __ALL_RESULTS_JSON__;
 
-  // Tabs
   function showPanel(panelId) {
     $('.panel').removeClass('active');
     $('#' + panelId).addClass('active');
@@ -333,99 +274,19 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     showPanel($(this).data('panel'));
   });
 
-  // Globals
-  let runsTable = null;
-  let resultsTable = null;
-  let pieChart = null;
-  let currentRunId = null;
-
   function statusBadge(d) {
     if (d === 'PASS') return '<span class="pass">PASS</span>';
     if (d === 'FAIL') return '<span class="fail">FAIL</span>';
     return '<span class="missing">' + (d ?? '') + '</span>';
   }
 
-  function computeTotals(results) {
-    const total_tests = results.length;
-    let total_passed = 0;
-    let total_failed = 0;
-
-    results.forEach(r => {
-      if (r.status === 'PASS') total_passed++;
-      if (r.status === 'FAIL') total_failed++;
-    });
-
-    const pass_percent = total_tests ? Math.round((total_passed / total_tests) * 1000) / 10 : 0;
-    return { total_tests, total_passed, total_failed, pass_percent };
-  }
-
-  function buildSummaryCard(runObj, totals) {
-    const fields = [
-      ['Run ID', runObj.run_id],
-      ['User', runObj.run_user],
-      ['Start', runObj.run_start_datetime],
-      ['End', runObj.run_end_datetime],
-      ['Automation', runObj.run_by_automation_name],
-      ['Tag', runObj.run_tag],
-      ['Status', runObj.run_status],
-      ['State Under Test', runObj.state_under_test],
-      ['Total Passed', totals.total_passed],
-      ['Total Failed', totals.total_failed],
-      ['Total Tests', totals.total_tests],
-      ['Pass %', totals.pass_percent + '%']
-    ];
-
-    let html = '';
-    fields.forEach(([k,v]) => {
-      html += `<div class="kv"><div class="k">${k}</div><div class="v">${(v ?? '')}</div></div>`;
-    });
-    return html;
-  }
-
-  function buildPie(results) {
-    const counts = {};
-    results.forEach(r => {
-      const s = r.status ?? 'UNKNOWN';
-      counts[s] = (counts[s] || 0) + 1;
-    });
-
-    const labels = Object.keys(counts);
-    const values = labels.map(l => counts[l]);
-
-    if (pieChart) {
-      pieChart.destroy();
-      pieChart = null;
-    }
-
-    pieChart = new Chart(document.getElementById('pieChart'), {
-      type: 'pie',
-      data: { labels: labels, datasets: [{ data: values }] },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-  }
+  let runsTable = null;
+  let resultsTable = null;
 
   function showRun(runId) {
-    currentRunId = String(runId);
-    const runObj = runsData.find(r => String(r.run_id) === String(runId));
-    const results = allResults[String(runId)] || [];
-
-    if (!runObj) {
-      $('#runTitle').text('Run not found: ' + runId);
-      $('#runDetailsWrap').hide();
-      $('#runEmpty').show();
-      showPanel('panel-run');
-      return;
-    }
-
-    const totals = computeTotals(results);
+    runId = String(runId);
+    const results = allResults[runId] || [];
     $('#runTitle').text('Run: ' + runId);
-
-    $('#runSummaryCard').html(buildSummaryCard(runObj, totals));
-    buildPie(results);
 
     if (resultsTable) {
       resultsTable.clear();
@@ -434,14 +295,15 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     } else {
       resultsTable = $('#resultsTable').DataTable({
         data: results,
+        autoWidth: false,
         columns: [
-          { data: 'result_id' },
-          { data: 'run_id' },
-          { data: 'test_name' },
-          { data: 'test_field' },
-          { data: 'test_from_state' },
-          { data: 'status', render: function(d){ return statusBadge(d); } },
-          { data: 'message' }
+          { data:'result_id', className:'col-resultid' },
+          { data:'run_id', className:'col-runid2' },
+          { data:'test_name' },
+          { data:'status', render: function(d){ return statusBadge(d); } },  // after test name
+          { data:'test_field', className:'col-testfield' },
+          { data:'test_from_state', className:'col-teststate' },
+          { data:'message' }
         ],
         pageLength: 15
       });
@@ -452,46 +314,44 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     showPanel('panel-run');
   }
 
-  // Init
   $(document).ready(function() {
     // Runs table
     runsTable = $('#runsTable').DataTable({
       data: runsData,
+      autoWidth: false,
       columns: [
         {
-          data: 'run_id',
-          className: 'col-runid',
-          render: function(d) {
+          data:'run_id',
+          render: function(d){
             if (!d) return '';
-            return '<a href="#" class="link run-link" data-runid="' + d + '">' + d + '</a>';
+            return '<a href="#" class="link run-link" data-run="' + d + '">' + d + '</a>';
           }
         },
-        { data: 'run_status', render: function(d){ return statusBadge(d); } },
-        { data: 'total_passed', className: 'col-pass' },
-        { data: 'total_failed', className: 'col-fail' },
-        { data: 'total_tests', className: 'col-total' },
-        { data: 'run_user', className: 'col-user' },
-        { data: 'run_start_datetime' },
-        { data: 'run_end_datetime' },
-        { data: 'state_under_test', className: 'col-state' },
-        { data: 'run_by_automation_name', className: 'col-auto' },
-        { data: 'run_tag' }
+        { data:'run_user', className:'col-user' },
+        { data:'run_status', render: function(d){ return statusBadge(d); } },
+        { data:'total_passed', className:'col-pass' },
+        { data:'total_failed', className:'col-fail' },
+        { data:'total_tests', className:'col-total' },
+        { data:'run_start_datetime' },
+        { data:'run_end_datetime' },
+        { data:'state_under_test', className:'col-state' },
+        { data:'run_by_automation_name' },
+        { data:'run_tag' }
       ],
-      order: [[6,'desc']],   // Start desc
-      pageLength: 15,
-      autoWidth: false
+      pageLength: 15
     });
 
-    // Compare dropdowns
+    // Populate compare dropdowns
     Object.keys(allResults).forEach(rid => {
-      $('#runA, #runB').append(`<option value="${rid}">${rid}</option>`);
+      $('#runA, #runB').append('<option value="' + rid + '">' + rid + '</option>');
     });
   });
 
-  // Run link click
+  // Click run id -> details
   $(document).on('click', 'a.run-link', function(e) {
     e.preventDefault();
-    showRun($(this).data('runid'));
+    const runId = $(this).data('run');
+    showRun(runId);
   });
 
   // Back button
@@ -499,40 +359,31 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     showPanel('panel-runs');
   });
 
-  // Excel download (current run)
-  $('#downloadRunExcelBtn').on('click', function() {
-    if (!currentRunId) {
-      alert('Select a run first.');
-      return;
-    }
-    const tbl = document.getElementById("resultsTable");
-    const wb = XLSX.utils.table_to_book(tbl, { sheet: "Results" });
-    XLSX.writeFile(wb, "run_" + currentRunId + "_results.xlsx");
-  });
-
   // Compare
   $('#compareBtn').on('click', function() {
     const runA = $('#runA').val();
     const runB = $('#runB').val();
+
     if (!runA || !runB || runA === runB) {
-      alert("Select two different runs");
+      alert('Select two different runs');
       return;
     }
 
     const resultsA = allResults[runA] || [];
     const resultsB = allResults[runB] || [];
 
+    // group duplicates by test_name|test_field
     const mapA = {};
     const mapB = {};
 
-    // group duplicates by test_name|test_field
     resultsA.forEach(r => {
-      const key = (r.test_name ?? '') + "|" + (r.test_field ?? '');
+      const key = (r.test_name ?? '') + '|' + (r.test_field ?? '');
       if (!mapA[key]) mapA[key] = [];
       mapA[key].push(r);
     });
+
     resultsB.forEach(r => {
-      const key = (r.test_name ?? '') + "|" + (r.test_field ?? '');
+      const key = (r.test_name ?? '') + '|' + (r.test_field ?? '');
       if (!mapB[key]) mapB[key] = [];
       mapB[key].push(r);
     });
@@ -544,38 +395,36 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     let rowNum = 1;
 
     sortedKeys.forEach(key => {
-      const rowsA = mapA[key] || [{ status: "MISSING" }];
-      const rowsB = mapB[key] || [{ status: "MISSING" }];
+      const rowsA = mapA[key] || [{ status: 'MISSING' }];
+      const rowsB = mapB[key] || [{ status: 'MISSING' }];
       const maxLen = Math.max(rowsA.length, rowsB.length);
 
-      const parts = key.split("|");
-      const testName = parts[0] || "";
-      const testField = parts[1] || "";
+      const parts = key.split('|');
+      const testName = parts[0] || '';
+      const testField = parts[1] || '';
 
-      for (let i = 0; i < maxLen; i++) {
-        const statusA = rowsA[i] ? (rowsA[i].status ?? "MISSING") : "MISSING";
-        const statusB = rowsB[i] ? (rowsB[i].status ?? "MISSING") : "MISSING";
+      for (let i=0; i<maxLen; i++) {
+        const statusA = rowsA[i] ? (rowsA[i].status ?? 'MISSING') : 'MISSING';
+        const statusB = rowsB[i] ? (rowsB[i].status ?? 'MISSING') : 'MISSING';
 
-        const rowClass = (statusA === statusB) ? "match-row" : "diff-row";
+        const rowClass = (statusA === statusB) ? 'match-row' : 'diff-row';
+        const classA = (statusA === 'PASS') ? 'pass' : ((statusA === 'FAIL') ? 'fail' : 'missing');
+        const classB = (statusB === 'PASS') ? 'pass' : ((statusB === 'FAIL') ? 'fail' : 'missing');
 
-        const classA = (statusA === "PASS") ? "pass" : ((statusA === "FAIL") ? "fail" : "missing");
-        const classB = (statusB === "PASS") ? "pass" : ((statusB === "FAIL") ? "fail" : "missing");
+        html += '<tr class="' + rowClass + '">'
+          + '<td>' + rowNum + '</td>'
+          + '<td>' + testName + '</td>'
+          + '<td>' + testField + '</td>'
+          + '<td class="' + classA + '">' + statusA + '</td>'
+          + '<td class="' + classB + '">' + statusB + '</td>'
+          + '</tr>';
 
-        html += `<tr class="${rowClass}">
-          <td>${rowNum}</td>
-          <td>${testName}</td>
-          <td>${testField}</td>
-          <td class="${classA}">${statusA}</td>
-          <td class="${classB}">${statusB}</td>
-        </tr>`;
         rowNum++;
       }
     });
 
-    html += "</table>";
+    html += '</table>';
     $('#compareResults').html(html);
-
-    // auto-switch to compare tab so user sees output
     showPanel('panel-compare');
   });
 </script>
@@ -591,5 +440,5 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-    print(f"✅ Single-page dashboard written: {html_path}")
+    print(f"✅ Dashboard written: {html_path}")
     return html_path, html

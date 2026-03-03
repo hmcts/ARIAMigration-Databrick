@@ -139,7 +139,7 @@ def test_hearingResponse_init(json, M3_silver, M6_bronze):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+        return None,TestResult("additionalInstructionsTribunalResponse", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
     
 
 def test_hearingResponse(test_df):

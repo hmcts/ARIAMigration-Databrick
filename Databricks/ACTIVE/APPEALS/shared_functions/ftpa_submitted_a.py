@@ -138,7 +138,7 @@ def ftpa(silver_m3,silver_c):
             # Appellant fields
             .withColumn(
                 "ftpaAppellantApplicationDate",
-                when(col("Party") == 1, date_format(datereceived_ts, "dd/MM/yyyy")).otherwise(None)
+                when(col("Party") == 1, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
             )
             .withColumn(
                 "ftpaAppellantSubmissionOutOfTime",
@@ -156,7 +156,7 @@ def ftpa(silver_m3,silver_c):
             # Respondent fields
             .withColumn(
                 "ftpaRespondentApplicationDate",
-                when(col("Party") == 2, date_format(datereceived_ts, "dd/MM/yyyy")).otherwise(None)
+                when(col("Party") == 2, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
             )
             .withColumn(
                 "ftpaRespondentSubmissionOutOfTime",

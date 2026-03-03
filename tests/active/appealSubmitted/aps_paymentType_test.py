@@ -3,7 +3,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted import paymentTy
 from datetime import datetime
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType, BooleanType
 from unittest.mock import patch
 import pytest
 
@@ -34,8 +34,8 @@ class TestAppealSubmittedPaymentType:
         StructField("TransactionId", IntegerType()),
         StructField("TransactionTypeId", IntegerType()),
         StructField("Amount", DoubleType()),
-        StructField("SumBalance", IntegerType()),
-        StructField("SumTotalPay", IntegerType()),
+        StructField("SumBalance", BooleanType()),
+        StructField("SumTotalPay", BooleanType()),
         StructField("ReferringTransactionId", IntegerType())
     ])
 
@@ -80,23 +80,23 @@ class TestAppealSubmittedPaymentType:
                 ("12", "EA", "AIP", 0, datetime(2000, 1, 1)),  # Referring TransactionId matches, but TransactionTypeId = 19 for MAX(TransactionId) is SumBalance = 0, = 'Paid'
             ]
             m4_data = [
-                ("98", 1, 6, 0.0, 1, 0, 1),    # TransactionTypeId = 6, ReferringTransationId = 1
-                ("99", 1, 19, 0.0, 1, 0, 2),   # TransactionTypeId = 19, ReferringTransationId = 2
-                ("1", 3, 1, 0.0, 1, 0, 3),     # valid condition
-                ("2", 3, 1, 0.0, 1, 0, 3),     # valid condition
-                ("3", 3, 1, 0.0, 1, 0, 3),     # valid condition
-                ("4", 3, 1, 0.0, 1, 0, 3),     # valid condition
-                ("5", 3, 1, 0.0, 1, 0, 3),     # valid condition
-                ("6", 3, 1, 0.0, 0, 0, 3),     # SumBalance = 0
-                ("7", 1, 1, 0.0, 1, 0, 3),     # TransactionId = 1
-                ("8", 2, 1, 0.0, 1, 0, 3),     # TransactionId = 2
-                ("9", 3, 1, 100.0, 1, 0, 3),   # Amount > 0
-                ("10", 4, 1, 0.0, 1, 0, 3),    # Case 10 - TransactionTypeId = 1, TransactionId = 4
-                ("10", 5, 19, 0.0, 1, 0, 2),   # Case 10 - TransactionTypeId = 19, TransactionId = 5
-                ("11", 6, 19, 0.0, 1, 0, 2),   # Case 11 - TransactionTypeId = 19, TransactionId = 6
-                ("11", 7, 1, 0.0, 1, 0, 3),    # Case 11 - TransactionTypeId = 1, TransactionId = 7
-                ("12", 8, 1, 100.0, 1, 0, 0),  # Case 12 - TransactionTypeId = 1, TransactionId = 8
-                ("12", 9, 19, 0.0, 0, 0, 8)    # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
+                ("98", 1, 6, 0.0, True, False, 1),    # TransactionTypeId = 6, ReferringTransationId = 1
+                ("99", 1, 19, 0.0, True, False, 2),   # TransactionTypeId = 19, ReferringTransationId = 2
+                ("1", 3, 1, 0.0, True, False, 3),     # valid condition
+                ("2", 3, 1, 0.0, True, False, 3),     # valid condition
+                ("3", 3, 1, 0.0, True, False, 3),     # valid condition
+                ("4", 3, 1, 0.0, True, False, 3),     # valid condition
+                ("5", 3, 1, 0.0, True, False, 3),     # valid condition
+                ("6", 3, 1, 0.0, False, False, 3),     # SumBalance = 0
+                ("7", 1, 1, 0.0, True, False, 3),     # TransactionId = 1
+                ("8", 2, 1, 0.0, True, False, 3),     # TransactionId = 2
+                ("9", 3, 1, 100.0, True, False, 3),   # Amount > 0
+                ("10", 4, 1, 0.0, True, False, 3),    # Case 10 - TransactionTypeId = 1, TransactionId = 4
+                ("10", 5, 19, 0.0, True, False, 2),   # Case 10 - TransactionTypeId = 19, TransactionId = 5
+                ("11", 6, 19, 0.0, True, False, 2),   # Case 11 - TransactionTypeId = 19, TransactionId = 6
+                ("11", 7, 1, 0.0, True, False, 3),    # Case 11 - TransactionTypeId = 1, TransactionId = 7
+                ("12", 8, 1, 100.0, True, False, 0),  # Case 12 - TransactionTypeId = 1, TransactionId = 8
+                ("12", 9, 19, 0.0, False, False, 8)    # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -226,19 +226,19 @@ class TestAppealSubmittedPaymentType:
             ]
 
             m4_data = [
-                ("98", 1, 6, 100.0, 0, 1, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
-                ("99", 1, 19, 100.0, 0, 1, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("1", 3, 1, 100.0, 0, 1, 3),    # valid condition
-                ("2", 3, 3, 100.0, 0, 1, 3),    # valid condition
-                ("3", 2, 3, 100.0, 0, 1, 1),    # valid condition
-                ("4", 2, 1, 100.0, 0, 1, 3),    # valid condition
-                ("5", 3, 1, 100.0, 0, 1, 3),    # valid condition
-                ("6", 3, 1, 100.0, 0, 0, 3),    # SumTotalPay = 0
-                ("7", 1, 1, 100.0, 0, 1, 3),    # TransactionId = 1
-                ("8", 2, 1, 100.0, 0, 1, 3),    # TransactionId = 2
-                ("9", 3, 1, 100.0, 0, 1, 3),    # valid condition for same case
-                ("9", 3, 1, 150.0, 0, 1, 3),    # valid condition for same case
-                ("9", 3, 3, 250.0, 0, 1, 3)     # valid condition for same case
+                ("98", 1, 6, 100.0, False, True, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
+                ("99", 1, 19, 100.0, False, True, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
+                ("1", 3, 1, 100.0, False, True, 3),    # valid condition
+                ("2", 3, 3, 100.0, False, True, 3),    # valid condition
+                ("3", 2, 3, 100.0, False, True, 1),    # valid condition
+                ("4", 2, 1, 100.0, False, True, 3),    # valid condition
+                ("5", 3, 1, 100.0, False, True, 3),    # valid condition
+                ("6", 3, 1, 100.0, False, False, 3),    # SumTotalPay = 0
+                ("7", 1, 1, 100.0, False, True, 3),    # TransactionId = 1
+                ("8", 2, 1, 100.0, False, True, 3),    # TransactionId = 2
+                ("9", 3, 1, 100.0, False, True, 3),    # valid condition for same case
+                ("9", 3, 1, 150.0, False, True, 3),    # valid condition for same case
+                ("9", 3, 3, 250.0, False, True, 3)     # valid condition for same case
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)

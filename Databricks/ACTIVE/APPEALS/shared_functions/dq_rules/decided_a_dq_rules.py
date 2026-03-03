@@ -47,7 +47,7 @@ class decidedADQRules(DQRulesBase):
             -- compare dates after parsing both sides
             to_date(
                 to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
-            ) = to_date(trim(sendDecisionsAndReasonsDate), 'dd/MM/yyyy')
+            ) = to_date(trim(sendDecisionsAndReasonsDate), 'yyyy-MM-dd')
         )
         """
 
@@ -55,7 +55,7 @@ class decidedADQRules(DQRulesBase):
         (
             DecisionDate IS NULL
             OR
-            to_date(DecisionDate, 'dd/MM/yyyy') = to_date(appealDate, 'dd/MM/yyyy')
+            to_date(DecisionDate, 'yyyy-MM-dd') = to_date(appealDate, 'yyyy-MM-dd')
         )
         """
 
@@ -74,8 +74,8 @@ class decidedADQRules(DQRulesBase):
         checks["valid_isDecisionAllowed"] = """
         (
             CASE
-                WHEN Outcome_SD = 1 THEN (isDecisionAllowed = 'Allowed')
-                WHEN Outcome_SD = 2 THEN (isDecisionAllowed = 'Dismissed')
+                WHEN Outcome_SD = 1 THEN (isDecisionAllowed = 'allowed')
+                WHEN Outcome_SD = 2 THEN (isDecisionAllowed = 'dismissed')
                 ELSE (isDecisionAllowed IS NULL)
             END
         )
@@ -99,18 +99,16 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_ftpaApplicationDeadline"] = """
         (
-            DecisionDate IS NULL
-            OR
-            date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            OR
-            date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            OR
-            date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            -- CASE
-            --     WHEN CategoryId = 37 THEN date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            --     WHEN CategoryId = 38 THEN date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            --     ELSE date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline, 'dd/MM/yyyy')
-            -- END
+            
+                DecisionDate IS NULL
+                OR
+                to_date(date_add(DecisionDate, 14)) = to_date(ftpaApplicationDeadline)
+                OR
+                to_date(date_add(DecisionDate, 28)) = to_date(ftpaApplicationDeadline)
+                OR
+                to_date(date_add(DecisionDate, 0))  = to_date(ftpaApplicationDeadline)
+
+
         )
         """
 

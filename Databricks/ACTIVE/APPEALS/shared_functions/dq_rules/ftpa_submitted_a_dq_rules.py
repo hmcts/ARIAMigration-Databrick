@@ -272,7 +272,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
             ftpaAppellantApplicationDate IS NULL
             OR
             CASE
-                WHEN Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'dd/MM/yyyy')
+                WHEN Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaAppellantApplicationDate IS NULL
             END
         )"""
@@ -297,7 +297,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ####### Respondent #######
         checks["valid_ftpaRespondentApplicationDate"] = """(
             CASE
-                WHEN Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'dd/MM/yyyy')
+                WHEN Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaRespondentApplicationDate IS NULL
             END
         )"""

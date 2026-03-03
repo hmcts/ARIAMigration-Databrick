@@ -27,14 +27,14 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(10) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
                 
-                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No Valid Appeal"
+                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
 
                 WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
 
-                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck Out"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck Out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck Out" 
-                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck Out" 
+                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
 
                 ELSE endAppealOutcome IS NULL
 
@@ -623,9 +623,9 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN             
-                    COALESCE(listCaseHearingLength, ARRAY()) = COALESCE(listCaseHearingLength_ended, ARRAY())
+                    listCaseHearingLength <=> listCaseHearingLength_ended
                 ELSE
-                    SIZE(COALESCE(listCaseHearingLength, ARRAY())) = 0
+                    listCaseHearingLength IS NULL
             END
         )
         """
@@ -637,7 +637,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(listCaseHearingDate, '') = coalesce(listCaseHearingDate_ended, '')
+                    coalesce(listCaseHearingDate, '') <=> coalesce(listCaseHearingDate_ended, '')
                 ELSE
                     listCaseHearingDate IS NULL
             END
@@ -649,10 +649,9 @@ class endedDQRules(DQRulesBase):
         (
             CASE 
                 WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
-                    ARRAY_SORT(COALESCE(listCaseHearingCentre, ARRAY())) =
-                    ARRAY_SORT(COALESCE(listCaseHearingCentre_ended, ARRAY()))
+                    listCaseHearingCentre <=> listCaseHearingCentre_ended
                 ELSE
-                    SIZE(COALESCE(listCaseHearingCentre, ARRAY())) = 0
+                    listCaseHearingCentre IS NULL
             END
         )
         """

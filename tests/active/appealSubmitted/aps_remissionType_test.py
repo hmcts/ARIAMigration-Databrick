@@ -2,7 +2,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted import remission
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, BooleanType
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -33,7 +33,7 @@ class TestAppealSubmittedRemissionType:
         StructField("TransactionTypeId", IntegerType()),
         StructField("Status", IntegerType()),
         StructField("Amount", DoubleType()),
-        StructField("SumTotalFee", IntegerType()),
+        StructField("SumTotalFee", BooleanType()),
         StructField("ReferringTransactionId", IntegerType())
     ])
 

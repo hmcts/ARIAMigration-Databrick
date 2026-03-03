@@ -27,7 +27,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(10) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
                 
-                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No Valid Appeal"
+                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
 
                 WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
 

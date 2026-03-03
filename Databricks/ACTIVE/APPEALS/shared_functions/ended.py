@@ -154,17 +154,20 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
             .otherwise(F.col("es.stateBeforeEndAppeal"))
         )
 
-                .select(
+                
+        .select(
             F.col("CaseNo"),
             F.when(F.col("es.endAppealOutcome") == "Struck Out", "Struck out")
-                .otherwise(F.col("es.endAppealOutcome"))
-                .alias("endAppealOutcome"),
+            .when(F.col("es.endAppealOutcome") == "No Valid Appeal", "No valid appeal")
+            .otherwise(F.col("es.endAppealOutcome"))
+            .alias("endAppealOutcome"),
             F.col("es.endAppealOutcomeReason"),
             F.col("endAppealApproverType"),
             F.col("endAppealApproverName"),
             F.col("endAppealDate"),
             F.col("stateBeforeEndAppeal"),
         )
+
     )
 
     ended_audit = (

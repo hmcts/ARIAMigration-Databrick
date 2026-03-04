@@ -1324,12 +1324,12 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
                 col("Appellant_Address4"),
                 col("Appellant_Address5")
             ).alias("AddressLine1"),
-            col("Appellant_Address2").alias("AddressLine2"),
+            coalesce(col("Appellant_Address2"), lit("")).alias("AddressLine2"),
             lit("").alias("AddressLine3"),
-            col("Appellant_Address3").alias("PostTown"),
-            col("Appellant_Address4").alias("County"),
-            col("Appellant_Address5").alias("Country"),
-            col("Appellant_Postcode").alias("PostCode")
+            coalesce(col("Appellant_Address3"), lit("")).alias("PostTown"),
+            coalesce(col("Appellant_Address4"), lit("")).alias("County"),
+            coalesce(col("Appellant_Address5"), lit("")).alias("Country"),
+            coalesce(col("Appellant_Postcode"), lit("")).alias("PostCode")
         )
     ).otherwise(None)
 
@@ -2436,11 +2436,12 @@ def sponsorDetails(silver_m1, silver_c):
                     col("Sponsor_Address4"),
                     col("Sponsor_Address5")
                 ).alias("AddressLine1"),
-                col("Sponsor_Address2").alias("AddressLine2"),
-                col("Sponsor_Address3").alias("PostTown"),
-                col("Sponsor_Address4").alias("County"),
-                col("Sponsor_Address5").alias("Country"),
-                col("Sponsor_Postcode").alias("PostCode")
+                coalesce(col("Sponsor_Address2"), lit("")).alias("AddressLine2"),
+                lit("").alias("AddressLine3"),
+                coalesce(col("Sponsor_Address3"), lit("")).alias("PostTown"),
+                coalesce(col("Sponsor_Address4"), lit("")).alias("County"),
+                coalesce(col("Sponsor_Address5"), lit("")).alias("Country"),
+                coalesce(col("Sponsor_Postcode"), lit("")).alias("PostCode")
             )
         )
     ).withColumn(

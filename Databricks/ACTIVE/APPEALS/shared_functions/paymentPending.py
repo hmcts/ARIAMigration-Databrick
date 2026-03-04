@@ -2437,7 +2437,7 @@ def sponsorDetails(silver_m1, silver_c):
                     col("Sponsor_Address5")
                 ).alias("AddressLine1"),
                 coalesce(col("Sponsor_Address2"), lit("")).alias("AddressLine2"),
-                lit("").alias("AddressLine3")
+                lit("").alias("AddressLine3"),
                 coalesce(col("Sponsor_Address3"), lit("")).alias("PostTown"),
                 coalesce(col("Sponsor_Address4"), lit("")).alias("County"),
                 coalesce(col("Sponsor_Address5"), lit("")).alias("Country"),

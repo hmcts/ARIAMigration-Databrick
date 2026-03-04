@@ -75,6 +75,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
   body { margin:0; font-family: Arial; background:#fff; }
@@ -140,7 +141,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     width:120px; max-width:120px; overflow-wrap:anywhere;
   }
 
-  /* State Under Test (reverted to 156px) */
+  /* State Under Test (156px) */
   td.col-state, th.col-state {
     width:156px; max-width:156px; overflow-wrap:anywhere;
   }
@@ -162,6 +163,41 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   td.col-teststate, th.col-teststate {
     width:150px; max-width:150px; overflow-wrap:anywhere;
   }
+
+  /* Run details summary layout */
+  .split {
+    display:flex;
+    flex-wrap:wrap;
+    gap:22px;
+    margin: 12px 0 16px 0;
+  }
+
+  .left {
+    flex: 1 1 280px;
+    max-width: 520px;
+  }
+
+  .right {
+    width: 280px;
+    height: 280px;
+  }
+
+  .card {
+    border:1px solid #ddd;
+    border-radius:8px;
+    background:#f9f9f9;
+    padding:12px;
+  }
+
+  .kv {
+    display:flex;
+    gap:10px;
+    padding:4px 0;
+    border-bottom:1px dashed #e2e2e2;
+  }
+  .kv:last-child { border-bottom:none; }
+  .k { min-width:150px; font-weight:bold; color:#333; }
+  .v { flex:1; overflow-wrap:anywhere; color:#111; }
 
   /* Compare table */
   table.compare {
@@ -218,7 +254,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   <div id="panel-run" class="panel">
     <div class="toolbar">
       <button id="backToRunsBtn">⬅ Back to Runs</button>
-      <button id="downloadRunExcelBtn">📥 Download Excel</button>
+      <button id="downloadRunExcelBtn">📥 Download Excel (all results)</button>
       <span id="runTitle" style="font-weight:bold;"></span>
     </div>
 
@@ -227,6 +263,16 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     </div>
 
     <div id="runDetailsWrap" style="display:none;">
+
+      <div class="split">
+        <div class="left">
+          <div class="card" id="runSummaryCard"></div>
+        </div>
+        <div class="right">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+
       <table id="resultsTable" class="display" style="width:100%;">
         <thead>
           <tr>
@@ -283,14 +329,86 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     return '<span class="missing">' + (d ?? '') + '</span>';
   }
 
+  function computeTotals(results) {
+    const total_tests = results.length;
+    let total_passed = 0;
+    let total_failed = 0;
+
+    results.forEach(r => {
+      if (r.status === 'PASS') total_passed++;
+      if (r.status === 'FAIL') total_failed++;
+    });
+
+    const pass_percent = total_tests ? Math.round((total_passed / total_tests) * 1000) / 10 : 0;
+    return { total_tests, total_passed, total_failed, pass_percent };
+  }
+
+  function buildSummaryCard(runObj, totals) {
+    const fields = [
+      ['Run ID', runObj.run_id],
+      ['User', runObj.run_user],
+      ['Start', runObj.run_start_datetime],
+      ['End', runObj.run_end_datetime],
+      ['Automation', runObj.run_by_automation_name],
+      ['Tag', runObj.run_tag],
+      ['Status', runObj.run_status],
+      ['State Under Test', runObj.state_under_test],
+      ['Total Passed', totals.total_passed],
+      ['Total Failed', totals.total_failed],
+      ['Total Tests', totals.total_tests],
+      ['Pass %', totals.pass_percent + '%']
+    ];
+
+    let html = '';
+    fields.forEach(([k,v]) => {
+      html += `<div class="kv"><div class="k">${k}</div><div class="v">${(v ?? '')}</div></div>`;
+    });
+    return html;
+  }
+
   let runsTable = null;
   let resultsTable = null;
   let currentRunId = null;
+  let pieChart = null;
+
+  function renderPie(results) {
+    const totals = computeTotals(results);
+
+    const labels = ['PASS','FAIL'];
+    const values = [totals.total_passed, totals.total_failed];
+
+    if (pieChart) {
+      pieChart.destroy();
+      pieChart = null;
+    }
+
+    pieChart = new Chart(document.getElementById('pieChart'), {
+      type:'pie',
+      data:{ labels: labels, datasets:[{ data: values }] },
+      options:{
+        responsive:false,
+        maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom' } }
+      }
+    });
+  }
 
   function showRun(runId) {
     currentRunId = String(runId);
+
+    const runObj = runsData.find(r => String(r.run_id) === currentRunId);
     const results = allResults[currentRunId] || [];
+    const totals = computeTotals(results);
+
     $('#runTitle').text('Run: ' + currentRunId);
+
+    if (runObj) {
+      $('#runSummaryCard').html(buildSummaryCard(runObj, totals));
+    } else {
+      $('#runSummaryCard').html('<div class="missing">Run details not found in runs list.</div>');
+    }
+
+    renderPie(results);
 
     if (resultsTable) {
       resultsTable.clear();
@@ -304,7 +422,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
           { data:'result_id', className:'col-resultid' },
           { data:'run_id', className:'col-runid2' },
           { data:'test_name' },
-          { data:'status', render: function(d){ return statusBadge(d); } }, // after test name
+          { data:'status', render: function(d){ return statusBadge(d); } }, // Status after Test Name
           { data:'test_field', className:'col-testfield' },
           { data:'test_from_state', className:'col-teststate' },
           { data:'message' }
@@ -319,10 +437,11 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   }
 
   $(document).ready(function() {
-    // Runs table
+    // Runs table (DEFAULT SORT: Start DESC)
     runsTable = $('#runsTable').DataTable({
       data: runsData,
       autoWidth: false,
+      order: [[6, 'desc']],   // "Start" column index (0-based): RunID(0),User(1),Status(2),Pass(3),Fail(4),Total(5),Start(6)
       columns: [
         {
           data:'run_id',
@@ -363,14 +482,34 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     showPanel('panel-runs');
   });
 
-  // Download Excel (Run Details)
+  // Download Excel (ALL results for this run)
   $('#downloadRunExcelBtn').on('click', function() {
     if (!currentRunId) {
       alert('Select a run first.');
       return;
     }
-    const tbl = document.getElementById("resultsTable");
-    const wb = XLSX.utils.table_to_book(tbl, { sheet: "Results" });
+
+    const rows = allResults[currentRunId] || [];
+    if (!rows.length) {
+      alert('No results to export for this run.');
+      return;
+    }
+
+    const header = ["result_id", "run_id", "test_name", "status", "test_field", "test_from_state", "message"];
+    const exportRows = rows.map(r => ({
+      result_id: r.result_id ?? "",
+      run_id: r.run_id ?? "",
+      test_name: r.test_name ?? "",
+      status: r.status ?? "",
+      test_field: r.test_field ?? "",
+      test_from_state: r.test_from_state ?? "",
+      message: r.message ?? ""
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportRows, { header: header });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Results");
+
     XLSX.writeFile(wb, "run_" + currentRunId + "_results.xlsx");
   });
 
@@ -387,7 +526,6 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     const resultsA = allResults[runA] || [];
     const resultsB = allResults[runB] || [];
 
-    // group duplicates by test_name|test_field
     const mapA = {};
     const mapB = {};
 

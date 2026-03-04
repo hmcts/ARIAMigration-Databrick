@@ -1,6 +1,6 @@
 # dashboard.py
 # Single-page HTML dashboard (Runs + Run Details + Compare) for Databricks notebooks.
-# Brace-safe: uses placeholders + .replace() rather than f-string HTML.
+# Brace-safe: placeholders + .replace() rather than f-string HTML.
 
 from functions.db_utils import get_runs, get_results
 from datetime import datetime
@@ -74,6 +74,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
   body { margin:0; font-family: Arial; background:#fff; }
@@ -139,6 +140,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     width:120px; max-width:120px; overflow-wrap:anywhere;
   }
 
+  /* State Under Test (reverted to 156px) */
   td.col-state, th.col-state {
     width:156px; max-width:156px; overflow-wrap:anywhere;
   }
@@ -216,6 +218,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   <div id="panel-run" class="panel">
     <div class="toolbar">
       <button id="backToRunsBtn">⬅ Back to Runs</button>
+      <button id="downloadRunExcelBtn">📥 Download Excel</button>
       <span id="runTitle" style="font-weight:bold;"></span>
     </div>
 
@@ -282,11 +285,12 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
 
   let runsTable = null;
   let resultsTable = null;
+  let currentRunId = null;
 
   function showRun(runId) {
-    runId = String(runId);
-    const results = allResults[runId] || [];
-    $('#runTitle').text('Run: ' + runId);
+    currentRunId = String(runId);
+    const results = allResults[currentRunId] || [];
+    $('#runTitle').text('Run: ' + currentRunId);
 
     if (resultsTable) {
       resultsTable.clear();
@@ -300,7 +304,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
           { data:'result_id', className:'col-resultid' },
           { data:'run_id', className:'col-runid2' },
           { data:'test_name' },
-          { data:'status', render: function(d){ return statusBadge(d); } },  // after test name
+          { data:'status', render: function(d){ return statusBadge(d); } }, // after test name
           { data:'test_field', className:'col-testfield' },
           { data:'test_from_state', className:'col-teststate' },
           { data:'message' }
@@ -357,6 +361,17 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   // Back button
   $('#backToRunsBtn').on('click', function() {
     showPanel('panel-runs');
+  });
+
+  // Download Excel (Run Details)
+  $('#downloadRunExcelBtn').on('click', function() {
+    if (!currentRunId) {
+      alert('Select a run first.');
+      return;
+    }
+    const tbl = document.getElementById("resultsTable");
+    const wb = XLSX.utils.table_to_book(tbl, { sheet: "Results" });
+    XLSX.writeFile(wb, "run_" + currentRunId + "_results.xlsx");
   });
 
   // Compare

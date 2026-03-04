@@ -10,7 +10,7 @@ PaymentPendingTypes = {
     'appealSubmissionInternalDate': 'string',
     'appealType': 'string',
     'appealTypeDescription': 'string',
-    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>',
+    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,Country:string,County:string,PostCode:string>',
     'appellantDateOfBirth': 'string',
     'appellantFamilyName': 'string',
     'appellantGivenNames': 'string',

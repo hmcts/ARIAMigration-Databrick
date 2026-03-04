@@ -1,4 +1,4 @@
-CaseUnderReviewTypes = {
+CaseUnderReviewTypes1 = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -10,7 +10,7 @@ CaseUnderReviewTypes = {
     'appealSubmissionInternalDate': 'string',
     'appealType': 'string',
     'appealTypeDescription': 'string',
-    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,Country:string,County:string,PostCode:string>',
+    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,Country:string, County:string,PostCode:string>',
     'appellantDateOfBirth': 'string',
     'appellantFamilyName': 'string',
     'appellantGivenNames': 'string',

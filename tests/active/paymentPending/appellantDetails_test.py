@@ -238,7 +238,7 @@ def test_appellant_address_fields(appellantDetails_outputs):
     assert addr["AddressLine3"] == ""
     assert addr["PostTown"] == "KristinfurtX"
     assert addr["County"] == "Trinidad and TobagoX"
-    assert addr["Country"] is None
+    assert addr["Country"] == ""
     assert addr["PostCode"] == "W3 8PF"
 
     # Out-of-country adminJ address (CategoryId 38)

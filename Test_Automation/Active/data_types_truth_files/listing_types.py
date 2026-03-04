@@ -1,4 +1,4 @@
-AwaitingRespondentEvidenceATypes = {
+ListingTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -92,7 +92,7 @@ AwaitingRespondentEvidenceATypes = {
     's94bStatus': 'string',
     'selectedHearingCentreRefData': 'string',
     'sendDirectionActionAvailable': 'string',
-    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>', 
+    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',
     'staffLocation': 'string',
     'submissionOutOfTime': 'string',
     'submitNotificationStatus': 'string',
@@ -105,14 +105,12 @@ AwaitingRespondentEvidenceATypes = {
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
-    'paymentStatus': 'string',
     'paAppealTypePaymentOption': 'string',
     'paAppealTypeAipPaymentOption': 'string',
     'rpDcAppealHearingOption': 'string',
     'paidAmount': 'string',
     'paidDate': 'string',
     'additionalPaymentInfo': 'string',
-    'paymentDescription': 'string',
     'remissionDecision': 'string',
     'remissionDecisionReason': 'string',
     'amountRemitted': 'string',
@@ -123,7 +121,7 @@ AwaitingRespondentEvidenceATypes = {
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -143,6 +141,53 @@ AwaitingRespondentEvidenceATypes = {
     'sponsorFamilyName': 'string', #not mandatory
     'sponsorGivenNames': 'string', #not mandatory 
     'sponsorPartyId': 'string', #not mandatory
-    'uploadHomeOfficeBundleAvailable': 'string' 
+    'uploadHomeOfficeBundleAvailable': 'string', 
+    'respondentDocuments': 'array<string>',
+    'uploadHomeOfficeBundleActionAvailable': 'string',
+    'additionalInstructionsTribunalResponse': 'string',
+    'sponsorAddressForDisplay': 'string',
+    'sponsorNameForDisplay': 'string',
+    'uploadHomeOfficeBundleActionAvailable': 'string',
+    'isAppellantAttendingTheHearing': 'string',
+    'isAppellantGivingOralEvidence': 'string',
+    'isWitnessesAttending': 'string',
+    'isHearingRoomNeeded': 'string',
+    'isHearingLoopNeeded': 'string',
+    'isInterpreterServicesNeeded': 'string',
+    'appellantInterpreterLanguageCategory': 'array<string>',
+    'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    'remoteVideoCall': 'string',
+    'remoteVideoCallDescription': 'string',
+    'physicalOrMentalHealthIssues': 'string',
+    'physicalOrMentalHealthIssuesDescription': 'string',
+    'pastExperiences': 'string',
+    'pastExperiencesDescription': 'string',
+    'multimediaEvidence': 'string',
+    'multimediaEvidenceDescription': 'string',
+    'additionalRequests': 'string',
+    'additionalRequestsDescription': 'string',
+    'isEvidenceFromOutsideUkOoc': 'string',
+    'isEvidenceFromOutsideUkInCountry': 'string',
+    'oocAddressLine1': 'string',
+    'oocAddressLine2': 'string',
+    'oocAddressLine3': 'string',
+    'oocLrCountryGovUkAdminJ': 'string',
+    'amendResponseActionAvailable': 'string',
+    'currentHearingDetailsVisible': 'string',
+    'reviewResponseActionAvailable': 'string',
+    'reviewHomeOfficeResponseByLegalRep': 'string',
+    'submitHearingRequirementsAvailable': 'string',
+    'reviewedHearingRequirements': 'string',
+    'uploadHomeOfficeAppealResponseActionAvailable': 'string',
+    'uploadHomeOfficeBundleActionAvailable': 'string',
+    'appealReviewOutcome': 'string',
+    'hearingRequirements': 'array<string>',
+    'inCameraCourt': 'string',
+    'inCameraCourtDescription': 'string',
+    'singleSexCourt': 'string',
+    'singleSexCourtType': 'string',
+    'singleSexCourtTypeDescription': 'string',
+    'datesToAvoidYesNo': 'string'
+
 
 }

@@ -1,4 +1,4 @@
-CaseUnderReviewTypes1 = {
+CaseUnderReviewTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',

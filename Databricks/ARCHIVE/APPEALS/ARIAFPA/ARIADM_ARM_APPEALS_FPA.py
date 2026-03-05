@@ -1896,7 +1896,7 @@ def bronze_appealcase_t_tt_ts_tm():
                 col("t.TransactionTypeId"),
                 col("t.TransactionMethodId"),
                 col("t.TransactionDate"),
-                col("t.Amount"),
+                col("t.Amount").cast(DecimalType(10,2)),
                 col("t.ClearedDate"),
                 col("t.Status").alias("TransactionStatusId"),
                 col("t.OriginalPaymentReference"),
@@ -3860,11 +3860,11 @@ def silver_case_detail():
         col("case.CaseFeeSummaryId").alias("CaseFeeSummaryId"),
         col("case.DatePosting1stTier").alias("DatePosting1stTier"),
         col("case.DatePostingUpperTier").alias("DatePostingUpperTier"),
-        col("case.DateCorrectFeeReceived").alias("DateCorrectFeeReceived"),
+        col("case.DateCorrectFeeReceived").alias("dateCorrectFeeReceived"),
         col("case.DateCorrectFeeDeemedReceived").alias("DateCorrectFeeDeemedReceived"),
-        when(col("case.PaymentRemissionrequested") == 1, "YES").when(col("case.PaymentRemissionrequested") == 2, "NO").otherwise(None).alias("PaymentRemissionrequested"),
-        when(col("case.PaymentRemissionGranted") == 1, "YES").when(col("case.PaymentRemissionGranted") == 2, "NO").otherwise(None).alias("PaymentRemissionGranted"),
-        col("case.PaymentRemissionReason").alias("PaymentRemissionReason"),
+        when(col("case.PaymentRemissionrequested") == 1, lit("Yes")).when(col("case.PaymentRemissionrequested") == 2, lit("No")).otherwise(lit(None)).alias("PaymentRemissionrequested"),
+        when(col("case.PaymentRemissionGranted") == 1, lit("Yes")).when(col("case.PaymentRemissionGranted") == 2, lit("No")).otherwise(lit(None)).alias("PaymentRemissionGranted"),
+        when(col("case.PaymentRemissionReason") == 1, lit("Yes")).when(col("case.PaymentRemissionReason") == 2, lit("No")).otherwise(lit(None)).alias("PaymentRemissionReason"),
         col("case.PaymentRemissionReasonNote").alias("PaymentRemissionReasonNote"),
         col("case.ASFReferenceNo").alias("ASFReferenceNo"),
         when(col("case.ASFReferenceNoStatus") == 1, "Unverified")
@@ -3876,7 +3876,7 @@ def silver_case_detail():
         .when(col("case.LSCStatus") == 2, "Verified")
         .when(col("case.LSCStatus") == 3, "Invalid")
         .otherwise(None).alias("LSCStatus"),
-        when(col("case.LCPRequested") == 1, "YES").when(col("case.LCPRequested") == 2, "NO").otherwise("").alias("LCPRequested"),
+        when(col("case.LCPRequested") == 1, "Yes").when(col("case.LCPRequested") == 2, "No").otherwise("").alias("LCPRequested"),
         when(col("case.LCPOutcome") == 1, "Refused")
         .when(col("case.LCPOutcome") == 2, "Full Remission")
         .when(col("case.LCPOutcome") == 3, "Part Remission")
@@ -3890,7 +3890,7 @@ def silver_case_detail():
         .otherwise("").alias("S17ReferenceStatus"),
         col("case.SubmissionURNCopied").alias("SubmissionURNCopied"),
         col("case.S20Reference").alias("S20Reference"),
-        when(col("case.S20ReferenceStatus") == 1, "YES").when(col("case.S20ReferenceStatus") == 2, "NO").otherwise("").alias("S20ReferenceStatus"),
+        when(col("case.S20ReferenceStatus") == 1, "Yes").when(col("case.S20ReferenceStatus") == 2, "No").otherwise("").alias("S20ReferenceStatus"),
         # col("case.HomeOfficeWaiverStatus").alias("HomeOfficeWaiverStatus"),
         when(col("case.HomeOfficeWaiverStatus") == 1, "Unverified")
         .when(col("case.HomeOfficeWaiverStatus") == 2, "Verified")
@@ -4004,107 +4004,106 @@ def silver_transaction_detail():
     status_decision_df = dlt.read("bronze_appealcase_t_tt_ts_tm").alias("tran")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
                                                                                
-    # Extract ReferringTransactionId values into a list
-    referring_transaction_ids = status_decision_df.filter(
-        col("TransactionTypeId").isin(6, 19)
-    ).select("ReferringTransactionId").distinct().rdd.flatMap(lambda x: x).collect()
+    referring_ids_df = broadcast(
+    status_decision_df.filter(col("TransactionTypeId").isin(6, 19))
+    .select(col("ReferringTransactionId"))
+    .distinct()
+)
 
-    # Updated FirstTierFee_df filter logic
-    FirstTierFee_df = status_decision_df.filter(
-        (col("TransactionTypeId") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    FirstTierFee_df = status_decision_df.join(
+        referring_ids_df, 
+        status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+        "left_anti"
+    ).filter(col("TransactionTypeId") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("FirstTierFee"))
 
-    # Updated TotalFeeAdjustments filter logic
-    TotalFeeAdjustments_df = status_decision_df.filter(
-        (col("SumFeeAdjustment") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    FirstTierFee_df.filter(col("CaseNo") == "PA/12591/2016").display()
+
+    TotalFeeAdjustments_df = status_decision_df.join(
+        referring_ids_df, 
+        status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+        "left_anti"
+    ).filter(col("SumFeeAdjustment") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("TotalFeeAdjustments"))
 
-
-    # Updated TotalFeeDue filter logic
-    TotalFeeDue_df = status_decision_df.filter(
-        (col("SumTotalFee") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    TotalFeeDue_df = status_decision_df.join(
+        referring_ids_df, 
+            status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+            "left_anti"
+    ).filter(col("SumTotalFee") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("TotalFeeDue"))
 
-    # Updated TotalPaymentsReceived filter logic
-    TotalPaymentsReceived_df = status_decision_df.filter(
-        (col("SumTotalPay") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    TotalPaymentsReceived_df = status_decision_df.join(
+        referring_ids_df, 
+        status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+        "left_anti"
+    ).filter(col("SumTotalPay") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("TotalPaymentsReceived"))
 
-    # Updated TotalPaymentAdjustments filter logic
-    TotalPaymentAdjustments_df = status_decision_df.filter(
-        (col("SumPayAdjustment") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    TotalPaymentAdjustments_df = status_decision_df.join(
+        referring_ids_df, 
+        status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+        "left_anti"
+    ).filter(col("SumPayAdjustment") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("TotalPaymentAdjustments"))
 
-     # Updated TotalPaymentAdjustments filter logic
-    BalanceDue_df = status_decision_df.filter(
-        (col("SumBalance") == 1) &
-        (~col("TransactionStatusId").isin(referring_transaction_ids))
+    BalanceDue_df = status_decision_df.join(
+        referring_ids_df, 
+        status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
+        "left_anti"
+    ).filter(col("SumBalance") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("BalanceDue"))
 
-    joined_df = status_decision_df.join(flt_df, col("tran.CaseNo") == col("flt.CaseNo"), "inner")\
-                                  .join(FirstTierFee_df.alias("FirstTierFee"), "CaseNo", "left") \
-                                  .join(TotalFeeAdjustments_df.alias("TotalFeeAdjustments"), "CaseNo", "left") \
-                                  .join(TotalFeeDue_df.alias("TotalFeeDue"), "CaseNo", "left") \
-                                  .join(TotalPaymentsReceived_df.alias("TotalPaymentsReceived"), "CaseNo", "left") \
-                                  .join(TotalPaymentAdjustments_df.alias("TotalPaymentAdjustments"), "CaseNo", "left") \
-                                  .join(BalanceDue_df.alias("BalanceDue"), "CaseNo", "left") \
-        .select(
-        "tran.TransactionId",
-        "tran.CaseNo",
-        "tran.TransactionTypeId",
-        "tran.TransactionMethodId",
-        "tran.TransactionDate",
-        "tran.Amount",
-        "tran.ClearedDate",
-        "tran.TransactionStatusId",
-        "tran.OriginalPaymentReference",
-        "tran.PaymentReference",
-        "tran.AggregatedPaymentURN",
-        "tran.PayerForename",
-        "tran.PayerSurname",
-        "tran.LiberataNotifiedDate",
-        "tran.LiberataNotifiedAggregatedPaymentDate",
-        "tran.BarclaycardTransactionId",
-        "tran.Last4DigitsCard",
-        "tran.TransactionNotes",
-        "tran.ExpectedDate",
-        "tran.ReferringTransactionId",
-        "tran.CreateUserId",
-        "tran.LastEditUserId",
-        "tran.TransactionDescription",
-        "tran.InterfaceDescription",
-        "tran.AllowIfNew",
-        "tran.DoNotUse",
-        "tran.SumFeeAdjustment",
-        "tran.SumPayAdjustment",
-        "tran.SumTotalFee",
-        "tran.SumTotalPay",
-        "tran.SumBalance",
-        "tran.GridFeeColumn",
-        "tran.GridPayColumn",
-        "tran.IsReversal",
-        "tran.TransactionStatusDesc",
-        "tran.TransactionStatusIntDesc",
-        "tran.DoNotUseTransactionStatus",
-        "tran.TransactionMethodDesc",
-        "tran.TransactionMethodIntDesc",
-        "tran.DoNotUseTransactionMethod",
-        when(col("tran.TransactionTypeId") != 3, col("tran.Amount")).otherwise(lit("")).alias("AmountDue"),
-        when(col("tran.TransactionTypeId") == 3, col("tran.Amount")).otherwise(lit("")).alias("AmountPaid"),
-        col("FirstTierFee.FirstTierFee").alias("FirstTierFee"),
-        col("TotalFeeAdjustments.TotalFeeAdjustments").alias("TotalFeeAdjustments"),
-        col("TotalFeeDue.TotalFeeDue").alias("TotalFeeDue"),
-        col("TotalPaymentsReceived.TotalPaymentsReceived").alias("TotalPaymentsReceived"),
-        col("TotalPaymentAdjustments.TotalPaymentAdjustments").alias("TotalPaymentAdjustments"),
-        col("BalanceDue.BalanceDue").alias("BalanceDue")
-    )
+    abs_transaction_type_ids = [3, 5, 10, 11, 12, 13, 17]
 
-  
+    joined_df = status_decision_df.join(flt_df, col("tran.CaseNo") == col("flt.CaseNo"), "inner")\
+                                    .join(FirstTierFee_df.alias("FirstTierFee"), "CaseNo", "left")\
+                                    .join(TotalFeeAdjustments_df.alias("TotalFeeAdjustments"), "CaseNo", "left") \
+                                    .join(TotalFeeDue_df.alias("TotalFeeDue"), "CaseNo", "left") \
+                                    .join(TotalPaymentsReceived_df.alias("TotalPaymentsReceived"), "CaseNo", "left") \
+                                    .join(TotalPaymentAdjustments_df.alias("TotalPaymentAdjustments"), "CaseNo", "left") \
+                                    .join(BalanceDue_df.alias("BalanceDue"), "CaseNo", "left"
+            ).withColumn(
+                "Amount_new",
+                    when(col("TransactionTypeId").isin(abs_transaction_type_ids), abs(col("Amount")))
+                    .otherwise(col("Amount"))
+            ).withColumn(
+                "AmountDue", 
+                when(col("TransactionTypeId") != 3, col("Amount_new"))
+                .otherwise(lit("0.00"))
+                .cast(DecimalType(10, 2)) 
+            ).withColumn(
+                "AmountPaid",
+                when(col("TransactionTypeId") == 3, col("Amount_new"))
+                .otherwise(lit("0.00"))
+                .cast(DecimalType(10, 2))
+            ).withColumn("FirstTierFee",
+                when(col("FirstTierFee").isNull(), lit("0.00"))
+                .otherwise(col("FirstTierFee"))
+                .cast(DecimalType(10, 2))
+            ).withColumn("TotalFeeAdjustments",
+                when(col("TotalFeeAdjustments").isNull(), lit("0.00"))
+                .otherwise(col("TotalFeeAdjustments"))
+                .cast(DecimalType(10, 2))
+            ).withColumn("TotalFeeDue",
+                when(col("TotalFeeDue").isNull(), lit("0.00"))
+                .otherwise(col("TotalFeeDue"))
+                .cast(DecimalType(10, 2))
+            ).withColumn("TotalPaymentsReceived",
+                when(col("TotalPaymentsReceived").isNull(), lit("0.00"))
+                .otherwise(abs(col("TotalPaymentsReceived")))
+                .cast(DecimalType(10, 2))
+            ).withColumn("TotalPaymentAdjustments",
+                when(col("TotalPaymentAdjustments").isNull(), lit("0.00"))
+                .otherwise(col("TotalPaymentAdjustments"))
+                .cast(DecimalType(10, 2))
+            ).withColumn("BalanceDue",
+                when(col("BalanceDue").isNull(), lit("0.00"))
+                .otherwise(col("BalanceDue"))
+                .cast(DecimalType(10, 2))
+            ).select(['*']).drop(col("flt.CaseNo"), col("flt.Segment")
+        )
+
     return joined_df
 
 # COMMAND ----------
@@ -4746,9 +4745,6 @@ def generate_html(row, templates=templates):
         #Convert row to a dictionary
         row_dict = row.asDict()
 
-        # Define the fields that need date formatting
-        # date_fields = {"DateApplicationLodged", "DateOfApplicationDecision"}  # Add other timestamp fields if needed
-
         date_fields = [
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
@@ -4756,22 +4752,35 @@ def generate_html(row, templates=templates):
             "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
         ]
 
-    
+        date_correct_fee_received = row_dict.get("dateCorrectFeeReceived")
+        date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
+
+        if date_correct_fee_received is not None and date_correct_fee_deemed_received is None:
+            row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
+
+        elif date_correct_fee_received is None and date_correct_fee_deemed_received is not None:
+            row_dict["dateCorrectFeeReceived"] = None
 
         # Create dynamic placeholder replacements
+        # replacements = {
+        #     f"{{{{{key}}}}}": format_date_iso(value) if key in date_fields and value is not None else str(value) if value is not None else ""
+        #     for key, value in row_dict.items()
+        # }
+
         replacements = {
-            f"{{{{{key}}}}}": format_date_iso(value) if key in date_fields and value is not None else str(value) if value is not None else ""
+            f"{{{{{key}}}}}": (
+                format_date_iso(value) 
+                if key in date_fields 
+                and value is not None 
+                and not (key == "DateOfApplicationDecision" and row_dict.get("CaseFeeSummaryId") is None)
+                else str(value) if value is not None else ""
+            )
             for key, value in row_dict.items()
         }
-
-        # # Create placeholder replacements dynamically
-        # replacements = {f"{{{{{key}}}}}": str(value) if value is not None else "" for key, value in row_dict.items()}
 
         # Replace placeholders in the template
         for placeholder, value in replacements.items():
             html_template = html_template.replace(placeholder, value)
-
-       
         
         # Replace placeholders in the template with row data
         replacements = {
@@ -4893,6 +4902,7 @@ def generate_html(row, templates=templates):
                                              .replace("{{ExpectedDate}}", format_date_iso(payment.ExpectedDate)) \
                                              .replace("{{clearedDate}}", format_date_iso(payment.ClearedDate)) \
                                              .replace("{{Amount}}", str(payment.Amount or '')) \
+                                             .replace("{{Amount_new}}", str(payment.Amount_new or '')) \
                                              .replace("{{TransactionMethodDesc}}", str(payment.TransactionMethodDesc or '')) \
                                              .replace("{{Last4DigitsCard}}", str(payment.Last4DigitsCard or '')) \
                                              .replace("{{CreateUserId}}", str(payment.CreateUserId or '')) \
@@ -4918,6 +4928,7 @@ def generate_html(row, templates=templates):
                                                           .replace("{{ExpectedDate}}", "") \
                                                           .replace("{{clearedDate}}", "") \
                                                           .replace("{{Amount}}", "") \
+                                                          .replace("{{Amount_new}}", "") \
                                                           .replace("{{TransactionMethodDesc}}", "") \
                                                           .replace("{{Last4DigitsCard}}", "") \
                                                           .replace("{{CreateUserId}}", "") \
@@ -6149,7 +6160,7 @@ def stg_apl_combined():
     )
 
     df_transaction = dlt.read("silver_transaction_detail").groupBy("CaseNo").agg(
-        collect_list(struct('TransactionId', 'TransactionTypeId', 'TransactionMethodId', 'TransactionDate', 'Amount', 'ClearedDate', 'TransactionStatusId', 'OriginalPaymentReference', 'PaymentReference', 'AggregatedPaymentURN', 'PayerForename', 'PayerSurname', 'LiberataNotifiedDate', 'LiberataNotifiedAggregatedPaymentDate', 'BarclaycardTransactionId', 'Last4DigitsCard', 'TransactionNotes', 'ExpectedDate', 'ReferringTransactionId', 'CreateUserId', 'LastEditUserId', 'TransactionDescription', 'InterfaceDescription', 'AllowIfNew', 'DoNotUse', 'SumFeeAdjustment', 'SumPayAdjustment', 'SumTotalFee', 'SumTotalPay', 'SumBalance', 'GridFeeColumn', 'GridPayColumn', 'IsReversal', 'TransactionStatusDesc', 'TransactionStatusIntDesc', 'DoNotUseTransactionStatus', 'TransactionMethodDesc', 'TransactionMethodIntDesc', 'DoNotUseTransactionMethod', 'AmountDue', 'AmountPaid', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')).alias("TransactionDetails")
+        collect_list(struct('TransactionId', 'TransactionTypeId', 'TransactionMethodId', 'TransactionDate', 'Amount', 'ClearedDate', 'TransactionStatusId', 'OriginalPaymentReference', 'PaymentReference', 'AggregatedPaymentURN', 'PayerForename', 'PayerSurname', 'LiberataNotifiedDate', 'LiberataNotifiedAggregatedPaymentDate', 'BarclaycardTransactionId', 'Last4DigitsCard', 'TransactionNotes', 'ExpectedDate', 'ReferringTransactionId', 'CreateUserId', 'LastEditUserId', 'TransactionDescription', 'InterfaceDescription', 'AllowIfNew', 'DoNotUse', 'SumFeeAdjustment', 'SumPayAdjustment', 'SumTotalFee', 'SumTotalPay', 'SumBalance', 'GridFeeColumn', 'GridPayColumn', 'IsReversal', 'TransactionStatusDesc', 'TransactionStatusIntDesc', 'DoNotUseTransactionStatus', 'TransactionMethodDesc', 'TransactionMethodIntDesc', 'DoNotUseTransactionMethod', 'Amount_new', 'AmountDue', 'AmountPaid', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')).alias("TransactionDetails")
     )
 
     df_standarddirection = dlt.read("sliver_direction_detail").groupBy("CaseNo").agg(

@@ -2,7 +2,7 @@ import logging
 from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
-    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules
+    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules, remitted_dq_rules
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp, 
@@ -58,7 +58,7 @@ def add_state_dq_rules(state: str) -> dict:
         "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
         "ftpaDecided": ftpaDecided_dq_rules.ftpaDecidedDQRules().get_checks(),
         "ended": ended_dq_rules.endedDQRules().get_checks(),
-        "remitted": {}
+        "remitted": remitted_dq_rules.remittedDQRules().get_checks()
     }
 
     return dq_rules.get(state, {})
@@ -79,7 +79,7 @@ def previous_state_map(state: str):
         "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
         "ended":                         "ftpaSubmitted(a)",
-        "remitted":                      "ended"
+        "remitted":                      "ftpaDecided"
     }
 
     return previous_state.get(state, None)
@@ -426,7 +426,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
     silver_m3_ranked_remitted = silver_m3_ranked_remitted.filter(col("row_number") == 1).drop("row_number")
 
-    valid_remitted = silver_m3_ranked_remitted.select(col("CaseNo"),col("DecisionDate").alias("DecisionDate_rem"))
+    valid_remitted = silver_m3_ranked_remitted.select(col("CaseNo"),col("DecisionDate").alias("DecisionDate_rem"),col("CaseStatus").alias("CaseStatus_rem"),col("Outcome").alias("Outcome_rem"))
 
 
 

@@ -1738,9 +1738,10 @@ def silver_normal_bail():
         "case_result",
         F.when(F.col("h.Comment").like("%indefinite retention%"), 'Legal Hold')
         .when(F.col("h.Comment").like("%indefinate retention%"), 'Legal Hold')
-        .when(F.date_add(F.col("t.DecisionDate"), 2 * 365) < F.current_date(), 'Destroy')
+        .when(F.date_add(F.col("t.DecisionDate"), 2 * 365) < lit("2026-02-01"), 'Destroy')
         .otherwise('Archive')
     )
+
     final_result = result_with_case.filter(F.col("case_result") == 'Archive')
 
     final_grouped_result = final_result.groupBy(
@@ -1751,11 +1752,9 @@ def silver_normal_bail():
     )
     final_normal_bail = final_grouped_result.orderBy("CaseNo", ascending=False).cache()
 
-
     df = final_normal_bail.select("ac.CaseNo",
                                     lit("Normal Bail").alias("BaseBailType"))
-    
-
+        
     return df
 
 

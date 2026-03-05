@@ -78,8 +78,9 @@ def previous_state_map(state: str):
         "ftpaSubmitted(a)":              "decided(a)",
         "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
-        "ended":                         "ftpaSubmitted(a)",
-        "remitted":                      "ftpaDecided"
+        "remitted":                      "ftpaDecided",
+        "ended":                         "ftpaSubmitted(a)"
+        
     }
 
     return previous_state.get(state, None)

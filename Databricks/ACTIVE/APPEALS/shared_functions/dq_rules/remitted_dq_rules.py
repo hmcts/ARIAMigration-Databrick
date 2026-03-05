@@ -33,7 +33,7 @@ class remittedDQRules(DQRulesBase):
         checks["valid_appealRemittedDate"] = (
             """
             (
-                appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd'))
+                appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd')
             )
             """)
 

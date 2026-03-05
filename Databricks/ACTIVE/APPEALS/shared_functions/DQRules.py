@@ -416,6 +416,23 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                                                 col("CaseStatus").alias("cs_39_outcome_14_30_31"),
                                                 col("Party").alias("cs39_party_14_30_31"))
 
+
+###################################################################################################
+    silver_m3_filtered_casestatus_remitted = silver_m3.filter(
+            col("CaseStatus").isin([42, 43, 44]) & (col("Outcome") == 86))
+
+    silver_m3_ranked_remitted = silver_m3_filtered_casestatus_remitted.withColumn(
+        "row_number", row_number().over(window_spec)
+    )
+    silver_m3_ranked_remitted = silver_m3_ranked_remitted.filter(col("row_number") == 1).drop("row_number")
+
+    valid_remitted = silver_m3_ranked_remitted.select(col("CaseNo"),col("DecisionDate").alias("DecisionDate_rem"))
+
+
+
+###################################################################################################
+
+
     return (
         df_final
             .join(valid_representation, on="CaseNo", how="left")
@@ -438,6 +455,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(cs39_out14_30_31_outcome, on="CaseNo", how="left")
             .join(valid_ended_new_columns, on="CaseNo", how="left")
             .join(valid_ended_updated_columns, on="CaseNo", how="left")
+            .join(valid_remitted, on="CaseNo", how="left")
     )
 
 

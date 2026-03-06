@@ -4827,6 +4827,15 @@ def generate_html(row, templates=templates):
         #Convert row to a dictionary
         row_dict = row.asDict()
 
+        def resolve_address(detained, dc_value, appellant_value):
+            if detained in ("HMP", "IRC"):
+                return dc_value or ""
+            elif detained == "No":
+                return appellant_value or ""
+            elif detained == "Other":
+                return dc_value if dc_value else appellant_value or ""
+            return ""
+
         date_fields = [
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
@@ -4842,25 +4851,28 @@ def generate_html(row, templates=templates):
 
         elif date_correct_fee_received is None and date_correct_fee_deemed_received is not None:
             row_dict["dateCorrectFeeReceived"] = None
+        
+        detained = row_dict.get("Detained")
 
-        # Create dynamic placeholder replacements
-        # replacements = {
-        #     f"{{{{{key}}}}}": format_date_iso(value) if key in date_fields and value is not None else str(value) if value is not None else ""
-        #     for key, value in row_dict.items()
-        # }
-
+        row_dict["AppellantAddress1"] = resolve_address(detained, row_dict.get("DCAddress1"), row_dict.get("AppellantAddress1"))
+        row_dict["AppellantAddress2"] = resolve_address(detained, row_dict.get("DCAddress2"), row_dict.get("AppellantAddress2"))
+        row_dict["AppellantAddress3"] = resolve_address(detained, row_dict.get("DCAddress3"), row_dict.get("AppellantAddress3"))
+        row_dict["AppellantAddress4"] = resolve_address(detained, row_dict.get("DCAddress4"), row_dict.get("AppellantAddress4"))
+        row_dict["AppellantAddress5"] = resolve_address(detained, row_dict.get("DCAddress5"), row_dict.get("AppellantAddress5"))
+        row_dict["DCPostcode"] = row_dict.get("AppellantPostcode") if detained == "No" else row_dict.get("DCPostcode")
+        row_dict["Country"] = row_dict.get("Country") if detained == "No" else ""
+                
         replacements = {
             f"{{{{{key}}}}}": (
-                format_date_iso(value) 
-                if key in date_fields 
-                and value is not None 
+                format_date_iso(value)
+                if key in date_fields
+                and value is not None
                 and not (key == "DateOfApplicationDecision" and row_dict.get("CaseFeeSummaryId") is None)
                 else str(value) if value is not None else ""
             )
             for key, value in row_dict.items()
         }
 
-        # Replace placeholders in the template
         for placeholder, value in replacements.items():
             html_template = html_template.replace(placeholder, value)
         
@@ -4924,15 +4936,8 @@ def generate_html(row, templates=templates):
             )
         }
 
-        # "{{StatusPlaceHolder}}": "\n".join(
-        #         f"<tr><td id=\"midpadding\">{status.CaseStatusDescription}</td><td id=\"midpadding\">{format_date(status.KeyDate)}</td><td id=\"midpadding\">{status.InterpreterRequired}</td><td id=\"midpadding\">{format_date(status.DecisionDate)}</td><td id=\"midpadding\">{status.DecisionTypeDescription}</td><td id=\"midpadding\">{format_date(status.Promulgated)}</td></tr>"
-        #         for i, status in enumerate(row.StatusDetails or [])
-        #     ),
-
-       
         for key, value in replacements.items():
             html_template = html_template.replace(key, value)
-
 
         # Dependent details handling dynamically
         dependent_details_Code = ""

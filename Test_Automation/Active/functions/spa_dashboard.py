@@ -30,7 +30,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     runs_pdf = get_runs().toPandas()
 
     runs_list = []
-    all_results = {}  # run_id -> list[dict] of all test results
+    all_results = {}
 
     for _, run in runs_pdf.iterrows():
         run_id = run.get("run_id")
@@ -127,6 +127,13 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     margin: 0 0 10px 0;
   }
 
+  .checkbox-wrap {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:8px;
+  }
+
   button {
     padding:8px 12px;
     cursor:pointer;
@@ -141,7 +148,6 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     width:120px; max-width:120px; overflow-wrap:anywhere;
   }
 
-  /* State Under Test (156px) */
   td.col-state, th.col-state {
     width:156px; max-width:156px; overflow-wrap:anywhere;
   }
@@ -209,10 +215,17 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     border: 1px solid #ccc;
     padding: 6px;
     text-align:left;
+    vertical-align: top;
   }
   table.compare th { background:#f2f2f2; }
   .match-row { background-color:#d4edda; }
   .diff-row { background-color:#fff3cd; }
+
+  td.col-error, th.col-error {
+    min-width: 220px;
+    max-width: 320px;
+    overflow-wrap:anywhere;
+  }
 </style>
 </head>
 
@@ -302,6 +315,16 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
       <select id="runB"><option value="">--Select--</option></select>
 
       <button id="compareBtn">Compare</button>
+
+      <label class="checkbox-wrap">
+        <input type="checkbox" id="showOnlyDifferences">
+        <span>Show only differences</span>
+      </label>
+
+      <label class="checkbox-wrap">
+        <input type="checkbox" id="showOnlyFailsBoth">
+        <span>Show only fails on both sides</span>
+      </label>
     </div>
 
     <div id="compareResults"></div>
@@ -370,6 +393,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
   let resultsTable = null;
   let currentRunId = null;
   let pieChart = null;
+  let lastCompareRows = [];
 
   function renderPie(results) {
     const totals = computeTotals(results);
@@ -422,7 +446,7 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
           { data:'result_id', className:'col-resultid' },
           { data:'run_id', className:'col-runid2' },
           { data:'test_name' },
-          { data:'status', render: function(d){ return statusBadge(d); } }, // Status after Test Name
+          { data:'status', render: function(d){ return statusBadge(d); } },
           { data:'test_field', className:'col-testfield' },
           { data:'test_from_state', className:'col-teststate' },
           { data:'message' }
@@ -436,12 +460,44 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     showPanel('panel-run');
   }
 
+  function renderCompareTable() {
+    const showOnlyDifferences = $('#showOnlyDifferences').is(':checked');
+    const showOnlyFailsBoth = $('#showOnlyFailsBoth').is(':checked');
+
+    let html = '<table class="compare"><tr><th>#</th><th>Test Name</th><th>Field</th><th>Run A Status</th><th>Error Message A</th><th>Run B Status</th><th>Error Message B</th></tr>';
+    let rowNum = 1;
+
+    lastCompareRows.forEach(row => {
+      if (showOnlyDifferences && row.statusA === row.statusB) {
+        return;
+      }
+
+      if (showOnlyFailsBoth && !(row.statusA === 'FAIL' && row.statusB === 'FAIL')) {
+        return;
+      }
+
+      html += '<tr class="' + row.rowClass + '">'
+        + '<td>' + rowNum + '</td>'
+        + '<td>' + row.testName + '</td>'
+        + '<td>' + row.testField + '</td>'
+        + '<td class="' + row.classA + '">' + row.statusA + '</td>'
+        + '<td class="col-error">' + row.messageA + '</td>'
+        + '<td class="' + row.classB + '">' + row.statusB + '</td>'
+        + '<td class="col-error">' + row.messageB + '</td>'
+        + '</tr>';
+
+      rowNum++;
+    });
+
+    html += '</table>';
+    $('#compareResults').html(html);
+  }
+
   $(document).ready(function() {
-    // Runs table (DEFAULT SORT: Start DESC)
     runsTable = $('#runsTable').DataTable({
       data: runsData,
       autoWidth: false,
-      order: [[6, 'desc']],   // "Start" column index (0-based): RunID(0),User(1),Status(2),Pass(3),Fail(4),Total(5),Start(6)
+      order: [[6, 'desc']],
       columns: [
         {
           data:'run_id',
@@ -464,25 +520,21 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
       pageLength: 15
     });
 
-    // Populate compare dropdowns
     Object.keys(allResults).forEach(rid => {
       $('#runA, #runB').append('<option value="' + rid + '">' + rid + '</option>');
     });
   });
 
-  // Click run id -> details
   $(document).on('click', 'a.run-link', function(e) {
     e.preventDefault();
     const runId = $(this).data('run');
     showRun(runId);
   });
 
-  // Back button
   $('#backToRunsBtn').on('click', function() {
     showPanel('panel-runs');
   });
 
-  // Download Excel (ALL results for this run)
   $('#downloadRunExcelBtn').on('click', function() {
     if (!currentRunId) {
       alert('Select a run first.');
@@ -513,7 +565,6 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     XLSX.writeFile(wb, "run_" + currentRunId + "_results.xlsx");
   });
 
-  // Compare
   $('#compareBtn').on('click', function() {
     const runA = $('#runA').val();
     const runB = $('#runB').val();
@@ -544,12 +595,11 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
     const allKeys = new Set([...Object.keys(mapA), ...Object.keys(mapB)]);
     const sortedKeys = Array.from(allKeys).sort((a,b) => a.localeCompare(b));
 
-    let html = '<table class="compare"><tr><th>#</th><th>Test Name</th><th>Field</th><th>Run A Status</th><th>Run B Status</th></tr>';
-    let rowNum = 1;
+    lastCompareRows = [];
 
     sortedKeys.forEach(key => {
-      const rowsA = mapA[key] || [{ status: 'MISSING' }];
-      const rowsB = mapB[key] || [{ status: 'MISSING' }];
+      const rowsA = mapA[key] || [{ status: 'MISSING', message: '' }];
+      const rowsB = mapB[key] || [{ status: 'MISSING', message: '' }];
       const maxLen = Math.max(rowsA.length, rowsB.length);
 
       const parts = key.split('|');
@@ -557,28 +607,38 @@ def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
       const testField = parts[1] || '';
 
       for (let i=0; i<maxLen; i++) {
-        const statusA = rowsA[i] ? (rowsA[i].status ?? 'MISSING') : 'MISSING';
-        const statusB = rowsB[i] ? (rowsB[i].status ?? 'MISSING') : 'MISSING';
+        const rowA = rowsA[i] || { status: 'MISSING', message: '' };
+        const rowB = rowsB[i] || { status: 'MISSING', message: '' };
 
-        const rowClass = (statusA === statusB) ? 'match-row' : 'diff-row';
-        const classA = (statusA === 'PASS') ? 'pass' : ((statusA === 'FAIL') ? 'fail' : 'missing');
-        const classB = (statusB === 'PASS') ? 'pass' : ((statusB === 'FAIL') ? 'fail' : 'missing');
+        const statusA = rowA.status ?? 'MISSING';
+        const statusB = rowB.status ?? 'MISSING';
+        const messageA = rowA.message ?? '';
+        const messageB = rowB.message ?? '';
 
-        html += '<tr class="' + rowClass + '">'
-          + '<td>' + rowNum + '</td>'
-          + '<td>' + testName + '</td>'
-          + '<td>' + testField + '</td>'
-          + '<td class="' + classA + '">' + statusA + '</td>'
-          + '<td class="' + classB + '">' + statusB + '</td>'
-          + '</tr>';
-
-        rowNum++;
+        lastCompareRows.push({
+          testName: testName,
+          testField: testField,
+          statusA: statusA,
+          statusB: statusB,
+          messageA: messageA,
+          messageB: messageB,
+          rowClass: (statusA === statusB) ? 'match-row' : 'diff-row',
+          classA: (statusA === 'PASS') ? 'pass' : ((statusA === 'FAIL') ? 'fail' : 'missing'),
+          classB: (statusB === 'PASS') ? 'pass' : ((statusB === 'FAIL') ? 'fail' : 'missing')
+        });
       }
     });
 
-    html += '</table>';
-    $('#compareResults').html(html);
+    renderCompareTable();
     showPanel('panel-compare');
+  });
+
+  $('#showOnlyDifferences').on('change', function() {
+    renderCompareTable();
+  });
+
+  $('#showOnlyFailsBoth').on('change', function() {
+    renderCompareTable();
   });
 </script>
 

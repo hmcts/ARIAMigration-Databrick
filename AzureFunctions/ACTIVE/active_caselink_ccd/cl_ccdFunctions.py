@@ -116,22 +116,19 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
 
 
 # caseNo = event.key, payloadData = event.value
-def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
+def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
     logger.info(f"Starting processing case for {ccdReference}")
-    start_date_time = datetime.now(timezone.utc).isoformat()
 
     try:
         idam_token, uid = idam_token_mgr.get_token()
-
     except Exception as e:
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
-            "StartDateTime": datetime.now(timezone.utc).isoformat(),
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather s2s token: {e}",
+            "Error": f"failed to gather s2s token: {e}"
         }
         return result
 
@@ -143,10 +140,9 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
-            "StartDateTime": datetime.now(timezone.utc).isoformat(),
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather IDAM token: {e}",
+            "Error": f"failed to gather IDAM token: {e}"
         }
         return result
 
@@ -185,10 +181,9 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
-            "StartDateTime": start_date_time,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"Case link event failed: {status_code} - {text}",
+            "Error": f"Case link event failed: {status_code} - {text}"
         }
         return result
 
@@ -197,7 +192,7 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
         logger.info(f"Case creation started for case {ccdReference} with event token {event_token}")
 
     # validate case
-    validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, payloadData, idam_token, s2s_token)
+    validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
     logger.info(f"Validation response for case {ccdReference}: {validate_case_response.status_code}")
     try:
@@ -219,7 +214,6 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
-            "StartDateTime": start_date_time,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"Case link validation failed: {status_code} - {text}",
@@ -230,7 +224,7 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
         logger.info(f"Validation passed for case {ccdReference}")
 
     # submit case
-    submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, payloadData, idam_token, s2s_token)
+    submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
     logger.info(f"Submit case response = {submit_case_response}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
@@ -247,7 +241,6 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
-            "StartDateTime": start_date_time,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"Case link submission failed: {status_code} - {text}",
@@ -259,11 +252,11 @@ def process_event(env, ccdReference, payloadData, runId, PR_NUMBER):
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
-            "CaseLinkCount": submit_case_response.json()["link"],  # TODO - find the correct property for case link count.
-            "StartDateTime": start_date_time,
+            "CaseLinkCount": len(caseLinkPayload),
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
-            "Status": "SUCCESS",
+            "Status": "Success",
             "Error": None
         }
+        print(submit_case_response.json())
         logger.info(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result

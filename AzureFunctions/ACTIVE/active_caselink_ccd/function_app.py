@@ -67,20 +67,20 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     logger.info(f"Event received with partition key: {event.partition_key}")
 
                     # Parse the payload
-                    start_datetime = datetime.now(timezone.utc).isoformat()
                     ccdReference = event.partition_key
                     payload_str = event.get_body().decode('utf-8')
                     payload = json.loads(payload_str)
                     run_id = payload.get("RunID", None)
-                    data = payload.get("Content", None)
+                    data = payload.get("CaseLinkPayload", None)
+                    start_datetime = payload.get("StartDateTime")
 
                     # Process the file
-                    result = await asyncio.to_thread(process_event, ENV, ccdReference, data, run_id, PR_NUMBER)
+                    result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_NUMBER)
                     result["StartDateTime"] = start_datetime
 
                     # Mark processed if success
                     if result.get("Status") == "Success":
-                        logger.info(f"Case linking processed from: {ccdReference} to: {ccdReference}")
+                        logger.info(f"Case linking processed from: {ccdReference} to: {", ".join(str(obj["id"]) for obj in data if "id" in obj)}")
 
                     result_json = json.dumps(result)
 

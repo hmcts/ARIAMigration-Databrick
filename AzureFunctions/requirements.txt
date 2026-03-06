@@ -10,7 +10,7 @@ attrs==25.1.0
 azure-core==1.31.0
 azure-eventhub==5.12.2
 azure-functions==1.21.3
-azure-identity==1.19.0
+azure-identity==1.25.2
 azure-keyvault==4.2.0
 azure-keyvault-certificates==4.9.0
 azure-keyvault-keys==4.10.0

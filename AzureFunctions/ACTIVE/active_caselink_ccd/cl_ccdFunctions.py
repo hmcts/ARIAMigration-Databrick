@@ -32,10 +32,10 @@ def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_to
     }
     try:
         response = requests.get(start_event_url, headers=headers)
-        logger.info(f"🔢 Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Response status: {response.status_code}:{response.text}")
         return response
     except Exception as e:
-        logger.error(f"❌ Network error while calling {start_event_url}: {e}")
+        print(f"❌ Network error while calling {start_event_url}: {e}")
         return None
 
 
@@ -54,7 +54,7 @@ def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadD
         try:
             payloadData = json.loads(payloadData)
         except json.JSONDecodeError as e:
-            logger.error(f"❌ Error decoding payloadData JSON string: {e}")
+            print(f"❌ Error decoding payloadData JSON string: {e}")
 
     try:
         json_object = {
@@ -64,15 +64,15 @@ def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadD
             "ignore_warning": True,
         }
 
-        logger.info(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
+        print(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
 
         response = requests.post(validate_case_url, headers=headers, json=json_object)
 
-        logger.info(f"🔢 Validate Response for {cid} = {response.status_code}: {response.text}")
+        print(f"🔢 Validate Response for {cid} = {response.status_code}: {response.text}")
         return response
 
     except Exception as e:
-        logger.error(f"❌ Network error while calling {validate_case_url}: {e}")
+        print(f"❌ Network error while calling {validate_case_url}: {e}")
         return None
 
 
@@ -91,9 +91,9 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         try:
             payloadData = json.loads(payloadData)
         except json.JSONDecodeError as e:
-            logger.error(f"❌ Error decoding payloadData JSON string: {e}")
+            print(f"❌ Error decoding payloadData JSON string: {e}")
 
-    logger.info("🎁 payload recieved for submission:", type(payloadData))
+    print("🎁 payload recieved for submission:", type(payloadData))
 
     try:
         json_object = {
@@ -103,21 +103,23 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
             "ignore_warning": True,
         }
 
-        logger.info(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {headers} json = {json_object}\n")
+        print(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {headers} json = {json_object}\n")
 
         response = requests.post(submit_event_url, headers=headers, json=json_object)
 
-        logger.info(f"🔢 Submit Response status for {cid}: {response.status_code}:{response.text}\n")
+        print(f"🔢 Submit Response status for {cid}: {response.status_code}:{response.text}\n")
         return response
 
     except Exception as e:
-        logger.error(f"❌ Network error while calling {submit_event_url}: {e}")
+        print(f"❌ Network error while calling {submit_event_url}: {e}")
         return None
 
 
 # caseNo = event.key, payloadData = event.value
 def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
-    logger.info(f"Starting processing case for {ccdReference}")
+    print(f"Starting processing case for {ccdReference}")
+
+    startDateTime = datetime.now(timezone.utc).isoformat()
 
     try:
         idam_token, uid = idam_token_mgr.get_token()
@@ -126,6 +128,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"failed to gather s2s token: {e}"
@@ -140,6 +143,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"failed to gather IDAM token: {e}"
@@ -158,14 +162,14 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
 
     try:
         ccd_base_url = urls[env]
-        logger.info(f"URL for {urls}")
+        print(f"URL for {urls}")
 
     except KeyError:
         raise ValueError("Invalid environment")
 
     # start case creation
     start_response = start_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, idam_token, s2s_token)
-    logger.info("Starting case event")
+    print("Starting case event")
 
     if start_response is None or start_response.status_code != 200:
         if start_response is not None:
@@ -175,12 +179,13 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             status_code = "N/A"
             text = "No response from API"
 
-        logger.error(f"Case event start failed: {status_code} - {text}")
+        print(f"Case event start failed: {status_code} - {text}")
 
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"Case link event failed: {status_code} - {text}"
@@ -189,16 +194,16 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
 
     else:
         event_token = start_response.json()["token"]
-        logger.info(f"Case creation started for case {ccdReference} with event token {event_token}")
+        print(f"Case creation started for case {ccdReference} with event token {event_token}")
 
     # validate case
     validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
-    logger.info(f"Validation response for case {ccdReference}: {validate_case_response.status_code}")
+    print(f"Validation response for case {ccdReference}: {validate_case_response.status_code}")
     try:
-        logger.info(json.dumps(validate_case_response.json(), indent=2))
+        print(json.dumps(validate_case_response.json(), indent=2))
     except Exception:
-        logger.error(validate_case_response.text)
+        print(validate_case_response.text)
 
     if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         if validate_case_response is not None:
@@ -208,12 +213,13 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             status_code = "N/A"
             text = "No response from API"
 
-        logger.error(f"Case validation failed: {status_code} - {text}")
+        print(f"Case validation failed: {status_code} - {text}")
 
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"Case link validation failed: {status_code} - {text}",
@@ -221,11 +227,11 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
         return result
 
     else:
-        logger.info(f"Validation passed for case {ccdReference}")
+        print(f"Validation passed for case {ccdReference}")
 
     # submit case
     submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
-    logger.info(f"Submit case response = {submit_case_response}")
+    print(f"Submit case response = {submit_case_response}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         if submit_case_response is not None:
@@ -235,12 +241,13 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             status_code = "N/A"
             text = "No response from API"
 
-        logger.error(f"Case submission failed: {status_code} - {text}")
+        print(f"Case submission failed: {status_code} - {text}")
 
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
             "Error": f"Case link submission failed: {status_code} - {text}",
@@ -253,10 +260,11 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_NUMBER):
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
             "CaseLinkCount": len(caseLinkPayload),
+            "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "Success",
             "Error": None
         }
         print(submit_case_response.json())
-        logger.info(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
+        print(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result

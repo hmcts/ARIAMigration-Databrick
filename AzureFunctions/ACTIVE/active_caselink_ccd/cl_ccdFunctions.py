@@ -12,7 +12,7 @@ try:
     from .cl_tokenManager import IDAMTokenManager, S2S_Manager
 except Exception:
     # fallback when running as a script in the same folder
-    from AzureFunctions.ACTIVE.active_caselink_ccd.cl_tokenManager import IDAMTokenManager, S2S_Manager
+    from cl_tokenManager import IDAMTokenManager, S2S_Manager
 
 logger = logging.getLogger(__name__)
 

@@ -52,7 +52,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     kv_client = SecretClient(vault_url=kv_url, credential=credential)
     logger.info(f"Connected to KeyVault: {kv_url}")
 
-    results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
+    results_eh_name = f"evh-active-caselink-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
     results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
     result_eh_secret_key = results_eh_key.value
     logger.info("Acquired KV secret for Results Event Hub")

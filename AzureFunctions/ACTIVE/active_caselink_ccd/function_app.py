@@ -80,7 +80,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
                     # Mark processed if success
                     if result.get("Status") == "Success":
-                        logger.info(f"Case linking processed from: {ccdReference} to: {", ".join(str(obj["id"]) for obj in data if "id" in obj)}")
+                        logger.info(f"Case linking processed from: {ccdReference} to: {', '.join(str(obj["id"]) for obj in data if 'id' in obj)}")
 
                     result_json = json.dumps(result)
 

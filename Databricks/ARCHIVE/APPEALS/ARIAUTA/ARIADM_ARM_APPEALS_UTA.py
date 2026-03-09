@@ -1168,7 +1168,8 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
     path=f"{bronze_mnt}/bronze_appealcase_ca_apt_country_detc"
 )
 def bronze_appealcase_ca_apt_country_detc():
-    
+
+    window = Window.partitionBy("ca.CaseNo")
     df = dlt.read("raw_caseappellant").alias("ca") \
         .join(
             dlt.read("raw_appellant").alias("a"),
@@ -1182,7 +1183,7 @@ def bronze_appealcase_ca_apt_country_detc():
             dlt.read("raw_country").alias("c"),
             col("a.AppellantCountryId") == col("c.CountryId"),
             "left_outer"
-        ).select(
+        ).withColumn("connectedFiles", when(count("ca.AppellantId").over(window) > 1, lit("Connected Files Exist")).otherwise(lit(None))).select(
             # Case Appellant fields
             col("ca.AppellantId"),
             trim(col("ca.CaseNo")).alias('CaseNo'),
@@ -1226,7 +1227,9 @@ def bronze_appealcase_ca_apt_country_detc():
             col("c.Code"),
             col("c.DoNotUse").alias("DoNotUseCountry"),
             col("c.Sdx").alias("CountrySdx"),
-            col("c.DoNotUseNationality")
+            col("c.DoNotUseNationality"),
+            "connectedFiles"
+
         )
         
     return df
@@ -3220,7 +3223,8 @@ def silver_applicant_detail():
         "ca.Code",
         "ca.DoNotUseCountry",
         "ca.CountrySdx",
-        "ca.DoNotUseNationality"
+        "ca.DoNotUseNationality",
+        "ca.connectedFiles"
     )
   
     return joined_df
@@ -5319,13 +5323,13 @@ def stg_statichtml_data():
     df_latest_status_details = df_status_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", col("CaseStatusDescription").alias("currentstatus"))
 
     # Derive connectedFiles column
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("CaseStatus").desc())
     df_link_details_derived = df_link_details.withColumn("connectedFiles", lit("Connected Files exist")).select("CaseNo", "connectedFiles").distinct()
 
     # Join all dataframes on CaseNo
     df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") \
-                                                            .join(df_link_details_derived, "CaseNo", "outer") \
                                                             .join(df_latest_status_details, "CaseNo", "outer") 
-                                                            # .join(df_link_details_derived, "CaseNo", "outer")
+                                                            #.join(df_link_details_derived, "CaseNo", "outer") \
 
     # display(df_stg_static_html_data)
 

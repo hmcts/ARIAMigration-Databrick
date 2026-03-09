@@ -4659,6 +4659,7 @@ def test_caseData_init(json, M1_bronze, M1_silver):
             "appealReferenceNumber",
             "submissionOutOfTime",
             # "recordedOutOfTimeDecision",
+            # "applicationOutOfTimeExplanation",
             "appealSubmissionDate",
             "appealSubmissionInternalDate",
             "tribunalReceivedDate",
@@ -4880,6 +4881,29 @@ def test_recordedOutOfTimeDecision_ac3(rod_test_df):
     except Exception as e:
         error_message = str(e)        
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+# applicationOutOfTimeExplanation - IF OutOfTimeIssue IS 1 = Include; ELSE OMIT
+#######################
+def test_applicationOutOfTimeExplanation(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("OutOfTimeIssue" == 1)).count() == 0:
+            return TestResult("applicationOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        ac1_applicationOutOfTimeExplanation = test_df.filter(
+            (col("OutOfTimeIssue") == 1) &
+            (col("applicationOutOfTimeExplanation").isNotNull()) &
+            (col("applicationOutOfTimeExplanation")!= "This is a migrated ARIA case. Please refer to the documents."))
+
+        if ac1_applicationOutOfTimeExplanation() != 0:
+            return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation().count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation has not been omitted.", test_from_state, inspect.stack()[0].function), ac4_sponsorAuthorisation_test1
+        else:
+            return TestResult("applicationOutOfTimeExplanation", "PASS", f"applicationOutOfTimeExplanation acceptance criteria passed, all cases where OutOfTimeIssue = 1 have applicationOutOfTimeExplanation omitted.", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("applicationOutOfTimeExplanation", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
 
 #######################
 #appealSubmissionDate - If M1.DateLodged != appealSubmissionDate

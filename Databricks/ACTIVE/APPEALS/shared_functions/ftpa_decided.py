@@ -101,7 +101,7 @@ def ftpa(silver_m3, silver_c):
     # Decision/outcome-driven decided fields (cs39 + outcome in 30/31/14)
     # ------------------------------------------------------------
     ftpaDec_df = (
-            m3_latest_cs39.alias("no_outcome").join(ftpa_df, on=["CaseNo"], how="left").join(m3_latest_cs39_outcome.alias("outcome"), on=["CaseNo"], how="left").join(ftpaFinalDecisionForDisplay.alias("ftpaFinalDescOutcome"), on=["CaseNo"], how="left")
+            m3_latest_cs39.alias("no_outcome").join(ftpa_df, on=["CaseNo"], how="full_outer").join(m3_latest_cs39_outcome.alias("outcome"), on=["CaseNo"], how="left").join(ftpaFinalDecisionForDisplay.alias("ftpaFinalDescOutcome"), on=["CaseNo"], how="left")
             .withColumn(
                 "ftpaApplicantType",
                 when(col("outcome.Party") == 1, lit("appellant"))

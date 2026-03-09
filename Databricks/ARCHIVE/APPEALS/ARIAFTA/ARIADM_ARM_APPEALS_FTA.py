@@ -2845,7 +2845,7 @@ def stg_skeleton_filtered():
             (
                 (col("ac.CasePrefix").isin("IA", "LD", "LE", "LH", "LP", "LR")) &
                 col("ac.HOANRef").isNotNull() &
-                ((add_years(col("t.DecisionDate"), 2) >= current_date()) | col("t.DecisionDate").isNull())
+                ((add_years(col("t.DecisionDate"), 2) >= lit("2026-02-01")) | col("t.DecisionDate").isNull())
             )
         )
     ).select("ac.CaseNo", lit('ARIAFTA').alias('Segment'))
@@ -3787,7 +3787,7 @@ def silver_status_detail():
                               "st.DeterminationByJudgeSurname",
                               "st.DeterminationByJudgeForenames",
                               "st.DeterminationByJudgeTitle",
-                              col("st.CaseStatusDescription").alias("CurrentStatus"),
+                              col("mx.CaseStatusDescription").alias("CurrentStatus"),
                               col("st.AdjournmentParentStatusId"),
                               when(col("st.IRISStatusOfCase") == 1, "Adjudicator Appeal")
                               .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
@@ -4017,8 +4017,6 @@ def silver_transaction_detail():
     ).filter(col("TransactionTypeId") == 1
     ).groupBy("CaseNo").agg(sum("Amount").alias("FirstTierFee"))
 
-    FirstTierFee_df.filter(col("CaseNo") == "PA/12591/2016").display()
-
     TotalFeeAdjustments_df = status_decision_df.join(
         referring_ids_df, 
         status_decision_df["TransactionId"] == referring_ids_df["ReferringTransactionId"],
@@ -4175,7 +4173,7 @@ def silver_documents_detail():
     documents_df = dlt.read("bronze_appealcase_dr_rd").alias("doc")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
-    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner").select("doc.*")
+    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner").withColumn("DocumentsReceived", when(col("doc.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None))).select("doc.*", "DocumentsReceived")
      
     return joined_df
 
@@ -5303,19 +5301,6 @@ lookup_list = lookup_df.collect()
     path=f"{silver_mnt}/stg_statichtml_data"
 )
 def stg_statichtml_data():
-    # df_transaction_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
-    # df_history_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_history_detail")
-    # df_status_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
-    # df_link_details = spark.read.table("hive_metastore.ariadm_arm_appeals.silver_link_detail")
-
-
-
-    # df_status = spark.table("hive_metastore.ariadm_arm_appeals.silver_status_detail")
-    # df_category = spark.table("hive_metastore.ariadm_arm_fta.silver_appealcategory_detail")
-    # df_transaction = spark.table("hive_metastore.ariadm_arm_appeals.silver_transaction_detail")
-    # df_case = spark.table("hive_metastore.ariadm_arm_fta.silver_appealcase_detail")
-    # df_applicant = spark.table("hive_metastore.ariadm_arm_fta.silver_applicant_detail")
-
     df_transaction_details = dlt.read("silver_transaction_detail")
     df_category = dlt.read("silver_appealcategory_detail")
     df_history_details =  dlt.read("silver_history_detail")
@@ -5333,7 +5318,7 @@ def stg_statichtml_data():
     df_latest_history_details = df_history_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", "lastDocument", "fileLocation1")
 
     # Get the latest status details
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("KeyDate").desc())
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("CaseStatus").desc())
     df_latest_status_details = df_status_details.withColumn("row_num", row_number().over(window_spec)).filter(col("row_num") == 1).drop("row_num").select("CaseNo", col("CaseStatusDescription").alias("currentstatus"))
 
     # Derive connectedFiles column
@@ -5341,8 +5326,9 @@ def stg_statichtml_data():
 
     # Join all dataframes on CaseNo
     df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") \
-                                                            .join(df_latest_status_details, "CaseNo", "outer") \
-                                                            .join(df_link_details_derived, "CaseNo", "outer")
+                                                            .join(df_link_details_derived, "CaseNo", "outer") \
+                                                            .join(df_latest_status_details, "CaseNo", "outer") 
+                                                            # .join(df_link_details_derived, "CaseNo", "outer")
 
     # display(df_stg_static_html_data)
 

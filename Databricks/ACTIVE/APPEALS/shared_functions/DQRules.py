@@ -240,14 +240,36 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .drop("HearingCentre")
     )
 
+    
     # decided(a) - hearing actuals
-    valid_decided_outcome = (
-        silver_m3.filter(col("CaseStatus").isin(37, 38, 26) & col("Outcome").isin(1, 2))
+    silver_m3_filtered = (
+        silver_m3
+            .filter(
+                col("CaseStatus").isin([37, 38, 26]) & col("Outcome").isin([1, 2])
+            )
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1)
-            .select(col("CaseNo"), col("Outcome").alias("Outcome_SD"), col("HearingDuration"), col("Adj_Determination_Title"),
-                    col("Adj_Determination_Forenames"), col("Adj_Determination_Surname"), col("DecisionDate"))
+            .select(
+                col("CaseNo"),
+                col("Outcome").alias("Outcome_SD"),
+                col("CaseStatus").alias("CaseStatus_SD"),
+                col("HearingDuration"),
+                col("Adj_Determination_Title"),
+                col("Adj_Determination_Forenames"),
+                col("Adj_Determination_Surname"),
+                col("DecisionDate"),
+            )
     )
+
+    silver_c_filtered = (
+        silver_c
+            .filter(col("CategoryId").isin([37, 38]))
+            .select(col("CaseNo"), col("CategoryId"))
+            .distinct()
+    )
+
+    valid_decided_outcome = silver_m3_filtered.join(silver_c_filtered, on="CaseNo", how="left")
+
 
     # ftpaSubmitted - ftpa
     valid_ftpa = (
@@ -322,7 +344,6 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             col("m1.dv_representation").alias("dv_representation_ended")
         )
     )
-
 
   ######################Ended State Update Columns#######################################
     df = (

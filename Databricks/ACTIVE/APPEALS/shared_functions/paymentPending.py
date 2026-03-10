@@ -351,7 +351,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     ).withColumn(
         "appealWasNotSubmittedReason", when(((col("m1.dv_representation") == "LR") & (col("lu_appealType").isNotNull())), "This is an ARIA Migrated Case.").otherwise(None)
     ).withColumn(
-        "applicationOutOfTimeExplanation", when(col("OutOfTimeIssue") == lit("true"), "This is a migrated ARIA case. Please refer to the documents.").otherwise(None)
+        "applicationOutOfTimeExplanation", when(col("OutOfTimeIssue") == True, "This is a migrated ARIA case. Please refer to the documents.").otherwise(None)
     ).withColumn(
         "appealSubmissionDate", date_format(col("m1.DateLodged"), "yyyy-MM-dd")
     ).withColumn(

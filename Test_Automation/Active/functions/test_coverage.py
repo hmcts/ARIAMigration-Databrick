@@ -1,15 +1,69 @@
 from pyspark.sql import functions as F
 from html import escape
+import json
 
 
 def generate_transformation_test_coverage_report(
     spark,
     runs_table,
     results_table,
-    test_names,
+    tests_by_state,
     state_display_order=None,
     output_file=None
 ):
+    """
+    Generate Transformation Tests coverage report.
+
+    Parameters
+    ----------
+    spark : SparkSession
+    runs_table : str
+    results_table : str
+    tests_by_state : dict[str, list[str]]
+        Dict where:
+            key   = state the test is from
+            value = list of test names for that state
+    state_display_order : list[str], optional
+    output_file : str, optional
+
+    Returns
+    -------
+    str
+        HTML report
+    """
+
+    # ---------------------------------------------------
+    # FLATTEN INPUT TESTS
+    # ---------------------------------------------------
+
+    test_records = []
+    for test_from_state, tests in tests_by_state.items():
+        if tests:
+            for test_name in tests:
+                test_records.append(
+                    {
+                        "test_from_state": str(test_from_state) if test_from_state is not None else "",
+                        "test_name": str(test_name) if test_name is not None else ""
+                    }
+                )
+
+    # preserve order, remove duplicates by (state, test)
+    seen = set()
+    ordered_test_records = []
+    for rec in test_records:
+        key = (rec["test_from_state"], rec["test_name"])
+        if key not in seen:
+            seen.add(key)
+            ordered_test_records.append(rec)
+
+    all_test_names = [r["test_name"] for r in ordered_test_records]
+    filter_states = []
+    seen_filter_states = set()
+    for rec in ordered_test_records:
+        state_val = rec["test_from_state"]
+        if state_val not in seen_filter_states:
+            seen_filter_states.add(state_val)
+            filter_states.append(state_val)
 
     # ---------------------------------------------------
     # LOAD DATA
@@ -30,7 +84,7 @@ def generate_transformation_test_coverage_report(
 
     results_df = (
         spark.table(results_table)
-        .filter(F.col("test_name").isin(test_names))
+        .filter(F.col("test_name").isin(all_test_names))
         .select(
             "run_id",
             "test_name",
@@ -115,7 +169,7 @@ def generate_transformation_test_coverage_report(
     # SUMMARY COUNTS
     # ---------------------------------------------------
 
-    total_tests_count = len(test_names)
+    total_tests_count = len(ordered_test_records)
     tests_with_any_states_passing = 0
     tests_with_no_states_passing = 0
 
@@ -123,9 +177,19 @@ def generate_transformation_test_coverage_report(
     # BUILD REPORT ROWS
     # ---------------------------------------------------
 
-    for test in test_names:
+    for idx, test_rec in enumerate(ordered_test_records, start=1):
 
-        row = f"<tr class='data-row' data-states-passing='0'><td class='sticky test-col'>{escape(test)}</td>"
+        test_from_state = test_rec["test_from_state"]
+        test_name = test_rec["test_name"]
+
+        row = (
+            f"<tr class='data-row' "
+            f"data-states-passing='0' "
+            f"data-test-from-state='{escape(test_from_state)}'>"
+            f"<td class='row-num-col'>{idx}</td>"
+            f"<td class='from-state-col'>{escape(test_from_state)}</td>"
+            f"<td class='sticky test-col'>{escape(test_name)}</td>"
+        )
 
         total_pass = 0
         total_fail = 0
@@ -136,7 +200,7 @@ def generate_transformation_test_coverage_report(
 
         for state in states:
 
-            item = lookup.get((test, state))
+            item = lookup.get((test_name, state))
 
             if item is None:
                 p = f = t = 0
@@ -173,8 +237,8 @@ def generate_transformation_test_coverage_report(
         pass_class = "states-pass-good" if states_passing == len(states) and len(states) > 0 else "states-pass-bad"
 
         row = row.replace(
-            "class='data-row' data-states-passing='0'",
-            f"class='data-row' data-states-passing='{states_passing}'"
+            "data-states-passing='0'",
+            f"data-states-passing='{states_passing}'"
         )
 
         row += f"""
@@ -188,6 +252,11 @@ def generate_transformation_test_coverage_report(
         """
 
         rows.append(row)
+
+    filter_state_options_html = "".join(
+        f"<option value='{escape(s)}'>{escape(s)}</option>"
+        for s in filter_states
+    )
 
     # ---------------------------------------------------
     # HTML OUTPUT
@@ -247,6 +316,12 @@ body {{
     user-select: none;
 }}
 
+.controls select {{
+    margin-right: 18px;
+    padding: 4px 6px;
+    font-size: 13px;
+}}
+
 table {{
     border-collapse: collapse;
 }}
@@ -262,6 +337,20 @@ th {{
     background: #f2f2f2;
     white-space: normal;
     word-wrap: break-word;
+    word-break: break-word;
+}}
+
+.row-num-col {{
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+}}
+
+.from-state-col {{
+    width: 99px;
+    min-width: 99px;
+    max-width: 99px;
+    white-space: normal;
     word-break: break-word;
 }}
 
@@ -349,19 +438,25 @@ thead .sticky {{
 <div class="summary-cards">
     <div class="summary-card">
         <div class="label">Total Tests</div>
-        <div class="value">{total_tests_count}</div>
+        <div class="value" id="summaryTotalTests">{total_tests_count}</div>
     </div>
     <div class="summary-card">
         <div class="label">Passed in One or More States</div>
-        <div class="value">{tests_with_any_states_passing}</div>
+        <div class="value" id="summaryPassedSome">{tests_with_any_states_passing}</div>
     </div>
     <div class="summary-card">
         <div class="label">Not Passed in Any State</div>
-        <div class="value">{tests_with_no_states_passing}</div>
+        <div class="value" id="summaryPassedNone">{tests_with_no_states_passing}</div>
     </div>
 </div>
 
 <div class="controls">
+    <label for="filterTestFromState">Test From State:</label>
+    <select id="filterTestFromState">
+        <option value="">All</option>
+        {filter_state_options_html}
+    </select>
+
     <label>
         <input type="checkbox" id="filterNoCoverage">
         Show where no Coverage
@@ -377,6 +472,8 @@ thead .sticky {{
 
 <thead>
 <tr>
+    <th class="row-num-col">#</th>
+    <th class="from-state-col">Test From State</th>
     <th class="sticky">Test</th>
     {''.join(f"<th class='state-header'><div>{escape(str(s))}</div></th>" for s in states)}
     <th>Total Pass</th>
@@ -399,34 +496,67 @@ thead .sticky {{
 (function() {{
     const noCoverageCheckbox = document.getElementById("filterNoCoverage");
     const coveredCheckbox = document.getElementById("filterCovered");
+    const testFromStateSelect = document.getElementById("filterTestFromState");
     const rows = Array.from(document.querySelectorAll("tbody tr.data-row"));
+
+    const summaryTotalTests = document.getElementById("summaryTotalTests");
+    const summaryPassedSome = document.getElementById("summaryPassedSome");
+    const summaryPassedNone = document.getElementById("summaryPassedNone");
+
+    function updateSummary() {{
+        const visibleRows = rows.filter(row => row.style.display !== "none");
+        const total = visibleRows.length;
+
+        let passedSome = 0;
+        let passedNone = 0;
+
+        visibleRows.forEach(row => {{
+            const statesPassing = parseInt(row.getAttribute("data-states-passing") || "0", 10);
+            if (statesPassing > 0) {{
+                passedSome += 1;
+            }} else {{
+                passedNone += 1;
+            }}
+        }});
+
+        summaryTotalTests.textContent = total;
+        summaryPassedSome.textContent = passedSome;
+        summaryPassedNone.textContent = passedNone;
+    }}
 
     function applyFilters() {{
         const showNoCoverage = noCoverageCheckbox.checked;
         const showCovered = coveredCheckbox.checked;
+        const selectedTestFromState = testFromStateSelect.value;
 
         rows.forEach(row => {{
             const statesPassing = parseInt(row.getAttribute("data-states-passing") || "0", 10);
+            const testFromState = row.getAttribute("data-test-from-state") || "";
 
             const isNoCoverage = statesPassing === 0;
             const isCovered = statesPassing !== 0;
+            const matchesTestFromState = selectedTestFromState === "" || testFromState === selectedTestFromState;
 
-            let show = true;
+            let showByCoverage = true;
 
             if (showNoCoverage && !showCovered) {{
-                show = isNoCoverage;
+                showByCoverage = isNoCoverage;
             }} else if (!showNoCoverage && showCovered) {{
-                show = isCovered;
+                showByCoverage = isCovered;
             }} else {{
-                show = true;
+                showByCoverage = true;
             }}
 
+            const show = showByCoverage && matchesTestFromState;
             row.style.display = show ? "" : "none";
         }});
+
+        updateSummary();
     }}
 
     noCoverageCheckbox.addEventListener("change", applyFilters);
     coveredCheckbox.addEventListener("change", applyFilters);
+    testFromStateSelect.addEventListener("change", applyFilters);
 
     applyFilters();
 }})();

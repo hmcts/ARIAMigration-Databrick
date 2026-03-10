@@ -1,0 +1,22 @@
+﻿CaseStatus,Outcome,endAppealOutcome,endAppealOutcomeReason,stateBeforeEndAppeal
+37,80,Abandoned,This is a migrated case. The final outcome was First Tier - Hearing | Abandoned.,listing
+38,80,Abandoned,This is a migrated case. The final outcome was First Tier - Paper | Abandoned.,listing
+10,80,Abandoned,This is a migrated case. The final outcome was Preliminary Issue | Abandoned.,appealSubmitted
+10,122,Abandoned,This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD).,appealSubmitted
+26,80,Abandoned,This is a migrated case. The final outcome was Case Management Review | Abandoned.,IF Representation IS LR = caseUnderReview; IF Representation IS AIP = reasonsForAppealSubmitted
+51,94,Struck Out,This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out.,pendingPayment
+37,13,No Valid Appeal,This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal.,listing
+38,13,No Valid Appeal,This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal.,listing
+26,13,No Valid Appeal,This is a migrated case. The final outcome was Case Management Review | No Valid Appeal.,IF Representation IS LR = caseUnderReview; IF Representation IS AIP = reasonsForAppealSubmitted
+37,25,Withdrawn,This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn.,listing
+38,25,Withdrawn,This is a migrated case. The final outcome was First Tier - Paper | Withdrawn.,listing
+39,25,Withdrawn,This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn.,ftpaSubmitted
+10,25,Withdrawn,This is a migrated case. The final outcome was Preliminary Issue | Withdrawn.,appealSubmitted
+26,25,Withdrawn,This is a migrated case. The final outcome was Case Management Review | Withdrawn.,IF Representation IS LR = caseUnderReview; IF Representation IS AIP = reasonsForAppealSubmitted
+52,91,Struck Out,This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt.,pendingPayment
+52,95,Struck Out,This is a migrated case. The final outcome was Case closed fee outstanding | Write Off.,pendingPayment
+51,93,Struck Out,This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure.,pendingPayment
+38,72,Abandoned,This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16.,listing
+10,120,Struck Out,This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD).,appealSubmitted
+10,2,Struck Out,This is a migrated case. The final outcome was Preliminary Issue | Dismissed.,appealSubmitted
+46,31,Struck Out,This is a migrated case. The final outcome was Set Aside Application | Refused.,appealSubmitted

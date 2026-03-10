@@ -1,0 +1,22 @@
+resources:
+  jobs:
+    case_linking_databricks_job:
+      name: case_linking_databricks_job
+      job_clusters:
+        - job_cluster_key: case_linking_databricks_job
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_D8ds_v5
+            num_workers: 8
+      tasks:        
+        - task_key: DLT_creation_of_case_linking
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.pipeline_pl_ariadm_active_appeals_case_linking.id}
+            full_refresh: true
+        - task_key: active_case_link_publish
+          depends_on: 
+            - task_key: DLT_creation_of_case_linking
+          job_cluster_key: case_linking_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE/MVP/Active_CCD_Publish_Case_Linking"
+            source: WORKSPACE

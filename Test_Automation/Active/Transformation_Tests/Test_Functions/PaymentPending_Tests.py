@@ -1530,7 +1530,7 @@ def test_appellantdetails_init(json, M2_bronze, M1_bronze, C):
             "AppealReferenceNumber", "appellantFamilyName", "appellantGivenNames",
             "appellantNameForDisplay", "appellantDateOfBirth", "isAppellantMinor",
             "caseNameHmctsInternal", "hmctsCaseNameInternal", "internalAppellantEmail",
-            "email", 
+            "email", "appellantHasFixedAddress", "appellantHasFixedAddressAdminJ",
             # "internalAppellantMobileNumber", "mobileNumber", 
             "appellantInUk", "appealOutOfCountry", "oocAppealAdminJ",
             "appellantAddress", "addressLine1AdminJ", "addressLine2AdminJ",
@@ -1594,6 +1594,8 @@ def test_appellantdetails_init(json, M2_bronze, M1_bronze, C):
                 first("internalAppellantEmail").alias("internalAppellantEmail"),
                 first("email").alias("email"),
                 first("appellantInUk").alias("appellantInUk"),
+                first("appellantHasFixedAddress").alias("appellantHasFixedAddress"),
+                first("appellantHasFixedAddressAdminJ").alias("appellantHasFixedAddressAdminJ"),
                 first("appealOutOfCountry").alias("appealOutOfCountry"),
                 first("oocAppealAdminJ").alias("oocAppealAdminJ"),
                 first("addressLine1AdminJ").alias("addressLine1AdminJ"),
@@ -1678,6 +1680,53 @@ def test_appellantGivenNames(test_df):
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantGivenNames", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)        
+
+
+# IF CategoryId IN [38] = Include; ELSE OMIT
+#######################
+#appellantHasFixedAddress - If CategoryId not in 38 
+#######################
+def test_appellantHasFixedAddress(test_df):
+    try:        
+        #Check we have Records To test
+        if test_df.filter(~array_contains(col("CategoryIds"), 38)).count() == 0:
+            return TestResult("appellantHasFixedAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        ac1_appellantHasFixedAddress = test_df.filter(
+        (~(array_contains(col("CategoryIds"), 38))) &
+        (col("appellantHasFixedAddress").isNotNull())
+        )
+
+        if ac1_appellantHasFixedAddress.count() != 0:
+            return TestResult("appellantHasFixedAddress", "FAIL", f"appellantHasFixedAddress acceptance criteria - failed: {str(ac1_appellantHasFixedAddress.count())} cases have been found where the CategoryIds do not contain 38", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appellantHasFixedAddress", "PASS", f"appellantHasFixedAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have been included.", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("appellantHasFixedAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+    
+# IF CategoryId IN [37] = Include; ELSE OMIT
+#######################
+#appellantHasFixedAddressAdminJ - If CategoryId not in 37
+#######################
+def test_appellantHasFixedAddressAdminJ(test_df):
+    try:        
+        #Check we have Records To test
+        if test_df.filter(~array_contains(col("CategoryIds"), 37)).count() == 0:
+            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        ac1_appellantHasFixedAddressAdminJ = test_df.filter(
+        (~(array_contains(col("CategoryIds"), 37))) &
+        (col("appellantHasFixedAddressAdminJ").isNotNull())
+        )
+
+        if ac1_appellantHasFixedAddressAdminJ.count() != 0:
+            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", f"appellantHasFixedAddressAdminJ acceptance criteria - failed: {str(ac1_appellantHasFixedAddressAdminJ.count())} cases have been found where the CategoryIds do not contain 37", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appellantHasFixedAddressAdminJ", "PASS", f"appellantHasFixedAddressAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 37 have been included.", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("appellantHasFixedAddressAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
 
 #######################
 #appellantNameForDisplay 
@@ -4663,7 +4712,9 @@ def test_caseData_init(json, M1_bronze, M1_silver):
             "appealSubmissionDate",
             "appealSubmissionInternalDate",
             "tribunalReceivedDate",
-            "appellantsRepresentation"
+            "appellantsRepresentation",
+            "hearingCentreDynamicList",
+            "caseManagementLocationRefData"
         )
 
         M1_bronze = M1_bronze.select(
@@ -4939,7 +4990,91 @@ def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
     except Exception as e:
         error_message = str(e)        
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
+
+#######################
+#"caseManagementLocationRefData": locationCode and locationLabel must be mapped
+#######################
+def test_caseManagementLocationRefData(test_df):
+    try:        
+        # Define the deep paths for the mandatory subfields
+        code_path = "caseManagementLocationRefData.baseLocation.value.code"
+        label_path = "caseManagementLocationRefData.baseLocation.value.label"
+
+        # Check for records where mandatory mapping is missing
+        invalid_mapping = test_df.filter(
+            (col(code_path).isNull()) | 
+            (col(label_path).isNull())
+        )
+
+        invalid_count = invalid_mapping.count()
+
+        if invalid_count != 0:
+            return TestResult(
+                "caseManagementLocationRefData", 
+                "FAIL", 
+                f"Mapping criteria failed: {invalid_count} cases found where locationCode or locationLabel is NULL.", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
+        else:
+            return TestResult(
+                "caseManagementLocationRefData", 
+                "PASS", 
+                "Acceptance criteria passed: All records have mandatory location subfields populated.", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
+    except Exception as e:
+        return TestResult(
+            "caseManagementLocationRefData", 
+            "FAIL", 
+            f"TEST FAILED WITH EXCEPTION: {str(e)[:300]}", 
+            test_from_state, 
+            inspect.stack()[0].function
+        )
+
+#######################
+#"hearingCentreDynamicList": locationCode and locationLabel must be mapped
+#######################
+def test_hearingCentreDynamicList(test_df):
+    try:        
+        # Define the paths for the mandatory subfields
+        code_path = "hearingCentreDynamicList.value.code"
+        label_path = "hearingCentreDynamicList.value.label"
+
+        # Check for records where mandatory mapping is missing
+        invalid_mapping = test_df.filter(
+            (col(code_path).isNull()) | 
+            (col(label_path).isNull())
+        )
+
+        invalid_count = invalid_mapping.count()
+
+        if invalid_count != 0:
+            return TestResult(
+                "hearingCentreDynamicList", 
+                "FAIL", 
+                f"Mapping criteria failed: {invalid_count} cases found where locationCode or locationLabel is NULL.", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
+        else:
+            return TestResult(
+                "hearingCentreDynamicList", 
+                "PASS", 
+                "Acceptance criteria passed: All records have mandatory location subfields populated.", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
+    except Exception as e:
+        return TestResult(
+            "hearingCentreDynamicList", 
+            "FAIL", 
+            f"TEST FAILED WITH EXCEPTION: {str(e)[:300]}", 
+            test_from_state, 
+            inspect.stack()[0].function
+        )
+
 #######################
 # applicationOutOfTimeExplanation - IF OutOfTimeIssue IS 1 = Include; ELSE OMIT
 #######################
@@ -6319,6 +6454,9 @@ def test_default_mapping_init(json):
     try:
         test_df = json.select(
             "appealReferenceNumber",
+            "isAppealReferenceNumberAvailable",
+            "caseLinks",
+            "appellantInDetention",
             "ccdReferenceNumberForDisplay",
             "hasOtherAppeals",
             "adminDeclaration1",
@@ -6357,7 +6495,11 @@ def test_default_mapping_init(json):
             "uploadAdditionalEvidenceHomeOfficeActionAvailable",
             "uploadTheAppealFormDocs",
             "tribunalDocuments",
-            "legalRepresentativeDocuments"
+            "legalRepresentativeDocuments",
+            "feePaymentAppealType",
+            "paymentStatus",
+            "hasServiceRequestAlready",
+            "feeVersion"
         )
         return test_df, True
     except Exception as e:
@@ -6368,6 +6510,8 @@ def test_PP_defaultValues(test_df):
     try:
         expected_defaults = {
             "ccdReferenceNumberForDisplay": "",
+            "isAppealReferenceNumberAvailable": "Yes",
+            "appellantInDetention": "No",
             "hasOtherAppeals": "NotSure",
             "s94bStatus": "No",
             "isAdmin": "Yes",
@@ -6406,9 +6550,10 @@ def test_PP_defaultValues(test_df):
             "notificationsSent": None,
             "uploadTheAppealFormDocs": None,
             "tribunalDocuments": None,
-            "legalRepresentativeDocuments": None
+            "legalRepresentativeDocuments": None,
+            "caseLinks": None
         }
-        
+
         results_list = []
 
         for field, expected in expected_defaults.items():
@@ -6452,7 +6597,33 @@ def test_PP_defaultValues(test_df):
                     test_from_state,
                     inspect.stack()[0].function
                 ))
+        
+        allowed_appeal_types = ["EA", "EU", "HU", "PA"]
+        conditional_checks = [
+            ("feePaymentAppealType", "Yes"),
+            ("paymentStatus", "Payment Pending"),
+            ("hasServiceRequestAlready", "No"),
+            ("feeVersion", "2")
+        ]
 
+        for field, expected_val in conditional_checks:
+           
+            invalid_records = test_df.filter(
+                (col("appealType").isin(allowed_appeal_types)) & (col(field) != expected_val)
+            )
+            
+            if invalid_records.count() != 0:
+                results_list.append(TestResult(
+                    field, "FAIL", 
+                    f"Conditional Default Failed: {invalid_records.count()} cases found where appealType is {allowed_appeal_types} but {field} is not '{expected_val}'", 
+                    test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult(
+                    field, "PASS", 
+                    f"Conditional Default Passed: {field} correctly set for appeal types {allowed_appeal_types}", 
+                    test_from_state, inspect.stack()[0].function))
+       
+        
         return results_list
     except Exception as e:
         error_message = str(e)        

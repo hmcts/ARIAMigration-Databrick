@@ -4943,8 +4943,39 @@ def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
 #######################
 # applicationOutOfTimeExplanation - IF OutOfTimeIssue IS 1 = Include; ELSE OMIT
 #######################
-def test_applicationOutOfTimeExplanation(test_df):
+def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json.select(
+                "appealReferenceNumber",
+                "applicationOutOfTimeExplanation"
+            )
+
+            M3_bronze = M3_bronze.select(
+                "CaseNo",
+                "Outcome"
+            ) 
+
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("CaseNo-M1"),
+                "OutOfTimeIssue"
+            )
+
+            test_df = json.join(
+                M3_bronze,
+                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                "inner"
+            )
+
+            test_df = test_df.join(
+                M1_bronze,
+                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                "inner"
+            )
+        except Exception as e:
+            error_message = str(e)        
+            return TestResult("applicationOutOfTimeExplanation", "FAIL",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        
         #Check we have Records To test
         if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
             return TestResult("applicationOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
@@ -4952,7 +4983,7 @@ def test_applicationOutOfTimeExplanation(test_df):
         ac1_applicationOutOfTimeExplanation = test_df.filter(
             (
                 (col("OutOfTimeIssue") == 1)
-            )&
+            ) &
             (
                 (col("applicationOutOfTimeExplanation").isNotNull()) &
                 (col("applicationOutOfTimeExplanation") == "This is a migrated ARIA case. Please refer to the documents.")

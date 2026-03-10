@@ -1,7 +1,7 @@
 from Databricks.ACTIVE.APPEALS.shared_functions import listing
 
 from pyspark.sql import SparkSession
-from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.sql.types import IntegerType, StringType, BooleanType, StructField, StructType
 from pyspark.testing.utils import assertDataFrameEqual
 from unittest.mock import patch
 
@@ -75,7 +75,7 @@ class TestListingState():
         StructField("Sponsor_Name", StringType()),
         StructField("Interpreter", IntegerType()),
         StructField("CourtPreference", IntegerType()),
-        StructField("InCamera", IntegerType()),
+        StructField("InCamera", BooleanType()),
         StructField("LanguageId", IntegerType())
     ])
     M3_COLUMNS = StructType([
@@ -92,19 +92,19 @@ class TestListingState():
 
     def test_hearing_requirements_yes_no_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FT", None, 0, 0, 0, 0),             # AIP Case
-            ("2", "LR", "FT", None, 0, 0, 0, 0),              # LR Case
-            ("3", "AIP", "FT", None, 1, 0, 0, 0),             # Interpreter Case 1
-            ("4", "AIP", "FT", None, 2, 0, 0, 0),             # Interpreter Case 2
-            ("5", "LR", "FT", None, 0, 1, 0, 0),              # Court Preference All Male
-            ("6", "AIP", "FT", None, 0, 2, 0, 0),             # Court Preference All Female
-            ("7", "LR", "FT", None, 0, 0, 1, 0),              # In Camera
+            ("1", "AIP", "FT", None, 0, 0, False, 0),             # AIP Case
+            ("2", "LR", "FT", None, 0, 0, False, 0),              # LR Case
+            ("3", "AIP", "FT", None, 1, 0, False, 0),             # Interpreter Case 1
+            ("4", "AIP", "FT", None, 2, 0, False, 0),             # Interpreter Case 2
+            ("5", "LR", "FT", None, 0, 1, False, 0),              # Court Preference All Male
+            ("6", "AIP", "FT", None, 0, 2, False, 0),             # Court Preference All Female
+            ("7", "LR", "FT", None, 0, 0, True, 0),              # In Camera
             ("8", None, None, None, None, None, None, None),  # All None
-            ("9", "AIP", "FT", None, 1, 1, 1, 1),             # All 1
-            ("10", "NotValid", "FT", None, 0, 0, 0, 0),       # Not AIP or LR
-            ("11", "LR", "FT", None, 3, 0, 0, 0),             # Interpreter is not 1 or 2
-            ("12", "AIP", "FT", None, 0, 3, 0, 0),            # Court Preference is not 1 or 2
-            ("13", "LR", "FT", None, 0, 0, 2, 0),             # In Camera is not 1
+            ("9", "AIP", "FT", None, 1, 1, True, 1),             # All 1
+            ("10", "NotValid", "FT", None, 0, 0, False, 0),       # Not AIP or LR
+            ("11", "LR", "FT", None, 3, 0, False, 0),             # Interpreter is not 1 or 2
+            ("12", "AIP", "FT", None, 0, 3, False, 0),            # Court Preference is not 1 or 2
+            ("13", "LR", "FT", None, 0, 0, False, 0),             # In Camera is not 1
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
@@ -121,28 +121,28 @@ class TestListingState():
 
     def test_hearing_requirements_interpreter_language_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FTPA", None, 1, 0, 0, 1),    # LanguageCode 1 - Spoken Language
-            ("2", "AIP", "FTPA", None, 1, 0, 0, 5),    # LanguageCode 5 - Spoken Language Manual Entry
-            ("3", "AIP", "FTPA", None, 1, 0, 0, 6),    # LanguageCode 6 - Sign Language
-            ("4", "AIP", "FTPA", None, 1, 0, 0, 8),    # LanguageCode 7 - Sign Language Manual Entry
-            ("5", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken (+ Latest StatusId Check)
-            ("6", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken Manual
-            ("7", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign
-            ("8", "AIP", "FT", None, 1, 0, 0, 1),      # For m3 conditional tests - Additional Language Spoken + Sign Manual
-            ("9", "AIP", "FT", None, 1, 0, 0, 6),      # For m3 conditional tests - Additional Language Sign + Sign
-            ("10", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Spoken Manual
-            ("11", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Additional Language Sign + Sign Manual
-            ("12", "AIP", "FT", None, 1, 0, 0, 5),     # For m3 conditional tests - Additional Language Spoken Manual + Spoken Manual
-            ("13", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Spoken Manual
-            ("14", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Additional Language Sign Manual + Sign Manual
-            ("15", "AIP", "FT", None, 1, 0, 0, 1),     # For m3 conditional tests - Two of the same spoken language
-            ("16", "AIP", "FT", None, 1, 0, 0, 6),     # For m3 conditional tests - Two of the same sign language
-            ("17", "AIP", "FT", None, 1, 0, 0, 5),     # For m3 conditional tests - Two of the same manual spoken language
-            ("18", "AIP", "FT", None, 1, 0, 0, 8),     # For m3 conditional tests - Two of the same manual sign language
-            ("19", "AIP", "FT", None, 1, 0, 0, None),  # For m3 conditional tests - Additional spoken language only
-            ("20", "AIP", "FT", None, 1, 0, 0, 0),     # For m3 conditional tests - Additional manual spoken language only
-            ("21", "AIP", "FT", None, 1, 0, 0, 0),     # For m3 conditional tests - Additional sign language only
-            ("22", "AIP", "FT", None, 1, 0, 0, None)   # For m3 conditional tests - Additional manual sign language only
+            ("1", "AIP", "FTPA", None, 1, 0, False, 1),    # LanguageCode 1 - Spoken Language
+            ("2", "AIP", "FTPA", None, 1, 0, False, 5),    # LanguageCode 5 - Spoken Language Manual Entry
+            ("3", "AIP", "FTPA", None, 1, 0, False, 6),    # LanguageCode 6 - Sign Language
+            ("4", "AIP", "FTPA", None, 1, 0, False, 8),    # LanguageCode 7 - Sign Language Manual Entry
+            ("5", "AIP", "FT", None, 1, 0, False, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken (+ Latest StatusId Check)
+            ("6", "AIP", "FT", None, 1, 0, False, 1),      # For m3 conditional tests - Additional Language Spoken + Spoken Manual
+            ("7", "AIP", "FT", None, 1, 0, False, 1),      # For m3 conditional tests - Additional Language Spoken + Sign
+            ("8", "AIP", "FT", None, 1, 0, False, 1),      # For m3 conditional tests - Additional Language Spoken + Sign Manual
+            ("9", "AIP", "FT", None, 1, 0, False, 6),      # For m3 conditional tests - Additional Language Sign + Sign
+            ("10", "AIP", "FT", None, 1, 0, False, 6),     # For m3 conditional tests - Additional Language Sign + Spoken Manual
+            ("11", "AIP", "FT", None, 1, 0, False, 6),     # For m3 conditional tests - Additional Language Sign + Sign Manual
+            ("12", "AIP", "FT", None, 1, 0, False, 5),     # For m3 conditional tests - Additional Language Spoken Manual + Spoken Manual
+            ("13", "AIP", "FT", None, 1, 0, False, 8),     # For m3 conditional tests - Additional Language Sign Manual + Spoken Manual
+            ("14", "AIP", "FT", None, 1, 0, False, 8),     # For m3 conditional tests - Additional Language Sign Manual + Sign Manual
+            ("15", "AIP", "FT", None, 1, 0, False, 1),     # For m3 conditional tests - Two of the same spoken language
+            ("16", "AIP", "FT", None, 1, 0, False, 6),     # For m3 conditional tests - Two of the same sign language
+            ("17", "AIP", "FT", None, 1, 0, False, 5),     # For m3 conditional tests - Two of the same manual spoken language
+            ("18", "AIP", "FT", None, 1, 0, False, 8),     # For m3 conditional tests - Two of the same manual sign language
+            ("19", "AIP", "FT", None, 1, 0, False, None),  # For m3 conditional tests - Additional spoken language only
+            ("20", "AIP", "FT", None, 1, 0, False, 0),     # For m3 conditional tests - Additional manual spoken language only
+            ("21", "AIP", "FT", None, 1, 0, False, 0),     # For m3 conditional tests - Additional sign language only
+            ("22", "AIP", "FT", None, 1, 0, False, None)   # For m3 conditional tests - Additional manual sign language only
         ]
 
         m3_data = [
@@ -181,26 +181,26 @@ class TestListingState():
 
     def test_hearing_requirements_m3_conditional_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 0
-            ("2", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 27
-            ("3", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 37
-            ("4", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 39
-            ("5", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 40
-            ("6", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 50
-            ("7", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 0
-            ("8", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 27
-            ("9", "AIP", "FT", None, 1, 0, 0, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 37
-            ("10", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 39
-            ("11", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 40
-            ("12", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 50
-            ("13", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 40
-            ("14", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 52
-            ("15", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
-            ("16", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
-            ("17", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
-            ("18", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
-            ("19", "AIP", "FT", None, 1, 0, 0, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
-            ("20", "AIP", "FT", None, 1, 0, 0, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
+            ("1", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 0
+            ("2", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 27
+            ("3", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 37
+            ("4", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 39
+            ("5", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 40
+            ("6", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 37 AND Outcome = 50
+            ("7", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 0
+            ("8", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 27
+            ("9", "AIP", "FT", None, 1, 0, False, 0),   # For m3 conditional tests - CaseStatus = 38 AND Outcome = 37
+            ("10", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 39
+            ("11", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 40
+            ("12", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - CaseStatus = 38 AND Outcome = 50
+            ("13", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 40
+            ("14", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - CaseStatus = 26 AND Outcome = 52
+            ("15", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching CaseStatus: CaseStatus = 39 AND Outcome = 0
+            ("16", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 37 AND Outcome = 52
+            ("17", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 26 AND Outcome = 0
+            ("18", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
+            ("19", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
+            ("20", "AIP", "FT", None, 1, 0, False, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
 
         ]
 
@@ -247,13 +247,13 @@ class TestListingState():
 
     def test_hearing_requirements_category_fields(self, spark, bronze_interpreter_languages_test_data):
         m1_data = [
-            ("1", "AIP", "FT", "Sponsor", 0, 0, 0, 0),  # Category isEvidenceFromOutsideUkOoc and has sponsor
-            ("2", "AIP", "FT", "Sponsor", 0, 0, 0, 0),  # Category isEvidenceFromOutsideUkInCountry and has sponsor
-            ("3", "AIP", "FT", None, 0, 0, 0, 0),       # Category isEvidenceFromOutsideUkOoc but no sponsor
-            ("4", "AIP", "FT", None, 0, 0, 0, 0),       # Category isEvidenceFromOutsideUkInCountry but no sponsor
-            ("5", "AIP", "FT", "Sponsor", 0, 0, 0, 0),  # No matching category
-            ("6", "AIP", "FT", "Sponsor", 0, 0, 0, 0),  # Both isEvidenceFromOutsideUkOoc and isEvidenceFromOutsideUkInCountry and has sponsor
-            ("7", "AIP", "FT", "SPonsor", 0, 0, 0, 0)   # Multiple categories including isEvidenceFromOutsideUkInCountry and has sponsor
+            ("1", "AIP", "FT", "Sponsor", 0, 0, False, 0),  # Category isEvidenceFromOutsideUkOoc and has sponsor
+            ("2", "AIP", "FT", "Sponsor", 0, 0, False, 0),  # Category isEvidenceFromOutsideUkInCountry and has sponsor
+            ("3", "AIP", "FT", None, 0, 0, False, 0),       # Category isEvidenceFromOutsideUkOoc but no sponsor
+            ("4", "AIP", "FT", None, 0, 0, False, 0),       # Category isEvidenceFromOutsideUkInCountry but no sponsor
+            ("5", "AIP", "FT", "Sponsor", 0, 0, False, 0),  # No matching category
+            ("6", "AIP", "FT", "Sponsor", 0, 0, False, 0),  # Both isEvidenceFromOutsideUkOoc and isEvidenceFromOutsideUkInCountry and has sponsor
+            ("7", "AIP", "FT", "SPonsor", 0, 0, False, 0)   # Multiple categories including isEvidenceFromOutsideUkInCountry and has sponsor
         ]
 
         c_data = [
@@ -287,12 +287,12 @@ class TestListingState():
             paymentPendingCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the paymentPendingOutput, trailing comma for tuple type
             PP.general.return_value = spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS)
             m1_data = [
-                ("1", "AIP", "FT", None, 0, 0, 0, 0),  # AIP Case
-                ("2", "LR", "FT", None, 0, 0, 0, 0),   # LR Case
-                ("3", "AIP", None, None, 0, 0, 0, 0),  # AIP Case no appealType
-                ("4", "LR", None, None, 0, 0, 0, 0),   # LR Case no appealType
-                ("5", None, "FT", None, 0, 0, 0, 0),   # No representation
-                ("6", "UN", "FT", None, 0, 0, 0, 0)    # Not AIP or LR Case
+                ("1", "AIP", "FT", None, 0, 0, False, 0),  # AIP Case
+                ("2", "LR", "FT", None, 0, 0, False, 0),   # LR Case
+                ("3", "AIP", None, None, 0, 0, False, 0),  # AIP Case no appealType
+                ("4", "LR", None, None, 0, 0, False, 0),   # LR Case no appealType
+                ("5", None, "FT", None, 0, 0, False, 0),   # No representation
+                ("6", "UN", "FT", None, 0, 0, False, 0)    # Not AIP or LR Case
             ]
 
             silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
@@ -310,8 +310,8 @@ class TestListingState():
 
     def test_general__default_fields(self, spark):
         m1_data = [
-            ("1", "AIP", "FT", None, 0, 0, 0, 0),  # Defaults 1
-            ("2", "LR", "FT", None, 0, 0, 0, 0)    # Defaults 2
+            ("1", "AIP", "FT", None, 0, 0, False, 0),  # Defaults 1
+            ("2", "LR", "FT", None, 0, 0, False, 0)    # Defaults 2
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
@@ -327,8 +327,8 @@ class TestListingState():
             aerBCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the AERb output, trailing comma for tuple type
             AERb.documents.return_value = spark.createDataFrame(aerBCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(aerBCaseOutput, self.CASE_NO_COLUMNS)
             m1_data = [
-                ("1", "AIP", "FT", None, 0, 0, 0, 0),  # Defaults 1
-                ("2", "LR", "FT", None, 0, 0, 0, 0)    # Defaults 2
+                ("1", "AIP", "FT", None, 0, 0, False, 0),  # Defaults 1
+                ("2", "LR", "FT", None, 0, 0, False, 0)    # Defaults 2
             ]
 
             silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)

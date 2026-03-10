@@ -3692,7 +3692,7 @@ def silver_status_detail():
                                 .otherwise("").alias("Process"),
                               "st.COAReferenceNumber",
                               "st.HighCourtReference",
-                              "st.OutOfTime",
+                              when(col("st.OutOfTime") == True, "checked").otherwise("disabled").alias("OutOfTime"),
                               when(col("st.ReconsiderationHearing") == True, "checked").otherwise("disabled").alias("ReconsiderationHearing"),
                               when(col("st.DecisionSentToHO") == 1, "Yes").when(col("st.DecisionSentToHO") == 2, "No").otherwise("").alias("DecisionSentToHO"),
                               "st.DecisionSentToHODate",
@@ -3765,7 +3765,7 @@ def silver_status_detail():
                               "st.OtherCondition",
                               "st.OutcomeReasons",
                               "st.AdditionalLanguageId",
-                              when(col("st.CostOrderAppliedFor") == True, "enabled").otherwise("disabled").alias("CostOrderAppliedFor"),
+                              when(col("st.CostOrderAppliedFor") == True, "checked").otherwise("disabled").alias("CostOrderAppliedFor"),
                               "st.HearingCourt",
                               "st.CaseStatusDescription",
                               "st.DoNotUseCaseStatus",
@@ -5120,7 +5120,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{DateReceived}}", format_date_iso(SDP.DateReceived or '')) \
                                         .replace("{{MiscDate1}}", format_date_iso(SDP.MiscDate1 or '')) \
                                         .replace("{{Party}}", str(SDP.Party or '')) \
-                                        .replace("{{OutOfTime}}", format_date_iso(SDP.OutOfTime or '')) \
+                                        .replace("{{OutOfTime}}", str(SDP.OutOfTime or '')) \
                                         .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
                                         .replace("{{Letter1Date}}", format_date_iso(SDP.Letter1Date or '')) \
                                         .replace("{{Letter2Date}}", format_date_iso(SDP.Letter2Date or '')) \

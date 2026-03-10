@@ -41,7 +41,7 @@ def test_default_mapping_init(json, M1_silver):
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
 
-def test_defaultValues(test_df):
+def test_CUR_defaultValues(test_df):
     try:
         results_list = []
 

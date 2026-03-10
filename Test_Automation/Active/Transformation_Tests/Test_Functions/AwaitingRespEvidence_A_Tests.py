@@ -26,7 +26,7 @@ def test_default_mapping_init(json):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_defaultValues(test_df, fields_to_exclude):
+def test_AREA_defaultValues(test_df, fields_to_exclude):
     try:
         expected_defaults = {
              "uploadHomeOfficeBundleAvailable": "Yes"

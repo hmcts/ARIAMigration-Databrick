@@ -248,12 +248,12 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 .otherwise(lit(None))
             ))
             .withColumn("inCameraCourt", (
-                when((col("m1.InCamera") == 1), lit("Yes"))
-                .when((col("m1.InCamera") == 0), lit("No"))
+                when((col("m1.InCamera") == True), lit("Yes"))
+                .when((col("m1.InCamera") == False), lit("No"))
                 .otherwise(lit("No"))
             ))
             .withColumn("inCameraCourtDescription", (
-                when((col("m1.InCamera") == 1), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
+                when((col("m1.InCamera") == True), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
                 .otherwise(lit(None))
             ))
             .withColumn("additionalRequests", lit("Yes"))

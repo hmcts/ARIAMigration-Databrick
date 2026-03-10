@@ -939,6 +939,10 @@ def raw_stmcases():
 def bail_raw_appeal_cases():
     return read_latest_parquet("Department","tv_department","ARIA_ARM_APPEALS")
 
+@dlt.table(name="raw_listrequirementtype", comment="Raw List Requirement Type",path=f"{raw_mnt}/raw_listrequirementtype")
+def raw_list_requirement_type():
+    return read_latest_parquet("ListRequirementType","tv_listrequirementtype","ARIA_ARM_APPEALS")
+
 # COMMAND ----------
 
 # MAGIC
@@ -1520,6 +1524,9 @@ def bronze_appealcase_status_sc_ra_cs():
                 dlt.read("raw_adjudicator").alias("a3"),
                 col("stm.Judiciary3Id") == col("a3.AdjudicatorId"),
                 "left_outer"
+            ).join(dlt.read("raw_listrequirementtype").alias("lrt"),
+                   col("s.ListRequirementTypeId") == col("lrt.ListRequirementTypeId"),
+                "left_outer"
             ).select(
                 # Status fields
                 col("s.StatusId"),
@@ -1558,6 +1565,7 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("s.RemittalOutcome"),
                 col("s.UpperTribunalAppellant"),
                 col("s.ListRequirementTypeId"),
+                col("lrt.Description").alias("ListRequirementType"),
                 col("s.UpperTribunalHearingDirectionId"),
                 col("s.ApplicationType"),
                 col("s.NoCertAwardDate"),
@@ -3715,6 +3723,7 @@ def silver_status_detail():
                               .when(col("st.UpperTribunalAppellant") == 2, "Respondent")
                               .alias("UpperTribunalAppellant"),
                               "st.ListRequirementTypeId",
+                              "st.ListRequirementType",
                               "st.UpperTribunalHearingDirectionId",
                               when((col("st.CaseStatus") == 17) & (col("st.ApplicationType") == 1), "Adjournment")
                                 .when((col("st.CaseStatus") == 17) & (col("st.ApplicationType") == 2), "Withdrawal")
@@ -3750,8 +3759,8 @@ def silver_status_detail():
                               ).otherwise(col("st.ExtemporeMethodOfTyping")).alias("ExtemporeMethodOfTyping"),
                               when(col("st.Extempore") == True, "enabled").otherwise("disabled").alias("Extempore"),
                               when(col("st.DecisionByTCW") == True, "enabled").otherwise("disabled").alias("DecisionByTCW"),
-                              "st.InitialHearingPoints",
-                              "st.FinalHearingPoints",
+                              when(col("st.InitialHearingPoints").isNull(), lit("0.00")).alias("InitialHearingPoints"),
+                              when(col("st.FinalHearingPoints").isNull(), lit("0.00")).alias("FinalHearingPoints"),
                               "st.HearingPointsChangeReasonId",
                               "st.OtherCondition",
                               "st.OutcomeReasons",
@@ -5131,6 +5140,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{ReconsiderationHearing}}", str(SDP.ReconsiderationHearing or '')) \
                                         .replace("{{UpperTribunalHearingDirectionId}}", str(SDP.UpperTribunalHearingDirectionId or '')) \
                                         .replace("{{ListRequirementTypeId}}", str(SDP.ListRequirementTypeId or '')) \
+                                        .replace("{{ListRequirementType}}", str(SDP.ListRequirementType or '')) \
                                         .replace("{{CourtSelection}}", str(SDP.CourtSelection or '')) \
                                         .replace("{{COAReferenceNumber}}", str(SDP.COAReferenceNumber or '')) \
                                         .replace("{{Notes2}}", str(SDP.Notes2 or '')) \
@@ -5872,7 +5882,7 @@ def stg_statusdetail_data():
             'status.HearingPointsChangeReasonId', 'status.DecisionByTCW', 'status.Allegation', 'status.DecidingCentre', 'status.Process', 'status.Tier', 'status.NoCertAwardDate', 
             'status.WrittenOffDate', 'status.WrittenOffFileDate', 'status.ReferredEnforceDate', 'status.Letter1Date', 'status.Letter2Date', 'status.Letter3Date', 
             'status.ReferredFinanceDate', 'status.CourtActionAuthDate', 'status.BalancePaidDate', 'status.ReconsiderationHearing', 
-            'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
+            'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', 'status.ListRequirementType', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
             'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
             'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
@@ -5894,7 +5904,7 @@ def stg_statusdetail_data():
             'casestatus.HearingPointsChangeReasonId', 'casestatus.DecisionByTCW', 'casestatus.Allegation', 'casestatus.DecidingCentre', 'casestatus.Process', 'casestatus.Tier', 'casestatus.NoCertAwardDate', 
             'casestatus.WrittenOffDate', 'casestatus.WrittenOffFileDate', 'casestatus.ReferredEnforceDate', 'casestatus.Letter1Date', 'casestatus.Letter2Date', 'casestatus.Letter3Date', 
             'casestatus.ReferredFinanceDate', 'casestatus.CourtActionAuthDate', 'casestatus.BalancePaidDate', 'casestatus.ReconsiderationHearing', 
-            'casestatus.UpperTribunalHearingDirectionId', 'casestatus.ListRequirementTypeId', 'casestatus.CourtSelection', 'casestatus.COAReferenceNumber', 'casestatus.Notes2', 
+            'casestatus.UpperTribunalHearingDirectionId', 'casestatus.ListRequirementTypeId', 'casestatus.ListRequirementType', 'casestatus.CourtSelection', 'casestatus.COAReferenceNumber', 'casestatus.Notes2', 
             'casestatus.HighCourtReference', 'casestatus.AdminCourtReference', 'casestatus.HearingCourt', 'casestatus.ApplicationType',  
             'IRISStatusOfCase','ListTypeDescription','HearingTypeDescription','Judiciary1Name','Judiciary2Name','Judiciary3Name','ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
@@ -6215,7 +6225,7 @@ def stg_apl_combined():
     )
 
     df_status = dlt.read("silver_status_detail").groupBy("CaseNo").agg(
-        collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'UpperTribunalHearingDirectionId', 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("StatusDetails")
+        collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'ListRequirementType','UpperTribunalHearingDirectionId', 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("StatusDetails")
     )
 
     df_statusdecisiontype = dlt.read("silver_statusdecisiontype_detail").groupBy("CaseNo").agg(

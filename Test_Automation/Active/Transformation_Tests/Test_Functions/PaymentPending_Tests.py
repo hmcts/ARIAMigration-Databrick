@@ -4768,46 +4768,42 @@ def test_submissionOutOfTime_ac3(test_df):
 
 #######################
 #recordedOutOfTimeDecision - If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
-#######################
-def test_recordedOutOfTimeDecision_init(json, M1_bronze, M3_bronze):
-    try:
-        json = json.select(
-            "appealReferenceNumber",
-            "recordedOutOfTimeDecision"
-        )
-
-        M3_bronze = M3_bronze.select(
-            "CaseNo",
-            "Outcome"
-        ) 
-
-        M1_bronze = M1_bronze.select(
-            col("CaseNo").alias("CaseNo-M1"),
-            "OutOfTimeIssue"
-        )
-
-        rod_test_df = json.join(
-            M3_bronze,
-            json["appealReferenceNumber"] == M3_bronze["CaseNo"],
-            "inner"
-        )
-
-        rod_test_df = rod_test_df.join(
-            M1_bronze,
-            json["appealReferenceNumber"] == M1_silver["CaseNo-M1"],
-            "inner"
-        )
-
-        return rod_test_df, True
-    except Exception as e:
-        rod_test_df = None
-        error_message = str(e)        
-        return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function), rod_test_df
-    
+#######################    
 # If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
-def test_recordedOutOfTimeDecision_ac1(rod_test_df):
+def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
     try:
-        if rod_test_df != None:
+        try:
+            json = json.select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision"
+            )
+
+            M3_bronze = M3_bronze.select(
+                "CaseNo",
+                "Outcome"
+            ) 
+
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("CaseNo-M1"),
+                "OutOfTimeIssue"
+            )
+
+            test_df = json.join(
+                M3_bronze,
+                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                "inner"
+            )
+
+            test_df = test_df.join(
+                M1_bronze,
+                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                "inner"
+            )
+        except Exception as e:
+            error_message = str(e)        
+            return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (col("OutOfTimeIssue") == 1) &
@@ -4831,9 +4827,40 @@ def test_recordedOutOfTimeDecision_ac1(rod_test_df):
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 # If OutOfTimeIssue is 1 + Outcome = 0 and recordedOutOfTimeDecision is not omitted
-def test_recordedOutOfTimeDecision_ac2(rod_test_df):
+def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
     try:
-        if rod_test_df != None:
+        try:
+            json = json.select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision"
+            )
+
+            M3_bronze = M3_bronze.select(
+                "CaseNo",
+                "Outcome"
+            ) 
+
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("CaseNo-M1"),
+                "OutOfTimeIssue"
+            )
+
+            test_df = json.join(
+                M3_bronze,
+                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                "inner"
+            )
+
+            test_df = test_df.join(
+                M1_bronze,
+                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                "inner"
+            )
+        except Exception as e:
+            error_message = str(e)        
+            return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (col("OutOfTimeIssue") == 1) &
@@ -4857,9 +4884,40 @@ def test_recordedOutOfTimeDecision_ac2(rod_test_df):
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 # If OutOfTimeIssue != 1 + Outcome != 0 and recordedOutOfTimeDecision is not omitted
-def test_recordedOutOfTimeDecision_ac3(rod_test_df):
+def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
     try:
-        if rod_test_df != None:
+        try:
+            json = json.select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision"
+            )
+
+            M3_bronze = M3_bronze.select(
+                "CaseNo",
+                "Outcome"
+            ) 
+
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("CaseNo-M1"),
+                "OutOfTimeIssue"
+            )
+
+            test_df = json.join(
+                M3_bronze,
+                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                "inner"
+            )
+
+            test_df = test_df.join(
+                M1_bronze,
+                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                "inner"
+            )
+        except Exception as e:
+            error_message = str(e)        
+            return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (col("OutOfTimeIssue") != 1) &
@@ -4888,13 +4946,18 @@ def test_recordedOutOfTimeDecision_ac3(rod_test_df):
 def test_applicationOutOfTimeExplanation(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(col("OutOfTimeIssue" == 1)).count() == 0:
+        if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
             return TestResult("applicationOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_applicationOutOfTimeExplanation = test_df.filter(
-            (col("OutOfTimeIssue") == 1) &
-            (col("applicationOutOfTimeExplanation").isNotNull()) &
-            (col("applicationOutOfTimeExplanation")!= "This is a migrated ARIA case. Please refer to the documents."))
+            (
+                (col("OutOfTimeIssue") == 1)
+            )&
+            (
+                (col("applicationOutOfTimeExplanation").isNotNull()) &
+                (col("applicationOutOfTimeExplanation") == "This is a migrated ARIA case. Please refer to the documents.")
+            ))
+            
 
         if ac1_applicationOutOfTimeExplanation() != 0:
             return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation().count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation has not been omitted.", test_from_state, inspect.stack()[0].function), ac4_sponsorAuthorisation_test1

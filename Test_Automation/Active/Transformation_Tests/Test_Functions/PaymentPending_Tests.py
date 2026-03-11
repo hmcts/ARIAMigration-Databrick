@@ -6507,7 +6507,7 @@ def test_default_mapping_init(json):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_PP_defaultValues(test_df):
+def test_PP_defaultValues(test_df,fields_to_exclude):
     try:
         expected_defaults = {
             "ccdReferenceNumberForDisplay": "",
@@ -6558,6 +6558,8 @@ def test_PP_defaultValues(test_df):
         results_list = []
 
         for field, expected in expected_defaults.items():
+            if field in fields_to_exclude:
+                continue
             condition = (col(field) != expected)
             if test_df.filter(condition).count() > 0:
                 results_list.append(TestResult(
@@ -6577,6 +6579,8 @@ def test_PP_defaultValues(test_df):
                 ))
 
         for field, contains_val in expected_arrays.items():
+            if field in fields_to_exclude:
+                continue
             if contains_val:
                 condition = (~array_contains(col(field), contains_val))
             else:
@@ -6608,7 +6612,8 @@ def test_PP_defaultValues(test_df):
         ]
 
         for field, expected_val in conditional_checks:
-           
+            if field in fields_to_exclude:
+                continue
             invalid_records = test_df.filter(
                 (col("appealType").isin(allowed_appeal_types)) & (col(field) != expected_val)
             )

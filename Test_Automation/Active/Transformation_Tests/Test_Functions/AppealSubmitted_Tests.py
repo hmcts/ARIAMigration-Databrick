@@ -45,72 +45,80 @@ def test_default_mapping_init(json, M1_silver):
         error_message = str(e)        
         return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
-def test_AS_defaultValues(test_df):
+def test_AS_defaultValues(test_df,fields_to_exclude):
     try:
         results_list = []
 
-        acceptance_critera_lr = test_df.filter(
-            ((col("dv_representation") == "LR") & (col("paAppealTypePaymentOption") != "payLater"))
-        )
+        #AC1
+        if field not in fields_to_exclude:                
+            acceptance_critera_lr = test_df.filter(
+                ((col("dv_representation") == "LR") & (col("paAppealTypePaymentOption") != "payLater"))
+            )
+            
+            if acceptance_critera_lr.count() != 0:
+                results_list.append(TestResult(
+                    "paAppealTypePaymentOption", 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : paAppealTypePaymentOption - expected : 'payLater' - found {acceptance_critera_lr.count()} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    "paAppealTypePaymentOption", 
+                    "PASS", 
+                    f"Checked Default Mapping for : paAppealTypePaymentOption - found correct value", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
 
-        acceptance_critera_aip = test_df.filter(
-            ((col("dv_representation") == "AIP") & (col("paAppealTypeAipPaymentOption") != "payLater"))
-        )
 
-        acceptance_critera_payment = test_df.filter(
-            (col("additionalPaymentInfo") != "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")
-        )
+        #AC2
+        if field not in fields_to_exclude:    
+            acceptance_critera_aip = test_df.filter(
+                ((col("dv_representation") == "AIP") & (col("paAppealTypeAipPaymentOption") != "payLater"))
+            )
+            
+            if acceptance_critera_aip.count() != 0:
+                results_list.append(TestResult(
+                    "paAppealTypeAipPaymentOption", 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'payLater' - found {acceptance_critera_aip.count()} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    "paAppealTypeAipPaymentOption", 
+                    "PASS", 
+                    f"Checked Default Mapping for : paAppealTypeAipPaymentOption - found correct value", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
 
-        if acceptance_critera_lr.count() != 0:
-            results_list.append(TestResult(
-                "paAppealTypePaymentOption", 
-                "FAIL", 
-                f"Failed to check Default Mapping for : paAppealTypePaymentOption - expected : 'payLater' - found {acceptance_critera_lr.count()} records not matching", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
-        else:
-            results_list.append(TestResult(
-                "paAppealTypePaymentOption", 
-                "PASS", 
-                f"Checked Default Mapping for : paAppealTypePaymentOption - found correct value", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
 
-        if acceptance_critera_aip.count() != 0:
-            results_list.append(TestResult(
-                "paAppealTypeAipPaymentOption", 
-                "FAIL", 
-                f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'payLater' - found {acceptance_critera_aip.count()} records not matching", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
-        else:
-            results_list.append(TestResult(
-                "paAppealTypeAipPaymentOption", 
-                "PASS", 
-                f"Checked Default Mapping for : paAppealTypeAipPaymentOption - found correct value", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
+        #AC3
+        if field not in fields_to_exclude:    
+            acceptance_critera_payment = test_df.filter(
+                (col("additionalPaymentInfo") != "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")
+            )
 
-        if acceptance_critera_payment.count() != 0:
-            results_list.append(TestResult(
-                "additionalPaymentInfo", 
-                "FAIL", 
-                f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.' - found {acceptance_critera_payment.count()} records not matching", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
-        else:
-            results_list.append(TestResult(
-                "additionalPaymentInfo", 
-                "PASS", 
-                f"Checked Default Mapping for : acceptance_critera_payment - found correct value", 
-                test_from_state,
-                inspect.stack()[0].function
-            ))
+            if acceptance_critera_payment.count() != 0:
+                results_list.append(TestResult(
+                    "additionalPaymentInfo", 
+                    "FAIL", 
+                    f"Failed to check Default Mapping for : paAppealTypeAipPaymentOption - expected : 'This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.' - found {acceptance_critera_payment.count()} records not matching", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
+            else:
+                results_list.append(TestResult(
+                    "additionalPaymentInfo", 
+                    "PASS", 
+                    f"Checked Default Mapping for : acceptance_critera_payment - found correct value", 
+                    test_from_state,
+                    inspect.stack()[0].function
+                ))
             
         return results_list
     except Exception as e:

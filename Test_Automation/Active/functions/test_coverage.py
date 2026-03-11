@@ -13,10 +13,6 @@ def generate_transformation_test_coverage_report(
     output_file=None
 ):
 
-    # -----------------------------------
-    # Flatten tests
-    # -----------------------------------
-
     test_records = []
 
     for state, tests in tests_by_state.items():
@@ -37,10 +33,6 @@ def generate_transformation_test_coverage_report(
 
     all_test_names = [r["test_name"] for r in ordered_test_records]
     filter_states = sorted({r["test_from_state"] for r in ordered_test_records})
-
-    # -----------------------------------
-    # Load tables
-    # -----------------------------------
 
     runs_df = (
         spark.table(runs_table)
@@ -72,15 +64,12 @@ def generate_transformation_test_coverage_report(
         .withColumn("status_norm", F.upper(F.trim(F.col("status"))))
     )
 
-    # -----------------------------------
-    # Discover states
-    # -----------------------------------
-
     discovered_states = [
         r["state_under_test"]
         for r in (
             runs_df
             .select("state_under_test")
+            .where(F.col("state_under_test").isNotNull())
             .distinct()
             .orderBy("state_under_test")
             .collect()
@@ -93,9 +82,7 @@ def generate_transformation_test_coverage_report(
     else:
         states = discovered_states
 
-    # -----------------------------------
-    # Coverage (full history)
-    # -----------------------------------
+    total_states = len(states)
 
     coverage_all_df = (
         joined_df
@@ -116,23 +103,22 @@ def generate_transformation_test_coverage_report(
             "total": int(r["total_count"])
         }
 
-    # -----------------------------------
-    # Coverage (latest only)
-    # -----------------------------------
-
-    window = Window.partitionBy(
+    latest_window = Window.partitionBy(
         "test_name",
         "state_under_test"
-    ).orderBy(F.col("run_start_datetime").desc_nulls_last())
+    ).orderBy(
+        F.col("run_start_datetime").desc_nulls_last(),
+        F.col("run_id").desc()
+    )
 
-    latest_df = (
+    latest_rows_df = (
         joined_df
-        .withColumn("rn", F.row_number().over(window))
-        .filter(F.col("rn") == 1)
+        .withColumn("rn_latest", F.row_number().over(latest_window))
+        .filter(F.col("rn_latest") == 1)
     )
 
     coverage_latest_df = (
-        latest_df
+        latest_rows_df
         .groupBy("test_name", "state_under_test")
         .agg(
             F.sum(F.when(F.col("status_norm") == "PASS", 1).otherwise(0)).alias("pass_count"),
@@ -150,14 +136,9 @@ def generate_transformation_test_coverage_report(
             "total": int(r["total_count"])
         }
 
-    # -----------------------------------
-    # Drilldown data
-    # -----------------------------------
-
     drilldown_lookup = {}
 
     for r in joined_df.collect():
-
         key = str(r["test_name"]) + "|||" + str(r["state_under_test"])
 
         if key not in drilldown_lookup:
@@ -175,10 +156,6 @@ def generate_transformation_test_coverage_report(
 
     drilldown_json = json.dumps(drilldown_lookup)
 
-    # -----------------------------------
-    # Helper
-    # -----------------------------------
-
     def colour(p, f, t):
         if t == 0:
             return "#f3f4f6"
@@ -188,15 +165,8 @@ def generate_transformation_test_coverage_report(
             return "#fee2e2"
         return "#fef3c7"
 
-    # -----------------------------------
-    # Build table rows
-    # -----------------------------------
-
     def build_rows(lookup):
-
         rows = []
-
-        total_tests = len(ordered_test_records)
         passed_some = 0
         passed_none = 0
 
@@ -213,13 +183,13 @@ def generate_transformation_test_coverage_report(
 
             row = (
                 f"<tr class='data-row' "
-                f"data-states-passing='0' "
-                f"data-test-from-state='{escape(from_state)}'>"
+                f"data-test-from-state='{escape(from_state)}' "
+                f"data-states-passing='{0}'>"
             )
 
-            row += f"<td class='row-num-col'>{i}</td>"
-            row += f"<td class='from-state-col'>{escape(from_state)}</td>"
-            row += f"<td class='test-col'>{escape(test)}</td>"
+            row += f"<td class='row-num-col sticky-col sticky-col-1'>{i}</td>"
+            row += f"<td class='from-state-col sticky-col sticky-col-2'>{escape(from_state)}</td>"
+            row += f"<td class='test-col sticky-col sticky-col-3'>{escape(test)}</td>"
 
             for s in states:
 
@@ -247,7 +217,7 @@ def generate_transformation_test_coverage_report(
                     f"data-test-name='{escape(test)}' "
                     f"data-state-under-test='{escape(s)}' "
                     f"data-test-from-state='{escape(from_state)}' "
-                    f"style='background:{colour(p, f, t)}'>"
+                    f"style='background:{colour(p,f,t)}'>"
                     f"P:{p}<br>F:{f}<br>T:{t}</td>"
                 )
 
@@ -263,31 +233,29 @@ def generate_transformation_test_coverage_report(
                 f"data-states-passing='{states_passing}'"
             )
 
-            row += f"<td>{total_pass}</td>"
-            row += f"<td>{total_fail}</td>"
-            row += f"<td>{total_runs}</td>"
-            row += f"<td>{pass_pct:.1f}%</td>"
-            row += f"<td>{states_passing}/{len(states)}</td>"
-            row += f"<td>{states_covered}/{len(states)}</td>"
+            row += f"<td class='metric-col-mid'>{states_passing} / {total_states}</td>"
+            row += f"<td class='metric-col-mid'>{states_covered} / {total_states}</td>"
+            row += f"<td class='metric-col-narrow'>{total_pass}</td>"
+            row += f"<td class='metric-col-narrow'>{total_fail}</td>"
+            row += f"<td class='metric-col-narrow'>{total_runs}</td>"
+            row += f"<td class='metric-col'>{pass_pct:.1f}%</td>"
+
             row += "</tr>"
 
             rows.append(row)
 
-        return rows, total_tests, passed_some, passed_none
+        return rows, passed_some, passed_none
 
-    rows_all, total_tests, passed_some, passed_none = build_rows(lookup_all)
-    rows_latest, _, _, _ = build_rows(lookup_latest)
+    rows_all, passed_some_all, passed_none_all = build_rows(lookup_all)
+    rows_latest, passed_some_latest, passed_none_latest = build_rows(lookup_latest)
+
+    total_tests = len(ordered_test_records)
+    total_cols = 3 + len(states) + 6
 
     filter_options = "".join(
         f"<option value='{escape(s)}'>{escape(s)}</option>"
         for s in filter_states
     )
-
-    total_cols = 3 + len(states) + 5 + 2
-
-    # -----------------------------------
-    # HTML
-    # -----------------------------------
 
     html = f"""
 <html>
@@ -296,195 +264,190 @@ def generate_transformation_test_coverage_report(
 <style>
 
 body {{
-font-family:Arial;
-margin:20px;
-color:#222;
-}}
-
-.summary-container {{
-display:flex;
-gap:15px;
-margin-bottom:20px;
-flex-wrap:wrap;
+    font-family: Arial, sans-serif;
+    margin: 20px;
 }}
 
 .summary-box {{
-border:1px solid #d1d5db;
-border-radius:8px;
-padding:14px 18px;
-background:#f9fafb;
-min-width:200px;
-}}
-
-.summary-label {{
-font-size:12px;
-color:#6b7280;
-margin-bottom:4px;
-}}
-
-.summary-value {{
-font-size:28px;
-font-weight:bold;
+    display: inline-block;
+    padding: 15px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+    min-width: 150px;
 }}
 
 .controls-box {{
-border:1px solid #d1d5db;
-padding:12px;
-border-radius:8px;
-background:#f9fafb;
-margin-bottom:20px;
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fafafa;
 }}
 
-.controls-row {{
-display:flex;
-gap:20px;
-align-items:center;
-flex-wrap:wrap;
-}}
-
-.controls-row label {{
-font-size:13px;
-}}
-
-.controls-row select {{
-margin-left:6px;
+.controls-box label {{
+    margin-right: 18px;
+    font-size: 13px;
 }}
 
 .table-wrap {{
-overflow-x:auto;
-margin-bottom:20px;
+    overflow-x: auto;
+    border: 1px solid #ccc;
 }}
 
 table {{
-border-collapse:collapse;
-width:max-content;
+    border-collapse: collapse;
+    width: max-content;
 }}
 
-th,td {{
-border:1px solid #ccc;
-padding:4px;
-font-size:12px;
-text-align:center;
-vertical-align:middle;
+th, td {{
+    border: 1px solid #ccc;
+    padding: 4px;
+    font-size: 12px;
+    text-align: center;
+    vertical-align: middle;
+    background: white;
+}}
+
+thead th {{
+    background: #f3f4f6;
 }}
 
 .row-num-col {{
-width:50px;
-min-width:50px;
-max-width:50px;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
 }}
 
 .from-state-col {{
-width:100px;
-min-width:100px;
-max-width:100px;
-word-break:break-word;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    word-break: break-word;
 }}
 
 .test-col {{
-width:150px;
-min-width:150px;
-max-width:150px;
-word-break:break-word;
-text-align:left;
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
+    word-break: break-word;
+    text-align: left;
 }}
 
 .state-col {{
-width:50px;
-min-width:50px;
-max-width:50px;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+}}
+
+.metric-col-mid {{
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+    white-space: normal;
+    font-size: 11px;
+}}
+
+.metric-col-narrow {{
+    width: 55px;
+    min-width: 55px;
+    max-width: 55px;
+    white-space: normal;
+}}
+
+.metric-col {{
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    white-space: normal;
+}}
+
+.metric-header-wrap {{
+    white-space: normal;
+    word-break: break-word;
 }}
 
 .state-header {{
-width:50px;
-min-width:50px;
-max-width:50px;
-height:150px;
-padding:0;
-vertical-align:bottom;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+    height: 150px;
+    padding: 0;
+    vertical-align: bottom;
 }}
 
 .state-header div {{
-writing-mode:vertical-rl;
-transform:rotate(180deg);
-padding:6px 2px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 6px 2px;
+}}
+
+.sticky-col {{
+    position: sticky;
+    background: white;
+    z-index: 2;
+}}
+
+.sticky-col-1 {{ left: 0; }}
+.sticky-col-2 {{ left: 50px; }}
+.sticky-col-3 {{ left: 150px; }}
+
+thead .sticky-col {{
+    background: #f3f4f6;
+    z-index: 4;
 }}
 
 .clickable-cell:hover {{
-outline:2px solid blue;
-cursor:pointer;
+    outline: 2px solid blue;
+    cursor: pointer;
 }}
 
 .drilldown-row td {{
-background:#ffffff;
-padding:0;
+    background: #fff;
+    padding: 10px;
 }}
 
-.inline-drilldown {{
-padding:16px;
-background:#ffffff;
+.drilldown-box {{
+    text-align: left;
 }}
 
-.inline-drilldown-header {{
-display:flex;
-justify-content:space-between;
-align-items:flex-start;
-gap:16px;
-margin-bottom:12px;
-flex-wrap:wrap;
+.drilldown-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 12px;
 }}
 
-.inline-drilldown-title {{
-font-size:18px;
-font-weight:bold;
-margin-bottom:4px;
+.drilldown-title {{
+    font-weight: bold;
 }}
 
-.inline-drilldown-subtitle {{
-font-size:13px;
-color:#555;
+.drilldown-close {{
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f8f8f8;
+    cursor: pointer;
 }}
 
-.inline-drilldown-note {{
-font-size:12px;
-color:#6b7280;
-margin-top:4px;
-}}
-
-.inline-drilldown-close {{
-border:1px solid #d1d5db;
-background:#f9fafb;
-padding:6px 10px;
-cursor:pointer;
-border-radius:6px;
+.drilldown-close:hover {{
+    background: #efefef;
 }}
 
 .drilldown-table {{
-width:100%;
-border-collapse:collapse;
+    margin-top: 8px;
+    width: 100%;
+    border-collapse: collapse;
 }}
 
 .drilldown-table th,
 .drilldown-table td {{
-border:1px solid #d1d5db;
-padding:6px;
-text-align:left;
-vertical-align:top;
-font-size:12px;
-}}
-
-.drilldown-table th {{
-background:#f3f4f6;
-}}
-
-.small-muted {{
-font-size:12px;
-color:#6b7280;
-}}
-
-.selected-cell {{
-outline:3px solid #1d4ed8 !important;
-outline-offset:-3px;
+    border: 1px solid #ccc;
+    padding: 4px;
+    text-align: left;
 }}
 
 </style>
@@ -495,67 +458,51 @@ outline-offset:-3px;
 
 <h2>Transformation Tests Coverage Report</h2>
 
-<div class="summary-container">
-
-<div class="summary-box">
-<div class="summary-label">Total Tests</div>
-<div class="summary-value" id="summaryTotalTests">{total_tests}</div>
-</div>
-
-<div class="summary-box">
-<div class="summary-label">Passed in One or More States</div>
-<div class="summary-value" id="summaryPassedSome">{passed_some}</div>
-</div>
-
-<div class="summary-box">
-<div class="summary-label">Not Passed in Any State</div>
-<div class="summary-value" id="summaryPassedNone">{passed_none}</div>
-</div>
-
+<div>
+    <div class="summary-box">Total Tests<br><b id="totalTests">{total_tests}</b></div>
+    <div class="summary-box">Passed in ≥1 State<br><b id="passSome">{passed_some_all}</b></div>
+    <div class="summary-box">Passed in 0 States<br><b id="passNone">{passed_none_all}</b></div>
 </div>
 
 <div class="controls-box">
-<div class="controls-row">
 
-<label>
-Test From State
-<select id="filterTestFromState">
-<option value="">All</option>
-{filter_options}
-</select>
-</label>
+    <label>
+        Test From State
+        <select id="stateFilter">
+            <option value="">All</option>
+            {filter_options}
+        </select>
+    </label>
 
-<label>
-<input type="checkbox" id="latestOnlyToggle"> Only latest data
-</label>
+    <label><input type="checkbox" id="showNoCoverage"> Show where no Coverage</label>
+    <label><input type="checkbox" id="showCovered"> Show where covered</label>
+    <label><input type="checkbox" id="latestOnly"> Only latest data</label>
 
-<label>
-<input type="checkbox" id="filterNoCoverage"> Show where no Coverage
-</label>
-
-<label>
-<input type="checkbox" id="filterCovered"> Show where is covered
-</label>
-
-</div>
 </div>
 
 <div class="table-wrap">
+
 <table>
 
 <thead>
+
 <tr>
-<th class="row-num-col">#</th>
-<th class="from-state-col">Test From State</th>
-<th class="test-col">Test</th>
+
+<th class="row-num-col sticky-col sticky-col-1">#</th>
+<th class="from-state-col sticky-col sticky-col-2">Test From State</th>
+<th class="test-col sticky-col sticky-col-3">Test</th>
+
 {''.join(f"<th class='state-header'><div>{escape(s)}</div></th>" for s in states)}
+
+<th>States Passing</th>
+<th>States Covered</th>
 <th>Total Pass</th>
 <th>Total Fail</th>
 <th>Total Runs</th>
 <th>Pass %</th>
-<th>States Passing</th>
-<th>States Covered</th>
+
 </tr>
+
 </thead>
 
 <tbody id="tbodyAll">
@@ -567,6 +514,7 @@ Test From State
 </tbody>
 
 </table>
+
 </div>
 
 <script>
@@ -574,200 +522,117 @@ Test From State
 const drilldownData = {drilldown_json};
 const drilldownColspan = {total_cols};
 
+window.closeDrilldown = function() {{
+    let d = document.querySelector(".drilldown-row");
+    if (d) d.remove();
+}};
+
 function activeBody() {{
-    return document.getElementById("latestOnlyToggle").checked
+    return document.getElementById("latestOnly").checked
         ? document.getElementById("tbodyLatest")
         : document.getElementById("tbodyAll");
 }}
 
 function removeExistingDrilldown() {{
-    const existing = document.querySelector(".drilldown-row");
-    if (existing) existing.remove();
-
-    document.querySelectorAll(".selected-cell").forEach(c => {{
-        c.classList.remove("selected-cell");
-    }});
+    let d = document.querySelector(".drilldown-row");
+    if (d) d.remove();
 }}
 
 function updateSummary() {{
-
-    let rows = Array.from(activeBody().querySelectorAll("tr.data-row"))
+    const rows = [...activeBody().querySelectorAll("tr.data-row")]
         .filter(r => r.style.display !== "none");
 
     let total = rows.length;
-    let passedSome = 0;
-    let passedNone = 0;
+    let passSome = 0;
+    let passNone = 0;
 
     rows.forEach(r => {{
-        let p = parseInt(r.dataset.statesPassing || 0, 10);
-        if (p > 0) passedSome++;
-        else passedNone++;
+        const passing = parseInt(r.dataset.statesPassing || "0", 10);
+        if (passing > 0) passSome++;
+        else passNone++;
     }});
 
-    document.getElementById("summaryTotalTests").textContent = total;
-    document.getElementById("summaryPassedSome").textContent = passedSome;
-    document.getElementById("summaryPassedNone").textContent = passedNone;
+    document.getElementById("totalTests").innerText = total;
+    document.getElementById("passSome").innerText = passSome;
+    document.getElementById("passNone").innerText = passNone;
 }}
 
 function applyFilters() {{
-
     removeExistingDrilldown();
 
-    const showNoCoverage = document.getElementById("filterNoCoverage").checked;
-    const showCovered = document.getElementById("filterCovered").checked;
-    const state = document.getElementById("filterTestFromState").value;
+    const selectedState = document.getElementById("stateFilter").value;
+    const showNoCoverage = document.getElementById("showNoCoverage").checked;
+    const showCovered = document.getElementById("showCovered").checked;
+    const latestOnly = document.getElementById("latestOnly").checked;
+
+    document.getElementById("tbodyAll").style.display = latestOnly ? "none" : "";
+    document.getElementById("tbodyLatest").style.display = latestOnly ? "" : "none";
 
     activeBody().querySelectorAll("tr.data-row").forEach(row => {{
+        const fromState = row.dataset.testFromState || "";
+        const passing = parseInt(row.dataset.statesPassing || "0", 10);
 
-        let passing = parseInt(row.dataset.statesPassing || 0, 10);
-        let from = row.dataset.testFromState || "";
-
-        let covered = passing > 0;
-        let noCoverage = passing === 0;
+        const matchesState = !selectedState || fromState === selectedState;
+        const isNoCoverage = passing === 0;
+        const isCovered = passing > 0;
 
         let show = true;
 
-        if (showNoCoverage && !showCovered) show = noCoverage;
-        if (showCovered && !showNoCoverage) show = covered;
-        if (state && state !== from) show = false;
+        if (showNoCoverage && !showCovered) show = isNoCoverage;
+        if (showCovered && !showNoCoverage) show = isCovered;
+        if (!matchesState) show = false;
 
         row.style.display = show ? "" : "none";
-
     }});
 
     updateSummary();
 }}
 
-function escapeHtml(value) {{
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}}
-
-function renderDrilldownTable(records, latestOnly) {{
-
-    let displayRecords = records.slice();
-
-    if (latestOnly) {{
-        displayRecords = records.length > 0 ? [records[0]] : [];
-    }}
-
-    let html = "";
-
-    html += "<div class='inline-drilldown'>";
-    html += "<div class='inline-drilldown-header'>";
-    html += "<div>";
-    html += "<div class='inline-drilldown-title' id='inlineDrilldownTitle'></div>";
-    html += "<div class='inline-drilldown-subtitle' id='inlineDrilldownSubtitle'></div>";
-    html += "<div class='inline-drilldown-note' id='inlineDrilldownNote'></div>";
-    html += "</div>";
-    html += "<button class='inline-drilldown-close' onclick='closeInlineDrilldown()'>Close</button>";
-    html += "</div>";
-
-    if (displayRecords.length === 0) {{
-        html += "<div class='small-muted'>No matching records.</div>";
-        html += "</div>";
-        return html;
-    }}
-
-    html += "<table class='drilldown-table'>";
-    html += "<thead><tr>";
-    html += "<th>Run Start</th>";
-    html += "<th>Run ID</th>";
-    html += "<th>User</th>";
-    html += "<th>Tag</th>";
-    html += "<th>Run Status</th>";
-    html += "<th>Result Status</th>";
-    html += "<th>Message</th>";
-    html += "</tr></thead><tbody>";
-
-    displayRecords.forEach(r => {{
-        html += "<tr>";
-        html += "<td>" + escapeHtml(r.run_start_datetime || "") + "</td>";
-        html += "<td>" + escapeHtml(r.run_id || "") + "</td>";
-        html += "<td>" + escapeHtml(r.run_user || "") + "</td>";
-        html += "<td>" + escapeHtml(r.run_tag || "") + "</td>";
-        html += "<td>" + escapeHtml(r.run_status || "") + "</td>";
-        html += "<td>" + escapeHtml(r.result_status || "") + "</td>";
-        html += "<td>" + escapeHtml(r.message || "") + "</td>";
-        html += "</tr>";
-    }});
-
-    html += "</tbody></table>";
-    html += "</div>";
-    return html;
-}}
-
-function closeInlineDrilldown() {{
-    removeExistingDrilldown();
-}}
-
 function openInlineDrilldown(cell) {{
 
+    removeExistingDrilldown();
+
     const row = cell.closest("tr");
-    const test = cell.dataset.testName || "";
-    const state = cell.dataset.stateUnderTest || "";
-    const fromState = cell.dataset.testFromState || "";
-    const latestOnly = document.getElementById("latestOnlyToggle").checked;
+    const test = cell.dataset.testName;
+    const state = cell.dataset.stateUnderTest;
 
     const key = test + "|||" + state;
     const records = drilldownData[key] || [];
 
-    const existing = document.querySelector(".drilldown-row");
-    const sameRow = existing && existing.previousElementSibling === row;
-    const sameCellSelected = cell.classList.contains("selected-cell");
+    let html = "<tr class='drilldown-row'><td colspan='" + drilldownColspan + "'>";
+    html += "<div class='drilldown-box'>";
+    html += "<div class='drilldown-header'>";
+    html += "<div class='drilldown-title'>" + test + " | " + state + "</div>";
+    html += "<button type='button' class='drilldown-close' onclick='window.closeDrilldown()'>Close</button>";
+    html += "</div>";
 
-    if (sameRow && sameCellSelected) {{
-        removeExistingDrilldown();
-        return;
-    }}
+    html += "<table class='drilldown-table'>";
+    html += "<tr><th>Run Time</th><th>Status</th><th>User</th><th>Message</th></tr>";
 
-    removeExistingDrilldown();
-    cell.classList.add("selected-cell");
+    records.forEach(r => {{
+        html += "<tr>";
+        html += "<td>" + r.run_start_datetime + "</td>";
+        html += "<td>" + r.result_status + "</td>";
+        html += "<td>" + r.run_user + "</td>";
+        html += "<td>" + r.message + "</td>";
+        html += "</tr>";
+    }});
 
-    const drillRow = document.createElement("tr");
-    drillRow.className = "drilldown-row";
+    html += "</table></div></td></tr>";
 
-    const drillCell = document.createElement("td");
-    drillCell.colSpan = drilldownColspan;
-    drillCell.innerHTML = renderDrilldownTable(records, latestOnly);
-
-    drillRow.appendChild(drillCell);
-    row.parentNode.insertBefore(drillRow, row.nextSibling);
-
-    document.getElementById("inlineDrilldownTitle").textContent = "Details for " + test;
-    document.getElementById("inlineDrilldownSubtitle").textContent =
-        "Test From State: " + fromState + " | State Under Test: " + state;
-    document.getElementById("inlineDrilldownNote").textContent = latestOnly
-        ? "Showing latest record only because Only latest data is enabled."
-        : "Showing full history for this test and state.";
-
-    drillRow.scrollIntoView({{ behavior: "smooth", block: "nearest" }});
+    row.insertAdjacentHTML("afterend", html);
 }}
-
-document.getElementById("latestOnlyToggle").addEventListener("change", function() {{
-
-    removeExistingDrilldown();
-
-    document.getElementById("tbodyAll").style.display = this.checked ? "none" : "";
-    document.getElementById("tbodyLatest").style.display = this.checked ? "" : "none";
-
-    applyFilters();
-
-}});
-
-document.getElementById("filterNoCoverage").addEventListener("change", applyFilters);
-document.getElementById("filterCovered").addEventListener("change", applyFilters);
-document.getElementById("filterTestFromState").addEventListener("change", applyFilters);
 
 document.querySelectorAll(".clickable-cell").forEach(cell => {{
     cell.addEventListener("click", function() {{
         openInlineDrilldown(this);
     }});
 }});
+
+document.getElementById("stateFilter").addEventListener("change", applyFilters);
+document.getElementById("showNoCoverage").addEventListener("change", applyFilters);
+document.getElementById("showCovered").addEventListener("change", applyFilters);
+document.getElementById("latestOnly").addEventListener("change", applyFilters);
 
 applyFilters();
 

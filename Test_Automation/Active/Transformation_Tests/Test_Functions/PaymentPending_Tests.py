@@ -1682,9 +1682,9 @@ def test_appellantGivenNames(test_df):
         return TestResult("appellantGivenNames", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)        
 
 
-# IF CategoryId IN [38] = Include; ELSE OMIT
+# IF CategoryId IN [37] = Include; ELSE OMIT
 #######################
-#appellantHasFixedAddress - If CategoryId not in 38 
+#appellantHasFixedAddress - If CategoryId not in 37 
 #######################
 def test_appellantHasFixedAddress(test_df):
     try:        
@@ -1693,21 +1693,21 @@ def test_appellantHasFixedAddress(test_df):
             return TestResult("appellantHasFixedAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_appellantHasFixedAddress = test_df.filter(
-        (~(array_contains(col("CategoryIds"), 38))) &
+        (~(array_contains(col("CategoryIds"), 37))) &
         (col("appellantHasFixedAddress").isNotNull())
         )
 
         if ac1_appellantHasFixedAddress.count() != 0:
-            return TestResult("appellantHasFixedAddress", "FAIL", f"appellantHasFixedAddress acceptance criteria - failed: {str(ac1_appellantHasFixedAddress.count())} cases have been found where the CategoryIds do not contain 38", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddress", "FAIL", f"appellantHasFixedAddress acceptance criteria - failed: {str(ac1_appellantHasFixedAddress.count())} cases have been found where the CategoryIds do not contain 37", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantHasFixedAddress", "PASS", f"appellantHasFixedAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have been included.", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddress", "PASS", f"appellantHasFixedAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 37 have been included.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantHasFixedAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
     
-# IF CategoryId IN [37] = Include; ELSE OMIT
+# IF CategoryId IN [38] = Include; ELSE OMIT
 #######################
-#appellantHasFixedAddressAdminJ - If CategoryId not in 37
+#appellantHasFixedAddressAdminJ - If CategoryId not in 38
 #######################
 def test_appellantHasFixedAddressAdminJ(test_df):
     try:        
@@ -1716,14 +1716,14 @@ def test_appellantHasFixedAddressAdminJ(test_df):
             return TestResult("appellantHasFixedAddressAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_appellantHasFixedAddressAdminJ = test_df.filter(
-        (~(array_contains(col("CategoryIds"), 37))) &
+        (~(array_contains(col("CategoryIds"), 38))) &
         (col("appellantHasFixedAddressAdminJ").isNotNull())
         )
 
         if ac1_appellantHasFixedAddressAdminJ.count() != 0:
-            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", f"appellantHasFixedAddressAdminJ acceptance criteria - failed: {str(ac1_appellantHasFixedAddressAdminJ.count())} cases have been found where the CategoryIds do not contain 37", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", f"appellantHasFixedAddressAdminJ acceptance criteria - failed: {str(ac1_appellantHasFixedAddressAdminJ.count())} cases have been found where the CategoryIds do not contain 38", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantHasFixedAddressAdminJ", "PASS", f"appellantHasFixedAddressAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 37 have been included.", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddressAdminJ", "PASS", f"appellantHasFixedAddressAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have been included.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantHasFixedAddressAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
@@ -4026,7 +4026,7 @@ def test_dateEntryClearanceDecision_ac1(test_df):
             return TestResult("dateEntryClearanceDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_dateEntryClearanceDecision = test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) & (col("dateEntryClearanceDecision").isNotNull())
+            (~(array_contains(col("CategoryIds"), 38))) & (col("dateEntryClearanceDecision").isNotNull())
         )
 
         if ac_dateEntryClearanceDecision.count() != 0:
@@ -4288,7 +4288,8 @@ def test_gwfReferenceNumber_ac2(test_df):
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_gwfReferenceNumber = test_df.filter(
-            col("HORef_M1").eqNullSafe(col("gwfReferenceNumber"))
+            (col("HORef_M1").isNotNull()) &
+            (col("HORef_M1").eqNullSafe(col("gwfReferenceNumber")))
         )
 
         if ac_gwfReferenceNumber.count() != 0:

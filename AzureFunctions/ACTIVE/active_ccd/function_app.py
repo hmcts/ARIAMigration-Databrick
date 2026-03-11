@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 ENV = os.environ["ENVIRONMENT"]
 LZ_KEY = os.environ["LZ_KEY"]
-PR_REFERENCE = os.environ.get("PR_REFERENCE", "pr-" + os.environ.get("PR_NUMBER")) if ENV == "sbox" else None
+PR_REFERENCE = os.environ.get("PR_REFERENCE", "pr-" + os.environ.get("PR_NUMBER", "1")) if ENV == "sbox" else None
 ARIA_NAME = "active"
 
 eventhub_name = f"evh-active-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"

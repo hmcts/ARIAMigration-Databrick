@@ -113,6 +113,7 @@ def setAside(silver_m1, silver_m3, silver_m6):
         .select(
             col("CaseNo"),
             col("reasonRehearingRule32"),
+            col("rule32ListingAdditionalIns"),
             col("updateTribunalDecisionList"),
             col("ftpaFinalDecisionRemadeRule32"),
             col("updateTribunalDecisionDateRule32"),

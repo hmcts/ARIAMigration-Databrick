@@ -1671,11 +1671,6 @@ def bronze_appealcase_status_sc_ra_cs():
 
 # COMMAND ----------
 
-# DBTITLE 1,***delete***
-spark.read.table('hive_metastore.ariadm_arm_fta.bronze_appealcase_status_sc_ra_cs').filter(col("CaseNo") == "AA/00001/2024").display()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation M8: bronze_appealcase_appealcatagory_catagory 
 
@@ -3744,9 +3739,9 @@ def silver_status_detail():
                               "st.CertRevokedDate",
                               "st.WrittenOffFileDate",
                               "st.ReferredEnforceDate",
-                              when(col("st.CaseStatus") == 17, col("st.Letter1Date")).otherwise(lit(None)).alias("Letter1Date"),
-                              when(col("st.CaseStatus") == 17, col("st.Letter2Date")).otherwise(lit(None)).alias("Letter2Date"),
-                              "st.Letter3Date",
+                              when(col("st.CaseStatus") == 52, col("st.Letter1Date")).otherwise(lit(None)).alias("Letter1Date"),
+                              when(col("st.CaseStatus") == 52, col("st.Letter2Date")).otherwise(lit(None)).alias("Letter2Date"),
+                              when(col("st.CaseStatus") == 52, col("st.Letter3Date")).otherwise(lit(None)).alias("Letter3Date"),
                               "st.ReferredFinanceDate",
                               "st.WrittenOffDate",
                               "st.CourtActionAuthDate",
@@ -3839,11 +3834,6 @@ def silver_status_detail():
                           )            
 
     return joined_df
-
-# COMMAND ----------
-
-# DBTITLE 1,***delete***
-spark.read.table('hive_metastore.ariadm_arm_fta.silver_status_detail').filter(col("CaseNo") == "AA/00001/2024").display()
 
 # COMMAND ----------
 

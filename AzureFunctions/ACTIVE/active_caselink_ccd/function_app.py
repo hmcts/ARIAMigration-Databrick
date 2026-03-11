@@ -72,14 +72,18 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     payload = json.loads(payload_str)
                     run_id = payload.get("RunID", None)
                     data = payload.get("CaseLinkPayload", None)
-                    start_datetime = payload.get("StartDateTime")
+                    overwrite = payload.get("Overwrite", None)
 
                     # Process the file
-                    result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_REFERENCE)
-                    result["StartDateTime"] = start_datetime
+                    result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
+
+                    # Skip if marked for SKIPPED
+                    if result.get("Status") == "SKIPPED":
+                        logger.info(f"Case linking skipped for {ccdReference} as same links already exist in CCD")
+                        continue
 
                     # Mark processed if success
-                    if result.get("Status") == "Success":
+                    if result.get("Status") == "SUCCESS":
                         logger.info(f"Case linking processed from: {ccdReference} to: {', '.join(str(obj['id']) for obj in data if 'id' in obj)}")
 
                     result_json = json.dumps(result)

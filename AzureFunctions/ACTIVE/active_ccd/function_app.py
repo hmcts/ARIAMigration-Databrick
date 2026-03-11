@@ -99,7 +99,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     result["StartDateTime"] = start_datetime
 
                     # Mark processed if success
-                    if result.get("Status") == "Success":
+                    if result.get("Status") == "SUCCESS":
                         try:
                             await idempotency_blob.upload_blob(b"", overwrite=True)
                             logger.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")

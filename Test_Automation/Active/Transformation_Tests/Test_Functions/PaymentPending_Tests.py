@@ -2159,13 +2159,13 @@ def test_appealOutOfCountry_ac1(test_df):
             return TestResult("appealOutOfCountry", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_appealOutOfCountry = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("appealOutOfCountry").isNotNull())
+            (~(array_contains(col("CategoryIds"), 38))) & (col("appealOutOfCountry") != "No")
         )
 
         if ac_appealOutOfCountry.count() != 0:
-            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: {str(ac_appealOutOfCountry.count())} cases have been found where CategoryId is not 38 and appealOutOfCountry is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: {str(ac_appealOutOfCountry.count())} cases have been found where CategoryId is not 38 and appealOutOfCountry is not No" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed, where CategoryId is not 38, appealOutOfCountry is always omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed, where CategoryId is not 38, appealOutOfCountry is always No.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appealOutOfCountry", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

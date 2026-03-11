@@ -415,7 +415,7 @@ thead .sticky-col {{
 
 .drilldown-header {{
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 8px;
     gap: 12px;
@@ -602,8 +602,8 @@ function openInlineDrilldown(cell) {{
     let html = "<tr class='drilldown-row'><td colspan='" + drilldownColspan + "'>";
     html += "<div class='drilldown-box'>";
     html += "<div class='drilldown-header'>";
-    html += "<div class='drilldown-title'>" + test + " | " + state + "</div>";
     html += "<button type='button' class='drilldown-close' onclick='window.closeDrilldown()'>Close</button>";
+    html += "<div class='drilldown-title'>" + test + " | " + state + "</div>";
     html += "</div>";
 
     html += "<table class='drilldown-table'>";

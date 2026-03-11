@@ -266,7 +266,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "RunID": runId,
             "CaseNo": caseNo,
             "State": state,
-            "Status": "Success",
+            "Status": "SUCCESS",
             "Error": None,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],

@@ -203,10 +203,11 @@ def ftpa(silver_m3,silver_c):
         )
 
     ftpa_df = (
-        ftpa_df.alias("ftpa")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        silver_m3_content.alias("m3")
+            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="full_outer")
             .select(
-                    "ftpa.*",
+                    col("m3.CaseNo"),
+                    *[col(f"ftpa.{c}") for c in ftpa_df.columns if c != "CaseNo"],
                     col("ftpaFirstDecision"),
                     col("ftpaFinalDecisionForDisplay"),
                     col("ftpaApplicantType"),
@@ -283,7 +284,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             .withColumn("isFtpaAppellantDecided",
                         when(col("Party") == 1, lit("Yes")).otherwise(None))
             .withColumn("isFtpaRespondentDecided",
-                        when(col("Party") == 2, lit("No")).otherwise(None))
+                        when(col("Party") == 2, lit("Yes")).otherwise(None))
     )
 
     general_df = (
@@ -334,8 +335,6 @@ def generalDefault(silver_m1):
     general_df = (
         general_df
         .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
-        .withColumn("isFtpaAppellantDecided", lit("Yes"))
-        .withColumn("isFtpaRespondentDecided", lit("Yes"))
         .withColumn("isReheardAppealEnabled", lit("Yes"))
         .withColumn("secondFtpaDecisionExists", lit("No"))
         .withColumn("caseFlagSetAsideReheardExists", lit("Yes"))

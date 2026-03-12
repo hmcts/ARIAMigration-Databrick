@@ -220,10 +220,11 @@ def ftpa(silver_m3,silver_c):
     )
 
     ftpa_df = (
-        ftpa_df.alias("ftpa")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        silver_m3_content.alias("m3")
+            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
             .select(
-                "ftpa.*",
+                col("m3.CaseNo"),
+                *[col(f"ftpa.{c}") for c in ftpa_df.columns if c != "CaseNo"],
                 col("ftpaList"),
                 col("ftpaAppellantApplicationDate"),
                 col("ftpaAppellantSubmissionOutOfTime"),

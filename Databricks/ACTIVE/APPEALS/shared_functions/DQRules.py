@@ -280,7 +280,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1)
             .select(col("CaseNo"), col("Party"), col("OutOfTime"), col("DateReceived"),
-                    col("DateReceived").alias("DecisionDate_decb"),col("CaseStatus").alias("CaseStatus_decb"),
+                    col("DecisionDate").alias("DecisionDate_decb"),col("CaseStatus").alias("CaseStatus_decb"),
                     col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
             .distinct()
     )

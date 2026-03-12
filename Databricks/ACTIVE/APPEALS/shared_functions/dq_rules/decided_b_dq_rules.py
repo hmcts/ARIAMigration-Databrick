@@ -111,7 +111,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantDecisionDate"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate = date_format(to_timestamp(DecisionDate_decb, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
                 ELSE ftpaAppellantDecisionDate IS NULL
             END
         )"""
@@ -119,7 +119,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaRespondentDecisionDate"] = """(
 
             CASE
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate = date_format(to_timestamp(DecisionDate_decb, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
                 ELSE ftpaRespondentDecisionDate IS NULL
             END
         )"""
@@ -133,7 +133,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType <=> 'remadeRule32'
                 ELSE ftpaAppellantRjDecisionOutcomeType IS NULL
             END
         )"""
@@ -141,7 +141,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaRespondentRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType <=> 'remadeRule32'
                 ELSE ftpaRespondentRjDecisionOutcomeType IS NULL
             END
         )"""

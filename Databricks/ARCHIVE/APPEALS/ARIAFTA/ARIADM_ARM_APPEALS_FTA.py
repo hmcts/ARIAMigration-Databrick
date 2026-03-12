@@ -1458,7 +1458,6 @@ def bronze_appealcase_link_linkdetail():
     return df  
 
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -3619,14 +3618,15 @@ def silver_history_detail():
 def silver_link_detail():
     appeals_df = dlt.read("bronze_appealcase_link_linkdetail").alias("ld")
     flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    m2 = dlt.read("bronze_appealcase_ca_apt_country_detc").alias('m2')
 
-    joined_df = appeals_df.join(flt_df, col("ld.CaseNo") == col("flt.CaseNo"), "inner").select(
-        "ld.CaseNo",
-        "ld.LinkNo",
-        "ld.LinkDetailComment",
-        "ld.LinkName",
-        "ld.LinkForeNames",
-        "ld.LinkTitle"
+    joined_df = appeals_df.join(flt_df, col("ld.CaseNo") == col("flt.CaseNo"), "inner").join(m2, col("ld.CaseNo") == col("m2.CaseNo"), "inner").select(
+    "ld.CaseNo",
+    "ld.LinkNo",
+    "ld.LinkDetailComment",
+    col("m2.AppellantName").alias("LinkAppellantName"),
+    col("m2.AppellantForenames").alias("LinkAppellantForenames"),
+    col("m2.AppellantTitle").alias("LinkAppellantTitle")
     )
 
     return joined_df
@@ -4339,7 +4339,7 @@ def silver_costaward_detail():
             .when(col("ca.CostsAwardDecision") == 3, "Interim")
             .alias("CostsAwardDecision"),
         "ca.DateOfDecision", 
-        "ca.CostsAmount", 
+        col("ca.CostsAmount").cast(DecimalType(10,2)).alias("CostsAmount"),
         "ca.OutcomeOfAppeal", 
         "ca.AppealStage",
         "ca.AppealStageDescription"
@@ -4901,7 +4901,7 @@ def generate_html(row, templates=templates):
                 f"<tr><td id=\"midpadding\" style=\"text-align:center\"></td><td id=\"midpadding\">{AdditionalGrounds.AppealTypeDescription}</td></tr>"
                 for AdditionalGrounds in (row.AppealGroundsDetails or [])) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>',
             "{{LinkedFilesPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(row.CaseNo)}</td><td id=\"midpadding\">{str(row.AppellantName)}, {str(row.AppellantForenames)} ({str(row.AppellantTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
+                f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(Link.CaseNo)}</td><td id=\"midpadding\">{str(Link.LinkAppellantName)}, {str(Link.LinkAppellantForenames)} ({str(Link.LinkAppellantTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
                 for i, Link in enumerate(row.LinkedCaseDetails or [])
             ),
             "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
@@ -5355,7 +5355,7 @@ def stg_statichtml_data():
     # *********************************************************************Red Text Flag logic***************************************************/
     cte = (df_status_details
         .filter(col("CaseStatus").isin([27, 28, 29, 30, 31, 32, 33, 34]))
-        .select("CaseNo", when(col("ReconsiderationHearing") == 'enabled', 'REC').otherwise(lit(None)).alias("ReconsiderationHearing"))
+        .select("CaseNo", when(col("ReconsiderationHearing") == 'checked', 'REC').otherwise(lit(None)).alias("ReconsiderationHearing"))
         .distinct())
 
     cte_rec = cte.filter(col("ReconsiderationHearing") == 'REC').select("CaseNo", "ReconsiderationHearing").distinct()
@@ -5918,12 +5918,6 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,***delete***
-df = spark.read.table('hive_metastore.ariadm_arm_fta.stg_statusdetail_data').filter(col("CaseNo") == "AA/00001/2024")
-df.select('TempCaseStatusDetails.DecidingCentre').display()
-
-# COMMAND ----------
-
 # df_list_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_list_detail")
 # df_status_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_status_detail")
 # df_hearingpointschange_details = spark.read.table("hive_metastore.ariadm_arm_fta.silver_hearingpointschange_detail")
@@ -6200,8 +6194,23 @@ def stg_apl_combined():
         )).alias("NewMatterDetails")
     )
 
-    df_link = dlt.read("silver_link_detail").groupBy("CaseNo").agg(
-        collect_list(struct( 'LinkNo', 'LinkDetailComment', 'LinkName', 'LinkForeNames', 'LinkTitle')).alias("LinkedCaseDetails")
+    df_link_input = dlt.read("silver_link_detail")
+
+    link_details = (
+        df_link_input
+        .groupBy("LinkNo").agg(collect_set(
+                struct("CaseNo", "LinkAppellantName", "LinkAppellantForenames", "LinkAppellantTitle", "LinkDetailComment")).alias("AllLinkedCases1")))
+
+    df_link_files = df_link_input.join(link_details, on="LinkNo", how="left")
+
+    df_link = df_link_files.withColumn(
+        "LinkedCaseDetails",
+        expr("""
+            filter(
+                AllLinkedCases1,
+                x -> x.CaseNo <> CaseNo
+            )
+        """)
     )
 
     df_linkedcostaward = dlt.read("silver_linkedcostaward_detail").groupBy("CaseNo").agg(

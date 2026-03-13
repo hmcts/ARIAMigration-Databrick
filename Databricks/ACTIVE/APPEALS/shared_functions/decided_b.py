@@ -218,6 +218,9 @@ def ftpa(silver_m3,silver_c):
 
     ftpa_df,ftpa_audit = FSA.ftpa(silver_m3,silver_c)
 
+    ftpa_df = ftpa_df.drop("ftpaList")
+    ftpa_audit = ftpa_audit.drop("ftpaList_value")
+
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
@@ -234,6 +237,46 @@ def ftpa(silver_m3,silver_c):
         .withColumn("ftpaRespondentDecisionDate", when(col("Party") == 2,date_format(col("DecisionDate"), "yyyy-MM-dd")).otherwise(None))
         .withColumn("ftpaAppellantRjDecisionOutcomeType", when(col("Party") == 1,lit("remadeRule32")).otherwise(None))
         .withColumn("ftpaRespondentRjDecisionOutcomeType", when(col("Party") == 2,lit("remadeRule32")).otherwise(None))
+        .withColumn(
+                "ftpaList",
+                when(
+                    col("Party") == 1,
+                    array(
+                        struct(
+                            lit("1").alias("id"),
+                            struct(
+                                lit("appellant").alias("ftpaApplicant"),
+                                col("ftpaAppellantDecisionDate").alias("ftpaDecisionDate"),
+                                col("ftpaAppellantDecisionDate").alias("ftpaApplicationDate"),
+                                lit([]).cast("array<string>").alias("ftpaGroundsDocuments"),
+                                lit([]).cast("array<string>").alias("ftpaEvidenceDocuments"),
+                                lit("remadeRule32").alias("ftpaDecisionOutcomeType"),
+                                lit("").alias("ftpaAppellantGroundsText"),
+                                lit("This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.").alias("ftpaDecisionRemadeRule32Text"),
+                                 lit("No").alias("isFtpaNoticeOfDecisionSetAside")
+                            ).alias("value")
+                        )
+                    )
+                ).when(
+                    col("Party") == 2,
+                    array(
+                        struct(
+                            lit("1").alias("id"),
+                            struct(
+                                lit("respondent").alias("ftpaApplicant"),
+                                col("ftpaRespondentDecisionDate").alias("ftpaDecisionDate"),
+                                col("ftpaRespondentDecisionDate").alias("ftpaApplicationDate"),
+                                lit([]).cast("array<string>").alias("ftpaGroundsDocuments"),
+                                lit([]).cast("array<string>").alias("ftpaEvidenceDocuments"),
+                                lit("remadeRule32").alias("ftpaDecisionOutcomeType"),
+                                lit("").alias("ftpaAppellantGroundsText"),
+                                lit("This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.").alias("ftpaDecisionRemadeRule32Text"),
+                                 lit("No").alias("isFtpaNoticeOfDecisionSetAside")
+                            ).alias("value")
+                        )
+                    )
+                ).otherwise(None)
+            )
         )
 
     ftpa_df = (
@@ -242,6 +285,7 @@ def ftpa(silver_m3,silver_c):
             .select(
                     col("m3.CaseNo"),
                     *[col(f"ftpa.{c}") for c in ftpa_df.columns if c != "CaseNo"],
+                    col("ftpaList"),
                     col("ftpaFirstDecision"),
                     col("ftpaFinalDecisionForDisplay"),
                     col("ftpaApplicantType"),
@@ -259,6 +303,12 @@ def ftpa(silver_m3,silver_c):
             .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
             .select(
                 "audit.*",
+
+                array(struct(lit("DecisionDate"),lit("Party"),lit("CaseStatus"))).alias("ftpaList_inputFields"),
+                array(struct(col("DecisionDate"),col("Party"),col("CaseStatus"))).alias("ftpaList_inputValues"),
+                col("ftpaList").alias("ftpaList_value"),
+                lit("Yes").alias("ftpaList_Transformation"),
+
                 array(struct(lit("ftpaFirstDecision"),lit("Party"),lit("CaseStatus"))).alias("ftpaFirstDecision_inputFields"),
                 array(struct(lit("Null"),col("Party"),col("CaseStatus"))).alias("ftpaFirstDecision_inputValues"),
                 col("ftpaFirstDecision").alias("ftpaFirstDecision_value"),

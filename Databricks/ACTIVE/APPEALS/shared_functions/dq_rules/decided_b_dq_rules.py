@@ -65,6 +65,7 @@ class decidedBDQRules(DQRulesBase):
 
     def get_checks_ftpa(self, checks={}):
 
+        
         checks["valid_ftpaList"] = """
             (CASE
         WHEN Party = 1 THEN
@@ -72,22 +73,28 @@ class decidedBDQRules(DQRulesBase):
         AND size(ftpaList) = 1
         AND element_at(ftpaList, 1).id = '1'
         AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'appellant'
-        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantApplicationDate
+        AND element_at(ftpaList, 1).value.ftpaDecisionDate <=> ftpaAppellantDecisionDate
+        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantDecisionDate
         AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
         AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaAppellantOutOfTimeExplanation
+        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType = "remadeRule32"
+        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText = ""
+        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text = "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
+        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
 
         WHEN Party = 2 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
         AND element_at(ftpaList, 1).id = '1'
         AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'respondent'
-        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentApplicationDate
+        AND element_at(ftpaList, 1).value.ftpaDecisionDate <=> ftpaRespondentDecisionDate
+        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentDecisionDate
         AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
         AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaRespondentOutOfTimeExplanation
+        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType = "remadeRule32"
+        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText = ""
+        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text = "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
+        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
         END
         )
         OR

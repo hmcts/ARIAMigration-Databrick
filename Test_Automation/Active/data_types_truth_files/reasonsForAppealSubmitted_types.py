@@ -65,7 +65,6 @@ ReasonsForAppealSubmittedTypes = {
     'homeOfficeNotificationsEligible': 'string',
     'internalAppellantEmail': 'string',
     'isAdmin': 'string',
-    'isAppealReferenceNumberAvailable': 'string',
     'isAppellantMinor': 'string',
     'isAriaMigratedFeeExemption': 'string',
     'isCaseUsingLocationRefData': 'string',
@@ -105,8 +104,6 @@ ReasonsForAppealSubmittedTypes = {
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
-    'paAppealTypePaymentOption': 'string',
-    'paAppealTypeAipPaymentOption': 'string',
     'rpDcAppealHearingOption': 'string',
     'paidAmount': 'string',
     'paidDate': 'string',
@@ -115,25 +112,16 @@ ReasonsForAppealSubmittedTypes = {
     'remissionDecisionReason': 'string',
     'amountRemitted': 'string',
     'amountLeftToPay': 'string',
-    'appealWasNotSubmittedReason': 'string', #not mandatory
     'asylumSupportReference': 'string', #not mandatory
     'directions': 'array<string>',
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
-    'legalRepCompanyPaperJ': 'string', #not mandatory
-    'legalRepEmail': 'string', #not mandatory
-    'legalRepFamilyNamePaperJ': 'string', #not mandatory
-    'legalRepGivenName': 'string', #not mandatory
-    'legalRepHasAddress': 'string', #not mandatory
     'legalRepIndividualPartyId': 'string', #not mandatory
     'legalRepOrganisationPartyId': 'string', #not mandatory
     'appellantFullName': 'string',
-    'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>', #not mandatory
     'exceptionalCircumstances': 'string', #not mandatory
     'helpWithFeesReferenceNumber': 'string', #not mandatory
-    'localAuthorityPolicy': 'struct<OrgPolicyCaseAssignedRole:string>', #not mandatory
     'recordedOutOfTimeDecision': 'string', #not mandatory
     'remissionClaim': 'string', #not mandatory
     'sponsorAuthorisation': 'string', #not mandatory 

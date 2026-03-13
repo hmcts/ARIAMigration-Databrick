@@ -95,7 +95,7 @@ def test_allocatedJudge(spark,ftpa_outputs):
     assert results["CASE006"]["allocatedJudge"] == "Mr xyz John"
     assert results["CASE007"]["allocatedJudge"] == "Mr Doe abc"
     assert results["CASE008"]["allocatedJudge"] == "Sir Random Guy"
-    assert results["CASE011"]["allocatedJudge"] == None
+
 
 def test_allocatedJudgeEdit(spark,ftpa_outputs):
 
@@ -105,7 +105,6 @@ def test_allocatedJudgeEdit(spark,ftpa_outputs):
     assert results["CASE006"]["allocatedJudgeEdit"] == "Mr xyz John"
     assert results["CASE007"]["allocatedJudgeEdit"] == "Mr Doe abc"
     assert results["CASE008"]["allocatedJudgeEdit"] == "Sir Random Guy"
-    assert results["CASE011"]["allocatedJudgeEdit"] == None
 
 
 

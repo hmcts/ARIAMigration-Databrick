@@ -273,7 +273,7 @@ def test_process_funciton_success(mock_start_case_creation_response,
         PR_REFERENCE="2866"
     )
 
-    assert results["Status"] == "Success"
+    assert results["Status"] == "SUCCESS"
     assert results["CCDCaseID"] == "1234567891011"
     assert results["Error"] is None
 
@@ -443,7 +443,7 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
         mock_blob_service, mock_eh_producer):
     mocks = _build_trigger_mocks()
     mock_process_case.return_value = {
-        "Status": "Success",
+        "Status": "SUCCESS",
         "CaseNo": "CASE123",
         "CCDCaseID": "9876543210",
         "Error": None,

@@ -49,9 +49,6 @@ EXPECTED_HEADERS = {
 # Keys required by get_case_details (no etid)
 CASE_DETAILS_COMMON = {k: COMMON[k] for k in ("ccd_base_url", "uid", "jid", "ctid", "cid", "idam_token", "s2s_token")}
 
-# A non-empty caseLinks list used as a "different from payload" sentinel in tests
-EXISTING_LINKS = [{"id": "existing-link"}]
-
 
 # ---------------------------------------------------------------------------
 # get_case_details
@@ -308,9 +305,7 @@ def mock_token_managers_cl():
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_success(mock_get_case, mock_start, mock_validate, mock_submit):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_success(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(
@@ -329,9 +324,7 @@ def test_process_event_success(mock_get_case, mock_start, mock_validate, mock_su
 
 @pytest.mark.usefixtures("mock_token_managers_cl")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_start_fails_non_200(mock_get_case, mock_start):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_start_fails_non_200(mock_start):
     mock_start.return_value = mock_response(401, text="Unauthorized")
 
     result = process_event(**PROCESS_DEFAULTS)
@@ -343,9 +336,7 @@ def test_process_event_start_fails_non_200(mock_get_case, mock_start):
 
 @pytest.mark.usefixtures("mock_token_managers_cl")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_start_returns_none(mock_get_case, mock_start):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_start_returns_none(mock_start):
     mock_start.return_value = None
 
     result = process_event(**PROCESS_DEFAULTS)
@@ -357,9 +348,7 @@ def test_process_event_start_returns_none(mock_get_case, mock_start):
 @pytest.mark.usefixtures("mock_token_managers_cl")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_validation_fails(mock_get_case, mock_start, mock_validate):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_validation_fails(mock_start, mock_validate):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(400, text="Bad payload")
 
@@ -374,10 +363,8 @@ def test_process_event_validation_fails(mock_get_case, mock_start, mock_validate
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_success_null_case_data(mock_get_case, mock_start, mock_validate, mock_submit):
+def test_process_event_success_null_case_data(mock_start, mock_validate, mock_submit):
     """CaseLinkCount should be 0 when case_data is explicitly null in the response."""
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "case_data": None})
@@ -392,9 +379,7 @@ def test_process_event_success_null_case_data(mock_get_case, mock_start, mock_va
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_submission_fails(mock_get_case, mock_start, mock_validate, mock_submit):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_submission_fails(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(500, text="Server error")
@@ -410,9 +395,7 @@ def test_process_event_submission_fails(mock_get_case, mock_start, mock_validate
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_submission_returns_none(mock_get_case, mock_start, mock_validate, mock_submit):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_submission_returns_none(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = None
@@ -469,9 +452,7 @@ def test_process_event_s2s_token_failure():
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_url_uses_pr_number(mock_get_case, mock_start, mock_validate, mock_submit):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_url_uses_pr_number(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "link": 1})
@@ -487,9 +468,7 @@ def test_process_event_url_uses_pr_number(mock_get_case, mock_start, mock_valida
 @patch(f"{MODULE}.submit_case_event")
 @patch(f"{MODULE}.validate_case")
 @patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_no_notification_flag_in_payload(mock_get_case, mock_start, mock_validate, mock_submit):
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": EXISTING_LINKS}})
+def test_process_event_no_notification_flag_in_payload(mock_start, mock_validate, mock_submit):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "link": 1})
@@ -499,73 +478,3 @@ def test_process_event_no_notification_flag_in_payload(mock_get_case, mock_start
     # payloadData is the 8th positional arg to validate_case
     full_case_data = mock_validate.call_args[0][7]
     assert "isNotificationTurnedOff" not in full_case_data
-
-
-# ---------------------------------------------------------------------------
-# process_event — overwrite / SKIP behaviour
-# ---------------------------------------------------------------------------
-
-@pytest.mark.usefixtures("mock_token_managers_cl")
-@patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_skips_when_case_links_match(mock_get_case, mock_start):
-    """When existing caseLinks match the payload and overwrite=False, SKIP is returned."""
-    case_links = [{"value": {"CaseReference": "1111111111111111"}}]
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": case_links}})
-
-    result = process_event(
-        env="sbox",
-        ccdReference="1234567890123456",
-        runId="run-001",
-        caseLinkPayload={"caseLinks": case_links},
-        PR_REFERENCE="1234",
-        overwrite=False,
-    )
-
-    assert result["Status"] == "SKIPPED"
-    assert result["CaseLinkCount"] == len(case_links)
-    mock_start.assert_not_called()
-
-
-@pytest.mark.usefixtures("mock_token_managers_cl")
-@patch(f"{MODULE}.submit_case_event")
-@patch(f"{MODULE}.validate_case")
-@patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_proceeds_when_case_links_differ(mock_get_case, mock_start, mock_validate, mock_submit):
-    """When existing caseLinks differ from the payload, processing continues normally."""
-    existing_links = [{"value": {"CaseReference": "1111111111111111"}}]
-    new_links = [{"value": {"CaseReference": "2222222222222222"}}]
-    mock_get_case.return_value = mock_response(200, {"case_data": {"caseLinks": existing_links}})
-    mock_start.return_value = mock_response(200, {"token": "tok123"})
-    mock_validate.return_value = mock_response(200)
-    mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "case_data": {"caseLinks": new_links}})
-
-    result = process_event(
-        env="sbox",
-        ccdReference="1234567890123456",
-        runId="run-001",
-        caseLinkPayload={"caseLinks": new_links},
-        PR_REFERENCE="1234",
-        overwrite=False,
-    )
-
-    assert result["Status"] == "SUCCESS"
-    mock_start.assert_called_once()
-
-
-@pytest.mark.usefixtures("mock_token_managers_cl")
-@patch(f"{MODULE}.submit_case_event")
-@patch(f"{MODULE}.validate_case")
-@patch(f"{MODULE}.start_case_event")
-@patch(f"{MODULE}.get_case_details")
-def test_process_event_overwrite_skips_case_details_check(mock_get_case, mock_start, mock_validate, mock_submit):
-    """When overwrite=True, get_case_details is not called and processing always proceeds."""
-    mock_start.return_value = mock_response(200, {"token": "tok123"})
-    mock_validate.return_value = mock_response(200)
-    mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "case_data": {"caseLinks": []}})
-
-    result = process_event(**{**PROCESS_DEFAULTS, "overwrite": True})
-
-    mock_get_case.assert_not_called()
-    assert result["Status"] == "SUCCESS"

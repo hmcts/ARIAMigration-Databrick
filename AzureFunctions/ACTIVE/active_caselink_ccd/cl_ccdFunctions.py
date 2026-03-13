@@ -195,21 +195,22 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     except KeyError:
         raise ValueError("Invalid environment")
 
-    # compare existing case link details if not overwriting
-    if not overwrite:
-        print("Checking existing case link data")
-        case_details = get_case_details(ccd_base_url, uid, jid, ctid, ccdReference, idam_token, s2s_token)
-        existingCaseLinks = (case_details.json().get("case_data") or {}).get("caseLinks", [])
-        if (existingCaseLinks == caseLinkPayload.get("caseLinks", [])):
-            return {
-                "RunID": runId,
-                "CCDCaseReferenceNumber": ccdReference,
-                "CaseLinkCount": len(existingCaseLinks),
-                "StartDateTime": startDateTime,
-                "EndDateTime": datetime.now(timezone.utc).isoformat(),
-                "Status": "SKIPPED",
-                "ERROR": None
-            }
+    # # Not yet required. No issue with duplicate linking events at the moment.
+    # # compare existing case link details if not overwriting
+    # if not overwrite:
+    #     print("Checking existing case link data")
+    #     case_details = get_case_details(ccd_base_url, uid, jid, ctid, ccdReference, idam_token, s2s_token)
+    #     existingCaseLinks = (case_details.json().get("case_data") or {}).get("caseLinks", [])
+    #     if (existingCaseLinks == caseLinkPayload.get("caseLinks", [])):
+    #         return {
+    #             "RunID": runId,
+    #             "CCDCaseReferenceNumber": ccdReference,
+    #             "CaseLinkCount": len(existingCaseLinks),
+    #             "StartDateTime": startDateTime,
+    #             "EndDateTime": datetime.now(timezone.utc).isoformat(),
+    #             "Status": "SKIPPED",
+    #             "ERROR": None
+    #         }
 
     # start case creation
     print("Starting case event")

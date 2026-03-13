@@ -57,6 +57,11 @@ stages:
         steps:
           - template: ci_cd_templates/unit_tests/active/decided_a.yml
 
+      - job: DecidedBTests
+        displayName: 'Run Decided_B Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/decided_b.yml
+
       - job: FTPASubmittedATests
         displayName: 'Run FTPASubmitted_A Tests'
         steps:

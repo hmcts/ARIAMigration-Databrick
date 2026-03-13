@@ -6,8 +6,8 @@ from shared_functions.dq_rules import (
     decided_b_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp, 
-                                   array_min,transform, array, abs)
+from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp, 
+                                   array_min,transform, array, abs, concat_ws, concat)
 from pyspark.sql.types import ArrayType, LongType
 
 # import shared_functions.ended as E
@@ -273,15 +273,39 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     valid_decided_outcome = silver_m3_filtered.join(silver_c_filtered, on="CaseNo", how="left")
 
+    
+    silver_m3_max_casestatus = (
+        silver_m3
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select("CaseNo", col("DecisionDate").alias("DecisionDate_correct"))
+    )
 
-    # ftpaSubmitted - ftpa
+    formatted_judge = concat(col("Judge_Surname"),lit(", "),col("Judge_Forenames"),lit(" ("),col("Judge_Title"),lit(")"))
+
+    # Step 2: Add formatted_judge only for Require == 0
+    silver_m6_conditional = silver_m6.withColumn("formatted_judge",when(col("Required") == False, formatted_judge).otherwise(None))
+
+    # Step 3: Group by case and join using newline separator
+    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(min("Required").alias("Required"), 
+                                                                          concat_ws("\n", collect_list("formatted_judge")).alias("Judges"))
+                              )
+
+    
+
+
+    # ftpaSubmitted - ftpa - decided(b)
     valid_ftpa = (
         silver_m3.filter(col("CaseStatus").isin(39))
             .withColumn("row_number", row_number().over(window_spec))
-            .filter(col("row_number") == 1)
+            .filter(col("row_number") == 1).drop("row_number").alias("m3")
+            .join(silver_m3_max_casestatus.alias("casemax"),on="CaseNo", how="left")
+            .join(judges_per_case_single.alias("m6"), on="CaseNo", how="left")
             .select(col("CaseNo"), col("Party"), col("OutOfTime"), col("DateReceived"),
-                    col("DecisionDate").alias("DecisionDate_decb"),col("CaseStatus").alias("CaseStatus_decb"),
-                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
+                    col("DecisionDate_correct").alias("DecisionDate_decb"),col("DecisionDate").alias("DecisionDate_ftpa"),
+                    col("CaseStatus").alias("CaseStatus_decb"),
+                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"),
+                    col("Judges"), col("Required"))
             .distinct()
     )
 #################################################################################################

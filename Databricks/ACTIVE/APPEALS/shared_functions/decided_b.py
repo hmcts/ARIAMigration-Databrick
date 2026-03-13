@@ -83,35 +83,62 @@ def documents(silver_m1,silver_m3):
 
 
 def setAside(silver_m1, silver_m3, silver_m6):
+
+
+    # Step 1: Build the formatted judge string
+    formatted_judge = concat(col("Judge_Surname"),lit(", "),col("Judge_Forenames"),lit(" ("),col("Judge_Title"),lit(")"))
+
+    # Step 2: Add formatted_judge only for Require == 0
+    silver_m6_conditional = silver_m6.withColumn("formatted_judge",when(col("Required") == False, formatted_judge).otherwise(None))
+
+    # Step 3: Group by case and join using newline separator
+    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(concat_ws("\n", collect_list("formatted_judge")).alias("Judges")))
+
+
     # Window: highest StatusId per CaseNo
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Filter: CaseStatus in (42, 43, 44) AND Outcome = 86
-    # Note: use & (bitwise AND), not 'and', and avoid HTML-encoded &amp;
-    silver_m3_filtered_casestatus = silver_m3.filter(
-        col("CaseStatus").isin([39]) #& (col("Outcome") == 86)
-        # Alternatively: col("Outcome").isin([86])
-    )
+    # Rank and keep the highest StatusId per CaseNo
+    silver_m3_max_casestatus = silver_m3.withColumn( "row_number", row_number().over(window_spec))
+    silver_m3_max_casestatus = silver_m3_max_casestatus.filter(col("row_number") == 1).select(col("CaseNo"),col("DecisionDate").alias("DecisionDate_max_case_status"))
+
+
+    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin([39]))
 
     # Rank and keep the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn(
-        "row_number", row_number().over(window_spec)
-    )
+    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
+
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
+    
+    # 3. Select everything from m3 except DecisionDate
+    # cols_except_decisiondate = [c for c in silver_m3_max_statusid.columns if c != "DecisionDate"]
+
+    silver_m3_max_statusid = (
+        silver_m3_max_statusid.alias("m3")
+            .join(silver_m3_max_casestatus.alias("casemax"), on="CaseNo", how="left")
+    )
+
+
+
+
+    
     # Build remittal content
     setaside_df = (
         silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m3"), on="CaseNo", how="left")
+        .join(judges_per_case_single.alias("m6"), on="CaseNo", how="left")
+        .withColumn("judgesNamesToExclude", col("Judges"))
         .withColumn("reasonRehearingRule32", lit("Set aside and to be reheard under rule 32"))
         .withColumn("rule32ListingAdditionalIns", lit("This is an ARIA Migrated case. Please refer to the documents for any additional listing instructions."))
         .withColumn("updateTribunalDecisionList", lit("underRule32"))
         .withColumn("ftpaFinalDecisionRemadeRule32", lit(""))
-        .withColumn("updateTribunalDecisionDateRule32", date_format(col("DecisionDate"), "yyyy-MM-dd")) 
+        .withColumn("updateTribunalDecisionDateRule32", date_format(col("DecisionDate_max_case_status"), "yyyy-MM-dd")) 
         .withColumn("ftpaAppellantDecisionRemadeRule32Text", when(col("Party") == 1, lit("This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.")).otherwise(None)) 
         .withColumn("ftpaRespondentDecisionRemadeRule32Text", when(col("Party") == 2, lit("This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.")).otherwise(None)) 
         
         .select(
             col("CaseNo"),
+            col("judgesNamesToExclude"),
             col("reasonRehearingRule32"),
             col("rule32ListingAdditionalIns"),
             col("updateTribunalDecisionList"),
@@ -126,8 +153,15 @@ def setAside(silver_m1, silver_m3, silver_m6):
     setaside_audit = (
         silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m3"), on="CaseNo", how="left")
         .join(setaside_df.alias("content"), on=["CaseNo"], how="left")
+        .join(silver_m6.alias("m6"), on="CaseNo", how="left")
         .select(
             col("m1.CaseNo"),
+
+            # ---- judgesNamesToExclude ----
+            array(struct(lit("Judge_Title"),lit("Judge_Forenames"),lit("Judge_Surname"),lit("Required"))).alias("judgesNamesToExclude_inputFields"),
+            array(struct(col("Judge_Title"),col("Judge_Forenames"),col("Judge_Surname"),col("Required"))).alias("judgesNamesToExclude_inputValues"),
+            col("judgesNamesToExclude").alias("judgesNamesToExclude_value"),
+            lit("Yes").alias("judgesNamesToExclude_Transformation"),
 
             # ---- reasonRehearingRule32 ----
             array(struct(lit("reasonRehearingRule32"))).alias("reasonRehearingRule32_inputFields"),
@@ -155,7 +189,7 @@ def setAside(silver_m1, silver_m3, silver_m6):
 
             # ---- updateTribunalDecisionDateRule32 ----
             array(struct(lit("DecisionDate"),lit("CaseStatus"),lit("Outcome"))).alias("updateTribunalDecisionDateRule32_inputFields"),
-            array(struct(col("m3.DecisionDate"),col("CaseStatus"),col("Outcome"))).alias("updateTribunalDecisionDateRule32_inputValues"),
+            array(struct(col("m3.DecisionDate_max_case_status"),col("CaseStatus"),col("Outcome"))).alias("updateTribunalDecisionDateRule32_inputValues"),
             col("updateTribunalDecisionDateRule32").alias("updateTribunalDecisionDateRule32_value"),
             lit("Yes").alias("updateTribunalDecisionDateRule32_Transformation"),
 

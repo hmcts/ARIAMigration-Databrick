@@ -8,6 +8,7 @@ class decidedBDQRules(DQRulesBase):
         checks = checks | self.get_checks_general()
         checks = checks | self.get_checks_general_default()
         checks = checks | self.get_checks_ftpa()
+        checks = checks | self.get_checks_set_aside()
 
         return checks
 
@@ -111,7 +112,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantDecisionDate"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
                 ELSE ftpaAppellantDecisionDate IS NULL
             END
         )"""
@@ -119,7 +120,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaRespondentDecisionDate"] = """(
 
             CASE
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
                 ELSE ftpaRespondentDecisionDate IS NULL
             END
         )"""
@@ -143,6 +144,64 @@ class decidedBDQRules(DQRulesBase):
             CASE
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType <=> 'remadeRule32'
                 ELSE ftpaRespondentRjDecisionOutcomeType IS NULL
+            END
+        )"""
+
+        return checks
+    
+
+    def get_checks_set_aside(self, checks={}):
+
+        checks["valid_reasonRehearingRule32"] = """(
+            
+            reasonRehearingRule32 = 'Set aside and to be reheard under rule 32'
+            
+        )"""
+
+        checks["valid_rule32ListingAdditionalIns"] = """(
+            
+            rule32ListingAdditionalIns = 'This is an ARIA Migrated case. Please refer to the documents for any additional listing instructions.'
+            
+        )"""
+
+        checks["valid_updateTribunalDecisionList"] = """(
+            
+            updateTribunalDecisionList = 'underRule32'
+            
+        )"""
+
+        checks["valid_ftpaFinalDecisionRemadeRule32"] = """(
+            
+            ftpaFinalDecisionRemadeRule32 = ''
+            
+        )"""
+
+        checks["valid_ftpaFinalDecisionRemadeRule32"] = """(
+            
+            updateTribunalDecisionDateRule32 = date_format(DecisionDate_decb,'yyyy-MM-dd')
+            
+        )"""
+
+        checks["valid_judgesNamesToExclude"] = """(
+            CASE
+                WHEN Required = 0 THEN
+                        judgesNamesToExclude <=> Judges
+                ELSE judgesNamesToExclude IS NULL
+            END
+            
+        )"""
+
+        checks["valid_ftpaAppellantDecisionRemadeRule32Text"] = """(
+            CASE
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
+                ELSE ftpaAppellantDecisionRemadeRule32Text IS NULL
+            END
+        )"""
+
+        checks["valid_ftpaRespondentDecisionRemadeRule32Text"] = """(
+            CASE
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
+                ELSE ftpaRespondentDecisionRemadeRule32Text IS NULL
             END
         )"""
 

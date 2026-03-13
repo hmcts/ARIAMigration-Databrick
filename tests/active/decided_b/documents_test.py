@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_a import documents
+from Databricks.ACTIVE.APPEALS.shared_functions.decided_b import documents
 from pyspark.sql import SparkSession
 import pytest
 
@@ -84,79 +84,36 @@ def documents_outputs(spark):
     return results
 
 
-def test_ftpaAppellantDocuments(spark,documents_outputs):
+def test_allFtpaAppellantDecisionDocs(spark,documents_outputs):
 
     results = documents_outputs
 
-    assert results["CASE005"]["ftpaAppellantDocuments"] == []
-    assert results["CASE006"]["ftpaAppellantDocuments"] == []
-    assert results["CASE007"]["ftpaAppellantDocuments"] == None
-    assert results["CASE010"]["ftpaAppellantDocuments"] == []
+    assert results["CASE005"]["allFtpaAppellantDecisionDocs"] == []
+    assert results["CASE006"]["allFtpaAppellantDecisionDocs"] == []
+    assert results["CASE007"]["allFtpaAppellantDecisionDocs"] == None
+    assert results["CASE010"]["allFtpaAppellantDecisionDocs"] == []
+    assert results["CASE011"]["allFtpaAppellantDecisionDocs"] == None
 
 
-def test_ftpaRespondentDocuments(spark,documents_outputs):
-
-    results = documents_outputs
-
-    assert results["CASE005"]["ftpaRespondentDocuments"] == None
-    assert results["CASE006"]["ftpaRespondentDocuments"] == None
-    assert results["CASE007"]["ftpaRespondentDocuments"] == []
-    assert results["CASE011"]["ftpaRespondentDocuments"] == []
-
-
-def test_ftpaAppellantGroundsDocuments(spark,documents_outputs):
+def test_allFtpaRespondentDecisionDocs(spark,documents_outputs):
 
     results = documents_outputs
 
-    assert results["CASE005"]["ftpaAppellantGroundsDocuments"] == []
-    assert results["CASE006"]["ftpaAppellantGroundsDocuments"] == []
-    assert results["CASE007"]["ftpaAppellantGroundsDocuments"] == None
-    assert results["CASE010"]["ftpaAppellantGroundsDocuments"] == []
-
-def test_ftpaRespondentGroundsDocuments(spark,documents_outputs):
-
-    results = documents_outputs
-
-    assert results["CASE005"]["ftpaRespondentGroundsDocuments"] == None
-    assert results["CASE006"]["ftpaRespondentGroundsDocuments"] == None
-    assert results["CASE007"]["ftpaRespondentGroundsDocuments"] == []
-    assert results["CASE011"]["ftpaRespondentGroundsDocuments"] == []
+    assert results["CASE005"]["allFtpaRespondentDecisionDocs"] == None
+    assert results["CASE006"]["allFtpaRespondentDecisionDocs"] == None
+    assert results["CASE007"]["allFtpaRespondentDecisionDocs"] == []
+    assert results["CASE010"]["allFtpaRespondentDecisionDocs"] == None
+    assert results["CASE011"]["allFtpaRespondentDecisionDocs"] == []
 
 
-def test_ftpaAppellantEvidenceDocuments(spark,documents_outputs):
+def test_allSetAsideDocs(spark,documents_outputs):
 
     results = documents_outputs
 
-    assert results["CASE005"]["ftpaAppellantEvidenceDocuments"] == []
-    assert results["CASE006"]["ftpaAppellantEvidenceDocuments"] == []
-    assert results["CASE007"]["ftpaAppellantEvidenceDocuments"] == None
-    assert results["CASE010"]["ftpaAppellantEvidenceDocuments"] == []
+    assert results["CASE005"]["allSetAsideDocs"] == []
+    assert results["CASE006"]["allSetAsideDocs"] == []
+    assert results["CASE007"]["allSetAsideDocs"] == []
+    assert results["CASE010"]["allSetAsideDocs"] == []
+    assert results["CASE011"]["allSetAsideDocs"] == []
 
-def test_ftpaRespondentEvidenceDocuments(spark,documents_outputs):
-
-    results = documents_outputs
-
-    assert results["CASE005"]["ftpaRespondentEvidenceDocuments"] == None
-    assert results["CASE006"]["ftpaRespondentEvidenceDocuments"] == None
-    assert results["CASE007"]["ftpaRespondentEvidenceDocuments"] == []
-    assert results["CASE011"]["ftpaRespondentEvidenceDocuments"] == []
-
-
-def test_ftpaAppellantOutOfTimeDocuments(spark,documents_outputs):
-
-    results = documents_outputs
-
-    assert results["CASE005"]["ftpaAppellantOutOfTimeDocuments"] == []
-    assert results["CASE006"]["ftpaAppellantOutOfTimeDocuments"] == []
-    assert results["CASE007"]["ftpaAppellantOutOfTimeDocuments"] == None
-    assert results["CASE010"]["ftpaAppellantOutOfTimeDocuments"] == []
-
-def test_ftpaRespondentEvidenceDocuments(spark,documents_outputs):
-
-    results = documents_outputs
-
-    assert results["CASE005"]["ftpaRespondentOutOfTimeDocuments"] == None
-    assert results["CASE006"]["ftpaRespondentOutOfTimeDocuments"] == None
-    assert results["CASE007"]["ftpaRespondentOutOfTimeDocuments"] == []
-    assert results["CASE011"]["ftpaRespondentOutOfTimeDocuments"] == []
 

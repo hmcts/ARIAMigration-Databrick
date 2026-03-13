@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.ftpa_submitted_a import generalDefault
+from Databricks.ACTIVE.APPEALS.shared_functions.decided_b import generalDefault
 from pyspark.sql import SparkSession
 import pytest
 
@@ -30,12 +30,36 @@ def generalDefault_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in generalDefault_content.collect()}
     return results
 
-def test_isFtpaListVisible(spark,generalDefault_outputs):
+def test_isDlrmSetAsideEnabled(spark,generalDefault_outputs):
 
     results = generalDefault_outputs
 
-    assert results["CASE001"]["isFtpaListVisible"] == "Yes"
-    assert results["CASE002"]["isFtpaListVisible"] == "Yes"
-    assert results["CASE003"]["isFtpaListVisible"] == "Yes"
+    assert results["CASE001"]["isDlrmSetAsideEnabled"] == "Yes"
+    assert results["CASE002"]["isDlrmSetAsideEnabled"] == "Yes"
+    assert results["CASE003"]["isDlrmSetAsideEnabled"] == "Yes"
+
+def test_isReheardAppealEnabled(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["isReheardAppealEnabled"] == "Yes"
+    assert results["CASE002"]["isReheardAppealEnabled"] == "Yes"
+    assert results["CASE003"]["isReheardAppealEnabled"] == "Yes"
+
+def test_secondFtpaDecisionExists(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["secondFtpaDecisionExists"] == "No"
+    assert results["CASE002"]["secondFtpaDecisionExists"] == "No"
+    assert results["CASE003"]["secondFtpaDecisionExists"] == "No"
+
+def test_caseFlagSetAsideReheardExists(spark,generalDefault_outputs):
+
+    results = generalDefault_outputs
+
+    assert results["CASE001"]["caseFlagSetAsideReheardExists"] == "Yes"
+    assert results["CASE002"]["caseFlagSetAsideReheardExists"] == "Yes"
+    assert results["CASE003"]["caseFlagSetAsideReheardExists"] == "Yes"
 
 

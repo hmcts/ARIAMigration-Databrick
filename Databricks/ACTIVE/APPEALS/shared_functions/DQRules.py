@@ -2,11 +2,12 @@ import logging
 from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
-    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules, remitted_dq_rules
+    decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules, remitted_dq_rules,
+    decided_b_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, max, date_format, to_timestamp, 
-                                   array_min,transform, array, abs)
+from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp, 
+                                   array_min,transform, array, abs, concat_ws, concat)
 from pyspark.sql.types import ArrayType, LongType
 
 # import shared_functions.ended as E
@@ -54,6 +55,7 @@ def add_state_dq_rules(state: str) -> dict:
         "prepareForHearing": prepareforhearing_dq_rules.prepareForHearingDQRules().get_checks(),
         "decision": decision_dq_rules.decisionDQRules().get_checks(),
         "decided(a)": decided_a_dq_rules.decidedADQRules().get_checks(),
+        "decided(b)": decided_b_dq_rules.decidedBDQRules().get_checks(),
         "ftpaSubmitted(a)": ftpa_submitted_a_dq_rules.ftpaSubmittedADQRules().get_checks(),
         "ftpaSubmitted(b)": ftpa_submitted_b_dq_rules.ftpaSubmittedBDQRules().get_checks(),
         "ftpaDecided": ftpaDecided_dq_rules.ftpaDecidedDQRules().get_checks(),
@@ -75,6 +77,7 @@ def previous_state_map(state: str):
         "prepareForHearing":             "listing",
         "decision":                      "prepareHearing",
         "decided(a)":                    "decision",
+        "decided(b)":                    "ftpaSubmitted(a)",
         "ftpaSubmitted(a)":              "decided(a)",
         "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
@@ -270,14 +273,39 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     valid_decided_outcome = silver_m3_filtered.join(silver_c_filtered, on="CaseNo", how="left")
 
+    
+    silver_m3_max_casestatus = (
+        silver_m3
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select("CaseNo", col("DecisionDate").alias("DecisionDate_correct"))
+    )
 
-    # ftpaSubmitted - ftpa
+    formatted_judge = concat(col("Judge_Surname"),lit(", "),col("Judge_Forenames"),lit(" ("),col("Judge_Title"),lit(")"))
+
+    # Step 2: Add formatted_judge only for Require == 0
+    silver_m6_conditional = silver_m6.withColumn("formatted_judge",when(col("Required") == False, formatted_judge).otherwise(None))
+
+    # Step 3: Group by case and join using newline separator
+    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(min("Required").alias("Required"), 
+                                                                          concat_ws("\n", collect_list("formatted_judge")).alias("Judges"))
+                              )
+
+    
+
+
+    # ftpaSubmitted - ftpa - decided(b)
     valid_ftpa = (
         silver_m3.filter(col("CaseStatus").isin(39))
             .withColumn("row_number", row_number().over(window_spec))
-            .filter(col("row_number") == 1)
+            .filter(col("row_number") == 1).drop("row_number").alias("m3")
+            .join(silver_m3_max_casestatus.alias("casemax"),on="CaseNo", how="left")
+            .join(judges_per_case_single.alias("m6"), on="CaseNo", how="left")
             .select(col("CaseNo"), col("Party"), col("OutOfTime"), col("DateReceived"),
-                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"))
+                    col("DecisionDate_correct").alias("DecisionDate_decb"),col("DecisionDate").alias("DecisionDate_ftpa"),
+                    col("CaseStatus").alias("CaseStatus_decb"),
+                    col("Adj_Title"), col("Adj_Forenames"), col("Adj_Surname"),
+                    col("Judges"), col("Required"))
             .distinct()
     )
 #################################################################################################

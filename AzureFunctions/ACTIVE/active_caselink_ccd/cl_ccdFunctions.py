@@ -1,7 +1,10 @@
 import json
-import logging
 import requests
 from datetime import datetime, timezone
+try:
+    from .retry_decorator import retry_on_result
+except ImportError:
+    from retry_decorator import retry_on_result
 
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
@@ -14,10 +17,27 @@ except Exception:
     # fallback when running as a script in the same folder
     from cl_tokenManager import IDAMTokenManager, S2S_Manager
 
-logger = logging.getLogger(__name__)
-
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
+
+
+def get_case_details(ccd_base_url, uid, jid, ctid, cid, idam_token, s2s_token):
+    get_case_endpoint = f"/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases/{cid}"
+    get_case_url = f"{ccd_base_url}{get_case_endpoint}"
+
+    headers = {
+        "Authorization": f"Bearer {idam_token}",  # IDAM user JWT
+        "ServiceAuthorization": f"{s2s_token}",  # service-to-service JWT
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    try:
+        response = requests.get(get_case_url, headers=headers)
+        print(f"🔢 Get Case Details Response status: {response.status_code}:{response.text}")
+        return response
+    except Exception as e:
+        print(f"❌ Network error while calling {get_case_url}: {e}")
+        return None
 
 
 def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_token):
@@ -32,7 +52,7 @@ def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_to
     }
     try:
         response = requests.get(start_event_url, headers=headers)
-        print(f"🔢 Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Start Case Event Response status: {response.status_code}:{response.text}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_event_url}: {e}")
@@ -93,7 +113,7 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         except json.JSONDecodeError as e:
             print(f"❌ Error decoding payloadData JSON string: {e}")
 
-    print("🎁 payload recieved for submission:", type(payloadData))
+    print(f"🎁 payload recieved for submission: {type(payloadData)}")
 
     try:
         json_object = {
@@ -115,8 +135,13 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         return None
 
 
-# caseNo = event.key, payloadData = event.value
-def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE):
+@retry_on_result(
+    max_retries=2,
+    base_delay=30,
+    max_delay=120,
+    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
+)
+def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
     print(f"Starting processing case for {ccdReference}")
 
     startDateTime = datetime.now(timezone.utc).isoformat()
@@ -166,6 +191,23 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE):
 
     except KeyError:
         raise ValueError("Invalid environment")
+
+    # # Not yet required. No issue with duplicate linking events at the moment.
+    # # compare existing case link details if not overwriting
+    # if not overwrite:
+    #     print("Checking existing case link data")
+    #     case_details = get_case_details(ccd_base_url, uid, jid, ctid, ccdReference, idam_token, s2s_token)
+    #     existingCaseLinks = (case_details.json().get("case_data") or {}).get("caseLinks", [])
+    #     if (existingCaseLinks == caseLinkPayload.get("caseLinks", [])):
+    #         return {
+    #             "RunID": runId,
+    #             "CCDCaseReferenceNumber": ccdReference,
+    #             "CaseLinkCount": len(existingCaseLinks),
+    #             "StartDateTime": startDateTime,
+    #             "EndDateTime": datetime.now(timezone.utc).isoformat(),
+    #             "Status": "SKIPPED",
+    #             "ERROR": None
+    #         }
 
     # start case creation
     print("Starting case event")
@@ -265,7 +307,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE):
             "CaseLinkCount": len((submit_case_response.json().get("case_data") or {}).get("caseLinks", [])),
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
-            "Status": "Success",
+            "Status": "SUCCESS",
             "Error": None
         }
 

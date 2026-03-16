@@ -55,11 +55,19 @@ def setup_mocks(batch_len=1):
 
 
 PROCESS_SUCCESS_RESULT = {
-    "Status": "Success",
+    "Status": "SUCCESS",
     "CCDCaseReferenceNumber": "1234567890123456",
     "RunID": "run-001",
     "CaseLinkCount": 2,
     "Error": None,
+}
+
+PROCESS_SKIP_RESULT = {
+    "Status": "SKIPPED",
+    "CCDCaseReferenceNumber": "1234567890123456",
+    "RunID": "run-001",
+    "CaseLinkCount": 1,
+    "ERROR": None,
 }
 
 PROCESS_ERROR_RESULT = {
@@ -209,36 +217,45 @@ def test_process_event_called_with_correct_args():
         payload["RunID"],
         payload["CaseLinkPayload"],
         app_module.PR_REFERENCE,
+        None,  # overwrite (payload has no "Overwrite" key)
     )
 
 
-def test_start_datetime_injected_into_result():
-    """StartDateTime is added to the result dict before it is serialised to JSON."""
-    mocks = setup_mocks(batch_len=1)
-    events = [make_mock_event({"RunID": "run-dt", "CaseLinkPayload": []})]
+def test_skip_result_is_not_added_to_batch():
+    """A SKIP result is dropped (continue) and never added to the event hub batch."""
+    mocks = setup_mocks(batch_len=0)
+    events = [make_mock_event({"RunID": "run-skip", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(return_value={"Status": "Success", "Error": None})
-    serialized_strings = []
+    to_thread = AsyncMock(return_value=dict(PROCESS_SKIP_RESULT))
 
-    original_event_data = app_module.EventData
-
-    def capture_event_data(body):
-        serialized_strings.append(body)
-        return original_event_data(body)
-
-    extra = [
-        patch(
-            "AzureFunctions.ACTIVE.active_caselink_ccd.function_app.EventData",
-            side_effect=capture_event_data,
-        )
-    ]
-
-    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    assert len(serialized_strings) == 1
-    result = json.loads(serialized_strings[0])
-    assert "StartDateTime" in result
+    mocks["batch"].add.assert_not_called()
+    mocks["producer"].send_batch.assert_not_called()
+
+
+def test_overwrite_flag_passed_from_payload():
+    """When the payload contains Overwrite=True it is forwarded to process_event."""
+    mocks = setup_mocks(batch_len=1)
+    payload = {"RunID": "run-ow", "CaseLinkPayload": [], "Overwrite": True}
+    partition_key = "1234567890123456"
+    events = [make_mock_event(payload, partition_key=partition_key)]
+
+    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    to_thread.assert_awaited_once_with(
+        app_module.process_event,
+        app_module.ENV,
+        partition_key,
+        payload["RunID"],
+        payload["CaseLinkPayload"],
+        app_module.PR_REFERENCE,
+        True,  # overwrite
+    )
 
 
 def test_empty_event_list_does_not_send_batch():

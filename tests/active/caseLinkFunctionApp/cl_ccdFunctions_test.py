@@ -8,6 +8,7 @@ with patch("azure.identity.DefaultAzureCredential"), \
      patch("azure.keyvault.secrets.SecretClient") as _mock_kv_cls:
     _mock_kv_cls.return_value.get_secret.return_value.value = "fake-secret"
     from AzureFunctions.ACTIVE.active_caselink_ccd.cl_ccdFunctions import (
+        get_case_details,
         start_case_event,
         validate_case,
         submit_case_event,
@@ -44,6 +45,37 @@ EXPECTED_HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
 }
+
+# Keys required by get_case_details (no etid)
+CASE_DETAILS_COMMON = {k: COMMON[k] for k in ("ccd_base_url", "uid", "jid", "ctid", "cid", "idam_token", "s2s_token")}
+
+
+# ---------------------------------------------------------------------------
+# get_case_details
+# ---------------------------------------------------------------------------
+
+@patch("requests.get")
+def test_get_case_details_success(mock_get):
+    mock_get.return_value = mock_response(200, {"id": "123", "case_data": {}})
+
+    response = get_case_details(**CASE_DETAILS_COMMON)
+
+    expected_url = (
+        f"{COMMON['ccd_base_url']}/caseworkers/{COMMON['uid']}"
+        f"/jurisdictions/{COMMON['jid']}/case-types/{COMMON['ctid']}"
+        f"/cases/{COMMON['cid']}"
+    )
+    mock_get.assert_called_once_with(expected_url, headers=EXPECTED_HEADERS)
+    assert response.status_code == 200
+
+
+@patch("requests.get")
+def test_get_case_details_network_error(mock_get):
+    mock_get.side_effect = Exception("Connection refused")
+
+    response = get_case_details(**CASE_DETAILS_COMMON)
+
+    assert response is None
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +276,14 @@ PROCESS_DEFAULTS = dict(
 )
 
 MODULE = "AzureFunctions.ACTIVE.active_caselink_ccd.cl_ccdFunctions"
+SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.time.sleep"
+
+
+@pytest.fixture(autouse=True)
+def no_retry_sleep():
+    """Suppress retry backoff sleeps in all process_event tests."""
+    with patch(SLEEP_PATH):
+        yield
 
 
 @pytest.fixture
@@ -275,7 +315,7 @@ def test_process_event_success(mock_start, mock_validate, mock_submit):
 
     result = process_event(**PROCESS_DEFAULTS)
 
-    assert result["Status"] == "Success"
+    assert result["Status"] == "SUCCESS"
     assert result["CaseLinkCount"] == 3
     assert result["Error"] is None
     assert result["CCDCaseReferenceNumber"] == PROCESS_DEFAULTS["ccdReference"]
@@ -331,7 +371,7 @@ def test_process_event_success_null_case_data(mock_start, mock_validate, mock_su
 
     result = process_event(**PROCESS_DEFAULTS)
 
-    assert result["Status"] == "Success"
+    assert result["Status"] == "SUCCESS"
     assert result["CaseLinkCount"] == 0
 
 

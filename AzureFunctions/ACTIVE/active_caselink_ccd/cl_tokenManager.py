@@ -5,7 +5,6 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from datetime import datetime, timezone, timedelta
 
-
 class IDAMTokenManager:
     def __init__(self, env: str, skew: int = 28792):
         self.env = env

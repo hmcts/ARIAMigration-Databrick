@@ -4900,9 +4900,9 @@ def generate_html(row, templates=templates):
                 f"<tr><td id=\"midpadding\" style=\"text-align:center\"></td><td id=\"midpadding\">{AdditionalGrounds.AppealTypeDescription}</td></tr>"
                 for AdditionalGrounds in (row.AppealGroundsDetails or [])) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>',
             "{{LinkedFilesPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(row.LinkNo)}</td><td id=\"midpadding\">{str(row.LinkName)}, {str(row.LinkForeNames)} ({str(row.LinkTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
+                f"<tr><td id=\"midpadding\"></td><td id=\"midpadding\">{str(Link.CaseNo)}</td><td id=\"midpadding\">{str(Link.LinkAppellantName)}, {str(Link.LinkAppellantForenames)} ({str(Link.LinkAppellantTitle)})</td><td id=\"midpadding\">{str(Link.LinkDetailComment)}</td></tr>"
                 for i, Link in enumerate(row.LinkedCaseDetails or [])
-            ), 
+            ),
             "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">{transaction.AmountDue}</td><td id=\"midpadding\">{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
                 for i, transaction in enumerate(row.TransactionDetails or [])

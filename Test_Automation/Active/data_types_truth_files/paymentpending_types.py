@@ -104,5 +104,7 @@ PaymentPendingTypes = {
     'uploadAddendumEvidenceLegalRepActionAvailable': 'string',
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
-    'uploadTheAppealFormDocs': 'array<string>'
+    'uploadTheAppealFormDocs': 'array<string>',
+    'applicationOutOfTimeExplanation': 'string'
+
 }

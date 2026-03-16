@@ -147,7 +147,7 @@ DecisionTypes = {
     'sponsorNameForDisplay': 'string',
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
-    'listingLength': 'struct<hours:long,minutes:long>',
+    'listingLength': 'struct<hours:bigint,minutes:bigint>',
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'amendResponseActionAvailable': 'string',

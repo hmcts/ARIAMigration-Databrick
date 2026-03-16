@@ -600,7 +600,9 @@ def test_hearingDetails_init(json, M1_bronze, M3_bronze):
 
         M3_bronze = M3_bronze.select(
             "CaseNo",
-            "HearingCentre"
+            "HearingCentre",
+            "TimeEstimate",
+            "CaseStatus"
         )
 
         test_df = test_df.join(
@@ -618,6 +620,59 @@ def test_hearingDetails_init(json, M1_bronze, M3_bronze):
         error_message = str(e)        
         return None,TestResult("hearingResponse", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
 
+#######################
+# hearingChannel - If VisitVisaType is 1 and channelCode = "ONPPRS", channelLabel = "On the Papers"
+#######################
+def test_hearingChannel_test1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            col("VisitVisaType") == 1
+            ).count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(
+        (
+            col("VisitVisaType") == 1
+        ) &
+        (
+            (col("hearingChannel.code") != "ONPPRS") |
+            (col("hearingChannel.label") != "On The Papers")   
+        ))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where VisitVisaType is 1 and channelCode != ONPPRS, channelLabel != On the Papers", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hearingChannel","PASS", "hearingChannel acceptance criteria pass: all rows VisitVisaType is 1 have channelCode = ONPPRS, channelLabel = On the Papers", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
+#######################
+# hearingChannel - If VisitVisaType is 2 and channelCode = "INTER", channelLabel = "In Person"
+#######################
+def test_hearingChannel_test2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            col("VisitVisaType") == 2
+            ).count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
+        acceptance_critera = test_df.filter(
+        (
+            col("VisitVisaType") == 2
+        ) &
+        (
+            (col("hearingChannel.code") != "INTER") |
+            (col("hearingChannel.label") != "In Person")   
+        ))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where VisitVisaType is 1 and channelCode != INTER, channelLabel != In Person", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hearingChannel","PASS", "hearingChannel acceptance criteria pass: all rows VisitVisaType is 1 have channelCode = INTER, channelLabel = In Person", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

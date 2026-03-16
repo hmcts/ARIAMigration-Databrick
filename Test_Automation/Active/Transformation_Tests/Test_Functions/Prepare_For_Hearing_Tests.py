@@ -580,4 +580,44 @@ def test_singleSexCourtDecisionForDisplay_test2(test_df):
         error_message = str(e)
         return TestResult("singleSexCourtDecisionForDisplay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+############################################################################################
+#######################
+#hearing details Init code
+#######################
+def test_hearingDetails_init(json, M1_bronze, M3_bronze):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "hearingChannel",
+            "listingLocation",
+            "listingLength"
+        )
+
+        M1_bronze = M1_bronze.select(
+            "CaseNo",
+            "VisitVisaType"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "HearingCentre"
+        )
+
+        test_df = test_df.join(
+            M1_bronze,
+            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            "inner"
+        ).join(
+            M3_bronze,
+            json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        ).drop(M1_bronze["CaseNo"], M3_bronze["CaseNo"])
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("hearingResponse", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+
+
+
 

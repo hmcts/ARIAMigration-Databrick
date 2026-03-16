@@ -105,5 +105,38 @@ def test_dec_defaultValues(test_df, fields_to_exclude):
         error_message = str(e)        
         return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
 
+############################################################################################
+#######################
+#hearingDetails Init code
+#######################
+def test_hearingDetails_init(json, M3_bronze):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "listCaseHearingLength",
+            "listCaseHearingDate",
+            "listCaseHearingCentre",
+            "listCaseHearingCentreAddress"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "TimeEstimate",
+            "CaseStatus",
+            "ListedCentre",
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] = M3_bronze["CaseNo"],
+            "inner"
+        )
+        
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
 
 

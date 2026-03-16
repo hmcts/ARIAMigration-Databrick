@@ -1,9 +1,6 @@
 import time
 import random
-import logging
 from functools import wraps
-
-logger = logging.getLogger(__name__)
 
 
 def retry_on_result(
@@ -47,7 +44,7 @@ def retry_on_result(
                     last_result = result
 
                     if attempt == max_retries:
-                        logger.error(
+                        print(
                             f"{func.__name__} returned a retryable result after "
                             f"{max_retries + 1} attempts. Returning last result."
                         )
@@ -57,7 +54,7 @@ def retry_on_result(
                     if jitter:
                         delay *= 0.5 + random.random() * 0.5
 
-                    logger.warning(
+                    print(
                         f"{func.__name__} returned a retryable result "
                         f"(attempt {attempt + 1}/{max_retries + 1}). "
                         f"Retrying in {delay:.2f}s..."

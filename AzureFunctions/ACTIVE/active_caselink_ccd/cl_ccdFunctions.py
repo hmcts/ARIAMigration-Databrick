@@ -1,5 +1,4 @@
 import json
-import logging
 import requests
 from datetime import datetime, timezone
 try:
@@ -17,8 +16,6 @@ try:
 except Exception:
     # fallback when running as a script in the same folder
     from cl_tokenManager import IDAMTokenManager, S2S_Manager
-
-logger = logging.getLogger(__name__)
 
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
@@ -116,7 +113,7 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         except json.JSONDecodeError as e:
             print(f"❌ Error decoding payloadData JSON string: {e}")
 
-    print("🎁 payload recieved for submission:", type(payloadData))
+    print(f"🎁 payload recieved for submission: {type(payloadData)}")
 
     try:
         json_object = {

@@ -1,6 +1,8 @@
 import asyncio
 import azure.functions as func
 import logging
+import logging.handlers
+import queue as _queue
 import json
 import os
 
@@ -74,7 +76,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     data = payload.get("CaseLinkPayload", None)
                     overwrite = payload.get("Overwrite", None)
 
-                    # Process the file
                     result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
 
                     # Skip if marked for SKIPPED

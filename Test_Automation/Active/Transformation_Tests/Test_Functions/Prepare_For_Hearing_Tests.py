@@ -4,6 +4,7 @@ from pyspark.sql.functions import (
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains
 )
+from pyspark.sql import functions as F
 import inspect
 
 #Import Test Results class
@@ -584,7 +585,7 @@ def test_singleSexCourtDecisionForDisplay_test2(test_df):
 #######################
 #hearing details Init code
 #######################
-def test_hearingDetails_init(json, M1_bronze, M3_bronze):
+def test_hearingDetails_init(json, M1_bronze, M3_bronze, bll):
     try:
         test_df = json.select(
             "appealReferenceNumber",
@@ -613,6 +614,10 @@ def test_hearingDetails_init(json, M1_bronze, M3_bronze):
             M3_bronze,
             json["appealReferenceNumber"] == M3_bronze["CaseNo"],
             "inner"
+        ).join(
+            bll,
+            M3_bronze["HearingCentre"] == bll["ListedCentre"],
+            "left"
         ).drop(M1_bronze["CaseNo"], M3_bronze["CaseNo"])
 
         return test_df, True
@@ -676,3 +681,46 @@ def test_hearingChannel_test2(test_df):
     except Exception as e:
         error_message = str(e)
         return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+# listingLocation
+#######################
+def test_listingLocation_mapping(test_df):
+    try:
+        
+        target_records = test_df.filter(F.col("CaseStatus").isin(37, 38))
+
+        collapsed_df = target_records.groupBy("appealReferenceNumber").agg(
+            F.max("listingLocation").alias("listingLocation"),
+            F.max("listingLocation.code").alias("actual_code"),
+            F.max("listingLocation.label").alias("actual_label"),
+            F.max("locationCode").alias("expected_code"),
+            F.max("locationLabel").alias("expected_label"),
+            F.max("ListedCentre").alias("ListedCentre") # To ensure we have a ListedCentre
+        )
+
+        acceptance_critera = collapsed_df.filter(
+            (F.col("ListedCentre").isNotNull()) & 
+            (
+                (F.col("actual_code") != F.col("expected_code")) | 
+                (F.col("actual_label") != F.col("expected_label"))
+            )
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("listingLocation","FAIL", f"listingLocation acceptance criteria failed: found {acceptance_critera.count()} rows where ListedCentre and listingLocation do not match", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("listingLocation","PASS", "listingLocation acceptance criteria pass: all rows have matching ListedCentre and listingLocation rows", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("listingLocation", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+
+
+
+
+
+
+

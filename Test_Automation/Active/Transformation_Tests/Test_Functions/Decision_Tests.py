@@ -128,7 +128,7 @@ def test_hearingDetails_init(json, M3_bronze):
 
         test_df = test_df.join(
             M3_bronze,
-            test_df["appealReferenceNumber"] = M3_bronze["CaseNo"],
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
             "inner"
         )
         

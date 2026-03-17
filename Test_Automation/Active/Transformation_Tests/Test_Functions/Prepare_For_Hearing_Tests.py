@@ -5,6 +5,7 @@ from pyspark.sql.functions import (
     collect_set, current_timestamp,transform, first, array_contains
 )
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 import inspect
 
 #Import Test Results class
@@ -688,8 +689,10 @@ def test_hearingChannel_test2(test_df):
 #######################
 def test_listingLocation_mapping(test_df):
     try:
-        
-        target_records = test_df.filter(F.col("CaseStatus").isin(37, 38))
+        target_records = test_df.filter(col("CaseStatus").isin(37, 38))
+
+        if target_records.count() == 0:
+            return TestResult("listingLocation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         collapsed_df = target_records.groupBy("appealReferenceNumber").agg(
             F.max("listingLocation").alias("listingLocation"),
@@ -716,9 +719,50 @@ def test_listingLocation_mapping(test_df):
     except Exception as e:
         return TestResult("listingLocation", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+# listingLength
+#######################
+def test_listingLength_mapping(test_df):
+    try:
+        # Filter CaseStatus = 37 or 38
+        target_records = test_df.filter(F.col("CaseStatus").isin(37, 38))
+
+        if target_records.count() == 0:
+            return TestResult("listingLength", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Partition by appealReferenceNumber
+        # Order by Status DESC (38 above 37)
+        # Order by TimeEstimate DESC (120 above 60 if status is tied)
+        window_spec = Window.partitionBy("appealReferenceNumber") \
+                            .orderBy(F.col("CaseStatus").desc(), F.col("TimeEstimate").desc())
+
+        # Apply rank and grab the most relevant row for each CaseNumber
+        ranked_df = target_records.withColumn("row_rank", F.row_number().over(window_spec))
+        winning_records = ranked_df.filter(F.col("row_rank") == 1)
+
+        # Extract JSON and test expected values from
+        final_comparison_df = winning_records.select(
+            "appealReferenceNumber",
+            col("listingLength"),
+            col("listingLength.hours").alias("actual_hours"),
+            col("listingLength.minutes").alias("actual_minutes"),
+            col("TimeEstimate").alias("source_mins")
+        ).withColumn("expected_hours", F.floor(F.col("source_mins") / 60)) \
+            .withColumn("expected_minutes", F.col("source_mins") % 60)
+
+        acceptance_critera = final_comparison_df.filter(
+            (F.col("actual_hours") != F.col("expected_hours")) | 
+            (F.col("actual_minutes") != F.col("expected_minutes"))
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("listingLength","FAIL", f"listingLength acceptance criteria failed: found {acceptance_critera.count()} CaseNos where listingLength and TimeEstimate do not match", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("listingLength","PASS", "listingLength acceptance criteria pass: all rows have matching listingLength and TimeEstimate rows", test_from_state, inspect.stack()[0].function)
 
 
-
+    except Exception as e:
+        return TestResult("listingLength", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 

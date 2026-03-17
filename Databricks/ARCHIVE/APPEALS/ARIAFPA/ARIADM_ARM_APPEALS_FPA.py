@@ -1320,6 +1320,7 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
             col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
             col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
             col("l.NumReqNonLegalMember").alias("NonLegalMember"),
+            col("l.ListId"),
             
             # Court fields
             col("c.CourtName"),
@@ -3444,6 +3445,7 @@ def silver_list_detail():
                               "ca.ListAdjudicatorNote",
                               "ca.ListAdjudicatorTitle",
                               "ca.ListName",
+                              "ca.ListId",
                             #   "ca.ListStartTime",
                               date_format(col("ca.ListStartTime"), 'h:mm a').alias("ListStartTime"),
                               "ca.ListTypeDesc",
@@ -4813,6 +4815,17 @@ def generate_html(row, templates=templates):
         for placeholder, value in replacements.items():
             html_template = html_template.replace(placeholder, value)
         
+        #m7 is StatusDetails, m3 is ListDetails
+        def should_strikethrough(status_id, list_details):
+            """
+            Returns True if the status_id is not present in list_details,
+            or if present but ListId is None.
+            """
+            for l in list_details or []:
+                if getattr(l, "StatusId", None) == status_id:
+                    return getattr(l, "ListId", None) is None
+            return True  # Not found in ListDetails
+        
         # Replace placeholders in the template with row data
         replacements = {
             "{{CaseNo}}": str(row.CaseNo),
@@ -4856,7 +4869,20 @@ def generate_html(row, templates=templates):
                 for i, ac in enumerate(row.AppealCategoryDetails or [])
             ),
             "{{StatusPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{status.CaseStatusDescription}</td><td id=\"midpadding\">{format_date(status.LatestKeyDate)}</td><td id=\"midpadding\">{status.InterpreterRequired}</td><td id=\"midpadding\">{format_date(status.DecisionDate)}</td><td id=\"midpadding\">{status.DecisionTypeDescription}</td><td id=\"midpadding\">{format_date(status.Promulgated)}</td></tr>"
+                "<tr>"
+                f"<td id=\"midpadding\">{status.CaseStatusDescription}</td>"
+                "<td id=\"midpadding\">"
+                + (
+                    f"<s>{format_date(status.KeyDate)}</s>"
+                    if should_strikethrough(status.StatusId, row.ListDetails)
+                    and status.KeyDate else format_date(status.KeyDate)
+                )
+                + "</td>"
+                f"<td id=\"midpadding\">{status.InterpreterRequired}</td>"
+                f"<td id=\"midpadding\">{format_date(status.DecisionDate)}</td>"
+                f"<td id=\"midpadding\">{status.DecisionTypeDescription}</td>"
+                f"<td id=\"midpadding\">{format_date(status.Promulgated)}</td>"
+                "</tr>"
                 for i, status in enumerate(sorted(row.TempCaseStatusDetails or [], key=lambda x: x.StatusId, reverse=True), start=1)
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
@@ -4994,12 +5020,24 @@ def generate_html(row, templates=templates):
                 nested_table_number += 1
                 nested_tab_group_number += 1
                 nested_tabs_size  = 10 if index == 1 else 400
-                # 320
+
+                # Use MiscDate1 for Preliminary Issue, KeyDate otherwise
+                if getattr(SDP, "CaseStatusDescription", None) == "Preliminary Issue":
+                    date_val = format_date(SDP.MiscDate1)
+                else:
+                    date_val = format_date(SDP.KeyDate) #LatestKeyDate?
+
+                if should_strikethrough(SDP.StatusId, row.ListDetails):
+                    doh_style = "text-decoration: line-through;"
+                else:
+                    doh_style = "" 
+
                 line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
                                         .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
                                         .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
                                         .replace("{{CaseStatusDescription}}", str(SDP.CaseStatusDescription)) \
-                                        .replace("{{KeyDate}}", format_date_iso(SDP.LatestKeyDate or '')) \
+                                        .replace("{{KeyDate}}", date_val if date_val else "") \
+                                        .replace("{{DOHstyle}}", doh_style) \
                                         .replace("{{InterpreterRequired}}", str(SDP.InterpreterRequired or '')) \
                                         .replace("{{AdjudicatorSurname}}", str(SDP.LatestAdjudicatorSurname or '')) \
                                         .replace("{{AdjudicatorForenames}}", str(SDP.LatestAdjudicatorForenames or ''))  \
@@ -5045,7 +5083,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{typingReasonsReceived}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
                                         .replace("{{WrittenReasonsSentDate}}", format_date_iso(SDP.WrittenReasonsSentDate or '')) \
                                         .replace("{{DateReceived}}", format_date_iso(SDP.DateReceived or '')) \
-                                        .replace("{{MiscDate1}}", format_date_iso(SDP.MiscDate1 or '')) \
+                                        .replace("{{MiscDate1}}", format_date(SDP.MiscDate1 or '')) \
                                         .replace("{{Party}}", str(SDP.Party or '')) \
                                         .replace("{{OutOfTime}}", str(SDP.OutOfTime or '')) \
                                         .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \
@@ -5703,10 +5741,11 @@ def stg_statusdetail_data():
                                                                 (col("status.Statusid") == col("hearing.Statusid")) & 
                                                                 (col("status.HearingPointsChangeReasonId") == col("hearing.HearingPointsChangeReasonId")), "left") \
                                                         .withColumn("HearingPointsChangeReasondesc", col("hearing.Description")) \
-                                                        .drop("list.CaseNo", "list.Statusid")
+                                                        .drop("list.CaseNo")
 
     # # Select and refine columns from the joined dataframe
-    status_refined_df = status_joined_df.select( "status.*", "list.Outcome",
+    status_refined_df = status_joined_df.select( "status.*", "list.Outcome", col("list.Statusid").alias("ListStatusId"),
+        "list.ListId",
         "list.TimeEstimate",
         "list.ListNumber",
         "list.HearingDuration",
@@ -5768,6 +5807,7 @@ def stg_statusdetail_data():
                 "list.Position"
             )).alias("CaseStatusAdjudicatorDetails"),
         max("status.KeyDate").alias("LatestKeyDate"),
+        max(when(col("status.CaseStatus") != 10, col("status.KeyDate")).otherwise(col("status.MiscDate1"))).alias("KeyDate"),
         max_by("list.ListAdjudicatorSurname", "status.KeyDate").alias("LatestAdjudicatorSurname"),
         max_by("list.ListAdjudicatorForenames", "status.KeyDate").alias("LatestAdjudicatorForenames"),
         max_by("list.ListAdjudicatorTitle", "status.KeyDate").alias("LatestAdjudicatorTitle"),
@@ -5781,7 +5821,7 @@ def stg_statusdetail_data():
         max_by("CourtClerkUsher", "status.KeyDate").alias("CourtClerkUsher")
     )
 
-    df_agg2 = join_df.select("status.CaseNo","status.CaseStatus", "status.StatusId", 'status.CaseStatusDescription',  'status.InterpreterRequired',  'status.MiscDate2', 'status.VideoLink', 'status.RemittalOutcome', 'status.UpperTribunalAppellant', 'status.DecisionSentToHO', 
+    df_agg2 = join_df.select("status.CaseNo","status.CaseStatus", "status.StatusId", 'ListStatusId', 'ListId','status.CaseStatusDescription',  'status.InterpreterRequired',  'status.MiscDate2', 'status.VideoLink', 'status.RemittalOutcome', 'status.UpperTribunalAppellant', 'status.DecisionSentToHO', 
             'status.InitialHearingPoints', 'status.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'status.CostOrderAppliedFor', 'status.DecisionDate', 
             'status.DeterminationByJudgeSurname', 'status.DeterminationByJudgeForenames', 'status.DeterminationByJudgeTitle', 'status.MethodOfTyping', 
             'adjournDecisionTypeDescription', 'status.Promulgated', 'status.UKAITNo', 'status.Extempore', 'status.WrittenReasonsRequestedDate', 
@@ -5803,7 +5843,7 @@ def stg_statusdetail_data():
             & (col("casestatus.CaseStatus") == col("adjj.CaseStatus"))), 'left')\
                 .join(lookup_df.alias("lookup"), col("casestatus.CaseStatus") == col("lookup.id")) \
                 .orderBy(col("casestatus.StatusId").desc()) \
-            .groupBy("casestatus.CaseNo").agg(collect_list(struct( "casestatus.CaseStatus", "casestatus.StatusId", "CaseStatusAdjudicatorDetails",'casestatus.CaseStatusDescription',  'casestatus.InterpreterRequired',  'casestatus.MiscDate2', 'casestatus.VideoLink', 'casestatus.RemittalOutcome', 'casestatus.UpperTribunalAppellant', 'casestatus.DecisionSentToHO', 
+            .groupBy("casestatus.CaseNo").agg(collect_list(struct( "casestatus.CaseStatus", "casestatus.StatusId", "caseStatus.ListStatusId", "caseStatus.ListId", "CaseStatusAdjudicatorDetails",'casestatus.CaseStatusDescription',  'casestatus.InterpreterRequired',  'casestatus.MiscDate2', 'casestatus.VideoLink', 'casestatus.RemittalOutcome', 'casestatus.UpperTribunalAppellant', 'casestatus.DecisionSentToHO', 
             'casestatus.InitialHearingPoints', 'casestatus.FinalHearingPoints', 'HearingPointsChangeReasondesc', 'casestatus.CostOrderAppliedFor', 'casestatus.DecisionDate', 
             'casestatus.DeterminationByJudgeSurname', 'casestatus.DeterminationByJudgeForenames', 'casestatus.DeterminationByJudgeTitle', concat_ws(" ", concat_ws(", ", col("casestatus.DeterminationByJudgeSurname"), col("casestatus.DeterminationByJudgeForenames")), when(col("casestatus.DeterminationByJudgeTitle").isNotNull(), concat(lit("("), col("casestatus.DeterminationByJudgeTitle"), lit(")")))).alias("DeterminationByJudgeFullName"), 'casestatus.MethodOfTyping', 
             'adjournDecisionTypeDescription', 'casestatus.Promulgated', 'casestatus.UKAITNo', 'casestatus.Extempore', 'casestatus.WrittenReasonsRequestedDate', 
@@ -5818,7 +5858,7 @@ def stg_statusdetail_data():
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("adjournAdjudicatorSurname"), col("adjournAdjudicatorForenames")), when(col("adjournAdjudicatorTitle").isNotNull(), concat(lit("("), col("adjournAdjudicatorTitle"), lit(")")))).alias("adjournAdjudicatorFullName"), 'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher', concat_ws(" ", concat_ws(", ", col("StatusDetailAdjudicatorSurname"), col("StatusDetailAdjudicatorForenames")), when(col("StatusDetailAdjudicatorTitle").isNotNull(), concat(lit("("), col("StatusDetailAdjudicatorTitle"), lit(")")))).alias("StatusDetailAdjudicatorFullName"),"adjournApplicationType","adjournKeyDate","CMROrder")).alias("TempCaseStatusDetails"))
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'casestatus.LanguageDescription','casestatus.CaseAdjudicatorsDetails','casestatus.ReviewSpecficDirectionDetails','casestatus.ReviewStandardDirectionDirectionDetails','lookup.HTMLName','LatestKeyDate', 'KeyDate','LatestAdjudicatorSurname','LatestAdjudicatorForenames','LatestAdjudicatorId','LatestAdjudicatorTitle', concat_ws(" ", concat_ws(", ", col("LatestAdjudicatorSurname"), col("LatestAdjudicatorForenames")), when(col("LatestAdjudicatorTitle").isNotNull(), concat(lit("("), col("LatestAdjudicatorTitle"), lit(")")))).alias("LatestAdjudicatorFullName"),'JudgeLabel1','JudgeLabel2','JudgeLabel3','Label1_JudgeValue','Label2_JudgeValue','Label3_JudgeValue','CourtClerkUsher', concat_ws(" ", concat_ws(", ", col("StatusDetailAdjudicatorSurname"), col("StatusDetailAdjudicatorForenames")), when(col("StatusDetailAdjudicatorTitle").isNotNull(), concat(lit("("), col("StatusDetailAdjudicatorTitle"), lit(")")))).alias("StatusDetailAdjudicatorFullName"),"adjournApplicationType","adjournKeyDate","CMROrder")).alias("TempCaseStatusDetails"))
     
     return df_final
 
@@ -6167,7 +6207,7 @@ def stg_apl_combined():
 
 
     df_list_detail = dlt.read("silver_list_detail").groupBy("CaseNo").agg(
-        collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc','UpperTribJudge','DesJudgeFirstTier','JudgeFirstTier','NonLegalMember')).alias("ListDetails")
+        collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'ListId', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc','UpperTribJudge','DesJudgeFirstTier','JudgeFirstTier','NonLegalMember')).alias("ListDetails")
     )
 
 

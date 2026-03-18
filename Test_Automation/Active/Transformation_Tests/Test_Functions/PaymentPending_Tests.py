@@ -6626,7 +6626,8 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
             "uploadAddendumEvidenceLegalRepActionAvailable": "No",
             "uploadAddendumEvidenceHomeOfficeActionAvailable": "No",
             "uploadAddendumEvidenceAdminOfficerActionAvailable": "No",
-            "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No"
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No",
+            "appellantInDetention":"No"
         }
 
         expected_arrays = {

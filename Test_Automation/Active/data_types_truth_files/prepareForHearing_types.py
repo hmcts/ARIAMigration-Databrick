@@ -208,7 +208,9 @@ PrepareForHearingTypes = {
     'uploadHomeOfficeBundleActionAvailable': 'string',
     'vulnerabilitiesDecisionForDisplay': 'string',
     'vulnerabilitiesTribunalResponse': 'string',
-    'witnessDetails': 'array<string>'
+    'witnessDetails': 'array<string>',
+    # "witness1InterpreterSignLanguage": "map<string, string>"
+    #     # map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string, string>"))
 }
 
 

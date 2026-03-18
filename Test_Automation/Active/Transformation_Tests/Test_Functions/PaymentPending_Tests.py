@@ -3822,7 +3822,7 @@ def test_decisionHearingFeeOption_ac2(test_df):
 #######################
 #homeOffice Init Code
 #######################
-def test_homeOffice_init(json, C, M1_bronze, M2_bronze):
+def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
     try:
         json = json.select(
             "appealReferenceNumber",
@@ -3850,6 +3850,12 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze):
             "FCONumber"
         )
 
+        bhoref = bhoref.select(
+            col("CaseNo").alias("HORef_CaseNo"),
+            col("HORef").alias("bhoref_HORef"),
+            col("FCONumber").alias("bhoref_FCONumber")
+        )
+
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
@@ -3865,7 +3871,13 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze):
         test_df = test_df.join(
             C,
             test_df["appealReferenceNumber"] == C["CaseNo"],
-            "inner"
+            "left"
+        )
+
+        test_df = test_df.join(
+            bhoref,
+            test_df["appealReferenceNumber"] == bhoref["HORef_CaseNo"], 
+            how="left"
         )
 
         test_df = test_df.select(
@@ -3879,7 +3891,8 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze):
             "DateOfApplicationDecision",
             "CategoryId",
             M1_bronze["HORef"],
-            M2_bronze["FCONumber"]
+            M2_bronze["FCONumber"],
+            bhoref["bhoref_HORef"]
         )
 
         test_df = (
@@ -3894,6 +3907,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze):
                 first("gwfReferenceNumber").alias("gwfReferenceNumber"),
                 first("homeOfficeDecisionDate").alias("homeOfficeDecisionDate"),
                 first("DateOfApplicationDecision").alias("DateOfApplicationDecision"),
+                first(bhoref["bhoref_HORef"]).alias("CleansedHORef"),
                 first(M1_bronze["HORef"]).alias("HORef_M1"),
                 first(M2_bronze["FCONumber"]).alias("FCONumber")
             )
@@ -4125,7 +4139,7 @@ def test_dateEntryClearanceDecision_ac3(test_df):
 #######################
 #homeOfficeReferenceNumber Init Code
 #######################
-def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze):
+def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
     try:
         json = json.select(
             "appealReferenceNumber",
@@ -4147,6 +4161,12 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze):
             "FCONumber"
         )
 
+        bhoref = bhoref.select(
+            col("CaseNo").alias("HORef_CaseNo"),
+            col("HORef").alias("bhoref_HORef"),
+            col("FCONumber").alias("bhoref_FCONumber")
+        )
+
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
@@ -4159,12 +4179,25 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze):
             "inner"
         )
 
+        test_df = test_df.join(
+            C,
+            test_df["appealReferenceNumber"] == C["CaseNo"],
+            "left"
+        )
+        
+        test_df = test_df.join(
+            bhoref,
+            test_df["appealReferenceNumber"] == bhoref["HORef_CaseNo"], 
+            how="left"
+        )
+
         test_df = test_df.select(
             "appealReferenceNumber",
             "homeOfficeReferenceNumber",
             "CategoryId",
             M1_bronze["HORef"],
-            M2_bronze["FCONumber"]
+            M2_bronze["FCONumber"],
+            bhoref["bhoref_HORef"]
         )
 
         ho_test_df = (
@@ -4174,7 +4207,8 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze):
                 collect_list("CategoryId").alias("CategoryIds"),
                 first("homeOfficeReferenceNumber").alias("homeOfficeReferenceNumber"),
                 first(M1_bronze["HORef"]).alias("HORef_M1"),
-                first(M2_bronze["FCONumber"]).alias("FCONumber")
+                first(M2_bronze["FCONumber"]).alias("FCONumber"),
+                first(bhoref["bhoref_HORef"]).alias("CleansedHORef")
             )
         )
 
@@ -4183,7 +4217,8 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze):
         ho_test_df = None
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function), ho_test_df
-    
+
+# IF CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted
 def test_homeOfficeReferenceNumber_ac1(ho_test_df):
     try:
         if ho_test_df != None:
@@ -4192,76 +4227,88 @@ def test_homeOfficeReferenceNumber_ac1(ho_test_df):
             
             if test_df.filter(
                 (array_contains(col("CategoryIds"), 38)) &
-                (col("HORef_M1").isNotNull()) & 
+                (
+                (col("CleansedHORef").isNotNull()) |
+                (col("HORef_M1").isNotNull()) |
                 (col("FCONumber").isNotNull())
+                )
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
             ac_ref = test_df.filter(
                 (array_contains(col("CategoryIds"), 38)) &
                     (
-                        ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
+                        col("CleansedHORef").rlike("GWF") | col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
                     )    
                 & (col("homeOfficeReferenceNumber").isNotNull())
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and homeOfficeReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and homeOfficeReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' have homeOfficeReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-
+# If CategoryId in 38, CleansedHORef IS not null and homeOfficeReferenceNumber != M1.CleansedHORef 
 def test_homeOfficeReferenceNumber_ac2(ho_test_df):
     try:
         if ho_test_df != None:
             test_df = ho_test_df
 
             if test_df.filter(
-                col("HORef_M1").isNotNull()
+                col("CleansedHORef").isNotNull()
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
+            test_df = test_df.filter(
+            (array_contains(col("CategoryIds"), 38))
+            )
+
             ac_ref = test_df.filter(
-                col("HORef_M1").eqNullSafe(col("homeOfficeReferenceNumber"))
+                col("CleansedHORef").eqNullSafe(col("homeOfficeReferenceNumber"))
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where M1.CleansedHORef IS not null and homeOfficeReferenceNumber != M1.CleansedHORef." , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CategoryId is 38, CleansedHORef IS not null and homeOfficeReferenceNumber != CleansedHORef." , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases have M1.CleansedHORef matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CategoryId is 38 have CleansedHORef matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
+# If CleansedHORef & M1.HORef IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber
 def test_homeOfficeReferenceNumber_ac3(ho_test_df):
     try:
         if ho_test_df != None:
             test_df = ho_test_df
 
             if test_df.filter(
-                (col("HORef_M1").isNull() & col("FCONumber").isNotNull()) 
+                (col("CleansedHORef").isNull()) &
+                (col("HORef_M1").isNull()) & 
+                (col("FCONumber").isNotNull()) 
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
             test_df = test_df.filter(
-                (col("HORef_M1").isNull() & col("FCONumber").isNotNull())
+                (col("CleansedHORef").isNull()) &
+                (col("HORef_M1").isNull()) & 
+                (col("FCONumber").isNotNull())
             )
 
             ac_ref = test_df.filter(
                 col("FCONumber") != (col("homeOfficeReferenceNumber"))
             )
 
-            if ac_gwfReferenceNumber.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where M1.CleansedHORef IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+            if ac_ref.count() != 0:
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where M1.CleansedHORef IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -4269,71 +4316,86 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#gwfReferenceNumber - IF CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted
+#gwfReferenceNumber - IF CategoryId in [38] + CleansedHORef + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted
 #######################
 def test_gwfReferenceNumber_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
             (array_contains(col("CategoryIds"), 38)) &
-            (col("HORef_M1").isNotNull()) & 
+            (
+            (col("CleansedHORef").isNotNull()) |
+            (col("HORef_M1").isNotNull()) |
             (col("FCONumber").isNotNull())
+            )
             ).count() == 0:
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_gwfReferenceNumber = test_df.filter(
             (array_contains(col("CategoryIds"), 38)) &
                 (
-                    ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
+                    col("CleansedHORef").rlike("GWF") | col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
                 )    
-            & (col("gwfReferenceNumber").isNotNull())
+            & (col("gwfReferenceNumber").isNull())
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId in [38] + CleansedHORef, M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + CleansedHORef, M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#gwfReferenceNumber - If M1.CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef 
+#gwfReferenceNumber - Where CategoryId = 38, If CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef 
 #######################
 def test_gwfReferenceNumber_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            col("HORef_M1").isNotNull()
+            col("CleansedHORef").isNotNull()
             ).count() == 0:
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
+        test_df = test_df.filter(
+            (array_contains(col("CategoryIds"), 38))
+        )
+        
         ac_gwfReferenceNumber = test_df.filter(
-            (col("HORef_M1").isNotNull()) &
-            (col("HORef_M1").eqNullSafe(col("gwfReferenceNumber")))
+            (col("CleansedHORef").isNotNull()) &
+            (col("CleansedHORef").eqNullSafe(col("gwfReferenceNumber")))
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where M1.CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef." , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId = 38, CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef." , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases have M1.CleansedHORef matching gwfReferenceNumber", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases have M1.CleansedHORef matching gwfReferenceNumber where CategoryId = 38", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#gwfReferenceNumber - If M1.CleansedHORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber
+#gwfReferenceNumber - Where CategoryId = 38, If CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber
 #######################
 def test_gwfReferenceNumber_ac3(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (col("HORef_M1").isNull() & col("FCONumber").isNotNull()) 
+            (col("CleansedHORef").isNull()) &
+            (col("HORef_M1").isNull()) & 
+            (col("FCONumber").isNotNull()) 
             ).count() == 0:
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         test_df = test_df.filter(
-            (col("HORef_M1").isNull() & col("FCONumber").isNotNull())
+            (array_contains(col("CategoryIds"), 38))
+        )
+        
+        test_df = test_df.filter(
+            (col("CleansedHORef").isNull()) &
+            (col("HORef_M1").isNull()) & 
+            (col("FCONumber").isNotNull()) 
         )
 
         ac_gwfReferenceNumber = test_df.filter(
@@ -4341,9 +4403,9 @@ def test_gwfReferenceNumber_ac3(test_df):
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where M1.CleansedHORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId = 38, CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where M1.CleansedHORef IS null + M2.FCONumber is not Null have a matching gwfReferenceNumber", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where CategoryId = 38, CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null, and all rows have a matching gwfReferenceNumber", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

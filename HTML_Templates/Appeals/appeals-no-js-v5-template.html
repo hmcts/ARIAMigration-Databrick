@@ -920,9 +920,9 @@
                                     </tr>
                                     <tr>
                                         <td id="labels"><label for="caseNo">File number : </label></td>
-                                        <td><input type="text" id="caseNo" value="" readonly></td>
+                                        <td><input type="text" id="caseNo" value="{{CaseNo}}" readonly></td>
                                         <td id="labels"><label for="fullName">Name : </label></td>
-                                        <td><input type="text" id="fullName" size="70" value=""readonly></td>
+                                        <td><input type="text" id="fullName" size="70" value="{{AppellantFullName}}"readonly></td>
                                     </tr>
                                     <tr>
                                         <td id="labels" style="vertical-align: top;"><label for="statusTypes">Status types : </label></td>
@@ -933,7 +933,7 @@
                                                     <th style="width:40%; text-align: left;">Status</th>
                                                     <th style="width:40%; text-align: left;">Outcome</th>
                                                 </tr>
-                                                <!-- {{StatusTypesPlaceHolder}} -->
+                                                {{StatusTypesPlaceHolder}}
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>

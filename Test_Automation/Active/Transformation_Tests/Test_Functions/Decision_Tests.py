@@ -6,6 +6,9 @@ from pyspark.sql.functions import (
 )
 import inspect
 
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
 #Import Test Results class
 from models.test_result import TestResult
 
@@ -109,7 +112,7 @@ def test_dec_defaultValues(test_df, fields_to_exclude):
 #######################
 #hearingDetails Init code
 #######################
-def test_hearingDetails_init(json, M3_bronze):
+def test_hearingDetails_init(json, M3_bronze, bll):
     try:
         test_df = json.select(
             "appealReferenceNumber",
@@ -123,14 +126,21 @@ def test_hearingDetails_init(json, M3_bronze):
             "CaseNo",
             "TimeEstimate",
             "CaseStatus",
-            "ListedCentre",
+            "HearingCentre",
+            "HearingDate",
+            "StartTime",
+            "StatusID"
         )
 
         test_df = test_df.join(
             M3_bronze,
             test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
             "inner"
-        )
+        ).join(
+            bll,
+            M3_bronze["HearingCentre"] == bll["ListedCentre"],
+            "left"
+        ).drop(M3_bronze["CaseNo"]).drop(bll["listCaseHearingCentre"])
         
         return test_df, True
     except Exception as e:
@@ -138,5 +148,77 @@ def test_hearingDetails_init(json, M3_bronze):
         return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 
+#######################
+#listCaseHearingLength code
+#######################
+def test_listCaseHearingLength(test_df):
+    try:
+        # Filter where CaseStatus is 37/38
+        target_records = test_df.filter(col("CaseStatus").isin(37, 38))
 
+        if target_records.count() == 0:
+            return TestResult("listingLength", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        # Rounding: divide by 30, round to nearest whole number, then multiply by 30
+        final_df = winning_records.withColumn(
+            "calculated_length", (F.round(F.col("TimeEstimate") / 30) * 30).cast("int")
+        ).withColumn(
+            "expected_length", F.greatest(F.lit(30), F.col("calculated_length"))
+        )
+
+        acceptance_critera = final_df.filter(F.col("listCaseHearingLength") != F.col("expected_length"))
+
+        if acceptance_critera.count() > 0:
+            return TestResult("listCaseHearingLength", "FAIL", f"listCaseHearingLength acceptance criteria failed: found {acceptance_critera.count()} rounding mismatches. JSON does not match nearest 30min increment.", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("listCaseHearingLength", "PASS", "listCaseHearingLength acceptance criteria passed: all listCaseHearingDate values correctly rounded to nearest 30m increment from Max Status row.", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("listCaseHearingLength", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#listCaseHearingDate code
+#######################
+def test_listCaseHearingDate(test_df):
+    try:
+        # Filter where CaseStatus is 37/38
+        target_records = test_df.filter(col("CaseStatus").isin(37, 38))
+
+        if target_records.count() == 0:
+            return TestResult("listCaseHearingDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        final_df = winning_records.withColumn("expected_hearing_date", 
+        F.to_timestamp(
+            F.concat(
+                F.date_format(F.col("HearingDate"), "yyyy-MM-dd"), 
+                F.lit(" "), 
+                F.date_format(F.col("StartTime"), "HH:mm:ss")
+            )
+        ))
+
+        acceptance_critera = final_df.filter(
+            F.col("listCaseHearingDate").cast("timestamp") != F.col("expected_hearing_date")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("listCaseHearingDate", "FAIL", f"listCaseHearingDate acceptance criteria failed: found {acceptance_critera.count()} mismatches between listCaseHearingDate and M3.HearingDate and StartTime", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("listCaseHearingDate", "PASS", "listCaseHearingDate acceptance criteria passed: all listCaseHearingDate values correctly match between listCaseHearingDate and M3.HearingDate and StartTime", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("listCaseHearingDate", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
 

@@ -79,31 +79,32 @@ def test_pFH_defaultValues(test_df, fields_to_exclude):
             "isAdditionalAdjustmentsAllowed": "Granted",
             "additionalTribunalResponse": "This is a migrated ARIA case. Please refer to the documents.",
             "otherDecisionForDisplay": "Granted - This is a migrated ARIA case. Please refer to the documents.",
-            "isAdditionalInstructionAllowed": "Yes"
-            }
-
+            "isAdditionalInstructionAllowed": "Yes",
+            "witness1InterpreterSignLanguage": "{}",
+            "witness2InterpreterSignLanguage": "{}",
+            "witness3InterpreterSignLanguage": "{}",
+            "witness4InterpreterSignLanguage": "{}",
+            "witness5InterpreterSignLanguage": "{}",
+            "witness6InterpreterSignLanguage": "{}",
+            "witness7InterpreterSignLanguage": "{}",
+            "witness8InterpreterSignLanguage": "{}",
+            "witness9InterpreterSignLanguage": "{}",
+            "witness10InterpreterSignLanguage": "{}",
+            "witness1InterpreterSpokenLanguage": "{}",
+            "witness2InterpreterSpokenLanguage": "{}",
+            "witness3InterpreterSpokenLanguage": "{}",
+            "witness4InterpreterSpokenLanguage": "{}",
+            "witness5InterpreterSpokenLanguage": "{}",
+            "witness6InterpreterSpokenLanguage": "{}",
+            "witness7InterpreterSpokenLanguage": "{}",
+            "witness8InterpreterSpokenLanguage": "{}",
+            "witness9InterpreterSpokenLanguage": "{}",
+            "witness10InterpreterSpokenLanguage": "{}"
+        }
+        
         expected_arrays = {
+    
             "witnessDetails": None,
-            "witness1InterpreterSignLanguage": None,
-            "witness2InterpreterSignLanguage": None,
-            "witness3InterpreterSignLanguage": None,
-            "witness4InterpreterSignLanguage": None,
-            "witness5InterpreterSignLanguage": None,
-            "witness6InterpreterSignLanguage": None,
-            "witness7InterpreterSignLanguage": None,
-            "witness8InterpreterSignLanguage": None,
-            "witness9InterpreterSignLanguage": None,
-            "witness10InterpreterSignLanguage": None,
-            "witness1InterpreterSpokenLanguage": None,
-            "witness2InterpreterSpokenLanguage": None,
-            "witness3InterpreterSpokenLanguage": None,
-            "witness4InterpreterSpokenLanguage": None,
-            "witness5InterpreterSpokenLanguage": None,
-            "witness6InterpreterSpokenLanguage": None,
-            "witness7InterpreterSpokenLanguage": None,
-            "witness8InterpreterSpokenLanguage": None,
-            "witness9InterpreterSpokenLanguage": None,
-            "witness10InterpreterSpokenLanguage": None,
             "hearingDocuments": None,
             "letterBundleDocuments": None
         }

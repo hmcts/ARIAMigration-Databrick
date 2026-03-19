@@ -5,6 +5,8 @@ from pyspark.sql.functions import (
     collect_set, current_timestamp,transform, first, array_contains
 )
 import inspect
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 #Import Test Results class
 from models.test_result import TestResult
@@ -92,5 +94,255 @@ def test_dec_a_defaultValues(test_df, fields_to_exclude):
     except Exception as e:
         error_message = str(e)        
         return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
+
+############################################################################################
+#######################
+#substantiveDecision Init code
+#######################
+def test_substantiveDecision_init(json, M3_bronze):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "sendDecisionsAndReasonsDate",
+            "appealDate",
+            "appealDecision",
+            "isDecisionAllowed"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "DecisionDate",
+            "Outcome",
+            "CaseStatus",
+            "StatusId"
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        )
+        
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+#######################
+#sendDecisionsAndReasonsDate code - Ensure M3.DecisionDate and sendDecisionsAndReasonsDate are equal
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_sendDecisionsAndReasonsDate(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("sendDecisionsAndReasonsDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "sendDecisionsAndReasonsDate", "DecisionDate", "CaseStatus", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            col("sendDecisionsAndReasonsDate") != col("DecisionDate")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"sendDecisionsAndReasonsDate acceptance criteria failed: found {acceptance_critera.count()} mismatches between DecisionDate and sendDecisionsAndReasonsDate", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("sendDecisionsAndReasonsDate", "PASS", "sendDecisionsAndReasonsDate acceptance criteria passed: all sendDecisionsAndReasonsDate values correctly match DecisionDate", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#appealDate code - Ensure M3.DecisionDate and appealDate are equal
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_appealDate(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("appealDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "appealDate", "DecisionDate", "CaseStatus", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            col("appealDate") != col("DecisionDate")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("appealDate", "FAIL", f"appealDate acceptance criteria failed: found {acceptance_critera.count()} mismatches between DecisionDate and appealDate", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealDate", "PASS", "appealDate acceptance criteria passed: all appealDate values correctly match DecisionDate", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appealDate", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#appealDecision code - Where M3.Outcome = 1 & appealDecision = ‘Allowed’
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_appealDecision_ac1(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "appealDecision", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            (col("Outcome") == 1) & (col("appealDecision") != "Allowed")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("appealDecision", "FAIL", f"appealDecision acceptance criteria failed: found {acceptance_critera.count()} cases where M3.Outcome = 1 & appealDecision != Allowed", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealDecision", "PASS", "appealDecision acceptance criteria passed: all appealDate cases where M3.Outcome = 1 have appealDecision = Allowed", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appealDecision", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#appealDecision code - Where M3.Outcome = 2 & appealDecision = ‘‘Dismissed’’
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_appealDecision_ac2(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "appealDecision", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            (col("Outcome") == 2) & (col("appealDecision") != "Dismissed")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("appealDecision", "FAIL", f"appealDecision acceptance criteria failed: found {acceptance_critera.count()} cases where M3.Outcome = 2 & appealDecision != Dismissed", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealDecision", "PASS", "appealDecision acceptance criteria passed: all appealDate cases where M3.Outcome = 2 have appealDecision = Dismissed", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appealDecision", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+#######################
+#isDecisionAllowed code - Where M3.Outcome = 1 & isDecisionAllowed = ‘allowed’
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_isDecisionAllowed_ac1(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "isDecisionAllowed", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            (col("Outcome") == 1) & (col("isDecisionAllowed") != "allowed")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"isDecisionAllowed acceptance criteria failed: found {acceptance_critera.count()} cases where M3.Outcome = 1 & isDecisionAllowed != allowed", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("isDecisionAllowed", "PASS", "appealDecision acceptance criteria passed: all appealDate cases where M3.Outcome = 1 have isDecisionAllowed = allowed", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("isDecisionAllowed", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#isDecisionAllowed code - Where M3.Outcome = 2 & isDecisionAllowed = ‘dismissed’
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_isDecisionAllowed_ac2(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        winning_records = winning_records.select("appealReferenceNumber", "isDecisionAllowed", "Outcome")
+
+        acceptance_critera = winning_records.filter(
+            (col("Outcome") == 2) & (col("isDecisionAllowed") != "dismissed")
+        )
+
+        if acceptance_critera.count() > 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"isDecisionAllowed acceptance criteria failed: found {acceptance_critera.count()} cases where M3.Outcome = 2 & isDecisionAllowed != dismissed", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("isDecisionAllowed", "PASS", "isDecisionAllowed acceptance criteria passed: all appealDate cases where M3.Outcome = 2 have isDecisionAllowed = Dismissed", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("isDecisionAllowed", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
 
 

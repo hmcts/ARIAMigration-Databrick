@@ -3203,6 +3203,13 @@ def silver_applicant_detail():
         "ca.AppellantName",
         "ca.AppellantForenames",
         "ca.AppellantTitle",
+        concat_ws(
+            " ",
+            col("ca.AppellantName"),
+            col("ca.AppellantForenames"),
+            when(col("ca.AppellantTitle").isNull(), lit(None)
+            ).otherwise(concat(lit("("), col("ca.AppellantTitle"), lit(")")))
+        ).alias("AppellantFullName"),
         "ca.AppellantBirthDate",
         "ca.AppellantAddress1",
         "ca.AppellantAddress2",
@@ -4977,6 +4984,14 @@ def generate_html(row, templates=templates):
             "{{DependentsPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{dependent.AppellantName}</td><td id=\"midpadding\">{dependent.CaseAppellantRelationship}</td></tr>"
                 for i, dependent in enumerate(row.DependentDetails or [])
+            ),
+            "{{StatusTypesPlaceHolder}}": "\n".join(
+                "<tr>"
+                f"<td id=\"midpadding\">{i + 1}</td>"
+                f"<td id=\"midpadding\">{statustype.CaseStatusDescription}</td>"
+                f"<td id=\"midpadding\">{statustype.DecisionTypeDescription}</td>"                      
+                "</tr>"
+                for i, statustype in enumerate(row.StatusDetails or [])
             )
         }
 

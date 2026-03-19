@@ -18,5 +18,5 @@ resources:
             - task_key: DLT_creation_of_case_linking
           job_cluster_key: case_linking_databricks_job
           notebook_task:
-            notebook_path: "/Workspace/live/ACTIVE/MVP/Active_CCD_Publish_Case_Linking"
+            notebook_path: "/Workspace/live/ACTIVE/MVP/CaseLinking/Active_CCD_Publish_Case_Linking"
             source: WORKSPACE

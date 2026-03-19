@@ -232,3 +232,141 @@ class TestProcessCaseStartFailure:
         assert "StartResponse" not in result
         mock_validate.assert_not_called()
         mock_submit.assert_not_called()
+
+    def test_start_returns_none_returns_error(self):
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_START, return_value=None),
+            patch(PATCH_VALIDATE) as mock_validate,
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_inst = Mock()
+            mock_s2s_inst.get_token.return_value = "s2s-token"
+            mock_s2s_cls.return_value = mock_s2s_inst
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-006",
+                payloadData={},
+                runId="run-6",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert "No response from API" in result["Error"]
+        mock_validate.assert_not_called()
+        mock_submit.assert_not_called()
+
+
+class TestProcessCaseTokenFailures:
+    """process_case returns an error result when token acquisition fails."""
+
+    def test_idam_token_failure_returns_error(self):
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.side_effect = Exception("IDAM unreachable")
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-007",
+                payloadData={},
+                runId="run-7",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert "IDAM" in result["Error"]
+
+    def test_s2s_token_failure_returns_error(self):
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_cls.return_value.get_token.side_effect = Exception("S2S unreachable")
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-008",
+                payloadData={},
+                runId="run-8",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert "s2s" in result["Error"]
+
+
+class TestProcessCaseInvalidEnv:
+    """process_case raises ValueError for unknown environments."""
+
+    def test_invalid_env_raises_value_error(self):
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_inst = Mock()
+            mock_s2s_inst.get_token.return_value = "s2s-token"
+            mock_s2s_cls.return_value = mock_s2s_inst
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            with pytest.raises(ValueError, match="Invalid environment"):
+                process_case(
+                    env="unknown",
+                    caseNo="CASE-009",
+                    payloadData={},
+                    runId="run-9",
+                    state="appealSubmitted",
+                    PR_REFERENCE="pr-123",
+                )
+
+
+class TestProcessCaseSubmitNone:
+    """process_case returns an error result when submit_case returns None."""
+
+    def test_submit_returns_none_returns_error(self):
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
+            patch(PATCH_SUBMIT, return_value=None),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_inst = Mock()
+            mock_s2s_inst.get_token.return_value = "s2s-token"
+            mock_s2s_cls.return_value = mock_s2s_inst
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-010",
+                payloadData={"appealReferenceNumber": "HU/010/2024"},
+                runId="run-10",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert "No response from API" in result["Error"]

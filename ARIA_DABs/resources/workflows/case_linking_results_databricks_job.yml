@@ -12,7 +12,7 @@ resources:
         - task_key: active_ccd_results_case_linking
           job_cluster_key: ccd_case_linking_result_databricks_job
           notebook_task:
-            notebook_path: "/Workspace/live/ACTIVE/MVP/Active_CCD_Results_Case_Linking"
+            notebook_path: "/Workspace/live/ACTIVE/MVP/CaseLinking/Active_CCD_Results_Case_Linking"
             source: WORKSPACE
       queue:
         enabled: true

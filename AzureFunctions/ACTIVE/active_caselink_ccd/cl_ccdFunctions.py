@@ -139,7 +139,7 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
 @retry_on_result(
     max_retries=2,
     base_delay=30,
-    max_delay=120,
+    max_delay=60,
     retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
 )
 def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):

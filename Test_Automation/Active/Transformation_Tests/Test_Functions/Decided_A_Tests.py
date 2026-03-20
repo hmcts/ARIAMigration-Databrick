@@ -354,6 +354,7 @@ def test_hearingActuals_init(json, M3_bronze):
         test_df = json.select(
             "appealReferenceNumber",
             "attendingJudge",
+            "actualCaseHearingLength",
             "ftpaApplicationDeadline"
         )
 
@@ -365,7 +366,8 @@ def test_hearingActuals_init(json, M3_bronze):
             "HearingDuration",
             "DecisionDate",
             "CaseStatus",
-            "StatusId"
+            "StatusId",
+            "Outcome"
         )
 
         test_df = test_df.join(
@@ -434,4 +436,184 @@ def test_attendingJudge(test_df):
 
     except Exception as e:
         return TestResult("attendingJudge", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-       
+    
+
+#######################
+#actualCaseHearingLength = "actualCaseHearingLength" : {
+#     "hours": hoursFromARIA,
+#     "minutes": minutesFromARIA
+#   }
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_actualCaseHearingLength(test_df):
+    try:
+        # Filter where CaseStatus is 37/38/26 and Outcome is 1/2
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("actualCaseHearingLength", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1).select("appealReferenceNumber", "actualCaseHearingLength", "HearingDuration")
+
+        # Extract from struct
+        winning_records = winning_records.withColumn(
+            "actual_hours", col("actualCaseHearingLength").getItem("hours").cast("int")
+        ).withColumn(
+            "actual_minutes", col("actualCaseHearingLength").getItem("minutes").cast("int")
+        )
+
+        # Expected Values from M3 HearingDuration
+        winning_records = winning_records.withColumn(
+            "expected_hours", F.floor(col("HearingDuration") / 60)
+        ).withColumn(
+            "expected_minutes", col("HearingDuration") % 60
+        )
+
+        # 4. Validation
+        acceptance_criteria = winning_records.filter(
+            (F.col("actual_hours") != F.col("expected_hours")) | 
+            (F.col("actual_minutes") != F.col("expected_minutes"))
+        )
+
+        if acceptance_criteria.count() > 0:
+            return TestResult("actualCaseHearingLength", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where actualCaseHearingLength does not match with M3.HearingDuration", test_from_state, inspect.stack()[0].function)
+            return
+        else:
+            return TestResult("actualCaseHearingLength", "PASS", "actualCaseHearingLength acceptance criteria passed: all actualCaseHearingLength match with M3.HearingDuration", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("actualCaseHearingLength", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+#######################
+#ftpaApplicationDeadline Init code
+#######################
+def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "ftpaApplicationDeadline"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "DecisionDate",
+            "CaseStatus",
+            "StatusId",
+            "Outcome"
+        )
+
+        C = C.select(
+            col("CaseNo").alias("C_CaseNo"),
+            "CategoryId"
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        ).join(
+            C,
+            test_df["appealReferenceNumber"] == C["C_CaseNo"],
+            "inner"
+        ).drop(
+            C["C_CaseNo"]
+        )
+
+        test_df = test_df.groupBy("appealReferenceNumber").agg(
+            collect_list("CategoryId").alias("CategoryIds"),
+            first("CategoryId").alias("CategoryId"),
+            first("ftpaApplicationDeadline").alias("ftpaApplicationDeadline"),
+            first("DecisionDate").alias("DecisionDate"),
+            first("CaseStatus").alias("CaseStatus"),
+            first("StatusId").alias("StatusId"),
+            first("Outcome").alias("Outcome")
+        )
+
+        # CategoryId filter
+        categoryid_rule = ( 
+            (array_contains(col("CategoryIds"), 37)) |
+            (array_contains(col("CategoryIds"), 38))
+        )
+
+        # Apply filters for CaseStatus, Outcome and CategoryID
+        test_df = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2)) &
+            (categoryid_rule) &
+            (col("CategoryId").isin(37, 38))
+        )
+
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        test_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+#ftpaApplicationDeadline 
+# Where CategoryId in 37, ftpaApplicationDeadline = M3.DecisionDate + 14 days
+# Where CategoryId in 38, ftpaApplicationDeadline = M3.DecisionDate + 28 days
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+#######################
+def test_ftpaApplicationDeadline_ac1(test_df):
+    try:
+        latest_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
+
+        winning_df = test_df.withColumn("row_rank", F.row_number().over(latest_window)).filter(F.col("row_rank") == 1)
+
+        winning_df = winning_df.withColumn(
+            "expected_deadline_37",
+            F.when(F.col("CategoryId") == 37, F.date_add(F.to_date("DecisionDate"), 14))
+            .otherwise(None)
+        )
+
+        acceptance_criteria = winning_df.filter(
+            F.to_date(col("ftpaApplicationDeadline")) != col("expected_deadline_37")
+        )
+
+        if acceptance_criteria.count() > 0:
+            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where where CategoryId is 37 and ftpaApplicationDeadline does not match with M3.DecisionDate + 14 days", test_from_state, inspect.stack()[0].function)
+            return
+        else:
+            return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline, CategoryId is 37 and  match with M3.DecisionDate + 14 days", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaApplicationDeadline", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+def test_ftpaApplicationDeadline_ac2(test_df):
+    try:
+        latest_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
+
+        winning_df = test_df.withColumn("row_rank", F.row_number().over(latest_window)).filter(F.col("row_rank") == 1)
+
+        winning_df = winning_df.withColumn(
+            "expected_deadline_38",
+            F.when(F.col("CategoryId") == 38, F.date_add(F.to_date("DecisionDate"), 28))
+            .otherwise(None)
+        )
+
+        acceptance_criteria = winning_df.filter(
+            F.to_date(col("ftpaApplicationDeadline")) != col("expected_deadline_38")
+        )
+
+        if acceptance_criteria.count() > 0:
+            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where CategoryId is 38 and ftpaApplicationDeadline does not match with M3.DecisionDate + 28 days", test_from_state, inspect.stack()[0].function)
+            return
+        else:
+            return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline, CategoryId is 38 match with M3.DecisionDate + 28 days", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaApplicationDeadline", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)

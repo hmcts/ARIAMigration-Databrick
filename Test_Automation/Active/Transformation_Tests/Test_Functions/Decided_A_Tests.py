@@ -345,4 +345,93 @@ def test_isDecisionAllowed_ac2(test_df):
         return TestResult("isDecisionAllowed", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 
+############################################################################################
+#######################
+#hearingActuals Init code
+#######################
+def test_hearingActuals_init(json, M3_bronze):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "attendingJudge",
+            "ftpaApplicationDeadline"
+        )
 
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "Adj_Determination_Title",
+            "Adj_Determination_Forenames",
+            "Adj_Determination_Surname",
+            "HearingDuration",
+            "DecisionDate",
+            "CaseStatus",
+            "StatusId"
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        )
+        
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#######################
+#attendingJudge = M3.Adj_Determination_Title + ' ' + M3.Adj_Determination_Forenames + ' ' +  M3.Adj_Determination_Surname
+# MAX(StatusId) WHERE CaseStatus IN (37,38,26)
+#######################
+def test_attendingJudge(test_df):
+    try:
+        # Filter for CaseStatus in 26, 37, 38
+        target_records = test_df.filter(F.col("CaseStatus").isin(37, 38, 26))
+
+        if target_records.count() == 0:
+            return TestResult("attendingJudge", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Partition by Appeal, Order by desc StatusId, where there is name
+        status_window = Window.partitionBy("appealReferenceNumber").orderBy(
+            F.when(F.col("Adj_Determination_Surname").isNotNull(), 1).otherwise(0).desc(),
+            F.desc("StatusId")
+        )
+
+        # Select most relevant records
+        winning_records = target_records.withColumn("rank", F.row_number().over(status_window)) \
+            .filter(F.col("rank") == 1) \
+            .withColumn(
+                "expected_judge_name", 
+                F.regexp_replace(
+                    F.trim(F.concat_ws(" ", "Adj_Determination_Title", "Adj_Determination_Forenames", "Adj_Determination_Surname")),
+                    r'\s+', ' '
+                )
+            )
+
+        # Replace Non-Breaking Spaces (\u00A0) with normal spaces
+        # Replace multiple whitespaces (\s+) with a single space
+        # Trim
+        def remove_spaces(col):
+            return F.trim(
+                F.regexp_replace(
+                    F.regexp_replace(F.col(col), r'\u00A0', ' '), 
+                    r'\s+', 
+                    ' '
+                )
+            )
+
+        # Test
+        acceptance_criteria = winning_records.filter(
+            remove_spaces("attendingJudge") != remove_spaces("expected_judge_name")
+        )
+
+        if acceptance_criteria.count() > 0:
+            return TestResult("attendingJudge", "FAIL", f"attendingJudge acceptance criteria failed: found {acceptance_criteria.count()} cases where attendingJudge does not match with M3 fields", test_from_state, inspect.stack()[0].function)
+            return
+        else:
+            return TestResult("attendingJudge", "PASS", "attendingJudge acceptance criteria passed: all attendingJudge fields match with M3 fields", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("attendingJudge", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+       

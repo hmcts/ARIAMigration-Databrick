@@ -234,7 +234,7 @@ def mock_response(status_code, json_data=None, text=""):
     mock.json_data = json_data
     mock.text = text
     mock.headers = {'Content-Type': "application/json"}
-    mock.json.return_values = json_data or {}
+    mock.json.return_value = json_data or {}
     return mock
 
 
@@ -257,8 +257,9 @@ def test_process_funciton_success(mock_start_case_creation_response,
 
     mock_start_case_creation = mock_response(200, {"token": "ABC123"})
     mock_validate_case = mock_response(201)
+    mock_validate_case.json.return_value = {"case_data": {"validated": True}}
     mock_submit_case = mock_response(201)
-    mock_submit_case.json = lambda: {"id": "1234567891011"}
+    mock_submit_case.json.return_value = {"id": "1234567891011", "case_data": {"submitted": True}}
 
     mock_start_case_creation_response.return_value = mock_start_case_creation
     mock_validate_case_response.return_value = mock_validate_case
@@ -276,6 +277,8 @@ def test_process_funciton_success(mock_start_case_creation_response,
     assert results["Status"] == "SUCCESS"
     assert results["CCDCaseID"] == "1234567891011"
     assert results["Error"] is None
+    assert json.loads(results["SuccessResponse"]) == {"id": "1234567891011", "case_data": {"submitted": True}}
+    assert json.loads(results["StartResponse"]) == {"token": "ABC123"}
 
 # failed to start case creation
 

@@ -194,12 +194,13 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "State": state,
             "Status": "ERROR",
             "Error": f"Case creation failed: {status_code} - {text}",
-            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         return result
 
     else:
         event_token = start_response.json()["token"]
+        start_response_data = json.dumps(start_response.json() or {})
         print(f"Case creation started for case {caseNo} with event token {event_token}")
 
     # validate case
@@ -229,6 +230,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "Status": "ERROR",  # change this to the validate response code
             "Error": f"Case validation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "StartResponse": start_response_data
         }
         return result
 
@@ -257,6 +259,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "Status": "ERROR",
             "Error": f"Case submission failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "StartResponse": start_response_data
         }
         print(f"Case {caseNo} submission failed.")
         return result
@@ -270,6 +273,10 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "Error": None,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],
+            "SuccessResponse": json.dumps(
+                submit_case_response.json().get("case_data") or {}
+            ),
+            "StartResponse": start_response_data
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result

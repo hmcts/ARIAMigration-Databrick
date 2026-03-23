@@ -234,6 +234,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
 
     else:
         print(f"Validation passed for case {caseNo}")
+        validate_success_response = validate_case_response.json()["case_data"]
 
     # submit case
     print("Starting submit case")
@@ -270,6 +271,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "Error": None,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],
+            "SuccessReponse": submit_case_response.json()["case_data"],
+            "ValidateResponse": validate_success_response
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
         return result

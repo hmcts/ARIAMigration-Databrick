@@ -130,7 +130,7 @@ def test_hearingDetails_init(json, M3_bronze, bll):
             "HearingCentre",
             "HearingDate",
             "StartTime",
-            "StatusID"
+            "StatusId"
         )
 
         test_df = test_df.join(
@@ -164,7 +164,7 @@ def test_listCaseHearingLength(test_df):
             return TestResult("listingLength", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         # Filter by max Status
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
 
         # Get the first Record per Case
         winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
@@ -286,11 +286,19 @@ def test_listCaseHearingCentre_Address(test_df, spark):
             "left"
         )
 
+        def clean_address(col_name):
+            return F.trim(
+                F.regexp_replace(
+                    F.regexp_replace(F.col(col_name), r'\u00A0', ' '), # Handle non-breaking spaces
+                    r'\s+', ' '                                       # Squash multiple spaces to one
+                )
+            )
+
         acceptance_critera = comparison_df.filter(
-        (col("ref_HearingCentre").isNotNull()) & 
+            (F.col("ref_HearingCentre").isNotNull()) & 
             (
-                (col("listCaseHearingCentre") != col("ref_CentreCode")) | 
-                (col("listCaseHearingCentreAddress") != col("ref_Address"))
+                (F.col("listCaseHearingCentre") != F.col("ref_CentreCode")) | 
+                (clean_address("listCaseHearingCentreAddress") != clean_address("ref_Address"))
             )
         )
 

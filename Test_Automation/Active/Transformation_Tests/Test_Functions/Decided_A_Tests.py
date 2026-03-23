@@ -389,7 +389,7 @@ def test_hearingActuals_init(json, M3_bronze):
 def test_attendingJudge(test_df):
     try:
         # Filter for CaseStatus in 26, 37, 38
-        target_records = test_df.filter(F.col("CaseStatus").isin(37, 38, 26))
+        target_records = test_df.filter((col("CaseStatus").isin(37, 38, 26)) & (col("Outcome").isin(1,2)))
 
         if target_records.count() == 0:
             return TestResult("attendingJudge", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)

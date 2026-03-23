@@ -274,7 +274,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],
             "SuccessResponse": json.dumps(
-                submit_case_response.json().get("case_data") or {}
+                submit_case_response.json() or {}
             ),
             "StartResponse": start_response_data
         }

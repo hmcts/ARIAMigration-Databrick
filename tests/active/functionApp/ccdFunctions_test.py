@@ -84,7 +84,7 @@ class TestProcessCaseSuccess:
 
         assert result["Status"] == "SUCCESS"
         assert result["CCDCaseID"] == SUBMIT_CASE_ID
-        assert json.loads(result["SuccessResponse"]) == SUBMIT_CASE_DATA
+        assert json.loads(result["SuccessResponse"]) == {"id": SUBMIT_CASE_ID, "case_data": SUBMIT_CASE_DATA}
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
 
     def test_success_result_base_fields_present(self):

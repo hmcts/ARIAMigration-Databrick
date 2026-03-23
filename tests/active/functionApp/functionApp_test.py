@@ -277,7 +277,7 @@ def test_process_funciton_success(mock_start_case_creation_response,
     assert results["Status"] == "SUCCESS"
     assert results["CCDCaseID"] == "1234567891011"
     assert results["Error"] is None
-    assert json.loads(results["SuccessResponse"]) == {"submitted": True}
+    assert json.loads(results["SuccessResponse"]) == {"id": "1234567891011", "case_data": {"submitted": True}}
     assert json.loads(results["StartResponse"]) == {"token": "ABC123"}
 
 # failed to start case creation

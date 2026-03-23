@@ -332,7 +332,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         lit("Yes").alias("recordedOutOfTimeDecision"), col("Outcome")
     )
 
-    conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
+    conditions = (col("lu_appealType").isNotNull())
 
     df = silver_m1.alias("m1").join(
         silver_m3_filtered.alias("m3"),
@@ -345,7 +345,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     ).withColumn(
         "appellantsRepresentation", when(((col("m1.dv_representation") == "LR") &  (col("lu_appealType").isNotNull())), "No").when(((col("m1.dv_representation") == "AIP") & (col("lu_appealType").isNotNull())), "Yes").otherwise(None)
     ).withColumn(
-        "submissionOutOfTime", when(col("OutOfTimeIssue") == lit("true"), lit("Yes")).otherwise(lit("No"))
+        "submissionOutOfTime", when(col("OutOfTimeIssue") == True, lit("Yes")).otherwise(lit("No"))
     ).withColumn(
         "adminDeclaration1", lit(["hasDeclared"])
     ).withColumn(

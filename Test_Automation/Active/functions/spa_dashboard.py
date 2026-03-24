@@ -10,6 +10,7 @@ import gzip
 import base64
 
 OUTPUT_DIR = "/dbfs/tmp"
+MAX_RUNS = 20
 
 
 def _safe_dt_str(v):
@@ -31,11 +32,27 @@ def _compress_json_for_html(obj):
     return base64.b64encode(compressed).decode("ascii")
 
 
-def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR):
+def generate_dashboard_single_page(output_dir: str = OUTPUT_DIR, max_runs: int = MAX_RUNS):
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
     runs_pdf = get_runs().toPandas()
+
+    # Keep only the latest N runs based on run_start_datetime descending
+    if "run_start_datetime" in runs_pdf.columns:
+        runs_pdf = runs_pdf.sort_values(
+            by="run_start_datetime",
+            ascending=False,
+            na_position="last"
+        )
+    elif "run_end_datetime" in runs_pdf.columns:
+        runs_pdf = runs_pdf.sort_values(
+            by="run_end_datetime",
+            ascending=False,
+            na_position="last"
+        )
+
+    runs_pdf = runs_pdf.head(max_runs).copy()
 
     runs_list = []
     all_results = {}
@@ -253,6 +270,7 @@ margin-bottom:8px;
 <div id="panel-runs" class="panel active">
   <h2 style="margin-top:0;">Test Runs Overview</h2>
   <p>Generated: __TIMESTAMP__</p>
+  <p>Showing latest __MAX_RUNS__ runs</p>
   <div class="status-note" id="loadInfo">Loading dashboard data...</div>
 
   <table id="runsTable" class="display" style="width:100%">
@@ -678,11 +696,13 @@ $('#showOnlyFailsBoth').on('change', function() {
     html = html.replace("__RUNS_B64__", runs_b64)
     html = html.replace("__ALL_RESULTS_B64__", all_results_b64)
     html = html.replace("__TIMESTAMP__", timestamp)
+    html = html.replace("__MAX_RUNS__", str(max_runs))
 
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html)
 
     print(f"Dashboard written: {html_path}")
+    print(f"Showing latest {len(runs_list)} runs")
     print(f"Compressed runs payload chars: {len(runs_b64)}")
     print(f"Compressed all_results payload chars: {len(all_results_b64)}")
 

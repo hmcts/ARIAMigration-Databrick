@@ -3892,8 +3892,7 @@ def generate_a360(row):
                 "bf_002": row.bf_002 or "",
                 "bf_003": row.bf_003 or "",
                 "bf_004": str(row.bf_004) or "",
-                "bf_005": row.bf_005 or "",
-                "retentionDate": str(row.retentionDate) or ""
+                "bf_005": row.bf_005 or ""
             }
         }
  

@@ -23,34 +23,177 @@ from pyspark.sql.functions import (
 ##########          Detained State Function          ###########
 ################################################################
 
-def detainedState(silver_m1, silver_m2):
+def detainedState(silver_m1, silver_m2,bronze_detention_centres):
 
     joined_m1_m2 =(
-        silver_m1.alias("m1").join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        silver_m1.alias("m1")
+        .join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        
     )
 
     detainedState_df = (
-        joined_m1_m2.withColumn("appellantInDetention", when(col("Detained").isin([1,2,4]), "Yes").otherwise(None))
+        joined_m1_m2.alias("m2").join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
+        .withColumn("appellantInDetention", when(col("m2.Detained").isin([1,2,4]), "Yes").otherwise(None))
+        .withColumn("detentionFacility", when(col("m2.Detained") == 1, "prison")
+                    .when(col("m2.Detained") == 1, "prison")
+                    .when(col("m2.Detained") == 2, "immigrationRemovalCentre")
+                    .when(col("m2.Detained") == 4, "other")
+                    .otherwise(None))
+        .withColumn("prisonNOMSNumber",
+                    when((col("m2.Detained") != 1) & (col("m2.PrisonRef").isNotNull()),
+                        struct(col("m2.PrisonRef").alias("prison"))
+                    ).otherwise(None)
+        )
+        .withColumn("otherDetentionFacilityName",
+            when((col("m2.Detained") == 4),
+                    struct(coalesce(col("det.DetentionCentre"),col("m2.Appellant_Address1")).alias("other"))
+            ).otherwise(None)
+        )
+        .withColumn("ircName",when((col("m2.Detained") == 2),col("det.ircName")).otherwise(None))
+        .withColumn("releaseDateProvided",when((col("m2.Detained").isin(1,4)),lit("Yes")).otherwise(None))
+        .withColumn("hasPendingBailApplications",when((col("m2.Detained") == 2),lit("NotSure")).otherwise(None))
+        .withColumn("removalOrderOptions",when((col("m2.RemovalDate").isNotNull()),lit("Yes")).otherwise("No"))
+        .withColumn("removalOrderDate",when((col("m2.RemovalDate").isNotNull()),date_format(col("m2.RemovalDate"), "yyyy-MM-dd")).otherwise(None))
+        .withColumn("detentionBuilding",when((col("m2.Detained").isin(1,2)),col("det.detentionBuilding")).otherwise(None))
+        .withColumn("detentionAddressLines",when((col("m2.Detained").isin(1,2)),col("det.detentionAddressLines")).otherwise(None))
+        .withColumn("detentionPostcode",when((col("m2.Detained").isin(1,2)),col("det.detentionPostcode")).otherwise(None))
+
+        .select(col("CaseNo"),
+                col("appellantInDetention"),
+                col("detentionFacility"),
+                col("prisonName"),
+                col("prisonNOMSNumber"),
+                col("otherDetentionFacilityName"),
+                col("ircName"),
+                col("releaseDateProvided"),
+                col("hasPendingBailApplications"),
+                col("removalOrderOptions"),
+                col("removalOrderDate"),
+                col("detentionBuilding"),
+                col("detentionAddressLines"),
+                col("detentionPostcode"),
+                )
     )
 
+    detainedState_audit = (
+        joined_m1_m2.alias("m1_m2")
+        .join(bronze_detention_centres.alias("det"),col("m1_m2.DetentionCentreId") == col("det.DetentionCentreId"),"left")
+        .join(detainedState_df.alias("content"), on="CaseNo", how="left")
+            .select(
+                # ariaDesiredState - ARIADM-797
+                col("content.CaseNo"),
+                array(struct(lit("Detained"))).alias("appellantInDetention_inputFields"),
+                array(struct(col("m1_m2.Detained"))).alias("appellantInDetention_inputValues"),
+                col("content.appellantInDetention"),
+                lit("Yes").alias("appellantInDetention_Transformation"),
 
-    detainedState_df, detainedState_audit = PP.detainedState(silver_m1)
+                array(struct(lit("Detained"))).alias("detentionFacility_inputFields"),
+                array(struct(col("m1_m2.Detained"))).alias("detentionFacility_inputValues"),
+                col("content.detentionFacility"),
+                lit("Yes").alias("detentionFacility_Transformation"),
 
-    df = silver_m1.select(col("CaseNo"), lit("No").alias("appellantInDetention"))
+                array(struct(lit("Detained"), lit("PrisonRef"))).alias("prisonNOMSNumber_inputFields"),
+                array(struct(col("m1_m2.Detained"), col("m1_m2.PrisonRef"))).alias("prisonNOMSNumber_inputValues"),
+                col("content.prisonNOMSNumber"),
+                lit("Yes").alias("prisonNOMSNumber_Transformation"),
 
-    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
-    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
+                array(struct(lit("Detained"), lit("DetentionCentre"), lit("Appellant_Address1"))).alias("otherDetentionFacilityName_inputFields"),
+                array(struct(
+                    col("m1_m2.Detained"),
+                    col("det.DetentionCentre"),
+                    col("m1_m2.Appellant_Address1")
+                )).alias("otherDetentionFacilityName_inputValues"),
+                col("content.otherDetentionFacilityName"),
+                lit("Yes").alias("otherDetentionFacilityName_Transformation"),
 
-    df_audit = silver_m1.alias("audit").join(df.alias("content"), on = ["CaseNo"], how = "left").select(col("CaseNo"),
-  
-    #ariaDesiredState - ARIADM-797
-    array(struct(*common_inputFields, lit("appellantInDetention"))).alias("appellantInDetention_inputFields"),
-    array(struct(*common_inputValues, lit("No"))).alias("appellantInDetention_inputValues"),
-    col("content.appellantInDetention"),
-    lit("No").alias("appellantInDetention_Transformation")
+                array(struct(lit("Detained"), lit("ircName"))).alias("ircName_inputFields"),
+                array(struct(col("m1_m2.Detained"), col("det.ircName"))).alias("ircName_inputValues"),
+                col("content.ircName"),
+                lit("Yes").alias("ircName_Transformation"),
+
+                array(struct(lit("Detained"))).alias("releaseDateProvided_inputFields"),
+                array(struct(col("m1_m2.Detained"))).alias("releaseDateProvided_inputValues"),
+                col("content.releaseDateProvided"),
+                lit("Yes").alias("releaseDateProvided_Transformation"),
+
+                array(struct(lit("Detained"))).alias("hasPendingBailApplications_inputFields"),
+                array(struct(col("m1_m2.Detained"))).alias("hasPendingBailApplications_inputValues"),
+                col("content.hasPendingBailApplications"),
+                lit("Yes").alias("hasPendingBailApplications_Transformation"),
+
+                array(struct(lit("RemovalDate"))).alias("removalOrderOptions_inputFields"),
+                array(struct(col("m1_m2.RemovalDate"))).alias("removalOrderOptions_inputValues"),
+                col("content.removalOrderOptions"),
+                lit("Yes").alias("removalOrderOptions_Transformation"),
+
+                array(struct(lit("RemovalDate"))).alias("removalOrderDate_inputFields"),
+                array(struct(col("m1_m2.RemovalDate"))).alias("removalOrderDate_inputValues"),
+                col("content.removalOrderDate"),
+                lit("Yes").alias("removalOrderDate_Transformation"),
+
+                array(struct(lit("Detained"), lit("detentionBuilding"))).alias("detentionBuilding_inputFields"),
+                array(struct(col("m1_m2.Detained"), col("det.detentionBuilding"))).alias("detentionBuilding_inputValues"),
+                col("content.detentionBuilding"),
+                lit("Yes").alias("detentionBuilding_Transformation"),
+
+                array(struct(lit("Detained"), lit("detentionAddressLines"))).alias("detentionAddressLines_inputFields"),
+                array(struct(col("m1_m2.Detained"), col("det.detentionAddressLines"))).alias("detentionAddressLines_inputValues"),
+                col("content.detentionAddressLines"),
+                lit("Yes").alias("detentionAddressLines_Transformation"),
+
+                array(struct(lit("Detained"), lit("detentionPostcode"))).alias("detentionPostcode_inputFields"),
+                array(struct(col("m1_m2.Detained"), col("det.detentionPostcode"))).alias("detentionPostcode_inputValues"),
+                col("content.detentionPostcode"),
+                lit("Yes").alias("detentionPostcode_Transformation")
+            )
     )
+
 
     return detainedState_df, detainedState_audit
+
+################################################################
+##########              caseData grouping            ###########
+################################################################
+
+# caseData grouping
+def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
+
+    caseData_df, caseData_audit = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+
+    caseData_df = caseData_df.drop("hearingCentre","staffLocation","caseManagementLocation","hearingCentreDynamicList","caseManagementLocationRefData","selectedHearingCentreRefData")
+
+    joined_m1_m2 =(
+        silver_m1.alias("m1")
+        .join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        )
+    
+    caseData_df = (
+        caseData_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
+        .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
+        .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
+        .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("bhc.hearingCentre")))
+        .withColumn("staffLocation1", when(col("m2.Detained").isin(1,2),col("det.staffLocation")).otherwise(col("bhc.staffLocation")))
+        # .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("bhc.caseManagementLocation")))
+        .withColumn("hearingCentreDynamicList1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre")).otherwise(col("bhc.applicationChangeDesignatedHearingCentre")))
+        # .withColumn("caseManagementLocationRefData", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocationRefData")).otherwise("bhc.caseManagementLocationRefData"))
+        .withColumn("selectedHearingCentreRefData1", when(col("m2.Detained").isin(1,2),col("det.selectedHearingCentreRefData")).otherwise(col("bhc.selectedHearingCentreRefData")))
+        .select(
+            "content.*",
+            col("hearingCentre1").alias("hearingCentre"),
+            col("staffLocation1").alias("staffLocation"),
+            # col("caseManagementLocation1").alias("caseManagementLocation"),
+            col("hearingCentreDynamicList1").alias("hearingCentreDynamicList"),
+            # col("caseManagementLocationRefData"),
+            col("selectedHearingCentreRefData1").alias("selectedHearingCentreRefData"),
+        )
+
+    )
+    
+
+
+
+
+    return caseData_df, caseData_audit
 
 ################################################################
 ##########              documents          ###########

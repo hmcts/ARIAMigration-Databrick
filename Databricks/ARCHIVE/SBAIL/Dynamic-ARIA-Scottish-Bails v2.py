@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor, col, date_format, count, explode, round, regexp_extract, max, collect_set, collect_list
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -119,6 +119,8 @@ def simple_date_format(date_value):
 # COMMAND ----------
 
 
+# from pyspark.sql.functions import current_timestamp, lit
+
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
@@ -127,7 +129,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
     output = set()  # Using a set to avoid duplicates
     if depth > max_depth:
-        return list(output)
+        return output
 
     try:
         children = dbutils.fs.ls(path)
@@ -136,12 +138,24 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
                 output.add(child.path.strip())  # Add only .parquet files to the set
 
             if child.isDir:
+                # Recursively explore directories
                 output.update(deep_ls(child.path, depth=depth + 1, max_depth=max_depth))
 
     except Exception as e:
         print(f"Error accessing {path}: {e}")
 
-    return list(output)
+    return list(output)  # Convert the set back to a list before returning
+
+# Function to extract timestamp from the file path
+def extract_timestamp(file_path):
+    """
+    Extracts timestamp from the parquet file name based on an assumed naming convention.
+    """
+    # Split the path and get the filename part
+    filename = file_path.split('/')[-1]
+    # Extract the timestamp part from the filename
+    timestamp_str = filename.split('_')[-1].replace('.parquet', '')
+    return timestamp_str
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
 def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str ) -> "DataFrame":
@@ -163,26 +177,16 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # List all .parquet files in the folder
     all_files = deep_ls(folder_path)
     
-    # Check if files were found
+    # Ensure that files were found
     if not all_files:
         print(f"No .parquet files found in {folder_path}")
         return None
-
-    # Create a DataFrame from the file paths
-    file_df = spark.createDataFrame([(f,) for f in all_files], ["file_path"])
     
-    # Extract timestamp from the file name using a regex pattern (assuming it's the last underscore-separated part before ".parquet")
-    file_df = file_df.withColumn("timestamp", regexp_extract("file_path", r"_(\d+)\.parquet$", 1).cast("long"))
-    
-    # Find the maximum timestamp
-    max_timestamp = file_df.agg(max("timestamp")).collect()[0][0]
-    
-    # Filter to get the file with the maximum timestamp
-    latest_file_df = file_df.filter(col("timestamp") == max_timestamp)
-    latest_file = latest_file_df.first()["file_path"]
+    # Find the latest .parquet file
+    latest_file = max(all_files, key=extract_timestamp)
     
     # Print the latest file being loaded for logging purposes
-    # print(f"Reading latest file: {latest_file}")
+    print(f"Reading latest file: {latest_file}")
     
     # Read the latest .parquet file into a DataFrame
     df = spark.read.option("inferSchema", "true").parquet(latest_file)
@@ -200,7 +204,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     
     # Return the DataFrame
     return df
-
 
 # COMMAND ----------
 
@@ -1788,10 +1791,6 @@ def silver_m2():
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## M3: silver_sbail_m3_hearing_details
 # MAGIC
@@ -1943,11 +1942,11 @@ def silver_m5():
            path=f"{silver_base_path}/silver_sbail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_sbail_ac_link_linkdetail").alias("m6")
-    segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
-    joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
+    # segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    # joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
 
-    df = joined_df.select("m6.CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
+    df = m6_df.select("CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
     df = df.withColumn("CaseNo", trim("CaseNo"))
@@ -3139,7 +3138,13 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
         """)
     )
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_link_files, "CaseNo", "left")
+    case_links = (
+        m6_link_files.groupBy("CaseNo").agg(
+            flatten(collect_list("linked_files_details")).alias("linked_files_details")
+        )
+    )
+
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(case_links, "CaseNo", "left")
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
 

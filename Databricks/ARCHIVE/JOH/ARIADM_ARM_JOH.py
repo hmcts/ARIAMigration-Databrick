@@ -1291,7 +1291,7 @@ def generate_html(row, html_template=html_template):
             ),
             "{{HistoryPlaceHolder}}": "\n".join(
                 f"<tr><td id=\"midpadding\">{format_date(hist.HistDate)}</td><td id=\"midpadding\">{hist.HistType}</td><td id=\"midpadding\">{hist.UserName}</td><td id=\"midpadding\">{hist.Comment}</td></tr>"
-                for hist in enumerate(sorted(row.History or [], key=lambda x: x.HistDate, reverse=True), start=1)
+                for i, hist in enumerate(sorted(row.History or []))
             ),
         }
 
@@ -1418,6 +1418,10 @@ def stg_judicial_officer_combined():
     )
 
     return df_combined
+
+# COMMAND ----------
+
+spark.read.table('hive_metastore.ariadm_arm_joh.stg_judicial_officer_combined').display()
 
 # COMMAND ----------
 

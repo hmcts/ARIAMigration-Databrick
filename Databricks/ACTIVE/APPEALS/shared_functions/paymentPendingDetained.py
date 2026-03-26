@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType,StructType,StructField
 from . import paymentPending as PP
 
 
@@ -158,6 +158,16 @@ def detainedState(silver_m1, silver_m2,bronze_detention_centres):
 # caseData grouping
 def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
+    case_mgmt_schema = StructType([
+    StructField("region", StringType(), True),
+    StructField("baseLocation", StringType(), True)
+    ])
+
+    bronze_detention_centres = bronze_detention_centres.withColumn(
+        "caseManagementLocation",
+        F.from_json(col("caseManagementLocation"), case_mgmt_schema)
+    )
+
     caseData_df, caseData_audit = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
 
     caseData_df = caseData_df.drop("hearingCentre","staffLocation","caseManagementLocation","hearingCentreDynamicList","caseManagementLocationRefData","selectedHearingCentreRefData")
@@ -173,633 +183,440 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("bhc.hearingCentre")))
         .withColumn("staffLocation1", when(col("m2.Detained").isin(1,2),col("det.staffLocation")).otherwise(col("bhc.staffLocation")))
-        # .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("bhc.caseManagementLocation")))
-        .withColumn("hearingCentreDynamicList1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre")).otherwise(col("bhc.applicationChangeDesignatedHearingCentre")))
-        # .withColumn("caseManagementLocationRefData", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocationRefData")).otherwise("bhc.caseManagementLocationRefData"))
+        .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("bhc.caseManagementLocation")))
+        .withColumn("hearingCentreDynamicList1", when(col("m2.Detained").isin(1,2),
+                                                      struct(
+                                                            struct(
+                                                                col("det.locationCode").alias("code"),
+                                                                col("det.locationLabel").alias("label")
+                                                            ).alias("value"),array(
+                                                        struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                                                        struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                                                        struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                                                        struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                                                        struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                                                        struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                                                        struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                                                        struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                                                        struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                                                        struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+                                                    ).alias("list_items")))
+                    .otherwise(struct(
+                                                            struct(
+                                                                col("bhc.locationCode").alias("code"),
+                                                                col("bhc.locationLabel").alias("label")
+                                                            ).alias("value"),array(
+                                                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                                                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                                                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                                                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                                                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                                                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                                                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                                                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                                                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                                                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+                                                ).alias("list_items")))
+        )
+        .withColumn("caseManagementLocationRefData", 
+                    when(col("m2.Detained").isin(1,2),struct(
+            lit("1").alias("region"),
+            struct(
+                struct(
+                    col("det.locationCode").alias("code"),
+                    col("det.locationLabel").alias("label")
+                ).alias("value"),
+                array(
+                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+                ).alias("list_items")
+            ).alias("baseLocation")
+        ))
+                    
+                    .otherwise(struct(
+            lit("1").alias("region"),
+            struct(
+                struct(
+                    col("bhc.locationCode").alias("code"),
+                    col("bhc.locationLabel").alias("label")
+                ).alias("value"),
+                array(
+                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
+                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
+                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
+                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
+                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
+                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
+                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
+                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
+                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
+                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
+                ).alias("list_items")
+            ).alias("baseLocation")
+        )))
         .withColumn("selectedHearingCentreRefData1", when(col("m2.Detained").isin(1,2),col("det.selectedHearingCentreRefData")).otherwise(col("bhc.selectedHearingCentreRefData")))
         .select(
             "content.*",
             col("hearingCentre1").alias("hearingCentre"),
             col("staffLocation1").alias("staffLocation"),
-            # col("caseManagementLocation1").alias("caseManagementLocation"),
+            col("caseManagementLocation1").alias("caseManagementLocation"),
             col("hearingCentreDynamicList1").alias("hearingCentreDynamicList"),
-            # col("caseManagementLocationRefData"),
+            col("caseManagementLocationRefData"),
             col("selectedHearingCentreRefData1").alias("selectedHearingCentreRefData"),
         )
-
     )
     
-
-
-
-
     return caseData_df, caseData_audit
 
 ################################################################
-##########              documents          ###########
+##########             General Function              ###########
 ################################################################
 
-def documents(silver_m1,silver_m3): 
-    documents_df, documents_audit = DA.documents(silver_m1)
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+    general_df, general_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
 
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    general_df = general_df.drop("applicationChangeDesignatedHearingCentre")
 
-    silver_m3_content = (
-    silver_m3_max_statusid
-        .withColumn("ftpaAppellantDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaRespondentDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaAppellantGroundsDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaRespondentGroundsDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaAppellantEvidenceDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaRespondentEvidenceDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaAppellantOutOfTimeDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("ftpaRespondentOutOfTimeDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
-        .select(
-            col("CaseNo"),
-            col("ftpaAppellantDocuments"),
-            col("ftpaRespondentDocuments"),
-            col("ftpaAppellantGroundsDocuments"),
-            col("ftpaRespondentGroundsDocuments"),
-            col("ftpaAppellantEvidenceDocuments"),
-            col("ftpaRespondentEvidenceDocuments"),
-            col("ftpaAppellantOutOfTimeDocuments"),
-            col("ftpaRespondentOutOfTimeDocuments")
-        )   
-    )
+    joined_m1_m2 =(
+        silver_m1.alias("m1")
+        .join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        )
     
-    documents_df = documents_df.join(silver_m3_content.alias("m3"), on="CaseNo", how="left")
-
-    
-    documents_audit = (
-        documents_audit.alias("audit")
-            .join(documents_df.alias("documents"), on="CaseNo", how="left")
-            .join(silver_m3_max_statusid.alias("m3"), on="CaseNo", how="left")
-            .select(
-                "audit.*",
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaAppellantDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaAppellantDocuments_inputValues"),
-                col("documents.ftpaAppellantDocuments").alias("ftpaAppellantDocuments_value"),
-                lit("Yes").alias("ftpaAppellantDocuments_Transformed"),
-
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaRespondentDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaRespondentDocuments_inputValues"),
-                col("documents.ftpaRespondentDocuments").alias("ftpaRespondentDocuments_value"),
-                lit("Yes").alias("ftpaRespondentDocuments_Transformed"),
-
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaAppellantGroundsDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaAppellantGroundsDocuments_inputValues"),
-                col("documents.ftpaAppellantGroundsDocuments").alias("ftpaAppellantGroundsDocuments_value"),
-                lit("Yes").alias("ftpaAppellantGroundsDocuments_Transformed"),
-                
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaRespondentGroundsDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaRespondentGroundsDocuments_inputValues"),
-                col("documents.ftpaRespondentGroundsDocuments").alias("ftpaRespondentGroundsDocuments_value"),
-                lit("Yes").alias("ftpaRespondentGroundsDocuments_Transformed"),
-
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaAppellantEvidenceDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaAppellantEvidenceDocuments_inputValues"),
-                col("documents.ftpaAppellantEvidenceDocuments").alias("ftpaAppellantEvidenceDocuments_value"),
-                lit("Yes").alias("ftpaAppellantEvidenceDocuments_Transformed"),
-                
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaRespondentEvidenceDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaRespondentEvidenceDocuments_inputValues"),
-                col("documents.ftpaRespondentEvidenceDocuments").alias("ftpaRespondentEvidenceDocuments_value"),
-                lit("Yes").alias("ftpaRespondentEvidenceDocuments_Transformed"),
-
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaAppellantOutOfTimeDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaAppellantOutOfTimeDocuments_inputValues"),
-                col("documents.ftpaAppellantOutOfTimeDocuments").alias("ftpaAppellantOutOfTimeDocuments_value"),
-                lit("Yes").alias("ftpaAppellantOutOfTimeDocuments_Transformed"),
-                
-                array(struct(lit("Party"),lit("StatusId"))).alias("ftpaRespondentOutOfTimeDocuments_inputFields"),
-                array(struct(col("Party"),col("StatusId"))).alias("ftpaRespondentOutOfTimeDocuments_inputValues"),
-                col("documents.ftpaRespondentOutOfTimeDocuments").alias("ftpaRespondentOutOfTimeDocuments_value"),
-                lit("Yes").alias("ftpaRespondentOutOfTimeDocuments_Transformed"),
-            )
-    )
-    return documents_df, documents_audit
-
-################################################################
-
-################################################################
-##########              ftpa          ###########
-################################################################
-
-def ftpa(silver_m3,silver_c):
-
-    ftpa_df,ftpa_audit = DA.ftpa(silver_m3,silver_c)
-
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-
-    datereceived_ts = coalesce(
-        F.to_timestamp(col("DateReceived"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),  # e.g., +00:00
-        F.to_timestamp(col("DateReceived"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")     # e.g., Z or +01
-    )
-
-    silver_m3_content = (
-        silver_m3_max_statusid
-            # Appellant fields
-            .withColumn(
-                "ftpaAppellantApplicationDate",
-                when(col("Party") == 1, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
-            )
-            .withColumn(
-                "ftpaAppellantSubmissionOutOfTime",
-                when((col("Party") == 1) & (col("OutOfTime") == 1), lit("Yes"))
-                .when((col("Party") == 1) & (col("OutOfTime") != 1), lit("No"))
-                .otherwise(None)
-            )
-            .withColumn(
-                "ftpaAppellantOutOfTimeExplanation",
-                when((col("Party") == 1) & (col("OutOfTime") == 1),
-                    lit("This is a migrated ARIA case. Please refer to the documents.")
-                ).otherwise(None)
-            )
-
-            # Respondent fields
-            .withColumn(
-                "ftpaRespondentApplicationDate",
-                when(col("Party") == 2, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
-            )
-            .withColumn(
-                "ftpaRespondentSubmissionOutOfTime",
-                when((col("Party") == 2) & (col("OutOfTime") == 1), lit("Yes"))
-                .when((col("Party") == 2) & (col("OutOfTime") != 1), lit("No"))
-                .otherwise(None)
-            )
-            .withColumn(
-                "ftpaRespondentOutOfTimeExplanation",
-                when((col("Party") == 2) & (col("OutOfTime") == 1),
-                    lit("This is a migrated ARIA case. Please refer to the documents.")
-                ).otherwise(None)
-            )
-
-            # Build ftpaList depending on Party
-            .withColumn(
-                "ftpaList",
-                when(
-                    col("Party") == 1,
-                    array(
-                        struct(
-                            lit("1").alias("id"),
-                            struct(
-                                lit("appellant").alias("ftpaApplicant"),
-                                col("ftpaAppellantApplicationDate").alias("ftpaApplicationDate"),
-                                lit([]).cast("array<string>").alias("ftpaGroundsDocuments"),
-                                lit([]).cast("array<string>").alias("ftpaEvidenceDocuments"),
-                                lit([]).cast("array<string>").alias("ftpaOutOfTimeDocuments"),
-                                col("ftpaAppellantOutOfTimeExplanation").alias("ftpaOutOfTimeExplanation")
-                            ).alias("value")
-                        )
-                    )
-                ).when(
-                    col("Party") == 2,
-                    array(
-                        struct(
-                            lit("1").alias("id"),
-                            struct(
-                                lit("respondent").alias("ftpaApplicant"),
-                                col("ftpaRespondentApplicationDate").alias("ftpaApplicationDate"),
-                                lit([]).cast("array<string>").alias("ftpaGroundsDocuments"),
-                                lit([]).cast("array<string>").alias("ftpaEvidenceDocuments"),
-                                lit([]).cast("array<string>").alias("ftpaOutOfTimeDocuments"),
-                                col("ftpaRespondentOutOfTimeExplanation").alias("ftpaOutOfTimeExplanation")
-                            ).alias("value")
-                        )
-                    )
-                ).otherwise(None)
-            )
-
-            .select(
-                col("CaseNo"),
-                col("ftpaList"),
-                col("ftpaAppellantApplicationDate"),
-                col("ftpaAppellantSubmissionOutOfTime"),
-                col("ftpaAppellantOutOfTimeExplanation"),
-                col("ftpaRespondentApplicationDate"),
-                col("ftpaRespondentSubmissionOutOfTime"),
-                col("ftpaRespondentOutOfTimeExplanation"),
-            )
-    )
-
-    ftpa_df = (
-        silver_m3_content.alias("m3")
-            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-            .select(
-                col("m3.CaseNo"),
-                *[col(f"ftpa.{c}") for c in ftpa_df.columns if c != "CaseNo"],
-                col("ftpaList"),
-                col("ftpaAppellantApplicationDate"),
-                col("ftpaAppellantSubmissionOutOfTime"),
-                col("ftpaAppellantOutOfTimeExplanation"),
-                col("ftpaRespondentApplicationDate"),
-                col("ftpaRespondentSubmissionOutOfTime"),
-                col("ftpaRespondentOutOfTimeExplanation"),
-            )
-    )
-
-    # Build the audit DataFrame
-    ftpa_audit = (
-        ftpa_audit.alias("audit")
-            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
-            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-            .select(
-                "audit.*",
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaList_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaList_inputValues"),
-                col("ftpaList").alias("ftpaList_value"),
-                lit("Yes").alias("ftpaList_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaAppellantApplicationDate_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaAppellantApplicationDate_inputValues"),
-                col("ftpaAppellantApplicationDate").alias("ftpaAppellantApplicationDate_value"),
-                lit("Yes").alias("ftpaAppellantApplicationDate_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaAppellantSubmissionOutOfTime_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaAppellantSubmissionOutOfTime_inputValues"),
-                col("ftpaAppellantSubmissionOutOfTime").alias("ftpaAppellantSubmissionOutOfTime_value"),
-                lit("Yes").alias("ftpaAppellantSubmissionOutOfTime_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaAppellantOutOfTimeExplanation_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaAppellantOutOfTimeExplanation_inputValues"),
-                col("ftpaAppellantOutOfTimeExplanation").alias("ftpaAppellantOutOfTimeExplanation_value"),
-                lit("Yes").alias("ftpaAppellantOutOfTimeExplanation_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaRespondentApplicationDate_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaRespondentApplicationDate_inputValues"),
-                col("ftpaRespondentApplicationDate").alias("ftpaRespondentApplicationDate_value"),
-                lit("Yes").alias("ftpaRespondentApplicationDate_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaRespondentSubmissionOutOfTime_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaRespondentSubmissionOutOfTime_inputValues"),
-                col("ftpaRespondentSubmissionOutOfTime").alias("ftpaRespondentSubmissionOutOfTime_value"),
-                lit("Yes").alias("ftpaRespondentSubmissionOutOfTime_Transformation"),
-
-                array(struct(lit("DateReceived"),lit("Party"),lit("OutOfTime"))).alias("ftpaRespondentOutOfTimeExplanation_inputFields"),
-                array(struct(col("DateReceived"),col("Party"),col("OutOfTime"))).alias("ftpaRespondentOutOfTimeExplanation_inputValues"),
-                col("ftpaRespondentOutOfTimeExplanation").alias("ftpaRespondentOutOfTimeExplanation_value"),
-                lit("Yes").alias("ftpaRespondentOutOfTimeExplanation_Transformation"),
-            )
-    )
-       
-    return ftpa_df, ftpa_audit
-################################################################
-
-################################################################
-
-################################################################
-##########              general          ###########
-################################################################
-
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-
-    general_df,general_audit = D.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
-
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(39))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-
-    silver_m3_content = (
-        silver_m3_max_statusid
-
-            # ---------------------------
-            # Appellant FTPA visibility
-            # ---------------------------
-            .withColumn("ftpaAppellantSubmitted",
-                        when(col("Party") == 1, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaAppellantDocsVisibleInDecided",
-                        when(col("Party") == 1, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaAppellantDocsVisibleInSubmitted",
-                        when(col("Party") == 1, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaAppellantOotDocsVisibleInDecided",
-                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("No"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaAppellantOotDocsVisibleInSubmitted",
-                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("Yes"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaAppellantGroundsDocsVisibleInDecided",
-                        when(col("Party") == 1, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaAppellantEvidenceDocsVisibleInDecided",
-                        when(col("Party") == 1, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaAppellantGroundsDocsVisibleInSubmitted",
-                        when(col("Party") == 1, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaAppellantEvidenceDocsVisibleInSubmitted",
-                        when(col("Party") == 1, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaAppellantOotExplanationVisibleInDecided",
-                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("No"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaAppellantOotExplanationVisibleInSubmitted",
-                        when((col("Party") == 1) & (col("OutOfTime") == 1), lit("Yes"))
-                        .otherwise(None))
-
-            # ---------------------------
-            # Respondent FTPA visibility
-            # ---------------------------
-            .withColumn("ftpaRespondentSubmitted",
-                        when(col("Party") == 2, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaRespondentDocsVisibleInDecided",
-                        when(col("Party") == 2, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaRespondentDocsVisibleInSubmitted",
-                        when(col("Party") == 2, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaRespondentOotDocsVisibleInDecided",
-                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("No"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaRespondentOotDocsVisibleInSubmitted",
-                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("Yes"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaRespondentGroundsDocsVisibleInDecided",
-                        when(col("Party") == 2, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaRespondentEvidenceDocsVisibleInDecided",
-                        when(col("Party") == 2, lit("No")).otherwise(None))
-
-            .withColumn("isFtpaRespondentGroundsDocsVisibleInSubmitted",
-                        when(col("Party") == 2, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaRespondentEvidenceDocsVisibleInSubmitted",
-                        when(col("Party") == 2, lit("Yes")).otherwise(None))
-
-            .withColumn("isFtpaRespondentOotExplanationVisibleInDecided",
-                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("No"))
-                        .otherwise(None))
-
-            .withColumn("isFtpaRespondentOotExplanationVisibleInSubmitted",
-                        when((col("Party") == 2) & (col("OutOfTime") == 1), lit("Yes"))
-                        .otherwise(None))
-    )
-
-    # Select only the needed columns
-    silver_m3_content = silver_m3_content.select(
-        "CaseNo",
-        "ftpaAppellantSubmitted",
-        "isFtpaAppellantDocsVisibleInDecided",
-        "isFtpaAppellantDocsVisibleInSubmitted",
-        "isFtpaAppellantOotDocsVisibleInDecided",
-        "isFtpaAppellantOotDocsVisibleInSubmitted",
-        "isFtpaAppellantGroundsDocsVisibleInDecided",
-        "isFtpaAppellantEvidenceDocsVisibleInDecided",
-        "isFtpaAppellantGroundsDocsVisibleInSubmitted",
-        "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
-        "isFtpaAppellantOotExplanationVisibleInDecided",
-        "isFtpaAppellantOotExplanationVisibleInSubmitted",
-
-        "ftpaRespondentSubmitted",
-        "isFtpaRespondentDocsVisibleInDecided",
-        "isFtpaRespondentDocsVisibleInSubmitted",
-        "isFtpaRespondentOotDocsVisibleInDecided",
-        "isFtpaRespondentOotDocsVisibleInSubmitted",
-        "isFtpaRespondentGroundsDocsVisibleInDecided",
-        "isFtpaRespondentEvidenceDocsVisibleInDecided",
-        "isFtpaRespondentGroundsDocsVisibleInSubmitted",
-        "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
-        "isFtpaRespondentOotExplanationVisibleInDecided",
-        "isFtpaRespondentOotExplanationVisibleInSubmitted",
-    )
-
     general_df = (
-        general_df.alias("gen")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
-            .select(
-                col("gen.*"),
-
-                col("m3.ftpaAppellantSubmitted"),
-                col("m3.isFtpaAppellantDocsVisibleInDecided"),
-                col("m3.isFtpaAppellantDocsVisibleInSubmitted"),
-                col("m3.isFtpaAppellantOotDocsVisibleInDecided"),
-                col("m3.isFtpaAppellantOotDocsVisibleInSubmitted"),
-                col("m3.isFtpaAppellantGroundsDocsVisibleInDecided"),
-                col("m3.isFtpaAppellantEvidenceDocsVisibleInDecided"),
-                col("m3.isFtpaAppellantGroundsDocsVisibleInSubmitted"),
-                col("m3.isFtpaAppellantEvidenceDocsVisibleInSubmitted"),
-                col("m3.isFtpaAppellantOotExplanationVisibleInDecided"),
-                col("m3.isFtpaAppellantOotExplanationVisibleInSubmitted"),
-
-                col("m3.ftpaRespondentSubmitted"),
-                col("m3.isFtpaRespondentDocsVisibleInDecided"),
-                col("m3.isFtpaRespondentDocsVisibleInSubmitted"),
-                col("m3.isFtpaRespondentOotDocsVisibleInDecided"),
-                col("m3.isFtpaRespondentOotDocsVisibleInSubmitted"),
-                col("m3.isFtpaRespondentGroundsDocsVisibleInDecided"),
-                col("m3.isFtpaRespondentEvidenceDocsVisibleInDecided"),
-                col("m3.isFtpaRespondentGroundsDocsVisibleInSubmitted"),
-                col("m3.isFtpaRespondentEvidenceDocsVisibleInSubmitted"),
-                col("m3.isFtpaRespondentOotExplanationVisibleInDecided"),
-                col("m3.isFtpaRespondentOotExplanationVisibleInSubmitted"),
-            )
-    )
-
-    general_audit = (
-        general_audit.alias("audit")
-            .join(general_df.alias("gen"), on=["CaseNo"], how="left")
-            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-            .select(
-                "audit.*",
-
-                # -------------------------------------------------------------
-                # 1. ftpaAppellantSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("ftpaAppellantSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("ftpaAppellantSubmitted_inputValues"),
-                col("ftpaAppellantSubmitted").alias("ftpaAppellantSubmitted_value"),
-                lit("Yes").alias("ftpaAppellantSubmitted_Transformation"),
-
-                # -------------------------------------------------------------
-                # 2. isFtpaAppellantDocsVisibleInDecided
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInDecided_inputValues"),
-                col("isFtpaAppellantDocsVisibleInDecided").alias("isFtpaAppellantDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaAppellantDocsVisibleInDecided_Transformation"),
-
-                # -------------------------------------------------------------
-                # 3. isFtpaAppellantDocsVisibleInSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaAppellantDocsVisibleInSubmitted").alias("isFtpaAppellantDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaAppellantDocsVisibleInSubmitted_Transformation"),
-
-                # -------------------------------------------------------------
-                # 4. isFtpaAppellantOotDocsVisibleInDecided
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInDecided_inputValues"),
-                col("isFtpaAppellantOotDocsVisibleInDecided").alias("isFtpaAppellantOotDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInDecided_Transformation"),
-
-                # -------------------------------------------------------------
-                # 5. isFtpaAppellantOotDocsVisibleInSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaAppellantOotDocsVisibleInSubmitted").alias("isFtpaAppellantOotDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaAppellantOotDocsVisibleInSubmitted_Transformation"),
-
-                # -------------------------------------------------------------
-                # 6. isFtpaAppellantGroundsDocsVisibleInDecided
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInDecided_inputValues"),
-                col("isFtpaAppellantGroundsDocsVisibleInDecided").alias("isFtpaAppellantGroundsDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInDecided_Transformation"),
-
-                # -------------------------------------------------------------
-                # 7. isFtpaAppellantEvidenceDocsVisibleInDecided
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInDecided_inputValues"),
-                col("isFtpaAppellantEvidenceDocsVisibleInDecided").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInDecided_Transformation"),
-
-                # -------------------------------------------------------------
-                # 8. isFtpaAppellantGroundsDocsVisibleInSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaAppellantGroundsDocsVisibleInSubmitted").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaAppellantGroundsDocsVisibleInSubmitted_Transformation"),
-
-                # -------------------------------------------------------------
-                # 9. isFtpaAppellantEvidenceDocsVisibleInSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaAppellantEvidenceDocsVisibleInSubmitted").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaAppellantEvidenceDocsVisibleInSubmitted_Transformation"),
-
-                # -------------------------------------------------------------
-                # 10. isFtpaAppellantOotExplanationVisibleInDecided
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInDecided_inputValues"),
-                col("isFtpaAppellantOotExplanationVisibleInDecided").alias("isFtpaAppellantOotExplanationVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInDecided_Transformation"),
-
-                # -------------------------------------------------------------
-                # 11. isFtpaAppellantOotExplanationVisibleInSubmitted
-                # -------------------------------------------------------------
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaAppellantOotExplanationVisibleInSubmitted_inputValues"),
-                col("isFtpaAppellantOotExplanationVisibleInSubmitted").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaAppellantOotExplanationVisibleInSubmitted_Transformation"),
-
-
-                # -------------------------------------------------------------
-                # RESPONDENT FIELDS (12–21)
-                # -------------------------------------------------------------
-
-                # ftpaRespondentSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("ftpaRespondentSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("ftpaRespondentSubmitted_inputValues"),
-                col("ftpaRespondentSubmitted").alias("ftpaRespondentSubmitted_value"),
-                lit("Yes").alias("ftpaRespondentSubmitted_Transformation"),
-
-                # isFtpaRespondentDocsVisibleInDecided
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInDecided_inputValues"),
-                col("isFtpaRespondentDocsVisibleInDecided").alias("isFtpaRespondentDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaRespondentDocsVisibleInDecided_Transformation"),
-
-                # isFtpaRespondentDocsVisibleInSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaRespondentDocsVisibleInSubmitted").alias("isFtpaRespondentDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaRespondentDocsVisibleInSubmitted_Transformation"),
-
-                # isFtpaRespondentOotDocsVisibleInDecided
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInDecided_inputValues"),
-                col("isFtpaRespondentOotDocsVisibleInDecided").alias("isFtpaRespondentOotDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInDecided_Transformation"),
-
-                # isFtpaRespondentOotDocsVisibleInSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaRespondentOotDocsVisibleInSubmitted").alias("isFtpaRespondentOotDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaRespondentOotDocsVisibleInSubmitted_Transformation"),
-
-                # isFtpaRespondentGroundsDocsVisibleInDecided
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInDecided_inputValues"),
-                col("isFtpaRespondentGroundsDocsVisibleInDecided").alias("isFtpaRespondentGroundsDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInDecided_Transformation"),
-
-                # isFtpaRespondentEvidenceDocsVisibleInDecided
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInDecided_inputValues"),
-                col("isFtpaRespondentEvidenceDocsVisibleInDecided").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInDecided_Transformation"),
-
-                # isFtpaRespondentGroundsDocsVisibleInSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaRespondentGroundsDocsVisibleInSubmitted").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaRespondentGroundsDocsVisibleInSubmitted_Transformation"),
-
-                # isFtpaRespondentEvidenceDocsVisibleInSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_inputValues"),
-                col("isFtpaRespondentEvidenceDocsVisibleInSubmitted").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaRespondentEvidenceDocsVisibleInSubmitted_Transformation"),
-
-                # isFtpaRespondentOotExplanationVisibleInDecided
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInDecided_inputValues"),
-                col("isFtpaRespondentOotExplanationVisibleInDecided").alias("isFtpaRespondentOotExplanationVisibleInDecided_value"),
-                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInDecided_Transformation"),
-
-                # isFtpaRespondentOotExplanationVisibleInSubmitted
-                array(struct(lit("Party"), lit("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputFields"),
-                array(struct(col("Party"), col("OutOfTime"))).alias("isFtpaRespondentOotExplanationVisibleInSubmitted_inputValues"),
-                col("isFtpaRespondentOotExplanationVisibleInSubmitted").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_value"),
-                lit("Yes").alias("isFtpaRespondentOotExplanationVisibleInSubmitted_Transformation"),
-            )
+        general_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
+        .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
+        .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
+        .withColumn("applicationChangeDesignatedHearingCentre1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre"))
+                    .otherwise(col("bhc.applicationChangeDesignatedHearingCentre")))
+        .select("content.*",
+                col("applicationChangeDesignatedHearingCentre1").alias("applicationChangeDesignatedHearingCentre")
+                )
     )
 
     return general_df, general_audit
 
-################################################################
 
 ################################################################
-##########              generalDefault          ###########
+##########             appellantDetails Function              ###########
 ################################################################
 
-def generalDefault(silver_m1):
+def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
 
-    general_df = DA.generalDefault(silver_m1)
+    appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
 
-    general_df = (
-        general_df
-        .withColumn("isFtpaListVisible", lit("Yes"))
+    appellantDetails_df = appellantDetails_df.drop("appellantInUk","appealOutOfCountry","appellantHasFixedAddress")
+    # appellantDetails_audit = appellantDetails_audit.drop("appellantAddress")
+
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    
+    appellantDetails_df = (
+        appellantDetails_df.alias("content")
+        .join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        .join(silver_c_grouped.alias("mc"), on="CaseNo", how="left")
+
+        # -----------------------------
+        # appellantInUk logic
+        # -----------------------------
+        .withColumn(
+            "appellantInUk",
+            when(col("m2.Detained").isin(1, 2, 4) | expr("array_contains(CategoryIdList, 37)"), "Yes")
+            .when(expr("array_contains(CategoryIdList, 38)"), "No")
+            .otherwise(None)
+        )
+
+        # -----------------------------
+        # appealOutOfCountry logic
+        # -----------------------------
+        .withColumn(
+            "appealOutOfCountry",
+            when(col("m2.Detained").isin(1, 2, 4) | expr("array_contains(CategoryIdList, 37)"), "No")
+            .when(expr("array_contains(CategoryIdList, 38)"), "Yes")
+            .otherwise(None)
+        )
+
+        # -----------------------------
+        # appellantHasFixedAddress logic
+        # -----------------------------
+        .withColumn(
+            "appellantHasFixedAddress",
+            when(col("m2.Detained").isin(1, 2), None)
+            .when(expr("array_contains(CategoryIdList, 37)"), "Yes")
+            .otherwise(None)
+        )
+
+        # -----------------------------
+        # appellantAddress logic
+        # -----------------------------
+        .withColumn(
+            "appellantAddress1",
+            when(col("m2.Detained").isin(1, 2), None)
+            .when(expr("array_contains(CategoryIdList, 37)"), col("content.appellantAddress"))
+            .otherwise(None)
+        )
+
+        .drop("appellantAddress")
+
+        # -----------------------------
+        # Final select
+        # -----------------------------
+        .select(
+            "content.*",
+            col("appellantInUk"),
+            col("appealOutOfCountry"),
+            col("appellantHasFixedAddress"),
+            col("appellantAddress1").alias("appellantAddress"),
+        )
     )
 
-    return general_df
+
+    return appellantDetails_df, appellantDetails_audit
+
+################################################################
+##########           cleanEmail Function             ###########
+################################################################
+
+
+def cleanEmail(email):
+    if email is None:
+        return None
+    
+    email = re.sub(r"\s+", "", email)             # Remove all whitespace
+    email = re.sub(r"\s", "", email)              # 2. Remove internal whitespace
+    email = re.sub(r"^\.", "", email)             # 3. Remove leading .
+    email = re.sub(r"\.$", "", email)             # 4. Remove trailing .
+    email = re.sub(r"^,", "", email)              # 5. Remove leading ,
+    email = re.sub(r",$", "", email)              # 6. Remove trailing ,
+    email = re.sub(r"^[()]", "", email)           # 7. Remove leading parenthesis
+    email = re.sub(r"[()]$", "", email)           # 8. Remove trailing parenthesis
+    email = re.sub(r"^:", "", email)              # 9. Remove leading colon
+    email = re.sub(r":$", "", email)              #10. Remove trailing colon
+    email = re.sub(r"^\*", "", email)             #11. Remove leading asterisk
+    email = re.sub(r"\*$", "", email)             #12. Remove trailing asterisk
+    email = re.sub(r"^;", "", email)              #13. Remove leading semicolon
+    email = re.sub(r";$", "", email)              #14. Remove trailing semicolon
+    email = re.sub(r"^\?", "", email)             #15. Remove leading question
+    email = re.sub(r"\?$", "", email)             #16. Remove trailing question
+    email = email.strip()                         # 1. Trim spaces
+
+    return email
+
+# Register the UDF
+cleanEmailUDF = udf(cleanEmail, StringType())
+
+################################################################
+##########           cleanPhoneNumber Function       ###########
+################################################################
+
+def cleanPhoneNumber(PhoneNumber):
+    if PhoneNumber is None:
+        return None
+
+
+    PhoneNumber = re.sub(r"\s+", "", PhoneNumber)             # 1. Remove internal whitespace
+    PhoneNumber = re.sub(r"\s", "", PhoneNumber)              # 2. Remove internal whitespace
+    PhoneNumber = re.sub(r"^\.", "", PhoneNumber)             # 3. Remove leading .
+    PhoneNumber = re.sub(r"\.$", "", PhoneNumber)             # 4. Remove trailing .
+    PhoneNumber = re.sub(r"^,", "", PhoneNumber)              # 5. Remove leading ,
+    PhoneNumber = re.sub(r",$", "", PhoneNumber)              # 6. Remove trailing ,
+    PhoneNumber = re.sub(r"^[()]", "", PhoneNumber)           # 7. Remove leading parenthesis
+    PhoneNumber = re.sub(r"[()]$", "", PhoneNumber)           # 8. Remove trailing parenthesis
+    PhoneNumber = re.sub(r"^:", "", PhoneNumber)              # 9. Remove leading colon
+    PhoneNumber = re.sub(r":$", "", PhoneNumber)              #10. Remove trailing colon
+    PhoneNumber = re.sub(r"^\*", "", PhoneNumber)             #11. Remove leading asterisk
+    PhoneNumber = re.sub(r"\*$", "", PhoneNumber)             #12. Remove trailing asterisk
+    PhoneNumber = re.sub(r"^;", "", PhoneNumber)              #13. Remove leading semicolon
+    PhoneNumber = re.sub(r";$", "", PhoneNumber)              #14. Remove trailing semicolon
+    PhoneNumber = re.sub(r"^\?", "", PhoneNumber)             #15. Remove leading question
+    PhoneNumber = re.sub(r"\?$", "", PhoneNumber)             #16. Remove trailing question
+    PhoneNumber = re.sub(r"[.\-]", "", PhoneNumber)           #17. Remove internal dots and dashes
+    PhoneNumber = re.sub(r"^0044", "+44", PhoneNumber)        #18. Change starting 0044 to +44
+    PhoneNumber = re.sub(r"\(0\)", "", PhoneNumber)           #19. Remove (0) if +44 or 44 exists in the number
+    PhoneNumber = re.sub(r"^44", "+44", PhoneNumber)          #20. Add missing + if number starts with 44 (but not already +)
+    PhoneNumber = PhoneNumber.strip()                         #21. Trim spaces
+    PhoneNumber = re.sub(r"[)]", "", PhoneNumber)               # Removing closing parenthesis 
+
+    return PhoneNumber
+
+
+# Register the UDF
+phoneNumberUDF = udf(cleanPhoneNumber, StringType())
+
+
+################################################################
+##########    mobile phone number regex check.       ###########
+################################################################
+
+def filterMobilePhoneNumber(PhoneNumber):
+    if PhoneNumber is None:
+        return None
+
+    cleanedPhoneNumber = cleanPhoneNumber(PhoneNumber)
+
+    mobile_number_pattern = re.compile("^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$")
+
+    if mobile_number_pattern.match(cleanedPhoneNumber):
+        return cleanedPhoneNumber
+    else:
+        return None
+
+
+filterMobilePhoneNumberUDF = udf(filterMobilePhoneNumber, StringType())
+
+################################################################
+##########        sponsorDetails Function            ###########
+################################################################
+
+def sponsorDetails(silver_m1, silver_c):
+    m1 = silver_m1.alias("m1")
+    c = silver_c.alias("c")
+
+    joined = m1.join(c, on='CaseNo', how="left")
+
+    grouped = joined.groupBy("CaseNo").agg(
+        collect_list("CategoryId").alias("CategoryIdList"),
+        first("Sponsor_Name", ignorenulls=True).alias("Sponsor_Name"),
+        first("Sponsor_Forenames", ignorenulls=True).alias("Sponsor_Forenames"),
+        first("Sponsor_Address1", ignorenulls=True).alias("Sponsor_Address1"),
+        first("Sponsor_Address2", ignorenulls=True).alias("Sponsor_Address2"),
+        first("Sponsor_Address3", ignorenulls=True).alias("Sponsor_Address3"),
+        first("Sponsor_Address4", ignorenulls=True).alias("Sponsor_Address4"),
+        first("Sponsor_Address5", ignorenulls=True).alias("Sponsor_Address5"),
+        first("Sponsor_Postcode", ignorenulls=True).alias("Sponsor_Postcode"),
+        first("Sponsor_Authorisation", ignorenulls=True).alias("Sponsor_Authorisation"),
+        first("Sponsor_Email", ignorenulls=True).alias("Sponsor_Email"),
+        first("Sponsor_Telephone", ignorenulls=True).alias("Sponsor_Telephone")
+    )
+
+    category_condition = (array_contains(col("CategoryIdList"), 38))
+    name_condition = col("Sponsor_Name").isNotNull()
+
+    grouped = grouped.withColumn("hasSponsor", when(name_condition, lit("Yes")).otherwise("No")
+    ).withColumn("sponsorGivenNames", when(name_condition, col("Sponsor_Forenames")).otherwise(lit(None))
+    ).withColumn("sponsorFamilyName", when((name_condition), col("Sponsor_Name")).otherwise(lit(None))
+    ).withColumn("sponsorAuthorisation",when(name_condition,when(col("Sponsor_Authorisation") == True, lit("Yes")).otherwise(lit("No")))
+    ).withColumn("sponsorAddress",when(name_condition,
+            struct(
+                coalesce(
+                    col("Sponsor_Address1"),
+                    col("Sponsor_Address2"),
+                    col("Sponsor_Address3"),
+                    col("Sponsor_Address4"),
+                    col("Sponsor_Address5")
+                ).alias("AddressLine1"),
+                coalesce(col("Sponsor_Address2"), lit("")).alias("AddressLine2"),
+                lit("").alias("AddressLine3"),
+                coalesce(col("Sponsor_Address3"), lit("")).alias("PostTown"),
+                coalesce(col("Sponsor_Address4"), lit("")).alias("County"),
+                coalesce(col("Sponsor_Address5"), lit("")).alias("Country"),
+                coalesce(col("Sponsor_Postcode"), lit("")).alias("PostCode")
+            )
+        )
+    ).withColumn("sponsorEmailAdminJ",when((name_condition),cleanEmailUDF(col("Sponsor_Email")))
+    ).withColumn("sponsorMobileNumberAdminJ",when((name_condition),filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
+    ).withColumn("sponsorNameForDisplay",when(name_condition,concat(col("Sponsor_Forenames"), lit(" "), col("Sponsor_Name"))).otherwise(lit(None))
+    ).withColumn("sponsorAddressForDisplay",
+        when(
+            name_condition,
+            concat_ws(
+                "\r\n",
+                col("Sponsor_Address1"),
+                col("Sponsor_Address2"),
+                col("Sponsor_Address3"),
+                col("Sponsor_Address4"),
+                col("Sponsor_Address5"),
+                col("Sponsor_Postcode")
+            )
+        ).otherwise(lit(None))
+    )
+
+    df = grouped.select(
+        "CaseNo",
+        "hasSponsor",
+        "sponsorGivenNames",
+        "sponsorFamilyName",
+        "sponsorAddress",
+        "sponsorEmailAdminJ",
+        "sponsorMobileNumberAdminJ",
+        "sponsorAuthorisation",
+        "sponsorNameForDisplay",
+        "sponsorAddressForDisplay"
+    )
+
+    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
+    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
+
+    df_audit = silver_m1.alias("audit").join(df.alias("content"), ["CaseNo"], "left"
+            ).join(grouped.alias("grp"), ["CaseNo"], "left").select(
+        col("CaseNo"),
+        
+        #audit hasSponsor
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryIdList"))).alias("hasSponsor_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryIdList"))).alias("hasSponsor_inputValues"),
+        col("content.hasSponsor"),
+        lit("yes").alias("hasSponsor_Transformation"),
+
+        #audit sponsorGivenNames
+        array(struct(*common_inputFields, lit("audit.Sponsor_Forenames"), lit("grp.CategoryIdList"))).alias("sponsorGivenName_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Forenames"), col("grp.CategoryIdList"))).alias("sponsorGivenName_inputValues"),
+        col("content.sponsorGivenNames"),
+        lit("yes").alias("sponsorGivenNames_Transformation"),
+
+        #audit sponsorFamilyName
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("grp.CategoryIdList"))).alias("sponsorFamilyName_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("grp.CategoryIdList"))).alias("sponsorFamilyName_inputValues"),
+        col("content.sponsorFamilyName"),
+        lit("yes").alias("sponsorFamilyName_Transformation"),
+
+        #audit sponsorAddress
+        array(struct(*common_inputFields, lit("audit.Sponsor_Address1"), lit("audit.Sponsor_Address2"), lit("audit.Sponsor_Address3"), lit("audit.Sponsor_Address4"), lit("audit.Sponsor_Address5"), lit("audit.Sponsor_Postcode"), lit("grp.CategoryIdList"))).alias("sponsorAddress.inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Address1"), col("audit.Sponsor_Address2"), col("audit.Sponsor_Address3"), col("audit.Sponsor_Address4"), col("audit.Sponsor_Address5"), col("audit.Sponsor_Postcode"), col("grp.CategoryIdList"))).alias("sponsorAddress.inputValues"),
+        col("content.sponsorAddress"),
+        lit("yes").alias("sponsorAddress_Transformation"),
+
+        #audit sponsorAuthorisation
+        array(struct(*common_inputFields, lit("audit.Sponsor_Authorisation"), lit("grp.CategoryIdList"))).alias("sponsorAuthorisation_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Authorisation"), col("grp.CategoryIdList"))).alias("sponsorAuthorisation_inputValues"),
+        col("content.sponsorAuthorisation"),
+        lit("yes").alias("sponsorAuthorisation_Transformation"),
+
+        #audit sponsorEmailAdminJ
+        array(struct(*common_inputFields, lit("audit.Sponsor_Email"), lit("grp.CategoryIdList"))).alias("sponsorEmailAdminJ_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Email"), col("grp.CategoryIdList"))).alias("sponsorEmailAdminJ_inputValues"),
+        col("content.sponsorEmailAdminJ"),
+        lit("yes").alias("sponsorEmailAdminJ_Transformation"),
+
+        #audit sponsorMobileNumberAdminJ
+        array(struct(*common_inputFields, lit("audit.Sponsor_Telephone"), lit("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Telephone"), col("grp.CategoryIdList"))).alias("sponsorMobileNumberAdminJ_inputValues"),
+        col("content.sponsorMobileNumberAdminJ"),
+        lit("yes").alias("sponsorMobileNumberAdminJ_Transformation"),
+
+        #audit sponsorNameForDisplay
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"), lit("Sponsor_Forenames"))).alias("sponsorNameForDisplay_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"), col("audit.Sponsor_Forenames"))).alias("sponsorNameForDisplay_inputValues"),
+        col("content.sponsorNameForDisplay"),
+        lit("yes").alias("sponsorNameForDisplay_Transformation"),
+
+        #audit sponsorAddressForDisplay
+        array(struct(*common_inputFields, lit("audit.Sponsor_Address1"), lit("audit.Sponsor_Address2"), lit("audit.Sponsor_Address3"), lit("audit.Sponsor_Address4"), lit("audit.Sponsor_Address5"), lit("audit.Sponsor_Postcode"))).alias("sponsorAddressForDisplay_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Address1"), col("audit.Sponsor_Address2"), col("audit.Sponsor_Address3"), col("audit.Sponsor_Address4"), col("audit.Sponsor_Address5"), col("audit.Sponsor_Postcode"))).alias("sponsorAddressForDisplay_inputValues"),
+        col("content.sponsorAddressForDisplay"),
+        lit("yes").alias("sponsorAddressForDisplay_Transformation"),
+    )
+
+    return df, df_audit
+
+
 ################################################################
 
 ################################################################   

@@ -527,36 +527,6 @@ def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
             C["C_CaseNo"]
         )
 
-        test_df = test_df.groupBy("appealReferenceNumber").agg(
-            collect_list("CategoryId").alias("CategoryIds"),
-            first("CategoryId").alias("CategoryId"),
-            first("ftpaApplicationDeadline").alias("ftpaApplicationDeadline"),
-            first("DecisionDate").alias("DecisionDate"),
-            first("CaseStatus").alias("CaseStatus"),
-            first("StatusId").alias("StatusId"),
-            first("Outcome").alias("Outcome")
-        )
-
-        # CategoryId filter
-        categoryid_rule = ( 
-            (array_contains(col("CategoryIds"), 37)) |
-            (array_contains(col("CategoryIds"), 38))
-        )
-
-        # Apply filters for CaseStatus, Outcome and CategoryID
-        test_df = test_df.filter(
-            (col("CaseStatus").isin(37, 38, 26)) & 
-            (col("Outcome").isin(1,2)) &
-            (categoryid_rule) &
-            (col("CategoryId").isin(37, 38))
-        )
-
-        # Filter by max Status
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
-
-        # Get the first Record per Case
-        test_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
-
         return test_df, True
     except Exception as e:
         error_message = str(e)        
@@ -568,52 +538,38 @@ def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
 # Where CategoryId in 38, ftpaApplicationDeadline = M3.DecisionDate + 28 days
 # MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
 #######################
-def test_ftpaApplicationDeadline_ac1(test_df):
+def test_ftpaApplicationDeadline_combined(test_df):
     try:
-        latest_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
+        test_df = test_df.filter(
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1,2)) &
+            (col("CategoryId").isin(37, 38))
+        )
 
-        winning_df = test_df.withColumn("row_rank", F.row_number().over(latest_window)).filter(F.col("row_rank") == 1)
+        #Check we have Records To test
+        if test_df.count() == 0:
+            return TestResult("ftpaApplicationDeadline", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+        
+        winning_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
 
         winning_df = winning_df.withColumn(
-            "expected_deadline_37",
-            F.when(F.col("CategoryId") == 37, F.date_add(F.to_date("DecisionDate"), 14))
-            .otherwise(None)
+            "expected_14", F.date_add(F.to_date("DecisionDate"), 14)
+        ).withColumn(
+            "expected_28", F.date_add(F.to_date("DecisionDate"), 28)
         )
 
         acceptance_criteria = winning_df.filter(
-            F.to_date(col("ftpaApplicationDeadline")) != col("expected_deadline_37")
+            (F.when(col("CategoryId") == 37, F.to_date("ftpaApplicationDeadline") != col("expected_14")).when(col("CategoryId") == 38, 
+            (F.to_date("ftpaApplicationDeadline") != col("expected_14")) & 
+            (F.to_date("ftpaApplicationDeadline") != col("expected_28"))).otherwise(lit(False)))
         )
 
         if acceptance_criteria.count() > 0:
-            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where where CategoryId is 37 and ftpaApplicationDeadline does not match with M3.DecisionDate + 14 days", test_from_state, inspect.stack()[0].function)
-            return
+            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where ftpaApplicationDeadline does not match with M3.DecisionDate + required days", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline, CategoryId is 37 and  match with M3.DecisionDate + 14 days", test_from_state, inspect.stack()[0].function)
-
-    except Exception as e:
-        return TestResult("ftpaApplicationDeadline", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
-def test_ftpaApplicationDeadline_ac2(test_df):
-    try:
-        latest_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
-
-        winning_df = test_df.withColumn("row_rank", F.row_number().over(latest_window)).filter(F.col("row_rank") == 1)
-
-        winning_df = winning_df.withColumn(
-            "expected_deadline_38",
-            F.when(F.col("CategoryId") == 38, F.date_add(F.to_date("DecisionDate"), 28))
-            .otherwise(None)
-        )
-
-        acceptance_criteria = winning_df.filter(
-            F.to_date(col("ftpaApplicationDeadline")) != col("expected_deadline_38")
-        )
-
-        if acceptance_criteria.count() > 0:
-            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where CategoryId is 38 and ftpaApplicationDeadline does not match with M3.DecisionDate + 28 days", test_from_state, inspect.stack()[0].function)
-            return
-        else:
-            return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline, CategoryId is 38 match with M3.DecisionDate + 28 days", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline match with M3.DecisionDate + required days", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
         return TestResult("ftpaApplicationDeadline", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)

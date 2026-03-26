@@ -170,7 +170,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
 
     caseData_df, caseData_audit = PP.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
 
-    caseData_df = caseData_df.drop("hearingCentre","staffLocation","caseManagementLocation","hearingCentreDynamicList","caseManagementLocationRefData","selectedHearingCentreRefData")
+    # caseData_df = caseData_df.drop("hearingCentre","staffLocation","caseManagementLocation","hearingCentreDynamicList","caseManagementLocationRefData","selectedHearingCentreRefData")
 
     joined_m1_m2 =(
         silver_m1.alias("m1")
@@ -181,9 +181,9 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         caseData_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
         .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
-        .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("bhc.hearingCentre")))
-        .withColumn("staffLocation1", when(col("m2.Detained").isin(1,2),col("det.staffLocation")).otherwise(col("bhc.staffLocation")))
-        .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("bhc.caseManagementLocation")))
+        .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("content.hearingCentre")))
+        .withColumn("staffLocation1", when(col("m2.Detained").isin(1,2),col("det.staffLocation")).otherwise(col("content.staffLocation")))
+        .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("content.caseManagementLocation")))
         .withColumn("hearingCentreDynamicList1", when(col("m2.Detained").isin(1,2),
                                                       struct(
                                                             struct(
@@ -201,24 +201,9 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
                                                         struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
                                                         struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
                                                     ).alias("list_items")))
-                    .otherwise(struct(
-                                                            struct(
-                                                                col("bhc.locationCode").alias("code"),
-                                                                col("bhc.locationLabel").alias("label")
-                                                            ).alias("value"),array(
-                                                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
-                                                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
-                                                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
-                                                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
-                                                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
-                                                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
-                                                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
-                                                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
-                                                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
-                                                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
-                                                ).alias("list_items")))
+                    .otherwise(col("content.hearingCentreDynamicList"))
         )
-        .withColumn("caseManagementLocationRefData", 
+        .withColumn("caseManagementLocationRefData1", 
                     when(col("m2.Detained").isin(1,2),struct(
             lit("1").alias("region"),
             struct(
@@ -241,35 +226,17 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
             ).alias("baseLocation")
         ))
                     
-                    .otherwise(struct(
-            lit("1").alias("region"),
-            struct(
-                struct(
-                    col("bhc.locationCode").alias("code"),
-                    col("bhc.locationLabel").alias("label")
-                ).alias("value"),
-                array(
-                    struct(lit("227101").alias("code"), lit("Newport Tribunal Centre - Columbus House").alias("label")),
-                    struct(lit("231596").alias("code"), lit("Birmingham Civil And Family Justice Centre").alias("label")),
-                    struct(lit("28837").alias("code"), lit("Harmondsworth Tribunal Hearing Centre").alias("label")),
-                    struct(lit("366559").alias("code"), lit("Atlantic Quay - Glasgow").alias("label")),
-                    struct(lit("366796").alias("code"), lit("Newcastle Civil And Family Courts And Tribunals Centre").alias("label")),
-                    struct(lit("386417").alias("code"), lit("Hatton Cross Tribunal Hearing Centre").alias("label")),
-                    struct(lit("512401").alias("code"), lit("Manchester Tribunal Hearing Centre - Piccadilly Exchange").alias("label")),
-                    struct(lit("649000").alias("code"), lit("Yarls Wood Immigration And Asylum Hearing Centre").alias("label")),
-                    struct(lit("698118").alias("code"), lit("Bradford Tribunal Hearing Centre").alias("label")),
-                    struct(lit("765324").alias("code"), lit("Taylor House Tribunal Hearing Centre").alias("label"))
-                ).alias("list_items")
-            ).alias("baseLocation")
-        )))
-        .withColumn("selectedHearingCentreRefData1", when(col("m2.Detained").isin(1,2),col("det.selectedHearingCentreRefData")).otherwise(col("bhc.selectedHearingCentreRefData")))
+                    .otherwise(col("content.caseManagementLocationRefData")))
+        .withColumn("selectedHearingCentreRefData1", 
+                    when(col("m2.Detained").isin(1,2),col("det.selectedHearingCentreRefData")).otherwise(col("content.selectedHearingCentreRefData")))
+        .drop("hearingCentre","staffLocation","caseManagementLocation","hearingCentreDynamicList","caseManagementLocationRefData","selectedHearingCentreRefData")
         .select(
             "content.*",
             col("hearingCentre1").alias("hearingCentre"),
             col("staffLocation1").alias("staffLocation"),
             col("caseManagementLocation1").alias("caseManagementLocation"),
             col("hearingCentreDynamicList1").alias("hearingCentreDynamicList"),
-            col("caseManagementLocationRefData"),
+            col("caseManagementLocationRefData1").alias("caseManagementLocationRefData"),
             col("selectedHearingCentreRefData1").alias("selectedHearingCentreRefData"),
         )
     )
@@ -284,7 +251,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     general_df, general_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
 
-    general_df = general_df.drop("applicationChangeDesignatedHearingCentre")
+    # general_df = general_df.drop("applicationChangeDesignatedHearingCentre")
 
     joined_m1_m2 =(
         silver_m1.alias("m1")
@@ -296,7 +263,8 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
         .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("applicationChangeDesignatedHearingCentre1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre"))
-                    .otherwise(col("bhc.applicationChangeDesignatedHearingCentre")))
+                    .otherwise(col("content.applicationChangeDesignatedHearingCentre")))
+        .drop(col("content.applicationChangeDesignatedHearingCentre"))
         .select("content.*",
                 col("applicationChangeDesignatedHearingCentre1").alias("applicationChangeDesignatedHearingCentre")
                 )

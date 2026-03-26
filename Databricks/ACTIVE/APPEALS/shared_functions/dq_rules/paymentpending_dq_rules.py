@@ -717,27 +717,24 @@ class paymentPendingDQRules(DQRulesBase):
         ##############################
         checks["valid_hasSponsor_yes_no"] = (
             """(
-                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-                OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
-                OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
+                (Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
+                OR (Sponsor_Name IS NULL AND hasSponsor <=> 'No')
+                OR (hasSponsor IS NULL)
             )"""
         )
         checks["valid_sponsorGivenNames_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
         )
 
         checks["valid_sponsorFamilyName_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
         )
 
         checks["valid_sponsorAuthorisation_yes_no"] = (
             """(
-                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-                OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
-                OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
+                (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
+                OR (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
+                OR (Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
             )"""
         )
 
@@ -745,7 +742,7 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
         ############################################################
         checks["valid_sponsorAddress_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddress IS NULL))"
         )
 
         checks["valid_sponsorAddressForDisplay"] = (
@@ -760,11 +757,11 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-778 (SponsorDetails)
         ##############################
         checks["valid_sponsorEmailAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
+            "(( sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
         )
 
         checks["valid_sponsorMobileNumberAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
+            "(((sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
         )
         # ##############################
         # ARIADM-760 (appellantDetails)

@@ -101,7 +101,7 @@ def build_state_flow(state: str, flow: list):
 def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,silver_h,
                                 bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
                                 bronze_interpreter_languages, bronze_listing_location,bronze_ended_states,
-                                bronze_hearing_centres, bronze_derive_hearing_centres):
+                                bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())

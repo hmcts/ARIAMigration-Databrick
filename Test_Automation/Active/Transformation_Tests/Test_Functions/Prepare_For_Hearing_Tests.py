@@ -624,7 +624,8 @@ def test_hearingDetails_init(json, M1_bronze, M3_bronze, bll):
             "CaseNo",
             "HearingCentre",
             "TimeEstimate",
-            "CaseStatus"
+            "CaseStatus",
+            "StatusId"
         )
 
         test_df = test_df.join(
@@ -713,8 +714,14 @@ def test_listingLocation_mapping(test_df):
 
         if target_records.count() == 0:
             return TestResult("listingLocation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.col("StatusId").desc(), F.col("TimeEstimate").desc())
 
-        collapsed_df = target_records.groupBy("appealReferenceNumber").agg(
+        # Apply rank and grab the most relevant row for each CaseNumber
+        ranked_df = target_records.withColumn("row_rank", F.row_number().over(window_spec))
+        winning_records = ranked_df.filter(F.col("row_rank") == 1)
+
+        collapsed_df = winning_records.groupBy("appealReferenceNumber").agg(
             F.max("listingLocation").alias("listingLocation"),
             F.max("listingLocation.code").alias("actual_code"),
             F.max("listingLocation.label").alias("actual_label"),
@@ -753,8 +760,7 @@ def test_listingLength_mapping(test_df):
         # Partition by appealReferenceNumber
         # Order by Status DESC (38 above 37)
         # Order by TimeEstimate DESC (120 above 60 if status is tied)
-        window_spec = Window.partitionBy("appealReferenceNumber") \
-                            .orderBy(F.col("CaseStatus").desc(), F.col("TimeEstimate").desc())
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.col("StatusId").desc(), F.col("TimeEstimate").desc())
 
         # Apply rank and grab the most relevant row for each CaseNumber
         ranked_df = target_records.withColumn("row_rank", F.row_number().over(window_spec))

@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,col,date_format,count,explode,round, add_months, collect_set, collect_list
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -69,6 +69,7 @@ from pyspark.sql.types import  StringType, IntegerType
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 from pyspark.sql.types import StructType
+from pyspark.sql import functions as F
 
 
 # COMMAND ----------
@@ -1738,9 +1739,11 @@ def silver_normal_bail():
         "case_result",
         F.when(F.col("h.Comment").like("%indefinite retention%"), 'Legal Hold')
         .when(F.col("h.Comment").like("%indefinate retention%"), 'Legal Hold')
-        .when(F.date_add(F.col("t.DecisionDate"), 2 * 365) < lit("2026-02-01"), 'Destroy')
-        .otherwise('Archive')
-    )
+        .when(
+            add_months(F.col("t.DecisionDate"), 24) < to_date(lit("2026-02-01")),
+            'Destroy'
+        )
+        .otherwise('Archive'))
 
     final_result = result_with_case.filter(F.col("case_result") == 'Archive')
 
@@ -2087,11 +2090,11 @@ def silver_m5():
            path=f"{silver_base_path}/silver_bail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_bail_ac_link_linkdetail").alias("m6")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
-    joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
+    # segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    # joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
 
-    df = joined_df.select("m6.CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
+    df = m6_df.select("CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
     df = df.withColumn("CaseNo", trim("CaseNo"))
@@ -3279,11 +3282,29 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
         """)
     )
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_link_files, "CaseNo", "left")
+    case_links = (
+        m6_link_files.groupBy("CaseNo").agg(
+            flatten(collect_list("linked_files_details")).alias("linked_files_details")
+        )
+    )
 
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(case_links, "CaseNo", "left")
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
 
+
+# COMMAND ----------
+
+# m6_df = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_link_linkdetail").alias("m6")
+# m6_apls_df = spark.read.table("hive_metastore.ariadm_arm_fta.bronze_appealcase_link_linkdetail").alias("ld")
+# selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
+
+# df = m6_df.select("CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
+#     col("Title"),col("Forenames"),col("Name")).alias("FullName")
+# )
+# df = df.withColumn("CaseNo", trim("CaseNo"))
+
+# df.display()
 
 # COMMAND ----------
 

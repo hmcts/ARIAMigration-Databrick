@@ -2386,7 +2386,7 @@ def bronze_case_adjudicator():
 
 # COMMAND ----------
 
-stg_appeals_filtered = spark.read.table("ariadm_active_appeals.stg_segmentation_states")
+stg_appeals_filtered = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states")
 
 # COMMAND ----------
 
@@ -3009,10 +3009,10 @@ def silver_history_detail():
 )
 def silver_link_detail():
     appeals_df = dlt.read("bronze_appealcase_link_linkdetail").alias("ld")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    # flt_df = dlt.read("stg_appeals_filtered").alias('flt')
     m2 = dlt.read("bronze_appealcase_ca_apt_country_detc").alias('m2')
 
-    joined_df = appeals_df.join(flt_df, col("ld.CaseNo") == col("flt.CaseNo"), "inner").join(m2, col("ld.CaseNo") == col("m2.CaseNo"), "inner").select(
+    joined_df = appeals_df.join(m2, col("ld.CaseNo") == col("m2.CaseNo"), "inner").select(
     "ld.CaseNo",
     "ld.LinkNo",
     "ld.LinkDetailComment",
@@ -5034,6 +5034,12 @@ def stg_apl_combined():
         """)
     )
 
+    df_files_link = (
+        df_link.groupBy("CaseNo").agg(
+            flatten(collect_list("LinkedCaseDetails")).alias("LinkedCaseDetails")
+        )
+    )
+
     df_linkedcostaward = dlt.read("silver_linkedcostaward_detail").groupBy("CaseNo").agg(
         collect_list(struct('CostAwardId', 'CaseNo', 'LinkNo', 'Name', 'Forenames', 'Title', 'DateOfApplication', 'TypeOfCostAward', 'ApplyingParty', 'PayingParty', 'MindedToAward', 'ObjectionToMindedToAward', 'CostsAwardDecision', 'DateOfDecision', 'CostsAmount', 'OutcomeOfAppeal', 'AppealStage', 'AppealStageDescription')).alias("LinkedCostAwardDetails")
     )
@@ -5098,7 +5104,7 @@ def stg_apl_combined():
         .join(df_list_detail, "CaseNo", "left")
         .join(df_dfdairy, "CaseNo", "left")
         .join(df_history, "CaseNo", "left")
-        .join(df_link, "CaseNo", "left")
+        .join(df_files_link, "CaseNo", "left")
         .join(df_status, "CaseNo", "left")
         .join(df_appealcategory, "CaseNo", "left")
         .join(df_case_detail, "CaseNo", "left")

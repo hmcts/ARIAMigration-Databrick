@@ -188,7 +188,9 @@ def test_hearingResponse_init(json, M1_bronze, M3_bronze):
 
         M3_bronze = M3_bronze.select(
             "CaseNo",
-            "ListTypeId"
+            "ListTypeId",
+            "CaseStatus",
+            "StatusId"
         )
 
         test_df = test_df.join(
@@ -208,14 +210,23 @@ def test_hearingResponse_init(json, M1_bronze, M3_bronze):
 
 #######################
 # isAppealSuitableToFloat - If M3.ListTypeId is 5 & isAppealSuitableToFloat is ‘Yes’
+# MAX(StatusId) WHERE CaseStatus IN (37,38)
 #######################
 def test_isAppealSuitableToFloat_test1(test_df):
     try:
+        test_df = test_df.filter(col("CaseStatus").isin(37,38))
+        
         #Check we have Records To test
-        if test_df.filter(
-            col("ListTypeId") == 5
-            ).count() == 0:
+        if test_df.count() == 0:
             return TestResult("isAppealSuitableToFloat", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        test_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        test_df = test_df.select("appealReferenceNumber", "isAppealSuitableToFloat", "ListTypeId", "CaseStatus")
 
         acceptance_critera = test_df.filter(
             (col("ListTypeId") == 5) &
@@ -235,11 +246,19 @@ def test_isAppealSuitableToFloat_test1(test_df):
 #######################
 def test_isAppealSuitableToFloat_test2(test_df):
     try:
+        test_df = test_df.filter(col("CaseStatus").isin(37,38))
+        
         #Check we have Records To test
-        if test_df.filter(
-            col("ListTypeId") != 5
-            ).count() == 0:
+        if test_df.count() == 0:
             return TestResult("isAppealSuitableToFloat", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # Filter by max Status
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusID"))
+
+        # Get the first Record per Case
+        test_df = test_df.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+
+        test_df = test_df.select("appealReferenceNumber", "isAppealSuitableToFloat", "ListTypeId", "CaseStatus")
 
         acceptance_critera = test_df.filter(
             (col("ListTypeId") != 5) &
@@ -764,8 +783,3 @@ def test_listingLength_mapping(test_df):
 
     except Exception as e:
         return TestResult("listingLength", "FAIL", f"TEST FAILED WITH EXCEPTION :  Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
-
-
-
-

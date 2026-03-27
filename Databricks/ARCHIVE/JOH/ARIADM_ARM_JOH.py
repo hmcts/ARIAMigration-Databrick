@@ -1251,7 +1251,7 @@ def generate_html(row, html_template=html_template):
             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
             "{{Telephone}}": row.Telephone or "",
             # "{{ContactDetails}}": row.ContactDetails or "",
-            "{{ContactDetails}}": (row.ContactDetails or "").replace("\n", ", "),
+            "{{ContactDetails}}": str(row.ContactDetails or "").replace("\n", ", "),
             "{{DesignatedCentre}}": row.DesignatedCentre or "",
             "{{EmploymentTerm}}": row.EmploymentTerm or "",
             "{{FullTime}}": row.FullTime or "",
@@ -1259,6 +1259,7 @@ def generate_html(row, html_template=html_template):
             "{{DateOfRetirement}}": format_date_iso(row.DateOfRetirement),
             "{{ContractEndDate}}": format_date_iso(row.ContractEndDate),
             "{{ContractRenewalDate}}": format_date_iso(row.ContractRenewalDate),
+            "{{AvailableAtShortNotice}}": "checked" if row.AvailableAtShortNotice else "",
             "{{DoNotUseReason}}": row.DoNotUseReason or "",
             "{{JudicialStatus}}": row.JudicialStatus or "",
             "{{Address1}}": row.Address1 or "",
@@ -1421,10 +1422,6 @@ def stg_judicial_officer_combined():
 
 # COMMAND ----------
 
-spark.read.table('hive_metastore.ariadm_arm_joh.stg_judicial_officer_combined').display()
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation  stg_create_joh_json_content
 @dlt.table(
     name="stg_create_joh_json_content",
@@ -1493,11 +1490,6 @@ def stg_create_joh_a360_content():
     return metadata_df
 
   
-
-# COMMAND ----------
-
-#  if read_hive:
-#      print("Loading data from Hive")
 
 # COMMAND ----------
 
@@ -1671,118 +1663,3 @@ def gold_judicial_officer_with_a360():
 
 # DBTITLE 1,Exit Notebook with Success Message
 dbutils.notebook.exit("Notebook completed successfully")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Appendix
-
-# COMMAND ----------
-
-# %sql
-# drop schema ariadm_arm_joh cascade
-
-# COMMAND ----------
-
-# DBTITLE 1,Count of Files in HTML, JSON, and A360 Directories
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
-
-# COMMAND ----------
-
-# df = (
-#     spark.read.table("hive_metastore.ariadm_arm_joh.silver_adjudicator_detail").alias("adj").join(spark.read.table("hive_metastore.ariadm_arm_joh.stg_joh_filtered").alias('flt'), col("adj.AdjudicatorId") == col("flt.AdjudicatorId"), "inner").select(
-#         col('adj.AdjudicatorId').alias('client_identifier'),
-#         date_format(coalesce(col('adj.DateOfRetirement'), col('adj.ContractEndDate'), col('adj.AdtclmnFirstCreatedDatetime')), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-#         date_format(col('adj.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-#         lit("GBR").alias("region"),
-#         lit("ARIA").alias("publisher"),
-#         lit("ARIA Judicial Records").alias("record_class"),
-#         lit('IA_Judicial_Office').alias("entitlement_tag"),
-#         col('adj.Title').alias('bf_001'),
-#         col('adj.Forenames').alias('bf_002'),
-#         col('adj.Surname').alias('bf_003'),
-#         when(
-#             workspace_env["env"] == 'dev-sbox',
-#             date_format(coalesce(col('adj.DateOfBirth'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-#         ).otherwise(
-#             date_format(col('adj.DateOfBirth'), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-#         ).alias('bf_004'),
-#         col('adj.DesignatedCentre').alias('bf_005')
-#     )
-# )
-
-# display(df)
-
-# COMMAND ----------
-
-# DBTITLE 1,HTML Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_html  --where UploadStatus != 'success' and HTMLContent not like '%ERROR%'
-
-# COMMAND ----------
-
-# # case_no = 'IM/00048/2003'
-# df = spark.sql("SELECT * FROM hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_html")
-
-# display(df)
-# # Filter for the specific case and extract the JSON collection
-# filtered_row = df.filter(col("AdjudicatorId") == 1809).select("HTMLContent").first()
-
-# displayHTML(filtered_row["HTMLContent"])
-
-# COMMAND ----------
-
-# DBTITLE 1,JSON Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_json --where UploadStatus != 'success'  and A360Content like '%ERROR%'
-
-# COMMAND ----------
-
-# DBTITLE 1,A360 Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_joh.gold_judicial_officer_with_A360 where UploadStatus != 'success' and A360Content like '%ERROR%'
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# %sql
-# drop schema hive_metastore.ariadm_arm_joh cascade
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_joh.stg_create_joh_json_content --where UploadStatus != 'success' and A360Content like '%ERROR%'
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/submission/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
-
-# COMMAND ----------
-
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/response/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))
-
-# COMMAND ----------
-
-# DBTITLE 1,failures
-# from pyspark.sql.functions import col, from_unixtime
-
-# files_df = spark.createDataFrame(dbutils.fs.ls("/mnt/dropzoneariajr/ARIAJR/response/"))
-# files_df = files_df.withColumn("modificationTime", from_unixtime(col("modificationTime") / 1000).cast("timestamp"))
-# files_df = files_df.filter(col("path").contains("_0_"))
-
-# display(files_df.orderBy(col("modificationTime").desc()))

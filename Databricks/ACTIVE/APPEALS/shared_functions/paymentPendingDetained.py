@@ -23,7 +23,7 @@ from pyspark.sql.functions import (
 ##########          Detained State Function          ###########
 ################################################################
 
-def detainedState(silver_m1, silver_m2,bronze_detention_centres):
+def detained(silver_m1, silver_m2,bronze_detention_centres):
 
     joined_m1_m2 =(
         silver_m1.alias("m1")
@@ -31,9 +31,9 @@ def detainedState(silver_m1, silver_m2,bronze_detention_centres):
         
     )
 
-    detainedState_df = (
+    detained_df = (
         joined_m1_m2.alias("m2").join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
-        .withColumn("appellantInDetention", when(col("m2.Detained").isin([1,2,4]), "Yes").otherwise(None))
+        .withColumn("appellantInDetention", when(col("m2.Detained").isin([1,2,4]), "Yes").otherwise(lit('No')))
         .withColumn("detentionFacility", when(col("m2.Detained") == 1, "prison")
                     .when(col("m2.Detained") == 1, "prison")
                     .when(col("m2.Detained") == 2, "immigrationRemovalCentre")
@@ -75,10 +75,10 @@ def detainedState(silver_m1, silver_m2,bronze_detention_centres):
                 )
     )
 
-    detainedState_audit = (
+    detained_audit = (
         joined_m1_m2.alias("m1_m2")
         .join(bronze_detention_centres.alias("det"),col("m1_m2.DetentionCentreId") == col("det.DetentionCentreId"),"left")
-        .join(detainedState_df.alias("content"), on="CaseNo", how="left")
+        .join(detained_df.alias("content"), on="CaseNo", how="left")
             .select(
                 # ariaDesiredState - ARIADM-797
                 col("content.CaseNo"),
@@ -148,8 +148,7 @@ def detainedState(silver_m1, silver_m2,bronze_detention_centres):
             )
     )
 
-
-    return detainedState_df, detainedState_audit
+    return detained_df, detained_audit
 
 ################################################################
 ##########              caseData grouping            ###########
@@ -272,7 +271,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     return general_df, general_audit
 
-
 ################################################################
 ##########             appellantDetails Function              ###########
 ################################################################
@@ -345,7 +343,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             col("appellantAddress1").alias("appellantAddress"),
         )
     )
-
 
     return appellantDetails_df, appellantDetails_audit
 

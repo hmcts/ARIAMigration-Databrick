@@ -479,9 +479,22 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_remitted = silver_m3_ranked_remitted.select(col("CaseNo"),col("DecisionDate").alias("DecisionDate_rem"),col("CaseStatus").alias("CaseStatus_rem"),col("Outcome").alias("Outcome_rem"))
 
 
-
+###################################################################################################
 ###################################################################################################
 
+    detained_df = (
+        silver_m1.alias("m1")
+        .join(silver_m2.alias("m2"),on="CaseNo",how="left")
+        .join(bronze_detention_centres.alias("det"),on="DetentionCentreId",how="left")
+        .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId"),
+            *[col(f"det.{c}").alias(f"{c}_det")
+                for c in bronze_detention_centres.columns
+            ]
+        )
+    )
+
+###################################################################################################
+###################################################################################################
 
     return (
         df_final
@@ -506,6 +519,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_ended_new_columns, on="CaseNo", how="left")
             .join(valid_ended_updated_columns, on="CaseNo", how="left")
             .join(valid_remitted, on="CaseNo", how="left")
+            .join(detained_df, on="CaseNo", how="left")
     )
 
 

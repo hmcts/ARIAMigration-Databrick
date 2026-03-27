@@ -966,4 +966,201 @@ class paymentPendingDQRules(DQRulesBase):
             "(legalRepresentativeDocuments IS NOT NULL)"
         )
 
+        #########################################
+        # (detained)
+        ######################################### 
+
+        checks["valid_appellantInDetention"] = (
+            """
+            (
+                Detained IN (1,2,4)
+                AND appellantInDetention = 'Yes'
+            )
+            OR
+            (
+                Detained NOT IN (1,2,4)
+                AND appellantInDetention = 'No'
+            )
+            """
+        )
+
+
+        checks["valid_detentionFacility"] = (
+            """
+            (
+                Detained = 1
+                AND detentionFacility = 'prison'
+            )
+            OR
+            (
+                Detained = 2
+                AND detentionFacility = 'immigrationRemovalCentre'
+            )
+            OR
+            (
+                Detained = 4
+                AND detentionFacility = 'other'
+            )
+            OR
+            (
+                Detained NOT IN (1,2,4)
+                AND detentionFacility IS NULL
+            )
+            """
+        )
+
+        
+        checks["valid_prisonName"] = (
+            """ ( Detained != 1 AND  prisonName IS NULL) OR 
+                ( prisonName <=> prisonName_det )
+            
+            """)
+        
+        checks["valid_prisonNOMSNumber"] = (
+            """
+            (
+                (Detained != 1 OR PrisonRef IS NULL)
+                AND prisonNOMSNumber IS NULL
+            ) 
+            OR 
+            (
+                Detained = 1 
+                AND PrisonRef IS NOT NULL 
+                AND prisonNOMSNumber.prison <=> PrisonRef
+            )
+            """
+        )
+
+        checks["valid_otherDetentionFacilityName"] = (
+            """
+            (
+                (Detained != 4)
+                AND otherDetentionFacilityName IS NULL
+            )
+            OR
+            (
+                Detained = 4
+                AND otherDetentionFacilityName.other <=> coalesce(DetentionCentre_det, Appellant_Address1)
+            )
+            """
+        )
+        
+        checks["valid_ircName"] = (
+            """
+            (
+                (Detained != 2)
+                AND ircName IS NULL
+            )
+            OR
+            (
+                Detained = 2
+                AND ircName <=> ircName_det
+            )
+            """
+        )
+        
+        checks["valid_releaseDateProvided"] = (
+            """
+            (
+                (Detained NOT IN (1,4))
+                AND releaseDateProvided IS NULL
+            )
+            OR
+            (
+                Detained IN (1,4)
+                AND releaseDateProvided = 'Yes'
+            )
+            """
+        )
+        
+        checks["valid_hasPendingBailApplications"] = (
+            """
+            (
+                (Detained != 2)
+                AND hasPendingBailApplications IS NULL
+            )
+            OR
+            (
+                Detained = 2
+                AND hasPendingBailApplications = 'NotSure'
+            )
+            """
+        )
+        
+        checks["valid_removalOrderOptions"] = (
+            """
+            (
+                RemovalDate IS NOT NULL
+                AND removalOrderOptions = 'Yes'
+            )
+            OR
+            (
+                RemovalDate IS NULL
+                AND removalOrderOptions = 'No'
+            )
+            """
+        )
+
+        
+        checks["valid_removalOrderDate"] = (
+            """
+            (
+                RemovalDate IS NULL
+                AND removalOrderDate IS NULL
+            )
+            OR
+            (
+                RemovalDate IS NOT NULL
+                AND removalOrderDate = date_format(RemovalDate, 'yyyy-MM-dd')
+            )
+            """
+        )
+
+        checks["valid_detentionBuilding"] = (
+            """
+            (
+                (Detained NOT IN (1,2))
+                AND detentionBuilding IS NULL
+            )
+            OR
+            (
+                Detained IN (1,2)
+                AND detentionBuilding <=> detentionBuilding_det
+            )
+            """
+        )
+
+        checks["valid_detentionAddressLines"] = (
+            """
+            (
+                (Detained NOT IN (1,2))
+                AND detentionAddressLines IS NULL
+            )
+            OR
+            (
+                Detained IN (1,2)
+                AND detentionAddressLines <=> detentionAddressLines_det
+            )
+            """
+        )
+
+        checks["valid_detentionPostcode"] = (
+            """
+            (
+                (Detained NOT IN (1,2))
+                AND detentionPostcode IS NULL
+            )
+            OR
+            (
+                Detained IN (1,2)
+                AND detentionPostcode <=> detentionPostcode_det
+            )
+            """
+        )
+
+
+
+
+
+
         return checks

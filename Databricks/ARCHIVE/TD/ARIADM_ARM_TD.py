@@ -399,93 +399,6 @@ from delta.tables import DeltaTable
 
 # COMMAND ----------
 
-# audit_schema = StructType([
-#     StructField("Runid", StringType(), True),
-#     StructField("Unique_identifier_desc", StringType(), True),
-#     StructField("Unique_identifier", StringType(), True),
-#     StructField("Table_name", StringType(), True),
-#     StructField("Stage_name", StringType(), True),
-#     StructField("Record_count", IntegerType(), True),
-#     StructField("Run_dt",TimestampType(), True),
-#     StructField("Batch_id", StringType(), True),
-#     StructField("Description", StringType(), True),
-#     StructField("File_name", StringType(), True),
-#     StructField("Status", StringType(), True)
-# ])
-
-# COMMAND ----------
-
-# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, file_name = False,status = False) -> None:
-#     """
-#     Creates an audit DataFrame and writes it to Delta format.
-
-#     :param df: Input DataFrame from which unique identifiers are extracted.
-#     :param unique_identifier_desc: Column name that acts as a unique identifier.
-#     :param table_name: Name of the source table.
-#     :param stage_name: Name of the data processing stage.
-#     :param description: Description of the table.
-#     :param additional_columns: options File_name or Status. List of additional columns to include in the audit DataFrame.
-#     """
-
-#     dt_desc = datetime.utcnow()
-
-#     additional_columns = []
-#     if file_name is True:
-#         additional_columns.append("File_name")
-#     if status is True:
-#         additional_columns.append("Status")
-
-
-#      # Default to an empty list if None   
-#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-#     .withColumn("Runid", lit(run_id_value))\
-#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-#             .withColumn("Stage_name", lit(stage_name))\
-#                 .withColumn("Table_name", lit(table_name))\
-#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-#                         .withColumn("Description", lit(description))
-
-#     list_cols = audit_df.columns
-
-#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
-# import uuid
-
-
-# def datetime_uuid():
-#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-# run_id_value = datetime_uuid()
-
-# COMMAND ----------
-
-# # Define Delta Table Path in Azure Storage
-
-
-# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-#     # Create an empty DataFrame
-#     empty_df = spark.createDataFrame([], audit_schema)
-
-#     # Write the empty DataFrame in Delta format to create the table
-#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-#     print("✅ Empty Delta table successfully created in Azure Storage.")
-# else:
-#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-# COMMAND ----------
-
 # MAGIC
 # MAGIC %md
 # MAGIC ## Bronze DLT Tables Creation
@@ -781,95 +694,87 @@ def bronze_iris_extract():
 def bronze_appeal_case_tribunal_decision():
     # Subquery for the max StatusId and Caseno filtering by outcome and casestatus
     status_subquery = (
-        dlt.read("raw_status")
-        .filter(
-            (col("outcome").isNotNull() & (~col("outcome").isin(38,111))) &
-            (col("casestatus").isNotNull() & (col("casestatus") != 17))
+            dlt.read("raw_status")
+            .filter(
+                (col("outcome").isNotNull() & (~col("outcome").isin(38,111))) &
+                (col("casestatus").isNotNull() & (col("casestatus") != 17))
+            )
+            .groupBy("CaseNo")
+            .agg({"StatusId": "max"})
+            .withColumnRenamed("max(StatusId)", "max_ID")
         )
-        .groupBy("CaseNo")
-        .agg({"StatusId": "max"})
-        .withColumnRenamed("max(StatusId)", "max_ID")
-    )
 
-    # Subquery for the previous status excluding certain casestatus
     prev_subquery = (
-        dlt.read("raw_status")
-        .filter(
-            (col("casestatus").isNotNull() & (col("casestatus").isin(52,36)))
+            dlt.read("raw_status")
+            .filter(
+                col("casestatus").isNull() | (~col("casestatus").isin(52,36))
+            )
+            .groupBy("CaseNo")
+            .agg({"StatusId": "max"})
+            .withColumnRenamed("max(StatusId)", "Prev_ID")
         )
-        .groupBy("CaseNo")
-        .agg({"StatusId": "max"})
-        .withColumnRenamed("max(StatusId)", "Prev_ID")
-    )
 
-    # Joining the tables
+        # Joining the tables
     result_df = (
-        dlt.read("raw_appealcase").alias("ac")
-        .join(status_subquery.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left_outer")
-        .join(dlt.read("raw_status").alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left_outer")
-        .join(prev_subquery.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left_outer")
-        .join(dlt.read("raw_status").alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
-        .join(dlt.read("raw_filelocation").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
-        .filter(
-            (col("ac.CaseType") == 1) &
-            (when(
-                (col("ac.CasePrefix").isin("LP", "LR", "LD", "LH", "LE", "IA")) & (col("ac.HOANRef").isNotNull()),
-                "Skeleton Case"
+            dlt.read("raw_appealcase").alias("ac")
+            .join(status_subquery.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left_outer")
+            .join(dlt.read("raw_status").alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left_outer")
+            .join(prev_subquery.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left_outer")
+            .join(dlt.read("raw_status").alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
+            .join(dlt.read("raw_filelocation").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
+            .filter(
+                (col("ac.CaseType") == 1) &
+                (when(
+                    (col("ac.CasePrefix").isin("LP", "LR", "LD", "LH", "LE", "IA")) & (col("ac.HOANRef").isNotNull()),
+                    "Skeleton Case"
+                )
+                .when(
+                    (col("t.CaseStatus").isin("40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33")) &
+                    (col("t.Outcome").isin("0", "86")),
+                    "UT Active/Remitted Case"
+                )
+                .when(
+                    col("fl.DeptId") == 519,
+                    "Tribunal Decision"
+                )
+                .when(
+                    (col("t.CaseStatus").isNull()) |
+                    ((col("t.CaseStatus") == 10) & (col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))) |
+                    ((col("t.CaseStatus") == 46) & (col("t.Outcome").isin("1", "86"))) |
+                    ((col("t.CaseStatus") == 26) & (col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))) |
+                    ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5"))) |
+                    ((col("t.CaseStatus") == 39) & (col("t.Outcome").isin("0", "86"))) | 
+                    ((col("t.CaseStatus") == 50) & (col("t.Outcome") == "0")) |
+                    ((col("t.CaseStatus").isin("52", "36")) & (col("t.Outcome") == "0") & col("st.DecisionDate").isNull()),
+                    "Active - CCD"
+                )
+                .when(
+                    (
+                        (col("t.CaseStatus") == 10) & (col("t.Outcome").isin("13", "80", "122", "25", "120", "2", "105", "119")) |
+                        (col("t.CaseStatus") == 46) & (col("t.Outcome").isin("31", "2", "50")) |
+                        (col("t.CaseStatus") == 26) & (col("t.Outcome").isin("80", "13", "25", "1", "2")) |
+                        (col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("1", "2", "80", "13", "25", "72", "14")) |
+                        (col("t.CaseStatus") == 39) & (col("t.Outcome").isin("30", "31", "25", "14")) |
+                        (col("t.CaseStatus") == 51) & (col("t.Outcome").isin("94", "93")) |
+                        (col("t.CaseStatus") == 36) & (col("t.Outcome") == 25) |
+                        (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) &
+                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin("37", "38", "39", "17"))
+                    ) & (add_months(col("t.DecisionDate"), 6) > lit("2026-02-01")),
+                    "Retain - CCD"
+                )
+                .when(
+                    (
+                        (col("t.CaseStatus").isin(52, 36)) & (col("t.Outcome") == 0) |
+                        (col("t.CaseStatus") == 36) & (col("t.Outcome").isin("1", "2", "50", "108")) |
+                        (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) & col("st.CaseStatus").isin("37", "38", "39", "17")
+                    ) & (add_months(col("st.DecisionDate"), 6) > lit("2026-02-01")),
+                    "Retain - CCD"
+                )
+                .otherwise("Tribunal Decision") == "Tribunal Decision")
             )
-            .when(
-                (col("t.CaseStatus").isin("40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33")) &
-                (col("t.Outcome").isin("0", "86")),
-                "UT Active/Remitted Case"
-            )
-            .when(
-                col("fl.DeptId") == 519,
-                "Tribunal Decision"
-            )
-            .when(
-                (col("t.CaseStatus").isNull()) |
-                ((col("t.CaseStatus") == 10) & (col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))) |
-                ((col("t.CaseStatus") == 46) & (col("t.Outcome").isin("1", "86"))) |
-                ((col("t.CaseStatus") == 26) & (col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))) |
-                ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5"))) |
-                ((col("t.CaseStatus") == 39) & (col("t.Outcome") == "0")) |
-                ((col("t.CaseStatus") == 50) & (col("t.Outcome") == "0")) |
-                ((col("t.CaseStatus").isin("52", "36")) & (col("t.Outcome") == "0") & col("st.DecisionDate").isNull()),
-                "Active - CCD"
-            )
-            .when(
-                (col("t.CaseStatus") == 10) & (col("t.Outcome").isin("13", "80", "122", "25", "120", "2", "105", "119")) |
-                (col("t.CaseStatus") == 46) & (col("t.Outcome").isin("31", "2", "50")) |
-                (col("t.CaseStatus") == 26) & (col("t.Outcome").isin("80", "13", "25", "1", "2")) |
-                (col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("1", "2", "80", "13", "25", "72", "14")) |
-                (col("t.CaseStatus") == 39) & (col("t.Outcome").isin("30", "31", "25", "14")) |
-                (col("t.CaseStatus") == 51) & (col("t.Outcome").isin("94", "93")) |
-                (col("t.CaseStatus") == 36) & (col("t.Outcome") == 25) |
-                (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) &
-                (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin("37", "38", "39", "17")),
-                "Retain - CCD"
-            )
-            .when(
-                (col("t.CaseStatus").isin(52, 36)) & (col("t.Outcome") == 0) |
-                (col("t.CaseStatus") == 36) & (col("t.Outcome").isin("1", "2", "50", "108")) |
-                (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) & col("st.CaseStatus").isin("37", "38", "39", "17"),
-                "Retain - CCD"
-            )
-            .otherwise("Tribunal Decision") == "Tribunal Decision")
+            .select("ac.CaseNo")
+            .orderBy("ac.CaseNo")
         )
-        .select("ac.CaseNo")
-        .orderBy("ac.CaseNo")
-    )
-
-    
-    # table_name = "stg_td_filtered"
-    # stage_name = "silver_stage"
-
-    # description = "The stg_td_filtered - segmentation Table for appeal cases requiring tribunal decisions with unique list of CaseNo's"
-
-    # unique_identifier_desc = "CaseNo"
-
-    # create_audit_df(result_df,unique_identifier_desc,table_name,stage_name,description)
-
 
     return result_df
 
@@ -1550,410 +1455,5 @@ def gold_td_iris_with_a360():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Audit Configuration
-
-# COMMAND ----------
-
-# dbutils.notebook.run("./ARIADM_ARM_TD_AUDIT_DataProcessing", timeout_seconds=60)
-
-# COMMAND ----------
-
-# DBTITLE 1,Generate Audit DataFrame with Unique Identifiers
-# # # def log_audit_entry(df,unique_identifier):
-# import uuid
-
-# def datetime_uuid():
-#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-# run_id_value = datetime_uuid()
-
-# audit_schema = StructType([
-#     StructField("Runid", StringType(), True),
-#     StructField("Unique_identifier_desc", StringType(), True),
-#     StructField("Unique_identifier", StringType(), True),
-#     StructField("Table_name", StringType(), True),
-#     StructField("Stage_name", StringType(), True),
-#     StructField("Record_count", IntegerType(), True),
-#     StructField("Run_dt",TimestampType(), True),
-#     StructField("Batch_id", StringType(), True),
-#     StructField("Description", StringType(), True),
-#     StructField("File_name", StringType(), True),
-#     StructField("Status", StringType(), True)
-# ])
-
-# def create_audit_df(df: DataFrame, unique_identifier_desc: str, table_name: str, stage_name: str, description: str, additional_columns: list = None) -> DataFrame:
-#     """
-#     Creates an audit DataFrame and writes it to Delta format.
-
-#     :param df: Input DataFrame from which unique identifiers are extracted.
-#     :param unique_identifier_desc: Column name that acts as a unique identifier.
-#     :param table_name: Name of the source table.
-#     :param stage_name: Name of the data processing stage.
-#     :param description: Description of the table.
-#     :param additional_columns: List of additional columns to include in the audit DataFrame.
-#     :return: DataFrame containing the audit information.
-#     """
-
-#     dt_desc = datetime.utcnow()
-
-#     additional_columns = additional_columns or []  # Default to an empty list if None   
-#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"), *additional_columns) \
-#         .withColumn("Runid", lit(run_id_value)) \
-#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc)) \
-#         .withColumn("Stage_name", lit(stage_name)) \
-#         .withColumn("Table_name", lit(table_name)) \
-#         .withColumn("Run_dt", lit(dt_desc).cast(TimestampType())) \
-#         .withColumn("Description", lit(description))
-
-#     list_cols = audit_df.columns
-
-#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-#     # final_audit_df.write.format("delta").mode("append").option("mergeSchema", "true").save(audit_delta_path)
-    
-#     return final_audit_df
-
-
-# COMMAND ----------
-
-# %sql
-# DESCRIBE HISTORY hive_metastore.ariadm_arm_td.td_cr_audit_table
-
-# COMMAND ----------
-
-# from delta.tables import DeltaTable
-
-# # Load Delta Table
-# delta_table = DeltaTable.forName(spark, "hive_metastore.ariadm_arm_td.td_cr_audit_table")
-
-# # Get history as DataFrame
-# history_df = delta_table.history()
-
-# # Collect versions
-# versions = [row['version'] for row in history_df.select("version").collect()]
-
-# # Loop through and get counts
-# for v in versions:
-#     df = spark.read.format("delta").option("versionAsOf", v).table("hive_metastore.ariadm_arm_td.td_cr_audit_table")
-#     print(f"Version {v} has {df.count()} rows")
-
-# COMMAND ----------
-
-# DBTITLE 1,Transformation: td_cr_audit_table
-# @dlt.table(
-#     name='td_cr_audit_table',
-#     comment="Delta Live unified stage Gold Table for gold outputs.",
-#     path=f"{audit_mnt}/td_cr_audit_table"
-# )
-# def td_cr_audit_table():
-#     audit_params = [
-#          {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "bronze_ac_ca_ant_fl_dt_hc",
-#             "stage_name": "bronze_stage",
-#             "description": "The bronze_ac_ca_ant_fl_dt_hc table Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre."
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "bronze_iris_extract",
-#             "stage_name": "bronze_stage",
-#             "description": "Delta Live Table extracted from the IRIS Tribunal decision file extract."
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo"],
-#             "table_name": "stg_td_filtered",
-#             "stage_name": "silver_stage",
-#             "description": "The stg_td_filtered - segmentation Table for appeal cases requiring tribunal decisions with unique list of CaseNo's"
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "silver_tribunaldecision_detail",
-#             "stage_name": "silver_stage",
-#             "description": "The silver_tribunaldecision_detail - or Tribunal Decision information"
-#         },
-#         {
-#             "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
-#             "table_name": "silver_archive_metadata",
-#             "stage_name": "silver_stage",
-#             "description": "The silver_archive_metadata table consolidates keys metadata for Archive Metadata da"
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "stg_create_td_iris_json_content",
-#             "stage_name": "silver_stage",
-#             "description": "The stg_create_td_iris_json_content table generates JSON content for TD cases",
-#             "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "JSONStatus"}
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "stg_create_td_iris_html_content",
-#             "stage_name": "silver_stage",
-#             "description": "The stg_create_td_iris_html_content table generates HTML content for TD cases",
-#             "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "HTMLStatus"}
-#         },
-#         {
-#             "unique_identifier_cols": ["client_identifier", "bf_002", "bf_003"],
-#             "table_name": "stg_create_td_iris_a360_content",
-#             "stage_name": "silver_stage",
-#             "description": "The stg_create_td_iris_a360_content table generates A360 content for TD cases",
-#             "Extra_columns_mapping": {"File_name": "NotYetBatched", "Status": "A360Status"}
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "stg_td_iris_unified",
-#             "stage_name": "silver_stage",
-#             "description": "The stg_td_iris_unified table generates A360 BatchId for TD cases",
-#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "A360Status"}
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "gold_td_iris_with_html",
-#             "stage_name": "silver_stage",
-#             "description": "The gold_td_iris_with_html with HTML Outputs Uploded..",
-#             "Extra_columns_mapping": {"File_name": "HTMLFileName", "Status": "UploadStatus"}
-#         },
-#         {
-#             "unique_identifier_cols": ["CaseNo", "Forenames", "Name"],
-#             "table_name": "gold_td_iris_with_json",
-#             "stage_name": "silver_stage",
-#             "description": "The gold_td_iris_with_json with HTML Outputs Uploded..",
-#             "Extra_columns_mapping": {"File_name": "JSONFileName", "Status": "UploadStatus"}
-#         },
-#         {
-#             "unique_identifier_cols": ["A360BatchId"],
-#             "table_name": "gold_td_iris_with_a360",
-#             "stage_name": "silver_stage",
-#             "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
-#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
-#         },
-#         {
-#             "unique_identifier_cols": ["A360BatchId"],
-#             "table_name": "temp",
-#             "stage_name": "silver_stage",
-#             "description": "The gold_td_iris_with_a360 with HTML Outputs Uploded..",
-#             "Extra_columns_mapping": {"File_name": "A360FileName", "Status": "UploadStatus"}
-#         }
-#     ]
-
-#     audit_dataframes = []
-
-#     for params in audit_params:
-#         table_name = params["table_name"]
-#         stage_name = params["stage_name"]
-#         unique_identifier_cols = params["unique_identifier_cols"]
-#         description = params["description"]
-#         extra_columns_mapping = params.get("Extra_columns_mapping", {})
-#         unique_identifier_desc = "_".join(unique_identifier_cols)
-
-#         try:
-
-#             df_logging = dlt.read(table_name)
-
-#             df_audit = df_logging
-#             if len(unique_identifier_cols) > 1:
-#                 df_audit = df_audit.withColumn(
-#                     unique_identifier_desc, 
-#                     concat_ws("_", *[col(c).cast("string") for c in unique_identifier_cols])
-#                 )
-#             else:
-#                 df_audit = df_audit.withColumn(unique_identifier_desc, col(unique_identifier_desc))
-
-#             # Apply extra column mappings dynamically
-#             for new_col, source_col in extra_columns_mapping.items():
-#                 if source_col == "NotYetBatched":
-#                     df_audit = df_audit.withColumn(new_col, lit("NotYetBatched"))
-#                 else:
-#                     df_audit = df_audit.withColumn(new_col, col(source_col))
-
-#             # Generate the audit DataFrame
-#             df_audit_appended = create_audit_df(
-#                 df_audit,
-#                 unique_identifier_desc=unique_identifier_desc,
-#                 table_name=table_name,
-#                 stage_name=stage_name,
-#                 description=description
-#             )
-
-#             audit_dataframes.append(df_audit_appended)
-
-#         except Exception as e:
-
-#             # Table does not exist, create an audit entry for it
-#             status = f"Failed - Table {table_name} does not exist"
-
-#             row_data = {
-#                 "Runid": run_id_value,
-#                 "Unique_identifier_desc": unique_identifier_desc,
-#                 "Unique_identifier": None,
-#                 "Table_name": table_name,
-#                 "Stage_name": stage_name,
-#                 "Record_count": 0,
-#                 "Run_dt": datetime.now(),
-#                 "Batch_id": None,
-#                 "Description": description,
-#                 "File_name": None,
-#                 "Status": status
-#             }
-
-#             row_df = spark.createDataFrame([row_data], schema=audit_schema)
-#             audit_dataframes.append(row_df)
-
-#     df_final_audit = audit_dataframes[0]
-#     for df in audit_dataframes[1:]:
-#         df_final_audit = df_final_audit.unionByName(df, allowMissingColumns=True)
-
-#     return df_final_audit
-
-# COMMAND ----------
-
-# Runid = run_id_value
-# unique_identifier_cols = ["CaseNo", "Forenames", "Name"]
-# unique_identifier_desc = "_".join(unique_identifier_cols)
-# Unique_identifier = None
-# Table_name = "stg"
-# Stage_name = "silver_stage"
-# Run_dt = datetime.now()
-# Description = "The stg_create_td_iris_json_content table generates JSON content for TD cases"
-# Status = "Failed"
-
-# # Create an empty DataFrame
-# empty_df = spark.createDataFrame([], audit_schema)
-
-# # Create a row
-# row_data = {
-#     "Runid": Runid,
-#     "Unique_identifier_desc": unique_identifier_desc,
-#     "Unique_identifier": Unique_identifier,
-#     "Table_name": Table_name,
-#     "Stage_name": Stage_name,
-#     "Record_count": 0,
-#     "Run_dt": Run_dt,
-#     "Batch_id": None,
-#     "Description": Description,
-#     "File_name": None,
-#     "Status": Status
-# }
-
-# row_df = spark.createDataFrame([row_data], schema=audit_schema)
-
-# # Append the row to the empty DataFrame
-# final_df = empty_df.unionByName(row_df, allowMissingColumns=True)
-
-# display(final_df)
-
-# COMMAND ----------
-
 # DBTITLE 1,Exit Notebook with Success Message
 dbutils.notebook.exit("Notebook completed successfully")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Appendix
-
-# COMMAND ----------
-
-# DBTITLE 1,Count of Files in HTML, JSON, and A360 Directories
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/HTML").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/JSON").count())
-# display(spark.read.format("binaryFile").load(f"{gold_mnt}/A360").count())
-
-# COMMAND ----------
-
-# dbutils.secrets.listScopes()
-
-# COMMAND ----------
-
-# DBTITLE 1,HTML Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html where UploadStatus != 'success' and HTMLContent like '%ERROR%'
-
-# COMMAND ----------
-
-# DBTITLE 1,JSON Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_json where UploadStatus != 'success'  and JSONCollection like '%ERROR%'
-
-# COMMAND ----------
-
-# DBTITLE 1,A360 Failed Upload Status
-# %sql
-# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360 --where UploadStatus != 'success'  and A360Content like '%ERROR%'
-
-# COMMAND ----------
-
-# %sql
-# drop schema hive_metastore.ariadm_arm_td cascade
-
-# COMMAND ----------
-
-# %sql
-# dbutils.fs.ls("/mnt/")
-
-# COMMAND ----------
-
-# df = spark.read.format("delta").load("abfss://gold@ingest00curatedsbox.dfs.core.windows.net/ARIADM/ARM/ARIATD/gold_td_iris_with_a360/")
-# display(df)
-
-# COMMAND ----------
-
-# %sql
-# select count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_json
-
-# COMMAND ----------
-
-# %sql
-# select count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
-
-# COMMAND ----------
-
-# %sql
-# select count(*), A360BatchId from hive_metastore.ariadm_arm_td.gold_td_iris_with_html group by A360BatchId
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD/td_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD/td_cr_audit_table").filter("Table_name LIKE '%silver%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD/td_cr_audit_table").filter("Table_name LIKE '%gold%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/TD/td_cr_audit_table").filter("Table_name LIKE '%stg%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# display(spark.read.format("delta").load("/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table").filter("Table_name LIKE '%bronze%'").groupBy("Table_name").agg({"Run_dt": "max", "*": "count"}))
-
-# COMMAND ----------
-
-# %sql
-# drop schema hive_metastore.ariadm_arm_td cascade
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
-# where CaseNo = 'VA/00003/2009'
-
-
-# COMMAND ----------
-
-# %sql
-# select CaseNo,count(*) from hive_metastore.ariadm_arm_td.gold_td_iris_with_html
-# group by CaseNo
-# having count(*) > 1
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_td.gold_td_iris_with_a360

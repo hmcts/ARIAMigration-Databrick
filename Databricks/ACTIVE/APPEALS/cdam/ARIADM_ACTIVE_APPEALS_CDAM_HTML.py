@@ -4362,7 +4362,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{typingReasonsReceived}}", format_date_iso(SDP.WrittenReasonsRequestedDate or '')) \
                                         .replace("{{WrittenReasonsSentDate}}", format_date_iso(SDP.WrittenReasonsSentDate or '')) \
                                         .replace("{{DateReceived}}", format_date_iso(SDP.DateReceived or '')) \
-                                        .replace("{{MiscDate1}}", format_date(SDP.MiscDate1 or '')) \
+                                        .replace("{{MiscDate1}}", format_date_iso(SDP.MiscDate1 or '')) \
                                         .replace("{{Party}}", str(SDP.Party or '')) \
                                         .replace("{{OutOfTime}}", str(SDP.OutOfTime or '')) \
                                         .replace("{{adjournInTime}}", str(SDP.adjournInTime or '')) \

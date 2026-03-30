@@ -78,73 +78,84 @@ class paymentPendingDQRules(DQRulesBase):
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
         )
 
+        checks["valid_outOfTimeDecisionType"] = (
+            """    (OutOfTimeIssue = True AND Outcome_end != 0 AND outOfTimeDecisionType = 'approved') 
+                OR (outOfTimeDecisionType IS NULL)     
+            """
+        )
+
+        checks["valid_outOfTimeDecisionMaker"] = (
+            """    (OutOfTimeIssue = True AND Outcome_end != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
+                OR (outOfTimeDecisionMaker IS NULL)
+            """
+        )
 
 
         # checks["valid_applicationOutOfTimeExplanation_yes_no_or_null"] = (
         #     "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation IN ('Yes', 'No'))"
         # )
 
-        # ##############################
-        # # ARIADM-708 (CaseData)
-        # ##############################
-        checks["valid_hearingCentre_in_allowed_values"] = """
-        (
-            (hearingCentre IS NOT NULL)
-            AND
-            (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
-            'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
-            'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
-        )
-        """
-        checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
-        checks["valid_caseManagementLocation_region_and_baseLocation"] = """
-        (
-            caseManagementLocation.region <=> '1' AND
-            caseManagementLocation.baseLocation IS NOT NULL AND
-            caseManagementLocation.baseLocation IN (
-                '231596', '698118', '366559', '386417', '512401',
-                '227101', '765324', '366796', '324339', '649000',
-                '999971', '420587', '28837'
-            )
-        )
-        """
-        checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
-        (
-            hearingCentreDynamicList.value.code IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
-                hearingCentreDynamicList.value.code
-            )
-        )
-        """
-        checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
-        (
-            hearingCentreDynamicList.value.label IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
-                hearingCentreDynamicList.value.label
-            )
-        )
-        """
-        checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
-        (
-            caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
-                caseManagementLocationRefData.baseLocation.value.code
-            )
-        )
-        """
-        checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
-        (
-            caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
-                caseManagementLocationRefData.baseLocation.value.label
-            )
-        )
-        """
-        checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
+        # # ##############################
+        # # # ARIADM-708 (CaseData)
+        # # ##############################
+        # checks["valid_hearingCentre_in_allowed_values"] = """
+        # (
+        #     (hearingCentre IS NOT NULL)
+        #     AND
+        #     (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
+        #     'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
+        #     'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
+        # )
+        # """
+        # checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
+        # checks["valid_caseManagementLocation_region_and_baseLocation"] = """
+        # (
+        #     caseManagementLocation.region <=> '1' AND
+        #     caseManagementLocation.baseLocation IS NOT NULL AND
+        #     caseManagementLocation.baseLocation IN (
+        #         '231596', '698118', '366559', '386417', '512401',
+        #         '227101', '765324', '366796', '324339', '649000',
+        #         '999971', '420587', '28837'
+        #     )
+        # )
+        # """
+        # checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
+        # (
+        #     hearingCentreDynamicList.value.code IS NOT NULL AND
+        #     ARRAY_CONTAINS(
+        #         TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
+        #         hearingCentreDynamicList.value.code
+        #     )
+        # )
+        # """
+        # checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
+        # (
+        #     hearingCentreDynamicList.value.label IS NOT NULL AND
+        #     ARRAY_CONTAINS(
+        #         TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
+        #         hearingCentreDynamicList.value.label
+        #     )
+        # )
+        # """
+        # checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
+        # (
+        #     caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
+        #     ARRAY_CONTAINS(
+        #         TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
+        #         caseManagementLocationRefData.baseLocation.value.code
+        #     )
+        # )
+        # """
+        # checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
+        # (
+        #     caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
+        #     ARRAY_CONTAINS(
+        #         TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
+        #         caseManagementLocationRefData.baseLocation.value.label
+        #     )
+        # )
+        # """
+        # checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
 
 
         # ##############################
@@ -188,12 +199,12 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_deportationOrderOptions_yes_no"] = (
             "(deportationOrderOptions IS NULL OR deportationOrderOptions IN ('Yes', 'No'))"
         )
-        checks["valid_appellantInUk_yes_no"] = (
-            "(appellantInUk IS  NULL OR appellantInUk IN ('Yes', 'No'))"
-        )
-        checks["valid_appealOutOfCountry_yes_no"] = (
-            "(appealOutOfCountry IS  NULL OR appealOutOfCountry IN ('Yes', 'No'))"
-        )
+        # checks["valid_appellantInUk_yes_no"] = (
+        #     "(appellantInUk IS  NULL OR appellantInUk IN ('Yes', 'No'))"
+        # )
+        # checks["valid_appealOutOfCountry_yes_no"] = (
+        #     "(appealOutOfCountry IS  NULL OR appealOutOfCountry IN ('Yes', 'No'))"
+        # )
 
         # ##############################
         # # ARIADM-769 (legalRepDetails - Address logic)
@@ -280,33 +291,33 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
         ##############################
 
-        # Only include if CategoryIdList contains 37; check for 'Yes'
-        checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
-        )
+        # # Only include if CategoryIdList contains 37; check for 'Yes'
+        # checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
+        # )
 
-        # Only include if array_contains(valid_categoryIdList, 37)
-        checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) )"
-        )
-        checks["valid_appellantAddress_AddressLine2_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL))"
-        )
-        checks["valid_appellantAddress_AddressLine3_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL) )"
-        )
-        checks["valid_appellantAddress_PostTown_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL) )"
-        )
-        checks["valid_appellantAddress_County_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL) )"
-        )
-        checks["valid_appellantAddress_PostCode_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL) )"
-        )
-        checks["valid_appellantAddress_Country_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
-        )
+        # # Only include if array_contains(valid_categoryIdList, 37)
+        # checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) )"
+        # )
+        # checks["valid_appellantAddress_AddressLine2_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL))"
+        # )
+        # checks["valid_appellantAddress_AddressLine3_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL) )"
+        # )
+        # checks["valid_appellantAddress_PostTown_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL) )"
+        # )
+        # checks["valid_appellantAddress_County_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL) )"
+        # )
+        # checks["valid_appellantAddress_PostCode_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL) )"
+        # )
+        # checks["valid_appellantAddress_Country_length"] = (
+        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
+        # )
 
 
         # #############################
@@ -712,60 +723,60 @@ class paymentPendingDQRules(DQRulesBase):
             """
         )
 
-        ##############################
-        # ARIADM-773 (SponsorDetails)
-        ##############################
-        checks["valid_hasSponsor_yes_no"] = (
-            """(
-                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-                OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
-                OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
-            )"""
-        )
-        checks["valid_sponsorGivenNames_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-        )
+        # ##############################
+        # # ARIADM-773 (SponsorDetails)
+        # ##############################
+        # checks["valid_hasSponsor_yes_no"] = (
+        #     """(
+        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
+        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
+        #         OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
+        #         OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
+        #     )"""
+        # )
+        # checks["valid_sponsorGivenNames_not_null"] = (
+        #     "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
+        # )
 
-        checks["valid_sponsorFamilyName_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
-        )
+        # checks["valid_sponsorFamilyName_not_null"] = (
+        #     "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
+        # )
 
-        checks["valid_sponsorAuthorisation_yes_no"] = (
-            """(
-                (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-                OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-                OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
-                OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
-            )"""
-        )
+        # checks["valid_sponsorAuthorisation_yes_no"] = (
+        #     """(
+        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
+        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
+        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
+        #         OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
+        #         OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
+        #     )"""
+        # )
 
-        ############################################################
-        # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-        ############################################################
-        checks["valid_sponsorAddress_not_null"] = (
-            "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
-        )
+        # ############################################################
+        # # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
+        # ############################################################
+        # checks["valid_sponsorAddress_not_null"] = (
+        #     "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
+        # )
 
-        checks["valid_sponsorAddressForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
-        )
+        # checks["valid_sponsorAddressForDisplay"] = (
+        #     "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
+        # )
 
-        checks["valid_sponsorNameForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
-        )
+        # checks["valid_sponsorNameForDisplay"] = (
+        #     "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
+        # )
 
-        ##############################
-        # ARIADM-778 (SponsorDetails)
-        ##############################
-        checks["valid_sponsorEmailAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
-        )
+        # ##############################
+        # # ARIADM-778 (SponsorDetails)
+        # ##############################
+        # checks["valid_sponsorEmailAdminJ"] = (
+        #     "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
+        # )
 
-        checks["valid_sponsorMobileNumberAdminJ"] = (
-            "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
-        )
+        # checks["valid_sponsorMobileNumberAdminJ"] = (
+        #     "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
+        # )
         # ##############################
         # ARIADM-760 (appellantDetails)
         # ARIADM-762 (appellantDetails)
@@ -870,15 +881,15 @@ class paymentPendingDQRules(DQRulesBase):
             "(isServiceRequestTabVisibleConsideringRemissions IS NOT NULL AND isServiceRequestTabVisibleConsideringRemissions IN ('Yes', 'No'))"
         )
 
-        checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-            """(
-                ((applicationChangeDesignatedHearingCentre IS NOT NULL)
-                AND 
-                (applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
-                )
-                OR (applicationChangeDesignatedHearingCentre IS NULL)
-            )"""
-        )
+        # checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
+        #     """(
+        #         ((applicationChangeDesignatedHearingCentre IS NOT NULL)
+        #         AND 
+        #         (applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
+        #         )
+        #         OR (applicationChangeDesignatedHearingCentre IS NULL)
+        #     )"""
+        # )
         #########################################
         # ARIADM-788 and ARIADM-792 (homeOffice)
         #########################################

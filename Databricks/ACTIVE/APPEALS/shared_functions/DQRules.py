@@ -3,7 +3,7 @@ from shared_functions.dq_rules import (
     paymentpending_dq_rules, appealSubmitted_dq_rules, awaitingEvidenceRespondentA_dq_rules, awaitingEvidenceRespondentB_dq_rules,
     caseUnderReview_dq_rules, reasonsForAppealSubmitted_dq_rules, listing_dq_rules, prepareforhearing_dq_rules, decision_dq_rules,
     decided_a_dq_rules, ftpa_submitted_b_dq_rules, ftpa_submitted_a_dq_rules, ftpaDecided_dq_rules, ended_dq_rules, remitted_dq_rules,
-    decided_b_dq_rules
+    decided_b_dq_rules, paymentpendingDetained_dq_rules
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp, 
@@ -46,6 +46,7 @@ def base_DQRules(state: str = "paymentPending"):
 def add_state_dq_rules(state: str) -> dict:
     dq_rules = {
         "paymentPending": paymentpending_dq_rules.paymentPendingDQRules().get_checks(),
+        "paymentPendingDetained": paymentpendingDetained_dq_rules.paymentPendingDetainedDQRules().get_checks(),
         "appealSubmitted": appealSubmitted_dq_rules.appealSubmittedDQRules().get_checks(),
         "awaitingRespondentEvidence(a)": awaitingEvidenceRespondentA_dq_rules.awaitingEvidenceRespondentADQRules().get_checks(),
         "awaitingRespondentEvidence(b)": awaitingEvidenceRespondentB_dq_rules.awaitingEvidenceRespondentBDQRules().get_checks(),
@@ -69,6 +70,7 @@ def add_state_dq_rules(state: str) -> dict:
 def previous_state_map(state: str):
     previous_state = {
         "appealSubmitted":               "paymentPending",
+        "paymentPending":                "paymentPendingDetained",
         "awaitingRespondentEvidence(a)": "appealSubmitted",
         "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
         "caseUnderReview":               "awaitingRespondentEvidence(b)",
@@ -110,6 +112,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
         col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
         col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
+        ,col("OutOfTimeIssue")
     )
     valid_appealant_address = silver_m2.select(
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),

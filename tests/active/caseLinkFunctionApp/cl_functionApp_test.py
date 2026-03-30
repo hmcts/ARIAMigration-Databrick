@@ -45,12 +45,22 @@ def setup_mocks(batch_len=1):
 
     mock_credential = AsyncMock()
 
+    mock_idempotency_blob = AsyncMock()
+
+    mock_idempotency_container = MagicMock()
+    mock_idempotency_container.get_blob_client.return_value = mock_idempotency_blob
+
+    mock_blob_svc = MagicMock()
+    mock_blob_svc.get_container_client.return_value = mock_idempotency_container
+
     return {
         "kv_client": mock_kv_client,
         "producer": mock_producer,
         "batch": mock_batch,
         "credential": mock_credential,
         "secret": mock_secret,
+        "idempotency_blob": mock_idempotency_blob,
+        "blob_svc": mock_blob_svc,
     }
 
 
@@ -101,6 +111,9 @@ def patched(mocks, to_thread_mock=None, extra_patches=None):
         patch(
             "AzureFunctions.ACTIVE.active_caselink_ccd.function_app.EventHubProducerClient",
         ),
+        patch(
+            "AzureFunctions.ACTIVE.active_caselink_ccd.function_app.BlobServiceClient",
+        ),
     ]
     if to_thread_mock is not None:
         patches.append(patch("asyncio.to_thread", new=to_thread_mock))
@@ -110,15 +123,16 @@ def patched(mocks, to_thread_mock=None, extra_patches=None):
 
 
 def apply_patches(patch_list, mocks):
-    """Apply all patches and wire the producer mock. Returns a context-manager stack."""
+    """Apply all patches and wire the producer and blob service mocks. Returns a context-manager stack."""
     import contextlib
 
     @contextlib.contextmanager
     def _stack():
         with contextlib.ExitStack() as stack:
             active = [stack.enter_context(p) for p in patch_list]
-            # active[2] is the EventHubProducerClient patch
+            # active[2] is EventHubProducerClient, active[3] is BlobServiceClient
             active[2].from_connection_string.return_value = mocks["producer"]
+            active[3].return_value = mocks["blob_svc"]
             yield active
 
     return _stack()
@@ -141,6 +155,10 @@ def test_single_event_success_sends_final_batch():
         run(eventhub_trigger_active(events))
 
     mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+    # Idempotency blob uploaded atomically before processing
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=False)
+    # SUCCESS: idempotency blob kept to prevent future duplicate execution
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
 def test_cleanup_always_called_on_success():
@@ -233,6 +251,8 @@ def test_skip_result_is_not_added_to_batch():
 
     mocks["batch"].add.assert_not_called()
     mocks["producer"].send_batch.assert_not_called()
+    # SKIPPED hits continue before the else-delete branch; idempotency blob stays
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
 def test_overwrite_flag_passed_from_payload():
@@ -283,6 +303,8 @@ def test_multiple_events_each_result_added_to_batch():
 
     assert mocks["batch"].add.call_count == 3
     mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+    # SUCCESS: idempotency blobs are kept (not deleted)
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
 def test_batch_overflow_flushes_old_batch_and_creates_new_one():
@@ -337,8 +359,8 @@ def test_individual_event_error_does_not_stop_other_events():
     mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
 
 
-def test_error_result_still_serialised_and_sent():
-    """An error result from process_event is still serialised and added to the batch."""
+def test_error_result_deletes_idempotency_blob_and_sends_to_batch():
+    """An error result deletes the idempotency blob (allowing retry) and is added to the batch."""
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event({"RunID": "run-err", "CaseLinkPayload": []})]
 
@@ -347,6 +369,7 @@ def test_error_result_still_serialised_and_sent():
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
     mocks["batch"].add.assert_called_once()
     mocks["producer"].send_batch.assert_awaited_once()
 
@@ -359,3 +382,76 @@ def test_keyvault_failure_propagates_as_exception():
     with apply_patches(patched(mocks), mocks):
         with pytest.raises(Exception, match="KeyVault unavailable"):
             run(eventhub_trigger_active([make_mock_event({"RunID": "r1", "CaseLinkPayload": []})]))
+
+
+def test_idempotency_blob_not_touched_when_no_events():
+    """With no events in the batch, the idempotency blob is never touched."""
+    mocks = setup_mocks(batch_len=0)
+
+    with apply_patches(patched(mocks), mocks):
+        run(eventhub_trigger_active([]))
+
+    mocks["idempotency_blob"].upload_blob.assert_not_called()
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+
+
+def test_idempotency_blob_uploaded_atomically_on_success_and_kept():
+    """Idempotency blob is uploaded (overwrite=False) before processing and kept on SUCCESS."""
+    mocks = setup_mocks(batch_len=1)
+    events = [make_mock_event({"RunID": "run-chk", "CaseLinkPayload": []}, partition_key="REF-CHK")]
+
+    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=False)
+    # SUCCESS: idempotency blob kept to prevent future duplicate execution
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+
+
+def test_idempotency_blob_not_deleted_when_process_event_raises():
+    """When process_event raises, the exception is caught; idempotency blob stays."""
+    mocks = setup_mocks(batch_len=0)
+    events = [make_mock_event({"RunID": "run-exc", "CaseLinkPayload": []})]
+
+    to_thread = AsyncMock(side_effect=Exception("processing crashed"))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    # Exception caught by inner except — delete_blob is never reached
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+    mocks["producer"].send_batch.assert_not_called()
+
+
+def test_idempotency_blob_path_includes_ccd_reference():
+    """get_blob_client is called with a path containing the CCD reference and 'idempotency'."""
+    mocks = setup_mocks(batch_len=1)
+    partition_key = "9999000011112222"
+    events = [make_mock_event({"RunID": "run-path", "CaseLinkPayload": []}, partition_key=partition_key)]
+
+    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    called_path = mocks["blob_svc"].get_container_client.return_value.get_blob_client.call_args[0][0]
+    assert partition_key in called_path
+    assert "idempotency" in called_path
+
+
+def test_in_progress_event_skipped_when_idempotency_blob_exists():
+    """When upload raises ResourceExistsError, the event is skipped (already in progress)."""
+    from azure.core.exceptions import ResourceExistsError
+
+    mocks = setup_mocks(batch_len=0)
+    mocks["idempotency_blob"].upload_blob.side_effect = ResourceExistsError()
+    events = [make_mock_event({"RunID": "run-dup", "CaseLinkPayload": []})]
+
+    with apply_patches(patched(mocks), mocks):
+        run(eventhub_trigger_active(events))
+
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once()
+    mocks["batch"].add.assert_not_called()
+    mocks["producer"].send_batch.assert_not_called()

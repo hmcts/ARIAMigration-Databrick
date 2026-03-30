@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from azure.core.exceptions import ResourceExistsError
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
@@ -402,7 +403,6 @@ def _make_event(case_no, run_id, state, content):
 def _build_trigger_mocks():
     """Shared async infrastructure mocks for eventhub_trigger_active tests."""
     mock_idempotency_blob = AsyncMock()
-    mock_idempotency_blob.exists.return_value = False
 
     mock_idempotency_container = MagicMock()
     mock_idempotency_container.get_blob_client.return_value = mock_idempotency_blob
@@ -458,7 +458,10 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
 
     asyncio.run(eventhub_trigger_active([_make_event("CASE123", "run001", "paymentPending", {"key": "val"})]))
 
+    # Idempotency blob uploaded before processing (overwrite=True marks in-flight)
     mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    # SUCCESS: blob kept to prevent future duplicates
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
@@ -466,7 +469,7 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
-def test_eventhub_trigger_no_idempotency_upload_on_error(
+def test_eventhub_trigger_deletes_idempotency_blob_on_error(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
     mocks = _build_trigger_mocks()
@@ -483,7 +486,10 @@ def test_eventhub_trigger_no_idempotency_upload_on_error(
 
     asyncio.run(eventhub_trigger_active([_make_event("CASE456", "run002", "paymentPending", {"key": "val"})]))
 
-    mocks["idempotency_blob"].upload_blob.assert_not_called()
+    # Idempotency blob uploaded before processing
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    # ERROR: blob deleted so the event can be retried
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
@@ -491,11 +497,12 @@ def test_eventhub_trigger_no_idempotency_upload_on_error(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
-def test_eventhub_trigger_skips_duplicate_event(
+def test_eventhub_trigger_skips_event_when_blob_upload_fails(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
+    """When idempotency blob upload raises an exception, the event is skipped."""
     mocks = _build_trigger_mocks()
-    mocks["idempotency_blob"].exists.return_value = True
+    mocks["idempotency_blob"].upload_blob.side_effect = Exception("Storage unavailable")
     mock_credential.return_value = AsyncMock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
@@ -504,3 +511,80 @@ def test_eventhub_trigger_skips_duplicate_event(
     asyncio.run(eventhub_trigger_active([_make_event("CASE789", "run003", "paymentPending", {"key": "val"})]))
 
     mock_process_case.assert_not_called()
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_idempotency_blob_not_deleted_when_process_case_raises(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """When process_case raises, the exception is caught; delete_blob is not reached."""
+    mocks = _build_trigger_mocks()
+    mock_process_case.side_effect = Exception("unexpected error")
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE999", "run004", "paymentPending", {"key": "val"})]))
+
+    # Blob was uploaded before processing
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    # Exception caught by inner except — delete never reached
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_process_case_called_with_correct_args(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """process_case is called with (ENV, caseNo, data, run_id, state, PR_REFERENCE)."""
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "SUCCESS",
+        "CaseNo": "CASE123",
+        "CCDCaseID": "1111",
+        "Error": None,
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE123", "run005", "paymentPending", {"key": "val"})]))
+
+    args = mock_process_case.call_args[0]
+    assert args[1] == "CASE123"        # caseNo
+    assert args[3] == "run005"         # run_id
+    assert args[4] == "paymentPending" # state
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_idempotency_blob_path_includes_state_and_case_number(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """get_blob_client is called with a path containing the state and case number."""
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {"Status": "SUCCESS", "CaseNo": "CASE111", "CCDCaseID": "1", "Error": None}
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE111", "run006", "paymentPending", {"key": "val"})]))
+
+    called_path = mocks["blob_svc"].get_container_client.return_value.get_blob_client.call_args[0][0]
+    assert "CASE111" in called_path
+    assert "paymentPending" in called_path
+    assert "idempotency" in called_path

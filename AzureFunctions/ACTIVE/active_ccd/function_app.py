@@ -4,12 +4,13 @@ import logging
 import json
 import os
 
+from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from typing import List
 # from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
@@ -87,11 +88,14 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     data = payload.get("Content", None)
 
                     # Build idempotency blob reference
-                    idempotency_blob_path = f"active/{state}/processed/{caseNo}.flag"
+                    idempotency_blob_path = f"active/{state}/idempotency/{caseNo}.flag"
                     idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
-                    if await idempotency_blob.exists():
-                        logger.warning(f"[IDEMPOTENCY] Skipping duplicate message for {state}/{caseNo}")
+                    try:
+                        await idempotency_blob.upload_blob(b"", overwrite=True)
+                        logger.info(f"[IDEMPOTENCY] Marked for processing: {caseNo}")
+                    except Exception as upload_error:
+                        logger.warning(f"[IDEMPOTENCY] Failed to process {caseNo}: {upload_error}")
                         continue
 
                     # Process the file
@@ -99,15 +103,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     result["StartDateTime"] = start_datetime
 
                     # Mark processed if success
-                    if result.get("Status") == "SUCCESS":
-                        try:
-                            await idempotency_blob.upload_blob(b"", overwrite=True)
-                            logger.info(f"[IDEMPOTENCY] Marked processed: {caseNo}")
-                        except Exception as upload_error:
-                            logger.error(f"[IDEMPOTENCY] Failed to mark processed for {caseNo}: {upload_error}")
-
+                    if result.get("Status") != "SUCCESS":
+                        await idempotency_blob.delete_blob()
+                        logger.info(f"[IDEMPOTENCY] Removing idempotency blob for failed processing of: {caseNo}")
+                        
                     result_json = json.dumps(result)
-
                     try:
                         event_data_batch.add(EventData(result_json))
                     except ValueError:

@@ -2923,7 +2923,7 @@ def generalDefault(silver_m1):
                 ).withColumn("isFeePaymentEnabled", lit("Yes")
                 ).withColumn("isRemissionsEnabled", lit("Yes")
                 ).withColumn("isOutOfCountryEnabled", lit("Yes")
-                ).withColumn("isIntegrated", lit("No")
+                ).withColumn("isIntegrated", lit("Yes")
                 ).withColumn("isNabaEnabled", lit("No")
                 ).withColumn("isNabaAdaEnabled", lit("Yes")
                 ).withColumn("isNabaEnabledOoc", lit("No")

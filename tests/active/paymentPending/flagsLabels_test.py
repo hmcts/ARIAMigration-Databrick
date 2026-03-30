@@ -66,9 +66,7 @@ def flags_labels_outputs(spark):
     results = {row["CaseNo"]: row.asDict() for row in flags_labels_content.collect()}
     return results
 
-# ---------------------------------------------------
-# Helper
-# ---------------------------------------------------
+##helper functions
 def assert_equals(row, **expected):
     for k, v in expected.items():
         assert row.get(k) == v, f"{k} expected {v} but got {row.get(k)}"
@@ -85,10 +83,7 @@ def get_flag_comments(flag_struct):
         return []
     return [d["value"]["flagComment"] for d in flag_struct["details"]]
 
-
-# ---------------------------------------------------
-# TESTS
-# ---------------------------------------------------
+##tests
 
 def test_horef_creates_dropped_case(flags_labels_outputs):
     row = flags_labels_outputs["CASE1"]
@@ -96,20 +91,17 @@ def test_horef_creates_dropped_case(flags_labels_outputs):
     assert "OT0001" in get_flag_codes(row["caseFlags"])
     assert "Dropped Case" in get_flag_comments(row["caseFlags"])
 
-
 def test_category_creates_expedite(flags_labels_outputs):
     row = flags_labels_outputs["CASE2"]
 
     assert "OT0001" in get_flag_codes(row["caseFlags"])
     assert "Expedite" in get_flag_comments(row["caseFlags"])
 
-
 def test_no_flags(flags_labels_outputs):
     row = flags_labels_outputs["CASE3"]
 
     assert row["caseFlags"] is None
     assert row["appellantLevelFlags"] is None
-
 
 def test_pf0012_deduplicated(flags_labels_outputs):
     row = flags_labels_outputs["CASE4"]
@@ -118,12 +110,10 @@ def test_pf0012_deduplicated(flags_labels_outputs):
 
     assert codes.count("PF0012") == 1
 
-
 def test_detained_flag(flags_labels_outputs):
     row = flags_labels_outputs["CASE5"]
 
     assert "PF0019" in get_flag_codes(row["appellantLevelFlags"])
-
 
 def test_base_condition_blocks_output(flags_labels_outputs):
     row = flags_labels_outputs["CASE6"]
@@ -134,12 +124,10 @@ def test_base_condition_blocks_output(flags_labels_outputs):
         isAdmin=None
     )
 
-
 def test_fee_exemption(flags_labels_outputs):
     row = flags_labels_outputs["CASE7"]
 
     assert row["isAriaMigratedFeeExemption"] == "Yes"
-
 
 def test_relationship_filtered(flags_labels_outputs):
     row = flags_labels_outputs["CASE8"]

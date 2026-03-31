@@ -182,7 +182,7 @@
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
-51,Taylor House (HX),,taylorHouse,Taylor House,"{
+515,Taylor House (HX),,taylorHouse,Taylor House,"{
     ""region"": ""1"",
     ""baseLocation"": ""765324""
   }",765324,Taylor House Tribunal Hearing Centre,Taylor House Tribunal Hearing Centre,taylorHouse,taylorHouse
@@ -254,3 +254,7 @@
      %% python
      split_comment = Comment.split(',')
      prevFileLocation = split_comment[0] # The value of prevFileLocation should then be mapped based on column L","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre","map with fileLocation, else assignHearingCentre"
+519,Belfast - Royal Courts of Justice,,glasgow,Glasgow,"{
+    ""region"": ""1"",
+    ""baseLocation"": ""366559""
+  }",366559,Atlantic Quay - Glasgow,Atlantic Quay - Glasgow,glasgow,glasgow

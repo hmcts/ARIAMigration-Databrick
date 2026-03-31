@@ -1,11 +1,11 @@
 import asyncio
 import azure.functions as func
 import logging
-import logging.handlers
-import queue as _queue
 import json
 import os
 
+from azure.core.exceptions import ResourceExistsError
+from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
@@ -59,6 +59,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     result_eh_secret_key = results_eh_key.value
     logger.info("Acquired KV secret for Results Event Hub")
 
+    idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
+    idempotency_container_name = "af-idempotency"
+    idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
+    idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
     res_eh_producer = EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
 
     async with res_eh_producer:
@@ -76,6 +81,17 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     data = payload.get("CaseLinkPayload", None)
                     overwrite = payload.get("Overwrite", None)
 
+                    idempotency_blob_path = f"active/caselink/idempotency/{ccdReference}.flag"
+                    idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
+
+                    try:
+                        # upload_blob is an atomic operation so awaiting the result ensures only 1 event runs for the state/caseNo.
+                        await idempotency_blob.upload_blob(b"", overwrite=False)
+                        logger.info(f"[IDEMPOTENCY][CASELINK] Case linking for {ccdReference} is being processed.")
+                    except ResourceExistsError:
+                        logger.warning(f"[IDEMPOTENCY][CASELINK] Skipping in progress case {ccdReference}.")
+                        continue
+
                     result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
 
                     # Skip if marked for SKIPPED
@@ -86,6 +102,9 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     # Mark processed if success
                     if result.get("Status") == "SUCCESS":
                         logger.info(f"Case linking processed from: {ccdReference} to: {', '.join(str(obj['id']) for obj in data if 'id' in obj)}")
+                    else:
+                        await idempotency_blob.delete_blob()
+                        logger.info(f"[IDEMPOTENCY][CASELINK] Deleting idempotency blob: {ccdReference}.")
 
                     result_json = json.dumps(result)
 

@@ -4,13 +4,12 @@ import logging
 import json
 import os
 
-from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from typing import List
 # from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type

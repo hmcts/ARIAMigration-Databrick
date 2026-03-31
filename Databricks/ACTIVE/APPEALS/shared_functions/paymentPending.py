@@ -359,6 +359,10 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         "appealSubmissionInternalDate", date_format(col("m1.DateLodged"), "yyyy-MM-dd")
     ).withColumn(
         "tribunalReceivedDate", date_format(col("m1.DateAppealReceived"), "yyyy-MM-dd")
+    ).withColumn(
+        "outOfTimeDecisionType",when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("approved")).otherwise(None)
+    ).withColumn(
+        "outOfTimeDecisionMaker", when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("Tribunal Caseworker")).otherwise(None)
     ).select(
         "CaseNo", 
         col("appellantsRepresentation"),
@@ -377,7 +381,9 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         when(conditions, col("appealSubmissionInternalDate")).otherwise(None).alias("appealSubmissionInternalDate"),
         when(conditions, col("tribunalReceivedDate")).otherwise(None).alias("tribunalReceivedDate"),
         when(conditions, lit([]).cast("array<int>")).otherwise(None).alias("caseLinks"), 
-        when(conditions, lit("NotSure")).otherwise(None).alias("hasOtherAppeals")
+        when(conditions, lit("NotSure")).otherwise(None).alias("hasOtherAppeals"),
+        col("outOfTimeDecisionType"),
+        col("outOfTimeDecisionMaker"),
     )
 
 
@@ -494,9 +500,19 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     array(struct(*common_inputFields)).alias("hasOtherAppeals_inputFields"),
     array(struct(*common_inputValues)).alias("hasOtherAppeals_inputValues"),
     col("content.hasOtherAppeals"),
-    lit("yes").alias("hasOtherAppeals_Transformation")
+    lit("yes").alias("hasOtherAppeals_Transformation"),
 
+    array(struct(*common_inputFields,lit("OutOfTimeIssue"),lit("Outcome"))).alias("outOfTimeDecisionType_inputFields"),
+    array(struct(*common_inputValues,col("audit.OutOfTimeIssue"),col("m3.Outcome"))).alias("outOfTimeDecisionType_inputValues"),
+    col("content.outOfTimeDecisionType"),
+    lit("yes").alias("outOfTimeDecisionType_Transformation"),
+
+    array(struct(*common_inputFields,lit("OutOfTimeIssue"),lit("Outcome"))).alias("outOfTimeDecisionMaker_inputFields"),
+    array(struct(*common_inputValues,col("audit.OutOfTimeIssue"),col("m3.Outcome"))).alias("outOfTimeDecisionMaker_inputValues"),
+    col("content.outOfTimeDecisionMaker"),
+    lit("yes").alias("outOfTimeDecisionMaker_Transformation"),
     )
+
 
     return df, df_audit
 
@@ -2923,7 +2939,7 @@ def generalDefault(silver_m1):
                 ).withColumn("isFeePaymentEnabled", lit("Yes")
                 ).withColumn("isRemissionsEnabled", lit("Yes")
                 ).withColumn("isOutOfCountryEnabled", lit("Yes")
-                ).withColumn("isIntegrated", lit("No")
+                ).withColumn("isIntegrated", lit("Yes")
                 ).withColumn("isNabaEnabled", lit("No")
                 ).withColumn("isNabaAdaEnabled", lit("Yes")
                 ).withColumn("isNabaEnabledOoc", lit("No")

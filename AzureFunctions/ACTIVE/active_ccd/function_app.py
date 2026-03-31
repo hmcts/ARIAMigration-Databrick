@@ -91,7 +91,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
                     try:
-                        await idempotency_blob.upload_blob(b"", overwrite=True)
+                        await idempotency_blob.upload_blob(b"", overwrite=False)
                         logger.info(f"[IDEMPOTENCY] Marked for processing: {caseNo}")
                     except Exception as upload_error:
                         logger.warning(f"[IDEMPOTENCY] Failed to process {caseNo}: {upload_error}")

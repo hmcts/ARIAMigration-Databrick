@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-from azure.core.exceptions import ResourceExistsError
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
@@ -458,8 +457,8 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
 
     asyncio.run(eventhub_trigger_active([_make_event("CASE123", "run001", "paymentPending", {"key": "val"})]))
 
-    # Idempotency blob uploaded before processing (overwrite=True marks in-flight)
-    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    # Idempotency blob uploaded before processing (overwrite=False prevents duplicates)
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=False)
     # SUCCESS: blob kept to prevent future duplicates
     mocks["idempotency_blob"].delete_blob.assert_not_called()
 
@@ -487,7 +486,7 @@ def test_eventhub_trigger_deletes_idempotency_blob_on_error(
     asyncio.run(eventhub_trigger_active([_make_event("CASE456", "run002", "paymentPending", {"key": "val"})]))
 
     # Idempotency blob uploaded before processing
-    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=False)
     # ERROR: blob deleted so the event can be retried
     mocks["idempotency_blob"].delete_blob.assert_awaited_once()
 
@@ -532,7 +531,7 @@ def test_idempotency_blob_not_deleted_when_process_case_raises(
     asyncio.run(eventhub_trigger_active([_make_event("CASE999", "run004", "paymentPending", {"key": "val"})]))
 
     # Blob was uploaded before processing
-    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=True)
+    mocks["idempotency_blob"].upload_blob.assert_awaited_once_with(b"", overwrite=False)
     # Exception caught by inner except — delete never reached
     mocks["idempotency_blob"].delete_blob.assert_not_called()
 

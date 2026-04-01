@@ -60,7 +60,7 @@ def paymentType(silver_m1, silver_m4):
 
     ref_txn_df1 = (
         silver_m4.alias("m4")
-            .join(ref_txn_df.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
+            .join(ref_txn_df1.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
             .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
     )
 
@@ -160,7 +160,7 @@ def paymentType(silver_m1, silver_m4):
             .otherwise(lit(None))
             .alias("dv_paymentStatus"),
         )
-        .select(
+    .select(
             "CaseNo",
             "feeAmountGbp",
             "feeDescription",
@@ -177,9 +177,10 @@ def paymentType(silver_m1, silver_m4):
             "rpDcAppealHearingOption",
             "paidDate",
             "paidAmount",
-            "additionalPaymentInfo",
+            "additionalPaymentInfo"
         )
     )
+
     payment_audit_final = (
         payment_audit.alias("audit")
         .join(paid_amount.alias("paid_amount"), ["CaseNo"], "left")

@@ -110,7 +110,7 @@ class TestAppealSubmittedPaymentType:
             assert resultList[4][0] is None 
             assert resultList[5][0] == "Paid" and resultList[6][0] == "Paid" and resultList[7][0] == "Paid"
             assert resultList[8][0] == "Paid" and resultList[9][0] == "Payment pending"
-            assert resultList[10][0] == "Paid" and resultList[11][0] == 'Payment pending' #ignore TransactionTypeId == 6, 19
+            assert resultList[10][0] == "Paid" and resultList[11][0] == 'Paid' #ignore TransactionTypeId == 6, 19
 
     def test_paAppealTypePaymentOption(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

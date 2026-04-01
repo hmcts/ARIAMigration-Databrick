@@ -75,7 +75,7 @@ class TestAppealSubmittedPaymentType:
                 ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - 'Paid'
                 ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - 'Paid'
                 ("9", "EA", "AIP", 0, datetime(2000, 1, 1)),   # SUM(AMOUNT) > 0 = 'Payment pending'
-                ("10", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 19 for MAX(TransactionId), = 'Paid' -> if Sum(Amount) = 0 then default to 'Paid'
+                ("10", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 19 for MAX(TransactionId), = 'Payment pending'
                 ("11", "EA", "AIP", 0, datetime(2000, 1, 1)),  # SUM(AMOUNT) = 0 AND TransactionTypeId = 1 for MAX(TransactionId), = 'Paid'
                 ("12", "EA", "AIP", 0, datetime(2000, 1, 1)),  # Referring TransactionId matches, but TransactionTypeId = 19 for MAX(TransactionId) is SumBalance = 0, = 'Paid'
             ]
@@ -98,15 +98,6 @@ class TestAppealSubmittedPaymentType:
                 ("12", 8, 1, 100.0, True, False, 0),  # Case 12 - TransactionTypeId = 1, TransactionId = 8
                 ("12", 9, 19, 0.0, False, False, 8)    # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
             ]
-    #             SILVER_M4_SCHEMA = StructType([
-    #     StructField("CaseNo", StringType()),
-    #     StructField("TransactionId", IntegerType()),
-    #     StructField("TransactionTypeId", IntegerType()),
-    #     StructField("Amount", DoubleType()),
-    #     StructField("SumBalance", BooleanType()),
-    #     StructField("SumTotalPay", BooleanType()),
-    #     StructField("ReferringTransactionId", IntegerType())
-    # ])
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)

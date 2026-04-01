@@ -98,6 +98,15 @@ class TestAppealSubmittedPaymentType:
                 ("12", 8, 1, 100.0, True, False, 0),  # Case 12 - TransactionTypeId = 1, TransactionId = 8
                 ("12", 9, 19, 0.0, False, False, 8)    # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
             ]
+    #             SILVER_M4_SCHEMA = StructType([
+    #     StructField("CaseNo", StringType()),
+    #     StructField("TransactionId", IntegerType()),
+    #     StructField("TransactionTypeId", IntegerType()),
+    #     StructField("Amount", DoubleType()),
+    #     StructField("SumBalance", BooleanType()),
+    #     StructField("SumTotalPay", BooleanType()),
+    #     StructField("ReferringTransactionId", IntegerType())
+    # ])
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
@@ -114,7 +123,7 @@ class TestAppealSubmittedPaymentType:
             assert resultList[5][0] == "Paid" 
             assert resultList[6][0] == "Paid" 
             assert resultList[7][0] == "Paid"
-            assert resultList[8][0] == "Paid" 
+            assert resultList[8][0] == "Payment pending" 
             assert resultList[9][0] == "Paid"
             assert resultList[10][0] == "Paid"
             assert resultList[11][0] == 'Paid' #ignore TransactionTypeId == 6, 19

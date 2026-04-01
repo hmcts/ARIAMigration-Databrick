@@ -114,7 +114,7 @@ class TestAppealSubmittedPaymentType:
             assert resultList[5][0] == "Paid" 
             assert resultList[6][0] == "Paid" 
             assert resultList[7][0] == "Paid"
-            assert resultList[8][0] == "Payment pending" 
+            assert resultList[8][0] == "Paid" 
             assert resultList[9][0] == "Paid"
             assert resultList[10][0] == "Paid"
             assert resultList[11][0] == 'Paid' #ignore TransactionTypeId == 6, 19

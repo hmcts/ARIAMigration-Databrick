@@ -277,9 +277,9 @@ def generalDefault(silver_m1):
 ##########              general          ###########
 ################################################################
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
-    general_df, general_audit = L.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    general_df, general_audit = L.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
 
     bundleFileNamePrefix_df = (
     silver_m1.alias("m1")

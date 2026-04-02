@@ -409,7 +409,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     df_documents, df_documents_audit = E.documents(silver_m1,silver_m3)
     df_ftpa, df_ftpa_audit = E.ftpa(silver_m3,silver_c)
-    df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
     df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
     df_hearingResponse, df_hearingResponse_audit = E.hearingResponse(silver_m1, silver_m3, silver_m6)
@@ -489,7 +489,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"),on="CaseNo",how="left")
         .join(bronze_detention_centres.alias("det"),on="DetentionCentreId",how="left")
-        .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId"),
+        .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId").alias("DetentionCentreId"),
             *[col(f"det.{c}").alias(f"{c}_det")
                 for c in bronze_detention_centres.columns
             ]

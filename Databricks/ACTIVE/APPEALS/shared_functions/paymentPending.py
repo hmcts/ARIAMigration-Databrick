@@ -327,7 +327,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
 
     # Filter the top-ranked rows where Outcome is not null
     silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (col("Outcome").isNotNull())
+        (col("row_num") == 1) & (col("Outcome").isNotNull()) & (col("OutOfTime") == True)
     ).select(
         col("CaseNo"),
         lit("Yes").alias("recordedOutOfTimeDecision"), col("Outcome")

@@ -344,7 +344,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
         # Only include if CategoryIdList contains 37; check for 'Yes'
         checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
+            "( (array_contains(valid_categoryIdList, 37) AND Detained NOT IN (1,2) AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
         )
 
         # Only include if array_contains(valid_categoryIdList, 37)

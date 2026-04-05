@@ -484,12 +484,17 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
 ###################################################################################################
 ###################################################################################################
+    silver_m3_all = silver_m3.withColumn("row_num", row_number().over(window_spec))
+
+    # Filter the top-ranked rows where Outcome is not null
+    silver_m3_all = silver_m3_all.filter(col("row_num") == 1)
 
     detained_df = (
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"),on="CaseNo",how="left")
+        .join(silver_m3_all.alias("m3"),on="CaseNo",how="left")
         .join(bronze_detention_centres.alias("det"),on="DetentionCentreId",how="left")
-        .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId").alias("DetentionCentreId"),
+        .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId").alias("DetentionCentreId"),col("m3.Outcome"),
             *[col(f"det.{c}").alias(f"{c}_det")
                 for c in bronze_detention_centres.columns
             ]

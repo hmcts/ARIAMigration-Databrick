@@ -344,13 +344,13 @@ def documents(silver_m1, silver_m3):
 ##########          general (General Field Group)     ###########
 ################################################################
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
     """
     Decided general = submitted_a general + 7 decided flags (derived from latest Party)
     (Not part of the red fields in the screenshot; keeping existing agreed logic.)
     """
     df, df_audit = FSA.general(
-        silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres
+        silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres
     )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())

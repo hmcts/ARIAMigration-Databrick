@@ -1046,39 +1046,112 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
         # Overwrite above creation of legalRepAddressUK in String format with Complex type AddressUK.
         when(col("legalRepHasAddress") == 'No', lit(None)
         ).when(col("RepresentativeId") == 0,
+            
             struct(
-                # AddressLine1 is mandatory in CCD, fallback logic
-                coalesce(
-                    col("CaseRep_Address1"),
-                    col("CaseRep_Address2"),
-                    col("CaseRep_Address3"),
-                    col("CaseRep_Address4"),
-                    col("CaseRep_Address5")
-                ).alias("AddressLine1"),
-                coalesce(col("CaseRep_Address2"),col("CaseRep_Address3"),col("CaseRep_Address4"),col("CaseRep_Address5")).alias("AddressLine2"),
-                coalesce(col("CaseRep_Address3"),col("CaseRep_Address4"),col("CaseRep_Address5")).alias("PostTown"),
-                coalesce(col("CaseRep_Address4"),col("CaseRep_Address5")).alias("County"),
-                col("CaseRep_Address5").alias("Country"),
-                col("CaseRep_Postcode").alias("PostCode")
-            )
-        ).otherwise(
-            struct(
-                # AddressLine1 is mandatory in CCD, fallback logic
-                coalesce(
-                    col("Rep_Address1"),
-                    col("Rep_Address2"),
-                    col("Rep_Address3"),
-                    col("Rep_Address4"),
-                    col("Rep_Address5")
-                ).alias("AddressLine1"),
-                col("Rep_Address2").alias("AddressLine2"),
-                col("Rep_Address3").alias("PostTown"),
-                col("Rep_Address4").alias("County"),
-                col("Rep_Address5").alias("Country"),
-                col("Rep_Postcode").alias("PostCode")
-            )
-        )
+                    # AddressLine1 (fallback mandatory)
+                    coalesce(
+                        col("CaseRep_Address1"),
+                        col("CaseRep_Address2"),
+                        col("CaseRep_Address3"),
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5")
+                    ).alias("AddressLine1"),
 
+                    # AddressLine2 (NULL when using special condition)
+                    when(
+                        col("CaseRep_Address3").isNull() &
+                        col("CaseRep_Address4").isNull() &
+                        col("CaseRep_Address5").isNull(),
+                        lit(None)
+                    ).otherwise(
+                        coalesce(
+                            col("CaseRep_Address2"),
+                            col("CaseRep_Address3"),
+                            col("CaseRep_Address4"),
+                            col("CaseRep_Address5")
+                        )
+                    ).alias("AddressLine2"),
+
+                    # PostTown logic
+                    when(
+                        col("CaseRep_Address3").isNull() &
+                        col("CaseRep_Address4").isNull() &
+                        col("CaseRep_Address5").isNull(),
+                        col("CaseRep_Address2")   # override rule
+                    ).otherwise(
+                        coalesce(
+                            col("CaseRep_Address3"),
+                            col("CaseRep_Address4"),
+                            col("CaseRep_Address5")
+                        )
+                    ).alias("PostTown"),
+
+                    # County
+                    coalesce(
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5")
+                    ).alias("County"),
+
+                    # Country
+                    col("CaseRep_Address5").alias("Country"),
+
+                    # Postcode
+                    col("CaseRep_Postcode").alias("PostCode")
+                )
+
+        ).otherwise(
+                struct(
+                    # AddressLine1 (fallback mandatory)
+                    coalesce(
+                        col("Rep_Address1"),
+                        col("Rep_Address2"),
+                        col("Rep_Address3"),
+                        col("Rep_Address4"),
+                        col("Rep_Address5")
+                    ).alias("AddressLine1"),
+
+                    # AddressLine2 (NULL when using special condition)
+                    when(
+                        col("Rep_Address3").isNull() &
+                        col("Rep_Address4").isNull() &
+                        col("Rep_Address5").isNull(),
+                        lit(None)
+                    ).otherwise(
+                        coalesce(
+                            col("Rep_Address2"),
+                            col("Rep_Address3"),
+                            col("Rep_Address4"),
+                            col("Rep_Address5")
+                        )
+                    ).alias("AddressLine2"),
+
+                    # PostTown logic
+                    when(
+                        col("Rep_Address3").isNull() &
+                        col("Rep_Address4").isNull() &
+                        col("Rep_Address5").isNull(),
+                        col("Rep_Address2")   # override rule
+                    ).otherwise(
+                        coalesce(
+                            col("Rep_Address3"),
+                            col("Rep_Address4"),
+                            col("Rep_Address5")
+                        )
+                    ).alias("PostTown"),
+
+                    # County
+                    coalesce(
+                        col("Rep_Address4"),
+                        col("Rep_Address5")
+                    ).alias("County"),
+
+                    # Country
+                    col("Rep_Address5").alias("Country"),
+
+                    # Postcode
+                    col("Rep_Postcode").alias("PostCode")
+                )
+                )
     ).select(
         col("CaseNo"),
         "legalRepGivenName",

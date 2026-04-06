@@ -564,6 +564,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         first("CasePrefix", ignorenulls=True).alias("CasePrefix"),
         first("dv_representation", ignorenulls=True).alias("dv_representation"),
         first("Detained", ignorenulls=True).alias("Detained"),
+        first("Appellant_Forenames", ignorenulls=True).alias("AppellantForenames"),
+        first("Appellant_Name", ignorenulls=True).alias("AppellantName"),
         first("lu_appealType", ignorenulls=True).alias("lu_appealType")
     )
 
@@ -739,7 +741,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
             struct(
                 col("appellantFlagDetails").alias("details"),
                 # lit(None).cast("string").alias("groupId"),
-                lit("Functional PostDeployment").alias("partyName"),
+                concat_ws(' ', col("AppellantForenames"), col("AppellantName")).alias("partyName"),
+                # lit("Functional PostDeployment").alias("partyName"),
                 lit("Appellant").alias("roleOnCase"),
                 # lit(None).cast("string").alias("visibility")
             )

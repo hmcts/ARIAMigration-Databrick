@@ -282,8 +282,8 @@ class TestListingState():
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         # assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
 
-    def test_general_fields(self, spark, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.PP') as PP:
+    def test_general_fields(self, spark, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data, bronze_detention_centres):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.PPD') as PP:
             paymentPendingCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the paymentPendingOutput, trailing comma for tuple type
             PP.general.return_value = spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS)
             m1_data = [

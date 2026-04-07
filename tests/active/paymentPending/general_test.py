@@ -181,7 +181,7 @@
 
 import pytest
 from pyspark.sql import SparkSession, types as T
-from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import general
+from Databricks.ACTIVE.APPEALS.shared_functions.paymentPendingDetained import general
 
 @pytest.fixture(scope="session")
 def spark():

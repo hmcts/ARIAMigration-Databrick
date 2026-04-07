@@ -315,7 +315,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             "amountRemitted",
             when(
                 (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                when(col("amountRemitted").isNotNull(), col("amountRemitted"))
+                when(col("amountRemitted").isNotNull(), col("amountRemitted") * 100)
                 .otherwise(lit(None))
                 .cast(IntegerType())
                 .cast(StringType()),

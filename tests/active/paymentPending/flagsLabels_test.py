@@ -37,18 +37,20 @@ def flags_labels_outputs(spark):
         T.StructField("CategoryId", T.IntegerType(), True),
         T.StructField("Relationship", T.StringType(), True),
         T.StructField("Detained", T.IntegerType(), True),
+        T.StructField("Appellant_Forenames", T.StringType(), True),
+        T.StructField("Appellant_Name", T.StringType(), True),
     ])
 
     m2_data = [
-        ("CASE1", None, None, None),
-        ("CASE2", 41, None, None),  # OT0001
-        ("CASE3", None, None, None),
-        ("CASE4", 17, None, None),
-        ("CASE4", 29, None, None),  # PF0012 duplicate
-        ("CASE5", None, None, 1),   # detained
-        ("CASE6", 41, None, None),
-        ("CASE7", None, None, None),
-        ("CASE8", 41, "CHILD", None),  # filtered out
+        ("CASE1", None, None, None,"forename1","surname1"),
+        ("CASE2", 41, None, None,"forename2","surname2"),  # OT0001
+        ("CASE3", None, None, None,"forename3","surname3"),
+        ("CASE4", 17, None, None,"forename4","surname4"),
+        ("CASE4", 29, None, None,"forename5","surname5"),  # PF0012 duplicate
+        ("CASE5", None, None, 1,"forename6","surname6"),   # detained
+        ("CASE6", 41, None, None,"forename7","surname7"),
+        ("CASE7", None, None, None,"forename8","surname8"),
+        ("CASE8", 41, "CHILD", None,"forename9","surname9"),  # filtered out
     ]
 
     c_schema = T.StructType([
@@ -61,7 +63,7 @@ def flags_labels_outputs(spark):
     silver_m2 = spark.createDataFrame(m2_data, m2_schema)
     silver_c = spark.createDataFrame(c_data, c_schema)
 
-    flags_labels_content, _ = flagsLabels(silver_m1, silver_m2, silver_c)
+    flags_labels_content, _ = PP.flagsLabels(silver_m1, silver_m2, silver_c)
 
     results = {row["CaseNo"]: row.asDict() for row in flags_labels_content.collect()}
     return results

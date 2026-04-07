@@ -295,7 +295,7 @@ class TestListingState():
                 ("6", "UN", "FT", None, 0, 0, False, 0)    # Not AIP or LR Case
             ]
 
-            dcs_schema = T.StructType([
+        dcs_schema = T.StructType([
         T.StructField("Detained", T.IntegerType(), True),
         T.StructField("DetentionCentreId", T.IntegerType(), True),
         T.StructField("DetentionCentre", T.StringType(), True),

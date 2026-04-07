@@ -166,7 +166,7 @@ def test_party_visibility_flags(general_outputs):
 
     # CASE005: Party=1 → appellant
     assert r["CASE005"]["isAppellantFtpaDecisionVisibleToAll"] == "Yes"
-    assert r["CASE005"]["isRespondentFtpaDecisionVisibleToAll"] == "No"
+    assert r["CASE005"]["isRespondentFtpaDecisionVisibleToAll"] is None
 
     # CASE007: Party=2 → respondent
     assert r["CASE007"]["isAppellantFtpaDecisionVisibleToAll"] == "No"

@@ -222,15 +222,17 @@ def general_outputs(spark):
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("Relationship", T.StringType(), True),
         T.StructField("Appellant_Postcode", T.StringType(), True),
+        T.StructField("DetentionCentreId", T.IntegerType(), True),
+        T.StructField("Detained", T.IntegerType(), True),
     ])
 
     m2_data = [
-        ("EA/10544/2022", None, "NN33 8XZ"),
-        ("HU/00516/2025", None, "N1W 0LE"),
-        ("EA/04437/2020", None, "S5 8NH"),
-        ("HU/00140/2024", None, "PE6 4RH"),
-        ("EA/03592/2023", None, "W95 3UX"),
-        ("EA/02375/2024", None, "LD2R 5HB"),
+        ("EA/10544/2022", None, "NN33 8XZ",2,1),
+        ("HU/00516/2025", None, "N1W 0LE",5,2),
+        ("EA/04437/2020", None, "S5 8NH",8,3),
+        ("HU/00140/2024", None, "PE6 4RH",9,4),
+        ("EA/03592/2023", None, "W95 3UX",2,1),
+        ("EA/02375/2024", None, "LD2R 5HB",5,2),
     ]
 
     m3_schema = T.StructType([])

@@ -314,8 +314,8 @@ def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
 
     expectedLegalRepAddressUkRow = Row(
         AddressLine1='734 Carson Plains Apt. 731X',
-        AddressLine2='Rodgers ShoalX',
-        PostTown=None,
+        AddressLine2=None,
+        PostTown='Rodgers ShoalX',
         County=None,
         Country=None,
         PostCode='S65 7EB'

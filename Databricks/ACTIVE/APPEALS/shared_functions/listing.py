@@ -4,6 +4,7 @@ from pyspark.sql.functions import (
 from pyspark.sql.window import Window
 
 from . import paymentPending as PP
+from . import paymentPendingDetained as PPD
 from . import AwaitingEvidenceRespondant_b as AERb
 
 
@@ -444,8 +445,8 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
     return df_hearingRequirements, df_audit_hearingRequirements
 
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-    df, df_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+    df, df_audit = PPD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_representation = silver_m1.select("CaseNo", "dv_representation", "lu_appealType")
 
     df = df.join(df_representation, on="CaseNo", how="left")

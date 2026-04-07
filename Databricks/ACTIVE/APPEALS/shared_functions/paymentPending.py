@@ -327,7 +327,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
 
     # Filter the top-ranked rows where Outcome is not null
     silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (col("Outcome").isNotNull())
+        (col("row_num") == 1) & (col("Outcome").isNotNull()) & (col("OutOfTime") == True)
     ).select(
         col("CaseNo"),
         lit("Yes").alias("recordedOutOfTimeDecision"), col("Outcome")
@@ -564,6 +564,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         first("CasePrefix", ignorenulls=True).alias("CasePrefix"),
         first("dv_representation", ignorenulls=True).alias("dv_representation"),
         first("Detained", ignorenulls=True).alias("Detained"),
+        first("Appellant_Forenames", ignorenulls=True).alias("AppellantForenames"),
+        first("Appellant_Name", ignorenulls=True).alias("AppellantName"),
         first("lu_appealType", ignorenulls=True).alias("lu_appealType")
     )
 
@@ -739,7 +741,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
             struct(
                 col("appellantFlagDetails").alias("details"),
                 # lit(None).cast("string").alias("groupId"),
-                lit("Functional PostDeployment").alias("partyName"),
+                concat_ws(' ', col("AppellantForenames"), col("AppellantName")).alias("partyName"),
+                # lit("Functional PostDeployment").alias("partyName"),
                 lit("Appellant").alias("roleOnCase"),
                 # lit(None).cast("string").alias("visibility")
             )
@@ -1046,39 +1049,112 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
         # Overwrite above creation of legalRepAddressUK in String format with Complex type AddressUK.
         when(col("legalRepHasAddress") == 'No', lit(None)
         ).when(col("RepresentativeId") == 0,
+            
             struct(
-                # AddressLine1 is mandatory in CCD, fallback logic
-                coalesce(
-                    col("CaseRep_Address1"),
-                    col("CaseRep_Address2"),
-                    col("CaseRep_Address3"),
-                    col("CaseRep_Address4"),
-                    col("CaseRep_Address5")
-                ).alias("AddressLine1"),
-                col("CaseRep_Address2").alias("AddressLine2"),
-                col("CaseRep_Address3").alias("PostTown"),
-                col("CaseRep_Address4").alias("County"),
-                col("CaseRep_Address5").alias("Country"),
-                col("CaseRep_Postcode").alias("PostCode")
-            )
-        ).otherwise(
-            struct(
-                # AddressLine1 is mandatory in CCD, fallback logic
-                coalesce(
-                    col("Rep_Address1"),
-                    col("Rep_Address2"),
-                    col("Rep_Address3"),
-                    col("Rep_Address4"),
-                    col("Rep_Address5")
-                ).alias("AddressLine1"),
-                col("Rep_Address2").alias("AddressLine2"),
-                col("Rep_Address3").alias("PostTown"),
-                col("Rep_Address4").alias("County"),
-                col("Rep_Address5").alias("Country"),
-                col("Rep_Postcode").alias("PostCode")
-            )
-        )
+                    # AddressLine1 (fallback mandatory)
+                    coalesce(
+                        col("CaseRep_Address1"),
+                        col("CaseRep_Address2"),
+                        col("CaseRep_Address3"),
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5")
+                    ).alias("AddressLine1"),
 
+                    # AddressLine2 (NULL when using special condition)
+                    when(
+                        col("CaseRep_Address3").isNull() &
+                        col("CaseRep_Address4").isNull() &
+                        col("CaseRep_Address5").isNull(),
+                        lit(None)
+                    ).otherwise(
+                        coalesce(
+                            col("CaseRep_Address2"),
+                            col("CaseRep_Address3"),
+                            col("CaseRep_Address4"),
+                            col("CaseRep_Address5")
+                        )
+                    ).alias("AddressLine2"),
+
+                    # PostTown logic
+                    when(
+                        col("CaseRep_Address3").isNull() &
+                        col("CaseRep_Address4").isNull() &
+                        col("CaseRep_Address5").isNull(),
+                        col("CaseRep_Address2")   # override rule
+                    ).otherwise(
+                        coalesce(
+                            col("CaseRep_Address3"),
+                            col("CaseRep_Address4"),
+                            col("CaseRep_Address5")
+                        )
+                    ).alias("PostTown"),
+
+                    # County
+                    coalesce(
+                        col("CaseRep_Address4"),
+                        col("CaseRep_Address5")
+                    ).alias("County"),
+
+                    # Country
+                    col("CaseRep_Address5").alias("Country"),
+
+                    # Postcode
+                    col("CaseRep_Postcode").alias("PostCode")
+                )
+
+        ).otherwise(
+                struct(
+                    # AddressLine1 (fallback mandatory)
+                    coalesce(
+                        col("Rep_Address1"),
+                        col("Rep_Address2"),
+                        col("Rep_Address3"),
+                        col("Rep_Address4"),
+                        col("Rep_Address5")
+                    ).alias("AddressLine1"),
+
+                    # AddressLine2 (NULL when using special condition)
+                    when(
+                        col("Rep_Address3").isNull() &
+                        col("Rep_Address4").isNull() &
+                        col("Rep_Address5").isNull(),
+                        lit(None)
+                    ).otherwise(
+                        coalesce(
+                            col("Rep_Address2"),
+                            col("Rep_Address3"),
+                            col("Rep_Address4"),
+                            col("Rep_Address5")
+                        )
+                    ).alias("AddressLine2"),
+
+                    # PostTown logic
+                    when(
+                        col("Rep_Address3").isNull() &
+                        col("Rep_Address4").isNull() &
+                        col("Rep_Address5").isNull(),
+                        col("Rep_Address2")   # override rule
+                    ).otherwise(
+                        coalesce(
+                            col("Rep_Address3"),
+                            col("Rep_Address4"),
+                            col("Rep_Address5")
+                        )
+                    ).alias("PostTown"),
+
+                    # County
+                    coalesce(
+                        col("Rep_Address4"),
+                        col("Rep_Address5")
+                    ).alias("County"),
+
+                    # Country
+                    col("Rep_Address5").alias("Country"),
+
+                    # Postcode
+                    col("Rep_Postcode").alias("PostCode")
+                )
+                )
     ).select(
         col("CaseNo"),
         "legalRepGivenName",
@@ -1430,8 +1506,11 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     # appellantAddress logic
     # Only include if CategoryIdList contains 37 and conditions
-    include_appellant_address = (conditions & expr("array_contains(CategoryIdList, 37)") & 
+    include_appellant_address = (conditions & (expr("array_contains(CategoryIdList, 37)") | expr("array_contains(CategoryIdList, 38)")) & 
                                     (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))
+    # include_appellant_out_of_uk_address = (conditions & expr("array_contains(CategoryIdList, 38)") & 
+    #                                 (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))
+    
     appellant_address_struct = when(
         include_appellant_address,
         struct(
@@ -1451,6 +1530,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             coalesce(col("Appellant_Postcode"), lit("")).alias("PostCode")
         )
     ).otherwise(None)
+
 
     # addressLine1AdminJ: mandatory for OOC, fallback through address fields
     address_line1_adminj_expr = when(
@@ -1634,6 +1714,19 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             ooc_appeal_adminj_expr.alias("oocAppealAdminJ"),
             appellant_has_fixed_address_expr.alias("appellantHasFixedAddress"),
             appellant_has_fixed_address_adminj_expr.alias("appellantHasFixedAddressAdminJ"),
+            
+            # when(include_appellant_address, appellant_address_struct)
+            #     .when(
+            #         include_appellant_out_of_uk_address,
+            #         struct(
+            #             address_line1_adminj_expr.alias("AddressLine1"),
+            #             address_line2_adminj_expr.alias("AddressLine2"),
+            #             address_line3_adminj_expr.alias("PostTown")
+            #         )
+            #     )
+            #     .otherwise(None)
+            #     .alias("appellantAddress"),
+
             appellant_address_struct.alias("appellantAddress"),
             address_line1_adminj_expr.alias("addressLine1AdminJ"),
             address_line2_adminj_expr.alias("addressLine2AdminJ"),
@@ -2126,7 +2219,10 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             date_entry_clearance_decision_expr.alias("dateEntryClearanceDecision"),
             home_office_reference_number_expr.alias("homeOfficeReferenceNumber"),
             gwf_reference_number_expr.alias("gwfReferenceNumber"),
-            lit("Yes").alias("isHomeOfficeIntegrationEnabled"),
+            when(col("dv_CCDAppealType").isin("RP", "PA"), "Yes")
+                        .otherwise(None)
+                        .alias("isHomeOfficeIntegrationEnabled"),
+            # lit("Yes").alias("isHomeOfficeIntegrationEnabled"),
             lit("Yes").alias("homeOfficeNotificationsEligible")
             # col("HORef"),
             # col("FCONumber"),
@@ -2171,8 +2267,8 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             lit("yes").alias("gwfReferenceNumber_Transformed"),
         
             #isHomeOfficeIntegrationEnabled - ARIADM-797
-            array(struct(*common_inputFields, lit("isHomeOfficeIntegrationEnabled"))).alias("isHomeOfficeIntegrationEnabled_inputFields"),
-            array(struct(*common_inputValues, lit("null"))).alias("isHomeOfficeIntegrationEnabled_inputValues"),
+            array(struct(*common_inputFields, lit("isHomeOfficeIntegrationEnabled"), lit("dv_CCDAppealType"))).alias("isHomeOfficeIntegrationEnabled_inputFields"),
+            array(struct(*common_inputValues, lit("null"),col("dv_CCDAppealType"))).alias("isHomeOfficeIntegrationEnabled_inputValues"),
             col("content.isHomeOfficeIntegrationEnabled"),
             lit("no").alias("isHomeOfficeIntegrationEnabled_Transformation"),
 

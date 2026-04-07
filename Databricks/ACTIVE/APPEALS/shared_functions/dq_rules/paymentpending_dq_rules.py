@@ -79,13 +79,13 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_outOfTimeDecisionType"] = (
-            """    (OutOfTimeIssue = True AND Outcome_end != 0 AND outOfTimeDecisionType = 'approved') 
+            """    (OutOfTimeIssue = True AND Outcome != 0 AND outOfTimeDecisionType = 'approved') 
                 OR (outOfTimeDecisionType IS NULL)     
             """
         )
 
         checks["valid_outOfTimeDecisionMaker"] = (
-            """    (OutOfTimeIssue = True AND Outcome_end != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
+            """    (OutOfTimeIssue = True AND Outcome != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
                 OR (outOfTimeDecisionMaker IS NULL)
             """
         )
@@ -530,7 +530,7 @@ class paymentPendingDQRules(DQRulesBase):
             "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
         checks["valid_sponsorPartyId_not_null"] = (
-            "((sponsorPartyId IS NOT NULL AND hasSponsor <=> 'Yes') OR (sponsorPartyId IS NULL and hasSponsor <=> 'No') OR (sponsorPartyID IS NULL and hasSponsor IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND CategoryId = 38 AND sponsorPartyId IS NOT NULL) OR (sponsorPartyID IS NULL))"
         )
 
         # ##############################

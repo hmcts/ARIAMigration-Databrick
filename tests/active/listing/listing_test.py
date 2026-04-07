@@ -305,32 +305,32 @@ class TestListingState():
                 ("6", "UN", "FT", None, 0, 0, False, 0)    # Not AIP or LR Case
             ]
 
-            dcs_schema = T.StructType([
-            T.StructField("Detained", T.IntegerType(), True),
-            T.StructField("DetentionCentreId", T.IntegerType(), True),
-            T.StructField("DetentionCentre", T.StringType(), True),
-            T.StructField("prisonName", T.StringType(), True),
-            T.StructField("ircName", T.StringType(), True),
-            T.StructField("detentionBuilding", T.StringType(), True),
-            T.StructField("detentionAddressLines", T.StringType(), True),
-            T.StructField("detentionPostcode", T.StringType(), True),
-            T.StructField("hearingCentre", T.StringType(), True),
-            T.StructField("staffLocation", T.StringType(), True),
+            dcs_schema = StructType([
+            StructField("Detained", IntegerType(), True),
+            StructField("DetentionCentreId", IntegerType(), True),
+            StructField("DetentionCentre", StringType(), True),
+            StructField("prisonName", StringType(), True),
+            StructField("ircName", StringType(), True),
+            StructField("detentionBuilding", StringType(), True),
+            StructField("detentionAddressLines", StringType(), True),
+            StructField("detentionPostcode", StringType(), True),
+            StructField("hearingCentre", StringType(), True),
+            StructField("staffLocation", StringType(), True),
 
             # caseManagementLocation as STRUCT
-            T.StructField(
+            StructField(
                 "caseManagementLocation",
-                T.StructType([
-                    T.StructField("region", T.StringType(), True),
-                    T.StructField("baseLocation", T.StringType(), True),
+                StructType([
+                    StructField("region", StringType(), True),
+                    StructField("baseLocation", StringType(), True),
                 ]),
                 True
             ),
 
-            T.StructField("locationCode", T.StringType(), True),
-            T.StructField("locationLabel", T.StringType(), True),
-            T.StructField("selectedHearingCentreRefData", T.StringType(), True),
-            T.StructField("applicationChangeDesignatedHearingCentre", T.StringType(), True),
+            StructField("locationCode", StringType(), True),
+            StructField("locationLabel", StringType(), True),
+            StructField("selectedHearingCentreRefData", StringType(), True),
+            StructField("applicationChangeDesignatedHearingCentre", StringType(), True),
             ])
 
             dcs_data = [

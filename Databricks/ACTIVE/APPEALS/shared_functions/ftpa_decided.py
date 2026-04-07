@@ -138,6 +138,32 @@ def ftpa(silver_m3, silver_c):
             
             .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 1, lit("No")).otherwise(lit(None)))
             .withColumn("isFtpaRespondentNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 2, lit("No")).otherwise(lit(None)))
+            
+            ##Updating ftpaList
+            .withColumn(
+                "ftpaList",
+                transform(
+                    col("ftpaList"),
+                    lambda x: x.withField(
+                        "value",
+                        x["value"]
+                        .withField(
+                            "ftpaDecisionDate",
+                            when(col("outcome.Party") == 1, col("ftpaAppellantDecisionDate"))
+                            .when(col("outcome.Party") == 2, col("ftpaRespondentDecisionDate"))
+                        )
+                        .withField(
+                            "ftpaDecisionOutcomeType",
+                            col("ftpaFinalDecisionForDisplay")
+                        )
+                        .withField(
+                            "isFtpaNoticeOfDecisionSetAside",
+                            when(col("outcome.Party") == 1, col("isFtpaAppellantNoticeOfDecisionSetAside"))
+                            .when(col("outcome.Party") == 2, col("isFtpaRespondentNoticeOfDecisionSetAside"))
+                        )
+                    )
+                )
+            )
 
             #copying logic from submitted b for 3 fields below. 3 cases not pulling through for some reason
             .withColumn("judgeAllocationExists",lit("Yes"))
@@ -257,12 +283,35 @@ def documents(silver_m1, silver_m3):
 
     empty_str_array = array().cast("array<string>")
 
+    window_spec = (
+        Window.partitionBy("CaseNo")
+        .orderBy(col("StatusId").desc())#, col("DecisionDate").desc_nulls_last())
+    )
+
+    # ------------------------------------------------------------
+    # F COLUMN (Set-aside flags):
+    # MAX(StatusId) WHERE CaseStatus = 39
+    # ------------------------------------------------------------
+    m3_latest_cs39 = (
+        silver_m3
+        .filter(col("CaseStatus") == 39)
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
     df = (
-        df
-        .withColumn("allFtpaAppellantDecisionDocs", coalesce(col("ftpaAppellantDocuments"), empty_str_array))
-        .withColumn("allFtpaRespondentDecisionDocs", coalesce(col("ftpaRespondentDocuments"), empty_str_array))
-        .withColumn("ftpaAppellantNoticeDocument", coalesce(col("finalDecisionAndReasonsDocuments"), empty_str_array))
-        .withColumn("ftpaRespondentNoticeDocument", coalesce(col("finalDecisionAndReasonsDocuments"), empty_str_array))
+        m3_latest_cs39.alias("m3").join(df.alias("doc"), "CaseNo", "left")
+        .withColumn("allFtpaAppellantDecisionDocs", when(col("Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("allFtpaRespondentDecisionDocs", when(col("Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("ftpaAppellantNoticeDocument", when(col("Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("ftpaRespondentNoticeDocument", when(col("Party") == 1, empty_str_array).otherwise(None))
+        .select("doc.*",
+                "m3.Party",
+                "allFtpaAppellantDecisionDocs",
+                "allFtpaRespondentDecisionDocs",
+                "ftpaAppellantNoticeDocument",
+                "ftpaRespondentNoticeDocument")
     )
 
     df_audit = (
@@ -308,8 +357,9 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     m3_latest = (
         silver_m3
+        .filter(col("CaseStatus") == 39)
         .withColumn("row_number", row_number().over(window_spec))
-        .filter((col("row_number") == 1) & (col("CaseStatus") == 39))
+        .filter(col("row_number") == 1)
         .drop("row_number")
         .select("CaseNo", "Party", "Outcome", "CaseStatus")
         .alias("m3_latest")
@@ -318,16 +368,15 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     joined = (
         df.alias("g")
         .join(m3_latest, on=["CaseNo"], how="left")
-        # .join(silver_m3.alias("m3"), on=["CaseNo"], how="left")
     )
 
     df = (
         joined
         .select(
-            [col("g.*"), col("Party"), col("CaseStatus"), col("Outcome")]
+            col("g.*"), col("Party"), col("CaseStatus"), col("Outcome")
         )
-        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party") == 1, lit("Yes")).otherwise(lit("No")))
-        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(lit("No")))
+        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party").isin([0,1]), lit("Yes")).otherwise(None))
+        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(None))
         .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
         .withColumn("isFtpaAppellantDecided", lit("Yes"))
         .withColumn("isFtpaRespondentDecided", lit("Yes"))
@@ -336,7 +385,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             "secondFtpaDecisionExists",
             when((col("CaseStatus") == 46) & (col("Outcome") == 31), lit("Yes")).otherwise(lit("No"))
         )
-        .drop("Party", "CaseStatus", "Outcome")
+        # .drop("Party", "CaseStatus", "Outcome")
     ).distinct()
 
     df_audit = (

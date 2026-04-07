@@ -302,12 +302,11 @@ def documents(silver_m1, silver_m3):
 
     df = (
         m3_latest_cs39.alias("m3").join(df.alias("doc"), "CaseNo", "left")
-        .withColumn("allFtpaAppellantDecisionDocs", when(col("Party") == 1, empty_str_array).otherwise(None))
-        .withColumn("allFtpaRespondentDecisionDocs", when(col("Party") == 1, empty_str_array).otherwise(None))
-        .withColumn("ftpaAppellantNoticeDocument", when(col("Party") == 1, empty_str_array).otherwise(None))
-        .withColumn("ftpaRespondentNoticeDocument", when(col("Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("allFtpaAppellantDecisionDocs", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("allFtpaRespondentDecisionDocs", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("ftpaAppellantNoticeDocument", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("ftpaRespondentNoticeDocument", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
         .select("doc.*",
-                "m3.Party",
                 "allFtpaAppellantDecisionDocs",
                 "allFtpaRespondentDecisionDocs",
                 "ftpaAppellantNoticeDocument",
@@ -373,10 +372,10 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     df = (
         joined
         .select(
-            col("g.*"), col("Party"), col("CaseStatus"), col("Outcome")
+            col("g.*"), col("m3_latest.Party").alias("m3_party"), col("m3_latest.CaseStatus"), col("m3_latest.Outcome")
         )
-        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("Party").isin([0,1]), lit("Yes")).otherwise(None))
-        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("Party") == 2, lit("Yes")).otherwise(None))
+        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("m3_party").isin([0,1]), lit("Yes")).otherwise(None))
+        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("m3_party") == 2, lit("Yes")).otherwise(None))
         .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
         .withColumn("isFtpaAppellantDecided", lit("Yes"))
         .withColumn("isFtpaRespondentDecided", lit("Yes"))
@@ -385,7 +384,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             "secondFtpaDecisionExists",
             when((col("CaseStatus") == 46) & (col("Outcome") == 31), lit("Yes")).otherwise(lit("No"))
         )
-        # .drop("Party", "CaseStatus", "Outcome")
+        .drop("Party", "CaseStatus", "Outcome")
     ).distinct()
 
     df_audit = (

@@ -140,8 +140,8 @@ class TestAppealSubmittedRemissionType:
             resultList = df.orderBy(col("CaseNo").cast("int")).select("amountRemitted").collect()
 
             assert resultList[0][0] == "10000" and resultList[1][0] == "10000" and resultList[2][0] == "10000" and resultList[3][0] == "10000"
-            # assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
-            # assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
+            assert resultList[4][0] is None and resultList[5][0] is None and resultList[6][0] is None
+            assert resultList[7][0] is None and resultList[8][0] is None and resultList[9][0] is None
             # assert resultList[10][0] == "500"
 
     def test_amountLeftToPay(self, spark):

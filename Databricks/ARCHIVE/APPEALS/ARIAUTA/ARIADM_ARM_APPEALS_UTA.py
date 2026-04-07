@@ -4186,12 +4186,12 @@ def silver_transaction_detail():
                     .otherwise(col("Amount"))
             ).withColumn(
                 "AmountDue", 
-                when(col("TransactionTypeId") != 3, col("Amount_new"))
+                when(col("TransactionTypeId") != 3, col("Amount"))
                 .otherwise(lit("0.00"))
                 .cast(DecimalType(10, 2)) 
             ).withColumn(
                 "AmountPaid",
-                when(col("TransactionTypeId") == 3, col("Amount_new"))
+                when(col("TransactionTypeId") == 3, col("Amount"))
                 .otherwise(lit("0.00"))
                 .cast(DecimalType(10, 2))
             ).withColumn("FirstTierFee",
@@ -5018,7 +5018,7 @@ def generate_html(row, templates=templates):
                 for i, Link in enumerate(row.LinkedCaseDetails or [])
             ),
             "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">{transaction.AmountDue}</td><td id=\"midpadding\">{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
+                f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">£{transaction.AmountDue}</td><td id=\"midpadding\">£{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
                 for i, transaction in enumerate(row.TransactionDetails or [])
             ),
             "{{CostorderdetailsPlaceHolder}}": "\n".join(

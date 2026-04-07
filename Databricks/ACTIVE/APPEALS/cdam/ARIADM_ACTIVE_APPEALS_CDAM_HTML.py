@@ -3390,7 +3390,7 @@ def silver_case_detail():
 )
 def silver_statusdecisiontype_detail():
     status_decision_df = dlt.read("bronze_status_decisiontype").alias("status")
-    flt_df = spark.read.table("ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     joined_df = status_decision_df.join(flt_df, col("status.CaseNo") == col("flt.CaseNo"), "inner").select("status.*")
    
@@ -3411,13 +3411,13 @@ def silver_statusdecisiontype_detail():
 )
 def silver_transaction_detail():
     status_decision_df = dlt.read("bronze_appealcase_t_tt_ts_tm").alias("tran")
-    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
+    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias("flt")
                                                                                
     referring_ids_df = broadcast(
     status_decision_df.filter(col("TransactionTypeId").isin(6, 19))
     .select(col("ReferringTransactionId"))
     .distinct()
-    )
+)
 
     FirstTierFee_df = status_decision_df.join(
         referring_ids_df, 
@@ -3476,12 +3476,12 @@ def silver_transaction_detail():
                     .otherwise(col("Amount"))
             ).withColumn(
                 "AmountDue", 
-                when(col("TransactionTypeId") != 3, col("Amount_new"))
+                when(col("TransactionTypeId") != 3, col("Amount"))
                 .otherwise(lit("0.00"))
                 .cast(DecimalType(10, 2)) 
             ).withColumn(
                 "AmountPaid",
-                when(col("TransactionTypeId") == 3, col("Amount_new"))
+                when(col("TransactionTypeId") == 3, col("Amount"))
                 .otherwise(lit("0.00"))
                 .cast(DecimalType(10, 2))
             ).withColumn("FirstTierFee",
@@ -4108,7 +4108,7 @@ def generate_html(row, templates=templates):
                 for i, Link in enumerate(row.LinkedCaseDetails or [])
             ),
             "{{PaymentEventsSummaryPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">{transaction.AmountDue}</td><td id=\"midpadding\">{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
+                f"<tr><td id=\"midpadding\">{format_date(transaction.TransactionDate)}</td><td id=\"midpadding\">{transaction.TransactionDescription}</td><td id=\"midpadding\">{transaction.TransactionStatusDesc}</td><td id=\"midpadding\">£{transaction.AmountDue}</td><td id=\"midpadding\">£{transaction.AmountPaid}</td><td id=\"midpadding\">{format_date(transaction.ClearedDate)}</td><td id=\"midpadding\">{transaction.PaymentReference}</td><td id=\"midpadding\">{transaction.AggregatedPaymentURN}</td></tr>"
                 for i, transaction in enumerate(row.TransactionDetails or [])
             ),
             "{{CostorderdetailsPlaceHolder}}": "\n".join(

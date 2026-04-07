@@ -179,7 +179,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     caseData_df = (
         caseData_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
-        .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
+        .join(bronze_hearing_centres.alias("bhc"),on=col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("content.hearingCentre")))
         .withColumn("staffLocation1", when(col("m2.Detained").isin(1,2),col("det.staffLocation")).otherwise(col("content.staffLocation")))
         .withColumn("caseManagementLocation1", when(col("m2.Detained").isin(1,2),col("det.caseManagementLocation")).otherwise(col("content.caseManagementLocation")))
@@ -260,7 +260,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     general_df = (
         general_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
-        .join(bronze_hearing_centres.alias("bhc"),col("m2.CentreId") == col("bhc.CentreId"),how="left")
+        .join(bronze_hearing_centres.alias("bhc"),on=col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("applicationChangeDesignatedHearingCentre1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre"))
                     .otherwise(col("content.applicationChangeDesignatedHearingCentre")))
         .drop(col("content.applicationChangeDesignatedHearingCentre"))

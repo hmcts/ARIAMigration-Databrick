@@ -63,7 +63,7 @@ def flags_labels_outputs(spark):
     silver_m2 = spark.createDataFrame(m2_data, m2_schema)
     silver_c = spark.createDataFrame(c_data, c_schema)
 
-    flags_labels_content, _ = PP.flagsLabels(silver_m1, silver_m2, silver_c)
+    flags_labels_content, _ = flagsLabels(silver_m1, silver_m2, silver_c)
 
     results = {row["CaseNo"]: row.asDict() for row in flags_labels_content.collect()}
     return results

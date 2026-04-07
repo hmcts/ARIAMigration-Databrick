@@ -58,10 +58,10 @@ def general_outputs(spark):
     ])
     
     m2_data = [
-        ("CASE001", "Gold", "B12 0hf","Relationship1"2,1),  
-        ("CASE002", "Smith", "M8 1XY","Relationship2"5,2),  
-        ("CASE003", "Johns", "DE4 9HN","Relationship3"8,3),  
-        ("CASE004", "Black", "BN6 0PA","Relationship4"9,4),  
+        ("CASE001", "Gold", "B12 0hf","Relationship1",2,1),  
+        ("CASE002", "Smith", "M8 1XY","Relationship2",5,2),  
+        ("CASE003", "Johns", "DE4 9HN","Relationship3",8,3),  
+        ("CASE004", "Black", "BN6 0PA","Relationship4",9,4),  
         ("CASE005", "Green", "DD7 7PT",None,9,4), 
         ]
 

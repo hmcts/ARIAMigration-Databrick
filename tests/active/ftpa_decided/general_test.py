@@ -57,13 +57,14 @@ def general_outputs(spark):
         T.StructField("Appellant_Name", T.StringType(), True),
         T.StructField("Appellant_Postcode", T.StringType(), True),
         T.StructField("Relationship", T.StringType(), True),
+        T.StructField("DetentionCentreId", T.IntegerType(), True),
     ])
 
     m2_data = [
-        ("CASE005", "Green", "DD7 7PT", None),
-        ("CASE006", "Blue", "DD7 7PT", None),
-        ("CASE007", "Red", "DD7 7PT", None),
-        ("CASE011", "Black", "DD7 7PT", None),
+        ("CASE005", "Green", "DD7 7PT", None,2),
+        ("CASE006", "Blue", "DD7 7PT", None,5),
+        ("CASE007", "Red", "DD7 7PT", None,8),
+        ("CASE011", "Black", "DD7 7PT", None,9),
     ]
 
     # ----------------------------

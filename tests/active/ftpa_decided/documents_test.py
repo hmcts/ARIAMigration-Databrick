@@ -75,14 +75,13 @@ def test_allFtpaAppellantDecisionDocs(documents_outputs):
     assert r["CASE010"]["allFtpaAppellantDecisionDocs"] == []
     assert r["CASE011"]["allFtpaAppellantDecisionDocs"] is None
 
-
 def test_allFtpaRespondentDecisionDocs(documents_outputs):
     r = documents_outputs
 
-    assert r["CASE005"]["allFtpaRespondentDecisionDocs"] == []
-    assert r["CASE006"]["allFtpaRespondentDecisionDocs"] == []
-    assert r["CASE007"]["allFtpaRespondentDecisionDocs"] is None
-    assert r["CASE010"]["allFtpaRespondentDecisionDocs"] == []
+    assert r["CASE005"]["allFtpaRespondentDecisionDocs"] is None
+    assert r["CASE006"]["allFtpaRespondentDecisionDocs"] is None
+    assert r["CASE007"]["allFtpaRespondentDecisionDocs"] == []
+    assert r["CASE010"]["allFtpaRespondentDecisionDocs"] is None
     assert r["CASE011"]["allFtpaRespondentDecisionDocs"] is None
 
 
@@ -99,8 +98,8 @@ def test_ftpaAppellantNoticeDocument(documents_outputs):
 def test_ftpaRespondentNoticeDocument(documents_outputs):
     r = documents_outputs
 
-    assert r["CASE005"]["ftpaRespondentNoticeDocument"] == []
-    assert r["CASE006"]["ftpaRespondentNoticeDocument"] == []
-    assert r["CASE007"]["ftpaRespondentNoticeDocument"] is None
-    assert r["CASE010"]["ftpaRespondentNoticeDocument"] == []
+    assert r["CASE005"]["ftpaRespondentNoticeDocument"] is None
+    assert r["CASE006"]["ftpaRespondentNoticeDocument"] is None
+    assert r["CASE007"]["ftpaRespondentNoticeDocument"] == []
+    assert r["CASE010"]["ftpaRespondentNoticeDocument"] is None
     assert r["CASE011"]["ftpaRespondentNoticeDocument"] is None

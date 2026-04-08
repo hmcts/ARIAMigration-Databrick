@@ -20,15 +20,16 @@ def homeOfficeDetails_outputs(spark):
         T.StructField("lu_appealType", T.StringType(), True),
         T.StructField("DateOfApplicationDecision", T.DateType(), True),
         T.StructField("HORef", T.StringType(), True),
+        T.StructField("dv_CCDAppealType", T.StringType(), True),
     ])
 
     m1_data = [    
-        ("EA/06826/2022", "LR",  "A", date(2022, 6, 30), None),
-        ("EA/09676/2022", "LR",  "A", date(2020, 2, 15), None),
-        ("EA/00591/2025", "LR",  "A", date(2022, 9, 5),  None),
-        ("EA/00441/2025", "AIP", "B", date(2025, 2, 12), None),
-        ("HU/00512/2025", "LR",  "A", date(2024, 7, 11), "R1277473"),
-        ("HU/02151/2024", "LR",  "A", None, None),
+        ("EA/06826/2022", "LR",  "A", date(2022, 6, 30), None,"RP"),
+        ("EA/09676/2022", "LR",  "A", date(2020, 2, 15), None,"RP"),
+        ("EA/00591/2025", "LR",  "A", date(2022, 9, 5),  None,"RP"),
+        ("EA/00441/2025", "AIP", "B", date(2025, 2, 12), None,"PA"),
+        ("HU/00512/2025", "LR",  "A", date(2024, 7, 11), "R1277473","PA"),
+        ("HU/02151/2024", "LR",  "A", None, None,"PA"),
     ]
 
     m2_schema = T.StructType([

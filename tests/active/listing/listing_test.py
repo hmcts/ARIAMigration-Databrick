@@ -62,6 +62,16 @@ def bronze_derive_hearing_centres_test_data(spark):
 
     return df
 
+@pytest.fixture(scope="session")
+def bronze_detention_centres_test_data(spark):
+    columns = StructType([
+        StructField("Id", StringType())
+    ])
+    data = []
+
+    df = spark.createDataFrame(data, columns)
+
+    return df
 
 class TestListingState():
 
@@ -282,7 +292,7 @@ class TestListingState():
         assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
         # assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
 
-    def test_general_fields(self, spark, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data, bronze_detention_centres):
+    def test_general_fields(self, spark, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data, bronze_detention_centres_test_data):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.PPD') as PP:
             paymentPendingCaseOutput = [("1",), ("2",), ("3",), ("4",), ("5",), ("6",)]  # listing joins left on the paymentPendingOutput, trailing comma for tuple type
             PP.general.return_value = spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS), spark.createDataFrame(paymentPendingCaseOutput, self.CASE_NO_COLUMNS)
@@ -295,12 +305,41 @@ class TestListingState():
                 ("6", "UN", "FT", None, 0, 0, False, 0)    # Not AIP or LR Case
             ]
 
+            dcs_schema = StructType([
+            StructField("Detained", IntegerType(), True),
+            StructField("DetentionCentreId", IntegerType(), True),
+            StructField("DetentionCentre", StringType(), True),
+            StructField("prisonName", StringType(), True),
+            StructField("ircName", StringType(), True),
+            StructField("detentionBuilding", StringType(), True),
+            StructField("detentionAddressLines", StringType(), True),
+            StructField("detentionPostcode", StringType(), True),
+            StructField("hearingCentre", StringType(), True),
+            StructField("staffLocation", StringType(), True),
+
+            # caseManagementLocation as STRUCT
+            StructField(
+                "caseManagementLocation",
+                StructType([
+                    StructField("region", StringType(), True),
+                    StructField("baseLocation", StringType(), True),
+                ]),
+                True
+            ),
+
+            StructField("locationCode", StringType(), True),
+            StructField("locationLabel", StringType(), True),
+            StructField("selectedHearingCentreRefData", StringType(), True),
+            StructField("applicationChangeDesignatedHearingCentre", StringType(), True),
+            ])
+
             silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
             silver_m2_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
             silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
             silver_h_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
 
-            df, df_audit = listing.general(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_h_test_data, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data)
+
+            df, df_audit = listing.general(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_h_test_data, bronze_hearing_centres_test_data, bronze_derive_hearing_centres_test_data,bronze_detention_centres_test_data)
 
             expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/general/general_output.jsonl")
             # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/general/general_audit_output.jsonl")

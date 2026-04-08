@@ -303,9 +303,9 @@ def documents(silver_m1, silver_m3):
     df = (
         m3_latest_cs39.alias("m3").join(df.alias("doc"), "CaseNo", "left")
         .withColumn("allFtpaAppellantDecisionDocs", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
-        .withColumn("allFtpaRespondentDecisionDocs", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("allFtpaRespondentDecisionDocs", when(col("m3.Party") == 2, empty_str_array).otherwise(None))
         .withColumn("ftpaAppellantNoticeDocument", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
-        .withColumn("ftpaRespondentNoticeDocument", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
+        .withColumn("ftpaRespondentNoticeDocument", when(col("m3.Party") == 2, empty_str_array).otherwise(None))
         .select("doc.*",
                 "allFtpaAppellantDecisionDocs",
                 "allFtpaRespondentDecisionDocs",

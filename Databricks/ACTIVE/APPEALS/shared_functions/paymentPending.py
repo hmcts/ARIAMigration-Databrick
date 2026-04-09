@@ -322,15 +322,19 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     # Define window partitioned by CaseNo and ordered by descending StatusId
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
+    silver_m3_filtered = silver_m3.filter((col("Outcome").isNotNull()) & (col("OutOfTime") == True))
+
     # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3.withColumn("row_num", row_number().over(window_spec))
+    silver_m3_ranked = silver_m3_filtered.withColumn("row_num", row_number().over(window_spec))
 
     # Filter the top-ranked rows where Outcome is not null
     silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (col("Outcome").isNotNull()) & (col("OutOfTime") == True)
+        (col("row_num") == 1) 
     ).select(
         col("CaseNo"),
-        lit("Yes").alias("recordedOutOfTimeDecision"), col("Outcome")
+        col("Outcome"),
+        col("OutOfTime"),
+        lit("Yes").alias("recordedOutOfTimeDecision")
     )
 
     conditions = (col("lu_appealType").isNotNull())
@@ -409,8 +413,8 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     lit("yes").alias("submissionOutOfTime_Transformation"),
 
     #Audit recordedOutOfTimeDecision
-    array(struct(*common_inputFields,lit("Outcome"))).alias("recordedOutOfTimeDecision_inputFields"),
-    array(struct(*common_inputValues,col("m3.Outcome"))).alias("recordedOutOfTimeDecision_inputValues"),
+    array(struct(*common_inputFields,lit("Outcome"),lit("OutOfTime"))).alias("recordedOutOfTimeDecision_inputFields"),
+    array(struct(*common_inputValues,col("m3.Outcome"),col("m3.OutOfTime"))).alias("recordedOutOfTimeDecision_inputValues"),
     col("content.recordedOutOfTimeDecision"),
     lit("yes").alias("recordedOutOfTimeDecision_Transformation"),
 

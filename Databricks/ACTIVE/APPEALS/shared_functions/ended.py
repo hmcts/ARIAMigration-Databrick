@@ -15,6 +15,7 @@ from . import prepareForHearing as PFH
 from . import decision as D
 from . import decided_a as DA
 from . import ftpa_submitted_a as FSA
+from . import paymentPendingDetained as PPD
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
@@ -1942,6 +1943,47 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     
 
     return general_df, general_audit
+
+
+def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+
+    caseData_df, caseData_audit = PPD.caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    caseData_df = caseData_df.drop("outOfTimeDecisionType")
+
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    silver_m3_ranked = silver_m3.withColumn("row_number", row_number().over(window_spec))
+    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
+    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+
+    
+    caseData_df = (
+        caseData_df
+            .alias("content")
+            .join(
+                silver_m3_max_statusid.alias("m3"),
+                on="CaseNo",
+                how="left"
+            )
+            .withColumn(
+                "outOfTimeDecisionType",
+                when(
+                    (col("m3.CaseStatus") == 10) &
+                    (col("m3.Outcome").isin(120, 2, 105)),
+                    lit("rejected")
+                ).otherwise(lit("approved"))
+            )
+            .select(
+                col("content.*"),
+                col("outOfTimeDecisionType")
+            )
+    )
+
+
+    return caseData_df,caseData_audit
+
+
 
 
 ################################################################   

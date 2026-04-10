@@ -129,7 +129,7 @@ def test_AS_defaultValues(test_df,fields_to_exclude):
 #######################
 #payment group
 #######################
-def test_payment_init(json, M1_bronze, M4_bronze):
+def test_payment_init(json, M1_bronze, M4_silver):
     try:
         json = json.select(
             "appealReferenceNumber",
@@ -147,12 +147,15 @@ def test_payment_init(json, M1_bronze, M4_bronze):
             "DateCorrectFeeReceived",
         )
 
-        M4_bronze = M4_bronze.select(
+        M4_silver = M4_silver.select(
             "CaseNo",
             "Amount",
             "TransactionTypeId",
             "TransactionId",
-            "Amount"
+            "ReferringTransactionId",
+            "Amount",
+            "SumBalance",
+            "SumTotalPay"
         )
 
         test_df = json.join(
@@ -160,8 +163,8 @@ def test_payment_init(json, M1_bronze, M4_bronze):
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
             "inner"
         ).join(
-            M4_bronze,
-            json["appealReferenceNumber"] == M4_bronze["CaseNo"],
+            M4_silver,
+            json["appealReferenceNumber"] == M4_silver["CaseNo"],
             "inner" 
         ).drop(M1_bronze["CaseNo"])
         
@@ -175,117 +178,65 @@ def test_payment_init(json, M1_bronze, M4_bronze):
 # HU = refusalOfHumanRights
 # PA = protection
 #######################
-# paymentStatus - Where AppealType = EA,EU,HU,PA + M4.Amount is > 0 and paymentStatus = ‘Payment Pending’
+# paymentStatus - Correct paymentStatus assignment
 #######################
 def test_paymentStatus_test1(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("Amount") > 0)
-            ).count() == 0:
-            return TestResult("paymentStatus", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
-        case_window = Window.partitionBy("CaseNo")
-
-        acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
-        .filter(
-            (F.col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) & 
-            (F.col("Total_Amount") > 0) &
-            (F.col("paymentStatus") != "Payment Pending")
+        # Start with SumBalance = 1
+        test_df = test_df.filter(
+            (col("SumBalance") == 1) &
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))
         )
 
-        if acceptance_critera.count() != 0:
-            failed_caseNo_count = acceptance_critera.select("appealReferenceNumber").distinct().count()
-            return TestResult("paymentStatus","FAIL", f"paymentStatus acceptance criteria failed: found {failed_caseNo_count} CaseNumbers where AppealType is in EA,EU,HU,PA + M4.Amount is > 0 but paymentStatus != Payment Pending", test_from_state, inspect.stack()[0].function)
+        #Check we have Records To test
+        if test_df.count() == 0:
+            return TestResult("paymentStatus", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # SELECT ReferringTransactionId FROM test_df WHERE TransactionTypeId IN (6,19
+        excluded_ids = test_df.filter(F.col("TransactionTypeId").isin(6, 19)) \
+                            .select(F.col("ReferringTransactionId").alias("ref_id")) \
+                            .distinct()
+
+        # Eliminate rows where TransactionID matches a ReferringTransactionId
+        selected_rows = test_df.filter(F.col("SumBalance") == 1) \
+            .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
+
+        # Calculate SUM(Amount)
+        case_window = Window.partitionBy("CaseNo")
+        calculated_df = selected_rows.withColumn("Total_Amount", F.sum("Amount").over(case_window))
+
+        # Select MAX(TransactionId)
+        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
+        final_row_to_test = calculated_df.withColumn("rank", F.row_number().over(rank_window)).filter(F.col("rank") == 1)
+
+        # Apply value logic:
+        # IF sum > 0: Pending
+        # IF sum = 0 AND Type = 19: Pending
+        # ELSE: Paid
+        acceptance_criteria = final_row_to_test.withColumn("Expected_Status", 
+            F.when(F.col("Total_Amount") > 0, "Payment Pending")
+            .when((F.col("Total_Amount") == 0) & (F.col("TransactionTypeId") == 19), "Payment Pending")
+            .otherwise("Paid")
+        )
+
+        # Final comparison
+        defects = acceptance_criteria.filter(
+            (F.col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
+            (F.upper(F.col("paymentStatus")) != F.upper(F.col("Expected_Status")))
+        )
+
+        if defects.count() != 0:
+            return TestResult("paymentStatus","FAIL", f"paymentStatus acceptance criteria failed: found {defects.count()} case numbers where cases have been correctly selected (SumBalance = 1 and TransactionId does not equal ReferringTransactionId when TransactionTypeId is 6 or 19) and payment status is not as expected. This could be due to one of the following: 1) Sum(Amount) > 0, but paymentStatus != Payment pending. 2) Sum(Amount) = 0, TransactionTypeId = 19 with MAX(TransactionId), but paymentStatus != Payment pending. 3) Sum(Amount) = 0, TransactionTypeId != 19 with MAX(TransactionId), but paymentStatus != Paid.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("paymentStatus","PASS", "paymentStatus acceptance criteria pass: all rows where AppealType is in EA,EU,HU,PA + M4.Amount is > 0, paymentStatus != Payment Pending", test_from_state, inspect.stack()[0].function)
+            return TestResult("paymentStatus","PASS", "paymentStatus acceptance criteria pass: all case numbers where cases have been correctly selected (SumBalance = 1 and TransactionId does not equal ReferringTransactionId when TransactionTypeId is 6 or 19) match correctly to their correct status of Payment pending or Paid.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("paymentStatus", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-
+       
 #######################
-# paymentStatus - Where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, Select MAX(TransactionId) which should be paymentStatus = ‘Payment Pending’ 
+# paymentStatus - Where AppealType = EA,EU,HU,PA and paymentStatus is null
 #######################
 def test_paymentStatus_test2(test_df):
-    try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("Amount") == 0) &
-            (col("TransactionTypeId") == 19) & # only one of these in data
-            (col("TransactionId").isNotNull())
-            ).count() == 0:
-            return TestResult("paymentStatus", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-
-        sum_window = Window.partitionBy("CaseNo")
-        latest_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
-
-        acceptance_critera = test_df \
-            .withColumn("Total_Case_Amount", F.sum("Amount").over(sum_window)) \
-            .withColumn("Transaction_row_id", F.row_number().over(latest_window)) \
-            .filter(
-                # The Population Scope
-                (F.col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-                (F.col("TransactionTypeId") == 19) &
-                (F.col("Transaction_row_id") == 1) & # check the MAX(TransactionId)
-                (
-                    # sum is 0, but it is NOT 'Payment Pending'
-                    ((F.col("Total_Case_Amount") == 0) & (F.col("paymentStatus") != "Payment Pending"))
-                )
-            )
-
-        if acceptance_critera.count() != 0:
-            return TestResult("paymentStatus","FAIL", f"paymentStatus acceptance criteria failed: found {acceptance_critera.count()} rows where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, the MAX(TransactionId) does not have paymentStatus = ‘Payment Pending’", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("paymentStatus","PASS", "paymentStatus acceptance criteria pass: all rows where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, the MAX(TransactionId) has paymentStatus = ‘Payment Pending’", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)
-        return TestResult("paymentStatus", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)        
-
-#######################
-# paymentStatus - Where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, Select non MAX(TransactionId) which should be paymentStatus = ‘Paid 
-#######################
-def test_paymentStatus_test3(test_df):
-    try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("Amount") == 0) &
-            (col("TransactionTypeId") == 19) & # only one of these in data
-            (col("TransactionId").isNotNull())
-            ).count() == 0:
-            return TestResult("paymentStatus", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-
-        sum_window = Window.partitionBy("CaseNo")
-        latest_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
-
-        acceptance_critera = test_df \
-            .withColumn("Total_Case_Amount", F.sum("Amount").over(sum_window)) \
-            .withColumn("Transaction_row_id", F.row_number().over(latest_window)) \
-            .filter(
-                # The Population Scope
-                (F.col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-                (F.col("TransactionTypeId") == 19) &
-                (F.col("Transaction_row_id") != 1) & # check non MAX(TransactionId)
-                (
-                    # sum is 0, but it is NOT 'Paid'
-                    ((F.col("Total_Case_Amount") == 0) & (F.col("paymentStatus") != "Paid"))
-                )
-            )
-
-        if acceptance_critera.count() != 0:
-            return TestResult("paymentStatus","FAIL", f"paymentStatus acceptance criteria failed: found {acceptance_critera.count()} rows where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, the MAX(TransactionId) does not have paymentStatus = ‘Payment Pending’", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("paymentStatus","PASS", "paymentStatus acceptance criteria pass: all rows where AppealType = EA,EU,HU,PA + M4.Amount is 0 + TransactionTypeId == 19, the MAX(TransactionId) has paymentStatus = ‘Payment Pending’", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)
-        return TestResult("paymentStatus", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)        
-
-#######################
-# paymentStatus - Where AppealType = EA,EU,HU,PA and paymentStatus is not null
-#######################
-def test_paymentStatus_test4(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(

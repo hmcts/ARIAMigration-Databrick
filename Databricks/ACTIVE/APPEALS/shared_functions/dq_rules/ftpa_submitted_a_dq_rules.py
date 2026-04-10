@@ -269,8 +269,6 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
         ####### Appellant #######
         checks["valid_ftpaAppellantApplicationDate"] = """(
-            ftpaAppellantApplicationDate IS NULL
-            OR
             CASE
                 WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaAppellantApplicationDate IS NULL
@@ -278,8 +276,6 @@ class ftpaSubmittedADQRules(DQRulesBase):
         )"""
 
         checks["valid_ftpaAppellantSubmissionOutOfTime"] = """(
-            ftpaAppellantSubmissionOutOfTime IS NULL
-            OR
             CASE
                 WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime = 'Yes'
                 WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime = 'No'

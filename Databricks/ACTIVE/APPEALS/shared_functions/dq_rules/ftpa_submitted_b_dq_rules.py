@@ -13,8 +13,6 @@ class ftpaSubmittedBDQRules(DQRulesBase):
         checks["valid_allocatedJudge"] = (
             """
             (dq_cs39_status = 39 AND 
-                (allocatedJudge IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
-                OR
                 (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
             )
             """
@@ -23,8 +21,6 @@ class ftpaSubmittedBDQRules(DQRulesBase):
         checks["valid_allocatedJudgeEdit"] = (
             """
             (dq_cs39_status = 39 AND 
-                    (allocatedJudgeEdit IS NULL AND Adj_Title IS NULL AND Adj_Forenames IS NULL AND Adj_Surname IS NULL)
-                    OR
                     (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
                 )
                 """

@@ -343,13 +343,19 @@ def documents(silver_m1, silver_m3):
 ##########          general (General Field Group)     ###########
 ################################################################
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+
+
+def general(
+    silver_m1, silver_m2, silver_m3, silver_h,
+    bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres
+):
     """
     Decided general = submitted_a general + 7 decided flags (derived from latest Party)
     (Not part of the red fields in the screenshot; keeping existing agreed logic.)
     """
     df, df_audit = FSA.general(
-        silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres
+        silver_m1, silver_m2, silver_m3, silver_h,
+        bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres
     )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
@@ -360,31 +366,59 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .withColumn("row_number", row_number().over(window_spec))
         .filter(col("row_number") == 1)
         .drop("row_number")
-        .select("CaseNo", "Party", "Outcome", "CaseStatus")
+        .select("CaseNo", "Party", col("Outcome").alias("Outcome_latest"), "CaseStatus")
         .alias("m3_latest")
+    )
+
+    m3_latest_any = (
+        silver_m3
+        .withColumn("row_number", row_number().over(window_spec))
+        .filter(col("row_number") == 1)
+        .drop("row_number")
+        .select(
+            col("CaseNo"),
+            col("CaseStatus").alias("latest_CaseStatus"),
+            col("Outcome").alias("latest_Outcome")
+        )
+        .alias("m3_latest_any")
     )
 
     joined = (
         df.alias("g")
         .join(m3_latest, on=["CaseNo"], how="left")
+        .join(m3_latest_any, on=["CaseNo"], how="left")
     )
 
     df = (
         joined
         .select(
-            col("g.*"), col("m3_latest.Party").alias("m3_party"), col("m3_latest.CaseStatus"), col("m3_latest.Outcome")
+            col("g.*"),
+            col("m3_latest.Party").alias("m3_party"),
+            col("m3_latest.CaseStatus").alias("m3_caseStatus"),
+            col("m3_latest.Outcome_latest").alias("m3_Outcome_latest"),
+            col("m3_latest_any.latest_CaseStatus").alias("m3latest_CaseStatus"),
+            col("m3_latest_any.latest_Outcome").alias("m3latest_outcome")
         )
-        .withColumn("isAppellantFtpaDecisionVisibleToAll", when(col("m3_party").isin([0,1]), lit("Yes")).otherwise(None))
-        .withColumn("isRespondentFtpaDecisionVisibleToAll", when(col("m3_party") == 2, lit("Yes")).otherwise(None))
+        .withColumn(
+            "isAppellantFtpaDecisionVisibleToAll",
+            when(col("m3_party").isin([0, 1]), lit("Yes")).otherwise(None)
+        )
+        .withColumn(
+            "isRespondentFtpaDecisionVisibleToAll",
+            when(col("m3_party") == 2, lit("Yes")).otherwise(None)
+        )
         .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
         .withColumn("isFtpaAppellantDecided", lit("Yes"))
         .withColumn("isFtpaRespondentDecided", lit("Yes"))
         .withColumn("isReheardAppealEnabled", lit("Yes"))
         .withColumn(
             "secondFtpaDecisionExists",
-            when((col("CaseStatus") == 46) & (col("Outcome") == 31), lit("Yes")).otherwise(lit("No"))
+            when(
+                (col("m3latest_CaseStatus") == 46) & (col("m3latest_outcome") == 31),
+                lit("Yes")
+            ).otherwise(lit("No"))
         )
-        .drop("Party", "CaseStatus", "Outcome")
+        .drop("m3_party", "m3_caseStatus", "m3_Outcome_latest", "m3latest_CaseStatus", "m3latest_outcome")
     ).distinct()
 
     df_audit = (

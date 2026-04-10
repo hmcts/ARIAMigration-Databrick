@@ -399,29 +399,43 @@ def test_paidDate_test2(test_df):
 #######################
 def test_paidAmount_test1(test_df):
     try:
+        # Filter for SumTotalPay = 1
+        test_df = test_df.filter(
+            (col("SumTotalPay") == 1) &
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))
+        )
+
         #Check we have Records To test
-        if test_df.filter(
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")))
-            ).count() == 0:
+        if test_df.count() == 0:
             return TestResult("paidAmount", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        case_window = Window.partitionBy("CaseNo")
+        # SELECT ReferringTransactionId FROM M4 WHERE TransactionTypeId NOT IN (6,19)
+        m4_exclusion_ids = test_df.filter(~col("TransactionTypeId").isin(6, 19)) \
+                                    .select(col("ReferringTransactionId").alias("ref_id")) \
+                                    .distinct()
 
-        acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
-        .filter(
-        (
-            col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")
-        ) & 
-        (
-            col("Total_Amount").cast("decimal(18,2)") != col("paidAmount").cast("decimal(18,2)")
-        )
+        # Eliminate rows where TransactionID matches a ReferringTransactionId
+        clean_df = test_df.join(m4_exclusion_ids, 
+                                test_df.TransactionId == m4_exclusion_ids.ref_id, 
+                                "left_anti")
+        
+        # Calculate the sum(Amount) and a flag for whether they ever had a Type 3 (Payment) transaction
+        case_window = Window.partitionBy("CaseNo")
+        processed_df = clean_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
+            .withColumn("Has_Payment_Tx", F.max(F.when(col("TransactionTypeId") == 3, 1).otherwise(0)).over(case_window))
+
+        # Apply Acceptance Criteria - AppealType match AND Has_Payment_Tx > 0 AND Total_Amount matches paidAmount
+        acceptance_critera = processed_df.filter(
+            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) & 
+            (col("Has_Payment_Tx") > 0) & 
+            (F.abs(col("Total_Amount")).cast("decimal(18,2)") != col("paidAmount").cast("decimal(18,2)"))
         )
 
         if acceptance_critera.count() != 0:
             failing_case_nos = acceptance_critera.select("appealReferenceNumber").distinct().count()
-            return TestResult("paidAmount","FAIL", f"paidAmount acceptance criteria failed: found {failing_case_nos} where Appeal Type = EA,EU,HU,PA + Sum(M4.Amount) != paidAmount", test_from_state, inspect.stack()[0].function)
+            return TestResult("paidAmount","FAIL", f"paidAmount acceptance criteria failed: found {failing_case_nos} where rows are selected correctly (SumBalance = 1, CaseNo where TransactionId does not equal ReferringTransactionId when TransactionTypeId is not 6 or 19 and with a TransactionTypeId equal to 3) but paidAmount is not equal to the absolute value of the total Amount.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("paidAmount","PASS", "paidAmount acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + Sum(M4.Amount) == paidAmount", test_from_state, inspect.stack()[0].function)
+            return TestResult("paidAmount","PASS", f"paidAmount acceptance criteria passed: all rows which are selected correctly (SumBalance = 1, CaseNo where TransactionId does not equal ReferringTransactionId when TransactionTypeId is not 6 or 19 and with a TransactionTypeId equal to 3) have a paidAmount equal to the absolute value of the total Amount.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("paidAmount", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

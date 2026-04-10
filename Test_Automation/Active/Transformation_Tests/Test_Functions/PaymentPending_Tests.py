@@ -3826,7 +3826,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
     try:
         json = json.select(
             "appealReferenceNumber",
-            "decisionLetterReceivedDate",
+            # "decisionLetterReceivedDate",
             "dateEntryClearanceDecision",
             # "homeOfficeReferenceNumber",
             "gwfReferenceNumber",
@@ -3883,7 +3883,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
         test_df = test_df.select(
             "appealReferenceNumber",
             "oocAppealAdminJ",
-            "decisionLetterReceivedDate",
+            # "decisionLetterReceivedDate",
             "dateEntryClearanceDecision",
             # "homeOfficeReferenceNumber",
             "gwfReferenceNumber",
@@ -3901,7 +3901,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
             .agg(
                 collect_list("CategoryId").alias("CategoryIds"),
                 first("oocAppealAdminJ").alias("oocAppealAdminJ"),
-                first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate"),
+                # first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate"),
                 first("dateEntryClearanceDecision").alias("dateEntryClearanceDecision"),
                 # first("homeOfficeReferenceNumber").alias("homeOfficeReferenceNumber"),
                 first("gwfReferenceNumber").alias("gwfReferenceNumber"),
@@ -3964,25 +3964,79 @@ def test_homeOfficeDecisionDate_ac2(test_df):
         error_message = str(e)        
         return TestResult("homeOfficeDecisionDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
+    try:
+        json = json.select(
+            "appealReferenceNumber",
+            "decisionLetterReceivedDate",
+        )
+
+        C = C.select(
+            "CaseNo",
+            "CategoryId"
+        )
+
+        M1_bronze = M1_bronze.select(
+            "CaseNo",
+            "DateOfApplicationDecision"
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            "inner"
+        )
+
+        test_df = test_df.join(
+            C,
+            test_df["appealReferenceNumber"] == C["CaseNo"],
+            "left"
+        )
+
+        test_df = test_df.select(
+            "appealReferenceNumber",
+            "decisionLetterReceivedDate",
+            "CategoryId"
+        )
+
+        test_df = (
+            test_df
+            .groupBy("appealReferenceNumber")
+            .agg(
+                collect_list("CategoryId").alias("CategoryIds"),
+                first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate")
+            )
+        )
+
+        return dlrd_test_df, True
+    except Exception as e:
+        dlrd_test_df = None
+        error_message = str(e)        
+        return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function), dlrd_test_df
+
 #######################
 #decisionLetterReceivedDate - If CategoryId not in 38 and decisionLetterReceivedDate not omitted
 #######################
-def test_decisionLetterReceivedDate_ac1(test_df):
+def test_decisionLetterReceivedDate_ac1(dlrd_test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
-            ).count() == 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
-        ac_decisionLetterReceivedDate = test_df.filter(
-            (array_contains(col("CategoryIds"), 37)) & (col("decisionLetterReceivedDate").isNotNull())
-        )
+        if dlrd_test_df != None:
+            test_df = dlrd_test_df
+            #Check we have Records To test
+            if test_df.filter(
+                (~(array_contains(col("CategoryIds"), 38)))
+                ).count() == 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            
+            ac_decisionLetterReceivedDate = test_df.filter(
+                (array_contains(col("CategoryIds"), 37)) & (col("decisionLetterReceivedDate").isNotNull())
+            )
 
-        if ac_decisionLetterReceivedDate.count() != 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in 38 and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+            if ac_decisionLetterReceivedDate.count() != 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in 38 and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+            else:
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in 38, decisionLetterReceivedDate is always omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in 38, decisionLetterReceivedDate is always omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -3992,28 +4046,32 @@ def test_decisionLetterReceivedDate_ac1(test_df):
 #######################
 def test_decisionLetterReceivedDate_ac2(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("HORef_M1").isNotNull()) & 
-            (col("FCONumber").isNotNull())
-            ).count() == 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
-        ac_decisionLetterReceivedDate = test_df.filter(
-        (
-            (array_contains(col("CategoryIds"), 38)) &
-            (
-                ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
-            )
+        if dlrd_test_df != None:
+            test_df = dlrd_test_df
+            #Check we have Records To test
+            if test_df.filter(
+                (array_contains(col("CategoryIds"), 38)) &
+                (col("HORef_M1").isNotNull()) & 
+                (col("FCONumber").isNotNull())
+                ).count() == 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
-        ) & (col("decisionLetterReceivedDate") != col("DateOfApplicationDecision"))
-        )
+            ac_decisionLetterReceivedDate = test_df.filter(
+            (
+                (array_contains(col("CategoryIds"), 38)) &
+                (
+                    ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
+                )
+                
+            ) & (col("decisionLetterReceivedDate") != col("DateOfApplicationDecision"))
+            )
 
-        if ac_decisionLetterReceivedDate.count() != 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
+            if ac_decisionLetterReceivedDate.count() != 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
+            else:
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
+            return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -4023,28 +4081,32 @@ def test_decisionLetterReceivedDate_ac2(test_df):
 #######################
 def test_decisionLetterReceivedDate_ac3(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("HORef_M1").isNotNull()) & 
-            (col("FCONumber").isNotNull())
-            ).count() == 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
-        ac_decisionLetterReceivedDate = test_df.filter(
-        (
-            (array_contains(col("CategoryIds"), 38)) &
-            (
-                col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
-            )
+        if dlrd_test_df != None:
+            test_df = dlrd_test_df
+            #Check we have Records To test
+            if test_df.filter(
+                (array_contains(col("CategoryIds"), 38)) &
+                (col("HORef_M1").isNotNull()) & 
+                (col("FCONumber").isNotNull())
+                ).count() == 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
-        ) & (col("decisionLetterReceivedDate").isNotNull())
-        )
+            ac_decisionLetterReceivedDate = test_df.filter(
+            (
+                (array_contains(col("CategoryIds"), 38)) &
+                (
+                    col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
+                )
+                
+            ) & (col("decisionLetterReceivedDate").isNotNull())
+            )
 
-        if ac_decisionLetterReceivedDate.count() != 0:
-            return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+            if ac_decisionLetterReceivedDate.count() != 0:
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+            else:
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

@@ -40,7 +40,7 @@ def detained(silver_m1, silver_m2,bronze_detention_centres):
                     .when(col("m2.Detained") == 4, "other")
                     .otherwise(None))
         .withColumn("prisonNOMSNumber",
-                    when((col("m2.Detained") != 1) & (col("m2.PrisonRef").isNotNull()),
+                    when((col("m2.Detained") == 1) & (col("m2.PrisonRef").isNotNull()),
                         struct(col("m2.PrisonRef").alias("prison"))
                     ).otherwise(None)
         )

@@ -248,7 +248,7 @@ class appealSubmittedDQRules(DQRulesBase):
                         TRANSFORM(valid_transactionList, x ->
                             CASE
                             WHEN (x.TransactionTypeId <=> 5 AND NOT(x.Status <=> 3))
-                            THEN x.Amount
+                            THEN x.Amount * 100
                             ELSE 0
                             END
                         ),

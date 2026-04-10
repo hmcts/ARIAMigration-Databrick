@@ -268,7 +268,7 @@ def ftpa(silver_m3,silver_c):
                 ).alias("ftpaApplicationDeadline_inputFields"),
                 array(
                     struct(
-                        col("CategoryId"),
+                        col("c.CategoryId"),
                         col("CaseStatus"),
                         col("DecisionDate"),
                         col("Outcome")

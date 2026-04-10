@@ -470,6 +470,17 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                                                 col("Party").alias("cs39_party_14_30_31"))
 
 
+    #ftpaDecided - status in 46. outcome in 31
+    cs46_out31_rank = silver_m3.filter((col("CaseStatus") == 46) & (col("Outcome") == 31))
+    cs46_out31_ranked = cs46_out31_rank.withColumn("row_number", row_number().over(window_spec)) 
+    cs46_out31 = cs46_out31_ranked.filter(col("row_number") == 1).select(
+            col("CaseNo"),
+            col("CaseStatus").alias("cs46_o31"),
+            col("Outcome").alias("o31_cs46")
+        )
+    
+
+
 ###################################################################################################
     silver_m3_filtered_casestatus_remitted = silver_m3.filter(
             col("CaseStatus").isin([42, 43, 44]) & (col("Outcome") == 86))
@@ -528,6 +539,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_ended_updated_columns, on="CaseNo", how="left")
             .join(valid_remitted, on="CaseNo", how="left")
             .join(detained_df, on="CaseNo", how="left")
+            .join(cs46_out31, on="CaseNo", how="left")
+
     )
 
 

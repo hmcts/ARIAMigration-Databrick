@@ -1,6 +1,5 @@
 import requests
 from azure.storage.blob import BlobServiceClient
-from azure.identity import DefaultAzureCredential
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 try:
@@ -62,7 +61,7 @@ def upload_document(cdam_base_url, jid, ctid, cid, file_name, doc_binary, conten
     max_delay=60,
     retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
 )
-def process_event(env, caseNo, runId, file_name, file_url, file_content_type):
+def process_event(env, caseNo, runId, file_name, file_url, file_content_type, storage_credential):
     print(f"Starting document upload for {caseNo} for {file_name} using file path {file_url} with content type {file_content_type}")
 
     startDateTime = datetime.now(timezone.utc).isoformat()
@@ -120,7 +119,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type):
         blob_path = parsed_path.path.lstrip("/")
         container, _, blob = blob_path.partition("/")
 
-        blob_service_client = BlobServiceClient(account_url, credential=DefaultAzureCredential())
+        blob_service_client = BlobServiceClient(account_url, credential=storage_credential)
         print("Successfully authenticated with storage account {account_url}.")
         file_binary_in_bytes = blob_service_client.get_blob_client(container=container, blob=blob).download_blob().readall()
     except Exception as e:

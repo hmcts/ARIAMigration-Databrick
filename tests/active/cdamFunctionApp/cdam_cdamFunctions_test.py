@@ -46,6 +46,7 @@ PROCESS_DEFAULTS = dict(
     file_name="test.html",
     file_url="https://mystorageaccount.blob.core.windows.net/mycontainer/path/to/test.html",
     file_content_type="text/html",
+    storage_credential=MagicMock(),
 )
 
 
@@ -216,6 +217,7 @@ def test_process_event_invalid_env_raises_value_error(mock_token_managers, mock_
             file_name="doc.html",
             file_url="https://storage.blob.core.windows.net/container/blob",
             file_content_type="text/html",
+            storage_credential=MagicMock(),
         )
 
 

@@ -57,6 +57,7 @@ def setup_mocks(batch_len=1):
     mock_producer.__aexit__ = AsyncMock(return_value=False)
 
     mock_credential = AsyncMock()
+    mock_storage_credential = MagicMock()
 
     mock_idempotency_blob = AsyncMock()
 
@@ -71,6 +72,7 @@ def setup_mocks(batch_len=1):
         "producer": mock_producer,
         "batch": mock_batch,
         "credential": mock_credential,
+        "storage_credential": mock_storage_credential,
         "secret": mock_secret,
         "idempotency_blob": mock_idempotency_blob,
         "blob_svc": mock_blob_svc,
@@ -102,6 +104,7 @@ def patched(mocks, to_thread_mock=None):
         patch(f"{MODULE}.SecretClient", return_value=mocks["kv_client"]),
         patch(f"{MODULE}.EventHubProducerClient"),
         patch(f"{MODULE}.BlobServiceClient"),
+        patch(f"{MODULE}.ClientSecretCredential", return_value=mocks["storage_credential"]),
     ]
     if to_thread_mock is not None:
         patches.append(patch("asyncio.to_thread", new=to_thread_mock))
@@ -261,7 +264,7 @@ def test_process_event_called_with_correct_args():
     file_url = "https://storage.blob.core.windows.net/c/doc.pdf"
     file_content_type = "application/pdf"
     events = [make_mock_event(case_no=case_no, run_id=run_id, file_name=file_name,
-                               file_url=file_url, file_content_type=file_content_type)]
+                              file_url=file_url, file_content_type=file_content_type)]
     to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
@@ -275,6 +278,7 @@ def test_process_event_called_with_correct_args():
         file_name,
         file_url,
         file_content_type,
+        mocks["storage_credential"],
     )
 
 
@@ -286,7 +290,7 @@ def test_keyvault_secret_fetched_with_correct_name():
         run(eventhub_trigger_active([]))
 
     expected = f"evh-active-cdam-res-{app_module.ENV}-{app_module.LZ_KEY}-uks-dlrm-01-key"
-    mocks["kv_client"].get_secret.assert_awaited_once_with(expected)
+    mocks["kv_client"].get_secret.assert_any_await(expected)
 
 
 def test_producer_created_from_kv_secret_value():

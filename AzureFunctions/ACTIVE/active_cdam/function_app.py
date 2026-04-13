@@ -9,6 +9,7 @@ from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
+from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets.aio import SecretClient
 from typing import List
 
@@ -58,6 +59,16 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     result_eh_secret_key = results_eh_key.value
     logger.info("Acquired KV secret for Results Event Hub")
 
+    storage_sp_tenant_id = await kv_client.get_secret("SERVICE-PRINCIPLE-TENANT-ID")
+    storage_sp_client_id = await kv_client.get_secret("SERVICE-PRINCIPLE-CLIENT-ID")
+    storage_sp_client_secret = await kv_client.get_secret("SERVICE-PRINCIPLE-CLIENT-SECRET")
+    storage_credential = ClientSecretCredential(
+        tenant_id=storage_sp_tenant_id.value,
+        client_id=storage_sp_client_id.value,
+        client_secret=storage_sp_client_secret.value
+    )
+    logger.info("Acquired KV service principal credentials for accessing ARIA DLRM storage accounts.")
+
     idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
     idempotency_container_name = "af-idempotency"
     idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
@@ -81,7 +92,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     file_url = payload.get("FileURL")
                     file_content_type = payload.get("FileContentType", "text/html")  # Default to HTML content type.
 
-                    idempotency_blob_path = f"active/cdam/idempotency/{caseNo}.flag"
+                    idempotency_blob_path = f"active/cdam/idempotency/{caseNo.replace('/', '_')}.flag"
                     idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
                     try:
@@ -92,7 +103,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.warning(f"[IDEMPOTENCY][CDAM] Skipping in progress case {caseNo}.")
                         continue
 
-                    result = await asyncio.to_thread(process_event, ENV, caseNo, run_id, file_name, file_url, file_content_type)
+                    result = await asyncio.to_thread(process_event, ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
 
                     # Mark processed if success
                     if result.get("Status") == "SUCCESS":

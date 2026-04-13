@@ -14,6 +14,36 @@ def spark():
 @pytest.fixture(scope="session")
 def remitted_outputs(spark):
 
+    m1_schema = T.StructType([
+    T.StructField("CaseNo", T.StringType(), True),
+    T.StructField("dv_representation", T.StringType(), True),
+    T.StructField("lu_appealType", T.StringType(), True),
+    T.StructField("Sponsor_Name", T.StringType(), True),
+    T.StructField("Interpreter", T.StringType(), True),
+    T.StructField("CourtPreference", T.StringType(), True),
+    T.StructField("InCamera", T.BooleanType(), True),
+    T.StructField("VisitVisaType", T.IntegerType(), True),
+    T.StructField("CentreId", T.IntegerType(), True),
+    T.StructField("Rep_Postcode", T.StringType(), True),
+    T.StructField("CaseRep_Postcode", T.StringType(), True),
+    T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
+    T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
+    ])
+
+    m1_data = [
+        ("CASE001", "AIP", "FTPA", None, 0, 0, True, 1,1, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE002", "AIP", "FTPA", None, 0, 0, False, 2,2, "B12 0hf", "B12 0hf",2,"Man"),  
+        ("CASE003", "AIP", "FTPA", None, 0, 0, True, 2,3, "B12 0hf", "B12 0hf",3,"Man"),  
+        ("CASE004", "AIP", "FTPA", None, 0, 0, False, 2,4, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE005", "AIP", "FT", None, 0, 0, True, 3,5, "B12 0hf", "B12 0hf",2,"Man"), 
+        ("CASE006", "AIP", "FT", None, 0, 0, True, 4,6, "B12 0hf", "B12 0hf",4,"Man"),    
+        ("CASE007", "AIP", "FT", None, 0, 0, False, None,7, "B12 0hf", "B12 0hf",0,"Man"),    
+        ("CASE008", "AIP", "FT", None, 0, 0, False, None,8, "B12 0hf", "B12 0hf",None,"Man"),    
+        ("CASE009", "AIP", "FT", None, 0, 0, None, 2,9, "B12 0hf", "B12 0hf",7,"Man"),    
+        ("CASE010", "AIP", "FT", None, 0, 0, None, 2,None, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61,0, "B12 0hf", "B12 0hf",1,"Man")
+        ]
+
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
@@ -37,9 +67,11 @@ def remitted_outputs(spark):
         ("PA/03885/2024", 1, 42, None, "LOC004","2025-11-02T00:00:00.000+00:00", None, "Sir", "Alex", "Smith", 1, 0, 86),
     ]
 
+    silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
+
     silver_m3 = spark.createDataFrame(m3_data, m3_schema)
 
-    remittal_content, _ = remittal(silver_m3)
+    remittal_content, _ = remittal(silver_m1, silver_m3)
 
     results = {row["CaseNo"]: row.asDict() for row in remittal_content.collect()}
     return results

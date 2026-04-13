@@ -90,7 +90,7 @@ def hearingActuals_outputs(spark):
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_loc =  spark.createDataFrame(loc_data, loc_schema)
 
-    hearingDetails_content,_ = hearingActuals(df_m3)
+    hearingDetails_content,_ = hearingActuals(df_m1,df_m3)
     results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
     
     return results

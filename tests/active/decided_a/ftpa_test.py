@@ -109,7 +109,7 @@ def ftpa_outputs(spark):
     df_c =  spark.createDataFrame(c_data, c_schema)
 
 
-    ftpa_content,_ = ftpa(df_m3, df_c)
+    ftpa_content,_ = ftpa(df_m1,df_m3, df_c)
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     
     return results

@@ -283,6 +283,7 @@ def test_HU_00539_2025_yes_even_repId_0(legalRepDetails_outputs):
     expectedLegalRepAddressUkRow = Row(
         AddressLine1='209 Hampton TerraceX',
         AddressLine2='Kimberly PassageX',
+        AddressLine3='',
         PostTown='ChristensenstadX',
         County='',
         Country='',
@@ -314,7 +315,8 @@ def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
 
     expectedLegalRepAddressUkRow = Row(
         AddressLine1='734 Carson Plains Apt. 731X',
-        AddressLine2=None,
+        AddressLine2='',
+        AddressLine3='',
         PostTown='Rodgers ShoalX',
         County='',
         Country='',

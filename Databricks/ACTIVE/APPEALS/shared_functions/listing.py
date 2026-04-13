@@ -593,7 +593,7 @@ def documents(silver_m1):
         .select(
             "m1.CaseNo",
             *[c for c in df_documents.columns if c != "CaseNo"],
-            lit([]).cast("array<string>").alias("hearingRequirements"),
+            array().cast("array<string>").alias("hearingRequirements")
         )
     )
 

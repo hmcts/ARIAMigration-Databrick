@@ -58,34 +58,30 @@ def paymentType(silver_m1, silver_m4):
         .distinct()
     )
 
-    ref_txn_df1 = (
-        silver_m4.alias("m4")
-            .join(ref_txn_df1.alias("ref_txn"), col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"), "left_anti")
-            .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance", "SumTotalPay")
-    )
-
     payment_status = (
-        silver_m4.alias("max")
+        silver_m4.alias("m4")
+        .join(ref_txn_df1.alias("r_txn"),
+            col("m4.TransactionId") == col("r_txn.ReferringTransactionId"),
+            "left_anti")
         .filter(col("SumBalance") == True)
         .groupBy("CaseNo")
         .agg(
             sum_("Amount").alias("SumAmount"),
             spark_max(col("TransactionId")).alias("MaxTransactionId"),
         )
+        .alias("max")
         .join(
-            ref_txn_df1.alias("type").select(
-                "CaseNo", "TransactionTypeId", "TransactionId"
-            ),
+            silver_m4.alias("type").select("CaseNo", "TransactionTypeId", "TransactionId"),
             on=(
-                (col("max.CaseNo") == col("type.CaseNo"))
-                & (col("MaxTransactionId") == col("type.TransactionId"))
+                (col("max.CaseNo") == col("type.CaseNo")) &
+                (col("max.MaxTransactionId") == col("type.TransactionId"))
             ),
         )
         .withColumn(
             "paymentStatus",
             when(col("SumAmount") > 0, lit("Payment pending"))
             .when(
-                (col("SumAmount") == 0) & ((col("type.TransactionTypeId") == 19)),
+                (col("SumAmount") == 0) & (col("type.TransactionTypeId") == 19),
                 lit("Payment pending"),
             )
             .otherwise(lit("Paid")),

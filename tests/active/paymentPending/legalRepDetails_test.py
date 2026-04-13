@@ -284,8 +284,8 @@ def test_HU_00539_2025_yes_even_repId_0(legalRepDetails_outputs):
         AddressLine1='209 Hampton TerraceX',
         AddressLine2='Kimberly PassageX',
         PostTown='ChristensenstadX',
-        County=None,
-        Country=None,
+        County='',
+        Country='',
         PostCode='IP4 2EJ'
     )
 
@@ -316,8 +316,8 @@ def test_EA_03862_2020_rep_address_yes(legalRepDetails_outputs):
         AddressLine1='734 Carson Plains Apt. 731X',
         AddressLine2=None,
         PostTown='Rodgers ShoalX',
-        County=None,
-        Country=None,
+        County='',
+        Country='',
         PostCode='S65 7EB'
     )
 

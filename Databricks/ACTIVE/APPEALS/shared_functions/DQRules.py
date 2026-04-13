@@ -111,7 +111,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_representation = silver_m1.select(
         col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
         col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
-        col("Sponsor_Authorisation"), col("Sponsor_Name"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
+        col("Sponsor_Authorisation"), col("Sponsor_Name"),col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
         ,col("OutOfTimeIssue")
     )
     valid_appealant_address = silver_m2.select(
@@ -127,10 +127,13 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
     valid_reasonDescription = (
         silver_m1.alias("m1")
-            .join(bronze_remission_lookup_df, on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .join(bronze_remission_lookup_df.alias("rem"), on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
             .select(
                 "CaseNo", "VisitVisaType", "PaymentRemissionGranted", "ReasonDescription",
-                col("remissionClaim").alias("lu_remissionClaim"), col("feeRemissionType").alias("lu_feeRemissionType")
+                col("remissionClaim").alias("lu_remissionClaim"), col("feeRemissionType").alias("lu_feeRemissionType"),
+                col("rem.PaymentRemissionReason").alias("PaymentRemissionReason_rem"),col("rem.PaymentRemissionRequested").alias("PaymentRemissionRequested_rem"),
+                col("m1.PaymentRemissionReason").alias("PaymentRemissionReason"),col("m1.PaymentRemissionRequested").alias("PaymentRemissionRequested")
+
             )
     )
 
@@ -276,6 +279,17 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     valid_decided_outcome = silver_m3_filtered.join(silver_c_filtered, on="CaseNo", how="left")
 
+    silver_m3_max_casestatus_no_filter = (
+        silver_m3.filter((col("Outcome").isNotNull()) & (col("OutOfTime") == True))
+            .withColumn("row_number", row_number().over(window_spec))
+            .filter(col("row_number") == 1)
+            .select("CaseNo",col("Outcome").alias("Outcome_no_filter"),col("CaseStatus").alias("CaseStatus_max_no_filter"),col("OutOfTime").alias("OutOfTime_no_filter"))
+    )
+
+    silver_m3_max_casestatus_no_filter = (
+        silver_m1.alias("m1").select("CaseNo").join(silver_m3_max_casestatus_no_filter,on="CaseNo",how="left")
+    )
+
     
     silver_m3_max_casestatus = (
         silver_m3
@@ -408,13 +422,13 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number").select(col("CaseNo"),col("StatusId"),col("CaseStatus"),col("Outcome"))
 
     df_documents, df_documents_audit = E.documents(silver_m1,silver_m3)
-    df_ftpa, df_ftpa_audit = E.ftpa(silver_m3,silver_c)
+    df_ftpa, df_ftpa_audit = E.ftpa(silver_m1,silver_m3,silver_c)
     df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
     df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
     df_hearingResponse, df_hearingResponse_audit = E.hearingResponse(silver_m1, silver_m3, silver_m6)
     df_hearingDetails, df_hearingDetails_audit = E.hearingDetails(silver_m1,silver_m3,bronze_listing_location)
-    df_hearingActuals, df_hearingActuals_audit = E.hearingActuals(silver_m3)
+    df_hearingActuals, df_hearingActuals_audit = E.hearingActuals(silver_m1,silver_m3)
     df_substantiveDecision, df_substantiveDecision_audit = E.substantiveDecision(silver_m1,silver_m3)
 
     df_ended_update_dq = (
@@ -540,6 +554,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_remitted, on="CaseNo", how="left")
             .join(detained_df, on="CaseNo", how="left")
             .join(cs46_out31, on="CaseNo", how="left")
+            .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
 
     )
 

@@ -177,7 +177,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         )
     
     caseData_df = (
-        caseData_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
+        joined_m1_m2.alias("m2").join(caseData_df.alias("content"),on="CaseNo", how="left")
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
         .join(bronze_hearing_centres.alias("bhc"),on=col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("hearingCentre1", when(col("m2.Detained").isin(1,2),col("det.hearingCentre")).otherwise(col("content.hearingCentre")))
@@ -249,6 +249,13 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
     general_df, general_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+
+    general_df = (
+        silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in general_df.columns if c != "CaseNo"],
+                )
+        )
 
     # general_df = general_df.drop("applicationChangeDesignatedHearingCentre")
 
@@ -488,7 +495,7 @@ def sponsorDetails(silver_m1, silver_c):
         )
     ).withColumn("sponsorEmailAdminJ",when((name_condition),cleanEmailUDF(col("Sponsor_Email")))
     ).withColumn("sponsorMobileNumberAdminJ",when((name_condition),filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
-    ).withColumn("sponsorNameForDisplay",when(name_condition,concat(col("Sponsor_Forenames"), lit(" "), col("Sponsor_Name"))).otherwise(lit(None))
+    ).withColumn("sponsorNameForDisplay",when(name_condition,concat_ws(" ",col("Sponsor_Forenames"), col("Sponsor_Name"))).otherwise(lit(None))
     ).withColumn("sponsorAddressForDisplay",
         when(
             name_condition,

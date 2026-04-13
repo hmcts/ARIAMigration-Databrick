@@ -214,9 +214,9 @@ def setAside(silver_m1, silver_m3, silver_m6):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3,silver_c):
+def ftpa(silver_m1, silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = FSA.ftpa(silver_m3,silver_c)
+    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m3,silver_c)
 
     ftpa_df = ftpa_df.drop("ftpaList")
     ftpa_audit = ftpa_audit.drop("ftpaList_value","ftpaList_inputFields","ftpaList_inputValues","ftpaList_Transformation")
@@ -228,7 +228,7 @@ def ftpa(silver_m3,silver_c):
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     silver_m3_content = (
-        silver_m3_max_statusid
+        silver_m1.alias("m1").join(silver_m3_max_statusid,on="CaseNo",how="left")
         .withColumn("ftpaFirstDecision",lit("remadeRule32"))
         .withColumn("ftpaFinalDecisionForDisplay",lit("undecided"))
         .withColumn("ftpaApplicantType",
@@ -356,6 +356,19 @@ def ftpa(silver_m3,silver_c):
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
     general_df,general_audit = FSA.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    general_df = (
+        silver_m1.alias("m1")
+        .join(
+            general_df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in general_df.columns if c != "CaseNo"],
+        )
+    )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     # Add row_number to get the row with the highest StatusId per CaseNo

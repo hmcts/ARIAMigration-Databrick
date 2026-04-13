@@ -24,7 +24,7 @@ from pyspark.sql.functions import (
 ################################################################
 
 
-def remittal(silver_m3):
+def remittal(silver_m1,silver_m3):
     # Window: highest StatusId per CaseNo
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -43,7 +43,7 @@ def remittal(silver_m3):
 
     # Build remittal content
     remittal_df = (
-        silver_m3_max_statusid
+        silver_m1.join(silver_m3_max_statusid,on="CaseNo",how="left")
         .withColumn("rehearingReason", lit("Remitted"))
         .withColumn("sourceOfRemittal", lit("Upper Tribunal"))
         .withColumn("appealRemittedDate", date_format(col("DecisionDate"), "yyyy-MM-dd")) 
@@ -101,11 +101,21 @@ def remittal(silver_m3):
 def documents(silver_m1, silver_m3): 
     documents_df, documents_audit = FD.documents(silver_m1, silver_m3)
 
-    documents_df = documents_df.select("*",
-                lit([]).cast("array<string>").alias("remittalDocuments"),
-                lit([]).cast("array<string>").alias("uploadOtherRemittalDocs"),
-                
-                )
+    documents_df = (
+        silver_m1.alias("m1")
+        .join(
+            documents_df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in documents_df.columns if c != "CaseNo"],
+            lit([]).cast("array<string>").alias("remittalDocuments"),
+            lit([]).cast("array<string>").alias("uploadOtherRemittalDocs"),
+        )
+    )
+
 
     documents_audit = (
         documents_audit.alias("audit")

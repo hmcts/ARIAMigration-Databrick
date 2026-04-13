@@ -560,9 +560,21 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 def documents(silver_m1): 
     documents_df, documents_audit = L.documents(silver_m1)
 
-    documents_df = documents_df.select("*",
-                lit([]).cast("array<string>").alias("hearingDocuments"),
-                lit([]).cast("array<string>").alias("letterBundleDocuments"))
+    documents_df = (
+        silver_m1.alias("m1")
+        .join(
+            documents_df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in documents_df.columns if c != "CaseNo"],
+            lit([]).cast("array<string>").alias("hearingDocuments"),
+            lit([]).cast("array<string>").alias("letterBundleDocuments"),
+        )
+    )
+
     return documents_df, documents_audit
 
 ################################################################

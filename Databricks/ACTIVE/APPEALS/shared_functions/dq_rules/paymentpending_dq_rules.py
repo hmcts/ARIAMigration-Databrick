@@ -79,13 +79,13 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_outOfTimeDecisionType"] = (
-            """    (OutOfTimeIssue = True AND Outcome != 0 AND outOfTimeDecisionType = 'approved') 
+            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND OutOfTime_no_filter = True AND outOfTimeDecisionType = 'approved') 
                 OR (outOfTimeDecisionType IS NULL)     
             """
         )
 
         checks["valid_outOfTimeDecisionMaker"] = (
-            """    (OutOfTimeIssue = True AND Outcome != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
+            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND OutOfTime_no_filter = True AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
                 OR (outOfTimeDecisionMaker IS NULL)
             """
         )
@@ -643,6 +643,12 @@ class paymentPendingDQRules(DQRulesBase):
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
                 OR
                 (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
+                    AND remissionType IS NULL
+                )
             )"""
         )
 
@@ -656,6 +662,12 @@ class paymentPendingDQRules(DQRulesBase):
                 OR
                 (
                     (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim <=> 'OMIT')
+                    AND remissionClaim IS NULL
+                )
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
                     AND remissionClaim IS NULL
                 )
             )"""

@@ -1328,9 +1328,9 @@ def substantiveDecision(silver_m1,silver_m3):
 ##########              hearingActuals          ###########
 ################################################################
 
-def hearingActuals(silver_m3):
+def hearingActuals(silver_m1,silver_m3):
 
-    hearingActuals_df, hearingActuals_audit = DA.hearingActuals(silver_m3)
+    hearingActuals_df, hearingActuals_audit = DA.hearingActuals(silver_m1, silver_m3)
 
     df = (
         silver_m3
@@ -1425,9 +1425,9 @@ def hearingActuals(silver_m3):
 ################################################################
 
 
-def ftpa(silver_m3, silver_c):
+def ftpa(silver_m1, silver_m3, silver_c):
 
-    ftpa_df, ftpa_audit = FSA.ftpa(silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m3, silver_c)
 
     df = (
         silver_m3

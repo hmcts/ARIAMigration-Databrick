@@ -449,6 +449,13 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     df, df_audit = PPD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_representation = silver_m1.select("CaseNo", "dv_representation", "lu_appealType")
 
+    df = (
+        silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in df.columns if c != "CaseNo"],
+                )
+        )
+
     df = df.join(df_representation, on="CaseNo", how="left")
 
     aip_conditions_generalDefault = (col("dv_representation") == "AIP") & (col("lu_appealType").isNotNull())
@@ -577,9 +584,20 @@ def documents(silver_m1):
     df_documents, df_audit_documents = AERb.documents(silver_m1)
 
     df_documents = (
-        df_documents
-            .withColumn("hearingRequirements", lit([]).cast("array<string>"))
+        silver_m1.alias("m1")
+        .join(
+            df_documents.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in df_documents.columns if c != "CaseNo"],
+            lit([]).cast("array<string>").alias("hearingRequirements"),
+        )
     )
+
+
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
 

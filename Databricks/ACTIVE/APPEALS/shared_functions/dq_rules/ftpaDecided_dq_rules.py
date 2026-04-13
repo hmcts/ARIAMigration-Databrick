@@ -297,12 +297,23 @@ class ftpaDecidedDQRules(DQRulesBase):
         )""")
 
         checks["valid_isFtpaAppellantDecided"] = ("""(
-            dq_cs39_status = 39 AND isFtpaAppellantDecided = "Yes"
-        )""")
+                   
+                (dq_cs39_status <=> 39 AND isFtpaAppellantDecided <=> "Yes")
+                OR
+                ((dq_cs39_status != 39 OR dq_cs39_status IS NULL) AND isFtpaAppellantDecided IS NULL)
 
-        checks["valid_isFtpaRespondentDecided"] = ("""(
-            dq_cs39_status = 39 AND isFtpaRespondentDecided = "Yes"
-        )""")
+               )
+               """)
+
+        checks["valid_isFtpaRespondentDecided"] = ("""
+            (
+                   
+                (dq_cs39_status <=> 39 AND isFtpaRespondentDecided <=> "Yes")
+                OR
+                ((dq_cs39_status != 39 OR dq_cs39_status IS NULL) AND isFtpaRespondentDecided IS NULL)
+
+               )
+        """)
 
         checks["valid_isReheardAppealEnabled"] = ("""(
             isReheardAppealEnabled = "Yes"

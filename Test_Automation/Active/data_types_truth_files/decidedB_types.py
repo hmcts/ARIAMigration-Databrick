@@ -1,4 +1,4 @@
-FtpaDecidedTypes = {
+DecidedBTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -16,7 +16,7 @@ FtpaDecidedTypes = {
     'appellantGivenNames': 'string',
     'appellantHasFixedAddress': 'string',
     'appellantHasFixedAddressAdminJ': 'string',
-    # 'appellantInDetention': 'string',
+    'appellantInDetention': 'string',
     'appellantInUk': 'string',
     'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
     'appellantNameForDisplay': 'string',
@@ -253,7 +253,7 @@ FtpaDecidedTypes = {
     'ftpaRespondentOutOfTimeExplanation': 'string',
     'ftpaRespondentSubmissionOutOfTime': 'string',
     'ftpaRespondentSubmitted': 'string',
-    'ftpaList': 'array<struct<id:string,value:struct<ftpaApplicant:string,ftpaApplicationDate:string,ftpaDecisionDate:string,ftpaDecisionOutcomeType:string,ftpaEvidenceDocuments:array<string>,ftpaGroundsDocuments:array<string>,ftpaOutOfTimeDocuments:array<string>,ftpaOutOfTimeExplanation:string,isFtpaNoticeOfDecisionSetAside:string>>>',
+    'ftpaList': 'array<struct<id:string,value:struct<ftpaAppellantGroundsText:string,ftpaApplicant:string,ftpaApplicationDate:string,ftpaDecisionDate:string,ftpaDecisionOutcomeType:string,ftpaDecisionRemadeRule32Text:string,ftpaEvidenceDocuments:array<string>,ftpaGroundsDocuments:array<string>,isFtpaNoticeOfDecisionSetAside:string>>>',
     'isFtpaAppellantDocsVisibleInDecided': 'string',
     'isFtpaAppellantDocsVisibleInSubmitted': 'string',
     'isFtpaAppellantEvidenceDocsVisibleInDecided': 'string',
@@ -297,7 +297,25 @@ FtpaDecidedTypes = {
     'allFtpaAppellantDecisionDocs': 'array<string>',
     'allFtpaRespondentDecisionDocs': 'array<string>',
     'ftpaAppellantNoticeDocument': 'array<string>',
-    'ftpaRespondentNoticeDocument': 'array<string>'
+    'ftpaRespondentNoticeDocument': 'array<string>',
+    'additionalRequests': 'string',
+    'additionalRequestsDescription': 'string',
+    'additionalTribunalResponse': 'string',
+    'allSetAsideDocs': 'array<string>',
+    'caseArgumentAvailable': 'string',
+    'caseFlagSetAsideReheardExists': 'string',
+    'decisionAndReasonsAvailable': 'string',
+    'ftpaAppellantDecisionRemadeRule32Text': 'string',
+    'ftpaFinalDecisionRemadeRule32': 'string',
+    'ftpaRespondentDecisionRemadeRule32Text': 'string',
+    'isAppealReferenceNumberAvailable': 'string',
+    'judgesNamesToExclude': 'string',
+    'paAppealTypeAipPaymentOption': 'string',
+    'reasonRehearingRule32': 'string',
+    'reasonsForAppealDecision': 'string',
+    'rule32ListingAdditionalIns': 'string',
+    'updateTribunalDecisionDateRule32': 'string',
+    'updateTribunalDecisionList': 'string'
 }
 
 

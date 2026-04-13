@@ -29,7 +29,7 @@ from pyspark.sql.functions import (
 ##########              ftpa (Field Group)          ###########
 ################################################################
 
-def ftpa(silver_m3, silver_c):
+def ftpa(silver_m1, silver_m3, silver_c):
     """
     Mapping alignment
       - Decision/outcome fields (ftpaFirstDecision, DecisionDates, FinalDecisionForDisplay, RJ outcome types, ApplicantType)
@@ -47,7 +47,7 @@ def ftpa(silver_m3, silver_c):
     """
 
     # Base ftpa fields (judge allocation etc.)
-    ftpa_df, ftpa_audit = FSB.ftpa(silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSB.ftpa(silver_m1, silver_m3, silver_c)
 
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
     window_spec = (
@@ -281,6 +281,19 @@ def documents(silver_m1, silver_m3):
     """
     df, df_audit = FSA.documents(silver_m1, silver_m3)
 
+    df = (
+        silver_m1.alias("m1")
+        .join(
+            df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in df.columns if c != "CaseNo"],
+        )
+    )
+
     empty_str_array = array().cast("array<string>")
 
     window_spec = (
@@ -301,7 +314,7 @@ def documents(silver_m1, silver_m3):
     )
 
     df = (
-        m3_latest_cs39.alias("m3").join(df.alias("doc"), "CaseNo", "left")
+        df.alias("doc").join(m3_latest_cs39.alias("m3"), "CaseNo", "left")
         .withColumn("allFtpaAppellantDecisionDocs", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
         .withColumn("allFtpaRespondentDecisionDocs", when(col("m3.Party") == 2, empty_str_array).otherwise(None))
         .withColumn("ftpaAppellantNoticeDocument", when(col("m3.Party") == 1, empty_str_array).otherwise(None))
@@ -340,10 +353,8 @@ def documents(silver_m1, silver_m3):
 
 
 ################################################################
-##########          general (General Field Group)     ###########
+##########          general (General Field Group)    ###########
 ################################################################
-
-
 
 def general(
     silver_m1, silver_m2, silver_m3, silver_h,
@@ -357,6 +368,13 @@ def general(
         silver_m1, silver_m2, silver_m3, silver_h,
         bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres
     )
+
+    df = (
+        silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in df.columns if c != "CaseNo"],
+                )
+        )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -407,9 +425,9 @@ def general(
             "isRespondentFtpaDecisionVisibleToAll",
             when(col("m3_party") == 2, lit("Yes")).otherwise(None)
         )
-        .withColumn("isDlrmSetAsideEnabled", lit("Yes"))
-        .withColumn("isFtpaAppellantDecided", lit("Yes"))
-        .withColumn("isFtpaRespondentDecided", lit("Yes"))
+        .withColumn("isDlrmSetAsideEnabled",  lit("Yes"))
+        .withColumn("isFtpaAppellantDecided",  when(col("m3_caseStatus")==39, lit("Yes")).otherwise(None))
+        .withColumn("isFtpaRespondentDecided", when(col("m3_caseStatus")==39, lit("Yes")).otherwise(None))
         .withColumn("isReheardAppealEnabled", lit("Yes"))
         .withColumn(
             "secondFtpaDecisionExists",

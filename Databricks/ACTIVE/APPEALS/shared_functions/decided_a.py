@@ -29,8 +29,12 @@ from pyspark.sql.functions import (
 def documents(silver_m1): 
     documents_df, documents_audit = D.documents(silver_m1)
 
-    documents_df = documents_df.select("*",
+    documents_df = (
+        silver_m1.alias("m1").join(documents_df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in documents_df.columns if c != "CaseNo"],
                 lit([]).cast("array<string>").alias("finalDecisionAndReasonsDocuments"))
+        )
     
 
     documents_audit = (
@@ -169,7 +173,7 @@ def substantiveDecision(silver_m1,silver_m3):
 ##########              hearingActuals          ###########
 ################################################################
 
-def hearingActuals(silver_m3):
+def hearingActuals(silver_m1, silver_m3):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -180,7 +184,7 @@ def hearingActuals(silver_m3):
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     hearingActuals_df = (
-        silver_m3_max_statusid
+        silver_m1.alias("m1").join(silver_m3_max_statusid,on="CaseNo",how="left")
         .withColumn(
             "actualCaseHearingLength",
             F.create_map(
@@ -226,7 +230,7 @@ def hearingActuals(silver_m3):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3,silver_c):
+def ftpa(silver_m1, silver_m3,silver_c):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -238,8 +242,8 @@ def ftpa(silver_m3,silver_c):
     silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"),col("CategoryId")).distinct()
     
     ftpa_df = (
-        silver_m3_max_statusid
-            .join(silver_c_filtered, on=["CaseNo"], how="left")
+        silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m2"),on="CaseNo",how="left")
+            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 date_format(

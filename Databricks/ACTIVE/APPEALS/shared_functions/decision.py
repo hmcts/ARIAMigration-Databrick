@@ -178,8 +178,20 @@ def hearingDetails(silver_m1, silver_m3, bronze_listing_location):
 def documents(silver_m1): 
     documents_df, documents_audit = PFH.documents(silver_m1)
 
-    documents_df = documents_df.select("*",
-                lit([]).cast("array<string>").alias("caseBundles"))
+    documents_df = (
+        silver_m1.alias("m1")
+        .join(
+            documents_df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in documents_df.columns if c != "CaseNo"],
+            lit([]).cast("array<string>").alias("caseBundles")
+        )
+    )
+
     
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
@@ -261,6 +273,7 @@ def substantiveDecision(silver_m1):
 def generalDefault(silver_m1):
 
     general_df = L.generalDefault(silver_m1)
+    
 
     general_df = (
         general_df
@@ -280,6 +293,13 @@ def generalDefault(silver_m1):
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
     general_df, general_audit = L.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    general_df = (
+        silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in general_df.columns if c != "CaseNo"],
+                )
+        )
 
     bundleFileNamePrefix_df = (
     silver_m1.alias("m1")

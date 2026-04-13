@@ -27,9 +27,9 @@ from pyspark.sql.functions import (
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3,silver_c):
+def ftpa(silver_m1,silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = FSA.ftpa(silver_m3,silver_c)
+    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1,silver_m3,silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -39,7 +39,7 @@ def ftpa(silver_m3,silver_c):
 
 
     silver_m3_content = (
-        silver_m3_max_statusid
+        silver_m1.join(silver_m3_max_statusid,on="CaseNo",how="left")
             # Appellant fields
             .withColumn("judgeAllocationExists",lit("Yes"))
             .withColumn("allocatedJudge",concat(col("Adj_Title"),lit(" "),col("Adj_Forenames"),lit(" "),col("Adj_Surname")))
@@ -53,8 +53,8 @@ def ftpa(silver_m3,silver_c):
     )
 
     ftpa_df = (
-        ftpa_df.alias("ftpa")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        silver_m3_content.alias("m3")
+            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
             .select(
                 "ftpa.*",
                 col("judgeAllocationExists"),

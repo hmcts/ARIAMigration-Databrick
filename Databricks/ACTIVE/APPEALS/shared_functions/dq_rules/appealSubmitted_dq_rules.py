@@ -258,28 +258,43 @@ class appealSubmittedDQRules(DQRulesBase):
 
         checks["valid_amountRemitted"] = (
             """(
-                (
-                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND PaymentRemissionGranted <=> 1)
-                    AND
-                    (amountRemitted <=> (
-                        CAST(ABS(CAST(AGGREGATE(
-                        TRANSFORM(valid_transactionList, x ->
-                            CASE
-                            WHEN (x.TransactionTypeId <=> 5 AND NOT(x.Status <=> 3))
-                            THEN x.Amount * 100
-                            ELSE 0
-                            END
-                        ),
-                        CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-                        ) AS INT)) AS STRING)
-                    ))
+                        (
+                dv_CCDAppealType IS NOT NULL
+                AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                AND PaymentRemissionGranted <=> 1
+                AND amountRemitted <=> (
+                    CAST(
+                        ABS(
+                            CAST(
+                                AGGREGATE(
+                                    TRANSFORM(
+                                        valid_transactionList,
+                                        x ->
+                                            CASE
+                                                WHEN x.TransactionTypeId = 5
+                                                    AND x.Status <> 3
+                                                THEN x.Amount * 100
+                                                ELSE 0
+                                            END
+                                    ),
+                                    CAST(0 AS DECIMAL(19,4)),
+                                    (acc, x) -> CAST(acc + x AS DECIMAL(19,4))
+                                ) AS INT
+                            )
+                        ) AS STRING
+                    )
                 )
-                OR
+            )
+            OR
+            (
                 (
-                    (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR NOT(PaymentRemissionGranted <=> 1))
-                    AND
-                    (amountRemitted IS NULL)
+                    dv_CCDAppealType IS NULL
+                    OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')
+                    OR NOT (PaymentRemissionGranted <=> 1)
+                    OR SIZE(FILTER(valid_transactionList, t -> t.TransactionTypeId = 5)) <=> 0
                 )
+                AND amountRemitted IS NULL
+            )
             )"""
         )
 

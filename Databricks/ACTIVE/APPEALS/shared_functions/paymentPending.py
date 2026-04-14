@@ -1069,15 +1069,17 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
                         col("CaseRep_Address3").isNull() &
                         col("CaseRep_Address4").isNull() &
                         col("CaseRep_Address5").isNull(),
-                        lit(None)
+                        lit("")
                     ).otherwise(
                         coalesce(
                             col("CaseRep_Address2"),
                             col("CaseRep_Address3"),
                             col("CaseRep_Address4"),
-                            col("CaseRep_Address5")
+                            col("CaseRep_Address5"),
                         )
                     ).alias("AddressLine2"),
+
+                    lit("").alias("AddressLine3"),
 
                     # PostTown logic
                     when(
@@ -1089,18 +1091,26 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
                         coalesce(
                             col("CaseRep_Address3"),
                             col("CaseRep_Address4"),
-                            col("CaseRep_Address5")
+                            col("CaseRep_Address5"),
+                            lit(""),
                         )
                     ).alias("PostTown"),
 
                     # County
-                    coalesce(
-                        col("CaseRep_Address4"),
-                        col("CaseRep_Address5")
+                    when(
+                        col("CaseRep_Address5").isNull(),
+                        lit("")
+                    ).otherwise(
+                        col("CaseRep_Address4")
                     ).alias("County"),
 
                     # Country
-                    col("CaseRep_Address5").alias("Country"),
+                    when(
+                        col("CaseRep_Address5").isNull(),
+                        coalesce(col("CaseRep_Address4"),lit(""))
+                    ).otherwise(
+                        coalesce(col("CaseRep_Address5"),lit(""))
+                    ).alias("Country"),
 
                     # Postcode
                     col("CaseRep_Postcode").alias("PostCode")
@@ -1122,15 +1132,18 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
                         col("Rep_Address3").isNull() &
                         col("Rep_Address4").isNull() &
                         col("Rep_Address5").isNull(),
-                        lit(None)
+                        lit(""),
                     ).otherwise(
                         coalesce(
                             col("Rep_Address2"),
                             col("Rep_Address3"),
                             col("Rep_Address4"),
-                            col("Rep_Address5")
+                            col("Rep_Address5"),
+                            lit(""),
                         )
                     ).alias("AddressLine2"),
+
+                    lit("").alias("AddressLine3"),
 
                     # PostTown logic
                     when(
@@ -1142,18 +1155,27 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
                         coalesce(
                             col("Rep_Address3"),
                             col("Rep_Address4"),
-                            col("Rep_Address5")
+                            col("Rep_Address5"),
+                            lit(""),
                         )
                     ).alias("PostTown"),
 
                     # County
-                    coalesce(
-                        col("Rep_Address4"),
-                        col("Rep_Address5")
+                    when(
+                        col("Rep_Address5").isNull(),
+                        lit("")
+                    ).otherwise(
+                        col("Rep_Address4")
                     ).alias("County"),
 
                     # Country
-                    col("Rep_Address5").alias("Country"),
+                    when(
+                        col("Rep_Address5").isNull(),
+                        coalesce(col("Rep_Address4"),lit(""))
+                    ).otherwise(
+                        coalesce(col("Rep_Address5"),lit(""))
+                    ).alias("Country"),
+
 
                     # Postcode
                     col("Rep_Postcode").alias("PostCode")

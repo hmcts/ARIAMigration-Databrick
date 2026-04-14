@@ -16,7 +16,9 @@ class decisionDQRules(DQRulesBase):
 
         checks["valid_listCaseHearingLength"] = ("""
         (
-            CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
+            CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
+            AND CaseStatus_dec IN (37,38)
+            AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
         )
         """)
 
@@ -29,15 +31,16 @@ class decisionDQRules(DQRulesBase):
                         WHEN StartTime IS NULL THEN '00:00:00.000'
                         ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
                         END)
+                    AND CaseStatus_dec IN (37,38)
             )
             """)
 
         checks["valid_listCaseHearingCentre"] = (
-            "(listCaseHearingCentre <=> bronze_listCaseHearingCentre)"
+            "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )" 
         )
 
         checks["valid_listCaseHearingCentreAddress"] = (
-            "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress)"
+            "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IN (37,38))"
         )
 
         return checks
@@ -78,7 +81,7 @@ class decisionDQRules(DQRulesBase):
         checks["valid_bundleFileNamePrefix"] = (
             """
             (
-                bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '-' || Appellant_Name
+                bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '-' || Appellant_Name AND bundleFileNamePrefix IS NOT NULL AND bundleFileNamePrefix != ""
             )
             """
         )

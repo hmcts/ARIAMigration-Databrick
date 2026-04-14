@@ -31,22 +31,11 @@ START_RESPONSE = _make_response(200, START_TOKEN_DATA)
 
 _MODULE = "AzureFunctions.ACTIVE.active_ccd.ccdFunctions"
 PATCH_IDAM = f"{_MODULE}.IDAMTokenManager"
-PATCH_S2S = f"{_MODULE}.S2S_Manager"
 PATCH_START = f"{_MODULE}.start_case_creation"
 PATCH_VALIDATE = f"{_MODULE}.validate_case"
 PATCH_SUBMIT = f"{_MODULE}.submit_case"
 PATCH_IDAM_MGR = f"{_MODULE}.idam_token_mgr"
-
-
-def _setup_happy_path_mocks(mock_idam_cls, mock_s2s_cls):
-    """Configure IDAM and S2S token mocks for the happy path."""
-    mock_idam_inst = Mock()
-    mock_idam_inst.get_token.return_value = ("idam-token", "uid-123")
-    mock_idam_cls.return_value = mock_idam_inst
-
-    mock_s2s_inst = Mock()
-    mock_s2s_inst.get_token.return_value = "s2s-token"
-    mock_s2s_cls.return_value = mock_s2s_inst
+PATCH_S2S_MGR = f"{_MODULE}.s2s_manager"
 
 
 # ---------------------------------------------------------------------------
@@ -60,16 +49,14 @@ class TestProcessCaseSuccess:
         """SuccessResponse is present in a successful result."""
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
             patch(PATCH_SUBMIT, return_value=SUBMIT_RESPONSE),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -91,16 +78,14 @@ class TestProcessCaseSuccess:
         """All pre-existing fields are still returned on success."""
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
             patch(PATCH_SUBMIT, return_value=SUBMIT_RESPONSE),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -126,16 +111,14 @@ class TestProcessCaseValidationFailure:
 
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=failed_validate),
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -159,16 +142,14 @@ class TestProcessCaseValidationFailure:
         # AttributeError before reaching the guard. This test documents that behaviour.
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=None),
             patch(PATCH_SUBMIT),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -191,16 +172,14 @@ class TestProcessCaseSubmitFailure:
 
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
             patch(PATCH_SUBMIT, return_value=failed_submit),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -228,16 +207,14 @@ class TestProcessCaseStartFailure:
 
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
             patch(PATCH_START, return_value=failed_start),
             patch(PATCH_VALIDATE) as mock_validate,
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 

@@ -157,7 +157,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather s2s token: {e}"
+            "Error": f"failed to gather IDAM token: {e}"
         }
         return result
 
@@ -171,7 +171,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather IDAM token: {e}"
+            "Error": f"failed to gather s2s token: {e}"
         }
         return result
 

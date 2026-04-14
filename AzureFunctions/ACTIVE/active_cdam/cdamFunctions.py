@@ -18,8 +18,9 @@ except Exception:
     # fallback when running as a script in the same folder
     from cdam_tokenManager import IDAMTokenManager, S2S_Manager
 
-# Instantiate only one IDAMTokenManager instance per ccdFunctions import.
+# Instantiate only one IDAMTokenManager / S2SManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
+s2s_manager = S2S_Manager(env="sbox")
 
 
 def upload_document(cdam_base_url, jid, ctid, cid, file_name, doc_binary, content_type, idam_token, s2s_token):
@@ -75,13 +76,12 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather s2s token: {e}",
+            "Error": f"failed to gather IDAM token: {e}",
             "CDAMResponse": ""
         }
         return result
 
     try:
-        s2s_manager = S2S_Manager("sbox", 21)
         s2s_token = s2s_manager.get_token()
     except Exception as e:
         result = {
@@ -90,7 +90,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather IDAM token: {e}",
+            "Error": f"failed to gather s2s token: {e}",
             "CDAMResponse": ""
         }
         return result

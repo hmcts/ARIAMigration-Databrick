@@ -31,6 +31,7 @@ START_RESPONSE = _make_response(200, START_TOKEN_DATA)
 
 _MODULE = "AzureFunctions.ACTIVE.active_ccd.ccdFunctions"
 PATCH_IDAM = f"{_MODULE}.IDAMTokenManager"
+PATCH_S2S = f"{_MODULE}.S2S_Manager"
 PATCH_START = f"{_MODULE}.start_case_creation"
 PATCH_VALIDATE = f"{_MODULE}.validate_case"
 PATCH_SUBMIT = f"{_MODULE}.submit_case"
@@ -236,16 +237,15 @@ class TestProcessCaseStartFailure:
     def test_start_returns_none_returns_error(self):
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_START, return_value=None),
             patch(PATCH_VALIDATE) as mock_validate,
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -271,6 +271,7 @@ class TestProcessCaseTokenFailures:
         with (
             patch(PATCH_IDAM),
             patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.side_effect = Exception("IDAM unreachable")
@@ -292,11 +293,12 @@ class TestProcessCaseTokenFailures:
     def test_s2s_token_failure_returns_error(self):
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_cls.return_value.get_token.side_effect = Exception("S2S unreachable")
+            mock_s2s.get_token.side_effect = Exception("S2S unreachable")
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -319,13 +321,12 @@ class TestProcessCaseInvalidEnv:
     def test_invalid_env_raises_value_error(self):
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
@@ -346,16 +347,15 @@ class TestProcessCaseSubmitNone:
     def test_submit_returns_none_returns_error(self):
         with (
             patch(PATCH_IDAM),
-            patch(PATCH_S2S) as mock_s2s_cls,
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
             patch(PATCH_SUBMIT, return_value=None),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
-            mock_s2s_inst = Mock()
-            mock_s2s_inst.get_token.return_value = "s2s-token"
-            mock_s2s_cls.return_value = mock_s2s_inst
+            mock_s2s.get_token.return_value = "s2s-token"
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 

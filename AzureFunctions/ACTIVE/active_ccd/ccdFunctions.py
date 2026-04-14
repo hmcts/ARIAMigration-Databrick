@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
+s2s_manager = S2S_Manager(env="sbox")
 
 
 def start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token):
@@ -142,7 +143,6 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         return result
 
     try:
-        s2s_manager = S2S_Manager("sbox", 21)
         s2s_token = s2s_manager.get_token()
     except Exception as e:
         result = {

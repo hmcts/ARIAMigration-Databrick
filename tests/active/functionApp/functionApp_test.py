@@ -240,20 +240,18 @@ def mock_response(status_code, json_data=None, text=""):
 
 # Succesfully sent a case payload
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.idam_token_mgr")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager")
+@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.s2s_manager")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
 def test_process_funciton_success(mock_start_case_creation_response,
                                   mock_validate_case_response,
                                   mock_submit_case_response,
-                                  mock_s2s_class,
+                                  mock_s2s_manager,
                                   mock_idam_mgr):
 
     mock_idam_mgr.get_token.return_value = ("mock_idam_token", "mock_uid")
-    mock_s2s_inst = MagicMock()
-    mock_s2s_inst.get_token.return_value = "mock_s2s_token"
-    mock_s2s_class.return_value = mock_s2s_inst
+    mock_s2s_manager.get_token.return_value = "mock_s2s_token"
 
     mock_start_case_creation = mock_response(200, {"token": "ABC123"})
     mock_validate_case = mock_response(201)
@@ -284,13 +282,11 @@ def test_process_funciton_success(mock_start_case_creation_response,
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.idam_token_mgr")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager")
+@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.s2s_manager")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
-def test_process_case_url_uses_pr_number(mock_start_case_creation, mock_s2s_class, mock_idam_mgr):
+def test_process_case_url_uses_pr_number(mock_start_case_creation, mock_s2s_manager, mock_idam_mgr):
     mock_idam_mgr.get_token.return_value = ("mock_idam_token", "mock_uid")
-    mock_s2s_inst = MagicMock()
-    mock_s2s_inst.get_token.return_value = "mock_s2s_token"
-    mock_s2s_class.return_value = mock_s2s_inst
+    mock_s2s_manager.get_token.return_value = "mock_s2s_token"
 
     # Return 401 so process_case exits before validate_case is reached
     mock_start_case_creation.return_value = mock_response(401, text="Unauthorized")
@@ -311,13 +307,11 @@ def test_process_case_url_uses_pr_number(mock_start_case_creation, mock_s2s_clas
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.idam_token_mgr")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager")
+@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.s2s_manager")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
-def test_process_case_start_case_fail(mock_start_case_creation, mock_s2s_class, mock_idam_mgr):
+def test_process_case_start_case_fail(mock_start_case_creation, mock_s2s_manager, mock_idam_mgr):
     mock_idam_mgr.get_token.return_value = ("mock_idam_token", "mock_uid")
-    mock_s2s_inst = MagicMock()
-    mock_s2s_inst.get_token.return_value = "mock_s2s_token"
-    mock_s2s_class.return_value = mock_s2s_inst
+    mock_s2s_manager.get_token.return_value = "mock_s2s_token"
 
     mock_start_case_response = mock_response(401, {"text": "bad response"})
     mock_start_case_creation.return_value = mock_start_case_response
@@ -336,14 +330,12 @@ def test_process_case_start_case_fail(mock_start_case_creation, mock_s2s_class, 
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.idam_token_mgr")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager")
+@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.s2s_manager")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
-def test_process_case_validation_fails(mock_start, mock_validate, mock_s2s_class, mock_idam_mgr):
+def test_process_case_validation_fails(mock_start, mock_validate, mock_s2s_manager, mock_idam_mgr):
     mock_idam_mgr.get_token.return_value = ("mock_idam_token", "mock_uid")
-    mock_s2s_inst = MagicMock()
-    mock_s2s_inst.get_token.return_value = "mock_s2s_token"
-    mock_s2s_class.return_value = mock_s2s_inst
+    mock_s2s_manager.get_token.return_value = "mock_s2s_token"
 
     mock_start.return_value = mock_response(200, {"token": "abc123"})
     mock_validate.return_value = mock_response(400, text="Invalid payload")
@@ -362,15 +354,13 @@ def test_process_case_validation_fails(mock_start, mock_validate, mock_s2s_class
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.idam_token_mgr")
-@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.S2S_Manager")
+@patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.s2s_manager")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.submit_case")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.validate_case")
 @patch("AzureFunctions.ACTIVE.active_ccd.ccdFunctions.start_case_creation")
-def test_process_case_submission_fails(mock_start, mock_validate, mock_submit, mock_s2s_class, mock_idam_mgr):
+def test_process_case_submission_fails(mock_start, mock_validate, mock_submit, mock_s2s_manager, mock_idam_mgr):
     mock_idam_mgr.get_token.return_value = ("mock_idam_token", "mock_uid")
-    mock_s2s_inst = MagicMock()
-    mock_s2s_inst.get_token.return_value = "mock_s2s_token"
-    mock_s2s_class.return_value = mock_s2s_inst
+    mock_s2s_manager.get_token.return_value = "mock_s2s_token"
 
     mock_start.return_value = mock_response(200, {"token": "abc123"})
     mock_validate.return_value = mock_response(201)
@@ -562,7 +552,7 @@ def test_process_case_called_with_correct_args(
     args = mock_process_case.call_args[0]
     assert args[1] == "CASE123"        # caseNo
     assert args[3] == "run005"         # run_id
-    assert args[4] == "paymentPending" # state
+    assert args[4] == "paymentPending"  # state
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")

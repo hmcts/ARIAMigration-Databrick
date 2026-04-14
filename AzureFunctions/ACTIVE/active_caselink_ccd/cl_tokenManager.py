@@ -6,7 +6,7 @@ from azure.keyvault.secrets import SecretClient
 from datetime import datetime, timezone, timedelta
 
 class IDAMTokenManager:
-    def __init__(self, env: str, skew: int = 28792):
+    def __init__(self, env: str, skew: int = 1800):
         self.env = env
         self._token = None
         self._expiration_time = None
@@ -124,7 +124,7 @@ class IDAMTokenManager:
 
 
 class S2S_Manager():
-    def __init__(self, env: str, skew: int = 21000):
+    def __init__(self, env: str, skew: int = 1800):
         self.env = env
         self._s2s_token = None
         self.expire_time = None

@@ -318,6 +318,18 @@ class appealSubmittedDQRules(DQRulesBase):
                 )
                 OR
                 (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND PaymentRemissionGranted <=> 1)
+                    AND
+                    (
+                        NOT EXISTS(
+                            valid_transactionList1,
+                            x -> CAST(x.SumTotalFee AS INT) = 1 AND NOT(ARRAY_CONTAINS(lu_ref_txn1, x.TransactionId))
+                        )
+                        AND amountLeftToPay IS NULL
+                    )
+                )
+                OR
+                (
                     (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR NOT(PaymentRemissionGranted <=> 1))
                     AND
                     (amountLeftToPay IS NULL)

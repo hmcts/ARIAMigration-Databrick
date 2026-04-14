@@ -119,15 +119,15 @@ class prepareForHearingDQRules(DQRulesBase):
     def get_checks_hearing_details(self, checks={}):
 
         checks["valid_listinglength"] = ("""
-        (roundedTimeEstimate IS NULL AND
-            element_at(listingLength, 'hours') IS NULL AND
-            element_at(listingLength, 'minutes') IS NULL
-        ) OR (
-            roundedTimeEstimate IS NOT NULL AND
-            element_at(listingLength, 'hours') >=0 AND
-            element_at(listingLength, 'minutes') >=0
-        )
-        """)
+            (
+                TimeEstimate IS NULL AND
+                element_at(listingLength, 'hours') IS NULL AND
+                element_at(listingLength, 'minutes') IS NULL
+            ) OR (
+                TimeEstimate IS NOT NULL AND
+                element_at(listingLength, 'hours') = floor(TimeEstimate / 60) AND
+                element_at(listingLength, 'minutes') = (TimeEstimate % 60)
+            )""")
 
         checks["valid_hearingChannel"] = ("""
         (

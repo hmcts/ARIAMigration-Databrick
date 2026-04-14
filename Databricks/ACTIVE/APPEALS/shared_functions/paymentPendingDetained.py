@@ -53,7 +53,7 @@ def detained(silver_m1, silver_m2,bronze_detention_centres):
         .withColumn("releaseDateProvided",when((col("m2.Detained").isin(1,4)),lit("Yes")).otherwise(None))
         .withColumn("hasPendingBailApplications",when((col("m2.Detained") == 2),lit("NotSure")).otherwise(None))
         .withColumn("removalOrderOptions",when((col("m2.RemovalDate").isNotNull()),lit("Yes")).otherwise("No"))
-        .withColumn("removalOrderDate",when((col("m2.RemovalDate").isNotNull()),date_format(col("m2.RemovalDate"), "yyyy-MM-dd")).otherwise(None))
+        .withColumn("removalOrderDate",when((col("m2.RemovalDate").isNotNull()),date_format(col("m2.RemovalDate"), "yyyy-MM-dd'T'HH:mm:ss.SSS")).otherwise(None))
         .withColumn("detentionBuilding",when((col("m2.Detained").isin(1,2)),col("det.detentionBuilding")).otherwise(None))
         .withColumn("detentionAddressLines",when((col("m2.Detained").isin(1,2)),col("det.detentionAddressLines")).otherwise(None))
         .withColumn("detentionPostcode",when((col("m2.Detained").isin(1,2)),col("det.detentionPostcode")).otherwise(None))

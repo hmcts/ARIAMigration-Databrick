@@ -3,7 +3,7 @@ from pyspark.sql.functions import (
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains, explode,
-    year, month, dayofmonth, countDistinct, count
+    year, month, dayofmonth, countDistinct, count, upper
 )
 
 from functools import reduce
@@ -7146,11 +7146,193 @@ def test_prisonNOMSNumber_ac2(test_df):
         error_message = str(e)        
         return TestResult("prisonNOMSNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#otherDetentionFacilityName - If M2.Detained != 4, otherDetentionFacilityName is not null
+#######################
+def test_otherDetentionFacilityName_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") != 4).count() ==0:    
+            return TestResult("otherDetentionFacilityName", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") != 4) &
+            (col("otherDetentionFacilityName").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("otherDetentionFacilityName", "FAIL", f"otherDetentionFacilityName acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 4 and otherDetentionFacilityName is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("otherDetentionFacilityName", "PASS", f"otherDetentionFacilityName acceptance criteria passed: all cases where Detained != 4 have otherDetentionFacilityName omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("otherDetentionFacilityName", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#otherDetentionFacilityName - If M2.Detained = 4, field != M2.DetentionCentreName or M2.AppellantAddress1 in order
+#######################
+def test_otherDetentionFacilityName_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(
+            (col("Detained") == 4) &
+            # (coalesce(col("DetentionCentreName"), col("AppellantAddress1")).isNotNull())
+            (col("Appellant_Address1").isNotNull())
+            ).count() ==0:    
+            return TestResult("otherDetentionFacilityName", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") == 4) &
+            # (
+            #     upper(trim(col("otherDetentionFacilityName"))) != 
+            #     upper(trim(coalesce(col("DetentionCentreName"), col("AppellantAddress1"))))
+            # )
+            (
+                upper(trim(col("otherDetentionFacilityName.other"))) != upper(trim(col("Appellant_Address1")))
+            )
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("otherDetentionFacilityName", "FAIL", f"otherDetentionFacilityName acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained = 4 and otherDetentionFacilityName does not equal M2.AppellantAddress1", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("otherDetentionFacilityName", "PASS", f"otherDetentionFacilityName acceptance criteria passed: all cases where Detained = 4 have otherDetentionFacilityName equal to M2.AppellantAddress1", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("otherDetentionFacilityName", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#ircName - If M2.Detained != 2, ircName is not null
+#######################
+def test_ircName_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") != 2).count() ==0:    
+            return TestResult("ircName", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") != 2) &
+            (col("ircName").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("ircName", "FAIL", f"ircName acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 2 and ircName is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("ircName", "PASS", f"ircName acceptance criteria passed: all cases where Detained != 2 have ircName omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("ircName", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#removalOrderOptions - If M1.RemovalDate is not null, field = Yes
+#######################
+def test_removalOrderOptions_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("RemovalDate").isNotNull()).count() ==0:    
+            return TestResult("removalOrderOptions", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("RemovalDate").isNotNull()) &
+            (col("removalOrderOptions") != "Yes")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("removalOrderOptions", "FAIL", f"removalOrderOptions acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is not null, field != Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("removalOrderOptions", "PASS", f"removalOrderOptions acceptance criteria passed: all cases where M1.RemovalDate is not null have field = Yes", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("removalOrderOptions", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#removalOrderOptions - If M1.RemovalDate is null, field = No
+#######################
+def test_removalOrderOptions_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("RemovalDate").isNull()).count() ==0:    
+            return TestResult("removalOrderOptions", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("RemovalDate").isNull()) &
+            (col("removalOrderOptions") != "No")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("removalOrderOptions", "FAIL", f"removalOrderOptions acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is null, field != No", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("removalOrderOptions", "PASS", f"removalOrderOptions acceptance criteria passed: all cases where M1.RemovalDate is null have field = No", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("removalOrderOptions", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#removalOrderDate - If M1.RemovalDate is not null, field = RemovalDate
+#######################
+def test_removalOrderDate_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("RemovalDate").isNotNull()).count() ==0:    
+            return TestResult("removalOrderDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("RemovalDate").isNotNull()) &
+            (col("removalOrderDate") != col("RemovalDate"))
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("removalOrderDate", "FAIL", f"removalOrderDate acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is not null, field != Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("removalOrderDate", "PASS", f"removalOrderDate acceptance criteria passed: all cases where M1.RemovalDate is not null have field = Yes", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("removalOrderDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#removalOrderDate - If M1.RemovalDate is null, field = No
+#######################
+def test_removalOrderDate_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("removalOrderDate").isNotNull()).count() ==0:    
+            return TestResult("removalOrderDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("RemovalDate").isNull()) &
+            (col("removalOrderDate").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("removalOrderDate", "FAIL", f"removalOrderDate acceptance criteria failed: found {acceptance_criteria.count()} cases where M1.RemovalDate is null, field is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("removalOrderDate", "PASS", f"removalOrderDate acceptance criteria passed: all cases where M1.RemovalDate is null have field is null", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("removalOrderDate", "FAIL",f"NO RECORDS TO TEST. EXCEPTION : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-
+#######################
+#detentionBuilding, detentionAddressLines, detentionPostcode - If M2.Detained = 1,2, field is not null
+#######################
+def test_detentionDetails_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(~(col("Detained").isin(1,2))).count() ==0:    
+            return TestResult("detentionBuilding, detentionAddressLines, detentionPostcode", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (~(col("Detained").isin(1,2))) &
+            (
+                (col("detentionBuilding").isNotNull()) | 
+                (col("detentionAddressLines").isNotNull()) | 
+                (col("detentionPostcode").isNotNull())
+            )
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("detentionBuilding, detentionAddressLines, detentionPostcode", "FAIL", f"detentionBuilding, detentionAddressLines, detentionPostcode acceptance criteria failed: found {acceptance_criteria.count()} cases where M2.Detained = 1,2, field is null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("detentionBuilding, detentionAddressLines, detentionPostcode", "PASS", f"detentionBuilding, detentionAddressLines, detentionPostcode acceptance criteria passed: all cases where cases where M2.Detained = 1,2, field is null", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("detentionBuilding, detentionAddressLines, detentionPostcode", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    

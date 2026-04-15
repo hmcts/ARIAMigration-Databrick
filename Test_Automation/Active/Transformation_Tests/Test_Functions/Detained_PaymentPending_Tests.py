@@ -6966,7 +6966,7 @@ def test_detained_init(json, M2_bronze, M1_bronze):
         M2_bronze = M2_bronze.select(
             "CaseNo",
             "Detained",
-            # "PrisonRef",
+            "prisonRef",
             # "DetentionCentreName",
             "Appellant_Address1",
         )
@@ -6991,20 +6991,160 @@ def test_detained_init(json, M2_bronze, M1_bronze):
         error_message = str(e)        
         return None,TestResult("detained", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#detentionFacility - If M2.Detained IS 1 = ‘prison'
+#######################
+def test_detentionFacility_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") == 1).count() ==0:    
+            return TestResult("detentionFacility", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") == 1) &
+            (col("detentionFacility") != 'prison')
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("detentionFacility", "FAIL", f"detentionFacility acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained = 1 and detentionFacility != prison", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("detentionFacility", "PASS", f"detentionFacility acceptance criteria passed: all cases where Detained = 1 have detentionFacility == prison", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("detentionFacility", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#detentionFacility - If M2.Detained IS 2 = 'immigrationRemovalCentre'
+#######################
+def test_detentionFacility_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") == 2).count() ==0:    
+            return TestResult("detentionFacility", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") == 2) &
+            (col("detentionFacility") != 'immigrationRemovalCentre')
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("detentionFacility", "FAIL", f"detentionFacility acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained = 2 and detentionFacility != immigrationRemovalCentre", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("detentionFacility", "PASS", f"detentionFacility acceptance criteria passed: all cases where Detained = 2 have detentionFacility == immigrationRemovalCentre", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("detentionFacility", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#detentionFacility - If M2.Detained IS 4 = 'other'
+#######################
+def test_detentionFacility_ac3(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") == 4).count() ==0:    
+            return TestResult("detentionFacility", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") == 4) &
+            (col("detentionFacility") != 'other')
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("detentionFacility", "FAIL", f"detentionFacility acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained = 4 and detentionFacility != other", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("detentionFacility", "PASS", f"detentionFacility acceptance criteria passed: all cases where Detained = 4 have detentionFacility == other", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("detentionFacility", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#detentionFacility - If M2.Detained IS other, field omitted
+#######################
+def test_detentionFacility_ac4(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(~(col("Detained").isin(1,2,4))).count() ==0:    
+            return TestResult("detentionFacility", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (~(col("Detained").isin(1,2,4))) &
+            (col("detentionFacility").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("detentionFacility", "FAIL", f"detentionFacility acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and detentionFacility is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("detentionFacility", "PASS", f"detentionFacility acceptance criteria passed: all cases where Detained != 1,2,4 have detentionFacility omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("detentionFacility", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#prisonName - If M2.Detained != 1, prisonName is not null
+#######################
+def test_prisonName_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") != 1).count() ==0:    
+            return TestResult("prisonName", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") != 1) &
+            (col("prisonName").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("prisonName", "FAIL", f"prisonName acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1 and prisonName is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("prisonName", "PASS", f"prisonName acceptance criteria passed: all cases where Detained != 1 have prisonName omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("prisonName", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+#######################
+#prisonNOMSNumber - If M2.Detained != 1, prisonNOMSNumber is not null
+#######################
+def test_prisonNOMSNumber_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained") != 1).count() ==0:    
+            return TestResult("prisonNOMSNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained") != 1) &
+            (col("prisonNOMSNumber").isNotNull())
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("prisonNOMSNumber", "FAIL", f"prisonNOMSNumber acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1 and prisonNOMSNumber is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("prisonNOMSNumber", "PASS", f"prisonNOMSNumber acceptance criteria passed: all cases where Detained != 1 have prisonNOMSNumber omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("prisonNOMSNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-
-
-
-
-
-
-
-
+#######################
+#prisonNOMSNumber - If M2.PrisonRef is not null, prisonName is not null and matches 
+#######################
+def test_prisonNOMSNumber_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter((col("prisonRef").isNotNull()) & (col("Detained") == 1)).count() ==0:    
+            return TestResult("prisonNOMSNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("prisonRef").isNotNull()) &
+            (col("Detained") == 1) &
+            (col("prisonNOMSNumber.prison") != col("prisonRef"))
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("prisonNOMSNumber", "FAIL", f"prisonNOMSNumber acceptance criteria failed: found {acceptance_criteria.count()} cases where M2.Detained = 1 and M2.PrisonRef is not null and, prisonName does not match", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("prisonNOMSNumber", "PASS", f"prisonNOMSNumber acceptance criteria passed: all cases where where M2.Detained = 1 and M2.PrisonRef is not null, prisonName matches", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("prisonNOMSNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 

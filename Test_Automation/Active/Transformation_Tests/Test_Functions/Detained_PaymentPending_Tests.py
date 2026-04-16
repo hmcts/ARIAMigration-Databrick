@@ -7336,3 +7336,255 @@ def test_detentionDetails_ac1(test_df):
         error_message = str(e)        
         return TestResult("detentionBuilding, detentionAddressLines, detentionPostcode", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
+############################################################################################
+#######################
+#caseData Init code
+#######################
+def test_caseData_init(json, M2_bronze):
+    try:
+        json = json.select(
+            "appealReferenceNumber",
+            "prisonName",
+            "ircName",
+            "detentionBuilding",
+            "detentionAddressLines",
+            "detentionPostcode",
+            "hearingCentre",
+            "staffLocation", 
+            "caseManagementLocation", 
+            "hearingCentreDynamicList", 
+            "caseManagementLocationRefData", 
+            "selectedHearingCentreRefData",
+            "applicationChangeDesignatedHearingCentre"
+        )
+
+        M2_bronze = M2_bronze.select(
+            "CaseNo",
+            "Detained",
+            "DetentionCentreId"
+        )
+
+        test_df = json.join(
+            M2_bronze,
+            json["appealReferenceNumber"] == M2_bronze["CaseNo"],
+            "inner"
+        )
+        
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("caseData", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+#caseData fields:
+# Given M2.Detained = 1,2
+# And M2.DetentionCentreId value
+# Then prisonName
+# And ircName
+# And detentionBuilding
+# And detentionAddressLines
+# And detentionPostcode
+# And hearingCentre
+# And staffLocation
+# And caseManagementLocation
+# And caseManagementLocationRefData | hearingCentreDynamicList
+# And selectedHearingCentreRefData
+# And applicationChangeDesignatedHearingCentre
+#######################
+def caseDataMap(spark):
+    mapping_schema = StructType([
+        StructField("req_Detained", IntegerType(), True),
+        StructField("req_DetentionCentreId", IntegerType(), True),
+        StructField("req_DetentionCentre", StringType(), True),
+        StructField("req_prisonName", StringType(), True),
+        StructField("req_ircName", StringType(), True),
+        StructField("req_detentionBuilding", StringType(), True),
+        StructField("req_detentionAddressLines", StringType(), True),
+        StructField("req_detentionPostcode", StringType(), True),
+        StructField("req_hearingCentre", StringType(), True),
+        StructField("req_staffLocation", StringType(), True),
+        StructField("req_caseManagementLocation", StringType(), True),
+        StructField("req_locationCode", StringType(), True),
+        StructField("req_locationLabel", StringType(), True),
+        StructField("req_selectedHearingCentreRefData", StringType(), True),
+        StructField("req_appChangeDHC", StringType(), True)
+    ])
+
+    # Full data mapping (107 rows)
+    mapping_data = [
+        (1, 2, 'Rochester', 'Rochester', 'N/A', 'HMP/YOI Rochester', '1 Fort Road, Rochester, Kent', 'ME1 3QS', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 5, 'Wormwood Scrubs', 'Wormwood Scrubs', 'N/A', 'HMP Wormwood Scrubs', 'PO Box 757, Du Cane Road, London', 'W12 0AE', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 8, 'Belmarsh', 'Belmarsh', 'N/A', 'HMP Belmarsh', 'Western Way, Thamesmead, London', 'SE28 0EB', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 9, 'Birmingham', 'Birmingham', 'N/A', 'HMP Birmingham', 'Winson Green Road, Birmingham', 'B18 4AS', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 10, 'High Down', 'High Down', 'N/A', 'HMP/YOI High Down', 'High Down Lane, Sutton, Surrey', 'SM2 5PJ', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 13, 'Pentonville', 'Pentonville', 'N/A', 'HMP/YOI Pentonville', 'Caledonian Road, London', 'N7 8TT', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 14, 'Wandsworth', 'Wandsworth', 'N/A', 'HMP Wandsworth', 'PO Box 757, Heathfield Road, Wandsworth, London', 'SW18 3HS', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 18, 'Elmley', 'Elmley', 'N/A', 'HMP/YOI Elmley', 'Church Road, Eastchurch, Sheerness, Kent', 'ME12 4DZ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 23, 'Magilligan', 'Magilligan', 'N/A', 'HMP Magilligan', 'Point Road, Londonderry, Limavady', 'BT49 0LR', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 25, 'Risley', 'Risley', 'N/A', 'HMP Risley', 'Warrington Road, Risley, Warrington, Cheshire', 'WA3 6BP', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 26, 'Woodhill', 'Woodhill', 'N/A', 'HMP/YOI Woodhill', 'Tattenhoe Street, Milton Keynes, Buckinghamshire', 'MK4 4DA', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 28, 'Long Lartin', 'Long Lartin', 'N/A', 'HMP Long Lartin', 'South Littleton, Evesham, Worcestershire', 'WR11 8ZB', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 29, 'Northumberland', 'Northumberland', 'N/A', 'HMP Northumberland', 'Wansbeck Rd, Morpeth', 'NE65 9XG', 'newcastle', 'Newcastle', '{"region": "1", "baseLocation": "366796"}', '366796', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Newcastle Civil And Family Courts And Tribunals Centre', 'newcastle'),
+        (1, 30, 'Aylesbury', 'Aylesbury', 'N/A', 'HMP Aylesbury', 'Bierton Road, Aylesbury', 'HP20 1EH', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 31, 'Highpoint', 'Highpoint', 'N/A', 'HMP Highpoint', 'Stradishall, Newmarket, Suffolk', 'CB8 9YG', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 32, 'Liverpool', 'Liverpool', 'N/A', 'HMP Liverpool', '68 Hornby Road, Liverpool', 'L9 3DF', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 33, 'Frankland', 'Frankland', 'N/A', 'HMP Frankland', 'Business Hub, Brasside,Durham', 'DH1 5YD', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 34, 'Doncaster', 'Doncaster', 'N/A', 'HMP & YOI Doncaster', 'Marsh Gate, Doncaster', 'DN5 8UX', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 35, 'The Mount', 'The Mount', 'N/A', 'HMP The Mount', 'Molyneaux Avenue, Bovingdon, Hemel Hempstead, Hertfordshire', 'HP3 0NZ', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 36, 'Morton Hall', 'Morton Hall', 'N/A', 'HMP Morton Hall', 'Swinderby, Lincoln', 'LN6 9PT', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 37, 'Brixton', 'Brixton', 'N/A', 'HMP Brixton', 'Jebb Ave, Brixton Hill, London', 'SW2 5XF', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 41, 'Maidstone', 'Maidstone', 'N/A', 'HMP Maidstone', '36 County Road, Maidstone, Kent', 'ME14 1UZ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 43, 'Downview', 'Downview', 'N/A', 'HMP/YOI Downview', 'Sutton Lane, Sutton, Surrey', 'SM2 5PD', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 44, 'Lindholme', 'Lindholme', 'N/A', 'HMP Lindholme', 'Bawtry Road, Hatfield, Doncaster', 'DN7 6EE', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 48, 'Lewes', 'Lewes', 'N/A', 'HMP/YOI Lewes', '1 Brighton Road, Lewes, East Sussex', 'BN7 1EA', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 50, 'Bullingdon', 'Bullingdon', 'N/A', 'HMP Bullingdon', 'Patrick Haugh Road, Bicester', 'OX25 1PZ', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 52, 'Holme House', 'Holme House', 'N/A', 'HMP Holme House', 'Holme House Road, Stockton on Tees', 'TS18 2QU', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 53, 'Winchester', 'Winchester', 'N/A', 'HMP/YOI Winchester', 'Romsey Road, Winchester', 'SO22 5DF', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 56, 'Cardiff', 'Cardiff', 'N/A', 'HMP Cardiff', 'Knox Road, Cardiff', 'CF24 0UG', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 57, 'Leeds', 'Leeds', 'N/A', 'HMP Leeds', '2 Gloucester Terrace, Stanningley Road, Leeds, West Yorkshire', 'LS12 2TJ', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 58, 'Swaleside', 'Swaleside', 'N/A', 'HMP Swaleside', 'Brabazon Road, Eastchurch, Isle of Sheppey, Kent', 'ME12 4AX', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 59, 'Manchester', 'Manchester', 'N/A', 'HMP Manchester', '1 Southall Street, Manchester', 'M60 9AH', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 62, 'Perth', 'Perth', 'N/A', 'HMP Peth', '3 Edinburgh Road, Perth', 'PH2 8AT', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 66, 'Whitemoor', 'Whitemoor', 'N/A', 'HMP Whitemoor', 'Longhill Road, March, Cambridgeshire', 'PE15 0PR', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 68, 'Bristol', 'Bristol', 'N/A', 'HMP Bristol', '19 Cambridge Road, Bishopston, Bristol', 'BS7 8PS', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 76, 'Erlestoke', 'Erlestoke', 'N/A', 'HMP Erlestoke', 'Erlestoke, Devizes, Wiltshire', 'SN10 5TU', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 79, 'Feltham', 'Feltham', 'N/A', 'HMP/YOI Feltham', 'Bedfont Road, Feltham, Middlesex', 'TW13 4ND', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 80, 'Wealstun', 'Wealstun', 'N/A', 'HMP Wealstun', 'Church Causeway, Thorp Arch, Wetherby, Yorkshire', 'LS23 7AZ', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 81, 'Onley', 'Onley', 'N/A', 'HMP Onley', 'Rugby, Warwickshire', 'CV23 8AP', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 82, 'Lowdham Grange', 'Lowdham Grange', 'N/A', 'HMP Lowdham Grange', 'Old Epperstone Road, Lowdham, Nottingham', 'NG14 7DA', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 83, 'Forest Bank', 'Forest Bank', 'N/A', 'HMP Forest Bank', 'Agecroft Road, Pendlebury, Manchester', 'M27 8FB', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 85, 'Dovegate', 'Dovegate', 'N/A', 'HMP Dovegate', 'Uttoxeter, Staffordshire', 'ST14 8XR', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 88, 'Moorland (Closed Prison)', 'Moorland', 'N/A', 'HMP/YOI Moorland', 'Bawtry Road, Hatfield Woodhouse, Doncaster, South Yorkshire', 'DN7 6BW', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 89, 'Glen Parva', 'Glen Parva', 'N/A', 'HMP Glen Parva', '10 Tigers Road, Wigston, Leicester', 'LE18 4TN', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 90, 'Rye Hill', 'Rye Hill', 'N/A', 'HMP Rye Hill', 'Willoughby, Rugby', 'CV23 8SZ', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 92, 'Glenochil', 'Glenochil', 'N/A', 'HMP Glenochil', 'King O Muir Road, Tullibody, Clackmannanshire', 'FK10 3AD', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 93, 'Drake Hall', 'Drake Hall', 'N/A', 'HMP/YOI Drake Hall', 'Eccleshall, Staffordshire', 'ST21 6LQ', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 94, 'Channingswood', 'Channings Wood', 'N/A', 'HMP Channings Wood', 'Denbury, Newton Abbot, Devon', 'TQ12 6DW', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 95, 'Chelmsford', 'Chelmsford', 'N/A', 'HMP/YOI Chelmsford', '200 Springfield Road, Chelmsford, Essex', 'CM2 6LQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 96, 'Coldingley', 'Coldingley', 'N/A', 'HMP Coldingley', 'Shaftesbury Road, Bisley, Woking, Surrey', 'GU24 9EX', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 98, 'Standford Hill', 'Standford Hill', 'N/A', 'HMP Standford Hill', 'Church Road, Eastchurch, Sheerness, Kent', 'ME12 4AA', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 99, 'New Hall', 'New Hall', 'N/A', 'HMP/YOI New Hall', 'Dial Wood, Flockton, Wakefield, West Yorkshire', 'WF4 4XX', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 100, 'Featherstone', 'Featherstone', 'N/A', 'HMP Featherstone', 'New Road, Featherstone, Wolverhampton', 'WV10 7PU', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 101, 'Lincoln', 'Lincoln', 'N/A', 'HMP/YOI Lincoln', 'Greetwell Road, Lincoln', 'LN2 4BD', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 107, 'Ashfield', 'Ashfield', 'N/A', 'HMP Ashfield', 'Shortwood Road, Pucklechurch, Bristol', 'BS16 9QJ', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 110, 'Swinfen Hall', 'Swinfen Hall', 'N/A', 'HMP/YOI Swinfen Hall', 'Swinfen Hall, Lichfield, Staffordshire', 'WS14 9QS', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 111, 'Bedford', 'Bedford', 'N/A', 'HMP Bedford', 'St Loyes St, Bedford', 'MK40 1HG', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 112, 'Wayland', 'Wayland', 'N/A', 'HMP Wayland', 'Griston, Thetford, Norfolk', 'IP25 6RL', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 113, 'SEND', 'Send', 'N/A', 'HMP Send', 'Ripley Road, Woking, Surrey', 'GU23 7LJ', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 114, 'Barlinnie', 'Barlinnie', 'N/A', 'HMP Barlinnie', '81 Lee Avenue, Riddrie, Glasgow', 'G33 2QX', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 116, 'Ford', 'Ford', 'N/A', 'HMP Ford', 'Arundel, West Sussex', 'BN18 0BX', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 117, 'Brinsford', 'Brinsford', 'N/A', 'HMP Brinsford', 'New Road, Featherstone, Wolverhampton', 'WV10 7PY', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 120, 'Littlehey', 'Littlehey', 'N/A', 'HMP Littlehey', 'Perry, Huntingdon, Cambridgeshire', 'PE28 0SR', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 123, 'STOCKEN', 'Stocken', 'N/A', 'HMP Stocken', 'Stocken Hall Road, Stretton, Nr Oakham, Rutland', 'LE15 7RD', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 124, 'Ranby', 'Ranby', 'N/A', 'HMP Ranby', 'Retford, Nottingham', 'DN22 8EU', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 128, 'Nottingham', 'Nottingham', 'N/A', 'HMP Nottingham', 'Perry Road, Sherwood, Nottingham', 'NG5 3AG', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 129, 'Maghabery', 'Maghaberry', 'N/A', 'HMP Maghaberry', 'Old Road, Ballinderry Upper, Lisburn', 'BT28 2PT', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 130, 'Hull', 'Hull', 'N/A', 'HMP Hull', 'Hedon Road, Hull', 'HU9 5LS', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford'),
+        (1, 132, 'Peterborough', 'Peterborough', 'N/A', 'HMP Peterborough', 'Saville Road, Peterborough', 'PE3 7PD', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 134, 'Huntercombe', 'Huntercombe', 'N/A', 'HMP Huntercombe', 'Nuffield, Henley-on-Thames, Oxfordshire', 'RG9 5SB', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 140, 'Portland', 'Portland', 'N/A', 'HMP/YOI Portland', '104 The Grove, Easton, Portland, Dorset', 'DT5 1DL', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 141, 'Buckley Hall', 'Buckley Hall', 'N/A', 'HMP Buckley Hall', 'Buckley Farm Lane, Rochdale', 'OL12 9DW', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 144, 'Garth', 'Garth', 'N/A', 'HMP Garth', 'Ulnes Walton, Leyland, Preston', 'PR26 8NE', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 152, 'Parc', 'Parc', 'N/A', 'HMP/YOI Parc', 'Heol Hopcyn John, Coety, Pen-y-bont ar Ogwr, Bridgend', 'CF35 6AP', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 155, 'Stafford', 'Stafford', 'N/A', 'HMP Stafford', '54 Gaol Road, Stafford, Staffordshire', 'ST16 3AW', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 156, 'Whatton', 'Whatton', 'N/A', 'HMP Whatton', 'New Lane, Whatton, Nottingham', 'NG13 9FQ', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 160, 'Foston Hall', 'Foston Hall', 'N/A', 'HMP/YOI Foston Hall', 'Foston, Derby, Derbyshire', 'DE65 5DN', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 166, 'Lancaster Farms', 'Lancaster Farms', 'N/A', 'HMP Lancaster Farms', 'Stone Row Head, Off Quernmore Road, Lancaster', 'LA1 3QZ', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 169, 'North Sea Camp', 'North Sea Camp', 'N/A', 'HMP North Sea Camp', 'Croppers Lane, Freiston, Boston, Lincolnshire', 'PE22 0QX', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 171, 'Springhill', 'Spring Hill', 'N/A', 'HMP Spring Hill', 'Grendon Underwood, Buckinghamshire', 'HP18 0TL', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 172, 'Stoke Heath', 'Stoke Heath', 'N/A', 'HMP/YOI Stoke Heath', 'Market Drayton, Shropshire', 'TF9 2JL', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 173, 'Styal', 'Styal', 'N/A', 'HMP/YOI Styal', 'Wilmslow, Cheshire', 'SK9 4HR', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 174, 'Sudbury', 'Sudbury', 'N/A', 'HMP Sudbury', 'Nr Ashbourne, Derbyshire', 'DE6 5HW', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 175, 'Swansea', 'Swansea', 'N/A', 'HMP Swansea', '200 Oystermouth Road, Swansea', 'SA1 3SR', 'newport', 'Newport', '{"region": "1", "baseLocation": "227101"}', '227101', 'Newport Tribunal Centre - Columbus House', 'Newport Tribunal Centre - Columbus House', 'newport'),
+        (1, 180, 'Werrington', 'Werrington', 'N/A', 'HMP/YOI Werrington', 'Ash Bank Road, Werrington, Stoke-On-Trent', 'ST9 0DX', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 183, 'Wymott', 'Wymott', 'N/A', 'HMP Wymott', 'Ulnes Walton Lane, Leyland, Preston, Lancashire', 'PR26 8LW', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 188, 'Low Moss', 'Low Moss', 'N/A', 'HMP Low Moss', 'Crosshill Road, Bishopbriggs, Glasgow', 'G64 2QB', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 190, 'Hindley', 'Hindley', 'N/A', 'HMP/YOI Hindley', 'Barracks Road, Bickershaw, Wigan', 'WN2 5TH', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 193, 'Edinburgh', 'Edinburgh Saughton', 'N/A', 'HMP Edinburgh', '33 Stenhouse Road, Edinburgh', 'EH11 3LN', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 194, 'Hewell', 'Hewell Grange', 'N/A', 'HMP Hewell', 'Hewell Lane, Redditch, Worcestershire', 'B97 6QS', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 198, 'Bure', 'Bure', 'N/A', 'HMP Bure', 'Jaguar Drive, Badersfield, Norwich', 'NR10 5GB', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 199, 'Isis', 'Isis', 'N/A', 'HMP/YOI Isis', 'Western Way, Thamesmead', 'SE28 0NZ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 201, 'Thameside', 'Thameside', 'N/A', 'HMP Thameside', 'Griffin Manorway, London', 'SE28 0FJ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (1, 202, 'Oakwood', 'Oakwood', 'N/A', 'HMP Oakwood', 'Oaks Drive, Featherstone, West Midlands', 'WV10 7QD', 'birmingham', 'Birmingham', '{"region": "1", "baseLocation": "231596"}', '231596', 'Birmingham Civil And Family Justice Centre', 'Birmingham Civil And Family Justice Centre', 'birmingham'),
+        (1, 203, 'Grampian', 'Grampian', 'N/A', 'HMP & YOI Grampian', 'South Road, Peterhead', 'AB42 2YY', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 205, 'Addiewell', 'Addiewell', 'N/A', 'HMP Addiewell', '9 Station Road, Addiewell, West Lothian', 'EH55 8QA', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (1, 207, 'Isle of Wight', 'Isle of Wight', 'N/A', 'HMP Isle of Wight', 'Albany House, Newport, Isle of Wight', 'PO30 5RS', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (1, 211, 'HMP Berwyn', 'Berwyn', 'N/A', 'HMP Berwyn', 'Bridge Road, Wrexham Industrial Estate, Wrexham, North Wales', 'LL13 9QE', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (1, 213, 'Berwyn', 'Berwyn', 'N/A', 'HMP Berwyn', 'Bridge Road, Wrexham Industrial Estate, Wrexham, North Wales', 'LL13 9QE', 'manchester', 'Manchester', '{"region": "1", "baseLocation": "512401"}', '512401', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'manchester'),
+        (2, 7, 'Tinsley House', 'N/A', 'Tinsley House', 'Tinsley House IRC', 'Perimeter Road South, Gatwick Airport, Gatwick, West Sussex', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (2, 46, 'Harmondsworth', 'N/A', 'Harmondsworth', 'Harmondsworth IRC', 'Colnbrook-by-pass, Harmondsworth, West Drayton, Middlesex', 'UB7 0HB', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (2, 60, 'Dungavel Detention Centre', 'N/A', 'Dungavel', 'Dungavel House IRC', 'Strathaven, South Lanarkshire', 'ML10 6RF', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
+        (2, 63, 'Yarl\'s Wood', 'N/A', 'Yarlswood', 'Yarlâ€™s Wood IRC', 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlswood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 103, 'Colnbrook', 'N/A', 'Colnbrook', 'Colnbrook IRC', 'Colnbrook Bypass, Harmondsworth, West Drayton, Middlesex', 'UB7 0FX', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
+        (2, 126, 'Yarl’s Wood IRC', 'N/A', 'Yarlswood', 'Yarlâ€™s Wood IRC', 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlsWood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 195, 'Brook House', 'N/A', 'Brookhouse', 'Brook House IRC', 'Perimeter Road South, London Gatwick Airport, Gatwick', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
+        (2, 212, 'Derwentside Immigration Removal Ctr', 'N/A', 'Derwentside', 'Derwentside IRC', 'Corbridge Road, Consett, Co Durham', 'DH8 6QY', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford')
+    ]
+    
+    mapping_df = spark.createDataFrame(mapping_data, mapping_schema)
+
+    return mapping_df
+
+
+def caseData_ac1(mapping_df, test_df):
+    try:
+        relevant_records = test_df.filter(
+            F.col("Detained").isin(1, 2) & F.col("DetentionCentreId").isNotNull()
+        ).select(
+            "appealReferenceNumber", "Detained", "DetentionCentreId",
+            "prisonName", "ircName", "detentionBuilding", "detentionAddressLines", "detentionPostcode",
+            "hearingCentre", "staffLocation", "applicationChangeDesignatedHearingCentre",
+            "caseManagementLocation", "caseManagementLocationRefData", "hearingCentreDynamicList", "selectedHearingCentreRefData"
+        ).distinct()
+        
+        if relevant_records.count() == 0:    
+            return TestResult("caseData", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        audit_df = relevant_records.join(
+            mapping_df, 
+            relevant_records.DetentionCentreId == mapping_df.req_DetentionCentreId, 
+            "inner"
+        )
+
+        acceptance_criteria = audit_df.filter(
+            (F.upper(F.trim(F.col("prisonName"))) != F.upper(F.trim(F.col("req_prisonName")))) |
+            (F.upper(F.trim(F.col("detentionBuilding"))) != F.upper(F.trim(F.col("req_detentionBuilding")))) |
+            (F.upper(F.trim(F.col("detentionPostcode"))) != F.upper(F.trim(F.col("req_detentionPostcode")))) |
+            (F.col("hearingCentre") != F.col("req_hearingCentre")) |
+            (F.col("staffLocation") != F.col("req_staffLocation")) |
+            (F.col("applicationChangeDesignatedHearingCentre") != F.col("req_appChangeDHC")) |
+            ~(
+                F.col("caseManagementLocation").cast("string").contains(F.col("req_locationLabel")) | 
+                F.col("caseManagementLocationRefData").cast("string").contains(F.col("req_locationLabel")) |
+                F.col("hearingCentreDynamicList").cast("string").contains(F.col("req_locationLabel")) |
+                F.col("selectedHearingCentreRefData").cast("string").contains(F.col("req_locationLabel"))
+            )
+        )
+
+        if acceptance_criteria.count() != 0:
+            return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained is in 1,2 and DetentionCentreId is populated, but one of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData does not match requirements.", test_from_state, inspect.stack()[0].function), acceptance_criteria
+        else:
+            return TestResult("caseData", "PASS", f"caseData acceptance criteria passed: all cases where Detained is in 1,2 and DetentionCentreId is populated, all of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData match requirements.", test_from_state, inspect.stack()[0].function), None
+
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("caseData", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function), None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

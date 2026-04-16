@@ -18,16 +18,16 @@ from pyspark.sql.window import Window
 import inspect
 
 def get_ended_group_id(df):
-    """
-    Mapping logic based on CaseStatusId and Outcome from mapping doc.
-    """
-    return df.withColumn("EndedGroup", 
+    history_window = Window.partitionBy("CaseNo").orderBy("StatusId")
+    df_with_prev = df.withColumn("PrevCaseStatusID", F.lag("CaseStatus").over(history_window))
+
+    return df_with_prev.withColumn("EndedGroup",
         F.when((F.col("CaseStatus") == 37) & (F.col("Outcome") == 80), 3)
         .when((F.col("CaseStatus") == 38) & (F.col("Outcome") == 80), 3)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 80), 1)
-        .when((F.col("CaseStatus") == 10122) & (F.col("Outcome") == 80), 1)
+        .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 122), 1) 
         .when((F.col("CaseStatus") == 26) & (F.col("Outcome") == 80), 2)
-        .when((F.col("CaseStatus") == 51) & (F.col("Outcome") == 194), 1)
+        .when((F.col("CaseStatus") == 51) & (F.col("Outcome") == 94), 1) 
         .when((F.col("CaseStatus") == 37) & (F.col("Outcome") == 13), 3)
         .when((F.col("CaseStatus") == 38) & (F.col("Outcome") == 13), 3)
         .when((F.col("CaseStatus") == 26) & (F.col("Outcome") == 13), 2)
@@ -38,25 +38,28 @@ def get_ended_group_id(df):
         .when((F.col("CaseStatus") == 26) & (F.col("Outcome") == 25), 2)
         .when((F.col("CaseStatus") == 52) & (F.col("Outcome") == 91), 1)
         .when((F.col("CaseStatus") == 52) & (F.col("Outcome") == 95), 1)
-        .when((F.col("CaseStatus") == 51) & (F.col("Outcome") == 193), 1)
+        .when((F.col("CaseStatus") == 51) & (F.col("Outcome") == 93), 1) 
         .when((F.col("CaseStatus") == 38) & (F.col("Outcome") == 72), 3)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 120), 1)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 2), 1)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 105), 1)
+        .when((F.col("CaseStatus") == 46) & (F.col("Outcome") == 31) & (F.col("PrevCaseStatusId") == 10), 1) # this is incorrect, needs to incorporate the 'IF dbo.Status CaseStatusId = 10 WHERE StatusId = MAX(StatusId)-1' conditions 
         .otherwise(0)
     )
 
 def test_default_mapping_init(json_data, M3_bronze):
     try:
-        # Find latest status
-        window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
-        latest_status = M3_bronze.withColumn("rn", F.row_number().over(window_spec)).filter("rn = 1")
-        status_with_groups = get_ended_group_id(latest_status)
+
+        full_status_with_groups = get_ended_group_id(M3_bronze)
         
-        # Join Group to JSON
+        window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
+        
+        latest_status = full_status_with_groups.withColumn("rn", F.row_number().over(window_spec)) \
+                                               .filter("rn = 1")
+
         test_df = json_data.join(
-            status_with_groups.select("CaseNo", "EndedGroup"),
-            json_data.appealReferenceNumber == status_with_groups.CaseNo,
+            latest_status.select("CaseNo", "EndedGroup"),
+            json_data.appealReferenceNumber == latest_status.CaseNo,
             "left"
         )
         return test_df, True

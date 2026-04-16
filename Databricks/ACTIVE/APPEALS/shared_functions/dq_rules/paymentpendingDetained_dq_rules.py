@@ -152,7 +152,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             OR
             (
                 RemovalDate IS NOT NULL
-                AND removalOrderDate = date_format(RemovalDate, 'yyyy-MM-dd')
+                AND removalOrderDate = date_format(RemovalDate, "yyyy-MM-dd'T'HH:mm:ss.SSS")
             )
             """
         )

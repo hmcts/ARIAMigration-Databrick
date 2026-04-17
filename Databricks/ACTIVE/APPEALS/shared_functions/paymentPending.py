@@ -1086,13 +1086,18 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
                         col("CaseRep_Address3").isNull() &
                         col("CaseRep_Address4").isNull() &
                         col("CaseRep_Address5").isNull(),
-                        col("CaseRep_Address2")   # override rule
+                        coalesce(
+                            col("CaseRep_Address2"),
+                            col("CaseRep_Postcode"),
+                            lit("")
+                        )
                     ).otherwise(
                         coalesce(
                             col("CaseRep_Address3"),
                             col("CaseRep_Address4"),
                             col("CaseRep_Address5"),
-                            lit(""),
+                            col("CaseRep_Postcode"),
+                            lit("")
                         )
                     ).alias("PostTown"),
 

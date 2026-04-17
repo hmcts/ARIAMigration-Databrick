@@ -15,7 +15,8 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
     max as spark_max, date_format, row_number, expr,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp, transform, first, array_contains, nullif, upper
+    collect_set, current_timestamp, transform, first, array_contains, nullif, upper,
+    lpad
 )
 from uk_postcodes_parsing import fix, postcode_utils
 
@@ -2527,10 +2528,12 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 
     ).withColumn(
         "legalAidAccountNumber",
+        lpad(
         when(col("legalAidAccountNumber") == lit("OMIT"), None                               #When set to OMIT, replace with NULL
         ).when(col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),    #If record matches the string
         when(col("m1.LSCReference").isNotNull(), col("m1.LSCReference")).otherwise(lit("Unknown")) #Perform logic in the string
-    ).otherwise(col("legalAidAccountNumber"))
+    ).otherwise(col("legalAidAccountNumber")
+            ), 6, "0")
 
     ).withColumn(
         "asylumSupportReference",

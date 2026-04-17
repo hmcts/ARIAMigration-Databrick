@@ -2526,7 +2526,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         "exceptionalCircumstances",
         when(col("exceptionalCircumstances") == lit("OMIT"), None).otherwise(col("exceptionalCircumstances"))
 
-    .withColumn(
+    ).withColumn(
         "legalAidAccountNumber",
         when(
             col("legalAidAccountNumber") == lit("OMIT"),

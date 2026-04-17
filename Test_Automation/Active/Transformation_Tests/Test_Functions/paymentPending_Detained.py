@@ -56,5 +56,25 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
             all_test_results.append(ppd_tests.test_appellantInDetention_ac1(test_df2))
             all_test_results.append(ppd_tests.test_appellantInDetention_ac2(test_df2))
 
+    # -- Detained appellantDetails tests --
+    test_df3, test_data_setup3 = ppd_tests.test_appellantDetails_init_detained(json_data, M2_bronze)
+    if test_data_setup3 is not True:
+        all_test_results.append(test_data_setup3)
+
+    if test_df3 is not None:
+        if "appellantInUk" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_appellantInUk_ac1(test_df3))
+            all_test_results.append(ppd_tests.test_appellantInUk_ac2(test_df3))
+            all_test_results.append(ppd_tests.test_appellantInUk_ac3(test_df3))
+
+        if "appealOutOfCountry" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_appealOutOfCountry_ac1(test_df3))
+            all_test_results.append(ppd_tests.test_appealOutOfCountry_ac2(test_df3))
+            all_test_results.append(ppd_tests.test_appealOutOfCountry_ac3(test_df3))        
+
+        if "appellantAddress" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_appellantAddress_ac1(test_df3))
+            all_test_results.append(ppd_tests.test_appellantAddress_ac2(test_df3))
+            all_test_results.append(ppd_tests.test_appellantAddress_ac3(test_df3))
 
     return all_test_results

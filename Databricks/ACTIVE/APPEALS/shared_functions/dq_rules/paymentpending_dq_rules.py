@@ -731,7 +731,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_legalAidAccountNumber_not_null"] = (
             """
                 (
-                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL)
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL AND length(legalAidAccountNumber) BETWEEN 6 AND 20)
                     OR
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND (NOT(remissionType <=> 'hoWaiverRemission') OR NOT(remissionClaim <=> 'legalAid') OR NOT(feeRemissionType <=> 'Legal Aid')) AND legalAidAccountNumber IS NULL)
                     OR

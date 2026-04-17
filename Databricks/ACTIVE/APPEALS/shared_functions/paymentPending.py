@@ -16,7 +16,7 @@ from pyspark.sql.functions import (
     max as spark_max, date_format, row_number, expr,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp, transform, first, array_contains, nullif, upper,
-    lpad, length
+    length
 )
 from uk_postcodes_parsing import fix, postcode_utils
 
@@ -2533,16 +2533,22 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             None
         ).when(
             col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),
-            when(col("m1.LSCReference").isNotNull(), col("m1.LSCReference"))
-            .otherwise(lit("Unknown"))
-        ).otherwise(
             when(
-                length(col("legalAidAccountNumber")) < 6,
-                lpad(col("legalAidAccountNumber"), 6, "0")
-            ).otherwise(col("legalAidAccountNumber"))
+                col("m1.LSCReference").isNotNull(),
+                when(
+                    length(col("m1.LSCReference")) == 5,
+                    concat(lit("0"), col("m1.LSCReference"))
+                ).when(
+                    length(col("m1.LSCReference")) == 4,
+                    concat(lit("00"), col("m1.LSCReference"))
+                ).when(
+                    length(col("m1.LSCReference")) == 3,
+                    concat(lit("000"), col("m1.LSCReference"))
+                ).otherwise(col("m1.LSCReference"))
+            ).otherwise(lit("Unknown"))
+        ).otherwise(
+            col("legalAidAccountNumber")
         )
-    )
-
     ).withColumn(
         "asylumSupportReference",
         when(col("asylumSupportReference") == lit("OMIT"), None                                  #When set to OMIT, replace with NULL

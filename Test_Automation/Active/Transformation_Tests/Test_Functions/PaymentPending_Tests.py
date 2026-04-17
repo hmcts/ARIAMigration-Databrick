@@ -7358,7 +7358,8 @@ def test_caseData_init_detained(json, M2_bronze):
             "hearingCentreDynamicList",
             "caseManagementLocationRefData",
             "selectedHearingCentreRefData",
-            "applicationChangeDesignatedHearingCentre"
+            "applicationChangeDesignatedHearingCentre",
+            "appellantInDetention"
         )
 
         M2_bronze = M2_bronze.select(
@@ -7572,9 +7573,49 @@ def caseData_ac1(mapping_df, test_df):
         error_message = str(e)        
         return TestResult("caseData", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function), None
 
+#######################
+#appellantInDetention - If M2.Detained in 1,2,4, field = Yes
+#######################
+def test_appellantInDetention_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Detained").isin(1,2,4)).count() ==0:    
+            return TestResult("appellantInDetention", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Detained").isin(1,2,4)) &
+            (col("appellantInDetention") != "Yes")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("appellantInDetention", "FAIL", f"appellantInDetention acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained = 1,2,4 and appellantInDetention is not yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appellantInDetention", "PASS", f"appellantInDetention acceptance criteria passed: all cases where Detained= 1,2,4 have appellantInDetention equal to yes", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("appellantInDetention", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-
-
+#######################
+#appellantInDetention - If M2.Detained not in 1,2,4, field = No
+#######################
+def test_appellantInDetention_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(~(col("Detained").isin(1,2,4))).count() ==0:    
+            return TestResult("appellantInDetention", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (~(col("Detained").isin(1,2,4))) &
+            (col("appellantInDetention") != "No")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("appellantInDetention", "FAIL", f"appellantInDetention acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and appellantInDetention is not no", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appellantInDetention", "PASS", f"appellantInDetention acceptance criteria passed: all cases where Detained != 1,2,4 have appellantInDetention equal to no", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("appellantInDetention", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 

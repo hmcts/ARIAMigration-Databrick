@@ -52,4 +52,9 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
             result, defect_df = ppd_tests.caseData_ac1(mapping_df, test_df2)
             all_test_results.append(result)
 
+        if "appellantInDetention" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_appellantInDetention_ac1(test_df2))
+            all_test_results.append(ppd_tests.test_appellantInDetention_ac2(test_df2))
+
+
     return all_test_results

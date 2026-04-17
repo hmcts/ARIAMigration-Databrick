@@ -139,7 +139,7 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
 @retry_on_result(
     max_retries=2,
     base_delay=30,
-    max_delay=120,
+    max_delay=60,
     retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
 )
 def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
@@ -157,7 +157,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather s2s token: {e}"
+            "Error": f"failed to gather IDAM token: {e}"
         }
         return result
 
@@ -171,7 +171,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "Error": f"failed to gather IDAM token: {e}"
+            "Error": f"failed to gather s2s token: {e}"
         }
         return result
 

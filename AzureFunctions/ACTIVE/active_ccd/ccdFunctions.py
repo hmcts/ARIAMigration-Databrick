@@ -2,6 +2,10 @@ import json
 import logging
 import requests
 from datetime import datetime, timezone
+try:
+    from .retry_decorator import retry_on_result
+except ImportError:
+    from retry_decorator import retry_on_result
 
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
@@ -125,6 +129,12 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
 
 
 # caseNo = event.key, payloadData = event.value
+@retry_on_result(
+    max_retries=2,
+    base_delay=30,
+    max_delay=60,
+    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
+)
 def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     print(f"Starting processing case for {caseNo}")
 

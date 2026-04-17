@@ -288,15 +288,12 @@ def no_retry_sleep():
 
 @pytest.fixture
 def mock_token_managers_cl():
-    """Patch the module-level idam_token_mgr instance and S2S_Manager."""
+    """Patch the module-level idam_token_mgr and s2s_manager instances."""
     with patch(f"{MODULE}.idam_token_mgr") as mock_idam, \
-         patch(f"{MODULE}.S2S_Manager") as mock_s2s_cls:
+         patch(f"{MODULE}.s2s_manager") as mock_s2s:
 
         mock_idam.get_token.return_value = ("mock-idam-token", "uid-001")
-
-        mock_s2s_inst = MagicMock()
-        mock_s2s_inst.get_token.return_value = "mock-s2s-token"
-        mock_s2s_cls.return_value = mock_s2s_inst
+        mock_s2s.get_token.return_value = "mock-s2s-token"
 
         yield
 
@@ -408,12 +405,10 @@ def test_process_event_submission_returns_none(mock_start, mock_validate, mock_s
 
 def test_process_event_invalid_env():
     with patch(f"{MODULE}.idam_token_mgr") as mock_idam, \
-         patch(f"{MODULE}.S2S_Manager") as mock_s2s_cls:
+         patch(f"{MODULE}.s2s_manager") as mock_s2s:
 
         mock_idam.get_token.return_value = ("tok", "uid")
-        mock_s2s_inst = MagicMock()
-        mock_s2s_inst.get_token.return_value = "s2s"
-        mock_s2s_cls.return_value = mock_s2s_inst
+        mock_s2s.get_token.return_value = "s2s"
 
         with pytest.raises(ValueError, match="Invalid environment"):
             process_event(
@@ -437,10 +432,10 @@ def test_process_event_idam_token_failure():
 
 def test_process_event_s2s_token_failure():
     with patch(f"{MODULE}.idam_token_mgr") as mock_idam, \
-         patch(f"{MODULE}.S2S_Manager") as mock_s2s_cls:
+         patch(f"{MODULE}.s2s_manager") as mock_s2s:
 
         mock_idam.get_token.return_value = ("tok", "uid")
-        mock_s2s_cls.side_effect = Exception("S2S unreachable")
+        mock_s2s.get_token.side_effect = Exception("S2S unreachable")
 
         result = process_event(**PROCESS_DEFAULTS)
 

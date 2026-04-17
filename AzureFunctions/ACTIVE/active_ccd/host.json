@@ -4,7 +4,7 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "maxTelemetryItemsPerSecond" : 1000,
+        "maxTelemetryItemsPerSecond" : 10000,
         "excludedTypes": "Request"
       }
     }
@@ -12,11 +12,5 @@
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
-  },
-  "retry": {
-    "strategy": "exponentialBackoff",
-    "maxRetryCount": 3,
-    "minimumInterval": "00:00:02",
-    "maximumInterval": "00:00:10"
   }
 }

@@ -20,7 +20,7 @@ parameters:
         service_connection: DTS-DATAINGEST-SBOX
         pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-        states: ['active_ccd', 'active_caselink_ccd'] # Active Function State
+        states: ['active_ccd', 'active_caselink_ccd', 'active_cdam'] # Active Function State
         landing_zones: 
           - landing_zone: '00'
             databricks_host: 'https://adb-3635282203417052.12.azuredatabricks.net'
@@ -47,7 +47,7 @@ parameters:
         dependsOn: sbox_aria
         pool_name: 'hmcts-sds-ptl'
         segments: ['bails', 'apluta', 'td', 'joh', 'aplfpa', 'aplfta', 'sbails']
-        states: ['active_ccd', 'active_caselink_ccd'] # Active Function State
+        states: ['active_ccd', 'active_caselink_ccd', 'active_cdam'] # Active Function State
         landing_zones:
           - landing_zone: '00'
             databricks_host: 'https://adb-4305432441461530.10.azuredatabricks.net'
@@ -285,6 +285,7 @@ stages:
         dependsOn:
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_ccd
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_caselink_ccd
+          - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_cdam
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_bails
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_apluta
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_td

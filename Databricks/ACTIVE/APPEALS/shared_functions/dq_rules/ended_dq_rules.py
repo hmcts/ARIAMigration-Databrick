@@ -21,10 +21,30 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_endAppealOutcome"] = """(
             
+            
+            (
+                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                OR
+                (CaseStatus_end = 46 AND Outcome_end = 31)
+                OR
+                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                OR
+                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                OR
+                (CaseStatus_end = 39 AND Outcome_end = 25)
+                OR
+                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                OR
+                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                OR
+                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+            )
+
+            AND
 
             CASE
                 WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(10) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
+                WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
                 
                 WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
@@ -36,14 +56,32 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
 
-                ELSE endAppealOutcome IS NULL
-
             END
         )"""
 
         checks["valid_endAppealOutcomeReason"] = """(
             
-            CASE
+            (
+                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                OR
+                (CaseStatus_end = 46 AND Outcome_end = 31)
+                OR
+                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                OR
+                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                OR
+                (CaseStatus_end = 39 AND Outcome_end = 25)
+                OR
+                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                OR
+                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                OR
+                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+            )
+            
+            AND
+            
+            (CASE
                 WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
                 WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
@@ -65,10 +103,9 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
                 WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
-                
-                ELSE endAppealOutcomeReason IS NULL
 
             END
+            )
             
         )"""
 
@@ -87,11 +124,55 @@ class endedDQRules(DQRulesBase):
         )"""
 
         checks["valid_endAppealDate"] = """(
-            endAppealDate = decision_ts
+            
+
+            (
+                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                OR
+                (CaseStatus_end = 46 AND Outcome_end = 31)
+                OR
+                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                OR
+                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                OR
+                (CaseStatus_end = 39 AND Outcome_end = 25)
+                OR
+                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                OR
+                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                OR
+                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+            )
+            
+            AND
+
+            (endAppealDate = date_format(to_date(DecisionDate_end), 'yyyy-MM-dd'))
+
         )"""
 
         checks["valid_stateBeforeEndAppeal"] = """(
             
+             (
+                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                OR
+                (CaseStatus_end = 46 AND Outcome_end = 31)
+                OR
+                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                OR
+                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                OR
+                (CaseStatus_end = 39 AND Outcome_end = 25)
+                OR
+                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                OR
+                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                OR
+                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+            )
+            
+            AND
+            
+            (
             CASE
                 WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25) THEN stateBeforeEndAppeal = "listing"
                 WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
@@ -103,9 +184,8 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
 
-                ELSE stateBeforeEndAppeal IS NULL
-
             END
+            )
 
         )"""
 

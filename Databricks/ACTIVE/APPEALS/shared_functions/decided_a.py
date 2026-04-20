@@ -248,8 +248,8 @@ def ftpa(silver_m1, silver_m3,silver_c):
                 col("CaseNo"),
                 date_format(
                     when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
-                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28))
-                    .otherwise(col("DecisionDate")),
+                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28)),
+                    # .otherwise(col("DecisionDate")),
                     "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )

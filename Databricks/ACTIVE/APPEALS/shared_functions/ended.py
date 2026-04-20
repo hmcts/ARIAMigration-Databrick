@@ -109,7 +109,7 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
     silver_with_decision_ts = m3_net_df.withColumn(
         "decision_ts",
         F.coalesce(
-            F.to_timestamp(F.col("DecisionDate")),  # already-ISO timestamps parse fine
+            F.to_timestamp(F.col("DecisionDate")),
             F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
             F.to_timestamp(F.col("DecisionDate"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")
         )

@@ -39,16 +39,16 @@ def documents(silver_m1,silver_m3):
     silver_m3_max_statusid
         .withColumn("allFtpaAppellantDecisionDocs", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
         .withColumn("allFtpaRespondentDecisionDocs", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
-        .withColumn("allSetAsideDocs", lit([]).cast("array<string>"))
+        # .withColumn("allSetAsideDocs", lit([]).cast("array<string>"))
         .select(
             col("CaseNo"),
             col("allFtpaAppellantDecisionDocs"),
             col("allFtpaRespondentDecisionDocs"),
-            col("allSetAsideDocs"),
+            # col("allSetAsideDocs"),
         )   
     )
 
-    documents_df = documents_df.join(silver_m3_content.alias("m3"), on="CaseNo", how="left")
+    documents_df = documents_df.join(silver_m3_content.alias("m3"), on="CaseNo", how="left").withColumn("allSetAsideDocs", lit([]).cast("array<string>"))
 
     documents_audit = (
         documents_audit.alias("audit")

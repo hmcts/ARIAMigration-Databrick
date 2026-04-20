@@ -15,14 +15,14 @@ class decidedADQRules(DQRulesBase):
     def get_checks_hearing_actuals(self, checks={}):
 
         checks["valid_actualCaseHearingLength"] = ("""
-        (HearingDuration IS NULL AND
-            element_at(actualCaseHearingLength, 'hours') IS NULL AND
-            element_at(actualCaseHearingLength, 'minutes') IS NULL
-        ) OR (
-            HearingDuration IS NOT NULL AND
-            element_at(actualCaseHearingLength, 'hours') >=0 AND
-            element_at(actualCaseHearingLength, 'minutes') >=0
-        )
+        
+        (
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND element_at(actualCaseHearingLength, 'hours') =
+                CAST(FLOOR(CAST(HearingDuration AS INT) / 60) AS STRING)
+            AND element_at(actualCaseHearingLength, 'minutes') =
+                CAST(CAST(HearingDuration AS INT) % 60 AS STRING)
+            )
         """)
 
         checks["valid_attendingJudge"] = (
@@ -40,11 +40,8 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_sendDecisionsAndReasonsDate"] = """
         (
-            -- allow missing output if that's acceptable; remove the next two lines if not
-            sendDecisionsAndReasonsDate IS NULL
-            OR trim(sendDecisionsAndReasonsDate) = ''
-            OR
-            -- compare dates after parsing both sides
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
             to_date(
                 to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
             ) = to_date(trim(sendDecisionsAndReasonsDate), 'yyyy-MM-dd')
@@ -53,8 +50,8 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_appealDate"] = """
         (
-            DecisionDate IS NULL
-            OR
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
             to_date(DecisionDate, 'yyyy-MM-dd') = to_date(appealDate, 'yyyy-MM-dd')
         )
         """
@@ -63,10 +60,12 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_appealDecision"] = """
         (
+            
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
             CASE
                 WHEN Outcome_SD = 1 THEN (appealDecision = 'Allowed')
                 WHEN Outcome_SD = 2 THEN (appealDecision = 'Dismissed')
-                ELSE (appealDecision IS NULL)
             END
         )
         """
@@ -85,7 +84,7 @@ class decidedADQRules(DQRulesBase):
 
     def get_checks_document(self, checks={}):
         checks["valid_finalDecisionAndReasonsDocuments"] = (
-            "(size(finalDecisionAndReasonsDocuments) = 0)"
+            "(size(finalDecisionAndReasonsDocuments) = 0 AND finalDecisionAndReasonsDocuments IS NOT NULL)" 
         )
         return checks
 
@@ -115,29 +114,27 @@ class decidedADQRules(DQRulesBase):
         # return checks
     
         
+        
         checks["valid_ftpaApplicationDeadline"] = """
         (
-            (
-                DecisionDate IS NULL
-                AND ftpaApplicationDeadline IS NULL
-            )
-            OR
             (
                 CASE
                     WHEN Outcome_SD IN (1, 2)
                         AND CaseStatus_SD IN (37, 38, 26)
-                        AND CategoryId IN (37, 38)
+                        AND CategoryId = 37
                     THEN
-                        to_date(ftpaApplicationDeadline) IN (
-                            date_add(DecisionDate, 14),
-                            date_add(DecisionDate, 28)
-                        )
-                    ELSE
-                        to_date(ftpaApplicationDeadline) = to_date(DecisionDate)
+                        to_date(ftpaApplicationDeadline) = date_add(DecisionDate, 14)
+
+                    WHEN Outcome_SD IN (1, 2)
+                        AND CaseStatus_SD IN (37, 38, 26)
+                        AND CategoryId = 38
+                    THEN
+                        to_date(ftpaApplicationDeadline) = date_add(DecisionDate, 28)
                 END
             )
         )
         """
         return checks
+
 
 

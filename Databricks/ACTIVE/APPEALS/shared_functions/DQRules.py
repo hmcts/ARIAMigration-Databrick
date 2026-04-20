@@ -377,6 +377,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         .select(
             col("CaseNo"),
             col("decision_ts"),
+            col("DecisionDate").alias("DecisionDate_end"),
             col("m3.CaseStatus").alias("CaseStatus_end"),
             col("m3.Outcome").alias("Outcome_end"),
             col("StatusId").alias("StatusId_end"),

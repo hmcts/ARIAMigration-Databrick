@@ -20,15 +20,15 @@ class decidedBDQRules(DQRulesBase):
 
         checks["valid_allFtpaAppellantDecisionDocs"] = """(
             CASE
-                WHEN Party = 1 THEN size(allFtpaAppellantDecisionDocs) = 0
-                ELSE allFtpaAppellantDecisionDocs IS NULL
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN size(allFtpaAppellantDecisionDocs) = 0
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN allFtpaAppellantDecisionDocs IS NULL
             END
         )"""
 
         checks["valid_allFtpaRespondentDecisionDocs"] = """(
             CASE
-                WHEN Party = 2 THEN size(allFtpaRespondentDecisionDocs) = 0
-                ELSE allFtpaRespondentDecisionDocs IS NULL
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN size(allFtpaRespondentDecisionDocs) = 0
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN allFtpaRespondentDecisionDocs IS NULL
             END
         )"""
 
@@ -50,14 +50,14 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_isFtpaAppellantDecided"] = """(
             CASE
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN isFtpaAppellantDecided = 'Yes'
-                ELSE isFtpaAppellantDecided IS NULL
+                WHEN Party = 2 AND CaseStatus_decb = 39  THEN isFtpaAppellantDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentDecided"] = """(
             CASE
                 WHEN Party = 2 AND CaseStatus_decb = 39 THEN isFtpaRespondentDecided = 'Yes'
-                ELSE isFtpaRespondentDecided IS NULL
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN isFtpaRespondentDecided IS NULL
             END
         )"""
 
@@ -68,7 +68,7 @@ class decidedBDQRules(DQRulesBase):
         
         checks["valid_ftpaList"] = """
             (CASE
-        WHEN Party = 1 THEN
+        WHEN Party = 1 AND CaseStatus_decb = 39 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
         AND element_at(ftpaList, 1).id = '1'
@@ -82,7 +82,7 @@ class decidedBDQRules(DQRulesBase):
         AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text = "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
         AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
 
-        WHEN Party = 2 THEN
+        WHEN Party = 2 AND CaseStatus_decb = 39 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
         AND element_at(ftpaList, 1).id = '1'
@@ -97,8 +97,6 @@ class decidedBDQRules(DQRulesBase):
         AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
         END
         )
-        OR
-        ftpaList IS NULL
         """
 
         checks["valid_ftpaApplicantType"] = """(
@@ -106,7 +104,6 @@ class decidedBDQRules(DQRulesBase):
             CASE
                 WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'appellant'
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'respondent'
-                ELSE ftpaApplicantType IS NULL
             END
         )"""
 
@@ -119,8 +116,8 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantDecisionDate"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
-                ELSE ftpaAppellantDecisionDate IS NULL
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate = date_format(DecisionDate_ftpa,'yyyy-MM-dd')
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate IS NULL
             END
         )"""
 
@@ -128,7 +125,7 @@ class decidedBDQRules(DQRulesBase):
 
             CASE
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
-                ELSE ftpaRespondentDecisionDate IS NULL
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate IS NULL
             END
         )"""
 
@@ -141,16 +138,16 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType <=> 'remadeRule32'
-                ELSE ftpaAppellantRjDecisionOutcomeType IS NULL
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType <=> 'remadeRule32'
-                ELSE ftpaRespondentRjDecisionOutcomeType IS NULL
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType IS NULL
             END
         )"""
 
@@ -183,11 +180,6 @@ class decidedBDQRules(DQRulesBase):
             
         )"""
 
-        checks["valid_ftpaFinalDecisionRemadeRule32"] = """(
-            
-            updateTribunalDecisionDateRule32 = date_format(DecisionDate_decb,'yyyy-MM-dd')
-            
-        )"""
 
         checks["valid_judgesNamesToExclude"] = """(
             CASE
@@ -201,14 +193,14 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantDecisionRemadeRule32Text"] = """(
             CASE
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
-                ELSE ftpaAppellantDecisionRemadeRule32Text IS NULL
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentDecisionRemadeRule32Text"] = """(
             CASE
                 WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
-                ELSE ftpaRespondentDecisionRemadeRule32Text IS NULL
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text IS NULL
             END
         )"""
 

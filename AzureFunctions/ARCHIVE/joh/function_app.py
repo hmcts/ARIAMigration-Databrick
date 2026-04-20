@@ -236,6 +236,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         logging.info(f'Uploading to target blob: {full_blob_name}')
 
         await upload_blob_with_retry(blob_client, file_content, capture_response)
+        logging.info(f"CaseNo = {results["filename"]}, http_response = {results["http_response"]}, http_message = {results["http_message"]}")
 
         results["timestamp"] = datetime.datetime.utcnow().isoformat()
         logging.info("Uploaded blob successfully: %s", key)
@@ -243,6 +244,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
     except Exception as e:
         logging.error(f"Failed to process event with key '{key}': {e}")
         results["http_message"] = str(e)
+        logging.error(f"CaseNo = {results["filename"]}, http_response = {results["http_response"]}, http_message = {results["http_message"]}")
 
         # Send failed message to dead-letter event hub
         if message is not None and key is not None:

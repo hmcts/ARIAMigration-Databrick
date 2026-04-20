@@ -14,13 +14,13 @@ class remittedDQRules(DQRulesBase):
 
         checks["valid_rehearingReason"] = ("""
         (
-            rehearingReason = "Remitted"
+            rehearingReason = "Remitted" AND rehearingReason IS NOT NULL AND rehearingReason != ""
         )
         """)
 
         checks["valid_sourceOfRemittal"] = ("""
         (
-            sourceOfRemittal = "Upper Tribunal"
+            sourceOfRemittal = "Upper Tribunal" AND sourceOfRemittal IS NOT NULL AND sourceOfRemittal != ""
         )
         """)
 
@@ -33,6 +33,8 @@ class remittedDQRules(DQRulesBase):
         checks["valid_appealRemittedDate"] = (
             """
             (
+                (CaseStatus_rem IN (42, 43, 44) AND Outcome_rem = 86)
+                AND
                 appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd')
             )
             """)
@@ -49,7 +51,12 @@ class remittedDQRules(DQRulesBase):
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists = 'Yes')")
+        checks["valid_caseFlagSetAsideReheardExists"] = 
+            ("""
+                (caseFlagSetAsideReheardExists = 'Yes') 
+                AND caseFlagSetAsideReheardExists IS NOT NULL
+                AND caseFlagSetAsideReheardExists != ""
+            """)
 
         return checks
 

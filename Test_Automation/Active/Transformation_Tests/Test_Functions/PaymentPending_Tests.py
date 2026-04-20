@@ -7870,3 +7870,92 @@ def test_appellantAddress_ac3(test_df):
         error_message = str(e)        
         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+############################################################################################
+#######################
+#sponsorDetails Init code
+#######################
+def test_sponsorDetails_init_detained(json, M1_bronze):
+    try:
+        json = json.select(
+            "appealReferenceNumber",
+            "hasSponsor",
+            "sponsorGivenNames",
+            "sponsorFamilyName",
+            "sponsorAddress",
+            "sponsorEmailAdminJ",
+            # "sponsorMobileNumberAdminJ",
+            "sponsorAuthorisation",
+            "sponsorNameForDisplay",
+            "sponsorAddressForDisplay"
+        )
+
+        M1_bronze = M1_bronze.select(
+            "CaseNo",
+            "Sponsor_Name",
+            "Sponsor_Forenames",
+            "Sponsor_Address1",
+            "Sponsor_Address2",
+            "Sponsor_Address3",
+            "Sponsor_Address4",
+            "Sponsor_Address5",
+            "Sponsor_Postcode",
+            "Sponsor_Email",
+            # "Sponsor_Mobile",
+            "Sponsor_Authorisation"
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            "inner"
+        )
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)
+        return None,TestResult("sponsorDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+#hasSponsor - If Sponsor_Name is not null, field = Yes
+#######################
+def test_hasSponsor_ac1(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Sponsor_Name").isNotNull()).count() ==0:    
+            return TestResult("hasSponsor", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Sponsor_Name").isNotNull()) &
+            (col("hasSponsor") != "Yes")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("hasSponsor", "FAIL", f"hasSponsor acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name is not null and hasSponsor is not Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hasSponsor", "PASS", f"hasSponsor acceptance criteria passed: all cases where Sponsor_Name is not null have hasSponsor equal to Yes", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("hasSponsor", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+#hasSponsor - If Sponsor_Name is null, field = Yes
+#######################
+def test_hasSponsor_ac2(test_df):
+    try:
+        #Check we have Records To test
+        if test_df.filter(col("Sponsor_Name").isNull()).count() ==0:    
+            return TestResult("hasSponsor", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                                                
+        acceptance_criteria = test_df.filter(
+            (col("Sponsor_Name").isNull()) &
+            (col("hasSponsor") != "No")
+        )    
+        
+        if acceptance_criteria.count() != 0:
+            return TestResult("hasSponsor", "FAIL", f"hasSponsor acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name is null and hasSponsor is not No", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hasSponsor", "PASS", f"hasSponsor acceptance criteria passed: all cases where Sponsor_Name is null have hasSponsor equal to No", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("hasSponsor", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+

@@ -51,8 +51,8 @@ class remittedDQRules(DQRulesBase):
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_caseFlagSetAsideReheardExists"] = 
-            ("""
+        checks["valid_caseFlagSetAsideReheardExists"] = (
+            """
                 (caseFlagSetAsideReheardExists = 'Yes') 
                 AND caseFlagSetAsideReheardExists IS NOT NULL
                 AND caseFlagSetAsideReheardExists != ""

@@ -100,7 +100,9 @@ class decidedBDQRules(DQRulesBase):
         """
 
         checks["valid_ftpaApplicantType"] = """(
-
+            
+            CaseStatus_decb = 39 
+            AND 
             CASE
                 WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'appellant'
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'respondent'

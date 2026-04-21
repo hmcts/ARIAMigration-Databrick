@@ -7633,6 +7633,12 @@ def test_appellantDetails_init_detained(json, M2_bronze, C):
         M2_bronze = M2_bronze.select(
             "CaseNo",
             "Detained",
+            "Appellant_Address1",
+            "Appellant_Address2",
+            "Appellant_Address3",
+            "Appellant_Address4",
+            "Appellant_Address5",
+            "Appellant_Postcode"
         )
         
         C = C.select(
@@ -7659,6 +7665,12 @@ def test_appellantDetails_init_detained(json, M2_bronze, C):
                 first("appellantInUk").alias("appellantInUk"),
                 first("appealOutOfCountry").alias("appealOutOfCountry"),
                 first("appellantAddress").alias("appellantAddress"),
+                first("Appellant_Address1").alias("Appellant_Address1"),
+                first("Appellant_Address2").alias("Appellant_Address2"),
+                first("Appellant_Address3").alias("Appellant_Address3"),
+                first("Appellant_Address4").alias("Appellant_Address4"),
+                first("Appellant_Address5").alias("Appellant_Address5"),
+                first("Appellant_Postcode").alias("Appellant_Postcode"),
                 first("Detained").alias("Detained")
             ))
         return test_df, True
@@ -7825,7 +7837,7 @@ def test_appellantAddress_ac1(test_df):
         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantAddress - If M2.Detained not in 1,2 and CategoryId NOT IN [37], field not omitted
+#appellantAddress - If M2.Detained not in 1,2 and CategoryId NOT IN [37], field omitted
 #######################
 def test_appellantAddress_ac2(test_df):
     try:
@@ -7834,10 +7846,10 @@ def test_appellantAddress_ac2(test_df):
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
-            (~col("Detained").isin(1,2)) & 
+            (~col("Detained").isin(1, 2)) & 
             (~array_contains(col("CategoryIds"), 37)) &
             (col("appellantAddress").isNotNull())
-        )    
+        )
         
         if acceptance_criteria.count() != 0:
             return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and CategoryId not IN [37] appellantAddress is not omitted", test_from_state, inspect.stack()[0].function)
@@ -7856,11 +7868,28 @@ def test_appellantAddress_ac3(test_df):
         if test_df.filter((~col("Detained").isin(1,2)) & (array_contains(col("CategoryIds"), 37))).count() ==0:    
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
+        def clean_val(col_ref):
+        c = F.col(col_ref) if isinstance(col_ref, str) else col_ref
+        return F.when(
+            (c.isNull()) | 
+            (F.trim(c) == "") | 
+            (F.trim(F.upper(c)) == "NULL"), 
+            None
+        ).otherwise(F.trim(c))
+
         acceptance_criteria = test_df.filter(
-            (~col("Detained").isin(1,2)) & 
+            (~col("Detained").isin(1, 2)) & 
             (array_contains(col("CategoryIds"), 37)) &
-            (col("appellantAddress").isNull())
-        )    
+            
+            (
+                (~clean_val("appellantAddress.AddressLine1").eqNullSafe(clean_val("Appellant_Address1"))) |
+                (~clean_val("appellantAddress.AddressLine2").eqNullSafe(clean_val("Appellant_Address2"))) |
+                (~clean_val("appellantAddress.PostTown").eqNullSafe(clean_val("Appellant_Address3"))) |
+                (~clean_val("appellantAddress.County").eqNullSafe(clean_val("Appellant_Address4"))) |
+                (~clean_val("appellantAddress.Country").eqNullSafe(clean_val("Appellant_Address5"))) |
+                (~clean_val("appellantAddress.PostCode").eqNullSafe(clean_val("Appellant_Postcode")))
+            )
+        )
         
         if acceptance_criteria.count() != 0:
             return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and CategoryId IN [37] appellantAddress is omitted", test_from_state, inspect.stack()[0].function)

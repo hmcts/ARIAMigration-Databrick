@@ -89,6 +89,23 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 
         if "sponsorGivenNames" not in fields_to_exclude:
             all_test_results.append(ppd_tests.test_sponsorGivenNames_ac1(test_df4))
-            all_test_results.append(ppd_tests.test_sponsorGivenNames_ac2(test_df4))            
+            all_test_results.append(ppd_tests.test_sponsorGivenNames_ac2(test_df4))  
+
+        if "sponsorAddress" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_sponsorAddress_ac1(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorAddress_ac2(test_df4))  
+
+        if "sponsorEmailAdminJ" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac1(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac2(test_df4))  
+
+        if "sponsorAuthorisation" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_sponsorAuthorisation_ac1(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorAuthorisation_ac2(test_df4)) 
+            all_test_results.append(ppd_tests.test_sponsorAuthorisation_ac3(test_df4))    
+
+        if "sponsorNameForDisplay" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_sponsorNameForDisplay_ac1(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorNameForDisplay_ac2(test_df4))
 
     return all_test_results

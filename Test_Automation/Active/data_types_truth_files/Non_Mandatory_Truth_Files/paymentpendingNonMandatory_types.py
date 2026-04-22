@@ -1,0 +1,5 @@
+PaymentPendingNonMandatoryTypes = {
+    'isHomeOfficeIntegrationEnabled': 'string'
+
+
+}

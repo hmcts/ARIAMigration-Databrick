@@ -1,4 +1,4 @@
-FtpaSubmittedATypes = {
+FtpaSubmittedAMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -51,7 +51,7 @@ FtpaSubmittedATypes = {
     'feeVersion': 'string',
     'feeWithHearing': 'string',
     'feeWithoutHearing': 'string',
-    'gwfReferenceNumber': 'string',
+    # 'gwfReferenceNumber': 'string',
     'hasAddedLegalRepDetails': 'string',
     'hasOtherAppeals': 'string',
     'hasServiceRequestAlready': 'string',
@@ -145,7 +145,7 @@ FtpaSubmittedATypes = {
     'additionalInstructionsTribunalResponse': 'string',
     'sponsorAddressForDisplay': 'string',
     'sponsorNameForDisplay': 'string',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
@@ -160,9 +160,9 @@ FtpaSubmittedATypes = {
     'hearingDocuments': 'array<string>',
     'hearingRequirements': 'array<string>',
     'inCameraCourt': 'string',
-    'inCameraCourtDecisionForDisplay': 'string',
-    'inCameraCourtDescription': 'string',
-    'inCameraCourtTribunalResponse': 'string',
+    # 'inCameraCourtDecisionForDisplay': 'string',mandatory
+    # 'inCameraCourtDescription': 'string',mandatory
+    # 'inCameraCourtTribunalResponse': 'string',mandatory
     'isAdditionalAdjustmentsAllowed': 'string',
     'isAdditionalInstructionAllowed': 'string',
     'isAppealSuitableToFloat': 'string',
@@ -172,12 +172,12 @@ FtpaSubmittedATypes = {
     'isEvidenceFromOutsideUkOoc': 'string',
     'isHearingLoopNeeded': 'string',
     'isHearingRoomNeeded': 'string',
-    'isInCameraCourtAllowed': 'string',
+    # 'isInCameraCourtAllowed': 'string',mandatory
     'isInterpreterServicesNeeded': 'string',
     'isMultimediaAllowed': 'string',
     'isRemoteHearing': 'string',
     'isRemoteHearingAllowed': 'string',
-    'isSingleSexCourtAllowed': 'string',
+    # 'isSingleSexCourtAllowed': 'string', mandatory
     'isVulnerabilitiesAllowed': 'string',
     'isWitnessesAttending': 'string',
     'letterBundleDocuments': 'array<string>',
@@ -199,10 +199,10 @@ FtpaSubmittedATypes = {
     'reviewResponseActionAvailable': 'string',
     'reviewedHearingRequirements': 'string',
     'singleSexCourt': 'string',
-    'singleSexCourtDecisionForDisplay': 'string',
-    'singleSexCourtTribunalResponse': 'string',
-    'singleSexCourtType': 'string',
-    'singleSexCourtTypeDescription': 'string',
+    # 'singleSexCourtDecisionForDisplay': 'string',mandatory
+    # 'singleSexCourtTribunalResponse': 'string',mandatory
+    # 'singleSexCourtType': 'string',
+    # 'singleSexCourtTypeDescription': 'string',
     'submitHearingRequirementsAvailable': 'string',
     'uploadHomeOfficeAppealResponseActionAvailable': 'string',
     'uploadHomeOfficeBundleActionAvailable': 'string',
@@ -233,9 +233,9 @@ FtpaSubmittedATypes = {
     'ftpaApplicationDeadline': 'string',
     'isDecisionAllowed': 'string',
     'oocAddressLine2': 'string',
-    'oocAddressLine3': 'string',
-    'oocAddressLine4': 'string',
-    'oocLrCountryGovUkAdminJ': 'string',
+    # 'oocAddressLine3': 'string',
+    # 'oocAddressLine4': 'string',
+    # 'oocLrCountryGovUkAdminJ': 'string',
     'sendDecisionsAndReasonsDate': 'string',
     'ftpaAppellantApplicationDate': 'string',
     'ftpaAppellantDocuments': 'array<string>',

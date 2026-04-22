@@ -2863,10 +2863,6 @@ def stg_skeleton_filtered():
 
 # COMMAND ----------
 
-spark.read.table('hive_metastore.ariadm_arm_fta.stg_skeleton_filtered').count()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation: stg_uppertribunalretained_filtered 
 # MAGIC Segmentation query – Upper Tribunal retained cases. 

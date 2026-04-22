@@ -809,12 +809,15 @@ def silver_tribunaldecision_detail():
     df = joined_df.unionByName(iris_df) \
     .withColumn(
         "BirthDate",
-            coalesce(col("BirthDate"), lit("1900-01-01 00:00:00.000").cast("timestamp")
+        date_format(
+            coalesce(col("BirthDate"), lit("1900-01-01").cast("date")),
+            "yyyy-MM-dd"
         )
-    ) \
-    .withColumn(
+    ).withColumn(
         "DestructionDate",
-            coalesce(col("DestructionDate"), lit("2000-01-01 00:00:00.000").cast("timestamp")
+            date_format(
+                coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
+            "yyyy-MM-dd"
         )
     )
     
@@ -912,12 +915,6 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
-# %sql
-# select * from hive_metastore.ariadm_arm_td.silver_archive_metadata 
-# where bf_010 is null
-
-# COMMAND ----------
-
 @dlt.table(
     name="silver_archive_metadata",
     comment="Delta Live Silver Table for Archive Metadata data.",
@@ -926,25 +923,15 @@ def silver_tribunaldecision_detail():
 def silver_archive_metadata():
     td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
         col('td.CaseNo').alias('client_identifier'),
-        # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        # date_format(col('td.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        # when(env_name == lit('sbox'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
-        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        # when(env_name == lit('sbox'), date_format(coalesce(col('td.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.AdtclmnFirstCreatedDatetime'), 
-        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         when(env_name == lit('sbox'), lit("ARIATDDEV")).otherwise(lit("ARIATD")).alias("record_class"),
-        #lit("ARIATDDEV" if env_name == "sbox" else "ARIATD").alias("record_class"),
-        # lit("ARIATD").alias("record_class"),
-        # lit('IA_Tribunal').alias("entitlement_tag"),
         col("td.HORef").alias('bf_001'),
         col('td.Forenames').alias('bf_002'),
         col('td.Name').alias('bf_003'),
-        # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
-         when(env_name == lit('sbox'), date_format(coalesce(col('td.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        date_format(coalesce(col('td.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
         col('td.PortReference').alias('bf_005'),
         col('td.HearingCentreDescription').alias('bf_006'),
         col("td.DepartmentDescription").alias('bf_007'),
@@ -954,8 +941,6 @@ def silver_archive_metadata():
     )
     iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
         col('iris.CaseNo').alias('client_identifier'),
-        # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
-        # date_format(col('iris.AdtclmnFirstCreatedDatetime'), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
         when(env_name == lit('sbox'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
         when(env_name == lit('sbox'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
@@ -963,12 +948,10 @@ def silver_archive_metadata():
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         lit("ARIATD").alias("record_class"),
-        # lit('IA_Tribunal').alias("entitlement_tag"),
         col("iris.HORef").alias('bf_001'),
         col('iris.Forenames').alias('bf_002'),
         col('iris.Name').alias('bf_003'),
-        # when(workspace_env["env"] == lit('dev-sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
-         when(env_name == lit('sbox'), date_format(coalesce(col('iris.BirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.BirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
+        date_format(coalesce(col('iris.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
         col('iris.PortReference').alias('bf_005'),
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),
@@ -979,6 +962,7 @@ def silver_archive_metadata():
 
 
     return df
+
 
 # COMMAND ----------
 

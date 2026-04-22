@@ -4664,26 +4664,16 @@ def silver_archive_metadata():
         col('ac.CaseNo').alias('client_identifier'),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-        # when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
-        # when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ac.DateOfApplicationDecision'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ac.DateOfApplicationDecision'), 
-        # "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('recordDate'),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
-        #  when(col('flt.Segment') == 'ARIAFTA', 'ARIAFTA')
-        # .when(col('flt.Segment') == 'ARIAUTA', 'ARIAUTA')
-        # .when(col('flt.Segment') == 'ARIAFPA', 'ARIAFPA')
-        # .alias("record_class"),
         when(
             (env_name == lit('sbox')),
             concat(col('flt.Segment'), lit("DEV"))
             ).otherwise(col('flt.Segment')).alias("record_class"),
-        #col('flt.Segment').alias("record_class"),
         lit('IA_Tribunal').alias("entitlement_tag"),
         col('ac.HORef').alias('bf_001'),
         col('ca.AppellantForenames').alias('bf_002'),
         col('ca.AppellantName').alias('bf_003'),
-        # col('ca.AppellantBirthDate').alias('bf_004'),
         when((env_name == lit('sbox')) | (env_name == lit('stg')), date_format(coalesce(col('ca.AppellantBirthDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('ca.AppellantBirthDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_004'),
         col('ca.PortReference').alias('bf_005'),
         col('ca.AppellantPostcode').alias('bf_006'))

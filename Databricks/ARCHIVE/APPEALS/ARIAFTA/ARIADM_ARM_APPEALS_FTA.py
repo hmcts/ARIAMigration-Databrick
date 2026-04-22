@@ -2863,6 +2863,10 @@ def stg_skeleton_filtered():
 
 # COMMAND ----------
 
+spark.read.table('hive_metastore.ariadm_arm_fta.stg_skeleton_filtered').count()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Transformation: stg_uppertribunalretained_filtered 
 # MAGIC Segmentation query – Upper Tribunal retained cases. 
@@ -4682,7 +4686,7 @@ def silver_archive_metadata():
     ).withColumn(
         "recordDate",
         concat(F.col("retentionDate"), lit("T00:00:00.000Z"))
-    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"))
+    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
     
     return final_df
 

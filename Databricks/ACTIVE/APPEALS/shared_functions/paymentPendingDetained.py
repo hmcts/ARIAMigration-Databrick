@@ -14,7 +14,7 @@ from . import paymentPending as PP
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, regexp_replace,
+    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
@@ -270,11 +270,35 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .join(bronze_hearing_centres.alias("bhc"),on=col("m2.CentreId") == col("bhc.CentreId"),how="left")
         .withColumn("applicationChangeDesignatedHearingCentre1", when(col("m2.Detained").isin(1,2),col("det.applicationChangeDesignatedHearingCentre"))
                     .otherwise(col("content.applicationChangeDesignatedHearingCentre")))
+        .withColumn(
+            "TTL",
+            struct(
+                lit("No").alias("Suspended"),
+                date_format(
+                    date_add(col("m2.DateLodged"), 36524),
+                    "yyyy-MM-dd"
+                ).alias("SystemTTL")
+            )
+        )
         .drop(col("content.applicationChangeDesignatedHearingCentre"))
         .select("content.*",
-                col("applicationChangeDesignatedHearingCentre1").alias("applicationChangeDesignatedHearingCentre")
+                col("applicationChangeDesignatedHearingCentre1").alias("applicationChangeDesignatedHearingCentre"),
+                col("TTL")
                 )
     )
+
+    general_audit = (general_df.alias("content")
+                     .join(general_audit.alias("audit"),on="CaseNo", how="left")
+                     .join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
+                     .select(
+                            col("audit.*"),
+                            array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+                            array(struct(lit(None),col("m2.DateLodged"))).alias("TTL_inputValues"),
+                            col("content.TTL").alias("TTL_value"),
+                            lit("Yes").alias("TTL_Transformation"),
+                            )
+                     
+                     )
 
     return general_df, general_audit
 

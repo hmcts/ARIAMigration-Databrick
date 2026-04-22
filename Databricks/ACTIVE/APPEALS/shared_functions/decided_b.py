@@ -357,16 +357,14 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     general_df,general_audit = FSA.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
 
-    general_df = (
-        silver_m1.alias("m1")
-        .join(
-            general_df.alias("content"),
-            on="CaseNo",
-            how="left"
-        )
+    general_df = general_df.drop("TTL")
+
+    general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+                  .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
         .select(
             "m1.CaseNo",
             *[c for c in general_df.columns if c != "CaseNo"],
+            "TTL",
         )
     )
 
@@ -394,9 +392,12 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             )
     )
 
+    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+
     general_audit = (
         general_audit.alias("audit")
             .join(general_df.alias("gen"), on=["CaseNo"], how="left")
+            .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
             .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
             .select(
                 "audit.*",
@@ -416,6 +417,11 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 array(struct(col("m3.Party"), col("m3.CaseStatus"))).alias("isFtpaRespondentDecided_inputValues"),
                 col("isFtpaRespondentDecided").alias("isFtpaRespondentDecided_value"),
                 lit("Yes").alias("isFtpaRespondentDecided_Transformation"),
+
+                array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+                array(struct(lit(None),col("m1.DateLodged"))).alias("TTL_inputValues"),
+                col("gen.TTL").alias("TTL_value"),
+                lit("Yes").alias("TTL_Transformation"),
 
             )
     )

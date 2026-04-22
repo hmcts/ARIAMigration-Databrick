@@ -19,7 +19,7 @@ from . import paymentPendingDetained as PPD
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, regexp_replace,
+    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
@@ -1869,6 +1869,10 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
+    silver_m3_ttl = silver_m3.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_ttl = silver_m3_ttl.filter(col("row_number") == 1).drop("row_number")
+
+
     
 
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left" )
@@ -1940,10 +1944,35 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           )
                   )
     
+    general_df = general_df.drop("TTL")
+
+    general_df = (general_df.alias("content").join(silver_m3_ttl.alias("m3"),on="CaseNo",how="left")
+                  .withColumn(
+                                "TTL",
+                                struct(
+                                    lit("No").alias("Suspended"),
+                                    date_format(
+                                        date_add(col("m3.DecisionDate"), 730),
+                                        "yyyy-MM-dd"
+                                    ).alias("SystemTTL")
+                                )
+                            )
+    )
+
+    
+    # general_audit = general_audit.drop("TTL")
+    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+    
     general_audit = (
         general_df.alias("content")
         .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_ttl.alias("ttl"), on="CaseNo", how="left")
         .select("content.CaseNo",
+                array(struct(lit("Suspended"),lit("DecisionDate"))).alias("TTL_inputFields"),
+                array(struct(lit(None),col("ttl.DecisionDate"))).alias("TTL_inputValues"),
+                col("content.TTL").alias("TTL_value"),
+                lit("Yes").alias("TTL_Transformed"),
+
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
                 array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
                 col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),

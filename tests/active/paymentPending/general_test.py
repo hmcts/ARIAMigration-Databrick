@@ -206,16 +206,17 @@ def general_outputs(spark):
         T.StructField("CaseRep_Postcode", T.StringType(), True),
         T.StructField("PaymentRemissionRequested", T.StringType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
+        T.StructField("DateLodged", T.StringType(), True), 
     ])
 
     # Assign CentreId to match bronze_hearing_centres
     m1_data = [
-        ("EA/10544/2022", "AIP", "euSettlementScheme", 520, None, None, "0", None),  # Birmingham IAC
-        ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None),  # Bradford
-        ("EA/04437/2020", "LR", "refusalOfEu", 512401, None, "WN4R 8ET", "0", None),  # Manchester
-        ("HU/00140/2024", "LR", "refusalOfHumanRights", 386417, "NE45 8RJ", None, "0", None),  # Hatton Cross
-        ("EA/03592/2023", "LR", "euSettlementScheme", 765324, None, "SE86 9UW", "0", None),  # Taylor House
-        ("EA/02375/2024", "AIP", "euSettlementScheme", 999, None, None, "0", None),  # No matching CentreId -> None
+        ("EA/10544/2022", "AIP", "euSettlementScheme", 520, None, None, "0", None,"2020-10-02T00:00:00.000+00:00"),  # Birmingham IAC
+        ("HU/00516/2025", "LR", "refusalOfHumanRights", 86, "S06 7UR", None, "0", None,"2020-10-02T00:00:00.000+00:00"),  # Bradford
+        ("EA/04437/2020", "LR", "refusalOfEu", 512401, None, "WN4R 8ET", "0", None,"2020-10-02T00:00:00.000+00:00"),  # Manchester
+        ("HU/00140/2024", "LR", "refusalOfHumanRights", 386417, "NE45 8RJ", None, "0", None,"2020-10-02T00:00:00.000+00:00"),  # Hatton Cross
+        ("EA/03592/2023", "LR", "euSettlementScheme", 765324, None, "SE86 9UW", "0", None,"2020-10-02T00:00:00.000+00:00"),  # Taylor House
+        ("EA/02375/2024", "AIP", "euSettlementScheme", 999, None, None, "0", None,"2020-10-02T00:00:00.000+00:00"),  # No matching CentreId -> None
     ]
 
     m2_schema = T.StructType([

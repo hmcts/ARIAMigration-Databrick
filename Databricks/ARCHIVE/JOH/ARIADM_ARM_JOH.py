@@ -810,7 +810,7 @@ def silver_adjudicator_detail():
             col("adj.Surname"),
             col("adj.Forenames"),
             col("adj.Title"),
-            coalesce(col("adj.DateOfBirth"),lit("1900-01-01 00:00:00.000").cast("timestamp")).alias("DateOfBirth"),
+            date_format(coalesce(col('adj.DateOfBirth'),lit("1900-01-01").cast("date")), "yyyy-MM-dd").alias('DateOfBirth'),
             when(col("adj.CorrespondenceAddress") == 1, "Business").otherwise("Home").alias("CorrespondenceAddress"),
             col("adj.ContactDetails"),
             when(col("adj.ContactTelephone") == 1, "Business")
@@ -1153,12 +1153,7 @@ def silver_archive_metadata():
             col("adj.Title").alias("bf_001"),
             col("adj.Forenames").alias("bf_002"),
             col("adj.Surname").alias("bf_003"),
-            when(
-                col("env") == lit("sbox"),
-                date_format(coalesce(col("adj.DateOfBirth"), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-            ).otherwise(
-                date_format(col("adj.DateOfBirth"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-            ).alias("bf_004"),
+            date_format(coalesce(col('adj.DateOfBirth'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
             # col("env"),
             col("adj.DesignatedCentre").alias("bf_005")
         )

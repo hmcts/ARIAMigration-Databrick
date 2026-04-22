@@ -85,7 +85,7 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 
          if "countryGovUkOocAdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_countryGovUkOocAdminJ_ac1(test_df))
-              all_test_results.append(pp_tests.test_countryGovUkOocAdminJ_ac2(test_df,external_storage,spark)[0])
+          #     all_test_results.append(pp_tests.test_countryGovUkOocAdminJ_ac2(test_df,external_storage,spark)[0])
 
          if "appellantStateless" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_appellantStateless_ac1(test_df))

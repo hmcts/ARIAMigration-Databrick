@@ -3,7 +3,7 @@ from pyspark.sql.functions import (
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains, explode,
-    year, month, dayofmonth, countDistinct, count, array, array_join, expr, array_remove, when
+    year, month, dayofmonth, countDistinct, count, array, array_join, expr, array_remove, when, upper
 )
 
 from functools import reduce
@@ -7518,9 +7518,9 @@ def caseDataMap(spark):
         (2, 7, 'Tinsley House', None, 'Tinsley House', 'Tinsley House IRC', 'Perimeter Road South, Gatwick Airport, Gatwick, West Sussex', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
         (2, 46, 'Harmondsworth', None, 'Harmondsworth', 'Harmondsworth IRC', 'Colnbrook-by-pass, Harmondsworth, West Drayton, Middlesex', 'UB7 0HB', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
         (2, 60, 'Dungavel Detention Centre', None, 'Dungavel', 'Dungavel House IRC', 'Strathaven, South Lanarkshire', 'ML10 6RF', 'glasgow', 'Glasgow', '{"region": "1", "baseLocation": "366559"}', '366559', 'Atlantic Quay - Glasgow', 'Atlantic Quay - Glasgow', 'glasgow'),
-        (2, 63, 'Yarl\'s Wood', None, 'Yarlswood', 'Yarlâ€™s Wood IRC', 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlswood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 63, "Yarl's Wood", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlswood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
         (2, 103, 'Colnbrook', None, 'Colnbrook', 'Colnbrook IRC', 'Colnbrook Bypass, Harmondsworth, West Drayton, Middlesex', 'UB7 0FX', 'hattonCross', 'Hatton Cross', '{"region": "1", "baseLocation": "386417"}', '386417', 'Hatton Cross Tribunal Hearing Centre', 'Hatton Cross Tribunal Hearing Centre', 'hattonCross'),
-        (2, 126, 'Yarl’s Wood IRC', None, 'Yarlswood', 'Yarlâ€™s Wood IRC', 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlsWood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
+        (2, 126, "Yarl's Wood IRC", None, 'Yarlswood', "Yarl's Wood IRC", 'Twinwoods Business Park, Thurleigh Road, Milton Ernest, Bedford', 'MK44 2FQ', 'yarlsWood', 'Yarlswood', '{"region": "1", "baseLocation": "649000"}', '649000', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Yarls Wood Immigration And Asylum Hearing Centre', 'yarlsWood'),
         (2, 195, 'Brook House', None, 'Brookhouse', 'Brook House IRC', 'Perimeter Road South, London Gatwick Airport, Gatwick', 'RH6 0PQ', 'taylorHouse', 'Taylor House', '{"region": "1", "baseLocation": "765324"}', '765324', 'Taylor House Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'taylorHouse'),
         (2, 212, 'Derwentside Immigration Removal Ctr', None, 'Derwentside', 'Derwentside IRC', 'Corbridge Road, Consett, Co Durham', 'DH8 6QY', 'bradford', 'Bradford', '{"region": "1", "baseLocation": "698118"}', '698118', 'Bradford Tribunal Hearing Centre', 'Bradford Tribunal Hearing Centre', 'bradford')
     ]
@@ -7532,42 +7532,55 @@ def caseDataMap(spark):
 
 def caseData_ac1(mapping_df, test_df):
     try:
-        relevant_records = test_df.filter(
-            F.col("Detained").isin(1, 2) & F.col("DetentionCentreId").isNotNull()
-        ).select(
-            "appealReferenceNumber", "Detained", "DetentionCentreId",
-            "prisonName", "ircName", "detentionBuilding", "detentionAddressLines", "detentionPostcode",
-            "hearingCentre", "staffLocation", "applicationChangeDesignatedHearingCentre",
-            "caseManagementLocation", "caseManagementLocationRefData", "hearingCentreDynamicList", "selectedHearingCentreRefData"
-        ).distinct()
-        
-        if relevant_records.count() == 0:    
-            return TestResult("caseData", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-
-        audit_df = relevant_records.join(
-            mapping_df, 
-            relevant_records.DetentionCentreId == mapping_df.req_DetentionCentreId, 
-            "inner"
+        hearingCentre_check = test_df.filter(
+            col("hearingCentre").isNull() |
+            col("staffLocation").isNull() |
+            col("applicationChangeDesignatedHearingCentre").isNull() |
+            col("caseManagementLocation").isNull() |
+            col("caseManagementLocationRefData").isNull() |
+            col("hearingCentreDynamicList").isNull() |
+            col("selectedHearingCentreRefData").isNull()
         )
 
-        acceptance_criteria = audit_df.filter(
-            (~F.upper(F.trim(F.col("prisonName"))).eqNullSafe(F.upper(F.trim(F.col("req_prisonName"))))) |
-            (~F.upper(F.trim(F.col("detentionBuilding"))).eqNullSafe(F.upper(F.trim(F.col("req_detentionBuilding"))))) |
-            (~F.upper(F.trim(F.col("detentionPostcode"))).eqNullSafe(F.upper(F.trim(F.col("req_detentionPostcode"))))) |
-            (F.upper(F.trim(F.col("staffLocation"))) != F.upper(F.trim(F.col("req_staffLocation")))) |
-            (F.upper(F.col("hearingCentre")) != F.upper(F.col("req_hearingCentre"))) |
-            (F.upper(F.col("applicationChangeDesignatedHearingCentre")) != F.upper(F.col("req_appChangeDHC"))) |
-            ~(
-                F.col("caseManagementLocation").cast("string").contains(F.col("req_locationCode")) | 
-                F.col("caseManagementLocationRefData").cast("string").contains(F.col("req_locationCode")) |
-                F.col("hearingCentreDynamicList").cast("string").contains(F.col("req_locationCode"))
-            )
-        )
-
-        if acceptance_criteria.count() != 0:
-            return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained is in 1,2 and DetentionCentreId is populated, but one of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData does not match requirements.", test_from_state, inspect.stack()[0].function), acceptance_criteria
+        if hearingCentre_check.count() != 0:
+            return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {acceptance_criteria.count()} cases where hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData are null. These are mandatory fields and always need to be populated.", test_from_state, inspect.stack()[0].function), acceptance_criteria
         else:
-            return TestResult("caseData", "PASS", f"caseData acceptance criteria passed: all cases where Detained is in 1,2 and DetentionCentreId is populated, all of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData match requirements.", test_from_state, inspect.stack()[0].function), None
+            relevant_records = test_df.filter(
+                F.col("Detained").isin(1, 2) & F.col("DetentionCentreId").isNotNull()
+            ).select(
+                "appealReferenceNumber", "Detained", "DetentionCentreId",
+                "prisonName", "ircName", "detentionBuilding", "detentionAddressLines", "detentionPostcode",
+                "hearingCentre", "staffLocation", "applicationChangeDesignatedHearingCentre",
+                "caseManagementLocation", "caseManagementLocationRefData", "hearingCentreDynamicList", "selectedHearingCentreRefData"
+            ).distinct()
+            
+            if relevant_records.count() == 0:    
+                return TestResult("caseData", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+            audit_df = relevant_records.join(
+                mapping_df, 
+                relevant_records.DetentionCentreId == mapping_df.req_DetentionCentreId, 
+                "inner"
+            )
+
+            acceptance_criteria = audit_df.filter(
+                (~F.upper(F.trim(F.col("prisonName"))).eqNullSafe(F.upper(F.trim(F.col("req_prisonName"))))) |
+                (~F.upper(F.trim(F.col("detentionBuilding"))).eqNullSafe(F.upper(F.trim(F.col("req_detentionBuilding"))))) |
+                (~F.upper(F.trim(F.col("detentionPostcode"))).eqNullSafe(F.upper(F.trim(F.col("req_detentionPostcode"))))) |
+                (F.upper(F.trim(F.col("staffLocation"))) != F.upper(F.trim(F.col("req_staffLocation")))) |
+                (F.upper(F.col("hearingCentre")) != F.upper(F.col("req_hearingCentre"))) |
+                (F.upper(F.col("applicationChangeDesignatedHearingCentre")) != F.upper(F.col("req_appChangeDHC"))) |
+                ~(
+                    F.col("caseManagementLocation").cast("string").contains(F.col("req_locationCode")) | 
+                    F.col("caseManagementLocationRefData").cast("string").contains(F.col("req_locationCode")) |
+                    F.col("hearingCentreDynamicList").cast("string").contains(F.col("req_locationCode"))
+                )
+            )
+
+            if acceptance_criteria.count() != 0:
+                return TestResult("caseData", "FAIL", f"caseData acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained is in 1,2 and DetentionCentreId is populated, but one of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData does not match requirements.", test_from_state, inspect.stack()[0].function), acceptance_criteria
+            else:
+                return TestResult("caseData", "PASS", f"caseData acceptance criteria passed: all cases where Detained is in 1,2 and DetentionCentreId is populated, all of prisonName, detentionBuilding, detentionAddressLines, detentionPostcode, hearingCentre, staffLocation, caseManagementLocation, hearingCentreDynamicList, caseManagementLocationRefData, selectedHearingCentreRefData match requirements.", test_from_state, inspect.stack()[0].function), None
 
     except Exception as e:
         error_message = str(e)        
@@ -7869,13 +7882,13 @@ def test_appellantAddress_ac3(test_df):
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         def clean_val(col_ref):
-        c = F.col(col_ref) if isinstance(col_ref, str) else col_ref
-        return F.when(
-            (c.isNull()) | 
-            (F.trim(c) == "") | 
-            (F.trim(F.upper(c)) == "NULL"), 
-            None
-        ).otherwise(F.trim(c))
+            c = F.col(col_ref) if isinstance(col_ref, str) else col_ref
+            return F.when(
+                (c.isNull()) | 
+                (F.trim(c) == "") | 
+                (F.trim(F.upper(c)) == "NULL"), 
+                None
+            ).otherwise(F.trim(c))
 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1, 2)) & 

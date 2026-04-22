@@ -1,4 +1,4 @@
-ReasonsForAppealSubmittedTypes = {
+PaymentPendingMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -16,7 +16,7 @@ ReasonsForAppealSubmittedTypes = {
     'appellantGivenNames': 'string',
     'appellantHasFixedAddress': 'string',
     'appellantHasFixedAddressAdminJ': 'string',
-    # 'appellantInDetention': 'string',
+    'appellantInDetention': 'string',
     'appellantInUk': 'string',
     'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
     'appellantNameForDisplay': 'string',
@@ -39,7 +39,7 @@ ReasonsForAppealSubmittedTypes = {
     'ccdReferenceNumberForDisplay': 'string',
     'changeDirectionDueDateActionAvailable': 'string',
     'countryGovUkOocAdminJ': 'string',
-    #'dateEntryClearanceDecision': 'string',
+    'dateEntryClearanceDecision': 'string',
     'decisionHearingFeeOption': 'string',
     'decisionLetterReceivedDate': 'string',
     'deportationOrderOptions': 'string',
@@ -65,6 +65,7 @@ ReasonsForAppealSubmittedTypes = {
     'homeOfficeNotificationsEligible': 'string',
     'internalAppellantEmail': 'string',
     'isAdmin': 'string',
+    'isAppealReferenceNumberAvailable': 'string',
     'isAppellantMinor': 'string',
     'isAriaMigratedFeeExemption': 'string',
     'isCaseUsingLocationRefData': 'string',
@@ -72,7 +73,7 @@ ReasonsForAppealSubmittedTypes = {
     'isDlrmFeeRemissionEnabled': 'string',
     'isEjp': 'string',
     'isFeePaymentEnabled': 'string',
-    'isHomeOfficeIntegrationEnabled': 'string',
+    # 'isHomeOfficeIntegrationEnabled': 'string',
     'isIntegrated': 'string',
     'isNabaAdaEnabled': 'string',
     'isNabaEnabled': 'string',
@@ -104,38 +105,6 @@ ReasonsForAppealSubmittedTypes = {
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
-    'rpDcAppealHearingOption': 'string',
-    'paidAmount': 'string',
-    'paidDate': 'string',
-    'additionalPaymentInfo': 'string',
-    'remissionDecision': 'string',
-    'remissionDecisionReason': 'string',
-    'amountRemitted': 'string',
-    'amountLeftToPay': 'string',
-    'asylumSupportReference': 'string', #not mandatory
-    'directions': 'array<string>',
-    'feeRemissionType': 'string', #not mandatory
-    'homeOfficeReferenceNumber': 'string', #not mandatory
-    'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepIndividualPartyId': 'string', #not mandatory
-    'legalRepOrganisationPartyId': 'string', #not mandatory
-    'appellantFullName': 'string',
-    'exceptionalCircumstances': 'string', #not mandatory
-    'helpWithFeesReferenceNumber': 'string', #not mandatory
-    'recordedOutOfTimeDecision': 'string', #not mandatory
-    'remissionClaim': 'string', #not mandatory
-    'sponsorAuthorisation': 'string', #not mandatory 
-    'sponsorEmailAdminJ': 'string', #not mandatory
-    'sponsorFamilyName': 'string', #not mandatory
-    'sponsorGivenNames': 'string', #not mandatory 
-    'sponsorPartyId': 'string', #not mandatory
-    'uploadHomeOfficeBundleAvailable': 'string', 
-    'respondentDocuments': 'array<string>',
-    'uploadHomeOfficeBundleActionAvailable': 'string',
-    'additionalInstructionsTribunalResponse': 'string',
-    'sponsorAddressForDisplay': 'string',
-    'sponsorNameForDisplay': 'string',
-    'uploadHomeOfficeBundleActionAvailable': 'string'
-
+    'applicationOutOfTimeExplanation': 'string'
 
 }

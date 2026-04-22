@@ -1,4 +1,4 @@
-PrepareForHearingTypes = {
+DecisionMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -119,7 +119,7 @@ PrepareForHearingTypes = {
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    # 'legalRepAddressUK': '<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -145,7 +145,7 @@ PrepareForHearingTypes = {
     'additionalInstructionsTribunalResponse': 'string',
     'sponsorAddressForDisplay': 'string',
     'sponsorNameForDisplay': 'string',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
@@ -209,8 +209,21 @@ PrepareForHearingTypes = {
     'vulnerabilitiesDecisionForDisplay': 'string',
     'vulnerabilitiesTribunalResponse': 'string',
     'witnessDetails': 'array<string>',
-    # "witness1InterpreterSignLanguage": "map<string, string>"
-    #     # map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string, string>"))
+    'bundleConfiguration': 'string',
+    'bundleFileNamePrefix': 'string',
+    'caseBundles': 'array<string>',
+    'decisionAndReasonsAvailable': 'string',
+    'hmcts': 'string',
+    'immigrationHistoryAgreement': 'string',
+    'immigrationHistoryDisagreementDescription': 'string',
+    'listCaseHearingCentre': 'string',
+    'listCaseHearingCentreAddress': 'string',
+    'listCaseHearingDate': 'string',
+    'listCaseHearingLength': 'string',
+    'oocAddressLine1': 'string',
+    'scheduleOfIssuesAgreement': 'string',
+    'scheduleOfIssuesDisagreementDescription': 'string',
+    'stitchingStatus': 'string'
 }
 
 

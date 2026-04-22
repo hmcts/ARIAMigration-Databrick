@@ -1,8 +1,8 @@
-CaseUnderReviewTypes = {
-    'addressLine1AdminJ': 'string',
-    'addressLine2AdminJ': 'string',
-    'addressLine3AdminJ': 'string',
-    'addressLine4AdminJ': 'string',
+AwaitingRespondentEvidenceAMandatoryTypes = {
+    # 'addressLine1AdminJ': 'string',
+    # 'addressLine2AdminJ': 'string',
+    # 'addressLine3AdminJ': 'string',
+    # 'addressLine4AdminJ': 'string',
     'adminDeclaration1': 'array<string>',
     'appealOutOfCountry': 'string',
     'appealReferenceNumber': 'string',
@@ -10,12 +10,12 @@ CaseUnderReviewTypes = {
     'appealSubmissionInternalDate': 'string',
     'appealType': 'string',
     'appealTypeDescription': 'string',
-    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,Country:string, County:string,PostCode:string>',
+    'appellantAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,Country:string,County:string,PostCode:string>',
     'appellantDateOfBirth': 'string',
     'appellantFamilyName': 'string',
     'appellantGivenNames': 'string',
     'appellantHasFixedAddress': 'string',
-    'appellantHasFixedAddressAdminJ': 'string',
+    # 'appellantHasFixedAddressAdminJ': 'string',
     # 'appellantInDetention': 'string',
     'appellantInUk': 'string',
     'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
@@ -38,10 +38,10 @@ CaseUnderReviewTypes = {
     'caseNotes': 'array<string>',
     'ccdReferenceNumberForDisplay': 'string',
     'changeDirectionDueDateActionAvailable': 'string',
-    'countryGovUkOocAdminJ': 'string',
+    # 'countryGovUkOocAdminJ': 'string',
     #'dateEntryClearanceDecision': 'string',
     'decisionHearingFeeOption': 'string',
-    'decisionLetterReceivedDate': 'string',
+    # 'decisionLetterReceivedDate': 'string',
     'deportationOrderOptions': 'string',
     'displayMarkAsPaidEventForPartialRemission': 'string',
     'email': 'string',
@@ -51,7 +51,7 @@ CaseUnderReviewTypes = {
     'feeVersion': 'string',
     'feeWithHearing': 'string',
     'feeWithoutHearing': 'string',
-    'gwfReferenceNumber': 'string',
+    # 'gwfReferenceNumber': 'string',
     'hasAddedLegalRepDetails': 'string',
     'hasOtherAppeals': 'string',
     'hasServiceRequestAlready': 'string',
@@ -65,6 +65,7 @@ CaseUnderReviewTypes = {
     'homeOfficeNotificationsEligible': 'string',
     'internalAppellantEmail': 'string',
     'isAdmin': 'string',
+    'isAppealReferenceNumberAvailable': 'string',
     'isAppellantMinor': 'string',
     'isAriaMigratedFeeExemption': 'string',
     'isCaseUsingLocationRefData': 'string',
@@ -84,14 +85,14 @@ CaseUnderReviewTypes = {
     'markAddendumEvidenceAsReviewedActionAvailable': 'string',
     'markEvidenceAsReviewedActionAvailable': 'string',
     'notificationsSent': 'array<string>',
-    'oocAppealAdminJ': 'string',
+    # 'oocAppealAdminJ': 'string',
     'paymentDescription': 'string',
     'paymentStatus': 'string',
     'remissionType': 'string',
     's94bStatus': 'string',
     'selectedHearingCentreRefData': 'string',
     'sendDirectionActionAvailable': 'string',
-    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',
+    # 'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>', 
     'staffLocation': 'string',
     'submissionOutOfTime': 'string',
     'submitNotificationStatus': 'string',
@@ -104,22 +105,25 @@ CaseUnderReviewTypes = {
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
+    'paymentStatus': 'string',
     'paAppealTypePaymentOption': 'string',
-    'rpDcAppealHearingOption': 'string',
+    'paAppealTypeAipPaymentOption': 'string',
+    # 'rpDcAppealHearingOption': 'string',
     'paidAmount': 'string',
     'paidDate': 'string',
     'additionalPaymentInfo': 'string',
-    'remissionDecision': 'string',
-    'remissionDecisionReason': 'string',
-    'amountRemitted': 'string',
-    'amountLeftToPay': 'string',
+    'paymentDescription': 'string',
+    # 'remissionDecision': 'string',
+    # 'remissionDecisionReason': 'string',
+    # 'amountRemitted': 'string',
+    # 'amountLeftToPay': 'string',
     'appealWasNotSubmittedReason': 'string', #not mandatory
-    'asylumSupportReference': 'string', #not mandatory
+    # 'asylumSupportReference': 'string', #not mandatory
     'directions': 'array<string>',
-    'feeRemissionType': 'string', #not mandatory
-    'homeOfficeReferenceNumber': 'string', #not mandatory
-    'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    # 'feeRemissionType': 'string', #not mandatory
+    # 'homeOfficeReferenceNumber': 'string', #not mandatory
+    # 'legalAidAccountNumber': 'string', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -129,22 +133,16 @@ CaseUnderReviewTypes = {
     'legalRepOrganisationPartyId': 'string', #not mandatory
     'appellantFullName': 'string',
     'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>', #not mandatory
-    'exceptionalCircumstances': 'string', #not mandatory
-    'helpWithFeesReferenceNumber': 'string', #not mandatory
+    # 'exceptionalCircumstances': 'string', #not mandatory
+    # 'helpWithFeesReferenceNumber': 'string', #not mandatory
     'localAuthorityPolicy': 'struct<OrgPolicyCaseAssignedRole:string>', #not mandatory
-    'recordedOutOfTimeDecision': 'string', #not mandatory
-    'remissionClaim': 'string', #not mandatory
-    'sponsorAuthorisation': 'string', #not mandatory 
-    'sponsorEmailAdminJ': 'string', #not mandatory
-    'sponsorFamilyName': 'string', #not mandatory
-    'sponsorGivenNames': 'string', #not mandatory 
-    'sponsorPartyId': 'string', #not mandatory
-    'uploadHomeOfficeBundleAvailable': 'string', 
-    'respondentDocuments': 'array<string>',
-    'uploadHomeOfficeBundleActionAvailable': 'string',
-    'additionalInstructionsTribunalResponse': 'string',
-    'sponsorAddressForDisplay': 'string',
-    'sponsorNameForDisplay': 'string'
-
+    # 'recordedOutOfTimeDecision': 'string', #not mandatory
+    # 'remissionClaim': 'string', #not mandatory
+    # 'sponsorAuthorisation': 'string', #not mandatory 
+    # 'sponsorEmailAdminJ': 'string', #not mandatory
+    # 'sponsorFamilyName': 'string', #not mandatory
+    # 'sponsorGivenNames': 'string', #not mandatory 
+    # 'sponsorPartyId': 'string', #not mandatory
+    'uploadHomeOfficeBundleAvailable': 'string' 
 
 }

@@ -1,4 +1,4 @@
-AwaitingRespondentEvidenceBTypes = {
+AppealSubmittedMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -39,7 +39,7 @@ AwaitingRespondentEvidenceBTypes = {
     'ccdReferenceNumberForDisplay': 'string',
     'changeDirectionDueDateActionAvailable': 'string',
     'countryGovUkOocAdminJ': 'string',
-    #'dateEntryClearanceDecision': 'string',
+    'dateEntryClearanceDecision': 'string',
     'decisionHearingFeeOption': 'string',
     'decisionLetterReceivedDate': 'string',
     'deportationOrderOptions': 'string',
@@ -73,7 +73,7 @@ AwaitingRespondentEvidenceBTypes = {
     'isDlrmFeeRemissionEnabled': 'string',
     'isEjp': 'string',
     'isFeePaymentEnabled': 'string',
-    'isHomeOfficeIntegrationEnabled': 'string',
+    # 'isHomeOfficeIntegrationEnabled': 'string',
     'isIntegrated': 'string',
     'isNabaAdaEnabled': 'string',
     'isNabaEnabled': 'string',
@@ -92,7 +92,7 @@ AwaitingRespondentEvidenceBTypes = {
     's94bStatus': 'string',
     'selectedHearingCentreRefData': 'string',
     'sendDirectionActionAvailable': 'string',
-    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',
+    'sponsorAddress': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,PostTown:string,County:string,Country:string,PostCode:string>',    
     'staffLocation': 'string',
     'submissionOutOfTime': 'string',
     'submitNotificationStatus': 'string',
@@ -116,35 +116,5 @@ AwaitingRespondentEvidenceBTypes = {
     'remissionDecision': 'string',
     'remissionDecisionReason': 'string',
     'amountRemitted': 'string',
-    'amountLeftToPay': 'string',
-    'appealWasNotSubmittedReason': 'string', #not mandatory
-    'asylumSupportReference': 'string', #not mandatory
-    'directions': 'array<string>',
-    'feeRemissionType': 'string', #not mandatory
-    'homeOfficeReferenceNumber': 'string', #not mandatory
-    'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>', #not mandatory
-    'legalRepCompanyPaperJ': 'string', #not mandatory
-    'legalRepEmail': 'string', #not mandatory
-    'legalRepFamilyNamePaperJ': 'string', #not mandatory
-    'legalRepGivenName': 'string', #not mandatory
-    'legalRepHasAddress': 'string', #not mandatory
-    'legalRepIndividualPartyId': 'string', #not mandatory
-    'legalRepOrganisationPartyId': 'string', #not mandatory
-    'appellantFullName': 'string',
-    'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>', #not mandatory
-    'exceptionalCircumstances': 'string', #not mandatory
-    'helpWithFeesReferenceNumber': 'string', #not mandatory
-    'localAuthorityPolicy': 'struct<OrgPolicyCaseAssignedRole:string>', #not mandatory
-    'recordedOutOfTimeDecision': 'string', #not mandatory
-    'remissionClaim': 'string', #not mandatory
-    'sponsorAuthorisation': 'string', #not mandatory 
-    'sponsorEmailAdminJ': 'string', #not mandatory
-    'sponsorFamilyName': 'string', #not mandatory
-    'sponsorGivenNames': 'string', #not mandatory 
-    'sponsorPartyId': 'string', #not mandatory
-    'uploadHomeOfficeBundleAvailable': 'string', 
-    'respondentDocuments': 'array<string>',
-    'uploadHomeOfficeBundleActionAvailable': 'string'
-
+    'amountLeftToPay': 'string'
 }

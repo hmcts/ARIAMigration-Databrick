@@ -1,4 +1,4 @@
-FtpaSubmittedBTypes = {
+DecidedAMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -119,7 +119,7 @@ FtpaSubmittedBTypes = {
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -148,7 +148,7 @@ FtpaSubmittedBTypes = {
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'amendResponseActionAvailable': 'string',
     'appealResponseAvailable': 'string',
@@ -236,49 +236,7 @@ FtpaSubmittedBTypes = {
     'oocAddressLine3': 'string',
     'oocAddressLine4': 'string',
     'oocLrCountryGovUkAdminJ': 'string',
-    'sendDecisionsAndReasonsDate': 'string',
-    'ftpaAppellantApplicationDate': 'string',
-    'ftpaAppellantDocuments': 'array<string>',
-    'ftpaAppellantEvidenceDocuments': 'array<string>',
-    'ftpaAppellantGroundsDocuments': 'array<string>',
-    'ftpaAppellantOutOfTimeDocuments': 'array<string>',
-    'ftpaAppellantOutOfTimeExplanation': 'string',
-    'ftpaAppellantSubmissionOutOfTime': 'string',
-    'ftpaAppellantSubmitted': 'string',
-    'ftpaRespondentApplicationDate': 'string',
-    'ftpaRespondentDocuments': 'array<string>',
-    'ftpaRespondentEvidenceDocuments': 'array<string>',
-    'ftpaRespondentGroundsDocuments': 'array<string>',
-    'ftpaRespondentOutOfTimeDocuments': 'array<string>',
-    'ftpaRespondentOutOfTimeExplanation': 'string',
-    'ftpaRespondentSubmissionOutOfTime': 'string',
-    'ftpaRespondentSubmitted': 'string',
-    'ftpaList': 'array<struct<id:string,value:struct<ftpaApplicant:string,ftpaApplicationDate:string,ftpaEvidenceDocuments:array<string>,ftpaGroundsDocuments:array<string>,ftpaOutOfTimeDocuments:array<string>,ftpaOutOfTimeExplanation:string>>>',
-    'isFtpaAppellantDocsVisibleInDecided': 'string',
-    'isFtpaAppellantDocsVisibleInSubmitted': 'string',
-    'isFtpaAppellantEvidenceDocsVisibleInDecided': 'string',
-    'isFtpaAppellantEvidenceDocsVisibleInSubmitted': 'string',
-    'isFtpaAppellantGroundsDocsVisibleInDecided': 'string',
-    'isFtpaAppellantGroundsDocsVisibleInSubmitted': 'string',
-    'isFtpaAppellantOotDocsVisibleInDecided': 'string',
-    'isFtpaAppellantOotDocsVisibleInSubmitted': 'string',
-    'isFtpaAppellantOotExplanationVisibleInDecided': 'string',
-    'isFtpaAppellantOotExplanationVisibleInSubmitted': 'string',
-    'isFtpaListVisible': 'string',
-    'isFtpaRespondentDocsVisibleInDecided': 'string',
-    'isFtpaRespondentDocsVisibleInSubmitted': 'string',
-    'isFtpaRespondentEvidenceDocsVisibleInDecided': 'string',
-    'isFtpaRespondentEvidenceDocsVisibleInSubmitted': 'string',
-    'isFtpaRespondentGroundsDocsVisibleInDecided': 'string',
-    'isFtpaRespondentGroundsDocsVisibleInSubmitted': 'string',
-    'isFtpaRespondentOotDocsVisibleInDecided': 'string',
-    'isFtpaRespondentOotDocsVisibleInSubmitted': 'string',
-    'isFtpaRespondentOotExplanationVisibleInDecided': 'string',
-    'isFtpaRespondentOotExplanationVisibleInSubmitted': 'string',
-    'judgeAllocationExists': 'string',
-    'allocatedJudge': 'string',
-    'allocatedJudgeEdit': 'string'
-
+    'sendDecisionsAndReasonsDate': 'string'
 }
 
 

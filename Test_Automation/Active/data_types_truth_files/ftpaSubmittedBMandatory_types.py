@@ -1,4 +1,4 @@
-FtpaDecidedTypes = {
+FtpaSubmittedBMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',
@@ -105,7 +105,7 @@ FtpaDecidedTypes = {
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
     'paAppealTypePaymentOption': 'string',
-    'rpDcAppealHearingOption': 'string',
+    # 'rpDcAppealHearingOption': 'string',
     'paidAmount': 'string',
     'paidDate': 'string',
     'additionalPaymentInfo': 'string',
@@ -119,7 +119,7 @@ FtpaDecidedTypes = {
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -145,7 +145,7 @@ FtpaDecidedTypes = {
     'additionalInstructionsTribunalResponse': 'string',
     'sponsorAddressForDisplay': 'string',
     'sponsorNameForDisplay': 'string',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
     'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
@@ -160,9 +160,9 @@ FtpaDecidedTypes = {
     'hearingDocuments': 'array<string>',
     'hearingRequirements': 'array<string>',
     'inCameraCourt': 'string',
-    'inCameraCourtDecisionForDisplay': 'string',
-    'inCameraCourtDescription': 'string',
-    'inCameraCourtTribunalResponse': 'string',
+    # 'inCameraCourtDecisionForDisplay': 'string', mandatory
+    # 'inCameraCourtDescription': 'string', 
+    # 'inCameraCourtTribunalResponse': 'string', mandatory
     'isAdditionalAdjustmentsAllowed': 'string',
     'isAdditionalInstructionAllowed': 'string',
     'isAppealSuitableToFloat': 'string',
@@ -172,12 +172,12 @@ FtpaDecidedTypes = {
     'isEvidenceFromOutsideUkOoc': 'string',
     'isHearingLoopNeeded': 'string',
     'isHearingRoomNeeded': 'string',
-    'isInCameraCourtAllowed': 'string',
+    # 'isInCameraCourtAllowed': 'string',
     'isInterpreterServicesNeeded': 'string',
     'isMultimediaAllowed': 'string',
     'isRemoteHearing': 'string',
     'isRemoteHearingAllowed': 'string',
-    'isSingleSexCourtAllowed': 'string',
+    # 'isSingleSexCourtAllowed': 'string',
     'isVulnerabilitiesAllowed': 'string',
     'isWitnessesAttending': 'string',
     'letterBundleDocuments': 'array<string>',
@@ -199,10 +199,10 @@ FtpaDecidedTypes = {
     'reviewResponseActionAvailable': 'string',
     'reviewedHearingRequirements': 'string',
     'singleSexCourt': 'string',
-    'singleSexCourtDecisionForDisplay': 'string',
-    'singleSexCourtTribunalResponse': 'string',
-    'singleSexCourtType': 'string',
-    'singleSexCourtTypeDescription': 'string',
+    # 'singleSexCourtDecisionForDisplay': 'string', mandatory
+    # 'singleSexCourtTribunalResponse': 'string', mandatory
+    # 'singleSexCourtType': 'string',
+    # 'singleSexCourtTypeDescription': 'string',
     'submitHearingRequirementsAvailable': 'string',
     'uploadHomeOfficeAppealResponseActionAvailable': 'string',
     'uploadHomeOfficeBundleActionAvailable': 'string',
@@ -219,7 +219,7 @@ FtpaDecidedTypes = {
     'listCaseHearingCentreAddress': 'string',
     'listCaseHearingDate': 'string',
     'listCaseHearingLength': 'string',
-    'oocAddressLine1': 'string',
+    # 'oocAddressLine1': 'string',
     'scheduleOfIssuesAgreement': 'string',
     'scheduleOfIssuesDisagreementDescription': 'string',
     'stitchingStatus': 'string',
@@ -232,10 +232,10 @@ FtpaDecidedTypes = {
     'finalDecisionAndReasonsDocuments': 'array<string>',
     'ftpaApplicationDeadline': 'string',
     'isDecisionAllowed': 'string',
-    'oocAddressLine2': 'string',
-    'oocAddressLine3': 'string',
-    'oocAddressLine4': 'string',
-    'oocLrCountryGovUkAdminJ': 'string',
+    # 'oocAddressLine2': 'string',
+    # 'oocAddressLine3': 'string',
+    # 'oocAddressLine4': 'string',
+    # 'oocLrCountryGovUkAdminJ': 'string',
     'sendDecisionsAndReasonsDate': 'string',
     'ftpaAppellantApplicationDate': 'string',
     'ftpaAppellantDocuments': 'array<string>',
@@ -253,7 +253,7 @@ FtpaDecidedTypes = {
     'ftpaRespondentOutOfTimeExplanation': 'string',
     'ftpaRespondentSubmissionOutOfTime': 'string',
     'ftpaRespondentSubmitted': 'string',
-    'ftpaList': 'array<struct<id:string,value:struct<ftpaApplicant:string,ftpaApplicationDate:string,ftpaDecisionDate:string,ftpaDecisionOutcomeType:string,ftpaEvidenceDocuments:array<string>,ftpaGroundsDocuments:array<string>,ftpaOutOfTimeDocuments:array<string>,ftpaOutOfTimeExplanation:string,isFtpaNoticeOfDecisionSetAside:string>>>',
+    'ftpaList': 'array<struct<id:string,value:struct<ftpaApplicant:string,ftpaApplicationDate:string,ftpaEvidenceDocuments:array<string>,ftpaGroundsDocuments:array<string>,ftpaOutOfTimeDocuments:array<string>,ftpaOutOfTimeExplanation:string>>>',
     'isFtpaAppellantDocsVisibleInDecided': 'string',
     'isFtpaAppellantDocsVisibleInSubmitted': 'string',
     'isFtpaAppellantEvidenceDocsVisibleInDecided': 'string',
@@ -277,27 +277,8 @@ FtpaDecidedTypes = {
     'isFtpaRespondentOotExplanationVisibleInSubmitted': 'string',
     'judgeAllocationExists': 'string',
     'allocatedJudge': 'string',
-    'allocatedJudgeEdit': 'string',
-    'ftpaApplicantType': 'string',
-    'ftpaFirstDecision': 'string',
-    'ftpaAppellantDecisionDate': 'string',
-    'ftpaRespondentDecisionDate': 'string',
-    'ftpaFinalDecisionForDisplay': 'string',
-    'ftpaAppellantRjDecisionOutcomeType': 'string',
-    'ftpaRespondentRjDecisionOutcomeType': 'string',
-    'isFtpaAppellantNoticeOfDecisionSetAside': 'string',
-    'isFtpaRespondentNoticeOfDecisionSetAside': 'string',
-    'isAppellantFtpaDecisionVisibleToAll': 'string',
-    'isRespondentFtpaDecisionVisibleToAll': 'string',
-    'isDlrmSetAsideEnabled': 'string',
-    'isFtpaAppellantDecided': 'string',
-    'isFtpaRespondentDecided': 'string',
-    'isReheardAppealEnabled': 'string',
-    'secondFtpaDecisionExists': 'string',
-    'allFtpaAppellantDecisionDocs': 'array<string>',
-    'allFtpaRespondentDecisionDocs': 'array<string>',
-    'ftpaAppellantNoticeDocument': 'array<string>',
-    'ftpaRespondentNoticeDocument': 'array<string>'
+    'allocatedJudgeEdit': 'string'
+
 }
 
 

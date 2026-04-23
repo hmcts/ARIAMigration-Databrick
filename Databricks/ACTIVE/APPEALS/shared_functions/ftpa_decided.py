@@ -454,7 +454,7 @@ def general(
             col("audit.*"),
 
             array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
-            array(struct(lit(None),col("m1.DateLodged"))).alias("TTL_inputValues"),
+            array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
             col("content.TTL").alias("TTL_value"),
             lit("Derived").alias("TTL_Transformation"),
 

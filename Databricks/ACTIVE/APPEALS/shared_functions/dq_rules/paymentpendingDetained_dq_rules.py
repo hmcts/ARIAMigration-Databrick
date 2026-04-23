@@ -370,4 +370,14 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
         )
 
+        
+        checks["valid_TTL"] = """
+        (
+            TTL.Suspended = 'No'
+            AND
+            TTL.SystemTTL = date_format(date_add(DateLodged, 36524),'yyyy-MM-dd')
+        )
+        """
+
+
         return checks

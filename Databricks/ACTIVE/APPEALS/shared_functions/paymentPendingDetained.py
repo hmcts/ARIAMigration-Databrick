@@ -293,7 +293,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                      .select(
                             col("audit.*"),
                             array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
-                            array(struct(lit(None),col("m2.DateLodged"))).alias("TTL_inputValues"),
+                            array(struct(lit("None"),col("m2.DateLodged"))).alias("TTL_inputValues"),
                             col("content.TTL").alias("TTL_value"),
                             lit("Yes").alias("TTL_Transformation"),
                             )

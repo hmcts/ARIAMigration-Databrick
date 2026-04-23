@@ -1870,7 +1870,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
     silver_m3_ttl = silver_m3.withColumn("row_number", row_number().over(window_spec))
-    silver_m3_ttl = silver_m3_ttl.filter(col("row_number") == 1).drop("row_number")
+    silver_m3_ttl = silver_m3_ttl.filter(col("row_number") == 1).drop("row_number").select("CaseNo","DecisionDate")
 
 
     
@@ -1957,6 +1957,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                                     ).alias("SystemTTL")
                                 )
                             )
+                  .select("content.*","TTL")
     )
 
     
@@ -1969,7 +1970,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         .join(silver_m3_ttl.alias("ttl"), on="CaseNo", how="left")
         .select("content.CaseNo",
                 array(struct(lit("Suspended"),lit("DecisionDate"))).alias("TTL_inputFields"),
-                array(struct(lit(None),col("ttl.DecisionDate"))).alias("TTL_inputValues"),
+                array(struct(lit("None"),col("ttl.DecisionDate"))).alias("TTL_inputValues"),
                 col("content.TTL").alias("TTL_value"),
                 lit("Yes").alias("TTL_Transformed"),
 

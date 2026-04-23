@@ -1,4 +1,4 @@
-DecidedBTypes = {
+DecidedBMandatoryTypes = {
     'addressLine1AdminJ': 'string',
     'addressLine2AdminJ': 'string',
     'addressLine3AdminJ': 'string',

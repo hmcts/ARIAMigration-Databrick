@@ -943,7 +943,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             col("cr.RespondentId") == col("e.EmbassyId"),
             "left_outer"
         ).join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer"
-        ).join(dlt.read("raw_hearingCentre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer"
+        ).join(dlt.read("raw_hearingCentre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer"
         ).select(
             # Appeal Case columns
             trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
@@ -996,7 +996,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             # col("r.Sdx").alias("RespondentSdx"),
             
             # File Location columns
-            col("hc.Description").alias("FileLocationHearingCentre"),
+            col("hc.Description").alias("FileLocationCentre"),
             col("dp.Description").alias("FileLocationDepartment"),
             col("fl.Note").alias("FileLocationNote"),
             col("fl.TransferDate").alias("FileLocationTransferDate"),
@@ -3150,7 +3150,7 @@ def silver_appealcase_detail():
         # "ap.RepDXNo2",
         "ap.Language",
         # "ap.DoNotUseLanguage",
-        "ap.FileLocationHearingCentre",
+        "ap.FileLocationCentre",
         "ap.FileLocationDepartment",
         "ap.FileLocationNote",
         when(col("ap.RepresentativeId") == 0, col("CaseRepName")).otherwise(col("RepName")).alias("RepresentativeName"),
@@ -3165,7 +3165,7 @@ def silver_appealcase_detail():
         when(col("ap.RepresentativeId") == 0, col("CaseRepEmail")).otherwise(col("RepEmail")).alias("RepresentativeEmail"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo1")).otherwise(col("RepDXNo1")).alias("RepresentativeDXNo1"),
         when(col("ap.RepresentativeId") == 0, col("CaseRepDXNo2")).otherwise(col("RepDXNo2")).alias("RepresentativeDXNo2"),
-        concat_ws(", ", col("ap.FileLocationHearingCentre"), col("ap.FileLocationDepartment"), col("ap.FileLocationNote")).alias("fileLocation")
+        concat_ws(", ", col("ap.FileLocationCentre"), col("ap.FileLocationDepartment"), col("ap.FileLocationNote")).alias("fileLocation")
     )
 
     return joined_df

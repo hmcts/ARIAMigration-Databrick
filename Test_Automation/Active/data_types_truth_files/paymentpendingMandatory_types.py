@@ -105,6 +105,28 @@ PaymentPendingMandatoryTypes = {
     'uploadAdditionalEvidenceActionAvailable': 'string',
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
-    'applicationOutOfTimeExplanation': 'string'
+    'applicationOutOfTimeExplanation': 'string',
+    #DetainedFields
+    'appealWasNotSubmittedReason': 'string',
+    'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
+    'exceptionalCircumstances': 'string',
+    'homeOfficeReferenceNumber': 'string',
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>',
+    'legalRepCompanyPaperJ': 'string',
+    'legalRepEmail': 'string',
+    'legalRepFamilyNamePaperJ': 'string',
+    'legalRepGivenName': 'string',
+    'legalRepHasAddress': 'string',
+    'legalRepIndividualPartyId': 'string',
+    'legalRepOrganisationPartyId': 'string',
+    'localAuthorityPolicy': 'struct<OrgPolicyCaseAssignedRole:string>',
+    'removalOrderOptions': 'string',
+    'sponsorAddressForDisplay': 'string',
+    'sponsorAuthorisation': 'string',
+    'sponsorEmailAdminJ': 'string',
+    'sponsorFamilyName': 'string',
+    'sponsorGivenNames': 'string',
+    'sponsorNameForDisplay': 'string',
+    'sponsorPartyId': 'string'
 
 }

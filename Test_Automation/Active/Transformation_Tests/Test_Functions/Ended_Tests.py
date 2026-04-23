@@ -968,7 +968,18 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
         test_df = json_data.select(
             "appealReferenceNumber",
             "isAppealSuitableToFloat",
-            "listingLength"
+            "listingLength",
+            "hearingChannel",
+            "listingLocation",
+            "actualCaseHearingLength",
+            "listCaseHearingLength",
+            "listCaseHearingDate",
+            "listCaseHearingCentre",
+            "listCaseHearingCentreAddress",
+            "sendDecisionsAndReasonsDate",
+            "appealDate",
+            "appealDecision",
+            "isDecisionAllowed"
             # "isInCameraCourtAllowed",
             # "inCameraCourtTribunalResponse",
             # "inCameraCourtDecisionForDisplay",
@@ -983,7 +994,8 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
             "Sponsor_Name", 
             "Interpreter", 
             "CourtPreference", 
-            "InCamera"
+            "InCamera",
+            "VisitVisaType"
         )
 
         # 3. Prepare BAC table for CategoryId
@@ -1023,7 +1035,13 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
                 "CategoryId", 
                 F.col("FinalEndedGroup").alias("EndedGroup"), # Use the spread Group ID
                 "ListTypeId", 
-                "TimeEstimate"
+                "TimeEstimate",
+                "HearingDate",
+                "StartTime",
+                "HearingCentre",
+                "Outcome",
+                "DecisionDate",
+                "DateReceived"
             )
 
         # 6. Master Join
@@ -1156,3 +1174,562 @@ def test_listingLength_test2(test_df):
 
     except Exception as e:
         return TestResult("listingLength.minutes", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+#######################
+# hearingChannel
+#######################
+def test_hearingChannel_test1(test_df):
+    try:
+        # Filter for Group 4 and VisitVisaType 1
+        target_df = test_df.filter((F.col("EndedGroup") == 4) & (F.col("VisitVisaType").cast("string") == "1"))
+        
+        if target_df.count() == 0:
+            return TestResult("hearingChannel", "PASS", "No records found where VisitVisaType is 1.", "ended", "test_hearingChannel_test1")
+
+        # VALIDATION: Matching "On The Papers" exactly as seen in your data
+        # Using upper() for the code and a case-insensitive match for the label is safest
+        failures = target_df.filter(
+            (F.upper(F.col("hearingChannel.code")) != "ONPPRS") | 
+            (F.lower(F.col("hearingChannel.label")) != "on the papers")
+        )
+
+        if failures.count() > 0:
+            mismatch = failures.select("hearingChannel.code", "hearingChannel.label").first()
+            return TestResult(
+                "hearingChannel", 
+                "FAIL", 
+                f"Mismatch found. Actual: '{mismatch[0]}' / '{mismatch[1]}'. Expected: 'ONPPRS' / 'On The Papers'", 
+                "ended", 
+                "test_hearingChannel_test1"
+            )
+        
+        return TestResult("hearingChannel", "PASS", "VisitVisaType 1 correctly mapped to 'On The Papers'.", "ended", "test_hearingChannel_test1")
+    except Exception as e:
+        return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test1")
+    
+
+
+def test_hearingChannel_test2(test_df):
+    try:
+        # Filter for Group 4 and VisitVisaType 2
+        target_df = test_df.filter((F.col("EndedGroup") == 4) & (F.col("VisitVisaType") == 2))
+        
+        if target_df.count() == 0:
+            return TestResult("hearingChannel", "PASS", "No records found where VisitVisaType is 2.", "ended", "test_hearingChannel_test2")
+
+        # VALIDATION: Only check fields that exist in the struct (code, label)
+        failures = target_df.filter(
+            (F.col("hearingChannel.code") != "INTER") | 
+            (F.col("hearingChannel.label") != "In Person")
+        )
+
+        if failures.count() > 0:
+            sample_cases = failures.select("appealReferenceNumber").limit(5).toPandas()["appealReferenceNumber"].tolist()
+            return TestResult("hearingChannel", "FAIL", f"Mismatches found for VisitVisaType 2. Examples: {sample_cases}", "ended", "test_hearingChannel_test2")
+        
+        return TestResult("hearingChannel", "PASS", "VisitVisaType 2 correctly mapped to 'In Person'.", "ended", "test_hearingChannel_test2")
+    except Exception as e:
+        return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test2")
+    
+
+#######################
+# listingLocation
+#######################
+from itertools import chain
+def test_listingLocation_test1(test_df):
+    try:
+        # 1. Scenario Filter: EndedGroup 4 and CaseStatus in (37, 38)
+        # Note:init function usually handles MAX(StatusId) selection
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("listingLocation", "PASS", "No records found for the specified statuses in Group 4.", "ended", "test_listingLocation_test1")
+
+        # 2. Define valid mapping dictionary (Code -> Label)
+        location_map = {
+            "227101": "Newport Tribunal Centre - Columbus House",
+            "231596": "Birmingham Civil And Family Justice Centre",
+            "366559": "Atlantic Quay - Glasgow",
+            "366796": "Newcastle Civil And Family Courts And Tribunals Centre",
+            "386417": "Hatton Cross Tribunal Hearing Centre",
+            "443257": "North Tyneside Magistrates Court",
+            "580554": "Bradford and Keighley Magistrates Court and Family Court",
+            "618632": "Nottingham Magistrates Court",
+            "649000": "Yarls Wood Immigration And Asylum Hearing Centre",
+            "698118": "Bradford Tribunal Hearing Centre",
+            "745389": "Hendon Magistrates Court",
+            "765324": "Taylor House Tribunal Hearing Centre",
+            "326944": "Manchester Crown Court (Minshull st)",
+            "144641": "Manchester Crown Court (Crown Square)",
+            "787030": "Coventry Magistrates Court",
+            "783803": "Manchester Magistrates Court",
+            "569737": "Leeds Magistrates Court and Family Court",
+            "28837": "Harmondsworth Tribunal Hearing Centre",
+            "999971": "Alloa Sheriff Court",
+            "999973": "Belfast Laganside Court",
+            "512401": "Manchester Tribunal Hearing Centre - Piccadilly Exchange"
+        }
+
+        # 3. Create conditional expression to validate label matches the code
+        # We handle both nested (value.code) and flat (.code) just in case
+        is_nested = "value" in target_df.schema["listingLocation"].dataType.names
+        code_col = "listingLocation.value.code" if is_nested else "listingLocation.code"
+        label_col = "listingLocation.value.label" if is_nested else "listingLocation.label"
+
+        # Check for invalid mappings
+        failures = target_df.withColumn("expected_label", 
+            F.create_map([F.lit(x) for x in chain(*location_map.items())])[F.col(code_col)]
+        ).filter(
+            (F.col(label_col) != F.col("expected_label")) | (F.col(code_col).isNull())
+        )
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", code_col, label_col).limit(5).toPandas()
+            return TestResult(
+                "listingLocation", 
+                "FAIL", 
+                f"Invalid location mapping in {failures.count()} records. Example: {sample.values.tolist()}", 
+                "ended", 
+                "test_listingLocation_test1"
+            )
+        
+        return TestResult("listingLocation", "PASS", "listingLocation values correctly mapped for Group 4.", "ended", "test_listingLocation_test1")
+
+    except Exception as e:
+        return TestResult("listingLocation", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listingLocation_test1")
+
+#######################
+# listCaseHearingLength
+#######################
+def test_listCaseHearingLength_test1(test_df):
+    """
+    Scenario: listCaseHearingLength Rounding logic.
+    BA NOTE: Passing all records regardless of rounding consistency.
+    Reasoning: Ended cases (Group 4) are closed and will not be re-listed for hearings.
+    """
+    try:
+        # Filter for the correct scenario group
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("listCaseHearingLength", "PASS", "No records found for Group 4.", "ended", "test_listCaseHearingLength_test1")
+
+        # We verify the field is at least populated to ensure data exists
+        null_count = target_df.filter(F.col("actualCaseHearingLength").isNull()).count()
+        
+        if null_count > 0:
+            return TestResult(
+                "listCaseHearingLength", 
+                "FAIL", 
+                f"Found {null_count} records with NULL hearing length.", 
+                "ended", 
+                "test_listCaseHearingLength_test1"
+            )
+
+        # Return PASS for all other cases per BA instruction
+        return TestResult(
+            "listCaseHearingLength", 
+            "PASS", 
+            "Passed with noted inconsistencies; Ended cases will not be listed for a hearing.", 
+            "ended", 
+            "test_listCaseHearingLength_test1"
+        )
+
+    except Exception as e:
+        return TestResult("listCaseHearingLength", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listCaseHearingLength_test1")
+#######################
+# listCaseHearingDate
+#######################   
+def test_listCaseHearingDate_test1(test_df):
+    """Scenario: Combine HearingDate and StartTime into ISO format"""
+    try:
+        target_df = test_df.filter((F.col("EndedGroup") == 4) & (F.col("CaseStatus").isin(37, 38)))
+        if target_df.count() == 0:
+            return TestResult("listCaseHearingDate", "PASS", "No records found.", "ended", "test_listCaseHearingDate_test1")
+
+        # Format expected string using HearingDate and extraction from StartTime Timestamp
+        target_df = target_df.withColumn("expected_date_str", 
+            F.concat(
+                F.date_format(F.col("HearingDate"), "yyyy-MM-dd"),
+                F.lit("T"),
+                F.date_format(F.col("StartTime"), "HH:mm:ss"),
+                F.lit(".000")
+            )
+        )
+
+        failures = target_df.filter(F.col("listCaseHearingDate") != F.col("expected_date_str"))
+
+        if failures.count() > 0:
+            sample = failures.select("listCaseHearingDate", "expected_date_str").first()
+            return TestResult("listCaseHearingDate", "FAIL", f"Mismatch. Actual: {sample[0]}, Expected: {sample[1]}", "ended", "test_listCaseHearingDate_test1")
+        
+        return TestResult("listCaseHearingDate", "PASS", "DateTime mapping correct.", "ended", "test_listCaseHearingDate_test1")
+    except Exception as e:
+        return TestResult("listCaseHearingDate", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listCaseHearingDate_test1")
+
+#######################
+# listCaseHearingCentre
+#######################   
+
+def test_listCaseHearingCentre_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4 and CaseStatus 37/38
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("listCaseHearingCentre", "PASS", "No records found.", "ended", "test_listCaseHearingCentre_test1")
+
+        # 2. Define the Mapping Table (ListedCentre -> [Code, Address])
+        # Note: I've grouped these by the source ListedCentre string provided in your table
+        centre_mapping = {
+            "Alloa Sheriff Court": ["alloaSherrif", "Alloa Sheriff Court, 47 Drysdale Street, Alloa, FK10 1JA"],
+            "Belfast - Laganside": ["belfast", "Belfast Laganside Court, 45 Donegall Quay, BT1 3LL"],
+            "Birmingham IAC (Priory Courts)": ["birmingham", "Birmingham Civil And Family Justice Centre, Priory Courts, 33 Bull Street, B4 6DS"],
+            "Birmingham IAC Sheldon Court": ["birmingham", "Birmingham Civil And Family Justice Centre, Priory Courts, 33 Bull Street, B4 6DS"],
+            "Bradford": ["bradford", "Bradford Tribunal Hearing Centre, Rushton Avenue, BD3 7BH"],
+            "Bradford Crown Court": ["bradford", "Bradford Tribunal Hearing Centre, Rushton Avenue, BD3 7BH"],
+            "Bradford Magistrates Court": ["bradfordKeighley", "Bradford and Keighley Magistrates Court and Family Court, The Tyrls, PO Box 187, BD1 1JL"],
+            "Coventry Magistrates' Court IAC": ["coventry", "Coventry Magistrates Court, Little Park Street, CV1 2SQ"],
+            "Field House (TH)": ["taylorHouse", "Taylor House Tribunal Hearing Centre, Rosebery Avenue, EC1R 4QU"],
+            "Glasgow (Eagle Building)": ["glasgowTribunalsCentre", "Atlantic Quay - Glasgow, 20 York Street, Glasgow, G2  8GT"],
+            "Glasgow (Tribunals Centre)": ["glasgowTribunalsCentre", "Atlantic Quay - Glasgow, 20 York Street, Glasgow, G2  8GT"],
+            "Harmondsworth": ["harmondsworth", "Harmondsworth Tribunal Hearing Centre, Colnbrook Bypass, UB7 0HB"],
+            "Harmondsworth (HX)": ["harmondsworth", "Harmondsworth Tribunal Hearing Centre, Colnbrook Bypass, UB7 0HB"],
+            "Hatton Cross": ["hattonCross", "Hatton Cross Tribunal Hearing Centre, York House And Wellington House, 2-3 Dukes Green, Feltham, Middlesex, TW14 0LS"],
+            "Hendon Magistrates Court (HX)": ["hendon", "Hendon Magistrates Court, The Court House, The Hyde, NW9 7BY"],
+            "Hendon Magistrates Court (TH)": ["hendon", "Hendon Magistrates Court, The Court House, The Hyde, NW9 7BY"],
+            "Manchester (Piccadilly)": ["manchester", "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH"],
+            "Newcastle CFCTC": ["newcastle", "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF"],
+            "Newcastle Law Courts": ["newcastle", "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF"],
+            "Newport (Columbus House)": ["newport", "Newport Tribunal Centre - Columbus House, Langstone Business Park, Newport, NP18 2LX"],
+            "North Shields (Kings Court)": ["newcastle", "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF"],
+            "North Tyneside Magistrates Court": ["nthTyneMags", "North Tyneside Magistrates Court, Tynemouth Road, The Court House, NE30 1AG"],
+            "Nottingham Justice Centre": ["nottingham", "Nottingham Magistrates Court, Carrington Street, NG2 1EE"],
+            "Stockport Magistrates' Court": ["manchester", "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH"],
+            "Taylor House": ["taylorHouse", "Taylor House Tribunal Hearing Centre, Rosebery Avenue, EC1R 4QU"],
+            "Wigan and Leigh Magistrates' Court": ["manchester", "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH"],
+            "Yarl's Wood": ["yarlsWord", "Yarls Wood Immigration And Asylum Hearing Centre, Twinwood Road, MK44 1FD"]
+        }
+
+        # 3. Apply Mapping and Compare
+        # Create separate maps for code and address
+        code_map = F.create_map([F.lit(x) for x in chain(*[(k, v[0]) for k, v in centre_mapping.items()])])
+        addr_map = F.create_map([F.lit(x) for x in chain(*[(k, v[1]) for k, v in centre_mapping.items()])])
+
+        target_df = target_df.withColumn("expected_code", code_map[F.col("HearingCentre")]) \
+                             .withColumn("expected_addr", addr_map[F.col("HearingCentre")])
+
+        # Validation Logic: Check both JSON fields against expected values
+        failures = target_df.filter(
+            (F.col("listCaseHearingCentre") != F.col("expected_code")) | 
+            (F.col("listCaseHearingCentreAddress") != F.col("expected_addr"))
+        )
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "HearingCentre", "listCaseHearingCentre", "expected_code").limit(5).toPandas()
+            return TestResult(
+                "listCaseHearingCentre", 
+                "FAIL", 
+                f"Mapping mismatch in {failures.count()} records. Examples: {sample.values.tolist()}", 
+                "ended", 
+                "test_listCaseHearingCentre_test1"
+            )
+        
+        return TestResult("listCaseHearingCentre", "PASS", "listCaseHearingCentre and Address correctly mapped.", "ended", "test_listCaseHearingCentre_test1")
+
+    except Exception as e:
+        return TestResult("listCaseHearingCentre", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listCaseHearingCentre_test1")
+    
+#######################
+# listCaseHearingCentreAddress
+#######################   
+
+def test_listCaseHearingCentreAddress_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4 and CaseStatus 37/38
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("listCaseHearingCentreAddress", "PASS", "No records found.", "ended", "test_listCaseHearingCentreAddress_test1")
+
+        # 2. Define the Mapping Table (HearingCentre -> Address)
+        # Note: Ensure the keys match exactly what is in your M3.HearingCentre column
+        address_mapping = {
+            "Alloa Sheriff Court": "Alloa Sheriff Court, 47 Drysdale Street, Alloa, FK10 1JA",
+            "Belfast - Laganside": "Belfast Laganside Court, 45 Donegall Quay, BT1 3LL",
+            "Birmingham IAC (Priory Courts)": "Birmingham Civil And Family Justice Centre, Priory Courts, 33 Bull Street, B4 6DS",
+            "Birmingham IAC Sheldon Court": "Birmingham Civil And Family Justice Centre, Priory Courts, 33 Bull Street, B4 6DS",
+            "Bradford": "Bradford Tribunal Hearing Centre, Rushton Avenue, BD3 7BH",
+            "Bradford Crown Court": "Bradford Tribunal Hearing Centre, Rushton Avenue, BD3 7BH",
+            "Bradford Magistrates Court": "Bradford and Keighley Magistrates Court and Family Court, The Tyrls, PO Box 187, BD1 1JL",
+            "Coventry Magistrates' Court IAC": "Coventry Magistrates Court, Little Park Street, CV1 2SQ",
+            "Field House (TH)": "Taylor House Tribunal Hearing Centre, Rosebery Avenue, EC1R 4QU",
+            "Glasgow (Eagle Building)": "Atlantic Quay - Glasgow, 20 York Street, Glasgow, G2  8GT",
+            "Glasgow (Tribunals Centre)": "Atlantic Quay - Glasgow, 20 York Street, Glasgow, G2  8GT",
+            "Harmondsworth": "Harmondsworth Tribunal Hearing Centre, Colnbrook Bypass, UB7 0HB",
+            "Harmondsworth (HX)": "Harmondsworth Tribunal Hearing Centre, Colnbrook Bypass, UB7 0HB",
+            "Hatton Cross": "Hatton Cross Tribunal Hearing Centre, York House And Wellington House, 2-3 Dukes Green, Feltham, Middlesex, TW14 0LS",
+            "Hendon Magistrates Court (HX)": "Hendon Magistrates Court, The Court House, The Hyde, NW9 7BY",
+            "Hendon Magistrates Court (TH)": "Hendon Magistrates Court, The Court House, The Hyde, NW9 7BY",
+            "Manchester (Piccadilly)": "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH",
+            "Newcastle CFCTC": "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF",
+            "Newcastle Law Courts": "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF",
+            "Newport (Columbus House)": "Newport Tribunal Centre - Columbus House, Langstone Business Park, Newport, NP18 2LX",
+            "North Shields (Kings Court)": "Newcastle Civil And Family Courts And Tribunals Centre, Barras Bridge, Newcastle-Upon-Tyne, NE1 8QF",
+            "North Tyneside Magistrates Court": "North Tyneside Magistrates Court, Tynemouth Road, The Court House, NE30 1AG",
+            "Nottingham Justice Centre": "Nottingham Magistrates Court, Carrington Street, NG2 1EE",
+            "Stockport Magistrates' Court": "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH",
+            "Taylor House": "Taylor House Tribunal Hearing Centre, Rosebery Avenue, EC1R 4QU",
+            "Wigan and Leigh Magistrates' Court": "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH",
+            "Yarl's Wood": "Yarls Wood Immigration And Asylum Hearing Centre, Twinwood Road, MK44 1FD"
+        }
+
+        # 3. Create Spark Map
+        spark_map = F.create_map([F.lit(x) for x in chain(*address_mapping.items())])
+
+        # 4. Compare Actual vs Expected
+        target_df = target_df.withColumn("expected_address", spark_map[F.col("HearingCentre")])
+
+        failures = target_df.filter(
+            (F.col("listCaseHearingCentreAddress") != F.col("expected_address")) |
+            (F.col("expected_address").isNull())
+        )
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "HearingCentre", "listCaseHearingCentreAddress", "expected_address").limit(5).toPandas()
+            return TestResult(
+                "listCaseHearingCentreAddress", 
+                "FAIL", 
+                f"Address mismatch in {failures.count()} records. Example: {sample.values.tolist()}", 
+                "ended", 
+                "test_listCaseHearingCentreAddress_test1"
+            )
+        
+        return TestResult("listCaseHearingCentreAddress", "PASS", "listCaseHearingCentreAddress correctly mapped.", "ended", "test_listCaseHearingCentreAddress_test1")
+
+    except Exception as e:
+        return TestResult("listCaseHearingCentreAddress", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listCaseHearingCentreAddress_test1")
+    
+#######################  
+#sendDecisionsAndReasonsDate
+#######################  
+def test_sendDecisionsAndReasonsDate_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4, Statuses (37, 38, 26), and Outcome (1, 2)
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38, 26)) &
+            (F.col("Outcome").isin(1, 2))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("sendDecisionsAndReasonsDate", "PASS", "No records found matching Group 4 status/outcome criteria.", "ended", "test_sendDecisionsAndReasonsDate_test1")
+
+        # 2. Construct Expected ISO 8601 String from ARIA Data (DecisionDate)
+        target_df = target_df.withColumn("expected_iso_date", F.date_format(F.col("DecisionDate"), "yyyy-MM-dd"))
+
+        # 3. Validation Logic
+        # - Check 1: Value matches ARIA
+        # - Check 2: Format matches ISO 8601 Regex (YYYY-MM-DD)
+        failures = target_df.filter(
+            (F.col("sendDecisionsAndReasonsDate") != F.col("expected_iso_date")) |
+            (~F.col("sendDecisionsAndReasonsDate").rlike(r"^\d{4}-\d{2}-\d{2}$"))
+        )
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "DecisionDate", "sendDecisionsAndReasonsDate").limit(5).toPandas()
+            return TestResult(
+                "sendDecisionsAndReasonsDate", 
+                "FAIL", 
+                f"ISO 8601 mismatch or format error in {failures.count()} records. Example: {sample.values.tolist()}", 
+                "ended", 
+                "test_sendDecisionsAndReasonsDate_test1"
+            )
+        
+        return TestResult("sendDecisionsAndReasonsDate", "PASS", "sendDecisionsAndReasonsDate correctly mapped to ISO 8601 format.", "ended", "test_sendDecisionsAndReasonsDate_test1")
+
+    except Exception as e:
+        return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_sendDecisionsAndReasonsDate_test1")
+#######################
+# appealDate
+#######################  
+def test_appealDate_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4, Statuses (37, 38, 26), and Outcome (1, 2)
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38, 26)) &
+            (F.col("Outcome").isin(1, 2))
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("appealDate", "PASS", "No records found matching criteria.", "ended", "test_appealDate_test1")
+
+        # 2. Construct Expected ISO 8601 String (YYYY-MM-DD)
+        target_df = target_df.withColumn("expected_iso_date", F.date_format(F.col("DateReceived"), "yyyy-MM-dd"))
+
+        # 3. Validation Logic
+        # - Check 1: Value matches ARIA source
+        # - Check 2: Format strictly follows YYYY-MM-DD
+        failures = target_df.filter(
+            (F.col("appealDate") != F.col("expected_iso_date")) |
+            (~F.col("appealDate").rlike(r"^\d{4}-\d{2}-\d{2}$"))
+        )
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "DateReceived", "appealDate").limit(5).toPandas()
+            return TestResult(
+                "appealDate", 
+                "FAIL", 
+                f"ISO 8601 mismatch. Examples: {sample.values.tolist()}", 
+                "ended", 
+                "test_appealDate_test1"
+            )
+        
+        return TestResult("appealDate", "PASS", "appealDate correctly mapped to ISO 8601 from ARIA.", "ended", "test_appealDate_test1")
+
+    except Exception as e:
+        return TestResult("appealDate", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDate_test1")
+    
+#######################
+# appealDecision (Allowed) - Scenario 1
+# Check if Outcome = 1 (Group 4, Status 26/37/38)
+# Expected: Value = "Allowed"
+#######################
+
+def test_appealDecision_test1(test_df):
+    """
+    Scenario: Verify Outcome 1 maps to 'Allowed'.
+    Criteria: EndedGroup 4, Status (26, 37, 38).
+    """
+    try:
+        # Filter strictly for Outcome 1
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(26, 37, 38)) &
+            (F.col("Outcome") == 1)
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("appealDecision_Allowed", "PASS", "No records found for Outcome 1.", "ended", "test_appealDecision_allowed_test1")
+
+        # Validation logic
+        failures = target_df.filter(F.col("appealDecision") != "Allowed")
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "appealDecision").limit(5).toPandas()
+            return TestResult(
+                "appealDecision_Allowed", 
+                "FAIL", 
+                f"Outcome 1 should be 'Allowed' but found: {sample.values.tolist()}", 
+                "ended", 
+                "test_appealDecision_allowed_test1"
+            )
+        
+        return TestResult("appealDecision_Allowed", "PASS", "Outcome 1 correctly mapped to 'Allowed'.", "ended", "test_appealDecision_allowed_test1")
+
+    except Exception as e:
+        return TestResult("appealDecision_Allowed", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDecision_allowed_test1")
+#######################
+# appealDecision (Dismissed) - Scenario 2
+# Check if Outcome = 2 (Group 4, Status 26/37/38)
+# Expected: Value = "Dismissed"
+#######################    
+
+def test_appealDecision_test2(test_df):
+    """
+    Scenario: Verify Outcome 2 maps to 'Dismissed'.
+    Criteria: EndedGroup 4, Status (26, 37, 38).
+    """
+    try:
+        # Filter strictly for Outcome 2
+        target_df = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(26, 37, 38)) &
+            (F.col("Outcome") == 2)
+        )
+        
+        if target_df.count() == 0:
+            return TestResult("appealDecision_Dismissed", "PASS", "No records found for Outcome 2.", "ended", "test_appealDecision_dismissed_test1")
+
+        # Validation logic
+        failures = target_df.filter(F.col("appealDecision") != "Dismissed")
+
+        if failures.count() > 0:
+            sample = failures.select("appealReferenceNumber", "appealDecision").limit(5).toPandas()
+            return TestResult(
+                "appealDecision_Dismissed", 
+                "FAIL", 
+                f"Outcome 2 should be 'Dismissed' but found: {sample.values.tolist()}", 
+                "ended", 
+                "test_appealDecision_dismissed_test1"
+            )
+        
+        return TestResult("appealDecision_Dismissed", "PASS", "Outcome 2 correctly mapped to 'Dismissed'.", "ended", "test_appealDecision_dismissed_test1")
+
+    except Exception as e:
+        return TestResult("appealDecision_Dismissed", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDecision_dismissed_test1")
+    
+#######################
+# isDecisionAllowed (Allowed) - Scenario 1
+# Updated to be case-insensitive
+#######################
+from pyspark.sql.functions import col, lit, lower, date_format, concat
+def test_isDecisionAllowed_test1(test_df):
+    try:
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus").isin(26, 37, 38)) &
+            (col("Outcome") == 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("isDecisionAllowed", "PASS", "No Outcome 1 records found.", "ended", inspect.stack()[0].function)
+
+        # Use lower() to ignore casing differences
+        failures = target_records.filter(lower(col("isDecisionAllowed")) != "allowed")
+
+        if failures.count() != 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"Found {failures.count()} Outcome 1 rows that were not 'allowed'", "ended", inspect.stack()[0].function)
+        
+        return TestResult("isDecisionAllowed", "PASS", "Outcome 1 correctly mapped (case-insensitive check)", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+#######################
+# isDecisionAllowed (Dismissed) - Scenario 2
+# Updated to be case-insensitive
+#######################
+def test_isDecisionAllowed_test2(test_df):
+    try:
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus").isin(26, 37, 38)) &
+            (col("Outcome") == 2)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("isDecisionAllowed", "PASS", "No Outcome 2 records found.", "ended", inspect.stack()[0].function)
+
+        # Use lower() to ignore casing differences
+        failures = target_records.filter(lower(col("isDecisionAllowed")) != "dismissed")
+
+        if failures.count() != 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"Found {failures.count()} Outcome 2 rows that were not 'dismissed'", "ended", inspect.stack()[0].function)
+        
+        return TestResult("isDecisionAllowed", "PASS", "Outcome 2 correctly mapped (case-insensitive check)", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)

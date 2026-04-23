@@ -83,7 +83,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     # 4. hearingResponse Tests
     # ---------------------------------------------------------
     test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze)
-    
+
     if test_data_setup is True and test_df is not None:
         if "isAppealSuitableToFloat" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
@@ -92,8 +92,36 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if "listingLength" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listingLength_test1(test_df))
             all_test_results.append(ended_tests.test_listingLength_test2(test_df))
+
+        if "hearingChannel" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_hearingChannel_test1(test_df))
+            all_test_results.append(ended_tests.test_hearingChannel_test2(test_df))
+        if "listingLocation" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listingLocation_test1(test_df))
+        if "listCaseHearingLength" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listCaseHearingLength_test1(test_df))
+        if "listCaseHearingDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listCaseHearingDate_test1(test_df))
+        if "listCaseHearingCentre" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listCaseHearingCentre_test1(test_df))
+        if "listCaseHearingCentreAddress" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))        
     elif test_data_setup is not True:
         all_test_results.append(test_data_setup)
 
-    # Return ALL results at once
-    return classify_all(all_test_results)
+        # ---------------------------------------------------------
+        # 5. substantiveDecision Tests
+        # ---------------------------------------------------------
+    if test_data_setup is True and test_df is not None:
+        if "sendDecisionsAndReasonsDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_sendDecisionsAndReasonsDate_test1(test_df))
+        if "appealDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_appealDate_test1(test_df))
+        if "appealDecision" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_appealDecision_test1(test_df))
+            all_test_results.append(ended_tests.test_appealDecision_test2(test_df))
+        if "isDecisionAllowed" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isDecisionAllowed_test1(test_df))
+            all_test_results.append(ended_tests.test_isDecisionAllowed_test2(test_df))
+            
+        return classify_all(all_test_results)

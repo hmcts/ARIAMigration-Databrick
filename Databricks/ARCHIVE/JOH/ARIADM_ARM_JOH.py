@@ -282,93 +282,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Audit Function
-
-# COMMAND ----------
-
-# from pyspark.sql.types import StructType, StructField, LongType, StringType, IntegerType
-# from delta.tables import DeltaTable
-
-# COMMAND ----------
-
-# audit_schema = StructType([
-#     StructField("Runid", StringType(), True),
-#     StructField("Unique_identifier_desc", StringType(), True),
-#     StructField("Unique_identifier", StringType(), True),
-#     StructField("Table_name", StringType(), True),
-#     StructField("Stage_name", StringType(), True),
-#     StructField("Record_count", IntegerType(), True),
-#     StructField("Run_dt",TimestampType(), True),
-#     StructField("Batch_id", StringType(), True),
-#     StructField("Description", StringType(), True),
-#     StructField("File_name", StringType(), True),
-#     StructField("Status", StringType(), True)
-# ])
-
-# COMMAND ----------
-
-# # Define Delta Table Path in Azure Storage
-# audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/JOH/joh_cr_audit_table"
-
-
-# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-#     # Create an empty DataFrame
-#     empty_df = spark.createDataFrame([], audit_schema)
-
-#     # Write the empty DataFrame in Delta format to create the table
-#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-#     print("✅ Empty Delta table successfully created in Azure Storage.")
-# else:
-#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-# COMMAND ----------
-
-# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, file_name = False,status = False) -> None:
-#     """
-#     Creates an audit DataFrame and writes it to Delta format.
-
-#     :param df: Input DataFrame from which unique identifiers are extracted.
-#     :param unique_identifier_desc: Column name that acts as a unique identifier.
-#     :param table_name: Name of the source table.
-#     :param stage_name: Name of the data processing stage.
-#     :param description: Description of the table.
-#     :param additional_columns: options File_name or Status. List of additional columns to include in the audit DataFrame.
-#     """
-
-#     dt_desc = datetime.utcnow()
-
-#     additional_columns = []
-#     if file_name is True:
-#         additional_columns.append("File_name")
-#     if status is True:
-#         additional_columns.append("Status")
-
-
-#      # Default to an empty list if None   
-#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-#     .withColumn("Runid", lit(run_id_value))\
-#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-#             .withColumn("Stage_name", lit(stage_name))\
-#                 .withColumn("Table_name", lit(table_name))\
-#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-#                         .withColumn("Description", lit(description))
-
-#     list_cols = audit_df.columns
-
-#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
 import uuid
 
 
@@ -1231,10 +1144,6 @@ html_template = "".join([row.value for row in html_template_list])
 # Modify the UDF to accept a row object
 def generate_html(row, html_template=html_template):
     try:
-        # Load template
-        # html_template_path = "/dbfs/mnt/ingest00landingsboxhtml-template/JOH-Details-no-js-updated-v2.html"
-        # with open(html_template_path, "r") as f:
-        #     html_template = f.read()
 
         # Replace placeholders in the template with row data
         replacements = {
@@ -1245,7 +1154,6 @@ def generate_html(row, html_template=html_template):
             "{{DateOfBirth}}": format_date_iso(row.DateOfBirth),
             "{{CorrespondenceAddress}}": row.CorrespondenceAddress or "",
             "{{Telephone}}": row.Telephone or "",
-            # "{{ContactDetails}}": row.ContactDetails or "",
             "{{ContactDetails}}": str(row.ContactDetails or "").replace("\n", ", "),
             "{{DesignatedCentre}}": row.DesignatedCentre or "",
             "{{EmploymentTerm}}": row.EmploymentTerm or "",
@@ -1396,14 +1304,6 @@ def stg_judicial_officer_combined():
                 struct("HistDate", "HistType", "UserName", "Comment")
         ).alias("History")
     )
-    # grouped_history = df_history.groupBy("AdjudicatorId").agg(
-    #     sort_array(
-    #         collect_list(
-    #             struct("HistDate", "HistType", "UserName", "Comment")
-    #         ),
-    #         asc=False
-    #     ).alias("History")
-    # )
 
     # Join all aggregated data with JudicialOfficerDetails
     df_combined = (
@@ -1470,10 +1370,6 @@ def stg_create_joh_html_content():
 def stg_create_joh_a360_content():
 
     df_td_metadata = dlt.read("silver_archive_metadata")
-   
-    # Optional: Load from Hive if not an initial load
-    # if read_hive:
-    #   df_td_metadata = spark.read.table(f"hive_metastore.{hive_schema}.silver_archive_metadata")
 
     # Generate A360 content and associated file names
     df = df_td_metadata.withColumn(
@@ -1504,9 +1400,6 @@ def stg_judicial_officer_unified():
     html_df = dlt.read("stg_create_joh_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_name","Status").alias("html")
     json_df = dlt.read("stg_create_joh_json_content").alias("json")
 
-
-   
-    # Perform joins
     df_unified = (
         html_df
         .join(json_df,  ((col("html.AdjudicatorId") == col("json.AdjudicatorId"))), "inner")
@@ -1532,8 +1425,6 @@ def stg_judicial_officer_unified():
             (~col("json.JSON_Content").like("Failure%"))
         )
     )
-
-
 
    # Define a window specification for batching  
     window_spec = Window.orderBy(col("client_identifier"), col("bf_001"), col("bf_002"))
@@ -1567,10 +1458,6 @@ def gold_judicial_officer_with_html():
     # Load source data
     df_combined = dlt.read("stg_judicial_officer_unified")
 
-    # # Optional: Load from Hive if not an initial load
-    # if read_hive:
-    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
-
     # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
@@ -1599,11 +1486,7 @@ def gold_judicial_officer_with_json():
     df_combined = dlt.read("stg_judicial_officer_unified")
     
 
-    # # Optionally load data from Hive if needed
-    # if read_hive:
-    #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_judicial_officer_unified")
-
-     # Repartition to optimize parallelism
+    # Repartition to optimize parallelism
     repartitioned_df = df_combined.repartition(64, col("AdjudicatorId"))
 
     df_with_upload_status = repartitioned_df.withColumn(
@@ -1628,10 +1511,6 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 @dlt.expect_all_or_fail(checks)
 def gold_judicial_officer_with_a360():
     df_a360 = dlt.read("stg_judicial_officer_unified")
-
-    # # Optionally load data from Hive
-    # if read_hive:
-    #     df_a360 = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
     # Group by 'A360FileName' with Batching and consolidate the 'sets' texts, separated by newline
     df_agg = df_a360.groupBy("File_Name", "A360_BatchId") \

@@ -7,12 +7,12 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     all_test_results = []
 
     # -- Default mappings --
-    # test_df, test_data_setup = ended_tests.test_default_mapping_init(json_data, M3_bronze)
-    # if test_data_setup != True:
-    #     all_test_results.append(test_data_setup)
+    test_df, test_data_setup = ended_tests.test_default_mapping_init(json_data, M3_bronze)
+    if test_data_setup != True:
+        all_test_results.append(test_data_setup)
 
-    # if test_df is not None:
-    #     all_test_results.extend(ended_tests.test_ended_defaultValues(test_df, fields_to_exclude))
+    if test_df is not None:
+        all_test_results.extend(ended_tests.test_ended_defaultValues(test_df, fields_to_exclude))
 
     # -- caseData Tests --
     test_data_setup = None
@@ -35,10 +35,49 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
          all_test_results.append(test_data_setup)
 
     if test_df != None:
-         if "isEvidenceFromOutsideUkOoc" not in fields_to_exclude:
-              all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test1(test_df))
-              all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test2(test_df))
-              all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test3(test_df))
-              all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test4(test_df))
+        if "isEvidenceFromOutsideUkOoc" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test1(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test2(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test3(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test4(test_df))
+        if "isEvidenceFromOutsideUkInCountry" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkInCountry_test1(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkInCountry_test2(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkInCountry_test3(test_df))
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkInCountry_test4(test_df))
+         if "isInterpreterServicesNeeded" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isInterpreterServicesNeeded_test1(test_df))
+            all_test_results.append(ended_tests.test_isInterpreterServicesNeeded_test2(test_df))
+         if "singleSexCourt" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_singleSexCourt_test1(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourt_test2(test_df))     
+         if "singleSexCourtType" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_singleSexCourtType_test1(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourtType_test2(test_df))       
+            all_test_results.append(ended_tests.test_singleSexCourtType_test3(test_df)) 
+         if "singleSexCourtTypeDescription" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_singleSexCourtTypeDescription_test1(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourtTypeDescription_test2(test_df))       
+            all_test_results.append(ended_tests.test_singleSexCourtTypeDescription_test3(test_df)) 
+         if "inCameraCourt" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_inCameraCourt_test1(test_df))
+            all_test_results.append(ended_tests.test_inCameraCourt_test2(test_df)) 
 
     return classify_all(all_test_results)
+
+
+# -- hearingResponse Tests --
+test_data_setup = None
+test_df, test_data_setup =  ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze)
+if test_data_setup != True:
+        all_test_results.append(test_data_setup)
+
+if test_df != None:
+        # if "isAppealSuitableToFloat" not in fields_to_exclude:
+        #     all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
+        #     all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test2(test_df))
+        if "listingLength" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_listingLength_test1(test_df))
+            all_test_results.append(ended_tests.test_listingLength_test2(test_df))
+
+     return classify_all(all_test_results)

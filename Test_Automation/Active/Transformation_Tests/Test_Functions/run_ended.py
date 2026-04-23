@@ -3,13 +3,17 @@ from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
 
-def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, bac, C, bhc, fields_to_exclude, M3_bronze_full=None):
+import Test_Functions.Ended_Tests as ended_tests
+from models.test_result import TestResult
+from Test_Functions.test_helpers import classify_all
+
+def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, bac, C, bhc, fields_to_exclude):
     all_test_results = []
 
     # ---------------------------------------------------------
     # 1. Default Mappings
     # ---------------------------------------------------------
-    test_df, test_data_setup = ended_tests.test_default_mapping_init(json_data, M3_bronze)
+    test_df, test_data_setup = ended_tests.test_default_mapping_init(json_data, M1_silver, M3_bronze)
     
     if test_data_setup is True and test_df is not None:
         all_test_results.extend(ended_tests.test_ended_defaultValues(test_df, fields_to_exclude))
@@ -32,10 +36,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     # ---------------------------------------------------------
     # 3. hearingRequirements Tests
     # ---------------------------------------------------------
-    test_df, test_data_setup = ended_tests.test_hearingRequirements_init(json_data, M1_bronze, M3_bronze)
+    test_df, test_data_setup = ended_tests.test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, bac)
     
     if test_data_setup is True and test_df is not None:
-        # evidence tests
         if "isEvidenceFromOutsideUkOoc" not in fields_to_exclude:
             all_test_results.extend([
                 ended_tests.test_isEvidenceFromOutsideUkOoc_test1(test_df),
@@ -92,5 +95,5 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     elif test_data_setup is not True:
         all_test_results.append(test_data_setup)
 
-
+    # Return ALL results at once
     return classify_all(all_test_results)

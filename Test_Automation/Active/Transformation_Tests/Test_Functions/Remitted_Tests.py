@@ -1,10 +1,11 @@
+from pyspark.sql import functions as F
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, 
+    date_format, row_number, expr,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains
+    collect_set, current_timestamp, transform, first, array_contains
 )
-
+from pyspark.sql.window import Window
 import inspect
 
 #Import Test Results class
@@ -75,3 +76,77 @@ def test_remitted_defaultValues(test_df, fields_to_exclude):
     except Exception as e:
         error_message = str(e)        
         return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
+    
+
+############################################################################################
+#######################
+# remitted Init code
+#######################
+
+def test_remittalDetails_init(json, M3_bronze):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "appealRemittedDate"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "CaseStatus",
+            "StatusId",
+            "Outcome",
+            "DecisionDate"
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        ).drop(M3_bronze["CaseNo"])
+        
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("remittalDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+############################################################################################
+#######################
+# appealRemittedDate
+#######################
+
+def test_appealRemittedDate_test1(test_df):
+    try:
+        # 1. Filter only for the Remitted States (42, 43, 44) and Outcome 86
+        target_records = test_df.filter(
+            (col("CaseStatus").isin(42, 43, 44)) & (col("Outcome") == 86)
+        ) 
+        
+        if target_records.count() == 0:
+            return TestResult("appealRemittedDate", "FAIL", "NO RECORDS TO TEST (No Remitted Status/Outcome found)", test_from_state, inspect.stack()[0].function)
+        
+        # 2. Identify the MAX StatusID record per appeal
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
+        ranked_df = target_records.withColumn("row_rank", row_number().over(window_spec))
+        winning_records = ranked_df.filter(col("row_rank") == 1)
+
+        # 3. Define the expected date format logic (ISO 8601: yyyy-MM-dd)
+        # We cast DecisionDate to a timestamp and format it to match the Gold field string
+        expected_date_format = date_format(col("DecisionDate").cast("timestamp"), "yyyy-MM-dd")
+
+        # 4. Acceptance Criteria: Check if the appealRemittedDate matches the source DecisionDate
+        acceptance_criteria = winning_records.filter(
+            col("appealRemittedDate") != expected_date_format
+        )
+
+        if acceptance_criteria.count() != 0:
+            return TestResult("appealRemittedDate", "FAIL", f"appealRemittedDate acceptance criteria failed: found {acceptance_criteria.count()} rows where date does not match DecisionDate or ISO 8601 format", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealRemittedDate", "PASS", "appealRemittedDate acceptance criteria pass: all rows match the expected MAX DecisionDate in yyyy-MM-dd format", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appealRemittedDate", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+
+

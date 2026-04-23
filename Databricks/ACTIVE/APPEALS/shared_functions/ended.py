@@ -19,7 +19,7 @@ from . import paymentPendingDetained as PPD
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, regexp_replace,
+    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
@@ -1429,6 +1429,136 @@ def ftpa(silver_m1, silver_m3, silver_c):
 
     ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m3, silver_c)
 
+    
+    # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
+    window_spec = (
+        Window.partitionBy("CaseNo")
+        .orderBy(col("StatusId").desc())#, col("DecisionDate").desc_nulls_last())
+    )
+
+    # ------------------------------------------------------------
+    # F COLUMN (Set-aside flags):
+    # MAX(StatusId) WHERE CaseStatus = 39
+    # ------------------------------------------------------------
+    m3_latest_cs39 = (
+        silver_m3
+        .filter(col("CaseStatus") == 39)
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
+    # ------------------------------------------------------------
+    # F COLUMN (Decision/outcome fields):
+    # MAX(StatusId) WHERE CaseStatus = 39 AND Outcome IN (30,31,14)
+    # ------------------------------------------------------------
+    m3_latest_cs39_outcome = (
+        silver_m3
+        .filter((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
+    ftpaFinalDecisionForDisplay = (
+        silver_m3
+        .filter((((col("CaseStatus") == 39) & (col("Outcome").isin([30, 31, 14])))
+                |
+                ((col("CaseStatus") == 46) & (col("Outcome") == 31))))
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
+    # Outcome mapping (I/J)
+    outcome_type = (
+        when(col("Outcome") == 30, lit("granted"))
+        .when(col("Outcome") == 31, lit("refused"))
+        .when(col("Outcome") == 14, lit("notAdmitted"))
+        .otherwise(lit(None))
+    )
+
+    # ------------------------------------------------------------
+    # Decision/outcome-driven decided fields (cs39 + outcome in 30/31/14)
+    # ------------------------------------------------------------
+    ftpaDec_df = (
+            m3_latest_cs39.alias("no_outcome").join(ftpa_df, on=["CaseNo"], how="full_outer").join(m3_latest_cs39_outcome.alias("outcome"), on=["CaseNo"], how="left").join(ftpaFinalDecisionForDisplay.alias("ftpaFinalDescOutcome"), on=["CaseNo"], how="left")
+            .withColumn(
+                "ftpaApplicantType",
+                when(col("outcome.Party") == 1, lit("appellant"))
+                .when(col("outcome.Party") == 2, lit("respondent"))
+                .otherwise(lit(None))
+            )
+            .withColumn("ftpaFirstDecision", when(col("outcome.Outcome") == 30, lit("granted"))
+                                            .when(col("outcome.Outcome") == 31, lit("refused"))
+                                            .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+                                            .otherwise(lit(None)))
+
+            .withColumn(
+                "ftpaAppellantDecisionDate",
+                when(col("outcome.Party") == 1, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None)))
+            
+            .withColumn(
+                "ftpaRespondentDecisionDate",
+                when(col("outcome.Party") == 2, date_format(col("outcome.DecisionDate"), "yyyy-MM-dd")).otherwise(lit(None)))
+            
+            .withColumn("ftpaFinalDecisionForDisplay", when(col("ftpaFinalDescOutcome.Outcome") == 30, lit("granted"))
+                                            .when(col("ftpaFinalDescOutcome.Outcome") == 31, lit("refused"))
+                                            .when(col("ftpaFinalDescOutcome.Outcome") == 14, lit("notAdmitted"))
+                                            .otherwise(lit(None)))
+
+            .withColumn("ftpaAppellantRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
+                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
+                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+                                                                .otherwise(lit(None)))
+            
+            .withColumn("ftpaRespondentRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
+                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
+                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+                                                                .otherwise(lit(None)))
+            
+            .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 1, lit("No")).otherwise(lit(None)))
+            .withColumn("isFtpaRespondentNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 2, lit("No")).otherwise(lit(None)))
+            
+            ##Updating ftpaList
+            .withColumn(
+                "ftpaList",
+                transform(
+                    col("ftpaList"),
+                    lambda x: x.withField(
+                        "value",
+                        x["value"]
+                        .withField(
+                            "ftpaDecisionDate",
+                            when(col("outcome.Party") == 1, col("ftpaAppellantDecisionDate"))
+                            .when(col("outcome.Party") == 2, col("ftpaRespondentDecisionDate"))
+                        )
+                        .withField(
+                            "ftpaDecisionOutcomeType",
+                            col("ftpaFinalDecisionForDisplay")
+                        )
+                        .withField(
+                            "isFtpaNoticeOfDecisionSetAside",
+                            when(col("outcome.Party") == 1, col("isFtpaAppellantNoticeOfDecisionSetAside"))
+                            .when(col("outcome.Party") == 2, col("isFtpaRespondentNoticeOfDecisionSetAside"))
+                        )
+                    )
+                )
+            )
+
+            .select(
+                col("CaseNo"),
+                col("ftpaList"),
+            )
+        )
+    
+    ftpa_df = ftpa_df.drop("ftpaList")
+    ftpa_df = (
+        ftpa_df.alias("content")
+        .join(ftpaDec_df.alias("m3"), on="CaseNo", how="left")
+    )
+    
+
     df = (
         silver_m3
         .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))
@@ -1739,6 +1869,10 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     silver_m3_ranked_state_2_3_4 = silver_m3_filtered_state_2_3_4.withColumn("row_number", row_number().over(window_spec))
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number")
 
+    silver_m3_ttl = silver_m3.withColumn("row_number", row_number().over(window_spec))
+    silver_m3_ttl = silver_m3_ttl.filter(col("row_number") == 1).drop("row_number").select("CaseNo","DecisionDate")
+
+
     
 
     general_df = ( general_df.alias("content") .join( silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left" )
@@ -1810,10 +1944,36 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                           )
                   )
     
+    general_df = general_df.drop("TTL")
+
+    general_df = (general_df.alias("content").join(silver_m3_ttl.alias("m3"),on="CaseNo",how="left")
+                  .withColumn(
+                                "TTL",
+                                struct(
+                                    lit("No").alias("Suspended"),
+                                    date_format(
+                                        date_add(col("m3.DecisionDate"), 730),
+                                        "yyyy-MM-dd"
+                                    ).alias("SystemTTL")
+                                )
+                            )
+                  .select("content.*","TTL")
+    )
+
+    
+    # general_audit = general_audit.drop("TTL")
+    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+    
     general_audit = (
         general_df.alias("content")
         .join(silver_m3_max_statusid_state_2_3_4.alias("m3"), on="CaseNo", how="left")
+        .join(silver_m3_ttl.alias("ttl"), on="CaseNo", how="left")
         .select("content.CaseNo",
+                array(struct(lit("Suspended"),lit("DecisionDate"))).alias("TTL_inputFields"),
+                array(struct(lit("None"),col("ttl.DecisionDate"))).alias("TTL_inputValues"),
+                col("content.TTL").alias("TTL_value"),
+                lit("Yes").alias("TTL_Transformed"),
+
                 array(struct(lit("CaseStatus"),lit("StatusId"),lit("Outcome"))).alias("caseArgumentAvailable_inputFields"),
                 array(struct(col("m3.CaseStatus"),col("m3.StatusId"),col("m3.Outcome"))).alias("caseArgumentAvailable_inputValues"),
                 col("content.caseArgumentAvailable").alias("caseArgumentAvailable_value"),

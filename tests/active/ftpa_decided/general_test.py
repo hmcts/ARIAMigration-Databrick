@@ -40,13 +40,14 @@ def general_outputs(spark):
         T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
         T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
         T.StructField("CaseStatus", T.IntegerType(), True), 
+        T.StructField("DateLodged", T.StringType(), True), 
     ])
 
     m1_data = [
-        ("CASE005", "AIP", "FT", None, 0, 0, True, 3, 5, "B12 0hf", "B12 0hf", 2, "Man", 39),
-        ("CASE006", "AIP", "FT", None, 0, 0, True, 4, 6, "B12 0hf", "B12 0hf", 4, "Man", 39),
-        ("CASE007", "AIP", "FT", None, 0, 0, False, None, 7, "B12 0hf", "B12 0hf", 0, "Man", 39),
-        ("CASE011", "AIP", "FT", None, 0, 0, True, 61, 0, "B12 0hf", "B12 0hf", 1, "Man", 39),
+        ("CASE005", "AIP", "FT", None, 0, 0, True, 3, 5, "B12 0hf", "B12 0hf", 2, "Man", 39,"1899-08-30T12:00:00.000+00:00"),
+        ("CASE006", "AIP", "FT", None, 0, 0, True, 4, 6, "B12 0hf", "B12 0hf", 4, "Man", 39,"1999-09-30T12:00:00.000+00:00"),
+        ("CASE007", "AIP", "FT", None, 0, 0, False, None, 7, "B12 0hf", "B12 0hf", 0, "Man", 39,"2019-10-30T12:00:00.000+00:00"),
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61, 0, "B12 0hf", "B12 0hf", 1, "Man", 39,"2000-11-30T12:00:00.000+00:00"),
     ]
 
     # ----------------------------

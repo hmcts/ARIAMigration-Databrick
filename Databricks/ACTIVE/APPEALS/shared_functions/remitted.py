@@ -14,7 +14,7 @@ from . import ftpa_decided as FD
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, regexp_replace,
+    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
 )
@@ -134,7 +134,42 @@ def documents(silver_m1, silver_m3):
             )
     )
     return documents_df, documents_audit
+################################################################
+##########              general                      ###########
+################################################################
 
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+
+    general_df,general_audit = FD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    general_df = general_df.drop("TTL")
+
+    general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+                  .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(date_add(col("m1.DateLodged"), 36524),"yyyy-MM-dd").alias("SystemTTL")))
+        .select(
+            "m1.CaseNo",
+            *[c for c in general_df.columns if c != "CaseNo"],
+            "TTL",
+        )
+    )
+
+
+    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+
+    general_audit = (
+        general_audit.alias("audit")
+            .join(general_df.alias("gen"), on=["CaseNo"], how="left")
+            .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
+            .select(
+                "audit.*",
+                array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+                array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+                col("gen.TTL").alias("TTL_value"),
+                lit("Yes").alias("TTL_Transformation"),
+            )
+    )
+
+    return general_df, general_audit
 
 ################################################################
 ##########              generalDefault          ###########

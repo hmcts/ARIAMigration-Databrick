@@ -369,10 +369,14 @@ def general(
         bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres
     )
 
+    df = df.drop("TTL")
+
     df = (
         silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
+        .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
         .select("m1.CaseNo",
                 *[c for c in df.columns if c != "CaseNo"],
+                "TTL"
                 )
         )
 
@@ -436,14 +440,23 @@ def general(
                 lit("Yes")
             ).otherwise(lit("No"))
         )
+        
         .drop("m3_party", "m3_caseStatus", "m3_Outcome_latest", "m3latest_CaseStatus", "m3latest_outcome")
     ).distinct()
 
+    df_audit = df_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
     df_audit = (
         df_audit.alias("audit")
+        .join(df.alias("content"), on=["CaseNo"], how="left")
+        .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
         .join(m3_latest.alias("m3"), on=["CaseNo"], how="left")
         .select(
             col("audit.*"),
+
+            array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+            array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+            col("content.TTL").alias("TTL_value"),
+            lit("Derived").alias("TTL_Transformation"),
 
             array(struct(lit("Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputFields"),
             array(struct(col("m3.Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputValues"),

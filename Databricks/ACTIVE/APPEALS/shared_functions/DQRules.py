@@ -85,7 +85,6 @@ def previous_state_map(state: str):
         "ftpaDecided":                   "ftpaSubmitted(b)",
         "remitted":                      "ftpaDecided",
         "ended":                         "ftpaSubmitted(a)"
-        
     }
 
     return previous_state.get(state, None)
@@ -112,7 +111,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
         col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
         col("Sponsor_Authorisation"), col("Sponsor_Name"),col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
-        ,col("OutOfTimeIssue")
+        ,col("OutOfTimeIssue"),col("DateLodged")
     )
     valid_appealant_address = silver_m2.select(
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),

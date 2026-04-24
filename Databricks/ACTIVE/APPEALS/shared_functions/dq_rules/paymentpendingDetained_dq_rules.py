@@ -257,14 +257,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
         checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
             """(
-                (applicationChangeDesignatedHearingCentre IS NOT NULL)
-                AND
                 CASE
                     WHEN Detained IN (1,2) THEN applicationChangeDesignatedHearingCentre IN ('taylorHouse','hattonCross','birmingham','glasgow','manchester',
                     'newcastle','bradford','newport','yarlsWood')
                     ELSE
                     applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
-                
                 END
             )"""
         )
@@ -378,8 +375,6 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
         checks["valid_selectedHearingCentreRefData_not_null"] = ("""
                                                                  
-                        (selectedHearingCentreRefData IS NOT NULL)
-                        AND 
                         CASE 
                             WHEN Detained IN (1,2) THEN 
                             selectedHearingCentreRefData IN ('Atlantic Quay - Glasgow','Birmingham Civil And Family Justice Centre',

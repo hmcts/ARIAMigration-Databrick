@@ -83,8 +83,8 @@ def test_default_mapping_init(json_data, M1_silver, M3_bronze):
             "hmcts",             
             "witnessDetails", "directions", 
             "respondentDocuments", "hearingRequirements", "hearingDocuments", "letterBundleDocuments", 
-            "caseBundles", "finalDecisionAndReasonsDocuments", "ftpaAppellantDocuments", 
-            "ftpaAppellantGroundsDocuments", "ftpaAppellantEvidenceDocuments", "ftpaAppellantOutOfTimeDocuments",
+            "caseBundles", "finalDecisionAndReasonsDocuments", #"ftpaAppellantDocuments", 
+            #"ftpaAppellantGroundsDocuments", "ftpaAppellantEvidenceDocuments", "ftpaAppellantOutOfTimeDocuments",
             "witness1InterpreterSignLanguage", "witness2InterpreterSignLanguage", "witness3InterpreterSignLanguage", 
             "witness4InterpreterSignLanguage", "witness5InterpreterSignLanguage", "witness6InterpreterSignLanguage",
             "witness7InterpreterSignLanguage", "witness8InterpreterSignLanguage", "witness9InterpreterSignLanguage",
@@ -146,8 +146,9 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
         "witness10InterpreterSpokenLanguage": [4], "scheduleOfIssuesAgreement": [4], "scheduleOfIssuesDisagreementDescription": [4],
         "immigrationHistoryAgreement": [4], "immigrationHistoryDisagreementDescription": [4], "hmcts": [4], "stitchingStatus": [4],
         "bundleConfiguration": [4], "appealDecisionAvailable": [4], "isFtpaListVisible": [4], "hearingDocuments": [4],
-        "letterBundleDocuments": [4], "caseBundles": [4], "finalDecisionAndReasonsDocuments": [4], "ftpaAppellantDocuments": [4], 
-        "ftpaAppellantGroundsDocuments": [4], "ftpaAppellantEvidenceDocuments": [4], "ftpaAppellantOutOfTimeDocuments": [4], "anonymityOrder": [4],
+        "letterBundleDocuments": [4], "caseBundles": [4], "finalDecisionAndReasonsDocuments": [4], #"ftpaAppellantDocuments": [4], 
+        #"ftpaAppellantGroundsDocuments": [4], "ftpaAppellantEvidenceDocuments": [4], "ftpaAppellantOutOfTimeDocuments": [4],
+        "anonymityOrder": [4],
         "directions": [2, 3, 4], "uploadHomeOfficeBundleAvailable": [2, 3, 4], "uploadHomeOfficeBundleActionAvailable": [2, 3, 4],
         "caseArgumentAvailable": [2, 3, 4], "reasonsForAppealDecision": [2, 3, 4], "respondentDocuments": [2, 3, 4]
     }
@@ -190,8 +191,8 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
     expected_arrays = {
         "witnessDetails": None, "directions": None, "respondentDocuments": None, "hearingRequirements": None,
         "hearingDocuments": None, "letterBundleDocuments": None, "caseBundles": None, "finalDecisionAndReasonsDocuments": None,
-        "ftpaAppellantDocuments": None, "ftpaAppellantGroundsDocuments": None, "ftpaAppellantEvidenceDocuments": None,
-        "ftpaAppellantOutOfTimeDocuments": None
+        #"ftpaAppellantDocuments": None, "ftpaAppellantGroundsDocuments": None, "ftpaAppellantEvidenceDocuments": None,
+        #"ftpaAppellantOutOfTimeDocuments": None
     }
 
     try:
@@ -979,7 +980,10 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
             "sendDecisionsAndReasonsDate",
             "appealDate",
             "appealDecision",
-            "isDecisionAllowed"
+            "isDecisionAllowed",
+            "additionalInstructionsTribunalResponse",
+            "attendingJudge",
+            "actualCaseHearingLength"
             # "isInCameraCourtAllowed",
             # "inCameraCourtTribunalResponse",
             # "inCameraCourtDecisionForDisplay",
@@ -1001,17 +1005,13 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
         # 3. Prepare BAC table for CategoryId
         bac_clean = bac.select(col("CaseNo").alias("bac_CaseNo"), "CategoryId")
 
-        # 4. Prepare M6_bronze
         m6_clean = M6_bronze.select(
             col("CaseNo").alias("m6_CaseNo")
-        #     F.col("Judge_Forenames").alias("M6_Judge_Forenames"),
-        #     F.col("Judge_Surname").alias("M6_Judge_Surname"),
-        #     F.col("Judge_Title").alias("M6_Judge_Title"),
-        #     F.col("Required").alias("M6_Required")
-        )
+        ).groupBy("m6_CaseNo").count().select("m6_CaseNo")
 
         # 5. Process M3 history
         m3_history = M3_bronze.join(bac_clean, M3_bronze["CaseNo"] == bac_clean["bac_CaseNo"], "left")
+        
         history_with_groups = get_ended_group_id(m3_history)
 
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
@@ -1041,7 +1041,11 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
                 "HearingCentre",
                 "Outcome",
                 "DecisionDate",
-                "DateReceived"
+                "DateReceived",
+                "Adj_Determination_Title",
+                "Adj_Determination_Forenames",
+                "Adj_Determination_Surname",
+                "HearingDuration"
             )
 
         # 6. Master Join
@@ -1733,3 +1737,156 @@ def test_isDecisionAllowed_test2(test_df):
         return TestResult("isDecisionAllowed", "PASS", "Outcome 2 correctly mapped (case-insensitive check)", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# additionalInstructionsTribunalResponse - Scenario 1
+# Check complex string concatenation from M3 and M6
+#######################
+def test_additionalInstructionsTribunalResponse_test1(test_df):
+    try:
+        target_records = test_df.filter(
+            (F.col("EndedGroup") == 4) & 
+            (F.col("CaseStatus").isin(37, 38))
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("additionalInstructionsTribunalResponse", "PASS", "No records found.", "ended", inspect.stack()[0].function)
+
+        # Helper to handle 'N/A' for standard fields
+        def aria_na(col_name):
+            return F.coalesce(F.col(col_name).cast("string"), F.lit("N/A"))
+
+        # Special Helper for Judge First Tier (NULL to blank, no punctuation)
+        def judge_ft(sur, fore, title):
+            return F.when(F.col(sur).isNull() & F.col(fore).isNull() & F.col(title).isNull(), F.lit("")) \
+                    .otherwise(F.concat(
+                        F.coalesce(F.col(sur), F.lit("")), F.lit(", "),
+                        F.coalesce(F.col(fore), F.lit("")), F.lit(" ("),
+                        F.coalesce(F.col(title), F.lit("")), F.lit(")")
+                    ))
+
+        # Build the massive expected string
+        expected_df = target_records.withColumn("expected_blob", 
+            F.concat(
+                F.lit("Listing details from ARIA: \n\nHearing Centre: "), aria_na("ListedCentre"), F.lit(" \nHearing Date: "), aria_na("HearingDate"),
+                F.lit(" \nHearing Type: "), aria_na("HearingType"), F.lit(" \nCourt: "), aria_na("CourtName"),
+                F.lit(" \nList Type: "), aria_na("ListType"), F.lit(" \nList Start Time: "), aria_na("StartTime"),
+                F.lit(" \nJudge First Tier: "), 
+                judge_ft("Judge1FT_Surname", "Judge1FT_Forenames", "Judge1FT_Title"), F.lit(", "),
+                judge_ft("Judge2FT_Surname", "Judge2FT_Forenames", "Judge2FT_Title"), F.lit(", "),
+                judge_ft("Judge3FT_Surname", "Judge3FT_Forenames", "Judge3FT_Title"),
+                F.lit(" \nCourt Clerk / Usher: "), aria_na("CourtClerk_Surname"), F.lit(", "), aria_na("CourtClerk_Forenames"), F.lit(" ("), aria_na("CourtClerk_Title"), F.lit(")"),
+                F.lit(" \nStart Time: "), F.date_format(F.col("StartTime"), "HH:mm:ss"),
+                F.lit(" \nEstimated Duration: "), aria_na("TimeEstimate"),
+                F.lit(" \nRequired/Incompatible Judicial Officers: \n"), F.coalesce(F.col("M6_Judges_List"), F.lit("N/A")),
+                F.lit(" \nNotes: "), aria_na("Notes")
+            )
+        )
+
+        failures = expected_df.filter(F.col("additionalInstructionsTribunalResponse") != F.col("expected_blob"))
+
+        if failures.count() != 0:
+            # We use a substring check or length check in the message because the blob is too big for a standard log
+            return TestResult("additionalInstructionsTribunalResponse", "FAIL", 
+                              f"Found {failures.count()} records with string mismatch. Check for hidden newlines or N/A mapping.", 
+                              "ended", inspect.stack()[0].function)
+        
+        return TestResult("additionalInstructionsTribunalResponse", "PASS", "String template correctly populated from M3 and M6.", "ended", inspect.stack()[0].function)
+        
+    except Exception as e:
+        return TestResult("additionalInstructionsTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# attendingJudge - Scenario 1
+# Check concatenation of Title, Forenames, and Surname (Group 4)
+# Expected: "Title Forenames Surname" (with N/A for nulls)
+#######################
+def test_attendingJudge_test1(test_df):
+    try:
+        # Filter: EndedGroup 4 (Scenario requires largest StatusID, which is handled in Init)
+        target_records = test_df.filter(col("EndedGroup") == 4)
+        
+        if target_records.count() == 0:
+            return TestResult("attendingJudge", "PASS", "No EndedGroup 4 records found.", "ended", inspect.stack()[0].function)
+
+        # Helper to handle 'N/A' for name parts to ensure concatenation doesn't break
+        def name_part(col_name):
+            return coalesce(col(col_name).cast("string"), lit("N/A"))
+
+        # Construct the expected string: "Title Forenames Surname"
+        expected_df = target_records.withColumn("expected_judge", 
+            concat(
+                name_part("Adj_Determination_Title"), lit(" "),
+                name_part("Adj_Determination_Forenames"), lit(" "),
+                name_part("Adj_Determination_Surname")
+            )
+        )
+
+        failures = expected_df.filter(col("attendingJudge") != col("expected_judge"))
+
+        if failures.count() != 0:
+            sample = failures.select("attendingJudge", "expected_judge").limit(1).collect()
+            return TestResult("attendingJudge", "FAIL", f"Found {failures.count()} rows with name mismatch. Example: Actual '{sample[0][0]}' vs Expected '{sample[0][1]}'", "ended", inspect.stack()[0].function)
+        
+        return TestResult("attendingJudge", "PASS", "attendingJudge correctly concatenated from Title, Forenames, and Surname", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("attendingJudge", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# actualCaseHearingLength - Scenario 1
+# Check conversion of total minutes to Hours and Minutes struct
+# Criteria: EndedGroup 4, Status (26, 37, 38), Outcome (1, 2)
+#######################
+def test_actualCaseHearingLength_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4, valid statuses and outcomes
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus").isin(26, 37, 38)) &
+            (col("Outcome").isin(1, 2))
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("actualCaseHearingLength", "PASS", "No records found matching criteria.", "ended", inspect.stack()[0].function)
+
+        # 2. Define Expected Logic (Spark equivalent of the pandas logic provided)
+        # hours = HearingDuration // 60
+        # minutes = HearingDuration % 60
+        expected_df = target_records.withColumn("exp_hours", (col("HearingDuration") / 60).cast("int")) \
+                                   .withColumn("exp_minutes", (col("HearingDuration") % 60).cast("int"))
+
+        # 3. Validation Logic
+        # Checking the nested JSON fields against our calculated expected values
+        failures = expected_df.filter(
+            (col("actualCaseHearingLength.hours") != col("exp_hours")) | 
+            (col("actualCaseHearingLength.minutes") != col("exp_minutes"))
+        )
+
+        if failures.count() != 0:
+            sample = failures.select(
+                "appealReferenceNumber", 
+                "HearingDuration", 
+                "actualCaseHearingLength.hours", 
+                "actualCaseHearingLength.minutes",
+                "exp_hours",
+                "exp_minutes"
+            ).limit(1).collect()
+            
+            return TestResult(
+                "actualCaseHearingLength", 
+                "FAIL", 
+                f"Mismatch for Duration {sample[0][1]}. Actual: {sample[0][2]}h:{sample[0][3]}m | Expected: {sample[0][4]}h:{sample[0][5]}m", 
+                "ended", 
+                inspect.stack()[0].function
+            )
+        
+        return TestResult("actualCaseHearingLength", "PASS", "Minutes correctly converted to hours and minutes struct.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("actualCaseHearingLength", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)

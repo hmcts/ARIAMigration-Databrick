@@ -1538,7 +1538,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     # appellantAddress logic
     # Only include if CategoryIdList contains 37 and conditions
-    include_appellant_address = (conditions & (expr("array_contains(CategoryIdList, 37)") | expr("array_contains(CategoryIdList, 38)")) & 
+    include_appellant_address = (conditions & (expr("array_contains(CategoryIdList, 37)") ) & 
                                     (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))
     # include_appellant_out_of_uk_address = (conditions & expr("array_contains(CategoryIdList, 38)") & 
     #                                 (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))

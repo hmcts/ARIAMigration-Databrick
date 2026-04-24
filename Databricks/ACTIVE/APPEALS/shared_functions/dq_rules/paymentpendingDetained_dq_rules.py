@@ -257,127 +257,235 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
         checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
             """(
-                ((applicationChangeDesignatedHearingCentre IS NOT NULL)
-                AND 
-                (applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
-                )
-                OR (applicationChangeDesignatedHearingCentre IS NULL)
+                (applicationChangeDesignatedHearingCentre IS NOT NULL)
+                AND
+                CASE
+                    WHEN Detained IN (1,2) THEN applicationChangeDesignatedHearingCentre IN ('taylorHouse','hattonCross','birmingham','glasgow','manchester',
+                    'newcastle','bradford','newport','yarlsWood')
+                    ELSE
+                    applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
+                
+                END
             )"""
         )
 
         # ##############################
         # # ARIADM-708 (CaseData)
         # ##############################
-        checks["valid_hearingCentre"] = """
+        checks["valid_hearingCentre"] = ("""
         (
             (hearingCentre IS NOT NULL)
-            AND
-            (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
-            'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
-            'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
+            AND CASE 
+                WHEN Detained IN (1,2) THEN hearingCentre IN ('taylorHouse','hattonCross','birmingham','glasgow','manchester','newcastle','bradford','newport','yarlsWood')
+                ELSE (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
+                                    'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
+                                    'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
+                                    )
+                END
         )
-        """
-        checks["valid_staffLocation_detained"] = "(staffLocation IS NOT NULL)"
-        checks["valid_caseManagementLocation_region_and_baseLocation"] = """
+        """)
+
+        checks["valid_staffLocation"] = ("""
+                                         
+                (staffLocation IS NOT NULL)
+                AND 
+                CASE 
+                    WHEN Detained IN (1,2)  
+                    THEN staffLocation IN ('Taylor House','Hatton Cross','Birmingham','Glasgow','Manchester','Newcastle','Bradford','Newport','YarlsWood')
+                    ELSE staffLocation IN ('Bradford','Birmingham','Glasgow','Hatton Cross','Manchester','Newcastle','Newport','Taylor House')
+                END
+
+        """)
+
+
+        checks["valid_caseManagementLocation_region_and_baseLocation"] = ("""
         (
-            caseManagementLocation.region <=> '1' AND
-            caseManagementLocation.baseLocation IS NOT NULL AND
-            caseManagementLocation.baseLocation IN (
-                '231596', '698118', '366559', '386417', '512401',
-                '227101', '765324', '366796', '324339', '649000',
-                '999971', '420587', '28837'
-            )
+            CASE 
+                    WHEN Detained IN (1,2)  
+                        THEN    caseManagementLocation.region <=> '1' 
+                                AND
+                                caseManagementLocation.baseLocation IN ('227101','231596','366559','366796','386417','512401','512401','649000','698118','765324')
+
+                    ELSE        caseManagementLocation.region <=> '1' AND
+                                caseManagementLocation.baseLocation IS NOT NULL AND
+                                caseManagementLocation.baseLocation IN (
+                                    '231596', '698118', '366559', '386417', '512401',
+                                    '227101', '765324', '366796', '324339', '649000',
+                                    '999971', '420587', '28837')
+            END
         )
-        """
-        checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
+        """)
+        
+        checks["valid_hearingCentreDynamicList_code_in_list_items"] = ("""
         (
-            hearingCentreDynamicList.value.code IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
-                hearingCentreDynamicList.value.code
+            CASE 
+                    WHEN Detained IN (1,2)  
+                        THEN hearingCentreDynamicList.value.code IN ('765324','386417','231596','366559','512401','366796','698118','227101','649000')
+
+                    ELSE hearingCentreDynamicList.value.code IS NOT NULL AND
+                                hearingCentreDynamicList.value.code IN (
+                                    '231596', '28837', '366559', '366796', '386417',
+                                    '512401', '649000', '698118', '765324', '227101')
+            END
             )
-        )
-        """
-        checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
+        """)
+
+        checks["valid_hearingCentreDynamicList_label_in_list_items"] = ("""
         (
-            hearingCentreDynamicList.value.label IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
-                hearingCentreDynamicList.value.label
+            CASE 
+                    WHEN Detained IN (1,2)  
+                        THEN hearingCentreDynamicList.value.label IN ('Taylor House Tribunal Hearing Centre','Hatton Cross Tribunal Hearing Centre','Birmingham Civil And Family Justice Centre','Atlantic Quay - Glasgow','Manchester Tribunal Hearing Centre - Piccadilly Exchange','Newcastle Civil And Family Courts And Tribunals Centre','Bradford Tribunal Hearing Centre','Newport Tribunal Centre - Columbus House','Yarls Wood Immigration And Asylum Hearing Centre')
+
+                    ELSE hearingCentreDynamicList.value.label IS NOT NULL AND
+                                hearingCentreDynamicList.value.label  IN (
+                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre', 
+                                    'Atlantic Quay - Glasgow', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Hatton Cross Tribunal Hearing Centre',
+                                    'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Bradford Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'Newport Tribunal Centre - Columbus House')
+            END
             )
-        )
-        """
-        checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
+        """)
+
+        checks["valid_caseManagementLocationRefData_code_in_list_items"] = ("""
         (
-            caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
-                caseManagementLocationRefData.baseLocation.value.code
+            CASE 
+                    WHEN Detained IN (1,2)  
+                        THEN caseManagementLocationRefData.baseLocation.value.code IN ('765324','386417','231596','366559','512401','366796','698118','227101','649000')
+
+                    ELSE caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
+                                caseManagementLocationRefData.baseLocation.value.code IN (
+                                    '231596', '28837', '366559', '366796', '386417',
+                                    '512401', '649000', '698118', '765324', '227101')
+            END
             )
-        )
-        """
-        checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
+        """)
+
+        checks["valid_caseManagementLocationRefData_label_in_list_items"] = ("""
         (
-            caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
-            ARRAY_CONTAINS(
-                TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
-                caseManagementLocationRefData.baseLocation.value.label
-            )
+            
+            CASE 
+                    WHEN Detained IN (1,2)  
+                        THEN caseManagementLocationRefData.baseLocation.value.label IN ('Taylor House Tribunal Hearing Centre','Hatton Cross Tribunal Hearing Centre','Birmingham Civil And Family Justice Centre','Atlantic Quay - Glasgow','Manchester Tribunal Hearing Centre - Piccadilly Exchange','Newcastle Civil And Family Courts And Tribunals Centre','Bradford Tribunal Hearing Centre','Newport Tribunal Centre - Columbus House','Yarls Wood Immigration And Asylum Hearing Centre')
+
+                    ELSE caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
+                                caseManagementLocationRefData.baseLocation.value.label IN (
+                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre', 
+                                    'Atlantic Quay - Glasgow', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Hatton Cross Tribunal Hearing Centre',
+                                    'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Bradford Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'Newport Tribunal Centre - Columbus House')
+            END
+
         )
-        """
-        checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
+        """)
+
+        checks["valid_selectedHearingCentreRefData_not_null"] = ("""
+                                                                 
+                        (selectedHearingCentreRefData IS NOT NULL)
+                        AND 
+                        CASE 
+                            WHEN Detained IN (1,2) THEN 
+                            selectedHearingCentreRefData IN ('Atlantic Quay - Glasgow','Birmingham Civil And Family Justice Centre',
+                            'Bradford Tribunal Hearing Centre','Hatton Cross Tribunal Hearing Centre','Manchester Tribunal Hearing Centre - Piccadilly Exchange',
+                            'Newcastle Civil And Family Courts And Tribunals Centre','Newport Tribunal Centre - Columbus House','Taylor House Tribunal Hearing Centre',
+                            'Yarls Wood Immigration And Asylum Hearing Centre')
+
+                            ELSE
+                            selectedHearingCentreRefData IN ('Atlantic Quay - Glasgow','Birmingham Civil And Family Justice Centre','Bradford Tribunal Hearing Centre',
+                            'Hatton Cross Tribunal Hearing Centre','Manchester Tribunal Hearing Centre - Piccadilly Exchange','Harmondsworth Tribunal Hearing Centre',
+                            'Newcastle Civil And Family Courts And Tribunals Centre','Newport Tribunal Centre - Columbus House','Taylor House Tribunal Hearing Centre',
+                            'Yarls Wood Immigration And Asylum Hearing Centre')
+                        END
+ 
+                """)
 
         # ##############################
         # # ARIADM-758 (appellantDetails)
         # ##############################
 
-        checks["valid_appellantInUk_yes_no"] = (
-            "(appellantInUk IS  NULL OR appellantInUk IN ('Yes', 'No'))"
-        )
-        checks["valid_appealOutOfCountry_yes_no"] = (
-            "(appealOutOfCountry IS  NULL OR appealOutOfCountry IN ('Yes', 'No'))"
-        )
+        checks["valid_appellantInUk"] = ("""
+            CASE    WHEN Detained IN (1,2,4) OR array_contains(valid_categoryIdList, 37) THEN appellantInUk = 'Yes'
+                    WHEN array_contains(valid_categoryIdList, 38) THEN appellantInUk = 'No'
+                    ELSE appellantInUk IS  NULL
+            END
+        """)
+
+        checks["valid_appealOutOfCountry"] = ("""
+            CASE    WHEN Detained IN (1,2,4) OR array_contains(valid_categoryIdList, 37) THEN appealOutOfCountry = 'No'
+                    WHEN array_contains(valid_categoryIdList, 38) THEN appealOutOfCountry = 'Yes'
+                    ELSE appealOutOfCountry IS  NULL
+            END
+
+        """)
 
         ##############################
         # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
         ##############################
 
         # Only include if CategoryIdList contains 37; check for 'Yes'
-        checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND Detained NOT IN (1,2) AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
-        )
+        checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = ("""
+                                                                    
+            CASE    WHEN Detained IN (1,2) THEN appellantHasFixedAddress IS NULL 
+                    WHEN array_contains(valid_categoryIdList, 37) THEN appellantHasFixedAddress = 'Yes'
+                    ELSE appellantHasFixedAddress IS NULL
+            END
+        """)
 
         # Only include if array_contains(valid_categoryIdList, 37)
-        checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) )"
-        )
-        checks["valid_appellantAddress_AddressLine2_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL))"
-        )
-        checks["valid_appellantAddress_AddressLine3_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL) )"
-        )
-        checks["valid_appellantAddress_PostTown_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL) )"
-        )
-        checks["valid_appellantAddress_County_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL) )"
-        )
-        checks["valid_appellantAddress_PostCode_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL) )"
-        )
-        checks["valid_appellantAddress_Country_length"] = (
-            "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
-        )
+        checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE
+                (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) 
+            END
+        """)
+        checks["valid_appellantAddress_AddressLine2_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE                                                 
+                 (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL)
+            END
+        """)
+        checks["valid_appellantAddress_AddressLine3_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE 
+                    (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL)
+            END
+        """)
+        checks["valid_appellantAddress_PostTown_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE 
+                    (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL)
+            END
+        """)
+        checks["valid_appellantAddress_County_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE 
+                    (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL)
+            END
+        """)
+        checks["valid_appellantAddress_PostCode_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE                                                
+                    (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL)
+            END
+        """)
+        checks["valid_appellantAddress_Country_length"] = ("""
+            CASE 
+                WHEN Detained IN (1,2) THEN appellantAddress IS NULL
+                ELSE 
+                    (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL)
+            END
+        """)
 
-        
-        checks["valid_TTL"] = """
-        (
-            TTL.Suspended = 'No'
-            AND
-            TTL.SystemTTL = date_format(date_add(DateLodged, 36524),'yyyy-MM-dd')
-        )
-        """
+        checks["valid_TTL"] = ("""
+            (
+                TTL.Suspended = 'No'
+                AND
+                TTL.SystemTTL = date_format(date_add(DateLodged, 36524),'yyyy-MM-dd')
+            )
+        """)
 
 
         return checks

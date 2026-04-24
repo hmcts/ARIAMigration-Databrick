@@ -123,5 +123,15 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if "isDecisionAllowed" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isDecisionAllowed_test1(test_df))
             all_test_results.append(ended_tests.test_isDecisionAllowed_test2(test_df))
-            
+
+        # ---------------------------------------------------------
+        # 5. hearingActuals Tests
+        # ---------------------------------------------------------
+    if test_data_setup is True and test_df is not None:
+        if "attendingJudge" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_attendingJudge_test1(test_df))   
+        if "actualCaseHearingLength" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
+
+
         return classify_all(all_test_results)

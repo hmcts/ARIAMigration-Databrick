@@ -73,7 +73,7 @@ def detained(silver_m1, silver_m2,bronze_detention_centres):
                 col("detentionAddressLines"),
                 col("detentionPostcode"),
                 )
-    )
+    ).distinct()
 
     detained_audit = (
         joined_m1_m2.alias("m1_m2")
@@ -236,7 +236,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
             col("caseManagementLocationRefData1").alias("caseManagementLocationRefData"),
             col("selectedHearingCentreRefData1").alias("selectedHearingCentreRefData"),
         )
-    )
+    ).distinct()
     
     return caseData_df, caseData_audit
 
@@ -283,7 +283,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 col("applicationChangeDesignatedHearingCentre1").alias("applicationChangeDesignatedHearingCentre"),
                 col("TTL")
                 )
-    )
+    ).distinct()
 
     general_audit = (general_df.alias("content")
                      .join(general_audit.alias("audit"),on="CaseNo", how="left")
@@ -371,7 +371,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             col("appellantHasFixedAddress"),
             col("appellantAddress1").alias("appellantAddress"),
         )
-    )
+    ).distinct()
 
     return appellantDetails_df, appellantDetails_audit
 
@@ -544,7 +544,7 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAuthorisation",
         "sponsorNameForDisplay",
         "sponsorAddressForDisplay"
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]

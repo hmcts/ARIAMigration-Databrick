@@ -175,7 +175,7 @@ def paymentType(silver_m1, silver_m4):
             "paidAmount",
             "additionalPaymentInfo"
         )
-    )
+    ).distinct()
 
     payment_audit_final = (
         payment_audit.alias("audit")
@@ -334,7 +334,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             "amountRemitted",
             "amountLeftToPay",
         )
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
     common_inputValues = [

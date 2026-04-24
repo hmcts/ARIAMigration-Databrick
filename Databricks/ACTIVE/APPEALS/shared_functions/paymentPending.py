@@ -60,7 +60,7 @@ def appealType(silver_m1):
             conditions,
             lit("")
         ).otherwise(lit(None)).alias("ccdReferenceNumberForDisplay")
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
@@ -389,7 +389,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         when(conditions, lit("NotSure")).otherwise(None).alias("hasOtherAppeals"),
         col("outOfTimeDecisionType"),
         col("outOfTimeDecisionMaker"),
-    )
+    ).distinct()
 
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
@@ -775,7 +775,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         when(conditions, col("isAdmin")).otherwise(None).alias("isAdmin"),
         when(conditions, col("isAriaMigratedFeeExemption")).otherwise(None).alias("isAriaMigratedFeeExemption"),
         when(conditions, col("isEjp")).otherwise(None).alias("isEjp")
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
@@ -1201,7 +1201,7 @@ def legalRepDetails(silver_m1, bronze_countryFromAddress):
         "oocAddressLine3",
         "oocAddressLine4",
         "oocLrCountryGovUkAdminJ"
-    )
+    ).distinct()
 
     df = staging_df.alias("d1").join(bronze_countryFromAddress.alias("b1"),
             col("d1.oocLrCountryGovUkAdminJ") == col("b1.countryFromAddress"), "left"
@@ -2260,7 +2260,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             # col("FCONumber"),
             # col("lu_HORef")
         )
-    )
+    ).distinct()
 
     common_inputFields = [lit("lu_appealType"), lit("dv_representation")]
     common_inputValues = [col("audit.lu_appealType"), col("audit.dv_representation")]
@@ -2347,7 +2347,7 @@ def paymentType(silver_m1):
             .when(conditions_all & (col("VisitVisaType") == 2), "decisionWithHearing")
             .alias("decisionHearingFeeOption"),
         when(conditions_all, lit("No")).alias("hasServiceRequestAlready")
-    )
+    ).distinct()
 
     payment_common_inputFields = [lit("dv_CCDAppealType"), lit("VisitVisaType")]
     payment_common_inputValues = [col("dv_CCDAppealType"), col("VisitVisaType")]
@@ -2751,7 +2751,7 @@ def sponsorDetails(silver_m1, silver_c):
         "sponsorAuthorisation",
         "sponsorNameForDisplay",
         "sponsorAddressForDisplay"
-    )
+    ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
@@ -3005,7 +3005,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             col("CaseNo"),
             "isServiceRequestTabVisibleConsideringRemissions",
             "applicationChangeDesignatedHearingCentre"
-        )
+        ).distinct()
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1_audit.dv_representation"), col("m1_audit.lu_appealType")]
@@ -3142,7 +3142,7 @@ def generalDefault(silver_m1):
         "uploadAddendumEvidenceHomeOfficeActionAvailable",
         "uploadAddendumEvidenceAdminOfficerActionAvailable",
         "uploadAdditionalEvidenceHomeOfficeActionAvailable"
-    )
+    ).distinct()
 
     return df
 
@@ -3189,7 +3189,7 @@ def documents(silver_m1):
         array(struct(*common_inputValues, lit("null"))).alias("legalRepresentativeDocuments_inputValues"),
         col("legalRepresentativeDocuments"),
         lit("no").alias("legalRepresentativeDocuments_Transformation")
-    )
+    ).distinct()
 
     return documents_content, documents_audit
 
@@ -3224,7 +3224,7 @@ def caseState(silver_m1, desiredState):
     array(struct(*common_inputValues, lit("null"))).alias("ariaMigrationTaskDueDays_inputValues"),
     col("content.ariaMigrationTaskDueDays"),
     lit("no").alias("ariaMigrationTaskDueDays_Transformation")
-    )
+    ).distinct()
 
     return df,df_audit
 
@@ -3246,7 +3246,7 @@ def detainedState(silver_m1):
     array(struct(*common_inputValues, lit("No"))).alias("appellantInDetention_inputValues"),
     col("content.appellantInDetention"),
     lit("No").alias("appellantInDetention_Transformation")
-    )
+    ).distinct()
 
     return df, df_audit
 

@@ -1698,6 +1698,12 @@ def generalDefault(silver_m1,silver_m3):
 
     generalDefault_df = FSA.generalDefault(silver_m1)
 
+    generalDefault_df = generalDefault_df.drop("uploadHomeOfficeBundleAvailable")
+
+    generalDefault_df = generalDefault_df.withColumn("uploadHomeOfficeBundleAvailable",lit("Yes"))
+
+
+
     df = (
         silver_m3
         .withColumn("CaseStatus", F.col("CaseStatus").cast("int"))

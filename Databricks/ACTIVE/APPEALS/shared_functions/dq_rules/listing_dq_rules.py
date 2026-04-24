@@ -399,9 +399,9 @@ class listingDQRules(DQRulesBase):
             "(appealResponseAvailable <=> 'Yes')"
         )
 
-        checks["valid_reviewedHearingRequirements"] = (
-            "(reviewedHearingRequirements <=> 'No')"
-        )
+        checks["valid_reviewedHearingRequirements"] = ("""
+            (reviewedHearingRequirements IN ('Yes','No'))
+        """)
 
         checks["valid_amendResponseActionAvailableamendResponseActionAvailable"] = (
             "(amendResponseActionAvailable <=> 'Yes')"

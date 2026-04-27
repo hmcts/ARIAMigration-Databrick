@@ -352,16 +352,46 @@ def test_paidDate_test1(test_df):
             (col("DateCorrectFeeReceived").isNotNull())
             ).count() == 0:
             return TestResult("paidDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # SELECT CaseNo
+        # FROM M4
+        # WHERE 
+        # TransactionID NOT IN 
+        # (SELECT ReferringTransactionId FROM M4
+        # WHERE TransactionTypeId NOT IN (6,19)) 
+        # GROUP BY CaseNo
+        # HAVING 
+        #     SUM(CASE WHEN TransactionTypeID = 3 THEN 1 ELSE 0 END) > 0
 
-        acceptance_critera = test_df.filter(
-        (
-            col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")
-        ) &
-            ~((F.col("DateCorrectFeeReceived").cast("date")).eqNullSafe((F.col("paidDate")).cast("date")))
+        # --- STEP 1: Exclude ReferringTransactionIds where TransactionTypeId NOT IN (6, 19)
+        excluded_ids = test_df.filter(~F.col("TransactionTypeId").isin(6, 19)) \
+                            .select(F.col("ReferringTransactionId").alias("ref_id")) \
+                            .filter(F.col("ref_id").isNotNull()) \
+                            .distinct()
+
+        # --- STEP 2: Filter rows where TransactionID should be excluded
+        selected_rows = test_df.join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
+
+        # --- STEP 3: Apply the HAVING Clause & Total Amount, ensuring there is at least one TransactionTypeID = 3 in the group
+        case_window = Window.partitionBy("CaseNo")
+
+        final_selection = selected_rows.withColumn(
+            "has_payment", F.max(F.when(F.col("TransactionTypeID") == 3, 1).otherwise(0)).over(case_window)
+        ).filter(F.col("has_payment") == 1)
+
+        # --- STEP 4: Select the latest TransactionId per Case ---
+        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
+
+        final_row_to_test = final_selection.withColumn("rank", F.row_number().over(rank_window)) \
+            .filter(F.col("rank") == 1)
+
+        # --- STEP 5: Apply Value Logic (Identify Defects) ---
+        acceptance_critera = final_row_to_test.filter(
+            ~F.col("DateCorrectFeeReceived").cast("date").eqNullSafe(F.col("paidDate").cast("date"))
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("paidDate","FAIL", f"paidDate acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA & M1.DateCorrectFeeReceived != paidDate'", test_from_state, inspect.stack()[0].function)
+            return TestResult("paidDate","FAIL", f"paidDate acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA & M1.DateCorrectFeeReceived != paidDate", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("paidDate","PASS", "paidDate acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.DateCorrectFeeReceived == paidDate", test_from_state, inspect.stack()[0].function)
     except Exception as e:

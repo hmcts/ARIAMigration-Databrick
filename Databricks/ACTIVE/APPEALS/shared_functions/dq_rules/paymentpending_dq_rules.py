@@ -72,7 +72,8 @@ class paymentPendingDQRules(DQRulesBase):
             "(submissionOutOfTime IS NOT NULL AND submissionOutOfTime IN ('Yes', 'No'))"
         )
         checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
-            "(recordedOutOfTimeDecision IS NULL OR recordedOutOfTimeDecision IN ('Yes', 'No'))"
+            """ (recordedOutOfTimeDecision IS NULL OR 
+                (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND recordedOutOfTimeDecision = 'Yes'))"""
         )
         checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"

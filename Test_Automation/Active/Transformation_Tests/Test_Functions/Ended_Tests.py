@@ -4,6 +4,13 @@ from pyspark.sql.functions import (
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains
 )
+from pyspark.sql.functions import (
+    col, lit, when, array, array_union, array_sort, 
+    create_map, date_add, date_format, max as spark_max
+)
+from itertools import chain
+import inspect
+import re
 import inspect
 
 #Import Test Results class
@@ -389,7 +396,7 @@ def test_hearingRequirements_init(json, M1_bronze, M3_bronze, bac):
                                                "StatusId", 
                                                "Party", 
                                                "CategoryId",
-                                               "EndedGroup"
+                                               "EndedGroup",
                                            )
 
         # 5. Master Join
@@ -409,6 +416,8 @@ def test_hearingRequirements_init(json, M1_bronze, M3_bronze, bac):
     except Exception as e:
         error_message = str(e)        
         return None, TestResult("HearingReq_Init", "FAIL", f"Failed to Setup Data: {error_message[:300]}", "ended", inspect.stack()[0].function)
+
+
 #######################
 # isEvidenceFromOutsideUkOoc - Scenario 1
 # Check if CategoryId = 38 (Group 3/4)
@@ -963,7 +972,7 @@ def test_inCameraCourt_test2(test_df):
 
 
 
-def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
+def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze):
     try:
         # Using a very unique name 'json_df_input' to avoid any conflict with 'json' module
         test_df = json_data.select(
@@ -981,9 +990,23 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
             "appealDate",
             "appealDecision",
             "isDecisionAllowed",
-            "additionalInstructionsTribunalResponse",
             "attendingJudge",
-            "actualCaseHearingLength"
+            "actualCaseHearingLength",
+            "ftpaApplicationDeadline",
+            "ftpaList",
+            "ftpaAppellantApplicationDate",
+            "ftpaAppellantSubmissionOutOfTime",
+            "ftpaAppellantOutOfTimeExplanation",
+            "endAppealOutcome",
+            "endAppealOutcomeReason",
+            "endAppealApproverType",
+            "endAppealApproverName",
+            "endAppealDate",
+            "stateBeforeEndAppeal",
+            "bundleFileNamePrefix"
+            # "ftpaRespondentApplicationDate",
+            # "ftpaRespondentSubmissionOutOfTime",
+            # "ftpaRespondentOutOfTimeExplanation"
             # "isInCameraCourtAllowed",
             # "inCameraCourtTribunalResponse",
             # "inCameraCourtDecisionForDisplay",
@@ -1000,6 +1023,17 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
             "CourtPreference", 
             "InCamera",
             "VisitVisaType"
+        )
+
+        M2_bronze = M2_bronze.select(
+            col("CaseNo").alias("M2_CaseNo"),
+            "Appellant_Name"
+        )
+
+        # NEW: Prepare M1_silver for Representation
+        m1_silver_clean = M1_silver.select(
+            col("CaseNo").alias("m1_silver_CaseNo"),
+            "dv_representation"
         )
 
         # 3. Prepare BAC table for CategoryId
@@ -1045,13 +1079,23 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
                 "Adj_Determination_Title",
                 "Adj_Determination_Forenames",
                 "Adj_Determination_Surname",
-                "HearingDuration"
+                "HearingDuration",
+                "DecisionDate",
+                "OutOfTime"
             )
 
         # 6. Master Join
         test_df = test_df.join(
             m1_clean,
             test_df["appealReferenceNumber"] == m1_clean["m1_CaseNo"],
+            "inner"
+        ).join(
+            m1_silver_clean,
+            test_df["appealReferenceNumber"] == m1_silver_clean["m1_silver_CaseNo"],
+            "inner"
+        ).join(
+            M2_bronze,
+            test_df["appealReferenceNumber"] == M2_bronze["M2_CaseNo"],
             "inner"
         ).join(
             latest_status,
@@ -1061,7 +1105,7 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze):
             m6_clean,
             test_df["appealReferenceNumber"] == m6_clean["m6_CaseNo"],
             "left"
-        ).drop("m1_CaseNo", "CaseNo", "bac_CaseNo", "m6_CaseNo")
+        ).drop("m1_CaseNo", "m1_silver_CaseNo", "CaseNo", "bac_CaseNo", "m6_CaseNo")
 
         return test_df, True
 
@@ -1740,63 +1784,6 @@ def test_isDecisionAllowed_test2(test_df):
     
 
 
-#######################
-# additionalInstructionsTribunalResponse - Scenario 1
-# Check complex string concatenation from M3 and M6
-#######################
-def test_additionalInstructionsTribunalResponse_test1(test_df):
-    try:
-        target_records = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(37, 38))
-        )
-        
-        if target_records.count() == 0:
-            return TestResult("additionalInstructionsTribunalResponse", "PASS", "No records found.", "ended", inspect.stack()[0].function)
-
-        # Helper to handle 'N/A' for standard fields
-        def aria_na(col_name):
-            return F.coalesce(F.col(col_name).cast("string"), F.lit("N/A"))
-
-        # Special Helper for Judge First Tier (NULL to blank, no punctuation)
-        def judge_ft(sur, fore, title):
-            return F.when(F.col(sur).isNull() & F.col(fore).isNull() & F.col(title).isNull(), F.lit("")) \
-                    .otherwise(F.concat(
-                        F.coalesce(F.col(sur), F.lit("")), F.lit(", "),
-                        F.coalesce(F.col(fore), F.lit("")), F.lit(" ("),
-                        F.coalesce(F.col(title), F.lit("")), F.lit(")")
-                    ))
-
-        # Build the massive expected string
-        expected_df = target_records.withColumn("expected_blob", 
-            F.concat(
-                F.lit("Listing details from ARIA: \n\nHearing Centre: "), aria_na("ListedCentre"), F.lit(" \nHearing Date: "), aria_na("HearingDate"),
-                F.lit(" \nHearing Type: "), aria_na("HearingType"), F.lit(" \nCourt: "), aria_na("CourtName"),
-                F.lit(" \nList Type: "), aria_na("ListType"), F.lit(" \nList Start Time: "), aria_na("StartTime"),
-                F.lit(" \nJudge First Tier: "), 
-                judge_ft("Judge1FT_Surname", "Judge1FT_Forenames", "Judge1FT_Title"), F.lit(", "),
-                judge_ft("Judge2FT_Surname", "Judge2FT_Forenames", "Judge2FT_Title"), F.lit(", "),
-                judge_ft("Judge3FT_Surname", "Judge3FT_Forenames", "Judge3FT_Title"),
-                F.lit(" \nCourt Clerk / Usher: "), aria_na("CourtClerk_Surname"), F.lit(", "), aria_na("CourtClerk_Forenames"), F.lit(" ("), aria_na("CourtClerk_Title"), F.lit(")"),
-                F.lit(" \nStart Time: "), F.date_format(F.col("StartTime"), "HH:mm:ss"),
-                F.lit(" \nEstimated Duration: "), aria_na("TimeEstimate"),
-                F.lit(" \nRequired/Incompatible Judicial Officers: \n"), F.coalesce(F.col("M6_Judges_List"), F.lit("N/A")),
-                F.lit(" \nNotes: "), aria_na("Notes")
-            )
-        )
-
-        failures = expected_df.filter(F.col("additionalInstructionsTribunalResponse") != F.col("expected_blob"))
-
-        if failures.count() != 0:
-            # We use a substring check or length check in the message because the blob is too big for a standard log
-            return TestResult("additionalInstructionsTribunalResponse", "FAIL", 
-                              f"Found {failures.count()} records with string mismatch. Check for hidden newlines or N/A mapping.", 
-                              "ended", inspect.stack()[0].function)
-        
-        return TestResult("additionalInstructionsTribunalResponse", "PASS", "String template correctly populated from M3 and M6.", "ended", inspect.stack()[0].function)
-        
-    except Exception as e:
-        return TestResult("additionalInstructionsTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
 
 
@@ -1890,3 +1877,1471 @@ def test_actualCaseHearingLength_test1(test_df):
 
     except Exception as e:
         return TestResult("actualCaseHearingLength", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+############################################################################################
+#######################
+#language tests Init code
+#######################
+def test_languages_init(json, M1_bronze):
+    try:
+        json = json.select(
+            col("appealReferenceNumber"),
+            col("appellantInterpreterLanguageCategory"),
+            col("appellantInterpreterSpokenLanguage")
+            # ,
+            # col("appellantInterpreterSignLanguage")
+        )
+
+        M1_bronze = M1_bronze.select(
+            col("CaseNo"),
+            col("LanguageId")
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            M1_bronze["CaseNo"] == json["appealReferenceNumber"],
+            "inner"
+).drop(M1_bronze["CaseNo"])
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage, appellantInterpreterSignLanguage", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+    
+def test_languageInterpreterMapping(test_df):
+    language_requirements = {
+    1: ("spokenLanguageInterpreter", "fra", "French", [], None),
+    2: ("spokenLanguageInterpreter", "deu", "German", [], None),
+    3: ("spokenLanguageInterpreter", "ach", "Acholi", [], None),
+    4: ("spokenLanguageInterpreter", "aka", "Akan", [], None),
+    5: ("spokenLanguageInterpreter", "afr", "Afrikaans", [], None),
+    6: ("spokenLanguageInterpreter", "sqi", "Albanian", [], None),
+    7: ("spokenLanguageInterpreter", "amh", "Amharic", [], None),
+    8: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bajuni"),
+    9: ("spokenLanguageInterpreter", "ara", "Arabic", [], None),
+    10: ("spokenLanguageInterpreter", "ara-ana", "Arabic North African", [], None),
+    11: ("spokenLanguageInterpreter", "ara-ame", "Arabic Middle Eastern", [], None),
+    12: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ashanti"),
+    13: ("spokenLanguageInterpreter", "aii", "Assyrian", [], None),
+    14: ("spokenLanguageInterpreter", "teo", "Ateso", [], None),
+    15: ("spokenLanguageInterpreter", "bjs", "Bajan (West Indian)", [], None),
+    16: ("spokenLanguageInterpreter", "bal", "Baluchi", [], None),
+    17: ("spokenLanguageInterpreter", "bam", "Bambara", [], None),
+    18: ("spokenLanguageInterpreter", "bel", "Belorussian", [], None),
+    19: ("spokenLanguageInterpreter", "ben", "Bengali", [], None),
+    20: ("spokenLanguageInterpreter", "bin", "Benin/Edo", [], None),
+    21: ("spokenLanguageInterpreter", "ber", "Berber", [], None),
+    22: ("spokenLanguageInterpreter", "abr", "Brong", [], None),
+    23: ("spokenLanguageInterpreter", "bul", "Bulgarian", [], None),
+    24: ("spokenLanguageInterpreter", "yue", "Cantonese", [], None),
+    25: ("spokenLanguageInterpreter", "ceb", "Cebuano", [], None),
+    26: ("spokenLanguageInterpreter", "ces", "Czech", [], None),
+    27: ("spokenLanguageInterpreter", "prs", "Dari", [], None),
+    28: ("spokenLanguageInterpreter", "din", "Dinka", [], None),
+    29: ("spokenLanguageInterpreter", "dyu", "Dioula", [], None),
+    30: ("spokenLanguageInterpreter", "bin", "Benin/Edo", [], None),
+    31: ("spokenLanguageInterpreter", "ewe", "Ewe", [], None),
+    32: ("spokenLanguageInterpreter", "fat", "Fanti", [], None),
+    33: ("spokenLanguageInterpreter", "fas", "Farsi", [], None),
+    34: ("spokenLanguageInterpreter", "fra-faf", "French African", [], None),
+    35: ("spokenLanguageInterpreter", "fra-far", "French Arabic", [], None),
+    36: ("spokenLanguageInterpreter", "gaa", "Ga", [], None),
+    37: ("spokenLanguageInterpreter", "ell", "Greek", [], None),
+    38: ("spokenLanguageInterpreter", "guj", "Gujarati", [], None),
+    39: ("spokenLanguageInterpreter", "sgw", "Gurage", [], None),
+    40: ("spokenLanguageInterpreter", "hak", "Hakka", [], None),
+    41: ("spokenLanguageInterpreter", "hau", "Hausa", [], None),
+    42: ("spokenLanguageInterpreter", "heb", "Hebrew", [], None),
+    43: ("spokenLanguageInterpreter", "hin", "Hindi", [], None),
+    44: ("spokenLanguageInterpreter", "hnd", "Hindko", [], None),
+    45: ("spokenLanguageInterpreter", "ibo", "Igbo (Also Known As Ibo)", [], None),
+    46: ("spokenLanguageInterpreter", "ilo", "Ilocano", [], None),
+    47: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ishan"),
+    48: ("spokenLanguageInterpreter", "ita", "Italian", [], None),
+    49: ("spokenLanguageInterpreter", "jam", "Jamaican", [], None),
+    50: ("spokenLanguageInterpreter", "jpn", "Japanese", [], None),
+    51: ("spokenLanguageInterpreter", None, None, ["Yes"], "Karaninka"),
+    52: ("spokenLanguageInterpreter", "kas", "Kashmiri", [], None),
+    53: ("spokenLanguageInterpreter", "kck", "Khalanga", [], None),
+    54: ("spokenLanguageInterpreter", "kon", "Kikongo", [], None),
+    55: ("spokenLanguageInterpreter", "kik", "Kikuyu", [], None),
+    56: ("spokenLanguageInterpreter", "kin", "Kinyarwandan", [], None),
+    57: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kisakata"),
+    58: ("spokenLanguageInterpreter", "knn", "Konkani", [], None),
+    59: ("spokenLanguageInterpreter", "kri", "Krio (Sierra Leone)", [], None),
+    60: ("spokenLanguageInterpreter", "kru", "Kru", [], None),
+    61: ("spokenLanguageInterpreter", "kur-kkr", "Kurdish kurmanji", [], None),
+    62: ("spokenLanguageInterpreter", "kur-ksr", "Kurdish Sorani", [], None),
+    63: ("spokenLanguageInterpreter", "kfr", "Kutchi", [], None),
+    64: ("spokenLanguageInterpreter", "laj", "Lango", [], None),
+    65: ("spokenLanguageInterpreter", "lin", "Lingala", [], None),
+    66: ("spokenLanguageInterpreter", "lit", "Lithuanian", [], None),
+    67: ("spokenLanguageInterpreter", "lug", "Lugandan", [], None),
+    68: ("spokenLanguageInterpreter", "luo", "Luo", [], None),
+    69: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lunyankole"),
+    70: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lutoro"),
+    71: ("spokenLanguageInterpreter", "mku", "Malinke", [], None),
+    72: ("spokenLanguageInterpreter", "cmn", "Mandarin", [], None),
+    73: ("spokenLanguageInterpreter", "mnk", "Mandinka", [], None),
+    74: ("spokenLanguageInterpreter", "mar", "Marathi", [], None),
+    75: ("spokenLanguageInterpreter", "men", "Mende", [], None),
+    76: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mirpuri"),
+    77: ("spokenLanguageInterpreter", "ron-fmo", "Moldovan", [], None),
+    78: ("spokenLanguageInterpreter", "mon", "Mongolian", [], None),
+    79: ("spokenLanguageInterpreter", "nde", "Ndebele", [], None),
+    80: ("spokenLanguageInterpreter", "nep", "Nepali", [], None),
+    81: ("spokenLanguageInterpreter", None, None, ["Yes"], "Ngwa"),
+    82: ("spokenLanguageInterpreter", "nzi", "Nzima", [], None),
+    83: ("spokenLanguageInterpreter", "orm", "Oromo", [], None),
+    84: ("spokenLanguageInterpreter", "pat", "Patois", [], None),
+    85: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pidgin English"),
+    86: ("spokenLanguageInterpreter", "pol", "Polish", [], None),
+    87: ("spokenLanguageInterpreter", "por", "Portuguese", [], None),
+    88: ("spokenLanguageInterpreter", "pan-pji", "Punjabi Indian", [], None),
+    89: ("spokenLanguageInterpreter", "pus", "Pushtu (Also Known As Pashto)", [], None),
+    90: ("spokenLanguageInterpreter", "ron", "Romanian", [], None),
+    91: ("spokenLanguageInterpreter", "rus", "Russian", [], None),
+    92: ("spokenLanguageInterpreter", "krn", "Sarpo", [], None),
+    93: ("spokenLanguageInterpreter", "hbs", "Serbo-Croatian", [], None),
+    94: ("spokenLanguageInterpreter", "sna", "Shona", [], None),
+    95: ("spokenLanguageInterpreter", "snd", "Sindhi", [], None),
+    96: ("spokenLanguageInterpreter", "sin", "Sinhalese", [], None),
+    97: ("spokenLanguageInterpreter", "slk", "Slovak", [], None),
+    98: ("spokenLanguageInterpreter", "som", "Somali", [], None),
+    99: ("spokenLanguageInterpreter", "spa", "Spanish", [], None),
+    100: ("spokenLanguageInterpreter", "sus", "Susu", [], None),
+    101: ("spokenLanguageInterpreter", "swa", "Swahili", [], None),
+    102: ("spokenLanguageInterpreter", "syl", "Sylheti", [], None),
+    103: ("spokenLanguageInterpreter", "tgl", "Tagalog", [], None),
+    104: ("spokenLanguageInterpreter", "tai", "Taiwanese", [], None),
+    105: ("spokenLanguageInterpreter", "tam", "Tamil", [], None),
+    106: ("spokenLanguageInterpreter", "tem", "Temne", [], None),
+    107: ("spokenLanguageInterpreter", "tha", "Thai", [], None),
+    108: ("spokenLanguageInterpreter", "tig", "Tigre", [], None),
+    109: ("spokenLanguageInterpreter", "tir", "Tigrinya", [], None),
+    110: ("spokenLanguageInterpreter", "tur", "Turkish", [], None),
+    111: ("spokenLanguageInterpreter", "twi", "Twi", [], None),
+    112: ("spokenLanguageInterpreter", "ukr", "Ukrainian", [], None),
+    113: ("spokenLanguageInterpreter", "urd", "Urdu", [], None),
+    114: ("spokenLanguageInterpreter", "urh", "Urohobo", [], None),
+    115: ("spokenLanguageInterpreter", "vie", "Vietnamese", [], None),
+    116: ("spokenLanguageInterpreter", "wol", "Wolof", [], None),
+    117: ("spokenLanguageInterpreter", "xho", "Xhosa", [], None),
+    118: ("spokenLanguageInterpreter", "yor", "Yoruba", [], None),
+    119: ("spokenLanguageInterpreter", "zul", "Zulu", [], None),
+    120: ("spokenLanguageInterpreter", "hye", "Armenian", [], None),
+    121: ("spokenLanguageInterpreter", "swa-sbv", "Swahili Bravanese", [], None),
+    122: ("spokenLanguageInterpreter", "zho-hok", "Hokkein", [], None),
+    123: ("spokenLanguageInterpreter", "cpf", "Creole (French)", [], None),
+    124: ("spokenLanguageInterpreter", "efi", "Efik", [], None),
+    125: ("spokenLanguageInterpreter", "ibb", "Ibibio", [], None),
+    126: ("spokenLanguageInterpreter", "est", "Estonian", [], None),
+    127: ("spokenLanguageInterpreter", "kur-fey", "Feyli", [], None),
+    128: ("spokenLanguageInterpreter", "ind", "Indonesian", [], None),
+    129: ("spokenLanguageInterpreter", "jav", "Javanese", [], None),
+    130: ("spokenLanguageInterpreter", "kor", "Korean", [], None),
+    131: ("signLanguageInterpreter", "sign-lps", "Lipspeaker", [], None),
+    132: ("spokenLanguageInterpreter", "mkd", "Macedonian", [], None),
+    133: ("spokenLanguageInterpreter", "fij", "Fijian", [], None),
+    134: ("spokenLanguageInterpreter", "bfz", "Pahari", [], None),
+    135: ("spokenLanguageInterpreter", None, None, ["Yes"], "Hendko"),
+    136: ("signLanguageInterpreter", "bfi", "British Sign Language (BSL)", [], None),
+    137: ("spokenLanguageInterpreter", "bnt-kic", "Kichagga", [], None),
+    138: ("spokenLanguageInterpreter", "pag", "Pangasinan", [], None),
+    139: ("spokenLanguageInterpreter", "ful", "Fula", [], None),
+    140: ("spokenLanguageInterpreter", None, None, ["Yes"], "Sarahuleh"),
+    141: ("spokenLanguageInterpreter", None, None, ["Yes"], "Putonghue"),
+    143: ("spokenLanguageInterpreter", "wol", "Wolof", [], None),
+    144: ("spokenLanguageInterpreter", "tel", "Telugu", [], None),
+    145: ("spokenLanguageInterpreter", "crp", "Creole (Spanish)", [], None),
+    146: ("spokenLanguageInterpreter", "cpp", "Creole (Portuguese)", [], None),
+    147: ("spokenLanguageInterpreter", "pan-pjp", "Punjabi Pakistani", [], None),
+    148: ("signLanguageInterpreter", "sign-sse", "Speech Supported English (SSE)", [], None),
+    149: ("signLanguageInterpreter", None, None, ["Yes"], "Sign Language (Others)"),
+    150: ("spokenLanguageInterpreter", "arq", "Algerian", [], None),
+    151: ("spokenLanguageInterpreter", "mya", "Burmese", [], None),
+    152: ("spokenLanguageInterpreter", "hun", "Hungarian", [], None),
+    153: ("spokenLanguageInterpreter", "xog", "Lusoga", [], None),
+    154: ("spokenLanguageInterpreter", "msa", "Malay", [], None),
+    155: ("spokenLanguageInterpreter", "mal", "Malayalam", [], None),
+    156: ("spokenLanguageInterpreter", None, None, ["Yes"], "NavsarispokenLanguageInterpreter"),
+    157: ("spokenLanguageInterpreter", "pam", "Pampangan", [], None),
+    158: ("spokenLanguageInterpreter", "rom", "Romany", [], None),
+    159: ("spokenLanguageInterpreter", "swe", "Swedish", [], None),
+    160: ("spokenLanguageInterpreter", "don", "Toura", [], None),
+    161: ("spokenLanguageInterpreter", "cym", "Welsh", [], None),
+    162: ("spokenLanguageInterpreter", None, None, ["Yes"], "Senegal (French) Olof Dialect"),
+    163: ("spokenLanguageInterpreter", "swa-skb", "Swahili Kibajuni", [], None),
+    164: ("spokenLanguageInterpreter", "swh", "Kiswahili", [], None),
+    165: ("spokenLanguageInterpreter", None, None, ["Yes"], "Banjuni"),
+    166: ("spokenLanguageInterpreter", "vsa", "Visayan", [], None),
+    167: ("spokenLanguageInterpreter", "rmm", "Roma", [], None),
+    168: ("spokenLanguageInterpreter", "lav", "Latvian", [], None),
+    169: ("spokenLanguageInterpreter", "kat", "Georgian", [], None),
+    170: ("spokenLanguageInterpreter", "ben-bsy", "Bengali Sylheti", [], None),
+    171: ("spokenLanguageInterpreter", "pan", "Punjabi", [], None),
+    172: ("spokenLanguageInterpreter", None, None, ["Yes"], "Lugisa"),
+    173: ("spokenLanguageInterpreter", "cgg", "Rukiga", [], None),
+    174: ("spokenLanguageInterpreter", "luo-lky", "Luo Kenyan", [], None),
+    175: ("spokenLanguageInterpreter", "luo-llg", "Luo Lango", [], None),
+    176: ("spokenLanguageInterpreter", "luo-lah", "Luo Acholi", [], None),
+    177: ("spokenLanguageInterpreter", "aze", "Azerbajani (aka Nth Azari)", [], None),
+    178: ("spokenLanguageInterpreter", "ctg", "Chittagonain", [], None),
+    179: ("spokenLanguageInterpreter", None, None, ["Yes"], "Cambellpuri"),
+    180: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    181: ("spokenLanguageInterpreter", "gjk", "Kachi", [], None),
+    182: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bharuchi"),
+    183: ("spokenLanguageInterpreter", None, None, ["Yes"], "Emakhuna"),
+    184: ("spokenLanguageInterpreter", "glg", "Galician", [], None),
+    185: ("spokenLanguageInterpreter", "cpe", "Creole (English)", [], None),
+    186: ("spokenLanguageInterpreter", None, None, ["Yes"], "Azari"),
+    187: ("spokenLanguageInterpreter", "nyo", "Runyoro", [], None),
+    188: ("spokenLanguageInterpreter", None, None, ["Yes"], "Guran"),
+    189: ("spokenLanguageInterpreter", "ara-mag", "Maghreb", [], None),
+    190: ("spokenLanguageInterpreter", None, None, ["Yes"], "Training"),
+    191: ("spokenLanguageInterpreter", "nor", "Norwegian", [], None),
+    192: ("spokenLanguageInterpreter", "ttj", "Rutoro", [], None),
+    193: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kurundi"),
+    194: ("spokenLanguageInterpreter", "nld-nfl", "Flemish", [], None),
+    195: ("spokenLanguageInterpreter", "uzb", "Uzbek", [], None),
+    196: ("spokenLanguageInterpreter", "btn", "Bhutanese", [], None),
+    197: ("spokenLanguageInterpreter", "nya", "Chichewa", [], None),
+    198: ("spokenLanguageInterpreter", "run", "Kirundi", [], None),
+    199: ("spokenLanguageInterpreter", "bem", "Benba (Bemba)", [], None),
+    200: ("spokenLanguageInterpreter", "swa-skb", "Swahili Kibajuni", [], None),
+    201: ("spokenLanguageInterpreter", "min", "Mina", [], None),
+    202: ("spokenLanguageInterpreter", "khm", "Khmer", [], None),
+    203: ("spokenLanguageInterpreter", "bih", "Bihari", [], None),
+    204: ("spokenLanguageInterpreter", "dua", "Douala", [], None),
+    205: ("spokenLanguageInterpreter", "ewo", "Ewondo", [], None),
+    206: ("spokenLanguageInterpreter", "bas", "Bassa", [], None),
+    207: ("spokenLanguageInterpreter", "bod", "Tibetan", [], None),
+    208: ("spokenLanguageInterpreter", "scl", "Shina", [], None),
+    209: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pothohari"),
+    210: ("spokenLanguageInterpreter", "slv", "Slovenian", [], None),
+    211: ("spokenLanguageInterpreter", "hac", "Gorani", [], None),
+    212: ("spokenLanguageInterpreter", "lub", "Luba (Tshiluba)", [], None),
+    213: ("spokenLanguageInterpreter", "kur-kbr", "Kurdish kurmanji", [], None),
+    214: ("spokenLanguageInterpreter", "tuk", "Turkmen", [], None),
+    215: ("spokenLanguageInterpreter", "kir", "Kyrgyz", [], None),
+    216: ("spokenLanguageInterpreter", "mkw", "Monokutuba", [], None),
+    217: ("spokenLanguageInterpreter", "byn", "Bilin", [], None),
+    218: ("spokenLanguageInterpreter", "tsn", "Setswana", [], None),
+    219: ("spokenLanguageInterpreter", "bas", "Bassa", [], None),
+    220: ("spokenLanguageInterpreter", "uig", "Uighur", [], None),
+    221: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pathwari"),
+    222: ("spokenLanguageInterpreter", None, None, ["Yes"], "Fur (Sudanese)"),
+    223: ("spokenLanguageInterpreter", "nld", "Dutch", [], None),
+    224: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kosovan"),
+    225: ("spokenLanguageInterpreter", None, None, ["Yes"], "Afreerhamar"),
+    226: ("spokenLanguageInterpreter", "che", "Chechen", [], None),
+    227: ("spokenLanguageInterpreter", None, None, ["Yes"], "Khymer Khymer"),
+    228: ("spokenLanguageInterpreter", "zza", "Zaza", [], None),
+    229: ("spokenLanguageInterpreter", "dan", "Danish", [], None),
+    230: ("spokenLanguageInterpreter", "zag", "Zaghawa", [], None),
+    231: ("spokenLanguageInterpreter", "div", "Maldivian", [], None),
+    232: ("signLanguageInterpreter", "sign-pst", "Palantypist / Speech to text", [], None),
+    233: ("signLanguageInterpreter", "sign-dfr", "Deaf Relay", [], None),
+    234: ("signLanguageInterpreter", "ase", "American Sign Language (ASL)", [], None),
+    235: ("signLanguageInterpreter", "sign-hos", "Hands on signing", [], None),
+    236: ("signLanguageInterpreter", "sign-lps", "Lipspeaker", [], None),
+    237: ("signLanguageInterpreter", "sign-mkn", "Makaton", [], None),
+    238: ("signLanguageInterpreter", "sign-dma", "Deafblind manual alphabet", [], None),
+    239: ("signLanguageInterpreter", "sign-ntr", "Notetaker", [], None),
+    240: ("signLanguageInterpreter", "sign-vfs", "Visual frame signing", [], None),
+    241: ("signLanguageInterpreter", "ils", "International Sign (IS)", [], None),
+    242: ("spokenLanguageInterpreter", "iso", "Isoko", [], None),
+    243: ("spokenLanguageInterpreter", "her", "Herero", [], None),
+    244: ("spokenLanguageInterpreter", "mlt", "Maltese", [], None),
+    245: ("spokenLanguageInterpreter", "skr", "Saraiki (Seraiki)", [], None),
+    246: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kalabari"),
+    247: ("spokenLanguageInterpreter", None, None, ["Yes"], "Kinyamulenge"),
+    249: ("spokenLanguageInterpreter", None, None, ["Yes"], "Wobe"),
+    250: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mauritian"),
+    251: ("spokenLanguageInterpreter", "mnk", "Mandinka", [], None),
+    252: ("spokenLanguageInterpreter", None, None, ["Yes"], "Gaelic"),
+    253: ("spokenLanguageInterpreter", None, None, ["Yes"], "Bosnian"),
+    254: ("spokenLanguageInterpreter", None, None, ["Yes"], "Filipino"),
+    255: ("spokenLanguageInterpreter", None, None, ["Yes"], "Mauritian Creole"),
+    256: ("spokenLanguageInterpreter", None, None, ["Yes"], "Yiddish"),
+    257: ("spokenLanguageInterpreter", None, None, ["Yes"], "Pular"),
+    258: ("spokenLanguageInterpreter", None, None, ["Yes"], "Runyankole"),
+    259: ("spokenLanguageInterpreter", None, None, ["Yes"], "Gurung"),
+    260: ("spokenLanguageInterpreter", None, None, ["Yes"], "Karen"),
+    261: ("spokenLanguageInterpreter", "tam", "Tamil", [], None),
+    262: ("spokenLanguageInterpreter", None, None, ["Yes"], "Rotana"),
+    263: ("spokenLanguageInterpreter", None, None, ["Yes"], "Spanish Hispanic"),
+    264: ("spokenLanguageInterpreter", None, None, ["Yes"], "Spanish Latin"),
+    265: ("spokenLanguageInterpreter", None, None, ["Yes"], "Tetum")
+    }
+
+    try:
+        results_list = []
+        cols = test_df.columns
+        rows = test_df.collect()
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            lang_id = row['LanguageId']
+            
+            if lang_id == 0:
+                category = row['appellantInterpreterLanguageCategory'] if 'appellantInterpreterLanguageCategory' in cols else None
+                if category is None or (isinstance(category, list) and len(category) == 0):
+                    # results_list.append(f"PASS - {case_no}: ID 0 (No Interpreter)")
+                    continue
+                else:
+                    results_list.append(f"FAIL - {case_no}: ID 0 expected null, found {category}")
+                
+
+            req = language_requirements.get(lang_id)
+            if not req:
+                results_list.append(f"FAIL - {case_no}: No requirement for ID {lang_id}")
+                continue
+            
+            req_category, req_code, req_label, req_manual, req_desc = req
+            field_name = "appellantInterpreterSpokenLanguage" if req_category == 'spokenLanguageInterpreter' else "appellantInterpreterSignLanguage"
+            target_data = row[field_name] if field_name in cols else None
+
+            if target_data is None:
+                results_list.append(f"FAIL - {case_no}: ID {lang_id} field {field_name} is null")
+                continue
+
+            # ensure we are working with a dictionary
+            d = target_data.asDict(recursive=True)
+
+            actual_ref = d.get('languageRefData') or {}
+            actual_val = actual_ref.get('value') or {}
+            actual_code = actual_val.get('code')
+            actual_label = actual_val.get('label')
+            actual_manual = d.get('languageManualEntry') or []
+            actual_desc = d.get('languageManualEntryDescription')
+
+            # comparison
+            errors = []
+            is_manual = len(actual_manual) > 0 or actual_desc is not None
+            if is_manual:
+                # Acceptance: Description should contain the expected language label
+                if req_label and req_label not in (actual_desc or ""):
+                    errors.append(f"ManualDesc: '{req_label}' missing from description '{actual_desc}'")
+            else:
+                # 2. Standard RefData comparison
+                if actual_code != req_code: 
+                    errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
+                if actual_label != req_label: 
+                    errors.append(f"Label: Expected '{req_label}', Found '{actual_label}'")
+            if actual_code != req_code: 
+                errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
+            if actual_label != req_label: 
+                errors.append(f"Label: Expected '{req_label}', Found '{actual_label}'")
+            if actual_manual != req_manual: 
+                errors.append(f"ManualList: Expected {req_manual}, Found {actual_manual}")
+            if actual_desc != req_desc: 
+                errors.append(f"ManualDesc: Expected '{req_desc}', Found '{actual_desc}'")
+
+            if not errors:
+                # results_list.append(f"PASS - {case_no}: ID {lang_id} mapped correctly")
+                continue
+            else:
+                # Joining with a clear separator for readability
+                results_list.append(f"FAIL - {case_no} (ID {lang_id}): " + " | ".join(errors))
+
+        if results_list != []:
+            formatted_results = "|||".join(results_list)
+            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria failed: found {len(results_list)} rows which failed. {formatted_results}"
+            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", message, test_from_state, inspect.stack()[0].function)
+        else:
+            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria passed: all rows meet mapping document requirements."
+            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","PASS", message, test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", f"Crash in test: {str(e)}", test_from_state, inspect.stack()[0].function)
+
+
+
+############################################################################################
+#######################
+#additionalInstructionsTribunalResponse Init code
+#######################
+def test_additionalInstructionsTribunalResponse_init(json, M3_silver, M6_bronze):
+    try:
+        window_spec = Window.partitionBy("CaseNo")
+
+        filtered_df = M3_silver.filter(
+            (col("CaseStatus").isin(37, 38)) | 
+            ((col("CaseStatus") == 26) & (col("Outcome") == 0))
+        )
+
+        df_with_max = filtered_df.withColumn("max_status_id", spark_max("StatusId").over(window_spec))
+        final_m3_df = df_with_max.filter(col("StatusId") == col("max_status_id")).drop("max_status_id")
+
+        json = json.select(
+            col("appealReferenceNumber"),
+            col("additionalInstructionsTribunalResponse")
+        )
+
+        M3_silver = final_m3_df.select(
+            col("CaseNo"),
+            col("CaseStatus"),
+            col("HearingCentre"), 
+            col("HearingDate"), 
+            col("HearingType"), col("CourtName"), 
+            col("ListType"), col("StartTime"), col("Judge1FT_Surname"), col("Judge1FT_Forenames"), 
+            col("Judge1FT_Title"), col("Judge2FT_Surname"), col("Judge2FT_Forenames"), 
+            col("Judge2FT_Title"), col("Judge3FT_Surname"), col("Judge3FT_Forenames"), 
+            col("Judge3FT_Title"), col("CourtClerk_Surname"), col("CourtClerk_Forenames"), 
+            col("CourtClerk_Title"), col("TimeEstimate"), col("Notes")
+        )
+
+        M6_bronze = M6_bronze.select(
+            col("CaseNo"),
+            col("Judge_Forenames"), col("Judge_Surname"), col("Judge_Title"), col("Required")
+        )
+
+        test_df = json.join(
+            M3_silver, 
+            json["appealReferenceNumber"] == M3_silver["CaseNo"], 
+            "inner"
+        ).join(
+            M6_bronze, 
+            json["appealReferenceNumber"] == M6_bronze["CaseNo"], 
+            "left" # <--- This was 'inner', change it to 'left'
+        ).filter(col("additionalInstructionsTribunalResponse").isNotNull()).drop("CaseNo")
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None,TestResult("additionalInstructionsTribunalResponse", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+    
+
+def test_additionalInstructionsTribunalResponse(test_df):
+    try:
+        import re
+        from pyspark.sql.functions import first, collect_list, struct
+
+        def normalize(text):
+            if not text: return ""
+            t = " ".join(text.split())
+            t = re.sub(r'\s*\(\s*', ' (', t) 
+            t = re.sub(r'\s*\)\s*', ')', t)   
+            return t.strip()
+
+        # Group by Case to handle multiple M6 officers
+        grouped_df = test_df.groupBy("appealReferenceNumber").agg(
+            first("additionalInstructionsTribunalResponse").alias("actual"),
+            first("HearingCentre").alias("HC"),
+            first("HearingDate").alias("HD"),
+            first("HearingType").alias("HT"),
+            first("CourtName").alias("CN"),
+            first("ListType").alias("LT"),
+            first("TimeEstimate").alias("TE"),
+            collect_list(struct("Judge_Surname", "Judge_Forenames", "Judge_Title", "Required")).alias("M6_Officers")
+        ).collect()
+
+        results_list = []
+
+        for row in grouped_df:
+            actual_norm = normalize(row['actual'] or "")
+            case_no = row['appealReferenceNumber']
+            errors = []
+
+            # 1. Corrected Date Formatting
+            if row.HD:
+                raw_date = str(row.HD).replace('T', ' ')
+                aria_date = re.split(r'[\.\+]', raw_date)[0]
+            else:
+                aria_date = "N/A"
+
+            # 2. Expected field mapping
+            expected_fields = {
+                "Hearing Centre": str(row.HC or "N/A"),
+                "Hearing Date": aria_date, # This will now be '2025-08-19 00:00:00'
+                "Hearing Type": str(row.HT or "N/A"),
+                "Court": str(row.CN or "N/A"),
+                "List Type": str(row.LT or "N/A"),
+                "Estimated Duration": str(row.TE or "N/A")
+            }
+
+            for key, val in expected_fields.items():
+                snippet = normalize(f"{key}: {val}")
+                if snippet not in actual_norm:
+                    errors.append(f"{key} Mismatch | Expected: '{snippet}'")
+
+            # 3. Handle M6 Officers (Only check if data exists)
+            for officer in row['M6_Officers']:
+                if officer.Judge_Surname is not None:
+                    req_status = "Required" if officer.Required == 1 else "Not Required"
+                    snippet = normalize(f"{officer.Judge_Surname} {officer.Judge_Forenames} ({officer.Judge_Title}) : {req_status}")
+                    
+                    if snippet not in actual_norm:
+                        errors.append(f"Judicial Officer Mismatch | Expected: '{snippet}'")
+
+            if errors:
+                results_list.append(f"FAIL - {case_no}: " + " | ".join(errors))
+
+        if results_list:
+            return TestResult("additionalInstructionsTribunalResponse", "FAIL", f"Found {len(results_list)} failures: " + "|||".join(results_list), "ended", "test_additionalInstructionsTribunalResponse")
+        
+        return TestResult("additionalInstructionsTribunalResponse", "PASS", "All instructions match ARIA source.", "ended", "test_additionalInstructionsTribunalResponse")
+
+    except Exception as e:
+        return TestResult("additionalInstructionsTribunalResponse", "FAIL", f"Crash: {str(e)}", "ended", "test_additionalInstructionsTribunalResponse")
+    
+
+#######################
+# ftpaApplicationDeadline - Scenario 1 & 2
+# Check DecisionDate + 14 or 28 days based on CategoryId
+# Criteria: EndedGroup 4, Status (26, 37, 38), Outcome (1, 2)
+#######################
+def test_ftpaApplicationDeadline_test1(test_df):
+    try:
+        # 1. Filter: EndedGroup 4, valid statuses and outcomes
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus").isin(26, 37, 38)) &
+            (col("Outcome").isin(1, 2))
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaApplicationDeadline", "PASS", "No records found matching criteria.", "ended", inspect.stack()[0].function)
+
+        # 2. Define Expected Logic
+        # Category 37 -> +14 days, Category 38 -> +28 days
+        # date_format ensures ISO 8601 (YYYY-MM-DD)
+        expected_df = target_records.withColumn("exp_deadline", 
+            when(col("CategoryId") == 37, date_add(col("DecisionDate"), 14))
+            .when(col("CategoryId") == 38, date_add(col("DecisionDate"), 28))
+            .otherwise(lit(None))
+        ).withColumn("exp_deadline_iso", date_format(col("exp_deadline"), "yyyy-MM-dd"))
+
+        # 3. Validation Logic
+        # Note: If DecisionDate is null in source, deadline should be null in JSON
+        failures = expected_df.filter(
+            (col("ftpaApplicationDeadline").isNotNull()) & 
+            (col("ftpaApplicationDeadline") != col("exp_deadline_iso"))
+        )
+
+        if failures.count() != 0:
+            sample = failures.select(
+                "appealReferenceNumber", 
+                "CategoryId", 
+                "DecisionDate", 
+                "ftpaApplicationDeadline", 
+                "exp_deadline_iso"
+            ).limit(1).collect()
+            
+            return TestResult(
+                "ftpaApplicationDeadline", 
+                "FAIL", 
+                f"Date Mismatch for Case {sample[0][0]} (Cat {sample[0][1]}). ARIA DecisionDate: {sample[0][2]} | JSON Actual: '{sample[0][3]}' | Expected: '{sample[0][4]}'", 
+                "ended", 
+                inspect.stack()[0].function
+            )
+        
+        return TestResult("ftpaApplicationDeadline", "PASS", "FTPA Deadline correctly calculated (+14/+28 days) in ISO format.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaApplicationDeadline", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# ftpaList - Scenario 1 & 2
+# Check FTPA Applicant mapping based on M3 Party (1=Appellant, 2=Respondent)
+# Criteria: EndedGroup 4, CaseStatus 39
+#######################
+def test_ftpaList_test1(test_df):
+    try:
+        # 1. Filter for Status 39 and EndedGroup 4
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaList", "PASS", "No CaseStatus 39 records found.", "ended", inspect.stack()[0].function)
+
+        # 2. Define Expected Value Logic
+        # Party 1 -> appellant, Party 2 -> respondent
+        expected_df = target_records.withColumn("expected_applicant", 
+            when(col("Party") == 1, lit("appellant"))
+            .when(col("Party") == 2, lit("respondent"))
+            .otherwise(lit(None))
+        )
+
+        # 3. Validation Logic
+        # We check the first item in the ftpaList array (index 0)
+        failures = expected_df.filter(
+            (col("ftpaList").getItem(0)["value"]["ftpaApplicant"] != col("expected_applicant")) |
+            (col("ftpaList").getItem(0)["id"] != lit("1"))
+        )
+
+        if failures.count() != 0:
+            sample = failures.select(
+                "appealReferenceNumber", 
+                "Party", 
+                col("ftpaList").getItem(0)["value"]["ftpaApplicant"].alias("actual_applicant")
+            ).limit(1).collect()
+            
+            return TestResult(
+                "ftpaList", 
+                "FAIL", 
+                f"Applicant mismatch for Case {sample[0][0]}. M3 Party: {sample[0][1]} | JSON Applicant: {sample[0][2]}", 
+                "ended", 
+                inspect.stack()[0].function
+            )
+        
+        return TestResult("ftpaList", "PASS", "ftpaList correctly mapped based on Party type.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaList", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+
+#######################
+# ftpaAppellantApplicationDate - Scenario 1
+# Check: M3.Party = 1 -> ftpaAppellantApplicationDate MUST be included
+#######################
+def test_ftpaAppellantApplicationDate_test1(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 1
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantApplicationDate", "PASS", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            # Access first item in array
+            if not ftpa_list or len(ftpa_list) == 0:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: ftpaList array is empty")
+                continue
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Check for inclusion
+            if "ftpaAppellantApplicationDate" not in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing from JSON")
+            elif first_item_val["ftpaAppellantApplicationDate"] is None:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key present but value is null")
+
+        if results_list:
+            return TestResult("ftpaAppellantApplicationDate", "FAIL", "Found inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaAppellantApplicationDate", "PASS", "Field correctly included for Party 1.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaAppellantApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaAppellantApplicationDate - Scenario 2
+# Check: M3.Party = 2 -> ftpaAppellantApplicationDate MUST be omitted
+#######################
+def test_ftpaAppellantApplicationDate_test2(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 2
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 2)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantApplicationDate", "PASS", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                continue # If list is empty, field is technically omitted
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Check for omission (Key should not exist in the dictionary)
+            if "ftpaAppellantApplicationDate" in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party 2 (Should be omitted)")
+
+        if results_list:
+            return TestResult("ftpaAppellantApplicationDate", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaAppellantApplicationDate", "PASS", "Field correctly omitted for Party 2.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaAppellantApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# ftpaAppellantSubmissionOutOfTime - Scenario 1
+# Check: M3.Party = 1 -> Must be 'Yes' if OutOfTime=1, else 'No'
+#######################
+def test_ftpaAppellantSubmissionOutOfTime_test1(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 1
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantSubmissionOutOfTime", "PASS", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "OutOfTime", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            # Determine expected value: 1 -> Yes, anything else -> No
+            expected_val = "Yes" if row['OutOfTime'] == 1 else "No"
+            
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                results_list.append(f"FAIL - {case_no}: ftpaList array is empty")
+                continue
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Validation
+            if "ftpaAppellantSubmissionOutOfTime" not in first_item_val:
+                results_list.append(f"FAIL - {case_no}: Key missing from JSON for Party 1")
+            else:
+                actual_val = first_item_val["ftpaAppellantSubmissionOutOfTime"]
+                if actual_val != expected_val:
+                    results_list.append(f"FAIL - {case_no}: ARIA OutOfTime={row['OutOfTime']} | Expected JSON='{expected_val}' | Found='{actual_val}'")
+
+        if results_list:
+            return TestResult("ftpaAppellantSubmissionOutOfTime", "FAIL", "Found Party 1 mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaAppellantSubmissionOutOfTime", "PASS", "Field correctly mapped to Yes/No for Party 1.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaAppellantSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaAppellantSubmissionOutOfTime - Scenario 2
+# Check: M3.Party != 1 -> ftpaAppellantSubmissionOutOfTime MUST be omitted
+#######################
+def test_ftpaAppellantSubmissionOutOfTime_test2(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party NOT 1
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") != 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantSubmissionOutOfTime", "PASS", "No non-Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                continue # Omitted by virtue of empty list
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Check for omission
+            if "ftpaAppellantSubmissionOutOfTime" in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party {row['Party']} (Should be omitted)")
+
+        if results_list:
+            return TestResult("ftpaAppellantSubmissionOutOfTime", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaAppellantSubmissionOutOfTime", "PASS", "Field correctly omitted for non-Party 1.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaAppellantSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# ftpaAppellantOutOfTimeExplanation - Scenario 1
+# Check: M3.OutOfTime=1 AND M3.Party=1 -> MUST include hardcoded string
+#######################
+def test_ftpaAppellantOutOfTimeExplanation_test1(test_df):
+    try:
+        expected_str = "This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") == 1) & (col("Party") == 1))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "No records found for OutOfTime=1, Party=1.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+        for row in rows:
+            ftpa_val = row['ftpaList'][0]["value"].asDict() if row['ftpaList'] else {}
+            if "ftpaAppellantOutOfTimeExplanation" not in ftpa_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Field missing")
+            elif ftpa_val["ftpaAppellantOutOfTimeExplanation"] != expected_str:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Found '{ftpa_val['ftpaAppellantOutOfTimeExplanation']}'")
+
+        if results_list:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", "Found mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "Scenario 1: Correctly included hardcoded string.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaAppellantOutOfTimeExplanation - Scenario 2
+# Check: M3.OutOfTime != 1 AND M3.Party != 1 -> MUST be omitted
+#######################
+def test_ftpaAppellantOutOfTimeExplanation_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") != 1) & (col("Party") != 1))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "No records for Scenario 2.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaAppellantOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "Scenario 2: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+
+    #######################
+# ftpaAppellantOutOfTimeExplanation - Scenario 3
+# Check: M3.OutOfTime = 1 AND M3.Party != 1 -> MUST be omitted
+#######################
+def test_ftpaAppellantOutOfTimeExplanation_test3(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") == 1) & (col("Party") != 1))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "No records for Scenario 3.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaAppellantOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "Scenario 3: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+
+#######################
+# ftpaAppellantOutOfTimeExplanation - Scenario 4
+# Check: M3.OutOfTime != 1 AND M3.Party = 1 -> MUST be omitted
+#######################
+def test_ftpaAppellantOutOfTimeExplanation_test4(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") != 1) & (col("Party") == 1))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "No records for Scenario 4.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaAppellantOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", "Scenario 4: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+
+#######################
+# ftpaRespondentApplicationDate - Scenario 1
+# Check: M3.Party = 2 -> ftpaRespondentApplicationDate MUST be included
+#######################
+def test_ftpaRespondentApplicationDate_test1(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 2
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 2)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentApplicationDate", "PASS", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: ftpaList array is empty")
+                continue
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Check for inclusion
+            if "ftpaRespondentApplicationDate" not in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing from JSON for Party 2")
+            elif first_item_val["ftpaRespondentApplicationDate"] is None:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key present but value is null")
+
+        if results_list:
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Found inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly included for Party 2.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaRespondentApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+
+#######################
+# ftpaRespondentApplicationDate - Scenario 2
+# Check: M3.Party = 1 -> ftpaRespondentApplicationDate MUST be omitted
+#######################
+def test_ftpaRespondentApplicationDate_test2(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 1
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentApplicationDate", "PASS", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                continue 
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            # Check for omission
+            if "ftpaRespondentApplicationDate" in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party 1 (Should be omitted)")
+
+        if results_list:
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly omitted for Party 1.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaRespondentApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaRespondentSubmissionOutOfTime - Scenario 1
+# Check: M3.Party = 2 -> Must be 'Yes' if OutOfTime=1, else 'No'
+#######################
+def test_ftpaRespondentSubmissionOutOfTime_test1(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party 2
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") == 2)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "OutOfTime", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            expected_val = "Yes" if row['OutOfTime'] == 1 else "No"
+            
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                results_list.append(f"FAIL - {case_no}: ftpaList array is empty")
+                continue
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            if "ftpaRespondentSubmissionOutOfTime" not in first_item_val:
+                results_list.append(f"FAIL - {case_no}: Key missing from JSON for Party 2")
+            else:
+                actual_val = first_item_val["ftpaRespondentSubmissionOutOfTime"]
+                if actual_val != expected_val:
+                    results_list.append(f"FAIL - {case_no}: ARIA OutOfTime={row['OutOfTime']} | Expected JSON='{expected_val}' | Found='{actual_val}'")
+
+        if results_list:
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "Found Party 2 mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "Field correctly mapped to Yes/No for Party 2.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaRespondentSubmissionOutOfTime - Scenario 2
+# Check: M3.Party != 2 -> ftpaRespondentSubmissionOutOfTime MUST be omitted
+#######################
+def test_ftpaRespondentSubmissionOutOfTime_test2(test_df):
+    try:
+        # Filter for Status 39, EndedGroup 4, and Party NOT 2
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus") == 39) &
+            (col("Party") != 2)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "No non-Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+
+        for row in rows:
+            ftpa_list = row['ftpaList']
+            if not ftpa_list or len(ftpa_list) == 0:
+                continue 
+            
+            first_item_val = ftpa_list[0]["value"].asDict()
+            
+            if "ftpaRespondentSubmissionOutOfTime" in first_item_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party {row['Party']} (Should be omitted)")
+
+        if results_list:
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "Field correctly omitted for non-Party 2.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaRespondentOutOfTimeExplanation - Scenario 1
+# Check: M3.OutOfTime=1 AND M3.Party=2 -> MUST include hardcoded string
+#######################
+def test_ftpaRespondentOutOfTimeExplanation_test1(test_df):
+    try:
+        expected_str = "This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") == 1) & (col("Party") == 2))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records found for Scenario 1.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = []
+        for row in rows:
+            ftpa_val = row['ftpaList'][0]["value"].asDict() if row['ftpaList'] else {}
+            if "ftpaRespondentOutOfTimeExplanation" not in ftpa_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing")
+            elif ftpa_val["ftpaRespondentOutOfTimeExplanation"] != expected_str:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Found '{ftpa_val['ftpaRespondentOutOfTimeExplanation']}'")
+
+        if results_list:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 1: Correctly included hardcoded string.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# ftpaRespondentOutOfTimeExplanation - Scenario 2
+# Check: M3.OutOfTime = 1 AND M3.Party != 2 -> MUST be omitted
+#######################
+def test_ftpaRespondentOutOfTimeExplanation_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") == 1) & (col("Party") != 2))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 2.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 2: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# ftpaRespondentOutOfTimeExplanation - Scenario 3
+# Check: M3.OutOfTime != 1 AND M3.Party = 2 -> MUST be omitted
+#######################
+def test_ftpaRespondentOutOfTimeExplanation_test3(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") != 1) & (col("Party") == 2))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 3.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 3: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+
+#######################
+# ftpaRespondentOutOfTimeExplanation - Scenario 4
+# Check: M3.OutOfTime != 1 AND M3.Party != 2 -> MUST be omitted
+#######################
+def test_ftpaRespondentOutOfTimeExplanation_test4(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
+                                        (col("OutOfTime") != 1) & (col("Party") != 2))
+        
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 4.", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+
+        if results_list:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 4: Correctly omitted.", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# endAppealOutcome & endAppealOutcomeReason
+# Validates the mapping of Status/Outcome to CCD Outcome Strings
+#######################
+def test_endAppealOutcome_test1(test_df):
+    try:
+        # 1. Define the Mapping Table based on your requirements
+        # Structure: (CaseStatus, Outcome): (ExpectedOutcome, ExpectedReasonSnippet)
+        mapping = {
+            (37, 80): ("Abandoned", "First Tier - Hearing | Abandoned"),
+            (38, 80): ("Abandoned", "First Tier - Paper | Abandoned"),
+            (10, 80): ("Abandoned", "Preliminary Issue | Abandoned"),
+            (10, 122): ("Abandoned", "Preliminary Issue | Abandoned (non-CCD)"),
+            (26, 80): ("Abandoned", "Case Management Review | Abandoned"),
+            (51, 94): ("Struck out", "Closed - Fee Not Paid | Struck Out"),
+            (37, 13): ("No valid appeal", "First Tier - Hearing | No Valid Appeal"),
+            (38, 13): ("No valid appeal", "First Tier - Paper | No Valid Appeal"),
+            (26, 13): ("No valid appeal", "Case Management Review | No Valid Appeal"),
+            (37, 25): ("Withdrawn", "First Tier - Hearing | Withdrawn"),
+            (38, 25): ("Withdrawn", "First Tier - Paper | Withdrawn"),
+            (39, 25): ("Withdrawn", "First Tier Permission Application | Withdrawn"),
+            (10, 25): ("Withdrawn", "Preliminary Issue | Withdrawn"),
+            (26, 25): ("Withdrawn", "Case Management Review | Withdrawn"),
+            (52, 91): ("Struck out", "Case closed fee outstanding | Fee Paid/Exempt"),
+            (52, 95): ("Struck out", "Case closed fee outstanding | Write Off"),
+            (51, 93): ("Struck out", "Closed - Fee Not Paid | Admin Closure"),
+            (38, 72): ("Abandoned", "First Tier - Paper | Certified under Rule 16"),
+            (10, 120): ("Struck out", "Preliminary Issue | Admin Rejected (Non-CCD)"),
+            (10, 2): ("Struck out", "Preliminary Issue | Dismissed"),
+            (46, 31): ("Struck out", "Set Aside Application | Refused")
+        }
+
+        # 2. Collect data for processing
+        rows = test_df.select(
+            "appealReferenceNumber", 
+            "CaseStatus", 
+            "Outcome", 
+            "endAppealOutcome", 
+            "endAppealOutcomeReason"
+        ).collect()
+
+        results_list = []
+
+        for row in rows:
+            status_outcome = (int(row['CaseStatus']), int(row['Outcome']))
+            actual_outcome = row['endAppealOutcome']
+            actual_reason = row['endAppealOutcomeReason'] or ""
+            
+            if status_outcome in mapping:
+                expected_outcome, reason_snippet = mapping[status_outcome]
+                
+                errors = []
+                # Validate Outcome String
+                if actual_outcome != expected_outcome:
+                    errors.append(f"Outcome Mismatch: Expected '{expected_outcome}', Found '{actual_outcome}'")
+                
+                # Validate Reason String (Checking if the specific phrase exists in the long text)
+                if reason_snippet not in actual_reason:
+                    errors.append(f"Reason Snippet Missing: Expected to find '{reason_snippet}' in '{actual_reason}'")
+                
+                if errors:
+                    results_list.append(f"FAIL - {row['appealReferenceNumber']} ({status_outcome}): " + " | ".join(errors))
+
+        if results_list:
+            return TestResult("endAppealOutcome", "FAIL", f"Found {len(results_list)} mapping errors. " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("endAppealOutcome", "PASS", "All Status/Outcome combinations mapped correctly to CCD values.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("endAppealOutcome", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# endAppealApproverType
+# Logic: IF CaseStatus == 46 THEN "Judge" ELSE "Case Worker"
+# Applicable to: All records in the filtered Status/Outcome list
+#######################
+def test_endAppealApproverType_test1(test_df):
+    try:
+        # We select the CaseStatus (from ARIA) and the ApproverType (from JSON)
+        # Note: 'CaseStatus' here should be the one associated with the MAX(StatusId)
+        rows = test_df.select("appealReferenceNumber", "CaseStatus", "endAppealApproverType").collect()
+        
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            # Ensure status is treated as a string for comparison
+            status = str(row['CaseStatus'])
+            actual_approver = row['endAppealApproverType']
+            
+            # 1. Determine Expected Value
+            expected_approver = "Judge" if status == "46" else "Case Worker"
+            
+            # 2. Compare
+            if actual_approver != expected_approver:
+                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_approver}' | Found '{actual_approver}'")
+
+        if results_list:
+            # Returning first 10 failures to avoid massive log walls
+            return TestResult("endAppealApproverType", "FAIL", "Logic Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        
+        return TestResult("endAppealApproverType", "PASS", "All records correctly mapped to Judge or Case Worker.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("endAppealApproverType", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# endAppealApproverName
+# Logic: 
+# IF CaseStatus == 46 -> "Surname, Forenames (Title)"
+# ELSE -> "This is a migrated ARIA case"
+#######################
+def test_endAppealApproverName_test1(test_df):
+    try:
+        # We need the status and the name parts from the dataframe
+        rows = test_df.select(
+            "appealReferenceNumber", 
+            "CaseStatus", 
+            "Adj_Determination_Surname", 
+            "Adj_Determination_Forenames", 
+            "Adj_Determination_Title", 
+            "endAppealApproverName"
+        ).collect()
+        
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            status = str(row['CaseStatus'])
+            actual_name = row['endAppealApproverName']
+            
+            # 1. Determine Expected Value
+            if status == "46":
+                surname = row['Adj_Determination_Surname'] or ""
+                forenames = row['Adj_Determination_Forenames'] or ""
+                title = row['Adj_Determination_Title'] or ""
+                # Format: Surname, Forenames (Title)
+                expected_name = f"{surname}, {forenames} ({title})"
+            else:
+                expected_name = "This is a migrated ARIA case"
+            
+            # 2. Compare
+            if actual_name != expected_name:
+                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_name}' | Found '{actual_name}'")
+
+        if results_list:
+            return TestResult("endAppealApproverName", "FAIL", "Name Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        
+        return TestResult("endAppealApproverName", "PASS", "All Approver Names mapped correctly.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("endAppealApproverName", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+
+#######################
+# endAppealDate
+# Logic: Date associated with the MAX(StatusId)
+# Format: ISO 8601 (YYYY-MM-DD)
+#######################
+import re
+
+def test_endAppealDate_test1(test_df):
+    try:
+        # We need the CaseStatus (to identify the row) and the Date from ARIA
+        # Assuming the ARIA date is stored in a column named 'LogDate' in your test_df
+        rows = test_df.select(
+            "appealReferenceNumber", 
+            "DecisionDate", 
+            "endAppealDate"
+        ).collect()
+        
+        results_list = []
+        # ISO 8601 regex pattern (YYYY-MM-DD)
+        iso_pattern = r"^\d{4}-\d{2}-\d{2}$"
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            aria_date = row['DecisionDate']
+            json_date = row['endAppealDate']
+            
+            # 1. Check if the date exists
+            if json_date is None or json_date == "":
+                results_list.append(f"FAIL - {case_no}: endAppealDate is null or empty")
+                continue
+
+            # 2. Check for ISO 8601 Formatting
+            if not re.match(iso_pattern, str(json_date)[:10]):
+                results_list.append(f"FAIL - {case_no}: Date '{json_date}' is not in ISO 8601 format (YYYY-MM-DD)")
+                continue
+
+            # 3. Check for Data Integrity (Does JSON date match ARIA date?)
+            # We convert both to strings and compare the first 10 characters (YYYY-MM-DD)
+            if str(aria_date)[:10] != str(json_date)[:10]:
+                results_list.append(f"FAIL - {case_no}: ARIA Date '{aria_date}' does not match JSON Date '{json_date}'")
+
+        if results_list:
+            return TestResult("endAppealDate", "FAIL", "Date errors: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        
+        return TestResult("endAppealDate", "PASS", "All appeal end dates are correctly formatted and matched.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("endAppealDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+    
+
+#######################
+# stateBeforeEndAppeal - Updated for M1_silver.dv_representation
+#######################
+def test_stateBeforeEndAppeal_test1(test_df):
+    try:
+        available_cols = test_df.columns
+        
+        # Determine which representation column to use
+        rep_col = "dv_representation" if "dv_representation" in available_cols else None
+            
+        rows = test_df.select("appealReferenceNumber", "CaseStatus", "Outcome", "stateBeforeEndAppeal", *([rep_col] if rep_col else [])).collect()
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            status = str(row['CaseStatus'])
+            actual_state = row['stateBeforeEndAppeal']
+            
+            expected_state = None
+
+            # --- Mapping Logic ---
+            if status in ['37', '38']:
+                expected_state = "listing"
+            elif status in ['10', '46']:
+                expected_state = "appealSubmitted"
+            elif status == '39':
+                expected_state = "ftpaSubmitted"
+            elif status in ['51', '52']:
+                expected_state = "pendingPayment"
+            elif status == '26':
+                # Use dv_representation for the LR vs AIP logic
+                if rep_col:
+                    rep_val = (row[rep_col] or "").upper()
+                    # Mapping: LR (Legal Rep) or AIP (Appellant in Person)
+                    if "LR" in rep_val:
+                        expected_state = "caseUnderReview"
+                    else:
+                        expected_state = "reasonsForAppealSubmitted"
+                else:
+                    # If column is missing, we skip Status 26 to prevent false failures
+                    continue 
+            else:
+                continue
+
+            # --- Validation ---
+            if expected_state and actual_state != expected_state:
+                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_state}' | Found '{actual_state}'")
+
+        if results_list:
+            return TestResult("stateBeforeEndAppeal", "FAIL", "State Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        
+        return TestResult("stateBeforeEndAppeal", "PASS", "All states mapped correctly using dv_representation.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("stateBeforeEndAppeal", "FAIL", f"EXCEPTION: {str(e)[:100]}", "ended", inspect.stack()[0].function)
+
+
+
+#######################
+# bundleFileNamePrefix
+# Logic: CaseNo (with '/' replaced by ' ') + '-' + Appellant_Name
+# Group: EndedGroup 4 (MAX StatusId)
+#######################
+def test_bundleFileNamePrefix_test1(test_df):
+    try:
+        # We need the raw CaseNo and Appellant_Name to verify the JSON output
+        rows = test_df.select(
+            "appealReferenceNumber", 
+            "Appellant_Name", 
+            "bundleFileNamePrefix"
+        ).collect()
+        
+        results_list = []
+
+        for row in rows:
+            case_no = row['appealReferenceNumber']
+            raw_appellant = row['Appellant_Name'] or ""
+            actual_prefix = row['bundleFileNamePrefix']
+            
+            # 1. Transform the raw CaseNo: replace '/' with ' '
+            # Example: "EA/01783/2024" -> "EA 01783 2024"
+            formatted_caseno = case_no.replace("/", " ")
+            
+            # 2. Construct the Expected String
+            # Format: CaseNo-Appellant_Name
+            expected_prefix = f"{formatted_caseno}-{raw_appellant}"
+            
+            # 3. Validation
+            if actual_prefix != expected_prefix:
+                results_list.append(
+                    f"FAIL - {case_no}: Expected '{expected_prefix}' | Found '{actual_prefix}'"
+                )
+
+        if results_list:
+            return TestResult("bundleFileNamePrefix", "FAIL", "Formatting Error: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        
+        return TestResult("bundleFileNamePrefix", "PASS", "All bundle filenames formatted correctly.", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("bundleFileNamePrefix", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)

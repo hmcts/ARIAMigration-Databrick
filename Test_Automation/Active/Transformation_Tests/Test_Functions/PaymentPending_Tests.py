@@ -6,6 +6,7 @@ from pyspark.sql.functions import (
     year, month, dayofmonth, countDistinct, count, array, array_join, expr, array_remove, when, upper
 )
 
+from pyspark.sql.window import Window
 from functools import reduce
 from pyspark.sql import functions as F
 
@@ -4970,31 +4971,20 @@ def test_submissionOutOfTime_ac3(test_df):
 def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
     try:
         try:
-            json = json.select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision"
-            )
-
-            M3_bronze = M3_bronze.select(
-                "CaseNo",
-                "Outcome"
-            ) 
-
-            M1_bronze = M1_bronze.select(
-                col("CaseNo").alias("CaseNo-M1"),
-                "OutOfTimeIssue"
-            )
-
             test_df = json.join(
                 M3_bronze,
                 json["appealReferenceNumber"] == M3_bronze["CaseNo"],
                 "inner"
-            )
-
-            test_df = test_df.join(
+            ).join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
                 "inner"
+            ).select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision",
+                "Outcome",
+                "StatusId",
+                "OutOfTimeIssue"
             )
         except Exception as e:
             error_message = str(e)        
@@ -5008,9 +4998,19 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
                 ).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
+            # Partition by Appeal, Order by desc StatusId
+            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
+                F.desc("StatusId")
+            )
+
+            # Select most relevant records
+            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
+
+            # If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
             ac = test_df.filter(
-            ((col("OutOfTimeIssue") == 1) & (col("Outcome") != 0)) & 
-            col("recordedOutOfTimeDecision") != "Yes"
+                (col("OutOfTimeIssue") == 1) & 
+                (col("Outcome") != 0) & 
+                (col("recordedOutOfTimeDecision") != "Yes")
             )
 
             if ac.count() != 0:
@@ -5027,31 +5027,20 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
 def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
     try:
         try:
-            json = json.select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision"
-            )
-
-            M3_bronze = M3_bronze.select(
-                "CaseNo",
-                "Outcome"
-            ) 
-
-            M1_bronze = M1_bronze.select(
-                col("CaseNo").alias("CaseNo-M1"),
-                "OutOfTimeIssue"
-            )
-
             test_df = json.join(
                 M3_bronze,
                 json["appealReferenceNumber"] == M3_bronze["CaseNo"],
                 "inner"
-            )
-
-            test_df = test_df.join(
+            ).join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
                 "inner"
+            ).select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision",
+                "Outcome",
+                "StatusId",
+                "OutOfTimeIssue"
             )
         except Exception as e:
             error_message = str(e)        
@@ -5065,9 +5054,18 @@ def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
                 ).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
+            # Partition by Appeal, Order by desc StatusId
+            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
+                F.desc("StatusId")
+            )
+
+            # Select most relevant records
+            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
+
             ac = test_df.filter(
-            ((col("OutOfTimeIssue") == 1) & (col("Outcome") == 0)) & 
-            col("recordedOutOfTimeDecision").isNotNull()
+                (col("OutOfTimeIssue") == 1) & 
+                (col("Outcome") == 0) & 
+                (col("recordedOutOfTimeDecision").isNotNull())
             )
 
             if ac.count() != 0:
@@ -5084,31 +5082,20 @@ def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
 def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
     try:
         try:
-            json = json.select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision"
-            )
-
-            M3_bronze = M3_bronze.select(
-                "CaseNo",
-                "Outcome"
-            ) 
-
-            M1_bronze = M1_bronze.select(
-                col("CaseNo").alias("CaseNo-M1"),
-                "OutOfTimeIssue"
-            )
-
             test_df = json.join(
                 M3_bronze,
                 json["appealReferenceNumber"] == M3_bronze["CaseNo"],
                 "inner"
-            )
-
-            test_df = test_df.join(
+            ).join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
                 "inner"
+            ).select(
+                "appealReferenceNumber",
+                "recordedOutOfTimeDecision",
+                "Outcome",
+                "StatusId",
+                "OutOfTimeIssue"
             )
         except Exception as e:
             error_message = str(e)        
@@ -5122,9 +5109,18 @@ def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
                 ).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
+            # Partition by Appeal, Order by desc StatusId
+            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
+                F.desc("StatusId")
+            )
+
+            # Select most relevant records
+            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
+
             ac = test_df.filter(
-            ((col("OutOfTimeIssue") != 1) & (col("Outcome") != 0)) & 
-            col("recordedOutOfTimeDecision").isNotNull()
+                (col("OutOfTimeIssue") != 1) & 
+                (col("Outcome") != 0) & 
+                (col("recordedOutOfTimeDecision").isNotNull())
             )
 
             if ac.count() != 0:

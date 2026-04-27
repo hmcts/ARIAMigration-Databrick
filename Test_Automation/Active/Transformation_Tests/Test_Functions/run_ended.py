@@ -82,7 +82,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     # ---------------------------------------------------------
     # 4. hearingResponse Tests
     # ---------------------------------------------------------
-    test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze)
+    test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze)
 
     if test_data_setup is True and test_df is not None:
         if "isAppealSuitableToFloat" not in fields_to_exclude:
@@ -132,6 +132,64 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_attendingJudge_test1(test_df))   
         if "actualCaseHearingLength" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
+        
+        # ---------------------------------------------------------
+        # 5. ftpa Tests
+        # ---------------------------------------------------------
+    if test_data_setup is True and test_df is not None:
+        if "ftpaApplicationDeadline" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaApplicationDeadline_test1(test_df))   
+        if "ftpaList" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaList_test1(test_df)) 
+        if "ftpaAppellantApplicationDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantApplicationDate_test1(test_df))
+        if "ftpaAppellantApplicationDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantApplicationDate_test2(test_df))
+        if "ftpaAppellantSubmissionOutOfTime" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test1(test_df))
+        if "ftpaAppellantSubmissionOutOfTime" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test2(test_df))
+        if "ftpaAppellantOutOfTimeExplanation" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test2(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test3(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test4(test_df))
+        if "ftpaRespondentApplicationDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test2(test_df))
+        if "ftpaRespondentSubmissionOutOfTime" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test2(test_df))
+        if "ftpaRespondentOutOfTimeExplanation" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test2(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test3(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test4(test_df))
+        # ---------------------------------------------------------
+        # 7. additionalInstructionsTribunalResponse Test
+        # ---------------------------------------------------------
+        test_data_setup = None
+        test_df, test_data_setup =  ended_tests.test_additionalInstructionsTribunalResponse_init(json_data, M3_silver, M6_bronze)
+        if test_data_setup != True:
+                all_test_results.append(test_data_setup)
 
+        if test_df != None:
+            all_test_results.append(ended_tests.test_additionalInstructionsTribunalResponse(test_df))
+        # ---------------------------------------------------------
+        # 8. Ended Tests
+        # ---------------------------------------------------------
+        test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze)    
+        if "endAppealOutcome" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_endAppealOutcome_test1(test_df))
+        if "endAppealApproverType" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_endAppealApproverType_test1(test_df))            
+        if "endAppealApproverName" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_endAppealApproverName_test1(test_df))
+        if "endAppealDate" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_endAppealDate_test1(test_df))
+        if "stateBeforeEndAppeal" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_stateBeforeEndAppeal_test1(test_df))
+        if "bundleFileNamePrefix" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_bundleFileNamePrefix_test1(test_df)) 
 
         return classify_all(all_test_results)

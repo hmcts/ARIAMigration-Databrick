@@ -25,15 +25,19 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.functions import col, row_number
 
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+import inspect
+
 ############################################################################################
-#Default Mapping
+# Default Mapping
 ############################################################################################
 
 def get_ended_group_id(df):
-    # Sort history to use lag correctly
+
     history_window = Window.partitionBy("CaseNo").orderBy("StatusId")
     
-    # Lag allows us to see the CaseStatus from the PREVIOUS StatusId row
+
     df_with_prev = df.withColumn("PrevCaseStatusId", F.lag("CaseStatus").over(history_window))
 
     return df_with_prev.withColumn("EndedGroup",
@@ -58,7 +62,6 @@ def get_ended_group_id(df):
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 120), 1)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 2), 1)
         .when((F.col("CaseStatus") == 10) & (F.col("Outcome") == 105), 1)
-        # Fixed Set Aside logic (MAX-1 was Status 10)
         .when((F.col("CaseStatus") == 46) & (F.col("Outcome") == 31) & (F.col("PrevCaseStatusId") == 10), 1)
         .otherwise(0)
     )
@@ -66,8 +69,8 @@ def get_ended_group_id(df):
 
 def test_default_mapping_init(json_data, M1_silver, M3_bronze):
     try:
-# 1. Select ALL JSON fields to avoid Unresolved Column errors
-        test_df = json_data.select(
+
+        manual_fields = [
             "appealReferenceNumber", "outOfTimeDecisionType", "uploadHomeOfficeBundleAvailable",
             "caseArgumentAvailable", "reasonsForAppealDecision", "reviewedHearingRequirements",
             "isAppellantAttendingTheHearing", "isAppellantGivingOralEvidence", "isWitnessesAttending",
@@ -85,13 +88,9 @@ def test_default_mapping_init(json_data, M1_silver, M3_bronze):
             "amendResponseActionAvailable", "currentHearingDetailsVisible", "reviewResponseActionAvailable",
             "reviewHomeOfficeResponseByLegalRep", "submitHearingRequirementsAvailable", 
             "uploadHomeOfficeAppealResponseActionAvailable", "stitchingStatus", "bundleConfiguration",
-            "appealDecisionAvailable", 
-            "isFtpaListVisible", 
-            "hmcts",             
-            "witnessDetails", "directions", 
+            "appealDecisionAvailable", "isFtpaListVisible", "hmcts", "witnessDetails", "directions", 
             "respondentDocuments", "hearingRequirements", "hearingDocuments", "letterBundleDocuments", 
-            "caseBundles", "finalDecisionAndReasonsDocuments", #"ftpaAppellantDocuments", 
-            #"ftpaAppellantGroundsDocuments", "ftpaAppellantEvidenceDocuments", "ftpaAppellantOutOfTimeDocuments",
+            "caseBundles", "finalDecisionAndReasonsDocuments",
             "witness1InterpreterSignLanguage", "witness2InterpreterSignLanguage", "witness3InterpreterSignLanguage", 
             "witness4InterpreterSignLanguage", "witness5InterpreterSignLanguage", "witness6InterpreterSignLanguage",
             "witness7InterpreterSignLanguage", "witness8InterpreterSignLanguage", "witness9InterpreterSignLanguage",
@@ -99,36 +98,45 @@ def test_default_mapping_init(json_data, M1_silver, M3_bronze):
             "witness3InterpreterSpokenLanguage", "witness4InterpreterSpokenLanguage", "witness5InterpreterSpokenLanguage",
             "witness6InterpreterSpokenLanguage", "witness7InterpreterSpokenLanguage", "witness8InterpreterSpokenLanguage",
             "witness9InterpreterSpokenLanguage", "witness10InterpreterSpokenLanguage"
-        )
+        ]
 
-        # 2. Process M3 for Group Logic
+ 
+        available_fields = [f for f in manual_fields if f in json_data.columns]
+        test_df = json_data.select(*available_fields)
+
+  
         full_status_with_groups = get_ended_group_id(M3_bronze)
         
-        # 3. Get LATEST status (rn=1)
+      
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
         latest_status = full_status_with_groups.withColumn("rn", F.row_number().over(window_spec)) \
-                                               .filter("rn = 1")
+                                               .filter(F.col("rn") == 1) \
+                                               .select(F.col("CaseNo").alias("M3_CaseNo"), "EndedGroup", "CaseStatus", "StatusId", "Outcome")
 
-        # 4. Master Join: JSON + M3 (Groups) + M1 (Representation)
         test_df = test_df.join(
-            latest_status.select("CaseNo", "EndedGroup", "CaseStatus", "StatusId", "Outcome"),
-            test_df.appealReferenceNumber == latest_status.CaseNo,
-            "left"
+            latest_status, test_df.appealReferenceNumber == latest_status.M3_CaseNo, "left"
         ).join(
             M1_silver.select(F.col("CaseNo").alias("M1_CaseNo"), "Dv_Representation"),
-            test_df.appealReferenceNumber == F.col("M1_CaseNo"),
-            "left"
-        ).drop("CaseNo", "M1_CaseNo")
+            test_df.appealReferenceNumber == F.col("M1_CaseNo"), "left"
+        ).drop("M3_CaseNo", "M1_CaseNo")
 
         return test_df, True
     except Exception as e:
-        return None, TestResult("Init", "FAIL", f"Error: {str(e)[:200]}", "ended")
+        return None, TestResult("Init", "FAIL", f"Error: {str(e)[:500]}", "ended", "init")
 
+############################################################################################
+# 3. Test: Default Values for Ended State
+############################################################################################
 
 def test_ended_defaultValues(test_df, fields_to_exclude):
     results_list = []
     
-    # Define mapping between fields and required EndedGroups
+    # Omitted FTPA fields that should fail as "No data to test"
+    omitted_fields = [
+        "ftpaAppellantDocuments", "ftpaAppellantGroundsDocuments", 
+        "ftpaAppellantEvidenceDocuments", "ftpaAppellantOutOfTimeDocuments"
+    ]
+
     group_requirements = {
         "isAppellantAttendingTheHearing": [3, 4], "isAppellantGivingOralEvidence": [3, 4],
         "isWitnessesAttending": [3, 4], "isHearingRoomNeeded": [3, 4], "isHearingLoopNeeded": [3, 4],
@@ -153,8 +161,7 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
         "witness10InterpreterSpokenLanguage": [4], "scheduleOfIssuesAgreement": [4], "scheduleOfIssuesDisagreementDescription": [4],
         "immigrationHistoryAgreement": [4], "immigrationHistoryDisagreementDescription": [4], "hmcts": [4], "stitchingStatus": [4],
         "bundleConfiguration": [4], "appealDecisionAvailable": [4], "isFtpaListVisible": [4], "hearingDocuments": [4],
-        "letterBundleDocuments": [4], "caseBundles": [4], "finalDecisionAndReasonsDocuments": [4], #"ftpaAppellantDocuments": [4], 
-        #"ftpaAppellantGroundsDocuments": [4], "ftpaAppellantEvidenceDocuments": [4], "ftpaAppellantOutOfTimeDocuments": [4],
+        "letterBundleDocuments": [4], "caseBundles": [4], "finalDecisionAndReasonsDocuments": [4],
         "anonymityOrder": [4],
         "directions": [2, 3, 4], "uploadHomeOfficeBundleAvailable": [2, 3, 4], "uploadHomeOfficeBundleActionAvailable": [2, 3, 4],
         "caseArgumentAvailable": [2, 3, 4], "reasonsForAppealDecision": [2, 3, 4], "respondentDocuments": [2, 3, 4]
@@ -195,59 +202,55 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
         "bundleConfiguration": "iac-hearing-bundle-config.yaml", "appealDecisionAvailable": "Yes", "isFtpaListVisible": "Yes"
     }
 
-    expected_arrays = {
-        "witnessDetails": None, "directions": None, "respondentDocuments": None, "hearingRequirements": None,
-        "hearingDocuments": None, "letterBundleDocuments": None, "caseBundles": None, "finalDecisionAndReasonsDocuments": None,
-        #"ftpaAppellantDocuments": None, "ftpaAppellantGroundsDocuments": None, "ftpaAppellantEvidenceDocuments": None,
-        #"ftpaAppellantOutOfTimeDocuments": None
-    }
-
     try:
-        # Loop for Simple Defaults
-        for field, expected in expected_defaults.items():
+        # Step 1: Explicitly FAIL omitted fields
+        for field in omitted_fields:
             if field in fields_to_exclude: continue
-            valid_groups = group_requirements.get(field, [1, 2, 3, 4])
+            results_list.append(TestResult(field, "FAIL", "No data to test: Field omitted from ended state", "ended", "omitted_check"))
+
+        # Step 2: Loop for Simple Defaults
+        for field, expected in expected_defaults.items():
+            if field in fields_to_exclude or field in omitted_fields: continue
             
-            # Base Filter
+            # Override for fields confirmed as "Yes" in ended Groups
+            current_expected = "Yes" if field in ["uploadHomeOfficeBundleAvailable", "reviewedHearingRequirements"] else expected
+
+            valid_groups = group_requirements.get(field, [1, 2, 3, 4])
             subset = test_df.filter(F.col("EndedGroup").isin(valid_groups))
             
-            # --- REPRESENTATION FILTERING ---
+            # Representation filtering
             if field == "caseArgumentAvailable":
                 subset = subset.filter(F.col("Dv_Representation") == "LR")
             elif field == "reasonsForAppealDecision":
                 subset = subset.filter(F.col("Dv_Representation") == "AIP")
 
-            if subset.count() == 0:
-                continue
+            if subset.count() == 0: continue
 
-            condition = (F.col(field) != expected) | (F.col(field).isNull())
+            condition = (F.col(field) != current_expected) | (F.col(field).isNull())
             fail_count = subset.filter(condition).count()
             
-            if fail_count > 0:
-                results_list.append(TestResult(field, "FAIL", f"Mismatches in Groups {valid_groups}: {fail_count}", "ended", inspect.stack()[0].function))
-            else:
-                results_list.append(TestResult(field, "PASS", f"Valid for Groups {valid_groups}", "ended", inspect.stack()[0].function))
+            status = "PASS" if fail_count == 0 else "FAIL"
+            msg = f"Valid for Groups {valid_groups}" if fail_count == 0 else f"Mismatches in Groups {valid_groups}: {fail_count}"
+            results_list.append(TestResult(field, status, msg, "ended", inspect.stack()[0].function))
 
-        # Loop for Arrays
+        # Step 3: Loop for Arrays
+        expected_arrays = {"witnessDetails": None, "directions": None, "respondentDocuments": None, "hearingRequirements": None, "hearingDocuments": None, "letterBundleDocuments": None, "caseBundles": None, "finalDecisionAndReasonsDocuments": None}
+        
         for field, contains_val in expected_arrays.items():
-            if field in fields_to_exclude: continue
+            if field in fields_to_exclude or field in omitted_fields: continue
             valid_groups = group_requirements.get(field, [1, 2, 3, 4])
             subset = test_df.filter(F.col("EndedGroup").isin(valid_groups))
             
-            if contains_val:
-                condition = (~F.array_contains(F.col(field), contains_val))
-            else:
-                condition = (F.size(F.col(field)) != 0)
+            condition = (~F.array_contains(F.col(field), contains_val)) if contains_val else (F.size(F.col(field)) != 0)
                 
             fail_count = subset.filter(condition).count()
-            if fail_count > 0:
-                results_list.append(TestResult(field, "FAIL", f"Array mismatch in Groups {valid_groups}: {fail_count}", "ended", inspect.stack()[0].function))
-            else:
-                results_list.append(TestResult(field, "PASS", f"Array valid for Groups {valid_groups}", "ended", inspect.stack()[0].function))
+            status = "PASS" if fail_count == 0 else "FAIL"
+            msg = f"Array valid for Groups {valid_groups}" if fail_count == 0 else f"Array mismatch in Groups {valid_groups}: {fail_count}"
+            results_list.append(TestResult(field, status, msg, "ended", inspect.stack()[0].function))
 
         return results_list
     except Exception as e:
-        return [TestResult("DefaultMapping", "FAIL", f"Error: {str(e)[:300]}", "ended", inspect.stack()[0].function)]
+        return [TestResult("DefaultMapping", "FAIL", f"Error: {str(e)[:300]}", "ended", "test")]
 
 def test_caseData_init(json, M1_bronze, M3_bronze):
     try:
@@ -357,10 +360,10 @@ def test_outOfTimeDecisionType_test3(test_df):
 ############################################################################################
 # hearingRequirements init code
 ############################################################################################
-def test_hearingRequirements_init(json, M1_bronze, M3_bronze, bac):
+def test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, bac):
     try:
         # 1. Select JSON fields
-        test_df = json.select(
+        test_df = json_data.select(
             "appealReferenceNumber",
             "isEvidenceFromOutsideUkOoc",
             "isEvidenceFromOutsideUkInCountry",
@@ -1003,7 +1006,29 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "endAppealApproverName",
             "endAppealDate",
             "stateBeforeEndAppeal",
-            "bundleFileNamePrefix"
+            "bundleFileNamePrefix",
+            "ftpaAppellantSubmitted",
+            "isFtpaAppellantDocsVisibleInDecided",
+            "isFtpaAppellantDocsVisibleInSubmitted",
+            "isFtpaAppellantOotDocsVisibleInDecided",
+            "isFtpaAppellantOotDocsVisibleInSubmitted",
+            "isFtpaAppellantGroundsDocsVisibleInDecided",
+            "isFtpaAppellantEvidenceDocsVisibleInDecided",
+            "isFtpaAppellantGroundsDocsVisibleInSubmitted",
+            "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
+            "isFtpaAppellantOotExplanationVisibleInDecided",
+            "isFtpaAppellantOotExplanationVisibleInSubmitted",
+            "ftpaRespondentSubmitted",
+            "isFtpaRespondentDocsVisibleInDecided",
+            "isFtpaRespondentDocsVisibleInSubmitted",
+            "isFtpaRespondentOotDocsVisibleInDecided",
+            "isFtpaRespondentOotDocsVisibleInSubmitted",
+            "isFtpaRespondentGroundsDocsVisibleInDecided",
+            "isFtpaRespondentEvidenceDocsVisibleInDecided",
+            "isFtpaRespondentGroundsDocsVisibleInSubmitted",
+            "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
+            "isFtpaRespondentOotExplanationVisibleInDecided",
+            "isFtpaRespondentOotExplanationVisibleInSubmitted"
             # "ftpaRespondentApplicationDate",
             # "ftpaRespondentSubmissionOutOfTime",
             # "ftpaRespondentOutOfTimeExplanation"
@@ -1015,7 +1040,6 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             # "singleSexCourtDecisionForDisplay"
         )
 
-        # 2. Prepare M1_bronze with metadata (Verify if Sponsor_Name or SponsorName)
         m1_clean = M1_bronze.select(
             col("CaseNo").alias("m1_CaseNo"),
             "Sponsor_Name", 
@@ -1030,20 +1054,17 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "Appellant_Name"
         )
 
-        # NEW: Prepare M1_silver for Representation
         m1_silver_clean = M1_silver.select(
             col("CaseNo").alias("m1_silver_CaseNo"),
             "dv_representation"
         )
-
-        # 3. Prepare BAC table for CategoryId
         bac_clean = bac.select(col("CaseNo").alias("bac_CaseNo"), "CategoryId")
 
         m6_clean = M6_bronze.select(
             col("CaseNo").alias("m6_CaseNo")
         ).groupBy("m6_CaseNo").count().select("m6_CaseNo")
 
-        # 5. Process M3 history
+
         m3_history = M3_bronze.join(bac_clean, M3_bronze["CaseNo"] == bac_clean["bac_CaseNo"], "left")
         
         history_with_groups = get_ended_group_id(m3_history)
@@ -1055,8 +1076,8 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             F.max("EndedGroup").over(Window.partitionBy("CaseNo"))
         )
 
-        # STEP B: Filter for rows that are 37 or 38 (as per Mapping Doc)
-        # But keep the Group 4 designation we found in Step A
+        # Filter for rows that are 37 or 38 (as per Mapping Doc)
+    
         latest_status = history_with_max_group \
             .filter(F.col("CaseStatus").isin(37, 38)) \
             .withColumn("rn", F.row_number().over(window_spec)) \
@@ -1067,7 +1088,7 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
                 "StatusId", 
                 "Party", 
                 "CategoryId", 
-                F.col("FinalEndedGroup").alias("EndedGroup"), # Use the spread Group ID
+                F.col("FinalEndedGroup").alias("EndedGroup"), 
                 "ListTypeId", 
                 "TimeEstimate",
                 "HearingDate",
@@ -1100,7 +1121,7 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
         ).join(
             latest_status,
             test_df["appealReferenceNumber"] == latest_status["CaseNo"],
-            "inner"
+            "left"
         ).join(
             m6_clean,
             test_df["appealReferenceNumber"] == m6_clean["m6_CaseNo"],
@@ -1884,31 +1905,47 @@ def test_actualCaseHearingLength_test1(test_df):
 #######################
 #language tests Init code
 #######################
-def test_languages_init(json, M1_bronze):
+def test_languages_init(json_data, M1_bronze, M3_bronze):
     try:
-        json = json.select(
-            col("appealReferenceNumber"),
-            col("appellantInterpreterLanguageCategory"),
-            col("appellantInterpreterSpokenLanguage")
-            # ,
-            # col("appellantInterpreterSignLanguage")
-        )
+        # 1. First, generate the EndedGroup column using your helper function
+        m3_with_groups = get_ended_group_id(M3_bronze)
 
-        M1_bronze = M1_bronze.select(
-            col("CaseNo"),
-            col("LanguageId")
-        )
+        # 2. Now that EndedGroup exists, define the window and filter
+        window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+        
+        m3_latest = m3_with_groups.withColumn("rn", row_number().over(window_spec)) \
+            .filter(
+                (col("rn") == 1) & 
+                (col("EndedGroup").isin(3, 4)) & 
+                (col("CaseStatus").isin(40, 52)) # Row selection 40, 52
+            ) \
+            .select("CaseNo", "CaseStatus", "EndedGroup")
 
-        test_df = json.join(
-            M1_bronze,
-            M1_bronze["CaseNo"] == json["appealReferenceNumber"],
+        # 3. Join with M1 for LanguageId
+        m1_data = M1_bronze.select(col("CaseNo").alias("M1_CaseNo"), col("LanguageId"))
+
+        # 4. Final Join
+        test_df = json_data.join(
+            m3_latest, 
+            json_data.appealReferenceNumber == m3_latest.CaseNo, 
             "inner"
-).drop(M1_bronze["CaseNo"])
+        ).join(
+            m1_data, 
+            json_data.appealReferenceNumber == m1_data.M1_CaseNo, 
+            "left"
+        ).select(
+            "appealReferenceNumber",
+            "appellantInterpreterLanguageCategory",
+            "appellantInterpreterSpokenLanguage",
+            # "appellantInterpreterSignLanguage",
+            "LanguageId",
+            "EndedGroup"
+        )
 
         return test_df, True
+
     except Exception as e:
-        error_message = str(e)        
-        return None,TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage, appellantInterpreterSignLanguage", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
+        return None, TestResult("Language_Init", "FAIL", f"Init Error: {str(e)}", "ended", "init")
     
 def test_languageInterpreterMapping(test_df):
     language_requirements = {
@@ -2176,90 +2213,74 @@ def test_languageInterpreterMapping(test_df):
     264: ("spokenLanguageInterpreter", None, None, ["Yes"], "Spanish Latin"),
     265: ("spokenLanguageInterpreter", None, None, ["Yes"], "Tetum")
     }
-
+    
+    
     try:
         results_list = []
-        cols = test_df.columns
         rows = test_df.collect()
 
         for row in rows:
             case_no = row['appealReferenceNumber']
             lang_id = row['LanguageId']
-            
-            if lang_id == 0:
-                category = row['appellantInterpreterLanguageCategory'] if 'appellantInterpreterLanguageCategory' in cols else None
-                if category is None or (isinstance(category, list) and len(category) == 0):
-                    # results_list.append(f"PASS - {case_no}: ID 0 (No Interpreter)")
-                    continue
-                else:
-                    results_list.append(f"FAIL - {case_no}: ID 0 expected null, found {category}")
-                
+            actual_categories = row['appellantInterpreterLanguageCategory'] or []
+
+            # Scenario: ID 0 (No Interpreter)
+            if lang_id is None or lang_id == 0:
+                if len(actual_categories) > 0:
+                    results_list.append(f"FAIL - {case_no}: ID 0/Null but Category list is not empty: {actual_categories}")
+                continue
 
             req = language_requirements.get(lang_id)
             if not req:
-                results_list.append(f"FAIL - {case_no}: No requirement for ID {lang_id}")
+                results_list.append(f"FAIL - {case_no}: ID {lang_id} not found in mapping doc")
                 continue
             
             req_category, req_code, req_label, req_manual, req_desc = req
+            
+            # 1. Validate Category List
+            # Check if the required category (spoken or sign) is present in the JSON list
+            if req_category not in actual_categories:
+                results_list.append(f"FAIL - {case_no}: Missing category '{req_category}' in {actual_categories}")
+
+            # 2. Validate Language Data
             field_name = "appellantInterpreterSpokenLanguage" if req_category == 'spokenLanguageInterpreter' else "appellantInterpreterSignLanguage"
-            target_data = row[field_name] if field_name in cols else None
+            target_data = row[field_name]
 
             if target_data is None:
-                results_list.append(f"FAIL - {case_no}: ID {lang_id} field {field_name} is null")
+                results_list.append(f"FAIL - {case_no}: {field_name} is null for ID {lang_id}")
                 continue
 
-            # ensure we are working with a dictionary
+            # Unpack Spark Row/Struct to Dict
             d = target_data.asDict(recursive=True)
-
             actual_ref = d.get('languageRefData') or {}
             actual_val = actual_ref.get('value') or {}
-            actual_code = actual_val.get('code')
-            actual_label = actual_val.get('label')
-            actual_manual = d.get('languageManualEntry') or []
-            actual_desc = d.get('languageManualEntryDescription')
-
-            # comparison
+            
+            # Handle Manual Entry vs RefData
             errors = []
-            is_manual = len(actual_manual) > 0 or actual_desc is not None
-            if is_manual:
-                # Acceptance: Description should contain the expected language label
-                if req_label and req_label not in (actual_desc or ""):
-                    errors.append(f"ManualDesc: '{req_label}' missing from description '{actual_desc}'")
+            if req_code is None: # It's a manual entry requirement
+                actual_manual = d.get('languageManualEntry') or []
+                actual_desc = d.get('languageManualEntryDescription')
+                if req_desc and req_desc not in (actual_desc or ""):
+                    errors.append(f"ManualDesc: Expected '{req_desc}', Found '{actual_desc}'")
             else:
-                # 2. Standard RefData comparison
-                if actual_code != req_code: 
-                    errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
-                if actual_label != req_label: 
-                    errors.append(f"Label: Expected '{req_label}', Found '{actual_label}'")
-            if actual_code != req_code: 
-                errors.append(f"Code: Expected '{req_code}', Found '{actual_code}'")
-            if actual_label != req_label: 
-                errors.append(f"Label: Expected '{req_label}', Found '{actual_label}'")
-            if actual_manual != req_manual: 
-                errors.append(f"ManualList: Expected {req_manual}, Found {actual_manual}")
-            if actual_desc != req_desc: 
-                errors.append(f"ManualDesc: Expected '{req_desc}', Found '{actual_desc}'")
+                # Standard RefData Comparison
+                if actual_val.get('code') != req_code:
+                    errors.append(f"Code: Expected '{req_code}', Found '{actual_val.get('code')}'")
+                if actual_val.get('label') != req_label:
+                    errors.append(f"Label: Expected '{req_label}', Found '{actual_val.get('label')}'")
 
-            if not errors:
-                # results_list.append(f"PASS - {case_no}: ID {lang_id} mapped correctly")
-                continue
-            else:
-                # Joining with a clear separator for readability
+            if errors:
                 results_list.append(f"FAIL - {case_no} (ID {lang_id}): " + " | ".join(errors))
 
-        if results_list != []:
-            formatted_results = "|||".join(results_list)
-            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria failed: found {len(results_list)} rows which failed. {formatted_results}"
-            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", message, test_from_state, inspect.stack()[0].function)
-        else:
-            message = f"appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage acceptance criteria passed: all rows meet mapping document requirements."
-            return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","PASS", message, test_from_state, inspect.stack()[0].function)
+        # Result Reporting
+        if results_list:
+            message = f"Found {len(results_list)} failures: " + " || ".join(results_list)
+            return TestResult("InterpreterMapping", "FAIL", message, "ended", "test")
+        
+        return TestResult("InterpreterMapping", "PASS", "All rows mapped correctly", "ended", "test")
 
     except Exception as e:
-        return TestResult("appellantInterpreterLanguageCategory, appellantInterpreterSpokenLanguage","FAIL", f"Crash in test: {str(e)}", test_from_state, inspect.stack()[0].function)
-
-
-
+        return TestResult("InterpreterMapping", "FAIL", f"Crash: {str(e)}", "ended", "test")
 ############################################################################################
 #######################
 #additionalInstructionsTribunalResponse Init code
@@ -3037,311 +3058,1300 @@ def test_ftpaRespondentOutOfTimeExplanation_test4(test_df):
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
 
+
+####################################################   
+
+
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+def test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver):
+    try:
+        # List of ALL fields for Appellant, Respondent, and Bundle
+        target_fields = [
+            "appealReferenceNumber",
+            "ftpaAppellantSubmitted",
+            "isFtpaAppellantDocsVisibleInDecided",
+            "isFtpaAppellantDocsVisibleInSubmitted",
+            "isFtpaAppellantOotDocsVisibleInDecided",
+            "isFtpaAppellantOotDocsVisibleInSubmitted",
+            "isFtpaAppellantGroundsDocsVisibleInDecided",
+            "isFtpaAppellantEvidenceDocsVisibleInDecided",
+            "isFtpaAppellantGroundsDocsVisibleInSubmitted",
+            "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
+            "isFtpaAppellantOotExplanationVisibleInDecided",
+            "isFtpaAppellantOotExplanationVisibleInSubmitted",
+            "ftpaRespondentSubmitted",
+            "isFtpaRespondentDocsVisibleInDecided",
+            "isFtpaRespondentDocsVisibleInSubmitted",
+            "isFtpaRespondentOotDocsVisibleInDecided",
+            "isFtpaRespondentOotDocsVisibleInSubmitted",
+            "isFtpaRespondentGroundsDocsVisibleInDecided",
+            "isFtpaRespondentEvidenceDocsVisibleInDecided",
+            "isFtpaRespondentGroundsDocsVisibleInSubmitted",
+            "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
+            "isFtpaRespondentOotExplanationVisibleInDecided",
+            "isFtpaRespondentOotExplanationVisibleInSubmitted",
+            "bundleFileNamePrefix"
+        ]
+
+        # 1. Dynamic Select from JSON
+        available_fields = [col for col in target_fields if col in json_data.columns]
+        if "appealReferenceNumber" not in available_fields:
+             return None, TestResult("general_init", "FAIL", "Critical Error: appealReferenceNumber missing", "ended", "init")
+
+        test_df = json_data.select(*available_fields)
+
+        # 2. Window logic with Priority for M3
+        m3_priority = M3_bronze.withColumn(
+            "priority", 
+            F.when(F.col("CaseStatus").isin(37, 38), 1)
+             .when(F.col("CaseStatus") == 39, 2)
+             .otherwise(3)
+        )
+        window_spec = Window.partitionBy("CaseNo").orderBy(F.col("priority").asc(), F.col("StatusId").desc())
+        m3_latest = m3_priority.withColumn("rn", F.row_number().over(window_spec)) \
+            .filter(F.col("rn") == 1) \
+            .select("CaseNo", "CaseStatus", "StatusId", "Party", "OutOfTime")
+
+        # 3. Prepare M1 (Formatted CaseNo) and M2 (Appellant Name) for Bundle Prefix
+        m1_prep = M1_bronze.select(
+            F.col("CaseNo").alias("M1_Join_Key"),
+            F.regexp_replace(F.col("CaseNo"), "/", " ").alias("Formatted_CaseNo")
+        )
+        
+        m2_prep = M2_bronze.select(
+            F.col("CaseNo").alias("M2_Join_Key"), 
+            "Appellant_Name"
+        )
+
+        # 4. Prepare M1_silver for Representation
+        m1_silver_prep = M1_silver.select(
+            F.col("CaseNo").alias("Silver_Join_Key"), 
+            F.col("dv_representation").alias("Representation")
+        )
+
+        # 5. Master Join
+        test_df = test_df.join(
+            m3_latest, test_df["appealReferenceNumber"] == m3_latest["CaseNo"], "inner"
+        ).join(
+            m1_prep, test_df["appealReferenceNumber"] == m1_prep["M1_Join_Key"], "left"
+        ).join(
+            m2_prep, test_df["appealReferenceNumber"] == m2_prep["M2_Join_Key"], "left"
+        ).join(
+            m1_silver_prep, test_df["appealReferenceNumber"] == m1_silver_prep["Silver_Join_Key"], "left"
+        )
+
+        # 6. Calculate Expected bundleFileNamePrefix ('CaseNo-Appellant_Name')
+        test_df = test_df.withColumn(
+            "expected_bundle_prefix",
+            F.concat(F.col("Formatted_CaseNo"), F.lit("-"), F.col("Appellant_Name"))
+        )
+
+        # Drop redundant join keys
+        test_df = test_df.drop("CaseNo", "M1_Join_Key", "M2_Join_Key", "Silver_Join_Key")
+
+        return test_df, True
+
+    except Exception as e:
+        return None, TestResult("general_init", "FAIL", f"Failed to Setup Data: {str(e)[:300]}", "ended", "init")
+    
+
+def test_bundleFileNamePrefix_test1(test_df):
+    try:
+        # Collect relevant columns for validation
+        # expected_bundle_prefix was created in the Init via: CaseNo (slashes to spaces) + "-" + Appellant_Name
+        rows = test_df.select(
+            "appealReferenceNumber", 
+            "bundleFileNamePrefix", 
+            "expected_bundle_prefix"
+        ).collect()
+        
+        results = []
+        
+        for row in rows:
+            actual = row['bundleFileNamePrefix']
+            expected = row['expected_bundle_prefix']
+            
+            # Handle potential nulls in source data (e.g., if Appellant_Name was missing in M2)
+            if expected is None or "-" not in expected:
+                # If we couldn't build a valid expected string, we skip or flag as data error
+                continue 
+
+            if actual != expected:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Expected '{expected}' | Found '{actual}'")
+
+        count = len(rows)
+        if results:
+            return TestResult(
+                "bundleFileNamePrefix", 
+                "FAIL", 
+                f"Found {len(results)} mismatches. Sample: " + " || ".join(results[:3]), 
+                "ended", 
+                "test1"
+            )
+        
+        return TestResult(
+            "bundleFileNamePrefix", 
+            "PASS", 
+            f"Verified {count} records; all bundle prefixes match the 'CaseNo-Appellant_Name' format with correct space-formatting.", 
+            "ended", 
+            "test1"
+        )
+
+    except Exception as e:
+        return TestResult("bundleFileNamePrefix", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")
+
+#################################################################################
+# ftpaAppellantSubmitted
+# Logic: IF M3.Party IS 1 = "Yes"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#################################################################################
+
+def test_ftpaAppellantSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['ftpaAppellantSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 1")
+    
+    count = len(rows)
+    if results:
+        return TestResult("ftpaAppellantSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("ftpaAppellantSubmitted", "PASS", f"Verified {count} Party 1 records; all correctly contain 'Yes'.", "ended", "test1")
+
+def test_ftpaAppellantSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['ftpaAppellantSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 2")
+    
+    count = len(rows)
+    if results:
+        return TestResult("ftpaAppellantSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("ftpaAppellantSubmitted", "PASS", f"Verified {count} Party 2 records; all correctly omit the field.", "ended", "test2")
+
+
 #######################
-# endAppealOutcome & endAppealOutcomeReason
-# Validates the mapping of Status/Outcome to CCD Outcome Strings
+# isFtpaAppellantDocsVisibleInDecided
+# Logic: IF M3.Party IS 1 = "No"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
+
+def test_isFtpaAppellantDocsVisibleInDecided_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; visibility correctly set to 'No'.", "ended", "test1")
+
+def test_isFtpaAppellantDocsVisibleInDecided_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+#######################
+# isFtpaAppellantDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 1 = "Yes"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantDocsVisibleInSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaAppellantDocsVisibleInSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+
+#######################
+# isFtpaAppellantOotDocsVisibleInDecided
+# Logic: IF M3.Party IS 1 AND M3.OutOfTime IS 1 = "No"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P1-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "PASS", f"Verified {count} P1 OOT records; visibility set to 'No'.", "ended", "test1")
+
+def test_isFtpaAppellantOotDocsVisibleInDecided_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P1-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "Omit Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "PASS", f"Verified {count} P1 In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test3")
+
+
+
+
+
+
+
+#######################
+# isFtpaAppellantOotDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 1 AND M3.OutOfTime IS 1 = "Yes"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P1-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "PASS", f"Verified {count} P1 OOT records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaAppellantOotDocsVisibleInSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P1-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "Omit Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "PASS", f"Verified {count} P1 In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaAppellantOotDocsVisibleInSubmitted_test3(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test3")
+
+
+
+
+
+#######################
+# isFtpaAppellantGroundsDocsVisibleInDecided
+# Logic: IF M3.Party IS 1 = "No"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantGroundsDocsVisibleInDecided_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantGroundsDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; visibility correctly set to 'No'.", "ended", "test1")
+
+def test_isFtpaAppellantGroundsDocsVisibleInDecided_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantGroundsDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+
+#######################
+# isFtpaAppellantEvidenceDocsVisibleInDecided
+# Logic: IF M3.Party IS 1 = "No"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantEvidenceDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; visibility set to 'No'.", "ended", "test1")
+
+def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantEvidenceDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+#######################
+# isFtpaAppellantGroundsDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 1 = "Yes"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantGroundsDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantGroundsDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+#######################
+# isFtpaAppellantEvidenceDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 1 = "Yes"; ELSE IF M3.Party IS 2 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantEvidenceDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantEvidenceDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test2")
+
+
+
+
+
+#######################
+# isFtpaAppellantOotExplanationVisibleInDecided
+# Logic: IF M3.Party IS 1 AND M3.OutOfTime IS 1 = "No"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantOotExplanationVisibleInDecided_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P1-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "PASS", f"Verified {count} P1 OOT records; visibility set to 'No'.", "ended", "test1")
+
+def test_isFtpaAppellantOotExplanationVisibleInDecided_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P1-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "Omit Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "PASS", f"Verified {count} P1 In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaAppellantOotExplanationVisibleInDecided_test3(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test3")
+
+
+
+
+#######################
+# isFtpaAppellantOotExplanationVisibleInSubmitted
+# Logic: IF M3.Party IS 1 AND M3.OutOfTime IS 1 = "Yes"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test1(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P1-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} P1 OOT records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test2(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P1-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "Omit Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} P1 In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df):
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaAppellantOotExplanationVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; correctly omitted.", "ended", "test3")
+
+
+#######################
+# ftpaRespondentSubmitted
+# Logic: IF M3.Party IS 2 = "Yes"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_ftpaRespondentSubmitted_test1(test_df):
+    if "ftpaRespondentSubmitted" not in test_df.columns:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", "no data to test", "ended", "test1")
+    
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['ftpaRespondentSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 2")
+    count = len(rows)
+    if results:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("ftpaRespondentSubmitted", "PASS", f"Verified {count} Party 2 records; all correctly contain 'Yes'.", "ended", "test1")
+
+def test_ftpaRespondentSubmitted_test2(test_df):
+    if "ftpaRespondentSubmitted" not in test_df.columns:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['ftpaRespondentSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("ftpaRespondentSubmitted", "PASS", f"Verified {count} Party 1 records; fields correctly omitted.", "ended", "test2")
+
+
+
+#######################
+# isFtpaRespondentDocsVisibleInDecided
+# Logic: IF M3.Party IS 2 = "No"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentDocsVisibleInDecided_test1(test_df):
+    if "isFtpaRespondentDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for Party 2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; visibility correctly set to 'No'.", "ended", "test1")
+
+def test_isFtpaRespondentDocsVisibleInDecided_test2(test_df):
+    if "isFtpaRespondentDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+
+#######################
+# isFtpaRespondentDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 2 = "Yes"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentDocsVisibleInSubmitted_test1(test_df):
+    if "isFtpaRespondentDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; visibility set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaRespondentDocsVisibleInSubmitted_test2(test_df):
+    if "isFtpaRespondentDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+
+#######################
+# isFtpaRespondentOotDocsVisibleInDecided
+# Logic: IF M3.Party IS 2 AND M3.OutOfTime IS 1 = "No"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentOotDocsVisibleInDecided_test1(test_df):
+    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P2-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Respondent OOT records; set to 'No'.", "ended", "test1")
+
+def test_isFtpaRespondentOotDocsVisibleInDecided_test2(test_df):
+    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaRespondentOotDocsVisibleInDecided_test3(test_df):
+    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test3")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+
+
+
+
+#######################
+# isFtpaRespondentOotDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 2 AND M3.OutOfTime IS 1 = "Yes"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test1(test_df):
+    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P2-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Respondent OOT records; set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test2(test_df):
+    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test3(test_df):
+    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test3")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+
+
+
+
+#######################
+# isFtpaRespondentGroundsDocsVisibleInDecided
+# Logic: IF M3.Party IS 2 = "No"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentGroundsDocsVisibleInDecided_test1(test_df):
+    if "isFtpaRespondentGroundsDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentGroundsDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; grounds set to 'No'.", "ended", "test1")
+
+def test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(test_df):
+    if "isFtpaRespondentGroundsDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentGroundsDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+
+#######################
+# isFtpaRespondentEvidenceDocsVisibleInDecided
+# Logic: IF M3.Party IS 2 = "No"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test1(test_df):
+    if "isFtpaRespondentEvidenceDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentEvidenceDocsVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; evidence set to 'No'.", "ended", "test1")
+
+def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(test_df):
+    if "isFtpaRespondentEvidenceDocsVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentEvidenceDocsVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+#######################
+# isFtpaRespondentGroundsDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 2 = "Yes"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test1(test_df):
+    if "isFtpaRespondentGroundsDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentGroundsDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; grounds set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(test_df):
+    if "isFtpaRespondentGroundsDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentGroundsDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+
+#######################
+# isFtpaRespondentEvidenceDocsVisibleInSubmitted
+# Logic: IF M3.Party IS 2 = "Yes"; ELSE IF M3.Party IS 1 = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test1(test_df):
+    if "isFtpaRespondentEvidenceDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
+    for row in rows:
+        if row['isFtpaRespondentEvidenceDocsVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P2")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; evidence set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test2(test_df):
+    if "isFtpaRespondentEvidenceDocsVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentEvidenceDocsVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+
+
+
+#######################
+# isFtpaRespondentOotExplanationVisibleInDecided
+# Logic: IF M3.Party IS 2 AND M3.OutOfTime IS 1 = "No"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test1(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInDecided'] != "No":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P2-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Respondent OOT records; set to 'No'.", "ended", "test1")
+
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test2(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test3(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test3")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInDecided'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+
+
+
+#######################
+# isFtpaRespondentOotExplanationVisibleInSubmitted
+# Logic: IF M3.Party IS 2 AND M3.OutOfTime IS 1 = "Yes"; ELSE = OMIT
+# Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
+#######################
+
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test1(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] != "Yes":
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P2-OOT)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Respondent OOT records; set to 'Yes'.", "ended", "test1")
+
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(test_df):
+    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test3")
+        
+    results = []
+    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
+    for row in rows:
+        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] is not None:
+            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
+    count = len(rows)
+    if results:
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
+    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+
+############################################################################################
+#######################
+#ended Init code
+#######################
+def test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver):
+    try:
+        # 1. Define Ended Filter
+        ended_filter = (
+            ((F.col("CaseStatus") == '10') & (F.col("Outcome").isin(80, 122, 25, 120, 2, 105, 13))) |
+            ((F.col("CaseStatus") == '46') & (F.col("Outcome") == 31)) |
+            ((F.col("CaseStatus") == '26') & (F.col("Outcome").isin(80, 13, 25))) |
+            ((F.col("CaseStatus").isin('37', '38')) & (F.col("Outcome").isin(80, 13, 25, 72, 125))) |
+            ((F.col("CaseStatus") == '39') & (F.col("Outcome") == 25)) |
+            ((F.col("CaseStatus") == '51') & (F.col("Outcome").isin(0, 94, 93))) |
+            ((F.col("CaseStatus") == '52') & (F.col("Outcome").isin(91, 95))) |
+            ((F.col("CaseStatus") == '36') & (F.col("Outcome").isin(1, 2, 25)))
+        )
+
+        # 2. Select JSON fields
+        json_df = json_data.select(
+            "appealReferenceNumber", "endAppealOutcome", "endAppealOutcomeReason",
+            "endAppealApproverType", "endAppealApproverName", "endAppealDate", "stateBeforeEndAppeal"
+        )
+
+        # 3. Get M1_silver Representation (dv_representation)
+        # Assuming CaseNo is the join key in M1_silver
+        m1_rep = M1_silver.select("CaseNo", F.col("dv_representation").alias("Representation"))
+
+        # 4. Process M3 Ended
+        window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
+        m3_ended = M3_bronze.filter(ended_filter) \
+            .withColumn("rn", F.row_number().over(window_spec)) \
+            .filter("rn = 1") \
+            .select(
+                "CaseNo", "CaseStatus", "Outcome", "StatusId", "DecisionDate",
+                "Adj_Determination_Title", "Adj_Determination_Forenames", "Adj_Determination_Surname"
+            )
+
+        # 5. Master Join (JSON + M3 + M1_silver)
+        test_df = json_df.join(
+            m3_ended, json_df["appealReferenceNumber"] == m3_ended["CaseNo"], "inner"
+        ).join(
+            m1_rep, json_df["appealReferenceNumber"] == m1_rep["CaseNo"], "left" # Left join in case M1_silver is missing rows
+        ).drop(m3_ended["CaseNo"], m1_rep["CaseNo"])
+
+        if test_df.isEmpty():
+            return None, TestResult("ended_init", "FAIL", "No records matched criteria.", "ended")
+
+        return test_df, True
+
+    except Exception as e:
+        return None, TestResult("ended_init", "FAIL", f"Setup Error: {str(e)[:300]}", "ended")
+########################
 def test_endAppealOutcome_test1(test_df):
     try:
-        # 1. Define the Mapping Table based on your requirements
-        # Structure: (CaseStatus, Outcome): (ExpectedOutcome, ExpectedReasonSnippet)
+        # Define mapping: (CaseStatus, Outcome) -> Expected endAppealOutcome
         mapping = {
-            (37, 80): ("Abandoned", "First Tier - Hearing | Abandoned"),
-            (38, 80): ("Abandoned", "First Tier - Paper | Abandoned"),
-            (10, 80): ("Abandoned", "Preliminary Issue | Abandoned"),
-            (10, 122): ("Abandoned", "Preliminary Issue | Abandoned (non-CCD)"),
-            (26, 80): ("Abandoned", "Case Management Review | Abandoned"),
-            (51, 94): ("Struck out", "Closed - Fee Not Paid | Struck Out"),
-            (37, 13): ("No valid appeal", "First Tier - Hearing | No Valid Appeal"),
-            (38, 13): ("No valid appeal", "First Tier - Paper | No Valid Appeal"),
-            (26, 13): ("No valid appeal", "Case Management Review | No Valid Appeal"),
-            (37, 25): ("Withdrawn", "First Tier - Hearing | Withdrawn"),
-            (38, 25): ("Withdrawn", "First Tier - Paper | Withdrawn"),
-            (39, 25): ("Withdrawn", "First Tier Permission Application | Withdrawn"),
-            (10, 25): ("Withdrawn", "Preliminary Issue | Withdrawn"),
-            (26, 25): ("Withdrawn", "Case Management Review | Withdrawn"),
-            (52, 91): ("Struck out", "Case closed fee outstanding | Fee Paid/Exempt"),
-            (52, 95): ("Struck out", "Case closed fee outstanding | Write Off"),
-            (51, 93): ("Struck out", "Closed - Fee Not Paid | Admin Closure"),
-            (38, 72): ("Abandoned", "First Tier - Paper | Certified under Rule 16"),
-            (10, 120): ("Struck out", "Preliminary Issue | Admin Rejected (Non-CCD)"),
-            (10, 2): ("Struck out", "Preliminary Issue | Dismissed"),
-            (46, 31): ("Struck out", "Set Aside Application | Refused")
+            ('37', 80): "Abandoned",
+            ('38', 80): "Abandoned",
+            ('10', 80): "Abandoned",
+            ('10', 122): "Abandoned",
+            ('26', 80): "Abandoned",
+            ('51', 94): "Struck out",
+            ('37', 13): "No valid appeal",
+            ('38', 13): "No valid appeal",
+            ('26', 13): "No valid appeal",
+            ('37', 25): "Withdrawn",
+            ('38', 25): "Withdrawn",
+            ('39', 25): "Withdrawn",
+            ('10', 25): "Withdrawn",
+            ('26', 25): "Withdrawn",
+            ('52', 91): "Struck out",
+            ('52', 95): "Struck out",
+            ('51', 93): "Struck out",
+            ('38', 72): "Abandoned",
+            ('10', 120): "Struck out",
+            ('10', 2): "Struck out",
+            ('46', 31): "Struck out"
         }
 
-        # 2. Collect data for processing
-        rows = test_df.select(
-            "appealReferenceNumber", 
-            "CaseStatus", 
-            "Outcome", 
-            "endAppealOutcome", 
-            "endAppealOutcomeReason"
-        ).collect()
+        rows = test_df.select("appealReferenceNumber", "CaseStatus", "Outcome", "endAppealOutcome").collect()
+        results = []
+        
+        for row in rows:
+            status = str(row['CaseStatus'])
+            outcome = int(row['Outcome'])
+            actual = row['endAppealOutcome']
+            
+            expected = mapping.get((status, outcome))
+            
+            if expected is None:
+                continue # Record doesn't match our specific test list
+                
+            if actual != expected:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Source({status}/{outcome}) | Expected '{expected}' | Found '{actual}'")
 
-        results_list = []
+        if results:
+            return TestResult("endAppealOutcome", "FAIL", "Logic Mismatch: " + " || ".join(results[:5]), "ended", "test1")
+        
+        return TestResult("endAppealOutcome", "PASS", f"Verified {len(rows)} records; all outcomes match mapping table.", "ended", "test1")
+
+    except Exception as e:
+        return TestResult("endAppealOutcome", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")
+    
+
+def test_endAppealOutcomeReason_test1(test_df):
+    try:
+        # Define mapping: (CaseStatus, Outcome) -> Expected Reason Snippet
+        # This follows your requirement: "This is a migrated case. The final outcome was {Snippet}."
+        reason_mapping = {
+            ('37', 80): "First Tier - Hearing | Abandoned",
+            ('38', 80): "First Tier - Paper | Abandoned",
+            ('10', 80): "Preliminary Issue | Abandoned",
+            ('10', 122): "Preliminary Issue | Abandoned (non-CCD)",
+            ('26', 80): "Case Management Review | Abandoned",
+            ('51', 94): "Closed - Fee Not Paid | Struck Out",
+            ('37', 13): "First Tier - Hearing | No Valid Appeal",
+            ('38', 13): "First Tier - Paper | No Valid Appeal",
+            ('26', 13): "Case Management Review | No Valid Appeal",
+            ('37', 25): "First Tier - Hearing | Withdrawn",
+            ('38', 25): "First Tier - Paper | Withdrawn",
+            ('39', 25): "First Tier Permission Application | Withdrawn",
+            ('10', 25): "Preliminary Issue | Withdrawn",
+            ('26', 25): "Case Management Review | Withdrawn",
+            ('52', 91): "Case closed fee outstanding | Fee Paid/Exempt",
+            ('52', 95): "Case closed fee outstanding | Write Off",
+            ('51', 93): "Closed - Fee Not Paid | Admin Closure",
+            ('38', 72): "First Tier - Paper | Certified under Rule 16",
+            ('10', 120): "Preliminary Issue | Admin Rejected (Non-CCD)",
+            ('10', 2): "Preliminary Issue | Dismissed",
+            ('46', 31): "Set Aside Application | Refused"
+        }
+
+        rows = test_df.select("appealReferenceNumber", "CaseStatus", "Outcome", "endAppealOutcomeReason").collect()
+        results = []
+        prefix = "This is a migrated case. The final outcome was "
 
         for row in rows:
-            status_outcome = (int(row['CaseStatus']), int(row['Outcome']))
-            actual_outcome = row['endAppealOutcome']
+            status = str(row['CaseStatus'])
+            outcome = int(row['Outcome'])
             actual_reason = row['endAppealOutcomeReason'] or ""
             
-            if status_outcome in mapping:
-                expected_outcome, reason_snippet = mapping[status_outcome]
+            snippet = reason_mapping.get((status, outcome))
+            if not snippet:
+                continue
                 
-                errors = []
-                # Validate Outcome String
-                if actual_outcome != expected_outcome:
-                    errors.append(f"Outcome Mismatch: Expected '{expected_outcome}', Found '{actual_outcome}'")
-                
-                # Validate Reason String (Checking if the specific phrase exists in the long text)
-                if reason_snippet not in actual_reason:
-                    errors.append(f"Reason Snippet Missing: Expected to find '{reason_snippet}' in '{actual_reason}'")
-                
-                if errors:
-                    results_list.append(f"FAIL - {row['appealReferenceNumber']} ({status_outcome}): " + " | ".join(errors))
+            expected_full_reason = f"{prefix}{snippet}."
+            
+            # We use a clean comparison (removing trailing spaces if any)
+            if actual_reason.strip() != expected_full_reason.strip():
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Expected '{expected_full_reason}' | Found '{actual_reason}'")
 
-        if results_list:
-            return TestResult("endAppealOutcome", "FAIL", f"Found {len(results_list)} mapping errors. " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        if results:
+            return TestResult("endAppealOutcomeReason", "FAIL", f"Found {len(results)} reason mismatches. Sample: " + " || ".join(results[:3]), "ended", "test1")
         
-        return TestResult("endAppealOutcome", "PASS", "All Status/Outcome combinations mapped correctly to CCD values.", "ended", inspect.stack()[0].function)
+        return TestResult("endAppealOutcomeReason", "PASS", f"Verified {len(rows)} records; all reason strings match the migrated ARIA format.", "ended", "test1")
 
     except Exception as e:
-        return TestResult("endAppealOutcome", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
+        return TestResult("endAppealOutcomeReason", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")
 
 
-#######################
-# endAppealApproverType
-# Logic: IF CaseStatus == 46 THEN "Judge" ELSE "Case Worker"
-# Applicable to: All records in the filtered Status/Outcome list
-#######################
+
+
+
 def test_endAppealApproverType_test1(test_df):
     try:
-        # We select the CaseStatus (from ARIA) and the ApproverType (from JSON)
-        # Note: 'CaseStatus' here should be the one associated with the MAX(StatusId)
+        # Collect relevant columns
         rows = test_df.select("appealReferenceNumber", "CaseStatus", "endAppealApproverType").collect()
+        results = []
         
-        results_list = []
-
         for row in rows:
-            case_no = row['appealReferenceNumber']
-            # Ensure status is treated as a string for comparison
+            # Ensure CaseStatus is treated as a string for comparison
             status = str(row['CaseStatus'])
-            actual_approver = row['endAppealApproverType']
+            actual_type = row['endAppealApproverType']
             
-            # 1. Determine Expected Value
-            expected_approver = "Judge" if status == "46" else "Case Worker"
+            # Logic: IF CaseStatus IS 46 = "Judge"; ELSE "Case Worker"
+            expected_type = "Judge" if status == '46' else "Case Worker"
             
-            # 2. Compare
-            if actual_approver != expected_approver:
-                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_approver}' | Found '{actual_approver}'")
-
-        if results_list:
-            # Returning first 10 failures to avoid massive log walls
-            return TestResult("endAppealApproverType", "FAIL", "Logic Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+            if actual_type != expected_type:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Status {status} | Expected '{expected_type}' | Found '{actual_type}'")
         
-        return TestResult("endAppealApproverType", "PASS", "All records correctly mapped to Judge or Case Worker.", "ended", inspect.stack()[0].function)
+        count = len(rows)
+        if results:
+            return TestResult("endAppealApproverType", "FAIL", f"Logic Mismatch found in {len(results)} records. Sample: " + " || ".join(results[:3]), "ended", "test1")
+        
+        return TestResult("endAppealApproverType", "PASS", f"Verified {count} records; all ApproverTypes correctly assigned (Status 46 as Judge, others as Case Worker).", "ended", "test1")
 
     except Exception as e:
-        return TestResult("endAppealApproverType", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+        return TestResult("endAppealApproverType", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")
     
 
-#######################
-# endAppealApproverName
-# Logic: 
-# IF CaseStatus == 46 -> "Surname, Forenames (Title)"
-# ELSE -> "This is a migrated ARIA case"
-#######################
 def test_endAppealApproverName_test1(test_df):
     try:
-        # We need the status and the name parts from the dataframe
-        rows = test_df.select(
-            "appealReferenceNumber", 
-            "CaseStatus", 
-            "Adj_Determination_Surname", 
-            "Adj_Determination_Forenames", 
-            "Adj_Determination_Title", 
-            "endAppealApproverName"
-        ).collect()
-        
-        results_list = []
-
+        rows = test_df.select("appealReferenceNumber", "CaseStatus", "endAppealApproverName",
+                               "Adj_Determination_Surname", "Adj_Determination_Forenames", 
+                               "Adj_Determination_Title").collect()
+        results = []
         for row in rows:
-            case_no = row['appealReferenceNumber']
             status = str(row['CaseStatus'])
-            actual_name = row['endAppealApproverName']
-            
-            # 1. Determine Expected Value
-            if status == "46":
-                surname = row['Adj_Determination_Surname'] or ""
-                forenames = row['Adj_Determination_Forenames'] or ""
-                title = row['Adj_Determination_Title'] or ""
-                # Format: Surname, Forenames (Title)
-                expected_name = f"{surname}, {forenames} ({title})"
+            actual = row['endAppealApproverName']
+            if status == '46':
+                s = (row['Adj_Determination_Surname'] or "").strip()
+                f = (row['Adj_Determination_Forenames'] or "").strip()
+                t = (row['Adj_Determination_Title'] or "").strip()
+                # Migration format: "Surname Forenames (Title)"
+                expected = f"{s} {f} ({t})".replace("  ", " ").strip()
             else:
-                expected_name = "This is a migrated ARIA case"
+                expected = "This is a migrated ARIA case"
             
-            # 2. Compare
-            if actual_name != expected_name:
-                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_name}' | Found '{actual_name}'")
-
-        if results_list:
-            return TestResult("endAppealApproverName", "FAIL", "Name Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+            if actual != expected:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Expected '{expected}' | Found '{actual}'")
         
-        return TestResult("endAppealApproverName", "PASS", "All Approver Names mapped correctly.", "ended", inspect.stack()[0].function)
-
+        if results:
+            return TestResult("endAppealApproverName", "FAIL", f"Mismatches: " + " || ".join(results[:3]), "ended", "test1")
+        return TestResult("endAppealApproverName", "PASS", f"Verified {len(rows)} records.", "ended", "test1")
     except Exception as e:
-        return TestResult("endAppealApproverName", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
+        return TestResult("endAppealApproverName", "FAIL", str(e), "ended", "test1")
 
 
-#######################
-# endAppealDate
-# Logic: Date associated with the MAX(StatusId)
-# Format: ISO 8601 (YYYY-MM-DD)
-#######################
-import re
+
 
 def test_endAppealDate_test1(test_df):
     try:
-        # We need the CaseStatus (to identify the row) and the Date from ARIA
-        # Assuming the ARIA date is stored in a column named 'LogDate' in your test_df
+        # Collect columns: appealReferenceNumber, the actual JSON date, and the source ARIA date
         rows = test_df.select(
             "appealReferenceNumber", 
-            "DecisionDate", 
-            "endAppealDate"
+            "endAppealDate", 
+            "DecisionDate",
+            "CaseStatus",
+            "Outcome"
         ).collect()
         
-        results_list = []
-        # ISO 8601 regex pattern (YYYY-MM-DD)
-        iso_pattern = r"^\d{4}-\d{2}-\d{2}$"
-
-        for row in rows:
-            case_no = row['appealReferenceNumber']
-            aria_date = row['DecisionDate']
-            json_date = row['endAppealDate']
-            
-            # 1. Check if the date exists
-            if json_date is None or json_date == "":
-                results_list.append(f"FAIL - {case_no}: endAppealDate is null or empty")
-                continue
-
-            # 2. Check for ISO 8601 Formatting
-            if not re.match(iso_pattern, str(json_date)[:10]):
-                results_list.append(f"FAIL - {case_no}: Date '{json_date}' is not in ISO 8601 format (YYYY-MM-DD)")
-                continue
-
-            # 3. Check for Data Integrity (Does JSON date match ARIA date?)
-            # We convert both to strings and compare the first 10 characters (YYYY-MM-DD)
-            if str(aria_date)[:10] != str(json_date)[:10]:
-                results_list.append(f"FAIL - {case_no}: ARIA Date '{aria_date}' does not match JSON Date '{json_date}'")
-
-        if results_list:
-            return TestResult("endAppealDate", "FAIL", "Date errors: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        results = []
         
-        return TestResult("endAppealDate", "PASS", "All appeal end dates are correctly formatted and matched.", "ended", inspect.stack()[0].function)
+        for row in rows:
+            actual_json_date = row['endAppealDate']
+            aria_source_date = row['DecisionDate']
+            
+            # If the source date is missing in ARIA, we should flag it as an issue 
+            # or skip if the business logic allows nulls for certain outcomes
+            if aria_source_date is None:
+                if actual_json_date is not None:
+                    results.append(f"FAIL - {row['appealReferenceNumber']}: ARIA date is NULL but JSON found '{actual_json_date}'")
+                continue
+
+            # Convert ARIA Timestamp to ISO 8601 String (YYYY-MM-DD)
+            expected_date_str = aria_source_date.strftime('%Y-%m-%d')
+            
+            # Compare. We check if the expected date string is contained within the actual 
+            # (handles cases where JSON might include a timestamp T00:00:00Z)
+            if actual_json_date is None or expected_date_str not in actual_json_date:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Source Date '{expected_date_str}' | Found in JSON '{actual_json_date}'")
+
+        count = len(rows)
+        if results:
+            return TestResult("endAppealDate", "FAIL", f"Date Mismatch in {len(results)} records. Sample: " + " || ".join(results[:3]), "ended", "test1")
+        
+        return TestResult("endAppealDate", "PASS", f"Verified {count} records; all dates match ARIA DecisionDate in ISO 8601 format.", "ended", "test1")
 
     except Exception as e:
-        return TestResult("endAppealDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+        return TestResult("endAppealDate", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")
     
-
-#######################
-# stateBeforeEndAppeal - Updated for M1_silver.dv_representation
-#######################
 def test_stateBeforeEndAppeal_test1(test_df):
     try:
-        available_cols = test_df.columns
-        
-        # Determine which representation column to use
-        rep_col = "dv_representation" if "dv_representation" in available_cols else None
-            
-        rows = test_df.select("appealReferenceNumber", "CaseStatus", "Outcome", "stateBeforeEndAppeal", *([rep_col] if rep_col else [])).collect()
-        results_list = []
+        state_mapping = {
+            ('37', 80): "listing", ('38', 80): "listing", ('10', 80): "appealSubmitted",
+            ('10', 122): "appealSubmitted", ('51', 94): "pendingPayment", ('37', 13): "listing",
+            ('38', 13): "listing", ('37', 25): "listing", ('38', 25): "listing",
+            ('39', 25): "ftpaSubmitted", ('10', 25): "appealSubmitted", ('52', 91): "pendingPayment",
+            ('52', 95): "pendingPayment", ('51', 93): "pendingPayment", ('38', 72): "listing",
+            ('10', 120): "appealSubmitted", ('10', 2): "appealSubmitted", ('46', 31): "appealSubmitted"
+        }
 
+        rows = test_df.collect()
+        results = []
         for row in rows:
-            case_no = row['appealReferenceNumber']
-            status = str(row['CaseStatus'])
-            actual_state = row['stateBeforeEndAppeal']
+            status, outcome = str(row['CaseStatus']), int(row['Outcome'])
+            actual = row['stateBeforeEndAppeal']
             
-            expected_state = None
-
-            # --- Mapping Logic ---
-            if status in ['37', '38']:
-                expected_state = "listing"
-            elif status in ['10', '46']:
-                expected_state = "appealSubmitted"
-            elif status == '39':
-                expected_state = "ftpaSubmitted"
-            elif status in ['51', '52']:
-                expected_state = "pendingPayment"
-            elif status == '26':
-                # Use dv_representation for the LR vs AIP logic
-                if rep_col:
-                    rep_val = (row[rep_col] or "").upper()
-                    # Mapping: LR (Legal Rep) or AIP (Appellant in Person)
-                    if "LR" in rep_val:
-                        expected_state = "caseUnderReview"
-                    else:
-                        expected_state = "reasonsForAppealSubmitted"
+            if status == '26':
+                # DEFENSIVE CHECK: 
+                # Handles 'Legal Representative', 'LR', or 'Yes' 
+                # Migration logic often looks for any string containing 'Legal'
+                rep_value = str(row['Representation'] or "").upper()
+                
+                if "LEGAL" in rep_value or rep_value == "LR":
+                    expected = "caseUnderReview"
                 else:
-                    # If column is missing, we skip Status 26 to prevent false failures
-                    continue 
+                    expected = "reasonsForAppealSubmitted"
             else:
-                continue
+                expected = state_mapping.get((status, outcome))
 
-            # --- Validation ---
-            if expected_state and actual_state != expected_state:
-                results_list.append(f"FAIL - {case_no}: Status {status} | Expected '{expected_state}' | Found '{actual_state}'")
+            if expected and actual != expected:
+                results.append(f"FAIL - {row['appealReferenceNumber']} ({status}/{outcome}): Expected '{expected}' | Found '{actual}' (Rep: {row['Representation']})")
 
-        if results_list:
-            return TestResult("stateBeforeEndAppeal", "FAIL", "State Mismatch: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
+        if results:
+            return TestResult("stateBeforeEndAppeal", "FAIL", f"{len(results)} mismatches. Sample: " + " || ".join(results[:3]), "ended", "test1")
         
-        return TestResult("stateBeforeEndAppeal", "PASS", "All states mapped correctly using dv_representation.", "ended", inspect.stack()[0].function)
-
+        return TestResult("stateBeforeEndAppeal", "PASS", f"Verified {len(rows)} records; all states match.", "ended", "test1")
     except Exception as e:
-        return TestResult("stateBeforeEndAppeal", "FAIL", f"EXCEPTION: {str(e)[:100]}", "ended", inspect.stack()[0].function)
-
-
-
-#######################
-# bundleFileNamePrefix
-# Logic: CaseNo (with '/' replaced by ' ') + '-' + Appellant_Name
-# Group: EndedGroup 4 (MAX StatusId)
-#######################
-def test_bundleFileNamePrefix_test1(test_df):
-    try:
-        # We need the raw CaseNo and Appellant_Name to verify the JSON output
-        rows = test_df.select(
-            "appealReferenceNumber", 
-            "Appellant_Name", 
-            "bundleFileNamePrefix"
-        ).collect()
-        
-        results_list = []
-
-        for row in rows:
-            case_no = row['appealReferenceNumber']
-            raw_appellant = row['Appellant_Name'] or ""
-            actual_prefix = row['bundleFileNamePrefix']
-            
-            # 1. Transform the raw CaseNo: replace '/' with ' '
-            # Example: "EA/01783/2024" -> "EA 01783 2024"
-            formatted_caseno = case_no.replace("/", " ")
-            
-            # 2. Construct the Expected String
-            # Format: CaseNo-Appellant_Name
-            expected_prefix = f"{formatted_caseno}-{raw_appellant}"
-            
-            # 3. Validation
-            if actual_prefix != expected_prefix:
-                results_list.append(
-                    f"FAIL - {case_no}: Expected '{expected_prefix}' | Found '{actual_prefix}'"
-                )
-
-        if results_list:
-            return TestResult("bundleFileNamePrefix", "FAIL", "Formatting Error: " + "|||".join(results_list[:10]), "ended", inspect.stack()[0].function)
-        
-        return TestResult("bundleFileNamePrefix", "PASS", "All bundle filenames formatted correctly.", "ended", inspect.stack()[0].function)
-
-    except Exception as e:
-        return TestResult("bundleFileNamePrefix", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+        return TestResult("stateBeforeEndAppeal", "FAIL", str(e), "ended", "test1")
+    

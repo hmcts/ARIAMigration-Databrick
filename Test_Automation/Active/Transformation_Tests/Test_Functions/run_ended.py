@@ -125,7 +125,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_isDecisionAllowed_test2(test_df))
 
         # ---------------------------------------------------------
-        # 5. hearingActuals Tests
+        # 6. hearingActuals Tests
         # ---------------------------------------------------------
     if test_data_setup is True and test_df is not None:
         if "attendingJudge" not in fields_to_exclude:
@@ -134,7 +134,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
         
         # ---------------------------------------------------------
-        # 5. ftpa Tests
+        # 7. ftpa Tests
         # ---------------------------------------------------------
     if test_data_setup is True and test_df is not None:
         if "ftpaApplicationDeadline" not in fields_to_exclude:
@@ -166,7 +166,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test3(test_df))
             all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test4(test_df))
         # ---------------------------------------------------------
-        # 7. additionalInstructionsTribunalResponse Test
+        # 8. additionalInstructionsTribunalResponse Test
         # ---------------------------------------------------------
         test_data_setup = None
         test_df, test_data_setup =  ended_tests.test_additionalInstructionsTribunalResponse_init(json_data, M3_silver, M6_bronze)
@@ -176,11 +176,13 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if test_df != None:
             all_test_results.append(ended_tests.test_additionalInstructionsTribunalResponse(test_df))
         # ---------------------------------------------------------
-        # 8. Ended Tests
+        # 9. Ended Tests
         # ---------------------------------------------------------
-        test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze)    
+        test_df, test_data_setup = ended_tests.test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver)
         if "endAppealOutcome" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_endAppealOutcome_test1(test_df))
+        if "endAppealOutcomeReason" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_endAppealOutcomeReason_test1(test_df))            
         if "endAppealApproverType" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_endAppealApproverType_test1(test_df))            
         if "endAppealApproverName" not in fields_to_exclude:
@@ -189,7 +191,98 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_endAppealDate_test1(test_df))
         if "stateBeforeEndAppeal" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_stateBeforeEndAppeal_test1(test_df))
+
+    # ---------------------------------------------------------
+    # 10. general Tests
+    # ---------------------------------------------------------
+    test_df, test_data_setup = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver)
+
+    if test_data_setup is True and test_df is not None:
+        
+        if "ftpaAppellantSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmitted_test2(test_df))
+        if "isFtpaAppellantDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantDocsVisibleInDecided_test2(test_df))
+        if "isFtpaAppellantDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaAppellantOotDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df))
+        if "isFtpaAppellantOotDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test3(test_df))
+        if "isFtpaAppellantGroundsDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInDecided_test2(test_df))
+        if "isFtpaAppellantEvidenceDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantEvidenceDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantEvidenceDocsVisibleInDecided_test2(test_df))
+        if "isFtpaAppellantGroundsDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaAppellantEvidenceDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaAppellantOotExplanationVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test3(test_df))
+        if "isFtpaAppellantOotExplanationVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df))
         if "bundleFileNamePrefix" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_bundleFileNamePrefix_test1(test_df)) 
+        if "ftpaRespondentSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_ftpaRespondentSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_ftpaRespondentSubmitted_test2(test_df))
+        if "isFtpaRespondentDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentDocsVisibleInDecided_test2(test_df))
+        if "isFtpaRespondentDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaRespondentOotDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInDecided_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInDecided_test3(test_df))
+        if "isFtpaRespondentOotDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInSubmitted_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotDocsVisibleInSubmitted_test3(test_df))
+        if "isFtpaRespondentGroundsDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentGroundsDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(test_df))
+        if "isFtpaRespondentEvidenceDocsVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentEvidenceDocsVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(test_df))
+        if "isFtpaRespondentGroundsDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaRespondentEvidenceDocsVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test2(test_df))
+        if "isFtpaRespondentOotExplanationVisibleInDecided" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInDecided_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInDecided_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInDecided_test3(test_df))
+        if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test1(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(test_df))
+            all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(test_df))
 
+    # ---------------------------------------------------------
+    # 11. appellantInterpreter Tests
+    # ---------------------------------------------------------
+        test_df, test_data_setup =  ended_tests.test_languages_init(json_data, M1_bronze, M3_bronze)
+        if test_data_setup != True:
+                all_test_results.append(test_data_setup)
+
+        if test_df != None:
+            all_test_results.append(ended_tests.test_languageInterpreterMapping(test_df))
         return classify_all(all_test_results)

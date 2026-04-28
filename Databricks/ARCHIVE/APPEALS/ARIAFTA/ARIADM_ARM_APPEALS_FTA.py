@@ -3099,7 +3099,7 @@ def silver_appealcase_detail():
         "ap.CaseType",
         "ap.AppealTypeId",
         "ap.DateLodged",
-        # "ap.DateReceived",
+        "ap.DateReceived",
         "ap.PortId",
         "ap.HORef",
         "ap.DateServed",
@@ -4280,10 +4280,14 @@ def silver_documents_detail():
     documents_df = dlt.read("bronze_appealcase_dr_rd").alias("doc")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
-    cols = [c for c in documents_df.columns if c != "DoNotUse"]
+    cols = [c for c in documents_df.columns if c != "DoNotUse" and c != "DateReceived"]
     joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "left") \
         .withColumn("DocumentsReceived", when(col("doc.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None))) \
-        .select([col(f"doc.{c}") for c in cols] + [col("DocumentsReceived")])
+        .select(
+            *[col(f"doc.{c}") for c in cols],
+            col("doc.DateReceived").alias("DocumentsDateReceived"),
+            col("DocumentsReceived")
+        )
      
     return joined_df
 
@@ -5039,7 +5043,7 @@ def generate_html(row, templates=templates):
                 for i, linkedcostaward in enumerate(row.LinkedCostAwardDetails or [])
             ),
             "{{DocumentTrackingPlaceHolder}}": "\n".join(
-                f"<tr><td id=\"midpadding\">{doc.DocumentDescription}</td><td id=\"midpadding\">{format_date(doc.DateRequested)}</td><td id=\"midpadding\">{format_date(doc.DateRequired)}</td><td id=\"midpadding\">{format_date(doc.DateReceived)}</td><td id=\"midpadding\">{format_date(doc.RepresentativeDate)}</td><td id=\"midpadding\">{format_date(doc.POUDate)}</td><td id=\"midpadding\" style=\"text-align:center\">{'&#9745;' if doc.NoLongerRequired else '&#9744'}</td></tr>"
+                f"<tr><td id=\"midpadding\">{doc.DocumentDescription}</td><td id=\"midpadding\">{format_date(doc.DateRequested)}</td><td id=\"midpadding\">{format_date(doc.DateRequired)}</td><td id=\"midpadding\">{format_date(doc.DocumentsDateReceived)}</td><td id=\"midpadding\">{format_date(doc.RepresentativeDate)}</td><td id=\"midpadding\">{format_date(doc.POUDate)}</td><td id=\"midpadding\" style=\"text-align:center\">{'&#9745;' if doc.NoLongerRequired else '&#9744'}</td></tr>"
                 for i, doc in enumerate(row.DocumentDetails or [])
             ),
             "{{NewMattersPlaceHolder}}": "\n".join(
@@ -5908,7 +5912,7 @@ def stg_apl_combined():
     )
 
     df_documents = dlt.read("silver_documents_detail").groupBy("CaseNo").agg(
-        collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'Auditable')).alias("DocumentDetails")
+        collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DocumentsDateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'Auditable')).alias("DocumentDetails")
     )
 
     df_hearingpointshistory = dlt.read("silver_hearingpointshistory_detail").groupBy("CaseNo").agg(

@@ -280,7 +280,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_decided_outcome = silver_m3_filtered.join(silver_c_filtered, on="CaseNo", how="left")
 
     silver_m3_max_casestatus_no_filter = (
-        silver_m3.filter((col("Outcome").isNotNull()) & (col("OutOfTime") == True))
+        silver_m3.filter((col("Outcome").isNotNull()))
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1)
             .select("CaseNo",col("Outcome").alias("Outcome_no_filter"),col("CaseStatus").alias("CaseStatus_max_no_filter"),col("OutOfTime").alias("OutOfTime_no_filter"))

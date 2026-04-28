@@ -335,7 +335,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         col("CaseNo"),
         col("Outcome"),
         col("OutOfTime"),
-        lit("Yes").alias("recordedOutOfTimeDecision")
+        # lit("Yes").alias("recordedOutOfTimeDecision")
     )
 
     conditions = (col("lu_appealType").isNotNull())
@@ -365,6 +365,8 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     ).withColumn(
         "tribunalReceivedDate", date_format(col("m1.DateAppealReceived"), "yyyy-MM-dd")
     ).withColumn(
+        "recordedOutOfTimeDecision",when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("Yes")).otherwise(None)
+    ).withColumn(
         "outOfTimeDecisionType",when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("approved")).otherwise(None)
     ).withColumn(
         "outOfTimeDecisionMaker", when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("Tribunal Caseworker")).otherwise(None)
@@ -372,7 +374,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         "CaseNo", 
         col("appellantsRepresentation"),
         when(conditions, col("submissionOutOfTime")).otherwise(None).alias("submissionOutOfTime"),
-        when(conditions, col("m3.recordedOutOfTimeDecision")).otherwise(None).alias("recordedOutOfTimeDecision"),
+        # when(conditions, col("m3.recordedOutOfTimeDecision")).otherwise(None).alias("recordedOutOfTimeDecision"),
         when(conditions, col("applicationOutOfTimeExplanation")).otherwise(None).alias("applicationOutOfTimeExplanation"), 
         when(conditions, col("hearing.hearingCentre")).otherwise(None).alias("hearingCentre"),
         when(conditions, col("hearing.staffLocation")).otherwise(None).alias("staffLocation"),
@@ -389,6 +391,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         when(conditions, lit("NotSure")).otherwise(None).alias("hasOtherAppeals"),
         col("outOfTimeDecisionType"),
         col("outOfTimeDecisionMaker"),
+        col("recordedOutOfTimeDecision"),
     ).distinct()
 
 

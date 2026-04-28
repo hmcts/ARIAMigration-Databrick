@@ -604,7 +604,12 @@ def test_remission_init(json, M1_bronze, M4_bronze):
 
         M4_bronze = M4_bronze.select(
             "CaseNo",
-            "Amount"
+            "Amount",
+            "Status",
+            "TransactionTypeId",
+            "ReferringTransactionId",
+            "SumTotalFee",
+            "TransactionId"
         )
 
         test_df = json.join(
@@ -798,10 +803,30 @@ def test_amountLeftToPay_test1(test_df):
             (col("Amount").isNotNull())
             ).count() == 0:
             return TestResult("amountLeftToPay", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        # --- STEP 1: Identify "Bad" IDs to exclude ---
+        # SQL: SELECT ReferringTransactionId FROM m4 WHERE TransactionTypeId IN (6,19)
+        excluded_ids = test_df.filter(F.col("TransactionTypeId").isin(6, 19)) \
+                            .select(F.col("ReferringTransactionId").alias("ref_id")) \
+                            .filter(F.col("ref_id").isNotNull()) \
+                            .distinct()
+
+        # --- STEP 2: Apply the Filter (SumTotalFee = 1 and Anti-Join) ---
+        # SQL: WHERE SumTotalFee = 1 AND TransactionID NOT IN (...)
+        selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
+            .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
+
+        # --- STEP 3: Group By CaseNo logic ---
+        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
+        # we pick the latest Transaction per Case to represent the group.
+        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
+
+        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
+            .filter(F.col("rank") == 1)
 
         case_window = Window.partitionBy("CaseNo")
 
-        acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
+        acceptance_critera = final_row_to_test.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
         .filter(
         (
             (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
@@ -813,9 +838,9 @@ def test_amountLeftToPay_test1(test_df):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("amountLeftToPay","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) != amountLeftToPay", test_from_state, inspect.stack()[0].function)
+            return TestResult("amountLeftToPay","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) != amountLeftToPay", test_from_state, inspect.stack()[0].function), acceptance_critera
         else:
-            return TestResult("amountLeftToPay","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have Sum(M4.Amount) == amountLeftToPay”", test_from_state, inspect.stack()[0].function)
+            return TestResult("amountLeftToPay","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have Sum(M4.Amount) == amountLeftToPay”", test_from_state, inspect.stack()[0].function), None
     except Exception as e:
         error_message = str(e)
         return TestResult("amountLeftToPay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -832,18 +857,39 @@ def test_amountLeftToPay_test2(test_df):
             ).count() == 0:
             return TestResult("amountLeftToPay", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
+        # --- STEP 1: Identify "Bad" IDs to exclude ---
+        # SQL: SELECT ReferringTransactionId FROM m4 WHERE TransactionTypeId IN (6,19)
+        excluded_ids = test_df.filter(F.col("TransactionTypeId").isin(6, 19)) \
+                            .select(F.col("ReferringTransactionId").alias("ref_id")) \
+                            .filter(F.col("ref_id").isNotNull()) \
+                            .distinct()
+
+        # --- STEP 2: Apply the Filter (SumTotalFee = 1 and Anti-Join) ---
+        # SQL: WHERE SumTotalFee = 1 AND TransactionID NOT IN (...)
+        selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
+            .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
+
+        # --- STEP 3: Group By CaseNo logic ---
+        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
+        # we pick the latest Transaction per Case to represent the group.
+        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
+
+        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
+            .filter(F.col("rank") == 1)
+
+        case_window = Window.partitionBy("CaseNo")
+
+        acceptance_critera = final_row_to_test.filter(
         (
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
             (col("PaymentRemissionGranted") != 1)
         ) &
             col("amountLeftToPay").isNotNull()
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("amountLeftToPay","FAIL", f"amountLeftToPay acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountLeftToPay is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("amountLeftToPay","FAIL", f"amountLeftToPay acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountLeftToPay is not null", test_from_state, inspect.stack()[0].function), acceptance_critera
         else:
-            return TestResult("amountLeftToPay","PASS", "amountLeftToPay acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 have amountLeftToPay is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("amountLeftToPay","PASS", "amountLeftToPay acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 have amountLeftToPay is null", test_from_state, inspect.stack()[0].function), None
     except Exception as e:
         error_message = str(e)
         return TestResult("amountLeftToPay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -859,6 +905,26 @@ def test_amountLeftToPay_test3(test_df):
             (col("PaymentRemissionGranted") == 1)
             ).count() == 0:
             return TestResult("amountLeftToPay", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # --- STEP 1: Identify "Bad" IDs to exclude ---
+        # SQL: SELECT ReferringTransactionId FROM m4 WHERE TransactionTypeId IN (6,19)
+        excluded_ids = test_df.filter(F.col("TransactionTypeId").isin(6, 19)) \
+                            .select(F.col("ReferringTransactionId").alias("ref_id")) \
+                            .filter(F.col("ref_id").isNotNull()) \
+                            .distinct()
+
+        # --- STEP 2: Apply the Filter (SumTotalFee = 1 and Anti-Join) ---
+        # SQL: WHERE SumTotalFee = 1 AND TransactionID NOT IN (...)
+        selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
+            .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
+
+        # --- STEP 3: Group By CaseNo logic ---
+        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
+        # we pick the latest Transaction per Case to represent the group.
+        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
+
+        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
+            .filter(F.col("rank") == 1)
 
         acceptance_critera = test_df.filter(
         (
@@ -888,7 +954,10 @@ def test_amountRemitted_test1(test_df):
             ).count() == 0:
             return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        case_window = Window.partitionBy("CaseNo")
+        test_df = test_df.filter(
+            (col("TransactionTypeId") == 5) &
+            (col("Status") != 3)
+        )
 
         acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
         .filter(
@@ -921,6 +990,11 @@ def test_amountRemitted_test2(test_df):
             ).count() == 0:
             return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
+        test_df = test_df.filter(
+            (col("TransactionTypeId") == 5) &
+            (col("Status") != 3)
+        )
+
         acceptance_critera = test_df.filter(
         (
             (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
@@ -948,6 +1022,11 @@ def test_amountRemitted_test3(test_df):
             (col("PaymentRemissionGranted") == 1)
             ).count() == 0:
             return TestResult("amountRemitted", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        test_df = test_df.filter(
+            (col("TransactionTypeId") == 5) &
+            (col("Status") != 3)
+        )
 
         acceptance_critera = test_df.filter(
         (

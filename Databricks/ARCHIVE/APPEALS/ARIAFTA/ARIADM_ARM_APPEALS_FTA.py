@@ -959,7 +959,8 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             col("ac.StatutoryClosureDate"), col("ac.PubliclyFunded"), col("ac.NonStandardSCPeriod"),
             col("ac.CourtPreference"), col("ac.ProvisionalDestructionDate"), col("ac.DestructionDate"),
             col("ac.FileInStatutoryClosure"), col("ac.DateOfNextListedHearing"),
-            col("ac.DocumentsReceived"), col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
+            # col("ac.DocumentsReceived"),
+            col("ac.OutOfTimeIssue"), col("ac.ValidityIssues"),
             col("ac.ReceivedFromRespondent"), col("ac.DateAppealReceived"), col("ac.RemovalDate"),
             col("ac.CaseOutcomeId"), col("ac.AppealReceivedBy"), col("ac.InCamera"),col('ac.SecureCourtRequired'),
             col("ac.DateOfApplicationDecision"), col("ac.UserId"), col("ac.SubmissionURN"),
@@ -1156,6 +1157,78 @@ def bronze_appealcase_ca_apt_country_detc():
         )
         
     return df
+
+# COMMAND ----------
+
+def bronze_appealcase_ca_apt_country_detc():
+
+    window = Window.partitionBy("ca.AppellantId")
+    df = spark.read.table("hive_metastore.ariadm_arm_fta.raw_caseappellant").alias("ca") \
+        .join(
+            spark.read.table("hive_metastore.ariadm_arm_fta.raw_appellant").alias("a"),
+            col("ca.AppellantId") == col("a.AppellantId"),
+            "left_outer"
+        ).join(
+            spark.read.table("hive_metastore.ariadm_arm_fta.raw_detentioncentre").alias("dc"),
+            col("a.DetentionCentreId") == col("dc.DetentionCentreId"),
+            "left_outer"
+        ).join(
+            spark.read.table("hive_metastore.ariadm_arm_fta.raw_country").alias("c"),
+            col("a.AppellantCountryId") == col("c.CountryId"),
+            "left_outer"
+        ).withColumn("connectedFiles", when(count("ca.AppellantId").over(window) > 1, lit("Connected Files Exist")).otherwise(lit(None))).select(
+            # Case Appellant fields
+            col("ca.AppellantId"),
+            trim(col("ca.CaseNo")).alias('CaseNo'),
+            col("ca.Relationship").alias("CaseAppellantRelationship"),
+            
+            # Appellant fields
+            col("a.PortReference"),
+            col("a.Name").alias("AppellantName"),
+            col("a.Forenames").alias("AppellantForenames"),
+            col("a.Title").alias("AppellantTitle"),
+            col("a.BirthDate").alias("AppellantBirthDate"),
+            col("a.Address1").alias("AppellantAddress1"),
+            col("a.Address2").alias("AppellantAddress2"),
+            col("a.Address3").alias("AppellantAddress3"),
+            col("a.Address4").alias("AppellantAddress4"),
+            col("a.Address5").alias("AppellantAddress5"),
+            col("a.Postcode").alias("AppellantPostcode"),
+            col("a.Telephone").alias("AppellantTelephone"),
+            col("a.Fax").alias("AppellantFax"),
+            col("a.Detained"),
+            col("a.Email").alias("AppellantEmail"),
+            col("a.FCONumber"),
+            col("a.PrisonRef"),
+            
+            # Detention Centre fields
+            col("dc.Centre").alias("DetentionCentre"),
+            col("dc.CentreTitle"),
+            col("dc.DetentionCentreType"),
+            col("dc.Address1").alias("DCAddress1"),
+            col("dc.Address2").alias("DCAddress2"),
+            col("dc.Address3").alias("DCAddress3"),
+            col("dc.Address4").alias("DCAddress4"),
+            col("dc.Address5").alias("DCAddress5"),
+            col("dc.Postcode").alias("DCPostcode"),
+            col("dc.Fax").alias("DCFax"),
+            col("dc.Sdx").alias("DCSdx"),
+            
+            # Country fields
+            col("c.Country"),
+            col("c.Nationality"),
+            col("c.Code"),
+            col("c.DoNotUse").alias("DoNotUseCountry"),
+            col("c.Sdx").alias("CountrySdx"),
+            col("c.DoNotUseNationality"),
+            "connectedFiles"
+
+        )
+        
+    return df
+
+df = bronze_appealcase_ca_apt_country_detc()
+df.display()
 
 # COMMAND ----------
 
@@ -3026,7 +3099,7 @@ def silver_appealcase_detail():
         "ap.CaseType",
         "ap.AppealTypeId",
         "ap.DateLodged",
-        "ap.DateReceived",
+        # "ap.DateReceived",
         "ap.PortId",
         "ap.HORef",
         "ap.DateServed",
@@ -3054,7 +3127,7 @@ def silver_appealcase_detail():
         "ap.DestructionDate",
         when(col("ap.FileInStatutoryClosure") == True,'checked').when(col("ap.FileInStatutoryClosure") == False, 'disabled').otherwise('disabled').alias("FileInStatutoryClosure"),
         when(col("ap.DateOfNextListedHearing") == True,'checked').when(col("ap.DateOfNextListedHearing") == False, 'disabled').otherwise('disabled').alias("DateOfNextListedHearing"),
-        when(col("ap.DocumentsReceived") == 0, 'Documents exist').when(col("ap.DocumentsReceived") == 1, 'Documents exist').when(col("ap.DocumentsReceived") == 2, '').otherwise('').alias("DocumentsReceived"),
+        # when(col("ap.DocumentsReceived") == 0, 'Documents exist').when(col("ap.DocumentsReceived") == 1, 'Documents exist').when(col("ap.DocumentsReceived") == 2, '').otherwise('').alias("DocumentsReceived"),
         when(col("ap.OutOfTimeIssue") == 1, 'checked').when(col("ap.OutOfTimeIssue") == 0, 'disabled').otherwise('disabled').alias("OutOfTimeIssue"),
         when(col("ap.ValidityIssues") == 1, 'checked').when(col("ap.ValidityIssues") == 0, 'disabled').otherwise('disabled').alias("validityIssues"),
         "ap.ReceivedFromRespondent",
@@ -4207,7 +4280,10 @@ def silver_documents_detail():
     documents_df = dlt.read("bronze_appealcase_dr_rd").alias("doc")
     flt_df = dlt.read("stg_appeals_filtered").alias("flt")
 
-    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner").withColumn("DocumentsReceived", when(col("doc.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None))).select("doc.*", "DocumentsReceived")
+    cols = [c for c in documents_df.columns if c != "DoNotUse"]
+    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "left") \
+        .withColumn("DocumentsReceived", when(col("doc.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None))) \
+        .select([col(f"doc.{c}") for c in cols] + [col("DocumentsReceived")])
      
     return joined_df
 
@@ -5789,6 +5865,7 @@ def stg_apl_combined():
     df_case_detail = dlt.read("silver_case_detail")
     #M22
     # df_hearingpointschange = dlt.read("silver_hearingpointschange_detail")
+    df_m15 = dlt.read("silver_documents_detail")
 
     df_hearingpointschange = dlt.read("silver_hearingpointschange_detail").groupBy("CaseNo").agg(
     collect_list(
@@ -5831,7 +5908,7 @@ def stg_apl_combined():
     )
 
     df_documents = dlt.read("silver_documents_detail").groupBy("CaseNo").agg(
-        collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'DoNotUse', 'Auditable')).alias("DocumentDetails")
+        collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'Auditable')).alias("DocumentDetails")
     )
 
     df_hearingpointshistory = dlt.read("silver_hearingpointshistory_detail").groupBy("CaseNo").agg(
@@ -5938,6 +6015,7 @@ def stg_apl_combined():
     # Join all tables
     df_combined = (
         df_appealcase
+        .join(df_m15, "CaseNo", "left")
         .join(df_applicant, "CaseNo", "left")
         .join(df_dependent, "CaseNo", "left")
         .join(df_list_detail, "CaseNo", "left")

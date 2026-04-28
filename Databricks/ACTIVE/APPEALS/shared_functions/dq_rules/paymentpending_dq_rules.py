@@ -80,13 +80,13 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         checks["valid_outOfTimeDecisionType"] = (
-            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND OutOfTime_no_filter = True AND outOfTimeDecisionType = 'approved') 
+            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND outOfTimeDecisionType = 'approved') 
                 OR (outOfTimeDecisionType IS NULL)     
             """
         )
 
         checks["valid_outOfTimeDecisionMaker"] = (
-            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND OutOfTime_no_filter = True AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
+            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
                 OR (outOfTimeDecisionMaker IS NULL)
             """
         )

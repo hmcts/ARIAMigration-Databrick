@@ -323,7 +323,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     # Define window partitioned by CaseNo and ordered by descending StatusId
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered = silver_m3.filter((col("Outcome").isNotNull()) & (col("OutOfTime") == True))
+    silver_m3_filtered = silver_m3.filter((col("Outcome").isNotNull()) )
 
     # Add row_number to get the row with the highest StatusId per CaseNo
     silver_m3_ranked = silver_m3_filtered.withColumn("row_num", row_number().over(window_spec))

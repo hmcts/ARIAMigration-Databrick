@@ -96,18 +96,46 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if "hearingChannel" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_hearingChannel_test1(test_df))
             all_test_results.append(ended_tests.test_hearingChannel_test2(test_df))
+
         if "listingLocation" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listingLocation_test1(test_df))
+
         if "listCaseHearingLength" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listCaseHearingLength_test1(test_df))
+
         if "listCaseHearingDate" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listCaseHearingDate_test1(test_df))
+
         if "listCaseHearingCentre" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listCaseHearingCentre_test1(test_df))
+
         if "listCaseHearingCentreAddress" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))        
-    elif test_data_setup is not True:
-        all_test_results.append(test_data_setup)
+            all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))
+
+        if "isInCameraCourtAllowed" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isInCameraCourtAllowed_test1(test_df))
+            all_test_results.append(ended_tests.test_isInCameraCourtAllowed_test2(test_df))
+
+        if "inCameraCourtTribunalResponse" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_inCameraCourtTribunalResponse_test1(test_df))
+            all_test_results.append(ended_tests.test_inCameraCourtTribunalResponse_test2(test_df))
+
+        if "inCameraCourtDecisionForDisplay" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_inCameraCourtDecisionForDisplay_test1(test_df))
+            all_test_results.append(ended_tests.test_inCameraCourtDecisionForDisplay_test2(test_df))
+
+        if "isSingleSexCourtAllowed" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_isSingleSexCourtAllowed_test1(test_df))
+            all_test_results.append(ended_tests.test_isSingleSexCourtAllowed_test2(test_df))
+
+        if "singleSexCourtTribunalResponse" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_singleSexCourtTribunalResponse_test1(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourtTribunalResponse_test2(test_df))
+
+        if "singleSexCourtDecisionForDisplay" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_singleSexCourtDecisionForDisplay_test1(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourtDecisionForDisplay_test2(test_df))
+
 
         # ---------------------------------------------------------
         # 5. substantiveDecision Tests

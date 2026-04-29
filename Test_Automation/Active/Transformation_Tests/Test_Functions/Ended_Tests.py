@@ -203,16 +203,15 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
     }
 
     try:
-        # Step 1: Explicitly FAIL omitted fields
+        # FAIL omitted fields
         for field in omitted_fields:
             if field in fields_to_exclude: continue
             results_list.append(TestResult(field, "FAIL", "No data to test: Field omitted from ended state", "ended", "omitted_check"))
 
-        # Step 2: Loop for Simple Defaults
+
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude or field in omitted_fields: continue
             
-            # Override for fields confirmed as "Yes" in ended Groups
             current_expected = "Yes" if field in ["uploadHomeOfficeBundleAvailable", "reviewedHearingRequirements"] else expected
 
             valid_groups = group_requirements.get(field, [1, 2, 3, 4])
@@ -977,7 +976,7 @@ def test_inCameraCourt_test2(test_df):
 
 def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze):
     try:
-        # Using a very unique name 'json_df_input' to avoid any conflict with 'json' module
+
         test_df = json_data.select(
             "appealReferenceNumber",
             "isAppealSuitableToFloat",
@@ -1000,35 +999,6 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "ftpaAppellantApplicationDate",
             "ftpaAppellantSubmissionOutOfTime",
             "ftpaAppellantOutOfTimeExplanation",
-            "endAppealOutcome",
-            "endAppealOutcomeReason",
-            "endAppealApproverType",
-            "endAppealApproverName",
-            "endAppealDate",
-            "stateBeforeEndAppeal",
-            "bundleFileNamePrefix",
-            "ftpaAppellantSubmitted",
-            "isFtpaAppellantDocsVisibleInDecided",
-            "isFtpaAppellantDocsVisibleInSubmitted",
-            "isFtpaAppellantOotDocsVisibleInDecided",
-            "isFtpaAppellantOotDocsVisibleInSubmitted",
-            "isFtpaAppellantGroundsDocsVisibleInDecided",
-            "isFtpaAppellantEvidenceDocsVisibleInDecided",
-            "isFtpaAppellantGroundsDocsVisibleInSubmitted",
-            "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
-            "isFtpaAppellantOotExplanationVisibleInDecided",
-            "isFtpaAppellantOotExplanationVisibleInSubmitted",
-            "ftpaRespondentSubmitted",
-            "isFtpaRespondentDocsVisibleInDecided",
-            "isFtpaRespondentDocsVisibleInSubmitted",
-            "isFtpaRespondentOotDocsVisibleInDecided",
-            "isFtpaRespondentOotDocsVisibleInSubmitted",
-            "isFtpaRespondentGroundsDocsVisibleInDecided",
-            "isFtpaRespondentEvidenceDocsVisibleInDecided",
-            "isFtpaRespondentGroundsDocsVisibleInSubmitted",
-            "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
-            "isFtpaRespondentOotExplanationVisibleInDecided",
-            "isFtpaRespondentOotExplanationVisibleInSubmitted"
             # "ftpaRespondentApplicationDate",
             # "ftpaRespondentSubmissionOutOfTime",
             # "ftpaRespondentOutOfTimeExplanation"

@@ -20,8 +20,8 @@ DEFAULT_CHAIN_ORDER = [
     "decided(b)",
     "ftpaSubmitted(b)",
     "ftpaDecided",
-    "remitted",
     "ended",
+    "remitted",
 ]
 
 
@@ -97,14 +97,14 @@ def build_and_display(
                 field = str(row.get("test_field", "") or "").strip()
                 from_state = str(row.get("test_from_state", "") or "").strip()
                 run_state = str(row.get("run_state", "") or "").strip()
+                test_name = str(row.get("test_name", "") or "").strip()
                 rs = row["status_upper"]
                 run_id = row.get("run_id", "")
-                if not field or not from_state or not run_state: continue
+                if not field or not from_state or not run_state or not test_name: continue
                 if from_state not in active_states: continue
-                pair = (from_state, field)
+                pair = (from_state, field, test_name)
                 field_pair_runstate_runs[pair][run_state][run_id].append({
                     "status": rs,
-                    "test_name": row.get("test_name", ""),
                     "message": str(row.get("message", ""))[:300],
                 })
                 current = field_pair_runstate_best[pair].get(run_state, "")
@@ -162,17 +162,16 @@ def build_and_display(
 
             for pair, runs_map in field_pair_runstate_runs.items():
                 for run_state, rid_map in runs_map.items():
-                    names = []
+                    items = []
                     for rid, rlist in rid_map.items():
                         for r in rlist:
-                            tn = str(r.get("test_name", "") or "").strip()
                             st = r.get("status", "")
-                            if tn:
-                                names.append(f"{tn} [{st}]")
-                    if len(names) > 8:
-                        shown = names[:8] + [f"... +{len(names) - 8} more"]
+                            msg = (str(r.get("message", "") or ""))[:120]
+                            items.append(f"[{st}] {msg}")
+                    if len(items) > 4:
+                        shown = items[:4] + [f"... +{len(items) - 4} more"]
                     else:
-                        shown = names
+                        shown = items
                     pair_runstate_tooltip[(pair, run_state)] = _attr_safe(" | ".join(shown))
 
 
@@ -213,16 +212,16 @@ def build_and_display(
 
             # ---- Matrix rows ----
             def pair_sort(pair):
-                from_state, field = pair
+                from_state, field, test_name = pair
                 chain_idx = chain_order.index(from_state) if from_state in chain_order else 999
                 order = {"FAILED": 0, "ERROR": 1, "NEEDS DATA": 2, "PASSED": 3}
                 v_rank = order.get(pair_stats[pair]["verdict"], 3)
-                return (chain_idx, v_rank, field)
+                return (chain_idx, field, v_rank, test_name)
 
             field_rows = ""
             row_idx = 0
             for pair in sorted(pair_stats.keys(), key=pair_sort):
-                from_state, field = pair
+                from_state, field, test_name = pair
                 stats = pair_stats[pair]
                 verdict = stats["verdict"]
                 v_css = {"PASSED": "v-pass", "FAILED": "v-fail", "ERROR": "v-err", "NEEDS DATA": "v-nodata"}[verdict]
@@ -253,7 +252,7 @@ def build_and_display(
                 is_partial = 1 if stats["pass_states"] < stats["states_covered"] else 0
 
                 field_rows += (
-                    f'<tr class="field-row" data-field="{field.lower()}" data-verdict="{verdict}" '
+                    f'<tr class="field-row" data-field="{field.lower()}" data-testname="{test_name.lower()}" data-verdict="{verdict}" '
                     f'data-states="{state_data_attr}" data-fromstate="{from_state}" '
                     f'data-passstates="{stats["pass_states"]}" data-statescov="{stats["states_covered"]}" '
                     f'data-crashed="{is_crashed_chunk}" data-partial="{is_partial}" '
@@ -261,8 +260,9 @@ def build_and_display(
                     f'data-pass-count="{stats["pass"]}" data-fail-count="{stats["fail"]}" '
                     f'data-error-count="{stats["error"]}" data-nodata-count="{stats["nodata"]}" '
                     f'onclick="toggleDetail({row_idx})" style="cursor:pointer" title="Click to expand">'
-                    f'<td><b>{from_state}</b></td>'
-                    f'<td><b>{field}</b></td>'
+                    f'<td class="col-fromstate"><b>{from_state}</b></td>'
+                    f'<td class="col-fieldgroup">{field}</td>'
+                    f'<td class="col-test"><b>{test_name}</b></td>'
                     f'{state_cells}'
                     f'<td class="num">{stats["states_covered"]}</td>'
                     f'<td class="num pass">{stats["pass_states"]}</td>'
@@ -301,7 +301,7 @@ def build_and_display(
                             detail_html += (
                                 f'<tr>'
                                 f'<td></td>'
-                                f'<td>{r["test_name"]}</td>'
+                                f'<td>{test_name}</td>'
                                 f'<td class="{d_css}">{r["status"]}</td>'
                                 f'<td colspan="2">{r["message"]}</td>'
                                 f'</tr>\n'
@@ -309,7 +309,7 @@ def build_and_display(
                 if detail_html:
                     field_rows += (
                         f'<tr class="detail-row" id="detail-{row_idx}" data-parent="{row_idx}" style="display:none">'
-                        f'<td colspan="{9 + len(states_in_data)}">'
+                        f'<td colspan="{10 + len(states_in_data)}">'
                         f'<table style="width:100%;margin:4px 0;font-size:11px;background:#fafafa">'
                         f'<thead><tr><th>State</th><th>Test</th><th>Run / Status</th><th>Date</th><th>Detail</th></tr></thead>'
                         f'<tbody>{detail_html}</tbody>'
@@ -334,10 +334,11 @@ def build_and_display(
                 rid = row.get("run_id", "")
                 field = str(row.get("test_field", "") or "").strip()
                 fs = str(row.get("test_from_state", "") or "").strip()
+                tn = str(row.get("test_name", "") or "").strip()
                 st = row.get("status_upper", "") or ""
-                if not (rid and field and fs and st):
+                if not (rid and field and fs and tn and st):
                     continue
-                key = f"{fs}|{field}"
+                key = f"{fs}|{field}|{tn}"
                 cur = run_pair_status.get(rid, {}).get(key, "")
                 order = {"PASS": 4, "FAIL": 3, "ERROR": 2, "NO_DATA": 1, "": 0}
                 if order.get(st, 0) > order.get(cur, 0):
@@ -414,6 +415,9 @@ def build_and_display(
                 .csr #field-matrix.solid-heat td.hm-nd   {{background:#f39c12}}
                 .csr tr.group-header td:hover {{background:#2c3e50}}
                 .csr #cmp-out table {{margin-top:6px}}
+                .csr #field-matrix th.col-fromstate, .csr #field-matrix td.col-fromstate {{width:110px;min-width:110px;max-width:110px;word-break:break-word;white-space:normal}}
+                .csr #field-matrix th.col-fieldgroup, .csr #field-matrix td.col-fieldgroup {{width:140px;min-width:140px;max-width:140px;word-break:break-word;white-space:normal}}
+                .csr #field-matrix th.col-test, .csr #field-matrix td.col-test {{width:210px;min-width:210px;max-width:210px;word-break:break-word;white-space:normal;font-size:11px}}
             </style>
             <div class="csr">
                 <h2>Active Transformation and Default Mapping Test Coverage Report <span style="font-size:11px;color:#7f8c8d;font-weight:normal">{REPORT_VERSION}</span></h2>
@@ -487,6 +491,8 @@ def build_and_display(
                         <input type="text" id="filter-fromstate" class="text" placeholder="filter from_state..." oninput="applyFilters()" style="min-width:130px" />
                         <label>Field:</label>
                         <input type="text" id="filter-field" class="text" placeholder="filter field..." oninput="applyFilters()" style="min-width:130px" />
+                        <label>Test:</label>
+                        <input type="text" id="filter-test" class="text" placeholder="filter test..." oninput="applyFilters()" style="min-width:130px" />
                     </span>
                     <span class="group">
                         <button onclick="resetStatusFilters()" class="alt">Reset</button>
@@ -513,8 +519,9 @@ def build_and_display(
                 <div style="overflow-x:auto;max-height:700px;overflow-y:auto">
                     <table id="field-matrix">
                         <thead><tr>
-                            <th data-sort-key="fromstate">From State</th>
-                            <th data-sort-key="field">Field</th>
+                            <th class="col-fromstate" data-sort-key="fromstate">From State</th>
+                            <th class="col-fieldgroup" data-sort-key="field">FieldGroup</th>
+                            <th class="col-test" data-sort-key="testname">Test</th>
                             {state_header}
                             <th data-sort-key="statescov">States</th>
                             <th data-sort-key="passstates">Pass states</th>
@@ -550,7 +557,7 @@ def build_and_display(
             <script id="csr-script">
                 var RUN_PAIR_STATUS = {run_pair_status_json};
                 var RUN_META = {run_meta_json};
-                var FIELD_MATRIX_COLS = {len(states_in_data) + 2};  /* 2 fixed (From/Field) + state columns */
+                var FIELD_MATRIX_COLS = {len(states_in_data) + 3};  /* 3 fixed (From/FieldGroup/Test) + state columns */
 
                 function toggleDetail(idx) {{
                     var row = document.getElementById('detail-' + idx);
@@ -598,6 +605,8 @@ def build_and_display(
                     fsFilter = fsFilter.trim().toLowerCase();
                     var fdFilter = (document.getElementById('filter-field') || {{}}).value || '';
                     fdFilter = fdFilter.trim().toLowerCase();
+                    var tnFilter = (document.getElementById('filter-test') || {{}}).value || '';
+                    tnFilter = tnFilter.trim().toLowerCase();
                     var statusClasses = {{'PASS':'hm-pass','FAIL':'hm-fail','ERROR':'hm-err','NO_DATA':'hm-nd'}};
                     var rows = document.querySelectorAll('#field-matrix tbody tr.field-row');
                     var shown = 0;
@@ -614,6 +623,11 @@ def build_and_display(
                             return;
                         }}
                         if (fdFilter && rowFd.indexOf(fdFilter) === -1) {{
+                            row.classList.add('hidden');
+                            return;
+                        }}
+                        var rowTn = (row.getAttribute('data-testname') || '').toLowerCase();
+                        if (tnFilter && rowTn.indexOf(tnFilter) === -1) {{
                             row.classList.add('hidden');
                             return;
                         }}
@@ -653,6 +667,7 @@ def build_and_display(
                     document.querySelectorAll('.status-filter-cb').forEach(function(cb) {{ cb.checked = true; }});
                     var ffs = document.getElementById('filter-fromstate'); if (ffs) ffs.value = '';
                     var ffd = document.getElementById('filter-field'); if (ffd) ffd.value = '';
+                    var ftn = document.getElementById('filter-test'); if (ftn) ftn.value = '';
                     applyFilters();
                 }}
 
@@ -753,7 +768,7 @@ def build_and_display(
                 }}
                 function downloadFailuresCSV() {{
                     var rows = document.querySelectorAll('#field-matrix tbody tr.field-row');
-                    var header = ['from_state','field','verdict','states_covered','pass_states','P','F','E','ND','failed_in','errored_in'];
+                    var header = ['from_state','field_group','test_name','verdict','states_covered','pass_states','P','F','E','ND','failed_in','errored_in'];
                     var lines = [header.join(',')];
                     rows.forEach(function(r) {{
                         var v = r.getAttribute('data-verdict');
@@ -761,6 +776,7 @@ def build_and_display(
                         var vals = [
                             r.getAttribute('data-fromstate') || '',
                             r.getAttribute('data-field') || '',
+                            r.getAttribute('data-testname') || '',
                             v,
                             r.getAttribute('data-statescov') || '0',
                             r.getAttribute('data-passstates') || '0',
@@ -1076,7 +1092,7 @@ def build_and_display(
                         var sb = mb[k] || '';
                         if (sa === sb) return;
                         var parts = k.split('|');
-                        rows.push({{ from: parts[0], field: parts[1], a: sa, b: sb }});
+                        rows.push({{ from: parts[0], field: parts[1], test: parts[2], a: sa, b: sb }});
                     }});
                     var metaA = RUN_META[a] || {{}};
                     var metaB = RUN_META[b] || {{}};
@@ -1087,14 +1103,14 @@ def build_and_display(
                     var html = '<p><b>' + rows.length + '</b> differing pairs. ' +
                         'A = ' + (metaA.state||'?') + ' @ ' + (metaA.started||'?') + '. ' +
                         'B = ' + (metaB.state||'?') + ' @ ' + (metaB.started||'?') + '.</p>';
-                    html += '<table style="font-size:11px"><thead><tr><th>From</th><th>Field</th><th>Run A</th><th>Run B</th><th>Delta</th></tr></thead><tbody>';
+                    html += '<table style="font-size:11px"><thead><tr><th>From</th><th>FieldGroup</th><th>Test</th><th>Run A</th><th>Run B</th><th>Delta</th></tr></thead><tbody>';
                     function _cls(s){{ return ({{PASS:'pass',FAIL:'fail',ERROR:'error',NO_DATA:'nodata'}})[s] || ''; }}
                     rows.forEach(function(r){{
                         var delta;
                         if (r.a === 'PASS' && r.b !== 'PASS') delta = 'regressed';
                         else if (r.a !== 'PASS' && r.b === 'PASS') delta = 'fixed';
                         else delta = 'changed';
-                        html += '<tr><td>' + r.from + '</td><td><b>' + r.field + '</b></td>' +
+                        html += '<tr><td>' + r.from + '</td><td>' + r.field + '</td><td><b>' + r.test + '</b></td>' +
                             '<td class="' + _cls(r.a) + '">' + (r.a||'-') + '</td>' +
                             '<td class="' + _cls(r.b) + '">' + (r.b||'-') + '</td>' +
                             '<td>' + delta + '</td></tr>';

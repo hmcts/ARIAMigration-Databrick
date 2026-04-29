@@ -637,10 +637,11 @@ def build_and_display(
                             shown++;
                             return;
                         }}
+                        var statusToVerdict = {{'PASS':'PASSED','FAIL':'FAILED','ERROR':'ERROR','NO_DATA':'NEEDS DATA'}};
+                        var rowVerdict = row.getAttribute('data-verdict') || '';
                         var hasMatch = false;
                         for (var i = 0; i < active.length; i++) {{
-                            var cls = statusClasses[active[i]];
-                            if (cls && row.querySelector('td.' + cls)) {{ hasMatch = true; break; }}
+                            if (statusToVerdict[active[i]] === rowVerdict) {{ hasMatch = true; break; }}
                         }}
                         if (active.length === 0) hasMatch = false;
                         if (hasMatch) {{

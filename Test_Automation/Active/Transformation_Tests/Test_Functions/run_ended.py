@@ -2,12 +2,7 @@ import Test_Functions.Ended_Tests as ended_tests
 from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
-
-import Test_Functions.Ended_Tests as ended_tests
-from models.test_result import TestResult
-from Test_Functions.test_helpers import classify_all
-
-def run_all_ended_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silver, bac, M6_bronze, fields_to_exclude):
+def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silver, bac, M6_bronze, fields_to_exclude):
     all_test_results = []
 
     # ---------------------------------------------------------
@@ -178,7 +173,6 @@ def run_all_ended_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M
         all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test2(json_data, M3_bronze))
     if "ftpaRespondentSubmissionOutOfTime" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test1(json_data, M3_bronze))
-        all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test2(json_data, M3_bronze))
     if "ftpaRespondentOutOfTimeExplanation" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test1(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test2(json_data, M3_bronze))

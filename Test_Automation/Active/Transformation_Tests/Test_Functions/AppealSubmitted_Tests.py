@@ -50,7 +50,7 @@ def test_AS_defaultValues(test_df,fields_to_exclude):
         results_list = []
 
         #AC1
-        if field not in fields_to_exclude:                
+        if "paAppealTypePaymentOption" not in fields_to_exclude:                
             acceptance_critera_lr = test_df.filter(
                 ((col("dv_representation") == "LR") & (col("paAppealTypePaymentOption") != "payLater"))
             )
@@ -74,7 +74,7 @@ def test_AS_defaultValues(test_df,fields_to_exclude):
 
 
         #AC2
-        if field not in fields_to_exclude:    
+        if "paAppealTypeAipPaymentOption" not in fields_to_exclude:    
             acceptance_critera_aip = test_df.filter(
                 ((col("dv_representation") == "AIP") & (col("paAppealTypeAipPaymentOption") != "payLater"))
             )
@@ -98,7 +98,7 @@ def test_AS_defaultValues(test_df,fields_to_exclude):
 
 
         #AC3
-        if field not in fields_to_exclude:    
+        if "additionalPaymentInfo" not in fields_to_exclude:    
             acceptance_critera_payment = test_df.filter(
                 (col("additionalPaymentInfo") != "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.")
             )

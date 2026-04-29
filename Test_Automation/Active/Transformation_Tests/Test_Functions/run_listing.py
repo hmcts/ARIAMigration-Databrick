@@ -57,7 +57,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
 
     # -- HearingRequirements - language tests --
     test_data_setup = None
-    test_df, test_data_setup =  list_tests.test_languages_init(json_data, M1_bronze)
+    test_df, test_data_setup =  list_tests.test_languages_init(json_data, M1_bronze, M3_bronze)
     if test_data_setup != True:
          all_test_results.append(test_data_setup)
 

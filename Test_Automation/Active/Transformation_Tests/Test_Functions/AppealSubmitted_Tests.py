@@ -816,17 +816,9 @@ def test_amountLeftToPay_test1(test_df):
         selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
             .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
 
-        # --- STEP 3: Group By CaseNo logic ---
-        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
-        # we pick the latest Transaction per Case to represent the group.
-        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
-
-        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
-            .filter(F.col("rank") == 1)
-
         case_window = Window.partitionBy("CaseNo")
 
-        acceptance_critera = final_row_to_test.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
+        acceptance_critera = selected_rows.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
         .filter(
         (
             (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
@@ -838,9 +830,9 @@ def test_amountLeftToPay_test1(test_df):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("amountLeftToPay","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) != amountLeftToPay", test_from_state, inspect.stack()[0].function), acceptance_critera
+            return TestResult("amountLeftToPay","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and Sum(M4.Amount) != amountLeftToPay", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("amountLeftToPay","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have Sum(M4.Amount) == amountLeftToPay”", test_from_state, inspect.stack()[0].function), None
+            return TestResult("amountLeftToPay","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have Sum(M4.Amount) == amountLeftToPay”", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("amountLeftToPay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -869,17 +861,7 @@ def test_amountLeftToPay_test2(test_df):
         selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
             .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
 
-        # --- STEP 3: Group By CaseNo logic ---
-        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
-        # we pick the latest Transaction per Case to represent the group.
-        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
-
-        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
-            .filter(F.col("rank") == 1)
-
-        case_window = Window.partitionBy("CaseNo")
-
-        acceptance_critera = final_row_to_test.filter(
+        acceptance_critera = selected_rows.filter(
         (
             (col("PaymentRemissionGranted") != 1)
         ) &
@@ -887,9 +869,9 @@ def test_amountLeftToPay_test2(test_df):
         )
 
         if acceptance_critera.count() != 0:
-            return TestResult("amountLeftToPay","FAIL", f"amountLeftToPay acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountLeftToPay is not null", test_from_state, inspect.stack()[0].function), acceptance_critera
+            return TestResult("amountLeftToPay","FAIL", f"amountLeftToPay acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 and amountLeftToPay is not null", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("amountLeftToPay","PASS", "amountLeftToPay acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 have amountLeftToPay is null", test_from_state, inspect.stack()[0].function), None
+            return TestResult("amountLeftToPay","PASS", "amountLeftToPay acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + PaymentRemissionGranted != 1 have amountLeftToPay is null", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("amountLeftToPay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -918,15 +900,7 @@ def test_amountLeftToPay_test3(test_df):
         selected_rows = test_df.filter(F.col("SumTotalFee") == 1) \
             .join(excluded_ids, test_df.TransactionId == excluded_ids.ref_id, "left_anti")
 
-        # --- STEP 3: Group By CaseNo logic ---
-        # Since the SQL has a GROUP BY CaseNo but no specific aggregate in the SELECT,
-        # we pick the latest Transaction per Case to represent the group.
-        rank_window = Window.partitionBy("CaseNo").orderBy(F.col("TransactionId").desc())
-
-        final_row_to_test = selected_rows.withColumn("rank", F.row_number().over(rank_window)) \
-            .filter(F.col("rank") == 1)
-
-        acceptance_critera = test_df.filter(
+        acceptance_critera = selected_rows.filter(
         (
             (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"))) &
             (col("PaymentRemissionGranted") == 1)

@@ -383,8 +383,7 @@ def test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, bac):
         # 3. Prepare BAC table for CategoryId
         bac_clean = bac.select(col("CaseNo").alias("bac_CaseNo"), "CategoryId")
 
-        # 4. Process M3 for Latest Status and EndedGroup
-        # Note: If get_ended_group_id needs CategoryId, we join bac to M3 first
+
         m3_with_cat = M3_bronze.join(bac_clean, M3_bronze["CaseNo"] == bac_clean["bac_CaseNo"], "left")
         
         history_with_groups = get_ended_group_id(m3_with_cat)
@@ -401,8 +400,6 @@ def test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, bac):
                                                "EndedGroup",
                                            )
 
-        # 5. Master Join
-        # Start with JSON -> Add M1 Metadata -> Add Latest M3 Status/Group
         test_df = test_df.join(
             m1_clean,
             test_df["appealReferenceNumber"] == m1_clean["m1_CaseNo"],
@@ -812,10 +809,6 @@ def test_singleSexCourtType_test3(test_df):
     
 
 
-############################################################################################
-# Field: singleSexCourtTypeDescription
-############################################################################################
-
 #######################
 # singleSexCourtTypeDescription - Scenario 1
 # IF dbo.CourtPreference IS 1 = Include ARIA Migrated String
@@ -999,15 +992,15 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "ftpaAppellantApplicationDate",
             "ftpaAppellantSubmissionOutOfTime",
             "ftpaAppellantOutOfTimeExplanation",
-            # "ftpaRespondentApplicationDate",
-            # "ftpaRespondentSubmissionOutOfTime",
-            # "ftpaRespondentOutOfTimeExplanation"
-            # "isInCameraCourtAllowed",
-            # "inCameraCourtTribunalResponse",
-            # "inCameraCourtDecisionForDisplay",
-            # "isSingleSexCourtAllowed",
-            # "singleSexCourtTribunalResponse",
-            # "singleSexCourtDecisionForDisplay"
+            "ftpaRespondentApplicationDate",
+            "ftpaRespondentSubmissionOutOfTime",
+            "ftpaRespondentOutOfTimeExplanation"
+            "isInCameraCourtAllowed",
+            "inCameraCourtTribunalResponse",
+            "inCameraCourtDecisionForDisplay",
+            "isSingleSexCourtAllowed",
+            "singleSexCourtTribunalResponse",
+            "singleSexCourtDecisionForDisplay"
         )
 
         m1_clean = M1_bronze.select(
@@ -1869,7 +1862,226 @@ def test_actualCaseHearingLength_test1(test_df):
     except Exception as e:
         return TestResult("actualCaseHearingLength", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
+#######################
+# isInCameraCourtAllowed
+#######################
 
+# Scenario 1: Include (Granted) if InCamera IS 1
+def test_isInCameraCourtAllowed_test1(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        if target_records.count() == 0:
+            return TestResult("isInCameraCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "isInCameraCourtAllowed").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['isInCameraCourtAllowed']}'" for r in rows if r['isInCameraCourtAllowed'] != "Granted"]
+
+        if results_list:
+            return TestResult("isInCameraCourtAllowed", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("isInCameraCourtAllowed", "PASS", "Correctly included 'Granted' for InCamera=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if InCamera IS NOT 1
+def test_isInCameraCourtAllowed_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        if target_records.count() == 0:
+            return TestResult("isInCameraCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "isInCameraCourtAllowed").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['isInCameraCourtAllowed'] is not None]
+
+        if results_list:
+            return TestResult("isInCameraCourtAllowed", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("isInCameraCourtAllowed", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+#######################
+# inCameraCourtTribunalResponse
+#######################
+
+# Scenario 1: Include hardcoded string if InCamera IS 1
+def test_inCameraCourtTribunalResponse_test1(test_df):
+    try:
+        expected = "This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtTribunalResponse").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['inCameraCourtTribunalResponse']}'" for r in rows if r['inCameraCourtTribunalResponse'] != expected]
+
+        if results_list:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("inCameraCourtTribunalResponse", "PASS", "Correct string included for InCamera=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if InCamera IS NOT 1
+def test_inCameraCourtTribunalResponse_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtTribunalResponse").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['inCameraCourtTribunalResponse'] is not None]
+
+        if results_list:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("inCameraCourtTribunalResponse", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+#######################
+# inCameraCourtDecisionForDisplay
+#######################
+
+# Scenario 1: Include hardcoded string if InCamera IS 1
+def test_inCameraCourtDecisionForDisplay_test1(test_df):
+    try:
+        expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['inCameraCourtDecisionForDisplay']}'" for r in rows if r['inCameraCourtDecisionForDisplay'] != expected]
+
+        if results_list:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("inCameraCourtDecisionForDisplay", "PASS", "Correct string included for InCamera=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if InCamera IS NOT 1
+def test_inCameraCourtDecisionForDisplay_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['inCameraCourtDecisionForDisplay'] is not None]
+
+        if results_list:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("inCameraCourtDecisionForDisplay", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+    
+
+#######################
+# isSingleSexCourtAllowed
+#######################
+
+# Scenario 1: Include (Granted) if CourtPreference IN [1,2]
+def test_isSingleSexCourtAllowed_test1(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "isSingleSexCourtAllowed").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['isSingleSexCourtAllowed']}'" for r in rows if r['isSingleSexCourtAllowed'] != "Granted"]
+
+        if results_list:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly included 'Granted' for Preference 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if CourtPreference NOT IN [1,2]
+def test_isSingleSexCourtAllowed_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "isSingleSexCourtAllowed").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['isSingleSexCourtAllowed'] is not None]
+
+        if results_list:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+#######################
+# singleSexCourtTribunalResponse
+#######################
+
+# Scenario 1: Include hardcoded string if CourtPreference IN [1,2]
+def test_singleSexCourtTribunalResponse_test1(test_df):
+    try:
+        expected = "This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "singleSexCourtTribunalResponse").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['singleSexCourtTribunalResponse']}'" for r in rows if r['singleSexCourtTribunalResponse'] != expected]
+
+        if results_list:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtTribunalResponse", "PASS", "Correct string included for Preference 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if CourtPreference NOT IN [1,2]
+def test_singleSexCourtTribunalResponse_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "singleSexCourtTribunalResponse").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['singleSexCourtTribunalResponse'] is not None]
+
+        if results_list:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtTribunalResponse", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+#######################
+# singleSexCourtDecisionForDisplay
+#######################
+
+# Scenario 1: Include hardcoded string if CourtPreference IN [1,2]
+def test_singleSexCourtDecisionForDisplay_test1(test_df):
+    try:
+        expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['singleSexCourtDecisionForDisplay']}'" for r in rows if r['singleSexCourtDecisionForDisplay'] != expected]
+
+        if results_list:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtDecisionForDisplay", "PASS", "Correct string included for Preference 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+
+# Scenario 2: Omit if CourtPreference NOT IN [1,2]
+def test_singleSexCourtDecisionForDisplay_test2(test_df):
+    try:
+        target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+
+        rows = target_records.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['singleSexCourtDecisionForDisplay'] is not None]
+
+        if results_list:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtDecisionForDisplay", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
 
 ############################################################################################
 #######################
@@ -4047,11 +4259,9 @@ def test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver):
             "endAppealApproverType", "endAppealApproverName", "endAppealDate", "stateBeforeEndAppeal"
         )
 
-        # 3. Get M1_silver Representation (dv_representation)
-        # Assuming CaseNo is the join key in M1_silver
+
         m1_rep = M1_silver.select("CaseNo", F.col("dv_representation").alias("Representation"))
 
-        # 4. Process M3 Ended
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
         m3_ended = M3_bronze.filter(ended_filter) \
             .withColumn("rn", F.row_number().over(window_spec)) \
@@ -4061,7 +4271,7 @@ def test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver):
                 "Adj_Determination_Title", "Adj_Determination_Forenames", "Adj_Determination_Surname"
             )
 
-        # 5. Master Join (JSON + M3 + M1_silver)
+    
         test_df = json_df.join(
             m3_ended, json_df["appealReferenceNumber"] == m3_ended["CaseNo"], "inner"
         ).join(
@@ -4078,7 +4288,7 @@ def test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver):
 ########################
 def test_endAppealOutcome_test1(test_df):
     try:
-        # Define mapping: (CaseStatus, Outcome) -> Expected endAppealOutcome
+
         mapping = {
             ('37', 80): "Abandoned",
             ('38', 80): "Abandoned",
@@ -4130,8 +4340,7 @@ def test_endAppealOutcome_test1(test_df):
 
 def test_endAppealOutcomeReason_test1(test_df):
     try:
-        # Define mapping: (CaseStatus, Outcome) -> Expected Reason Snippet
-        # This follows your requirement: "This is a migrated case. The final outcome was {Snippet}."
+
         reason_mapping = {
             ('37', 80): "First Tier - Hearing | Abandoned",
             ('38', 80): "First Tier - Paper | Abandoned",
@@ -4246,7 +4455,7 @@ def test_endAppealApproverName_test1(test_df):
 
 def test_endAppealDate_test1(test_df):
     try:
-        # Collect columns: appealReferenceNumber, the actual JSON date, and the source ARIA date
+
         rows = test_df.select(
             "appealReferenceNumber", 
             "endAppealDate", 
@@ -4260,9 +4469,7 @@ def test_endAppealDate_test1(test_df):
         for row in rows:
             actual_json_date = row['endAppealDate']
             aria_source_date = row['DecisionDate']
-            
-            # If the source date is missing in ARIA, we should flag it as an issue 
-            # or skip if the business logic allows nulls for certain outcomes
+
             if aria_source_date is None:
                 if actual_json_date is not None:
                     results.append(f"FAIL - {row['appealReferenceNumber']}: ARIA date is NULL but JSON found '{actual_json_date}'")
@@ -4271,8 +4478,6 @@ def test_endAppealDate_test1(test_df):
             # Convert ARIA Timestamp to ISO 8601 String (YYYY-MM-DD)
             expected_date_str = aria_source_date.strftime('%Y-%m-%d')
             
-            # Compare. We check if the expected date string is contained within the actual 
-            # (handles cases where JSON might include a timestamp T00:00:00Z)
             if actual_json_date is None or expected_date_str not in actual_json_date:
                 results.append(f"FAIL - {row['appealReferenceNumber']}: Source Date '{expected_date_str}' | Found in JSON '{actual_json_date}'")
 
@@ -4303,9 +4508,7 @@ def test_stateBeforeEndAppeal_test1(test_df):
             actual = row['stateBeforeEndAppeal']
             
             if status == '26':
-                # DEFENSIVE CHECK: 
-                # Handles 'Legal Representative', 'LR', or 'Yes' 
-                # Migration logic often looks for any string containing 'Legal'
+
                 rep_value = str(row['Representation'] or "").upper()
                 
                 if "LEGAL" in rep_value or rep_value == "LR":

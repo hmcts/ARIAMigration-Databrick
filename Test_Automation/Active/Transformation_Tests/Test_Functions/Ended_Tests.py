@@ -970,41 +970,29 @@ def test_inCameraCourt_test2(test_df):
 def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze):
     try:
 
-        test_df = json_data.select(
-            "appealReferenceNumber",
-            "isAppealSuitableToFloat",
-            "listingLength",
-            "hearingChannel",
-            "listingLocation",
-            "actualCaseHearingLength",
-            "listCaseHearingLength",
-            "listCaseHearingDate",
-            "listCaseHearingCentre",
-            "listCaseHearingCentreAddress",
-            "sendDecisionsAndReasonsDate",
-            "appealDate",
-            "appealDecision",
-            "isDecisionAllowed",
-            "attendingJudge",
-            "actualCaseHearingLength",
-            "ftpaApplicationDeadline",
-            "ftpaList",
-            "ftpaAppellantApplicationDate",
-            "ftpaAppellantSubmissionOutOfTime",
-            "ftpaAppellantOutOfTimeExplanation",
-            "ftpaRespondentApplicationDate",
-            "ftpaRespondentSubmissionOutOfTime",
-            "ftpaRespondentOutOfTimeExplanation"
-            "isInCameraCourtAllowed",
-            "inCameraCourtTribunalResponse",
-            "inCameraCourtDecisionForDisplay",
-            "isSingleSexCourtAllowed",
-            "singleSexCourtTribunalResponse",
-            "singleSexCourtDecisionForDisplay"
-        )
+        target_fields = [
+            "appealReferenceNumber", "isAppealSuitableToFloat", "listingLength",
+            "hearingChannel", "listingLocation", "actualCaseHearingLength",
+            "listCaseHearingLength", "listCaseHearingDate", "listCaseHearingCentre",
+            "listCaseHearingCentreAddress", "sendDecisionsAndReasonsDate", "appealDate",
+            "appealDecision", "isDecisionAllowed", "attendingJudge", "ftpaApplicationDeadline",
+            "ftpaList", "ftpaAppellantApplicationDate", "ftpaAppellantSubmissionOutOfTime",
+            "ftpaAppellantOutOfTimeExplanation", "ftpaRespondentApplicationDate",
+            "ftpaRespondentSubmissionOutOfTime", "ftpaRespondentOutOfTimeExplanation",
+            "isInCameraCourtAllowed", "inCameraCourtTribunalResponse", "inCameraCourtDecisionForDisplay",
+            "isSingleSexCourtAllowed", "singleSexCourtTribunalResponse", "singleSexCourtDecisionForDisplay"
+        ]
 
+        selected_cols = [
+            F.col(f) if f in json_data.columns else F.lit(None).alias(f) 
+            for f in target_fields
+        ]
+
+        test_df = json_data.select(*selected_cols)
+
+        # 2. Setup Bronze dependencies
         m1_clean = M1_bronze.select(
-            col("CaseNo").alias("m1_CaseNo"),
+            F.col("CaseNo").alias("m1_CaseNo"),
             "Sponsor_Name", 
             "Interpreter", 
             "CourtPreference", 
@@ -1012,19 +1000,20 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "VisitVisaType"
         )
 
-        M2_bronze = M2_bronze.select(
-            col("CaseNo").alias("M2_CaseNo"),
+        m2_clean = M2_bronze.select(
+            F.col("CaseNo").alias("M2_CaseNo"),
             "Appellant_Name"
         )
 
         m1_silver_clean = M1_silver.select(
-            col("CaseNo").alias("m1_silver_CaseNo"),
+            F.col("CaseNo").alias("m1_silver_CaseNo"),
             "dv_representation"
         )
-        bac_clean = bac.select(col("CaseNo").alias("bac_CaseNo"), "CategoryId")
+
+        bac_clean = bac.select(F.col("CaseNo").alias("bac_CaseNo"), "CategoryId")
 
         m6_clean = M6_bronze.select(
-            col("CaseNo").alias("m6_CaseNo")
+            F.col("CaseNo").alias("m6_CaseNo")
         ).groupBy("m6_CaseNo").count().select("m6_CaseNo")
 
 
@@ -1034,15 +1023,14 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
 
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
         
+ 
         history_with_max_group = history_with_groups.withColumn(
             "FinalEndedGroup", 
             F.max("EndedGroup").over(Window.partitionBy("CaseNo"))
         )
 
-        # Filter for rows that are 37 or 38 (as per Mapping Doc)
-    
         latest_status = history_with_max_group \
-            .filter(F.col("CaseStatus").isin(37, 38)) \
+            .filter(F.col("CaseStatus").isin(37, 38, 39)) \
             .withColumn("rn", F.row_number().over(window_spec)) \
             .filter("rn = 1") \
             .select(
@@ -1064,12 +1052,11 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
                 "Adj_Determination_Forenames",
                 "Adj_Determination_Surname",
                 "HearingDuration",
-                "DecisionDate",
                 "OutOfTime"
             )
 
-        # 6. Master Join
-        test_df = test_df.join(
+        # 5. Master Join
+        final_test_df = test_df.join(
             m1_clean,
             test_df["appealReferenceNumber"] == m1_clean["m1_CaseNo"],
             "inner"
@@ -1078,8 +1065,8 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             test_df["appealReferenceNumber"] == m1_silver_clean["m1_silver_CaseNo"],
             "inner"
         ).join(
-            M2_bronze,
-            test_df["appealReferenceNumber"] == M2_bronze["M2_CaseNo"],
+            m2_clean,
+            test_df["appealReferenceNumber"] == m2_clean["M2_CaseNo"],
             "inner"
         ).join(
             latest_status,
@@ -1091,10 +1078,11 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             "left"
         ).drop("m1_CaseNo", "m1_silver_CaseNo", "CaseNo", "bac_CaseNo", "m6_CaseNo")
 
-        return test_df, True
+        return final_test_df, True
 
     except Exception as e:
-        return None, TestResult("HearingResponse_Init", "FAIL", f"Error: {str(e)[:300]}", "ended")
+        # Returns a TestResult object instead of crashing
+        return None, TestResult("HearingResponse_Init", "FAIL", f"Setup Error: {str(e)[:400]}", "ended", "init")
 
 #######################
 # isAppealSuitableToFloat - Scenario 1

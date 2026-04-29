@@ -8,7 +8,8 @@ import inspect
 
 #Import Test Results class
 from models.test_result import TestResult
-
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 test_from_state = "listing"
 
@@ -681,14 +682,12 @@ def test_inCameraCourtDescription_test2(test_df):
 #######################
 #language tests Init code
 #######################
-def test_languages_init(json, M1_bronze):
+def test_languages_init(json, M1_bronze, M3_bronze):
     try:
         json = json.select(
             col("appealReferenceNumber"),
             col("appellantInterpreterLanguageCategory"),
             col("appellantInterpreterSpokenLanguage")
-            # ,
-            # col("appellantInterpreterSignLanguage")
         )
 
         M1_bronze = M1_bronze.select(
@@ -696,11 +695,27 @@ def test_languages_init(json, M1_bronze):
             col("LanguageId")
         )
 
+        M3_filtered = M3_bronze.filter(
+            (col("CaseStatus").isin('37', '38') & col("Outcome").isin(39, 40, 37, 50, 27, 0)) |
+            (col("CaseStatus") == '26' & col("Outcome").isin(40, 52))
+        )
+
+        # Window to find the latest record per appeal
+        window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
+        
+        latest_m3 = M3_filtered.withColumn("rn", F.row_number().over(window_spec)) \
+                               .filter(col("rn") == 1) \
+                               .select(col("CaseNo").alias("m3_CaseNo"), "StatusId", "CaseStatus", "Outcome")
+
         test_df = json.join(
             M1_bronze,
             M1_bronze["CaseNo"] == json["appealReferenceNumber"],
             "inner"
-).drop(M1_bronze["CaseNo"])
+        ).join(
+            latest_m3,
+            json["appealReferenceNumber"] == latest_m3["m3_CaseNo"],
+            "inner"
+        )
 
         return test_df, True
     except Exception as e:

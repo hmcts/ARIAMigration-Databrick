@@ -724,99 +724,122 @@ def test_singleSexCourt_test2(test_df):
 
 
 
-#######################
-# singleSexCourtType - Scenario 1
-# IF dbo.CourtPreference IS 1 = "All male"
-# (MAX StatusID where EndedGroup = 3 or 4)
-#######################
-def test_singleSexCourtType_test1(test_df):
+def test_singleSexCourtType_test1(json_data, M1_bronze, M3_bronze):
     try:
-        # 1. Filter for the target state (Group 3 or 4 and CourtPreference 1)
-        target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
-            (col("CourtPreference") == 1)
-        )
-        
-        if target_records.count() == 0:
-            return TestResult("singleSexCourtType", "PASS", "No records found with Group 3/4 and CourtPreference 1 to test.", test_from_state, inspect.stack()[0].function)
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtType")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Must be "All male"
+        target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("CourtPreference") == 1))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtType", "FAIL", "No Group 3/4 records with Preference 1.", "ended", inspect.stack()[0].function)
+
         failures = target_records.filter(col("singleSexCourtType") != "All male")
-
         if failures.count() != 0:
-            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows where CourtPreference 1 was not mapped to 'All male'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("singleSexCourtType", "PASS", "CourtPreference 1 correctly mapped to 'All male'", test_from_state, inspect.stack()[0].function)
-
+            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows not mapped to 'All male'", "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtType", "PASS", "Preference 1 correctly mapped to 'All male'", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-
-#######################
-# singleSexCourtType - Scenario 2
-# IF dbo.CourtPreference IS 2 = "All female"
-# (MAX StatusID where EndedGroup = 3 or 4)
-#######################
-def test_singleSexCourtType_test2(test_df):
+def test_singleSexCourtType_test2(json_data, M1_bronze, M3_bronze):
     try:
-        # 1. Filter for the target state (Group 3 or 4 and CourtPreference 2)
-        target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
-            (col("CourtPreference") == 2)
-        )
-        
-        if target_records.count() == 0:
-            return TestResult("singleSexCourtType", "PASS", "No records found with Group 3/4 and CourtPreference 2 to test.", test_from_state, inspect.stack()[0].function)
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtType")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Must be "All female"
+        target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("CourtPreference") == 2))
+        if target_records.count() == 0:
+            return TestResult("singleSexCourtType", "FAIL", "No Group 3/4 records with Preference 2.", "ended", inspect.stack()[0].function)
+
         failures = target_records.filter(col("singleSexCourtType") != "All female")
-
         if failures.count() != 0:
-            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows where CourtPreference 2 was not mapped to 'All female'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("singleSexCourtType", "PASS", "CourtPreference 2 correctly mapped to 'All female'", test_from_state, inspect.stack()[0].function)
-
+            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows not mapped to 'All female'", "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtType", "PASS", "Preference 2 correctly mapped to 'All female'", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-
-#######################
-# singleSexCourtType - Scenario 3
-# IF CourtPreference IS NOT 1 or 2 = OMIT
-# (MAX StatusID where EndedGroup = 3 or 4)
-#######################
-def test_singleSexCourtType_test3(test_df):
+def test_singleSexCourtType_test3(json_data, M1_bronze, M3_bronze):
     try:
-        # 1. Filter for Group 3/4 where CourtPreference is NOT 1 or 2
-        target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
-            (~col("CourtPreference").isin(1, 2))
-        )
-        
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtType")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (~col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
-            return TestResult("singleSexCourtType", "PASS", "No records found with Group 3/4 and CourtPreference != 1 or 2 to test.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtType", "FAIL", "No records found for Omission test (Pref != 1/2).", "ended", inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Field must be Null (Omitted)
         failures = target_records.filter(col("singleSexCourtType").isNotNull())
-
         if failures.count() != 0:
-            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows where singleSexCourtType was incorrectly included", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("singleSexCourtType", "PASS", "Field correctly omitted when CourtPreference is not 1 or 2", test_from_state, inspect.stack()[0].function)
-
+            return TestResult("singleSexCourtType", "FAIL", f"Found {failures.count()} rows incorrectly included", "ended", inspect.stack()[0].function)
+        return TestResult("singleSexCourtType", "PASS", "Field correctly omitted when Preference is not 1 or 2", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-    
-
+        return TestResult("singleSexCourtType", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
 #######################
 # singleSexCourtTypeDescription - Scenario 1
 # IF dbo.CourtPreference IS 1 = Include ARIA Migrated String
 # (MAX StatusID where EndedGroup = 3 or 4)
 #######################
-def test_singleSexCourtTypeDescription_test1(test_df):
+def test_singleSexCourtTypeDescription_test1(json_data, M1_bronze, M3_bronze):
     try:
-        expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
+        try:
+            # CHECK IF singleSexCourtTypeDescription IS IN OUR PAYLOAD 
+            # 1. Select JSON fields
+            json = json_data.select(
+                "appealReferenceNumber",
+                "singleSexCourtTypeDescription"
+            )
+
+            # 2. Prepare M1_bronze with metadata
+            m1_clean = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                "CourtPreference"
+            )
+
+            # 3. Prepare M3_bronze
+            M3_bronze = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                "CaseStatus",
+                "Outcome"
+            )
+            
+            # 4. Join M3 to test_df to get ended group M3 fields
+            unended_test_df = json.join(
+                m1_clean,
+                json["appealReferenceNumber"] == m1_clean["m1_CaseNo"],
+                "inner"
+            )
+
+            unended_test_df = unended_test_df.join(
+                M3_bronze,
+                unended_test_df["appealReferenceNumber"] == M3_bronze["m3_CaseNo"],
+                "inner"
+            )
+
+            # 5. Make ended group
+            test_df = get_ended_group_id(unended_test_df)
+
+            expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
+        except Exception as e:
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # 1. Filter for Group 3/4 and CourtPreference 1
         target_records = test_df.filter(
@@ -825,7 +848,7 @@ def test_singleSexCourtTypeDescription_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("singleSexCourtTypeDescription", "PASS", "No records found with Group 3/4 and CourtPreference 1 to test.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", "No records found with Group 3/4 and CourtPreference 1 to test.", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must match the specific ARIA string
         failures = target_records.filter(
@@ -842,27 +865,50 @@ def test_singleSexCourtTypeDescription_test1(test_df):
         return TestResult("singleSexCourtTypeDescription", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 
-#######################
-# singleSexCourtTypeDescription - Scenario 2
-# IF dbo.CourtPreference IS 2 = Include ARIA Migrated String
-# (MAX StatusID where EndedGroup = 3 or 4)
-#######################
-def test_singleSexCourtTypeDescription_test2(test_df):
+def test_singleSexCourtTypeDescription_test2(json_data, M1_bronze, M3_bronze):
     try:
-        expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
+        try:
+            # 1. Select JSON fields
+            json = json_data.select(
+                "appealReferenceNumber",
+                "singleSexCourtTypeDescription"
+            )
+
+            # 2. Prepare M1_bronze
+            m1_clean = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                "CourtPreference"
+            )
+
+            # 3. Prepare M3_bronze
+            m3_clean = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                "CaseStatus",
+                "Outcome"
+            )
+
+            # 4. Join and setup test_df
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            
+            test_df = get_ended_group_id(unended_test_df)
+
+            expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
+        except Exception as e:
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # 1. Filter for Group 3/4 and CourtPreference 2
         target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
+            (col("EndedGroup").isin(3, 4)) &
             (col("CourtPreference") == 2)
         )
         
         if target_records.count() == 0:
-            return TestResult("singleSexCourtTypeDescription", "PASS", "No records found with Group 3/4 and CourtPreference 2 to test.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", "No records found with Group 3/4 and CourtPreference 2 to test.", test_from_state, inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Must match the specific ARIA string
+        # 2. Acceptance Criteria: Must match string
         failures = target_records.filter(
-            (col("singleSexCourtTypeDescription") != expected_string) | 
+            (col("singleSexCourtTypeDescription") != expected_string) |
             (col("singleSexCourtTypeDescription").isNull())
         )
 
@@ -874,35 +920,54 @@ def test_singleSexCourtTypeDescription_test2(test_df):
     except Exception as e:
         return TestResult("singleSexCourtTypeDescription", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
-
-#######################
-# singleSexCourtTypeDescription - Scenario 3
-# IF CourtPreference IS NOT 1 or 2 = OMIT
-# (MAX StatusID where EndedGroup = 3 or 4)
-#######################
-def test_singleSexCourtTypeDescription_test3(test_df):
+def test_singleSexCourtTypeDescription_test3(json_data, M1_bronze, M3_bronze):
     try:
-        # 1. Filter for Group 3/4 where CourtPreference is NOT 1 or 2
+        try:
+            # 1. Select JSON fields
+            json = json_data.select(
+                "appealReferenceNumber",
+                "singleSexCourtTypeDescription"
+            )
+
+            # 2. Prepare metadata
+            m1_clean = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                "CourtPreference"
+            )
+
+            m3_clean = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                "CaseStatus",
+                "Outcome"
+            )
+
+            # 3. Join and setup test_df
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        
+        # 1. Filter for Group 3/4 and CourtPreference NOT 1 or 2
         target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
+            (col("EndedGroup").isin(3, 4)) &
             (~col("CourtPreference").isin(1, 2))
         )
         
         if target_records.count() == 0:
-            return TestResult("singleSexCourtTypeDescription", "PASS", "No records found with Group 3/4 and CourtPreference != 1 or 2 to test.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", "No records found with Group 3/4 and CourtPreference != 1 or 2 to test.", test_from_state, inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Field must be Null (Omitted)
+        # 2. Acceptance Criteria: Field must be Null (OMITTED)
         failures = target_records.filter(col("singleSexCourtTypeDescription").isNotNull())
 
         if failures.count() != 0:
-            return TestResult("singleSexCourtTypeDescription", "FAIL", f"Found {failures.count()} rows where singleSexCourtTypeDescription was incorrectly included", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"Found {failures.count()} rows where description was incorrectly included", test_from_state, inspect.stack()[0].function)
         
         return TestResult("singleSexCourtTypeDescription", "PASS", "Field correctly omitted when CourtPreference is not 1 or 2", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
         return TestResult("singleSexCourtTypeDescription", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-    
-
 
 
 
@@ -969,26 +1034,30 @@ def test_inCameraCourt_test2(test_df):
 
 def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze):
     try:
-
-        target_fields = [
-            "appealReferenceNumber", "isAppealSuitableToFloat", "listingLength",
-            "hearingChannel", "listingLocation", "actualCaseHearingLength",
-            "listCaseHearingLength", "listCaseHearingDate", "listCaseHearingCentre",
-            "listCaseHearingCentreAddress", "sendDecisionsAndReasonsDate", "appealDate",
-            "appealDecision", "isDecisionAllowed", "attendingJudge", "ftpaApplicationDeadline",
-            "ftpaList", "ftpaAppellantApplicationDate", "ftpaAppellantSubmissionOutOfTime",
-            "ftpaAppellantOutOfTimeExplanation", "ftpaRespondentApplicationDate",
-            "ftpaRespondentSubmissionOutOfTime", "ftpaRespondentOutOfTimeExplanation",
-            "isInCameraCourtAllowed", "inCameraCourtTribunalResponse", "inCameraCourtDecisionForDisplay",
-            "isSingleSexCourtAllowed", "singleSexCourtTribunalResponse", "singleSexCourtDecisionForDisplay"
-        ]
-
-        selected_cols = [
-            F.col(f) if f in json_data.columns else F.lit(None).alias(f) 
-            for f in target_fields
-        ]
-
-        test_df = json_data.select(*selected_cols)
+        # 1. Selection of fields confirmed to be in the JSON
+        # Missing fields (FTPA Respondent, In-Camera, Single-Sex) removed from here
+        test_df = json_data.select(
+            "appealReferenceNumber",
+            "isAppealSuitableToFloat",
+            "listingLength",
+            "hearingChannel",
+            "listingLocation",
+            "actualCaseHearingLength",
+            "listCaseHearingLength",
+            "listCaseHearingDate",
+            "listCaseHearingCentre",
+            "listCaseHearingCentreAddress",
+            "sendDecisionsAndReasonsDate",
+            "appealDate",
+            "appealDecision",
+            "isDecisionAllowed",
+            "attendingJudge",
+            "ftpaApplicationDeadline",
+            "ftpaList",
+            "ftpaAppellantApplicationDate",
+            "ftpaAppellantSubmissionOutOfTime",
+            "ftpaAppellantOutOfTimeExplanation"
+        )
 
         # 2. Setup Bronze dependencies
         m1_clean = M1_bronze.select(
@@ -1016,19 +1085,18 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
             F.col("CaseNo").alias("m6_CaseNo")
         ).groupBy("m6_CaseNo").count().select("m6_CaseNo")
 
-
+        # 3. Process M3 History
         m3_history = M3_bronze.join(bac_clean, M3_bronze["CaseNo"] == bac_clean["bac_CaseNo"], "left")
-        
         history_with_groups = get_ended_group_id(m3_history)
 
         window_spec = Window.partitionBy("CaseNo").orderBy(F.col("StatusId").desc())
         
- 
         history_with_max_group = history_with_groups.withColumn(
             "FinalEndedGroup", 
             F.max("EndedGroup").over(Window.partitionBy("CaseNo"))
         )
 
+        # 4. Filter for latest status
         latest_status = history_with_max_group \
             .filter(F.col("CaseStatus").isin(37, 38, 39)) \
             .withColumn("rn", F.row_number().over(window_spec)) \
@@ -1081,7 +1149,6 @@ def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M
         return final_test_df, True
 
     except Exception as e:
-        # Returns a TestResult object instead of crashing
         return None, TestResult("HearingResponse_Init", "FAIL", f"Setup Error: {str(e)[:400]}", "ended", "init")
 
 #######################
@@ -1854,12 +1921,27 @@ def test_actualCaseHearingLength_test1(test_df):
 # isInCameraCourtAllowed
 #######################
 
-# Scenario 1: Include (Granted) if InCamera IS 1
-def test_isInCameraCourtAllowed_test1(test_df):
+def test_isInCameraCourtAllowed_test1(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            # 1. Select JSON fields
+            json = json_data.select("appealReferenceNumber", "isInCameraCourtAllowed")
+            # 2. Prepare Metadata (InCamera is in M1)
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            # 3. Joins
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            # 4. Process Ended Group
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isInCameraCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Scenario 1: Include (Granted) if InCamera IS 1 and Group 4
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        
         if target_records.count() == 0:
-            return TestResult("isInCameraCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+            return TestResult("isInCameraCourtAllowed", "FAIL", "No records found with Group 4 and InCamera=1.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "isInCameraCourtAllowed").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['isInCameraCourtAllowed']}'" for r in rows if r['isInCameraCourtAllowed'] != "Granted"]
@@ -1868,14 +1950,25 @@ def test_isInCameraCourtAllowed_test1(test_df):
             return TestResult("isInCameraCourtAllowed", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("isInCameraCourtAllowed", "PASS", "Correctly included 'Granted' for InCamera=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-# Scenario 2: Omit if InCamera IS NOT 1
-def test_isInCameraCourtAllowed_test2(test_df):
+def test_isInCameraCourtAllowed_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isInCameraCourtAllowed")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isInCameraCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Scenario 2: Omit if InCamera IS NOT 1
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        
         if target_records.count() == 0:
-            return TestResult("isInCameraCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+            return TestResult("isInCameraCourtAllowed", "FAIL", "No records found for Omission test (InCamera != 1).", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "isInCameraCourtAllowed").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['isInCameraCourtAllowed'] is not None]
@@ -1884,19 +1977,28 @@ def test_isInCameraCourtAllowed_test2(test_df):
             return TestResult("isInCameraCourtAllowed", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("isInCameraCourtAllowed", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
-
+        return TestResult("isInCameraCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 #######################
 # inCameraCourtTribunalResponse
 #######################
 
-# Scenario 1: Include hardcoded string if InCamera IS 1
-def test_inCameraCourtTribunalResponse_test1(test_df):
+def test_inCameraCourtTribunalResponse_test1(json_data, M1_bronze, M3_bronze):
     try:
-        expected = "This is a migrated ARIA case. Please refer to the documents."
+        try:
+            json = json_data.select("appealReferenceNumber", "inCameraCourtTribunalResponse")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+            expected = "This is a migrated ARIA case. Please refer to the documents."
+        except Exception as e:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        
         if target_records.count() == 0:
-            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No Group 4 records with InCamera=1.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "inCameraCourtTribunalResponse").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['inCameraCourtTribunalResponse']}'" for r in rows if r['inCameraCourtTribunalResponse'] != expected]
@@ -1905,14 +2007,24 @@ def test_inCameraCourtTribunalResponse_test1(test_df):
             return TestResult("inCameraCourtTribunalResponse", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("inCameraCourtTribunalResponse", "PASS", "Correct string included for InCamera=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-# Scenario 2: Omit if InCamera IS NOT 1
-def test_inCameraCourtTribunalResponse_test2(test_df):
+def test_inCameraCourtTribunalResponse_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json_data.select("appealReferenceNumber", "inCameraCourtTribunalResponse")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        
         if target_records.count() == 0:
-            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", "No records found for Omission test.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "inCameraCourtTribunalResponse").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['inCameraCourtTribunalResponse'] is not None]
@@ -1921,19 +2033,28 @@ def test_inCameraCourtTribunalResponse_test2(test_df):
             return TestResult("inCameraCourtTribunalResponse", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("inCameraCourtTribunalResponse", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
-
+        return TestResult("inCameraCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 #######################
 # inCameraCourtDecisionForDisplay
 #######################
 
-# Scenario 1: Include hardcoded string if InCamera IS 1
-def test_inCameraCourtDecisionForDisplay_test1(test_df):
+def test_inCameraCourtDecisionForDisplay_test1(json_data, M1_bronze, M3_bronze):
     try:
-        expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        try:
+            json = json_data.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+            expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        except Exception as e:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
+        
         if target_records.count() == 0:
-            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with InCamera=1", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No Group 4 records with InCamera=1.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['inCameraCourtDecisionForDisplay']}'" for r in rows if r['inCameraCourtDecisionForDisplay'] != expected]
@@ -1942,14 +2063,24 @@ def test_inCameraCourtDecisionForDisplay_test1(test_df):
             return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("inCameraCourtDecisionForDisplay", "PASS", "Correct string included for InCamera=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-# Scenario 2: Omit if InCamera IS NOT 1
-def test_inCameraCourtDecisionForDisplay_test2(test_df):
+def test_inCameraCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json_data.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
+        
         if target_records.count() == 0:
-            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with InCamera!=1", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "No records found for Omission test.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "inCameraCourtDecisionForDisplay").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['inCameraCourtDecisionForDisplay'] is not None]
@@ -1958,56 +2089,217 @@ def test_inCameraCourtDecisionForDisplay_test2(test_df):
             return TestResult("inCameraCourtDecisionForDisplay", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("inCameraCourtDecisionForDisplay", "PASS", "Correctly omitted for InCamera!=1", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("inCameraCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+
+def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
+    try:
+        try:
+            # 1. Select JSON fields
+            json = json_data.select(
+                "appealReferenceNumber",
+                "inCameraCourtDescription"
+            )
+
+            # 2. Prepare M1_bronze (Source of InCamera flag)
+            m1_clean = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                "InCamera"
+            )
+
+            # 3. Prepare M3_bronze
+            m3_clean = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                "CaseStatus"
+            )
+
+            # 4. Join and setup test_df
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            
+            test_df = get_ended_group_id(unended_test_df)
+
+            expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
+        except Exception as e:
+            return TestResult("inCameraCourtDescription", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+        
+        # 1. Filter for Ended Group 3/4 and InCamera = 1
+        target_records = test_df.filter(
+            (col("EndedGroup").isin(3, 4)) &
+            (col("InCamera") == 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtDescription", "FAIL", "No records found with Group 3/4 and InCamera=1 to test.", "ended", inspect.stack()[0].function)
+
+        # 2. Acceptance Criteria: Must match the hardcoded ARIA string
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtDescription").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: String mismatch or Null" for r in rows if r['inCameraCourtDescription'] != expected_string]
+
+        if results_list:
+            return TestResult("inCameraCourtDescription", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("inCameraCourtDescription", "PASS", "InCamera=1 correctly mapped to ARIA migrated description", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("inCameraCourtDescription", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
 
-#######################
-# isSingleSexCourtAllowed
-#######################
 
-# Scenario 1: Include (Granted) if CourtPreference IN [1,2]
-def test_isSingleSexCourtAllowed_test1(test_df):
+def test_inCameraCourtDescription_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            # 1. Select JSON fields
+            json = json_data.select(
+                "appealReferenceNumber",
+                "inCameraCourtDescription"
+            )
+
+            # 2. Prepare Metadata
+            m1_clean = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                "InCamera"
+            )
+
+            m3_clean = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                "CaseStatus"
+            )
+
+            # 3. Join and setup test_df
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("inCameraCourtDescription", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+        
+        # 1. Filter for Ended Group 3/4 and InCamera != 1
+        target_records = test_df.filter(
+            (col("EndedGroup").isin(3, 4)) &
+            (col("InCamera") != 1)
+        )
+        
+        if target_records.count() == 0:
+            return TestResult("inCameraCourtDescription", "FAIL", "No records found for Omission test (InCamera != 1).", "ended", inspect.stack()[0].function)
+
+        # 2. Acceptance Criteria: Field must be Null
+        rows = target_records.select("appealReferenceNumber", "inCameraCourtDescription").collect()
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found unexpectedly" for r in rows if r['inCameraCourtDescription'] is not None]
+
+        if results_list:
+            return TestResult("inCameraCourtDescription", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        
+        return TestResult("inCameraCourtDescription", "PASS", "Field correctly omitted when InCamera is not 1", "ended", inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("inCameraCourtDescription", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+
+
+
+def test_isSingleSexCourtAllowed_test1(json_data, M1_bronze, M3_bronze):
+    test_from_state = "ended"
+    try:
+        try:
+            # 1. Select JSON fields
+            json_df = json_data.select("appealReferenceNumber", "isSingleSexCourtAllowed")
+
+            # 2. Prepare M1_bronze
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+
+            # 3. Prepare M3_bronze
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Outcome")
+            
+            # 4. Join
+            unended_test_df = json_df.join(m1_clean, json_df["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+
+            # 5. Make ended group
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        
+        # Filter for Group 4 and Preference 1 or 2
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
+        
         if target_records.count() == 0:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records found with Group 4 and Preference 1/2 to test.", test_from_state, inspect.stack()[0].function)
 
-        rows = target_records.select("appealReferenceNumber", "isSingleSexCourtAllowed").collect()
-        results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['isSingleSexCourtAllowed']}'" for r in rows if r['isSingleSexCourtAllowed'] != "Granted"]
+        # Acceptance Criteria: Must match "Granted"
+        failures = target_records.filter(col("isSingleSexCourtAllowed") != "Granted")
 
-        if results_list:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly included 'Granted' for Preference 1/2", "ended", inspect.stack()[0].function)
+        if failures.count() != 0:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"Inclusion failures: Found {failures.count()} rows where value was not 'Granted'", test_from_state, inspect.stack()[0].function)
+        
+        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly included 'Granted' for Preference 1/2", test_from_state, inspect.stack()[0].function)
+
     except Exception as e:
-        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
-# Scenario 2: Omit if CourtPreference NOT IN [1,2]
-def test_isSingleSexCourtAllowed_test2(test_df):
+def test_isSingleSexCourtAllowed_test2(json_data, M1_bronze, M3_bronze):
+    test_from_state = "ended"
     try:
+        try:
+            # 1. Select JSON fields
+            json_df = json_data.select("appealReferenceNumber", "isSingleSexCourtAllowed")
+
+            # 2. Prepare M1_bronze
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+
+            # 3. Prepare M3_bronze
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Outcome")
+            
+            # 4. Join
+            unended_test_df = json_df.join(m1_clean, json_df["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+
+            # 5. Make ended group
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        
+        # Filter for Group 4 and Preference NOT 1 or 2
         target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
+        
         if target_records.count() == 0:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("isSingleSexCourtAllowed", "FAIL", "No records found with Group 4 and Preference != 1/2 to test.", test_from_state, inspect.stack()[0].function)
 
-        rows = target_records.select("appealReferenceNumber", "isSingleSexCourtAllowed").collect()
-        results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['isSingleSexCourtAllowed'] is not None]
+        # Acceptance Criteria: Must be Omitted (Null)
+        failures = target_records.filter(col("isSingleSexCourtAllowed").isNotNull())
 
-        if results_list:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
+        if failures.count() != 0:
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"Omission failures: Found {failures.count()} rows where field should be omitted", test_from_state, inspect.stack()[0].function)
+        
+        return TestResult("isSingleSexCourtAllowed", "PASS", "Correctly omitted for Preference != 1/2", test_from_state, inspect.stack()[0].function)
+
     except Exception as e:
-        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("isSingleSexCourtAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # singleSexCourtTribunalResponse
 #######################
 
-# Scenario 1: Include hardcoded string if CourtPreference IN [1,2]
-def test_singleSexCourtTribunalResponse_test1(test_df):
+def test_singleSexCourtTribunalResponse_test1(json_data, M1_bronze, M3_bronze):
     try:
-        expected = "This is a migrated ARIA case. Please refer to the documents."
+        try:
+            # 1. Select JSON fields
+            json = json_data.select("appealReferenceNumber", "singleSexCourtTribunalResponse")
+            # 2. Prepare Metadata
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            # 3. Join and setup test_df
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+            expected = "This is a migrated ARIA case. Please refer to the documents."
+        except Exception as e:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
-            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records found with Group 4 and CourtPreference 1/2.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "singleSexCourtTribunalResponse").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['singleSexCourtTribunalResponse']}'" for r in rows if r['singleSexCourtTribunalResponse'] != expected]
@@ -2016,14 +2308,23 @@ def test_singleSexCourtTribunalResponse_test1(test_df):
             return TestResult("singleSexCourtTribunalResponse", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("singleSexCourtTribunalResponse", "PASS", "Correct string included for Preference 1/2", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-# Scenario 2: Omit if CourtPreference NOT IN [1,2]
-def test_singleSexCourtTribunalResponse_test2(test_df):
+def test_singleSexCourtTribunalResponse_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtTribunalResponse")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
-            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtTribunalResponse", "FAIL", "No records found for Omission test (Pref != 1/2).", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "singleSexCourtTribunalResponse").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['singleSexCourtTribunalResponse'] is not None]
@@ -2032,19 +2333,27 @@ def test_singleSexCourtTribunalResponse_test2(test_df):
             return TestResult("singleSexCourtTribunalResponse", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("singleSexCourtTribunalResponse", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
-
+        return TestResult("singleSexCourtTribunalResponse", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 #######################
 # singleSexCourtDecisionForDisplay
 #######################
 
-# Scenario 1: Include hardcoded string if CourtPreference IN [1,2]
-def test_singleSexCourtDecisionForDisplay_test1(test_df):
+def test_singleSexCourtDecisionForDisplay_test1(json_data, M1_bronze, M3_bronze):
     try:
-        expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+            expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
+        except Exception as e:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
-            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with Preference 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No Group 4 records with Preference 1/2.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Found '{r['singleSexCourtDecisionForDisplay']}'" for r in rows if r['singleSexCourtDecisionForDisplay'] != expected]
@@ -2053,14 +2362,23 @@ def test_singleSexCourtDecisionForDisplay_test1(test_df):
             return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("singleSexCourtDecisionForDisplay", "PASS", "Correct string included for Preference 1/2", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-# Scenario 2: Omit if CourtPreference NOT IN [1,2]
-def test_singleSexCourtDecisionForDisplay_test2(test_df):
+def test_singleSexCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze):
     try:
+        try:
+            json = json_data.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay")
+            m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "CourtPreference")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+            unended_test_df = json.join(m1_clean, json["appealReferenceNumber"] == m1_clean["m1_CaseNo"], "inner")
+            unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
         target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
-            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No records to test: No EndedGroup 4 records with Preference != 1/2", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "No records found for Omission test.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "singleSexCourtDecisionForDisplay").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Field found" for r in rows if r['singleSexCourtDecisionForDisplay'] is not None]
@@ -2069,7 +2387,7 @@ def test_singleSexCourtDecisionForDisplay_test2(test_df):
             return TestResult("singleSexCourtDecisionForDisplay", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
         return TestResult("singleSexCourtDecisionForDisplay", "PASS", "Correctly omitted for Preference != 1/2", "ended", inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended")
+        return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
 ############################################################################################
 #######################
@@ -2960,188 +3278,113 @@ def test_ftpaAppellantOutOfTimeExplanation_test4(test_df):
 
 
 
-#######################
-# ftpaRespondentApplicationDate - Scenario 1
-# Check: M3.Party = 2 -> ftpaRespondentApplicationDate MUST be included
-#######################
-def test_ftpaRespondentApplicationDate_test1(test_df):
+def test_ftpaRespondentApplicationDate_test1(json_data, M3_bronze):
     try:
-        # Filter for Status 39, EndedGroup 4, and Party 2
-        target_records = test_df.filter(
-            (col("EndedGroup") == 4) & 
-            (col("CaseStatus") == 39) &
-            (col("Party") == 2)
-        )
+        try:
+            # 1. Select JSON fields
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            # 2. Prepare Metadata (Filter for Status 39 / Party 2)
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            # 3. Joins
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            # 4. Process Ended Group
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Scenario 1: Include if Party=2 and Status=39
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentApplicationDate", "PASS", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "No records found for Group 4 / Status 39 / Party 2.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
         results_list = []
-
         for row in rows:
-            ftpa_list = row['ftpaList']
-            if not ftpa_list or len(ftpa_list) == 0:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: ftpaList array is empty")
-                continue
-            
-            first_item_val = ftpa_list[0]["value"].asDict()
-            
-            # Check for inclusion
-            if "ftpaRespondentApplicationDate" not in first_item_val:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing from JSON for Party 2")
-            elif first_item_val["ftpaRespondentApplicationDate"] is None:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key present but value is null")
+            ftpa_val = row['ftpaList'][0]["value"].asDict() if row['ftpaList'] else {}
+            if "ftpaRespondentApplicationDate" not in ftpa_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing for Party 2")
+            elif ftpa_val["ftpaRespondentApplicationDate"] is None:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Value is null")
 
         if results_list:
-            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Found inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        
-        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly included for Party 2.", "ended", inspect.stack()[0].function)
-
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly included for Party 2", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
 
-
-
-#######################
-# ftpaRespondentApplicationDate - Scenario 2
-# Check: M3.Party = 1 -> ftpaRespondentApplicationDate MUST be omitted
-#######################
-def test_ftpaRespondentApplicationDate_test2(test_df):
+def test_ftpaRespondentApplicationDate_test2(json_data, M3_bronze):
     try:
-        # Filter for Status 39, EndedGroup 4, and Party 1
-        target_records = test_df.filter(
-            (col("EndedGroup") == 4) & 
-            (col("CaseStatus") == 39) &
-            (col("Party") == 1)
-        )
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Scenario 2: Omit if Party=1
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentApplicationDate", "PASS", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "No records found for Party 1 omission test.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
-        results_list = []
-
-        for row in rows:
-            ftpa_list = row['ftpaList']
-            if not ftpa_list or len(ftpa_list) == 0:
-                continue 
-            
-            first_item_val = ftpa_list[0]["value"].asDict()
-            
-            # Check for omission
-            if "ftpaRespondentApplicationDate" in first_item_val:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party 1 (Should be omitted)")
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found for Party 1" for r in rows if r['ftpaList'] and "ftpaRespondentApplicationDate" in r['ftpaList'][0]["value"].asDict()]
 
         if results_list:
-            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        
-        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly omitted for Party 1.", "ended", inspect.stack()[0].function)
-
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentApplicationDate", "PASS", "Field correctly omitted for Party 1", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentApplicationDate", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
 
-
-#######################
-# ftpaRespondentSubmissionOutOfTime - Scenario 1
-# Check: M3.Party = 2 -> Must be 'Yes' if OutOfTime=1, else 'No'
-#######################
-def test_ftpaRespondentSubmissionOutOfTime_test1(test_df):
+def test_ftpaRespondentSubmissionOutOfTime_test1(json_data, M3_bronze):
     try:
-        # Filter for Status 39, EndedGroup 4, and Party 2
-        target_records = test_df.filter(
-            (col("EndedGroup") == 4) & 
-            (col("CaseStatus") == 39) &
-            (col("Party") == 2)
-        )
-        
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "No records found for Party 2 mapping.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "OutOfTime", "ftpaList").collect()
         results_list = []
-
         for row in rows:
-            case_no = row['appealReferenceNumber']
-            expected_val = "Yes" if row['OutOfTime'] == 1 else "No"
-            
-            ftpa_list = row['ftpaList']
-            if not ftpa_list or len(ftpa_list) == 0:
-                results_list.append(f"FAIL - {case_no}: ftpaList array is empty")
-                continue
-            
-            first_item_val = ftpa_list[0]["value"].asDict()
-            
-            if "ftpaRespondentSubmissionOutOfTime" not in first_item_val:
-                results_list.append(f"FAIL - {case_no}: Key missing from JSON for Party 2")
-            else:
-                actual_val = first_item_val["ftpaRespondentSubmissionOutOfTime"]
-                if actual_val != expected_val:
-                    results_list.append(f"FAIL - {case_no}: ARIA OutOfTime={row['OutOfTime']} | Expected JSON='{expected_val}' | Found='{actual_val}'")
+            expected = "Yes" if row['OutOfTime'] == 1 else "No"
+            ftpa_val = row['ftpaList'][0]["value"].asDict() if row['ftpaList'] else {}
+            if "ftpaRespondentSubmissionOutOfTime" not in ftpa_val:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing")
+            elif ftpa_val["ftpaRespondentSubmissionOutOfTime"] != expected:
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Expected {expected}, found {ftpa_val['ftpaRespondentSubmissionOutOfTime']}")
 
         if results_list:
-            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "Found Party 2 mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        
-        return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "Field correctly mapped to Yes/No for Party 2.", "ended", inspect.stack()[0].function)
-
+            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "Field correctly mapped for Party 2", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
 
 
-#######################
-# ftpaRespondentSubmissionOutOfTime - Scenario 2
-# Check: M3.Party != 2 -> ftpaRespondentSubmissionOutOfTime MUST be omitted
-#######################
-def test_ftpaRespondentSubmissionOutOfTime_test2(test_df):
+def test_ftpaRespondentOutOfTimeExplanation_test1(json_data, M3_bronze):
     try:
-        # Filter for Status 39, EndedGroup 4, and Party NOT 2
-        target_records = test_df.filter(
-            (col("EndedGroup") == 4) & 
-            (col("CaseStatus") == 39) &
-            (col("Party") != 2)
-        )
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+            expected_str = "This is a migrated ARIA case. Please refer to the documents."
+        except Exception as e:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Target: Party 2 (Respondent) and OutOfTime (1)
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("OutOfTime") == 1) & (col("Party") == 2))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "No non-Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
-
-        rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
-        results_list = []
-
-        for row in rows:
-            ftpa_list = row['ftpaList']
-            if not ftpa_list or len(ftpa_list) == 0:
-                continue 
-            
-            first_item_val = ftpa_list[0]["value"].asDict()
-            
-            if "ftpaRespondentSubmissionOutOfTime" in first_item_val:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key found in JSON for Party {row['Party']} (Should be omitted)")
-
-        if results_list:
-            return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", "Found omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        
-        return TestResult("ftpaRespondentSubmissionOutOfTime", "PASS", "Field correctly omitted for non-Party 2.", "ended", inspect.stack()[0].function)
-
-    except Exception as e:
-        return TestResult("ftpaRespondentSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
-
-
-#######################
-# ftpaRespondentOutOfTimeExplanation - Scenario 1
-# Check: M3.OutOfTime=1 AND M3.Party=2 -> MUST include hardcoded string
-#######################
-def test_ftpaRespondentOutOfTimeExplanation_test1(test_df):
-    try:
-        expected_str = "This is a migrated ARIA case. Please refer to the documents."
-        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
-                                        (col("OutOfTime") == 1) & (col("Party") == 2))
-        
-        if target_records.count() == 0:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records found for Scenario 1.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "No records found for Scenario 1 (Party 2 & OutOfTime 1).", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
         results_list = []
@@ -3150,11 +3393,11 @@ def test_ftpaRespondentOutOfTimeExplanation_test1(test_df):
             if "ftpaRespondentOutOfTimeExplanation" not in ftpa_val:
                 results_list.append(f"FAIL - {row['appealReferenceNumber']}: Key missing")
             elif ftpa_val["ftpaRespondentOutOfTimeExplanation"] != expected_str:
-                results_list.append(f"FAIL - {row['appealReferenceNumber']}: Found '{ftpa_val['ftpaRespondentOutOfTimeExplanation']}'")
+                results_list.append(f"FAIL - {row['appealReferenceNumber']}: String mismatch")
 
         if results_list:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Mapping failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 1: Correctly included hardcoded string.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Inclusion failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 1: Correct string included for Party 2/OutOfTime 1", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
@@ -3163,20 +3406,28 @@ def test_ftpaRespondentOutOfTimeExplanation_test1(test_df):
 # ftpaRespondentOutOfTimeExplanation - Scenario 2
 # Check: M3.OutOfTime = 1 AND M3.Party != 2 -> MUST be omitted
 #######################
-def test_ftpaRespondentOutOfTimeExplanation_test2(test_df):
+def test_ftpaRespondentOutOfTimeExplanation_test2(json_data, M3_bronze):
     try:
-        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
-                                        (col("OutOfTime") == 1) & (col("Party") != 2))
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Target: Not Party 2 (e.g. Appellant) but is OutOfTime
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("OutOfTime") == 1) & (col("Party") != 2))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 2.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "No records found for Scenario 2 (Party != 2).", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
-        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found for Party {r['Party']}" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
 
         if results_list:
             return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 2: Correctly omitted.", "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 2: Correctly omitted for Party != 2", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
@@ -3186,23 +3437,30 @@ def test_ftpaRespondentOutOfTimeExplanation_test2(test_df):
 # ftpaRespondentOutOfTimeExplanation - Scenario 3
 # Check: M3.OutOfTime != 1 AND M3.Party = 2 -> MUST be omitted
 #######################
-def test_ftpaRespondentOutOfTimeExplanation_test3(test_df):
+def test_ftpaRespondentOutOfTimeExplanation_test3(json_data, M3_bronze):
     try:
-        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
-                                        (col("OutOfTime") != 1) & (col("Party") == 2))
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Target: Party 2 but was In-Time
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("OutOfTime") != 1) & (col("Party") == 2))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 3.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "No records found for Scenario 3 (In-Time).", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
-        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
+        results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found for In-Time case" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
 
         if results_list:
             return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 3: Correctly omitted.", "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 3: Correctly omitted for In-Time case", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
-    
 
 
 
@@ -3210,20 +3468,28 @@ def test_ftpaRespondentOutOfTimeExplanation_test3(test_df):
 # ftpaRespondentOutOfTimeExplanation - Scenario 4
 # Check: M3.OutOfTime != 1 AND M3.Party != 2 -> MUST be omitted
 #######################
-def test_ftpaRespondentOutOfTimeExplanation_test4(test_df):
+def test_ftpaRespondentOutOfTimeExplanation_test4(json_data, M3_bronze):
     try:
-        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & 
-                                        (col("OutOfTime") != 1) & (col("Party") != 2))
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaList")
+            m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3_clean, json["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        # Target: Everything else (Party 1 and In-Time)
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("OutOfTime") != 1) & (col("Party") != 2))
         
         if target_records.count() == 0:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "No records for Scenario 4.", "ended", inspect.stack()[0].function)
+            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "No records found for Scenario 4.", "ended", inspect.stack()[0].function)
 
         rows = target_records.select("appealReferenceNumber", "ftpaList").collect()
         results_list = [f"FAIL - {r['appealReferenceNumber']}: Key found" for r in rows if r['ftpaList'] and "ftpaRespondentOutOfTimeExplanation" in r['ftpaList'][0]["value"].asDict()]
 
         if results_list:
             return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "Omission failures: " + "|||".join(results_list), "ended", inspect.stack()[0].function)
-        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 4: Correctly omitted.", "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "Scenario 4: Correctly omitted", "ended", inspect.stack()[0].function)
     except Exception as e:
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
     
@@ -3234,10 +3500,9 @@ def test_ftpaRespondentOutOfTimeExplanation_test4(test_df):
 
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-
 def test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver):
     try:
-        # List of ALL fields for Appellant, Respondent, and Bundle
+        # 1. Removed Respondent Visibility fields from target_fields
         target_fields = [
             "appealReferenceNumber",
             "ftpaAppellantSubmitted",
@@ -3251,28 +3516,17 @@ def test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver):
             "isFtpaAppellantEvidenceDocsVisibleInSubmitted",
             "isFtpaAppellantOotExplanationVisibleInDecided",
             "isFtpaAppellantOotExplanationVisibleInSubmitted",
-            "ftpaRespondentSubmitted",
-            "isFtpaRespondentDocsVisibleInDecided",
-            "isFtpaRespondentDocsVisibleInSubmitted",
-            "isFtpaRespondentOotDocsVisibleInDecided",
-            "isFtpaRespondentOotDocsVisibleInSubmitted",
-            "isFtpaRespondentGroundsDocsVisibleInDecided",
-            "isFtpaRespondentEvidenceDocsVisibleInDecided",
-            "isFtpaRespondentGroundsDocsVisibleInSubmitted",
-            "isFtpaRespondentEvidenceDocsVisibleInSubmitted",
-            "isFtpaRespondentOotExplanationVisibleInDecided",
-            "isFtpaRespondentOotExplanationVisibleInSubmitted",
             "bundleFileNamePrefix"
         ]
 
-        # 1. Dynamic Select from JSON
+        # Dynamic Select from JSON
         available_fields = [col for col in target_fields if col in json_data.columns]
         if "appealReferenceNumber" not in available_fields:
              return None, TestResult("general_init", "FAIL", "Critical Error: appealReferenceNumber missing", "ended", "init")
 
         test_df = json_data.select(*available_fields)
 
-        # 2. Window logic with Priority for M3
+        # 2. Window logic
         m3_priority = M3_bronze.withColumn(
             "priority", 
             F.when(F.col("CaseStatus").isin(37, 38), 1)
@@ -3284,47 +3538,27 @@ def test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver):
             .filter(F.col("rn") == 1) \
             .select("CaseNo", "CaseStatus", "StatusId", "Party", "OutOfTime")
 
-        # 3. Prepare M1 (Formatted CaseNo) and M2 (Appellant Name) for Bundle Prefix
+        # 3. Bronze Preps
         m1_prep = M1_bronze.select(
             F.col("CaseNo").alias("M1_Join_Key"),
             F.regexp_replace(F.col("CaseNo"), "/", " ").alias("Formatted_CaseNo")
         )
-        
-        m2_prep = M2_bronze.select(
-            F.col("CaseNo").alias("M2_Join_Key"), 
-            "Appellant_Name"
-        )
+        m2_prep = M2_bronze.select(F.col("CaseNo").alias("M2_Join_Key"), "Appellant_Name")
+        m1_silver_prep = M1_silver.select(F.col("CaseNo").alias("Silver_Join_Key"), F.col("dv_representation").alias("Representation"))
 
-        # 4. Prepare M1_silver for Representation
-        m1_silver_prep = M1_silver.select(
-            F.col("CaseNo").alias("Silver_Join_Key"), 
-            F.col("dv_representation").alias("Representation")
-        )
+        # 4. Master Join
+        test_df = test_df.join(m3_latest, test_df["appealReferenceNumber"] == m3_latest["CaseNo"], "inner") \
+                         .join(m1_prep, test_df["appealReferenceNumber"] == m1_prep["M1_Join_Key"], "left") \
+                         .join(m2_prep, test_df["appealReferenceNumber"] == m2_prep["M2_Join_Key"], "left") \
+                         .join(m1_silver_prep, test_df["appealReferenceNumber"] == m1_silver_prep["Silver_Join_Key"], "left")
 
-        # 5. Master Join
-        test_df = test_df.join(
-            m3_latest, test_df["appealReferenceNumber"] == m3_latest["CaseNo"], "inner"
-        ).join(
-            m1_prep, test_df["appealReferenceNumber"] == m1_prep["M1_Join_Key"], "left"
-        ).join(
-            m2_prep, test_df["appealReferenceNumber"] == m2_prep["M2_Join_Key"], "left"
-        ).join(
-            m1_silver_prep, test_df["appealReferenceNumber"] == m1_silver_prep["Silver_Join_Key"], "left"
-        )
+        # 5. Expected Bundle Prefix
+        test_df = test_df.withColumn("expected_bundle_prefix", F.concat(F.col("Formatted_CaseNo"), F.lit("-"), F.col("Appellant_Name")))
 
-        # 6. Calculate Expected bundleFileNamePrefix ('CaseNo-Appellant_Name')
-        test_df = test_df.withColumn(
-            "expected_bundle_prefix",
-            F.concat(F.col("Formatted_CaseNo"), F.lit("-"), F.col("Appellant_Name"))
-        )
-
-        # Drop redundant join keys
-        test_df = test_df.drop("CaseNo", "M1_Join_Key", "M2_Join_Key", "Silver_Join_Key")
-
-        return test_df, True
+        return test_df.drop("CaseNo", "M1_Join_Key", "M2_Join_Key", "Silver_Join_Key"), True
 
     except Exception as e:
-        return None, TestResult("general_init", "FAIL", f"Failed to Setup Data: {str(e)[:300]}", "ended", "init")
+        return None, TestResult("general_init", "FAIL", f"Failed: {str(e)[:100]}", "ended", "init")
     
 
 def test_bundleFileNamePrefix_test1(test_df):
@@ -3773,33 +4007,48 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_ftpaRespondentSubmitted_test1(test_df):
-    if "ftpaRespondentSubmitted" not in test_df.columns:
-        return TestResult("ftpaRespondentSubmitted", "FAIL", "no data to test", "ended", "test1")
-    
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['ftpaRespondentSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 2")
-    count = len(rows)
-    if results:
-        return TestResult("ftpaRespondentSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("ftpaRespondentSubmitted", "PASS", f"Verified {count} Party 2 records; all correctly contain 'Yes'.", "ended", "test1")
 
-def test_ftpaRespondentSubmitted_test2(test_df):
-    if "ftpaRespondentSubmitted" not in test_df.columns:
-        return TestResult("ftpaRespondentSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['ftpaRespondentSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("ftpaRespondentSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("ftpaRespondentSubmitted", "PASS", f"Verified {count} Party 1 records; fields correctly omitted.", "ended", "test2")
+def test_ftpaRespondentSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaRespondentSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        failures = target_records.filter(col("ftpaRespondentSubmitted") != "Yes")
+        if failures.count() != 0:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", f"Found {failures.count()} rows where Party 2 was not 'Yes'", "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentSubmitted", "PASS", "Correctly included 'Yes' for Party 2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+def test_ftpaRespondentSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "ftpaRespondentSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        if target_records.count() == 0:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        failures = target_records.filter(col("ftpaRespondentSubmitted").isNotNull())
+        if failures.count() != 0:
+            return TestResult("ftpaRespondentSubmitted", "FAIL", f"Found {failures.count()} rows where Party 1 was not omitted", "ended", inspect.stack()[0].function)
+        return TestResult("ftpaRespondentSubmitted", "PASS", "Correctly omitted for Party 1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("ftpaRespondentSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
 
 
@@ -3809,33 +4058,47 @@ def test_ftpaRespondentSubmitted_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentDocsVisibleInDecided_test1(test_df):
-    if "isFtpaRespondentDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentDocsVisibleInDecided'] != "No":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for Party 2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; visibility correctly set to 'No'.", "ended", "test1")
+def test_isFtpaRespondentDocsVisibleInDecided_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
-def test_isFtpaRespondentDocsVisibleInDecided_test2(test_df):
-    if "isFtpaRespondentDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentDocsVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        if target_records.count() == 0:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "No Party 2 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        failures = target_records.filter(col("isFtpaRespondentDocsVisibleInDecided") != "No")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"Found {failures.count()} rows where Party 2 was not 'No'", "ended", inspect.stack()[0].function)
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", "Correctly included 'No' for Party 2", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+def test_isFtpaRespondentDocsVisibleInDecided_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        if target_records.count() == 0:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", "No Party 1 records found for Status 39.", "ended", inspect.stack()[0].function)
+
+        failures = target_records.filter(col("isFtpaRespondentDocsVisibleInDecided").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"Found {failures.count()} rows where Party 1 was not omitted", "ended", inspect.stack()[0].function)
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "PASS", "Correctly omitted for Party 1", "ended", inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("isFtpaRespondentDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
 
 
@@ -3846,33 +4109,41 @@ def test_isFtpaRespondentDocsVisibleInDecided_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentDocsVisibleInSubmitted_test1(test_df):
-    if "isFtpaRespondentDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentDocsVisibleInSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for Party 2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; visibility set to 'Yes'.", "ended", "test1")
+def test_isFtpaRespondentDocsVisibleInSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentDocsVisibleInSubmitted_test2(test_df):
-    if "isFtpaRespondentDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentDocsVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Logic Mismatch: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        failures = target_records.filter(col("isFtpaRespondentDocsVisibleInSubmitted") != "Yes")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Logic Mismatch", "ended", "test1")
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", "Verified 'Yes' for Party 2", "ended", "test1")
+    except Exception as e:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
+
+def test_isFtpaRespondentDocsVisibleInSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target_records.filter(col("isFtpaRespondentDocsVisibleInSubmitted").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", "Omit Mismatch", "ended", "test2")
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "PASS", "Correctly omitted for Party 1", "ended", "test2")
+    except Exception as e:
+        return TestResult("isFtpaRespondentDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
 
 
 
@@ -3882,48 +4153,59 @@ def test_isFtpaRespondentDocsVisibleInSubmitted_test2(test_df):
 # Logic: IF M3.Party IS 2 AND M3.OutOfTime IS 1 = "No"; ELSE = OMIT
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
+def test_isFtpaRespondentOotDocsVisibleInDecided_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotDocsVisibleInDecided_test1(test_df):
-    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") == 1))
+        if target.count() == 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "No P2-OOT records", "ended", "test1")
         
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInDecided'] != "No":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P2-OOT)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Respondent OOT records; set to 'No'.", "ended", "test1")
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInDecided") != "No")
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", "Verified 'No' for P2-OOT", "ended", "test1")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotDocsVisibleInDecided_test2(test_df):
-    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+def test_isFtpaRespondentOotDocsVisibleInDecided_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test2")
 
-def test_isFtpaRespondentOotDocsVisibleInDecided_test3(test_df):
-    if "isFtpaRespondentOotDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test3")
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") != 1))
+        if target.count() == 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "No P2 In-Time records", "ended", "test2")
         
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
-    return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInDecided").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Omission Error", "ended", "test2")
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", "Correctly omitted (P2 In-Time)", "ended", "test2")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
+
+def test_isFtpaRespondentOotDocsVisibleInDecided_test3(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test3")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        if target.count() == 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "No P1 records", "ended", "test3")
+        
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInDecided").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", "Omission Error", "ended", "test3")
+        return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "PASS", "Correctly omitted (Party 1)", "ended", "test3")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test3")
 
 
 
@@ -3934,47 +4216,53 @@ def test_isFtpaRespondentOotDocsVisibleInDecided_test3(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentOotDocsVisibleInSubmitted_test1(test_df):
-    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P2-OOT)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Respondent OOT records; set to 'Yes'.", "ended", "test1")
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotDocsVisibleInSubmitted_test2(test_df):
-    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") == 1))
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInSubmitted") != "Yes")
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", "Verified 'Yes' for P2-OOT", "ended", "test1")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotDocsVisibleInSubmitted_test3(test_df):
-    if "isFtpaRespondentOotDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test3")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotDocsVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
-    return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test2")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") != 1))
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInSubmitted").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Omission Error", "ended", "test2")
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", "Correctly omitted (P2 In-Time)", "ended", "test2")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
+
+def test_isFtpaRespondentOotDocsVisibleInSubmitted_test3(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test3")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target.filter(col("isFtpaRespondentOotDocsVisibleInSubmitted").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", "Omission Error", "ended", "test3")
+        return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "PASS", "Correctly omitted (Party 1)", "ended", "test3")
+    except Exception as e: return TestResult("isFtpaRespondentOotDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test3")
 
 
 
@@ -3985,33 +4273,41 @@ def test_isFtpaRespondentOotDocsVisibleInSubmitted_test3(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentGroundsDocsVisibleInDecided_test1(test_df):
-    if "isFtpaRespondentGroundsDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentGroundsDocsVisibleInDecided'] != "No":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; grounds set to 'No'.", "ended", "test1")
+def test_isFtpaRespondentGroundsDocsVisibleInDecided_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentGroundsDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(test_df):
-    if "isFtpaRespondentGroundsDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentGroundsDocsVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        failures = target_records.filter(col("isFtpaRespondentGroundsDocsVisibleInDecided") != "No")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", "Verified 'No' for P2", "ended", "test1")
+    except Exception as e:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
+
+def test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentGroundsDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target_records.filter(col("isFtpaRespondentGroundsDocsVisibleInDecided").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", "Failed Omission", "ended", "test2")
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "PASS", "Correctly omitted for Party 1", "ended", "test2")
+    except Exception as e:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
 
 
 
@@ -4022,33 +4318,41 @@ def test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test1(test_df):
-    if "isFtpaRespondentEvidenceDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentEvidenceDocsVisibleInDecided'] != "No":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' for P2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 2 records; evidence set to 'No'.", "ended", "test1")
+def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentEvidenceDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(test_df):
-    if "isFtpaRespondentEvidenceDocsVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentEvidenceDocsVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        failures = target_records.filter(col("isFtpaRespondentEvidenceDocsVisibleInDecided") != "No")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", "Verified 'No' for P2", "ended", "test1")
+    except Exception as e:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
+
+def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentEvidenceDocsVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target_records.filter(col("isFtpaRespondentEvidenceDocsVisibleInDecided").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", "Failed Omission", "ended", "test2")
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "PASS", "Correctly omitted for Party 1", "ended", "test2")
+    except Exception as e:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
 
 
 
@@ -4058,33 +4362,41 @@ def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test1(test_df):
-    if "isFtpaRespondentGroundsDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentGroundsDocsVisibleInSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; grounds set to 'Yes'.", "ended", "test1")
+def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentGroundsDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(test_df):
-    if "isFtpaRespondentGroundsDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentGroundsDocsVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        failures = target_records.filter(col("isFtpaRespondentGroundsDocsVisibleInSubmitted") != "Yes")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", "Verified 'Yes' for P2", "ended", "test1")
+    except Exception as e:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
+
+def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentGroundsDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target_records.filter(col("isFtpaRespondentGroundsDocsVisibleInSubmitted").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", "Failed Omission", "ended", "test2")
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "PASS", "Correctly omitted for Party 1", "ended", "test2")
+    except Exception as e:
+        return TestResult("isFtpaRespondentGroundsDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
 
 
 
@@ -4095,33 +4407,41 @@ def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test1(test_df):
-    if "isFtpaRespondentEvidenceDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2)).collect()
-    for row in rows:
-        if row['isFtpaRespondentEvidenceDocsVisibleInSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' for P2")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 2 records; evidence set to 'Yes'.", "ended", "test1")
+def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentEvidenceDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test2(test_df):
-    if "isFtpaRespondentEvidenceDocsVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentEvidenceDocsVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for P1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test2")
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2))
+        failures = target_records.filter(col("isFtpaRespondentEvidenceDocsVisibleInSubmitted") != "Yes")
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", "Verified 'Yes' for P2", "ended", "test1")
+    except Exception as e:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
+
+def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentEvidenceDocsVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+
+        target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target_records.filter(col("isFtpaRespondentEvidenceDocsVisibleInSubmitted").isNotNull())
+        if failures.count() != 0:
+            return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", "Failed Omission", "ended", "test2")
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "PASS", "Correctly omitted for Party 1", "ended", "test2")
+    except Exception as e:
+        return TestResult("isFtpaRespondentEvidenceDocsVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
 
 
 
@@ -4131,48 +4451,54 @@ def test_isFtpaRespondentEvidenceDocsVisibleInSubmitted_test2(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentOotExplanationVisibleInDecided_test1(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInDecided'] != "No":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'No' (P2-OOT)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Respondent OOT records; set to 'No'.", "ended", "test1")
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotExplanationVisibleInDecided_test2(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") == 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInDecided") != "No")
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", "Verified 'No' for P2-OOT", "ended", "test1")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotExplanationVisibleInDecided_test3(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInDecided" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "no data to test", "ended", "test3")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInDecided'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInDecided")
+            m3 = F.col("m3_CaseNo") if "m3_CaseNo" in locals() else col("CaseNo").alias("m3_CaseNo") # Safety
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test2")
 
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") != 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInDecided").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Omission Error", "ended", "test2")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", "Correctly omitted (P2 In-Time)", "ended", "test2")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
+
+def test_isFtpaRespondentOotExplanationVisibleInDecided_test3(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInDecided")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"No data: {str(e)[:300]}", "ended", "test3")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInDecided").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", "Omission Error", "ended", "test3")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "PASS", "Correctly omitted (Party 1)", "ended", "test3")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInDecided", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test3")
 
 
 #######################
@@ -4181,47 +4507,53 @@ def test_isFtpaRespondentOotExplanationVisibleInDecided_test3(test_df):
 # Group: EndedGroup 4 (MAX StatusId WHERE CaseStatus = 39)
 #######################
 
-def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test1(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test1")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] != "Yes":
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected 'Yes' (P2-OOT)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "OOT Error: " + "|||".join(results[:5]), "ended", "test1")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Respondent OOT records; set to 'Yes'.", "ended", "test1")
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test1(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test2")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 2) & (F.col("OutOfTime") != 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit (P2-InTime)")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test2")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Respondent In-Time records; correctly omitted.", "ended", "test2")
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") == 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInSubmitted") != "Yes")
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Logic Error", "ended", "test1")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", "Verified 'Yes' for P2-OOT", "ended", "test1")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test1")
 
-def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(test_df):
-    if "isFtpaRespondentOotExplanationVisibleInSubmitted" not in test_df.columns:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "no data to test", "ended", "test3")
-        
-    results = []
-    rows = test_df.filter((F.col("CaseStatus") == 39) & (F.col("Party") == 1)).collect()
-    for row in rows:
-        if row['isFtpaRespondentOotExplanationVisibleInSubmitted'] is not None:
-            results.append(f"FAIL - {row['appealReferenceNumber']}: Expected Omit for Party 1")
-    count = len(rows)
-    if results:
-        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Logic Error: " + "|||".join(results[:5]), "ended", "test3")
-    return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", f"Verified {count} Party 1 records; correctly omitted.", "ended", "test3")
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party", "OutOfTime")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test2")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 2) & (col("OutOfTime") != 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInSubmitted").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Omission Error", "ended", "test2")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", "Correctly omitted (P2 In-Time)", "ended", "test2")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test2")
+
+def test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(json_data, M3_bronze):
+    try:
+        try:
+            json = json_data.select("appealReferenceNumber", "isFtpaRespondentOotExplanationVisibleInSubmitted")
+            m3 = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus", "Party")
+            unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
+            test_df = get_ended_group_id(unended_test_df)
+        except Exception as e:
+            return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"No data: {str(e)[:300]}", "ended", "test3")
+
+        target = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39) & (col("Party") == 1))
+        failures = target.filter(col("isFtpaRespondentOotExplanationVisibleInSubmitted").isNotNull())
+        if failures.count() != 0: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", "Omission Error", "ended", "test3")
+        return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "PASS", "Correctly omitted (Party 1)", "ended", "test3")
+    except Exception as e: return TestResult("isFtpaRespondentOotExplanationVisibleInSubmitted", "FAIL", f"EXCEPTION: {str(e)[:300]}", "ended", "test3")
 
 ############################################################################################
 #######################

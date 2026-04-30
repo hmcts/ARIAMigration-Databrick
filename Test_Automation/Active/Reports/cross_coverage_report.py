@@ -70,13 +70,12 @@ def build_and_display(
 
         NO_DATA_PATTERNS = ["NO RECORDS TO TEST", "NO MATCHING TEST DATA", "DOES NOT EXIST IN THE",
                             "NO RECORDS FOUND", "NO DATA AVAILABLE", "NO DATA TO TEST",
-                            "NO DATA EXISTS FOR", "UNRESOLVED_COLUMN", "FAILED TO SETUP DATA"]
-        ERROR_PATTERNS = ["IS NOT DEFINED", "TEST CRASHED:"]
+                            "NO DATA EXISTS FOR", "UNRESOLVED_COLUMN"]
+        ERROR_PATTERNS = ["IS NOT DEFINED", "TEST CRASHED:", "FAILED TO SETUP DATA"]
 
         def reclassify(row):
             status = row["status_upper"]
             if status == "PASS": return "PASS"
-            if status in ("NO_DATA", "ERROR"): return status
             msg = str(row.get("message", "") or "").upper()
             for p in NO_DATA_PATTERNS:
                 if p in msg: return "NO_DATA"

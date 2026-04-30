@@ -3967,6 +3967,9 @@ def test_homeOfficeDecisionDate_ac2(test_df):
 
 def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
     try:
+        if "decisionLetterReceivedDate" not in json.columns:
+            return None, TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
+
         json = json.select(
             "appealReferenceNumber",
             "decisionLetterReceivedDate",
@@ -4013,7 +4016,7 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
     except Exception as e:
         dlrd_test_df = None
         error_message = str(e)        
-        return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function), dlrd_test_df
+        return None,TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #decisionLetterReceivedDate - If CategoryId not in 38 and decisionLetterReceivedDate not omitted
@@ -4045,7 +4048,7 @@ def test_decisionLetterReceivedDate_ac1(dlrd_test_df):
 #######################
 #decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision
 #######################
-def test_decisionLetterReceivedDate_ac2(test_df):
+def test_decisionLetterReceivedDate_ac2(dlrd_test_df):
     try:
         if dlrd_test_df != None:
             test_df = dlrd_test_df
@@ -4080,7 +4083,7 @@ def test_decisionLetterReceivedDate_ac2(test_df):
 #######################
 #decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted
 #######################
-def test_decisionLetterReceivedDate_ac3(test_df):
+def test_decisionLetterReceivedDate_ac3(dlrd_test_df):
     try:
         if dlrd_test_df != None:
             test_df = dlrd_test_df

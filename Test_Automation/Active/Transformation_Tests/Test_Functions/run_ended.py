@@ -35,20 +35,10 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
     
     if test_data_setup is True and test_df is not None:
         if "isEvidenceFromOutsideUkOoc" not in fields_to_exclude:
-            all_test_results.extend([
-                ended_tests.test_isEvidenceFromOutsideUkOoc_test1(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkOoc_test2(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkOoc_test3(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkOoc_test4(test_df)
-            ])
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkOoc_test1(test_df))
         
         if "isEvidenceFromOutsideUkInCountry" not in fields_to_exclude:
-            all_test_results.extend([
-                ended_tests.test_isEvidenceFromOutsideUkInCountry_test1(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkInCountry_test2(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkInCountry_test3(test_df),
-                ended_tests.test_isEvidenceFromOutsideUkInCountry_test4(test_df)
-            ])
+            all_test_results.append(ended_tests.test_isEvidenceFromOutsideUkInCountry_test1(test_df))
 
         if "isInterpreterServicesNeeded" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isInterpreterServicesNeeded_test1(test_df))
@@ -86,6 +76,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
         if "isAppealSuitableToFloat" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
             all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test2(test_df))
+            all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test3(test_df))
         if "listingLength" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listingLength_test1(test_df))
             all_test_results.append(ended_tests.test_listingLength_test2(test_df))
@@ -161,6 +152,8 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
         if "ftpaAppellantSubmissionOutOfTime" in ["ftpaAppellantSubmissionOutOfTime"]:
             all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test1(test_df))
             all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test2(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test3(test_df))
+            all_test_results.append(ended_tests.test_ftpaAppellantSubmissionOutOfTime_test4(test_df))
         if "ftpaAppellantOutOfTimeExplanation" in ["ftpaAppellantOutOfTimeExplanation"]:
             all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test1(test_df))
             all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test2(test_df))
@@ -209,7 +202,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
     # ---------------------------------------------------------
     # 10. general Tests
     # ---------------------------------------------------------
-    test_df_gen, test_data_setup_gen = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver)
+    test_df_gen, test_data_setup_gen = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, bac)
 
     if test_data_setup_gen is True and test_df_gen is not None:
         if "bundleFileNamePrefix" not in fields_to_exclude:
@@ -228,10 +221,12 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test2(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df_gen))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df_gen))
         if "isFtpaAppellantOotDocsVisibleInSubmitted" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test2(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test3(test_df_gen))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test4(test_df_gen))
         if "isFtpaAppellantGroundsDocsVisibleInDecided" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInDecided_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantGroundsDocsVisibleInDecided_test2(test_df_gen))
@@ -248,10 +243,12 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test2(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test3(test_df_gen))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInDecided_test4(test_df_gen))
         if "isFtpaAppellantOotExplanationVisibleInSubmitted" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test2(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df_gen))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test4(test_df_gen))
 
     # --- Self-Contained FTPA Respondent Visibility Tests ---
     if "ftpaRespondentSubmitted" not in fields_to_exclude:

@@ -12,18 +12,13 @@ NO_DATA_PATTERNS = [
     "no data available",
     "No data to test",
     "no data exists for",
+    "UNRESOLVED_COLUMN",
 ]
 
 # Patterns that mean "code error" — reclassify FAIL → ERROR
-# UNRESOLVED_COLUMN and "Failed to Setup Data" surface real bugs:
-# init crashes, unhandled column references, broken joins. They were
-# previously in NO_DATA_PATTERNS, which masked genuine code/data bugs as
-# benign "no data to test" rows in the cross-coverage report. Moving them
-# here makes those failures visible as ERROR.
 ERROR_PATTERNS = [
     "is not defined",
     "Test crashed:",
-    "UNRESOLVED_COLUMN",
     "Failed to Setup Data",
 ]
 

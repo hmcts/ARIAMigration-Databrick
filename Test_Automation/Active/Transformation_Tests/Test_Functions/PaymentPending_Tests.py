@@ -5270,8 +5270,8 @@ def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
             ))
             
 
-        if ac1_applicationOutOfTimeExplanation() != 0:
-            return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation().count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation has not been omitted.", test_from_state, inspect.stack()[0].function), ac4_sponsorAuthorisation_test1
+        if ac1_applicationOutOfTimeExplanation.count() != 0:
+            return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation.count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation has not been omitted.", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("applicationOutOfTimeExplanation", "PASS", f"applicationOutOfTimeExplanation acceptance criteria passed, all cases where OutOfTimeIssue = 1 have applicationOutOfTimeExplanation omitted.", test_from_state, inspect.stack()[0].function)
     except Exception as e:

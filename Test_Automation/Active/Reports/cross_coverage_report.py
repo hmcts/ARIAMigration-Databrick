@@ -89,8 +89,14 @@ def build_and_display(
             print("No results found")
         else:
             field_pair_runstate_best = defaultdict(dict)
+            field_pair_runstate_latest = defaultdict(dict)
             field_pair_runstate_runs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
             priority = {"PASS": 4, "FAIL": 3, "ERROR": 2, "NO_DATA": 1, "": 0}
+
+            all_results["__run_dt"] = all_results["run_id"].map(
+                lambda rid: getattr(run_lookup.get(rid), "run_start_datetime", None)
+            )
+            all_results = all_results.sort_values("__run_dt", na_position="first")
 
             for _, row in all_results.iterrows():
                 field = str(row.get("test_field", "") or "").strip()
@@ -106,18 +112,19 @@ def build_and_display(
                     "status": rs,
                     "message": str(row.get("message", ""))[:300],
                 })
+                field_pair_runstate_latest[pair][run_state] = rs
                 current = field_pair_runstate_best[pair].get(run_state, "")
                 if priority.get(rs, 0) > priority.get(current, 0):
                     field_pair_runstate_best[pair][run_state] = rs
 
             states_in_data = sorted(
-                set(rs for m in field_pair_runstate_best.values() for rs in m.keys()),
+                set(rs for m in field_pair_runstate_latest.values() for rs in m.keys()),
                 key=lambda s: chain_order.index(s) if s in chain_order else 999
             )
 
             pair_stats = {}
-            for pair, run_state_bests in field_pair_runstate_best.items():
-                bests = list(run_state_bests.values())
+            for pair, run_state_latest_for_pair in field_pair_runstate_latest.items():
+                latest_vals = list(run_state_latest_for_pair.values())
                 total_p = total_f = total_e = total_nd = 0
                 for run_state, runs_map in field_pair_runstate_runs[pair].items():
                     for rid, rlist in runs_map.items():
@@ -127,14 +134,14 @@ def build_and_display(
                             elif s == "FAIL": total_f += 1
                             elif s == "ERROR": total_e += 1
                             elif s == "NO_DATA": total_nd += 1
-                if "PASS" in bests: v = "PASSED"
-                elif "FAIL" in bests: v = "FAILED"
-                elif "ERROR" in bests: v = "ERROR"
+                if "PASS" in latest_vals: v = "PASSED"
+                elif "FAIL" in latest_vals: v = "FAILED"
+                elif "ERROR" in latest_vals: v = "ERROR"
                 else: v = "NEEDS DATA"
                 pair_stats[pair] = {
                     "verdict": v,
-                    "states_covered": len(bests),
-                    "pass_states": sum(1 for b in bests if b == "PASS"),
+                    "states_covered": len(latest_vals),
+                    "pass_states": sum(1 for v in latest_vals if v == "PASS"),
                     "pass": total_p, "fail": total_f, "error": total_e, "nodata": total_nd,
                     "total": total_p + total_f + total_e + total_nd,
                 }
@@ -224,26 +231,35 @@ def build_and_display(
                 stats = pair_stats[pair]
                 verdict = stats["verdict"]
                 v_css = {"PASSED": "v-pass", "FAILED": "v-fail", "ERROR": "v-err", "NEEDS DATA": "v-nodata"}[verdict]
-                run_state_bests = field_pair_runstate_best[pair]
+                run_state_latest_for_pair = field_pair_runstate_latest[pair]
+                run_state_best_for_pair = field_pair_runstate_best[pair]
                 row_run_states = []
                 fails_in_states = []
                 errors_in_states = []
                 state_cells = ""
                 for state in states_in_data:
-                    val = run_state_bests.get(state, "")
+                    val = run_state_latest_for_pair.get(state, "")
+                    best = run_state_best_for_pair.get(state, "")
+                    regressed = bool(val) and priority.get(best, 0) > priority.get(val, 0)
                     if val:
                         row_run_states.append(state)
                     if val == "FAIL":
                         fails_in_states.append(state)
                     elif val == "ERROR":
                         errors_in_states.append(state)
-                    tip = pair_runstate_tooltip.get((pair, state), "")
-                    tip_attr = f' title="{tip}"' if tip else ''
+                    tip_parts = []
+                    if regressed:
+                        tip_parts.append(f"Regressed from {best}")
+                    base_tip = pair_runstate_tooltip.get((pair, state), "")
+                    if base_tip:
+                        tip_parts.append(base_tip)
+                    tip_attr = f' title="{" | ".join(tip_parts)}"' if tip_parts else ''
                     css_extra = f' data-col-state="{state}"' + tip_attr
-                    if val == "PASS": state_cells += f'<td class="hm-pass"{css_extra}>&#10003;</td>'
-                    elif val == "FAIL": state_cells += f'<td class="hm-fail"{css_extra}>&#10007;</td>'
-                    elif val == "ERROR": state_cells += f'<td class="hm-err"{css_extra}>!</td>'
-                    elif val == "NO_DATA": state_cells += f'<td class="hm-nd"{css_extra}>&mdash;</td>'
+                    regress_marker = '<span class="regress">&#x2193;</span>' if regressed else ''
+                    if val == "PASS": state_cells += f'<td class="hm-pass"{css_extra}>&#10003;{regress_marker}</td>'
+                    elif val == "FAIL": state_cells += f'<td class="hm-fail"{css_extra}>&#10007;{regress_marker}</td>'
+                    elif val == "ERROR": state_cells += f'<td class="hm-err"{css_extra}>!{regress_marker}</td>'
+                    elif val == "NO_DATA": state_cells += f'<td class="hm-nd"{css_extra}>&mdash;{regress_marker}</td>'
                     else: state_cells += f'<td class="hm-empty"{css_extra}></td>'
 
                 state_data_attr = "|".join(row_run_states)
@@ -414,6 +430,7 @@ def build_and_display(
                 .csr #field-matrix.solid-heat td.hm-nd   {{background:#f39c12}}
                 .csr tr.group-header td:hover {{background:#2c3e50}}
                 .csr #cmp-out table {{margin-top:6px}}
+                .csr .regress {{color:#c0392b;font-size:9px;margin-left:2px;font-weight:bold;vertical-align:super}}
                 .csr #field-matrix th.col-fromstate, .csr #field-matrix td.col-fromstate {{width:110px;min-width:110px;max-width:110px;word-break:break-word;white-space:normal}}
                 .csr #field-matrix th.col-fieldgroup, .csr #field-matrix td.col-fieldgroup {{width:140px;min-width:140px;max-width:140px;word-break:break-word;white-space:normal}}
                 .csr #field-matrix th.col-test, .csr #field-matrix td.col-test {{width:210px;min-width:210px;max-width:210px;word-break:break-word;white-space:normal;font-size:11px}}

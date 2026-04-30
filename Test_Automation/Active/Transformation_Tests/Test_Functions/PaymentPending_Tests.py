@@ -4187,7 +4187,7 @@ def test_dateEntryClearanceDecision_ac3(test_df):
         (
             (array_contains(col("CategoryIds"), 38)) &
             (
-                ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
+                ~col("HORef_M1").rlike("GWF") & ~col("FCONumber").rlike("GWF") & ~col("CleansedHORef").rlike("GWF")
             )
             
         ) & (col("dateEntryClearanceDecision").isNotNull())

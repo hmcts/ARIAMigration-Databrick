@@ -697,7 +697,7 @@ def test_languages_init(json, M1_bronze, M3_bronze):
 
         M3_filtered = M3_bronze.filter(
             (col("CaseStatus").isin('37', '38') & col("Outcome").isin(39, 40, 37, 50, 27, 0)) |
-            (col("CaseStatus") == '26' & col("Outcome").isin(40, 52))
+            ((col("CaseStatus") == '26') & col("Outcome").isin(40, 52))
         )
 
         # Window to find the latest record per appeal

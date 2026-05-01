@@ -47,10 +47,13 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
         if "singleSexCourt" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_singleSexCourt_test1(test_df))
             all_test_results.append(ended_tests.test_singleSexCourt_test2(test_df))     
+            all_test_results.append(ended_tests.test_singleSexCourt_test3(test_df))
+            all_test_results.append(ended_tests.test_singleSexCourt_test4(test_df))
 
         if "inCameraCourt" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_inCameraCourt_test1(test_df))
             all_test_results.append(ended_tests.test_inCameraCourt_test2(test_df)) 
+            all_test_results.append(ended_tests.test_inCameraCourt_test3(test_df)) 
 
     # --- Self-Contained hearingRequirements Tests ---
     if "singleSexCourtType" not in fields_to_exclude:
@@ -221,7 +224,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test2(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df_gen))
-            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df_gen))
+            all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInDecided_test4(test_df_gen))
         if "isFtpaAppellantOotDocsVisibleInSubmitted" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotDocsVisibleInSubmitted_test2(test_df_gen))

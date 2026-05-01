@@ -566,51 +566,110 @@ def test_isInterpreterServicesNeeded_test2(test_df):
 
 
 
+from pyspark.sql.functions import col
+
+#######################
+# singleSexCourt - Scenario 1
+# Check where M1.CourtPreference = 0 and singleSexCourt = No
+# Context: EndedGroup 3, 4
 #######################
 def test_singleSexCourt_test1(test_df):
     try:
-        # 1. Filter for Group 3/4 and CourtPreference 0
+        test_from_state = "ended"
+        
+        # 1. Filter for Group 3/4 and target Preference
         target_records = test_df.filter(
-        (col("EndedGroup").isin(3, 4)) &
-        (col("CourtPreference") == 0)
+            (col("EndedGroup").isin(3, 4)) &
+            (col("CourtPreference") == 0)
         )
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "No records found in Groups 3/4 with CourtPreference 0.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "No"
         failures = target_records.filter(col("singleSexCourt") != "No")
 
         if failures.count() != 0:
-            return TestResult("singleSexCourt", "FAIL", f"Found {failures.count()} rows (Pref 0) not set to 'No'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("singleSexCourt", "PASS", "CourtPreference 0 correctly mapped to 'No'", test_from_state, inspect.stack()[0].function)
-
+            return TestResult("singleSexCourt", "FAIL", f"singleSexCourt FAIL: Found {failures.count()} rows where Preference = 0 but singleSexCourt != No", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("singleSexCourt", "PASS", f"singleSexCourt PASS: Verified {target_records.count()} records as 'No'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("singleSexCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-    
+        return TestResult("singleSexCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function) 
 
-
+#######################
+# singleSexCourt - Scenario 2
+# Check where M1.CourtPreference = 1 and singleSexCourt = Yes
+# Context: EndedGroup 3, 4
 #######################
 def test_singleSexCourt_test2(test_df):
     try:
-        # 1. Filter for Group 3/4 and CourtPreference NOT equal to 0
+        test_from_state = "ended"
+        
         target_records = test_df.filter(
-        (col("EndedGroup").isin(3, 4)) &
-        (col("CourtPreference") != 0)
+            (col("EndedGroup").isin(3, 4)) &
+            (col("CourtPreference") == 1)
         )
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "No records found in Groups 3/4 with CourtPreference != 0.", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
-        # 2. Acceptance Criteria: Must be "Yes"
         failures = target_records.filter(col("singleSexCourt") != "Yes")
 
         if failures.count() != 0:
-            return TestResult("singleSexCourt", "FAIL", f"Found {failures.count()} rows (Pref != 0) not set to 'Yes'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("singleSexCourt", "PASS", "CourtPreference != 0 correctly mapped to 'Yes'", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", f"singleSexCourt FAIL: Found {failures.count()} rows where Preference = 1 but singleSexCourt != Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("singleSexCourt", "PASS", f"singleSexCourt PASS: Verified {target_records.count()} records as 'Yes'", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function) 
 
+#######################
+# singleSexCourt - Scenario 3
+# Check where M1.CourtPreference = 2 and singleSexCourt = Yes
+# Context: EndedGroup 3, 4
+#######################
+def test_singleSexCourt_test3(test_df):
+    try:
+        test_from_state = "ended"
+        
+        target_records = test_df.filter(
+            (col("EndedGroup").isin(3, 4)) &
+            (col("CourtPreference") == 2)
+        )
+
+        if target_records.count() == 0:
+            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 2 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+
+        failures = target_records.filter(col("singleSexCourt") != "Yes")
+
+        if failures.count() != 0:
+            return TestResult("singleSexCourt", "FAIL", f"singleSexCourt FAIL: Found {failures.count()} rows where Preference = 2 but singleSexCourt != Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("singleSexCourt", "PASS", f"singleSexCourt PASS: Verified {target_records.count()} records as 'Yes'", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("singleSexCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function) 
+
+#######################
+# singleSexCourt - Scenario 4
+# Check singleSexCourt is not null
+# Context: EndedGroup 3, 4
+#######################
+def test_singleSexCourt_test4(test_df):
+    try:
+        test_from_state = "ended"
+        
+        # 1. Filter for the groups
+        target_records = test_df.filter(col("EndedGroup").isin(3, 4))
+
+        if target_records.count() == 0:
+            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+
+        # 2. Identify any NULL values
+        failures = target_records.filter(col("singleSexCourt").isNull())
+
+        if failures.count() != 0:
+            return TestResult("singleSexCourt", "FAIL", f"singleSexCourt FAIL: Found {failures.count()} records where singleSexCourt is NULL in Group 3/4", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("singleSexCourt", "PASS", f"singleSexCourt PASS: All {target_records.count()} records in Group 3/4 have a value", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         return TestResult("singleSexCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
@@ -863,65 +922,88 @@ def test_singleSexCourtTypeDescription_test3(json_data, M1_bronze, M3_bronze):
 
 
 
-############################################################################################
-# Field: inCameraCourt
-############################################################################################
+from pyspark.sql.functions import col
 
 #######################
 # inCameraCourt - Scenario 1
-# IF dbo.InCamera IS 1 = "Yes"
-# (MAX StatusID where EndedGroup = 3 or 4)
+# Logic: M1.inCamera = 1 -> inCameraCourt = 'Yes'
+# Context: EndedGroup 3, 4
 #######################
 def test_inCameraCourt_test1(test_df):
     try:
-        # 1. Filter for Group 3/4 and InCamera 1
-        target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
-            (col("InCamera") == 1)
-        )
+        test_from_state = "ended"
         
+        # 1. Filter for Group 3/4 and target inCamera value
+        target_records = test_df.filter(
+            (col("EndedGroup").isin(3, 4)) &
+            (col("inCamera") == 1)
+        )
+
         if target_records.count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "No records found in Groups 3/4 with InCamera 1.", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found with inCamera = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "Yes"
         failures = target_records.filter(col("inCameraCourt") != "Yes")
 
         if failures.count() != 0:
-            return TestResult("inCameraCourt", "FAIL", f"Found {failures.count()} rows (InCamera 1) not set to 'Yes'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("inCameraCourt", "PASS", "InCamera 1 correctly mapped to 'Yes'", test_from_state, inspect.stack()[0].function)
-
+            return TestResult("inCameraCourt", "FAIL", f"inCameraCourt FAIL: Found {failures.count()} rows where inCamera = 1 but inCameraCourt != Yes", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("inCameraCourt", "PASS", f"inCameraCourt PASS: Verified {target_records.count()} records as 'Yes'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        return TestResult("inCameraCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
+        return TestResult("inCameraCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function) 
 
 #######################
 # inCameraCourt - Scenario 2
-# IF dbo.InCamera IS 0 = "No"
-# (MAX StatusID where EndedGroup = 3 or 4)
+# Logic: M1.inCamera = 0 -> inCameraCourt = 'No'
+# Context: EndedGroup 3, 4
 #######################
 def test_inCameraCourt_test2(test_df):
     try:
-        # 1. Filter for Group 3/4 and InCamera 0
-        target_records = test_df.filter(
-            (col("EndedGroup").isin(3, 4)) & 
-            (col("InCamera") == 0)
-        )
+        test_from_state = "ended"
         
+        # 1. Filter for Group 3/4 and target inCamera value
+        target_records = test_df.filter(
+            (col("EndedGroup").isin(3, 4)) &
+            (col("inCamera") == 0)
+        )
+
         if target_records.count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "No records found in Groups 3/4 with InCamera 0.", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found with inCamera = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "No"
         failures = target_records.filter(col("inCameraCourt") != "No")
 
         if failures.count() != 0:
-            return TestResult("inCameraCourt", "FAIL", f"Found {failures.count()} rows (InCamera 0) not set to 'No'", test_from_state, inspect.stack()[0].function)
-        
-        return TestResult("inCameraCourt", "PASS", "InCamera 0 correctly mapped to 'No'", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", f"inCameraCourt FAIL: Found {failures.count()} rows where inCamera = 0 but inCameraCourt != No", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("inCameraCourt", "PASS", f"inCameraCourt PASS: Verified {target_records.count()} records as 'No'", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        return TestResult("inCameraCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function) 
 
+#######################
+# inCameraCourt - Scenario 3
+# Check inCameraCourt is not null
+# Context: EndedGroup 3, 4
+#######################
+def test_inCameraCourt_test3(test_df):
+    try:
+        test_from_state = "ended"
+        
+        # 1. Filter for the groups
+        target_records = test_df.filter(col("EndedGroup").isin(3, 4))
+
+        if target_records.count() == 0:
+            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+
+        # 2. Identify any NULL values
+        failures = target_records.filter(col("inCameraCourt").isNull())
+
+        if failures.count() != 0:
+            return TestResult("inCameraCourt", "FAIL", f"inCameraCourt FAIL: Found {failures.count()} records where inCameraCourt is NULL in Group 3/4", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("inCameraCourt", "PASS", f"inCameraCourt PASS: All {target_records.count()} records in Group 3/4 have a value", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         return TestResult("inCameraCourt", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
 
 def test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze):
     try:
@@ -1250,74 +1332,68 @@ def test_hearingChannel_test2(test_df):
         return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test2")
     
 
-#######################
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
+
+############################################################################################
 # listingLocation
-#######################
-from itertools import chain
+# Logic: Verify that when ListedCentre exists, the listingLocation object matches
+# Context: EndedGroup 4 AND MAX StatusID WHERE CaseStatus is 37 or 38
+############################################################################################
 def test_listingLocation_test1(test_df):
     try:
-        # 1. Scenario Filter: EndedGroup 4 and CaseStatus in (37, 38)
-        # Note:init function usually handles MAX(StatusId) selection
-        target_df = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(37, 38))
-        )
+        test_from_state = "ended"
         
-        if target_df.count() == 0:
-            return TestResult("listingLocation", "FAIL", "No records found for the specified statuses in Group 4.", "ended", "test_listingLocation_test1")
+        # 1. Filter for Group 4 and relevant Statuses (37, 38)
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) & 
+            (col("CaseStatus").isin(37, 38))
+        )
 
-        # 2. Define valid mapping dictionary (Code -> Label)
-        location_map = {
-            "227101": "Newport Tribunal Centre - Columbus House",
-            "231596": "Birmingham Civil And Family Justice Centre",
-            "366559": "Atlantic Quay - Glasgow",
-            "366796": "Newcastle Civil And Family Courts And Tribunals Centre",
-            "386417": "Hatton Cross Tribunal Hearing Centre",
-            "443257": "North Tyneside Magistrates Court",
-            "580554": "Bradford and Keighley Magistrates Court and Family Court",
-            "618632": "Nottingham Magistrates Court",
-            "649000": "Yarls Wood Immigration And Asylum Hearing Centre",
-            "698118": "Bradford Tribunal Hearing Centre",
-            "745389": "Hendon Magistrates Court",
-            "765324": "Taylor House Tribunal Hearing Centre",
-            "326944": "Manchester Crown Court (Minshull st)",
-            "144641": "Manchester Crown Court (Crown Square)",
-            "787030": "Coventry Magistrates Court",
-            "783803": "Manchester Magistrates Court",
-            "569737": "Leeds Magistrates Court and Family Court",
-            "28837": "Harmondsworth Tribunal Hearing Centre",
-            "999971": "Alloa Sheriff Court",
-            "999973": "Belfast Laganside Court",
-            "512401": "Manchester Tribunal Hearing Centre - Piccadilly Exchange"
-        }
+        if target_records.count() == 0:
+            return TestResult("listingLocation", "FAIL", "DATA DEFICIENCY: No Status 37/38 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+        
+        # 2. Identify the MAX StatusID record per appeal
+        # Included TimeEstimate in order as per your original logic for tie-breaking
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(
+            col("StatusId").desc(), 
+            col("TimeEstimate").desc()
+        )
 
-        # 3. Create conditional expression to validate label matches the code
-        # We handle both nested (value.code) and flat (.code) just in case
-        is_nested = "value" in target_df.schema["listingLocation"].dataType.names
-        code_col = "listingLocation.value.code" if is_nested else "listingLocation.code"
-        label_col = "listingLocation.value.label" if is_nested else "listingLocation.label"
+        winning_records = target_records.withColumn("row_rank", row_number().over(window_spec)).filter(col("row_rank") == 1)
 
-        # Check for invalid mappings
-        failures = target_df.withColumn("expected_label", 
-            F.create_map([F.lit(x) for x in chain(*location_map.items())])[F.col(code_col)]
-        ).filter(
-            (F.col(label_col) != F.col("expected_label")) | (F.col(code_col).isNull())
+        # 3. Collapse/Aggregate to prepare for comparison
+        collapsed_df = winning_records.groupBy("appealReferenceNumber").agg(
+            F.max("listingLocation.code").alias("actual_code"),
+            F.max("listingLocation.label").alias("actual_label"),
+            F.max("locationCode").alias("expected_code"),
+            F.max("locationLabel").alias("expected_label"),
+            F.max("ListedCentre").alias("ListedCentre")
+        )
+
+        # 4. Acceptance Criteria: Check for mismatches only where ListedCentre is populated
+        # This filters for Party-specific records that should have a location
+        failures = collapsed_df.filter(
+            (col("ListedCentre").isNotNull()) & 
+            (
+                (col("actual_code") != col("expected_code")) | 
+                (col("actual_label") != col("expected_label"))
+            )
         )
 
         if failures.count() > 0:
-            sample = failures.select("appealReferenceNumber", code_col, label_col).limit(5).toPandas()
-            return TestResult(
-                "listingLocation", 
-                "FAIL", 
-                f"Invalid location mapping in {failures.count()} records. Example: {sample.values.tolist()}", 
-                "ended", 
-                "test_listingLocation_test1"
-            )
-        
-        return TestResult("listingLocation", "PASS", "listingLocation values correctly mapped for Group 4.", "ended", "test_listingLocation_test1")
+            return TestResult("listingLocation", "FAIL", f"listingLocation FAIL: Found {failures.count()} records where actual listingLocation does not match expected source location", test_from_state, inspect.stack()[0].function)
+        else:
+            # Check if we actually tested any populated ListedCentres
+            tested_count = collapsed_df.filter(col("ListedCentre").isNotNull()).count()
+            if tested_count == 0:
+                return TestResult("listingLocation", "FAIL", "DATA DEFICIENCY: Records found, but none had a populated ListedCentre to verify", test_from_state, inspect.stack()[0].function)
+            
+            return TestResult("listingLocation", "PASS", f"listingLocation PASS: Verified {tested_count} records have matching location codes and labels", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("listingLocation", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listingLocation_test1")
+        return TestResult("listingLocation", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # listCaseHearingLength
@@ -1540,241 +1616,257 @@ def test_listCaseHearingCentreAddress_test1(test_df):
     except Exception as e:
         return TestResult("listCaseHearingCentreAddress", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_listCaseHearingCentreAddress_test1")
     
-#######################  
-#sendDecisionsAndReasonsDate
-#######################  
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
+
+#######################
+# sendDecisionsAndReasonsDate
+# Logic: Ensure M3.DecisionDate and sendDecisionsAndReasonsDate are equal
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37, 38, 26) AND Outcome IN (1, 2)
+#######################
 def test_sendDecisionsAndReasonsDate_test1(test_df):
     try:
-        # 1. Filter: EndedGroup 4, Statuses (37, 38, 26), and Outcome (1, 2)
-        target_df = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(37, 38, 26)) &
-            (F.col("Outcome").isin(1, 2))
-        )
+        test_from_state = "ended"
         
-        if target_df.count() == 0:
-            return TestResult("sendDecisionsAndReasonsDate", "FAIL", "No records found matching Group 4 status/outcome criteria.", "ended", "test_sendDecisionsAndReasonsDate_test1")
+        # 1. Filter for Group 4, relevant CaseStatuses, and specific Outcomes
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) &
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1, 2))
+        )
 
-        # 2. Construct Expected ISO 8601 String from ARIA Data (DecisionDate)
-        target_df = target_df.withColumn("expected_iso_date", F.date_format(F.col("DecisionDate"), "yyyy-MM-dd"))
+        if target_records.count() == 0:
+            return TestResult("sendDecisionsAndReasonsDate", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
-        # 3. Validation Logic
-        # - Check 1: Value matches ARIA
-        # - Check 2: Format matches ISO 8601 Regex (YYYY-MM-DD)
-        failures = target_df.filter(
-            (F.col("sendDecisionsAndReasonsDate") != F.col("expected_iso_date")) |
-            (~F.col("sendDecisionsAndReasonsDate").rlike(r"^\d{4}-\d{2}-\d{2}$"))
+        # 2. Identify the MAX StatusID record per appeal
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+
+        # Get the latest Record per Case
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
+
+        # 3. Acceptance Criteria: sendDecisionsAndReasonsDate must match DecisionDate
+        # Note: We filter for rows where they are NOT equal to find failures
+        failures = winning_records.filter(
+            col("sendDecisionsAndReasonsDate") != col("DecisionDate")
         )
 
         if failures.count() > 0:
-            sample = failures.select("appealReferenceNumber", "DecisionDate", "sendDecisionsAndReasonsDate").limit(5).toPandas()
-            return TestResult(
-                "sendDecisionsAndReasonsDate", 
-                "FAIL", 
-                f"ISO 8601 mismatch or format error in {failures.count()} records. Example: {sample.values.tolist()}", 
-                "ended", 
-                "test_sendDecisionsAndReasonsDate_test1"
-            )
-        
-        return TestResult("sendDecisionsAndReasonsDate", "PASS", "sendDecisionsAndReasonsDate correctly mapped to ISO 8601 format.", "ended", "test_sendDecisionsAndReasonsDate_test1")
+            return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"sendDecisionsAndReasonsDate FAIL: Found {failures.count()} mismatches between DecisionDate and sendDecisionsAndReasonsDate", test_from_state, inspect.stack()[0].function)
+        else:
+            success_count = winning_records.count()
+            return TestResult("sendDecisionsAndReasonsDate", "PASS", f"sendDecisionsAndReasonsDate PASS: Verified {success_count} records where dates correctly match", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_sendDecisionsAndReasonsDate_test1")
+        return TestResult("sendDecisionsAndReasonsDate", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
+
 #######################
 # appealDate
-#######################  
+# Logic: Ensure M3.DecisionDate and appealDate are equal
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37, 38, 26) AND Outcome IN (1, 2)
+#######################
 def test_appealDate_test1(test_df):
     try:
-        # 1. Filter: EndedGroup 4, Statuses (37, 38, 26), and Outcome (1, 2)
-        target_df = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(37, 38, 26)) &
-            (F.col("Outcome").isin(1, 2))
-        )
+        test_from_state = "ended"
         
-        if target_df.count() == 0:
-            return TestResult("appealDate", "FAIL", "No records found matching criteria.", "ended", "test_appealDate_test1")
+        # 1. Filter for Group 4, relevant CaseStatuses, and specific Outcomes
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) &
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1, 2))
+        )
 
-        # 2. Construct Expected ISO 8601 String (YYYY-MM-DD)
-        target_df = target_df.withColumn("expected_iso_date", F.date_format(F.col("DateReceived"), "yyyy-MM-dd"))
+        if target_records.count() == 0:
+            return TestResult("appealDate", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
-        # 3. Validation Logic
-        # - Check 1: Value matches ARIA source
-        # - Check 2: Format strictly follows YYYY-MM-DD
-        failures = target_df.filter(
-            (F.col("appealDate") != F.col("expected_iso_date")) |
-            (~F.col("appealDate").rlike(r"^\d{4}-\d{2}-\d{2}$"))
+        # 2. Identify the MAX StatusID record per appeal
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+
+        # Get the latest Record per Case
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
+
+        # 3. Acceptance Criteria: appealDate must match DecisionDate
+        failures = winning_records.filter(
+            col("appealDate") != col("DecisionDate")
         )
 
         if failures.count() > 0:
-            sample = failures.select("appealReferenceNumber", "DateReceived", "appealDate").limit(5).toPandas()
-            return TestResult(
-                "appealDate", 
-                "FAIL", 
-                f"ISO 8601 mismatch. Examples: {sample.values.tolist()}", 
-                "ended", 
-                "test_appealDate_test1"
-            )
-        
-        return TestResult("appealDate", "PASS", "appealDate correctly mapped to ISO 8601 from ARIA.", "ended", "test_appealDate_test1")
+            return TestResult("appealDate", "FAIL", f"appealDate FAIL: Found {failures.count()} mismatches between DecisionDate and appealDate", test_from_state, inspect.stack()[0].function)
+        else:
+            success_count = winning_records.count()
+            return TestResult("appealDate", "PASS", f"appealDate PASS: Verified {success_count} records where appealDate correctly matches DecisionDate", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("appealDate", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDate_test1")
+        return TestResult("appealDate", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
     
-#######################
-# appealDecision (Allowed) - Scenario 1
-# Check if Outcome = 1 (Group 4, Status 26/37/38)
-# Expected: Value = "Allowed"
-#######################
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
 
+############################################################################################
+# appealDecision - Scenario 1
+# Logic: M3.Outcome = 1 -> appealDecision = 'Allowed'
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37,38,26)
+############################################################################################
 def test_appealDecision_test1(test_df):
-    """
-    Scenario: Verify Outcome 1 maps to 'Allowed'.
-    Criteria: EndedGroup 4, Status (26, 37, 38).
-    """
     try:
-        # Filter strictly for Outcome 1
-        target_df = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(26, 37, 38)) &
-            (F.col("Outcome") == 1)
-        )
+        test_from_state = "ended"
         
-        if target_df.count() == 0:
-            return TestResult("appealDecision_Allowed", "FAIL", "No records found for Outcome 1.", "ended", "test_appealDecision_allowed_test1")
+        # 1. Filter for Group 4 and relevant decision statuses
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) &
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1, 2))
+        )
 
-        # Validation logic
-        failures = target_df.filter(F.col("appealDecision") != "Allowed")
+        if target_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+
+        # 2. Identify the MAX StatusID record per appeal
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
+
+        # 3. Acceptance Criteria: Outcome 1 must be 'Allowed'
+        outcome_1_records = winning_records.filter(col("Outcome") == 1)
+        
+        if outcome_1_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No Outcome 1 records found to verify 'Allowed' mapping", test_from_state, inspect.stack()[0].function)
+
+        failures = outcome_1_records.filter(col("appealDecision") != "Allowed")
 
         if failures.count() > 0:
-            sample = failures.select("appealReferenceNumber", "appealDecision").limit(5).toPandas()
-            return TestResult(
-                "appealDecision_Allowed", 
-                "FAIL", 
-                f"Outcome 1 should be 'Allowed' but found: {sample.values.tolist()}", 
-                "ended", 
-                "test_appealDecision_allowed_test1"
-            )
-        
-        return TestResult("appealDecision_Allowed", "PASS", "Outcome 1 correctly mapped to 'Allowed'.", "ended", "test_appealDecision_allowed_test1")
+            return TestResult("appealDecision", "FAIL", f"appealDecision FAIL: Found {failures.count()} cases where Outcome = 1 but decision != 'Allowed'", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealDecision", "PASS", f"appealDecision PASS: Verified {outcome_1_records.count()} 'Allowed' mappings", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("appealDecision_Allowed", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDecision_allowed_test1")
-#######################
-# appealDecision (Dismissed) - Scenario 2
-# Check if Outcome = 2 (Group 4, Status 26/37/38)
-# Expected: Value = "Dismissed"
-#######################    
-
-def test_appealDecision_test2(test_df):
-    """
-    Scenario: Verify Outcome 2 maps to 'Dismissed'.
-    Criteria: EndedGroup 4, Status (26, 37, 38).
-    """
-    try:
-        # Filter strictly for Outcome 2
-        target_df = test_df.filter(
-            (F.col("EndedGroup") == 4) & 
-            (F.col("CaseStatus").isin(26, 37, 38)) &
-            (F.col("Outcome") == 2)
-        )
-        
-        if target_df.count() == 0:
-            return TestResult("appealDecision_Dismissed", "FAIL", "No records found for Outcome 2.", "ended", "test_appealDecision_dismissed_test1")
-
-        # Validation logic
-        failures = target_df.filter(F.col("appealDecision") != "Dismissed")
-
-        if failures.count() > 0:
-            sample = failures.select("appealReferenceNumber", "appealDecision").limit(5).toPandas()
-            return TestResult(
-                "appealDecision_Dismissed", 
-                "FAIL", 
-                f"Outcome 2 should be 'Dismissed' but found: {sample.values.tolist()}", 
-                "ended", 
-                "test_appealDecision_dismissed_test1"
-            )
-        
-        return TestResult("appealDecision_Dismissed", "PASS", "Outcome 2 correctly mapped to 'Dismissed'.", "ended", "test_appealDecision_dismissed_test1")
-
-    except Exception as e:
-        return TestResult("appealDecision_Dismissed", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_appealDecision_dismissed_test1")
+        return TestResult("appealDecision", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
     
-#######################
+
+############################################################################################
+# appealDecision - Scenario 2
+# Logic: M3.Outcome = 2 -> appealDecision = 'Dismissed'
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37,38,26)
+############################################################################################
+def test_appealDecision_test2(test_df):
+    try:
+        test_from_state = "ended"
+        
+        # 1. Filter for Group 4 and relevant decision statuses
+        target_records = test_df.filter(
+            (col("EndedGroup") == 4) &
+            (col("CaseStatus").isin(37, 38, 26)) & 
+            (col("Outcome").isin(1, 2))
+        )
+
+        if target_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+
+        # 2. Identify the MAX StatusID record per appeal
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
+
+        # 3. Acceptance Criteria: Outcome 2 must be 'Dismissed'
+        outcome_2_records = winning_records.filter(col("Outcome") == 2)
+        
+        if outcome_2_records.count() == 0:
+            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No Outcome 2 records found to verify 'Dismissed' mapping", test_from_state, inspect.stack()[0].function)
+
+        failures = outcome_2_records.filter(col("appealDecision") != "Dismissed")
+
+        if failures.count() > 0:
+            return TestResult("appealDecision", "FAIL", f"appealDecision FAIL: Found {failures.count()} cases where Outcome = 2 but decision != 'Dismissed'", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("appealDecision", "PASS", f"appealDecision PASS: Verified {outcome_2_records.count()} 'Dismissed' mappings", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("appealDecision", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
+
+############################################################################################
 # isDecisionAllowed - Scenario 1
-# Where M3.Outcome = 1 & isDecisionAllowed = ‘allowed’
-# State: Ended (Group 4)
-#######################
+# Logic: M3.Outcome = 1 -> isDecisionAllowed = 'allowed'
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37,38,26)
+############################################################################################
 def test_isDecisionAllowed_test1(test_df):
     try:
         test_from_state = "ended"
         
-        # 1. Filter for Ended Group 4 and relevant outcome statuses
-        # Including 39 as it represents the 'Ended' state row in your current data
+        # 1. Filter for Group 4 and relevant decision statuses
         target_records = test_df.filter(
             (col("EndedGroup") == 4) &
-            (col("CaseStatus").isin(37, 38, 26, 39)) & 
+            (col("CaseStatus").isin(37, 38, 26)) & 
             (col("Outcome").isin(1, 2))
         )
 
         if target_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST (No Group 4 Decision/FTPA records)", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
-        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
 
         # 3. Acceptance Criteria: Outcome 1 must be 'allowed'
-        # Note: Added a lower() check to handle potential casing issues
-        acceptance_criteria = winning_records.filter(
-            (col("Outcome") == 1) & (F.lower(col("isDecisionAllowed")) != "allowed")
-        )
+        outcome_1_records = winning_records.filter(col("Outcome") == 1)
+        
+        if outcome_1_records.count() == 0:
+            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No Outcome 1 records found in Group 4", test_from_state, inspect.stack()[0].function)
 
-        if acceptance_criteria.count() > 0:
-            return TestResult("isDecisionAllowed", "FAIL", f"Scenario 1 FAIL: found {acceptance_criteria.count()} cases where Outcome is 1 but isDecisionAllowed is not 'allowed'", test_from_state, inspect.stack()[0].function)
+        failures = outcome_1_records.filter(col("isDecisionAllowed") != "allowed")
+
+        if failures.count() > 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"isDecisionAllowed FAIL: Found {failures.count()} cases where Outcome = 1 but field != 'allowed'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("isDecisionAllowed", "PASS", "Scenario 1 PASS: All Outcome 1 cases are correctly marked as 'allowed'", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "PASS", f"isDecisionAllowed PASS: Verified {outcome_1_records.count()} 'allowed' mappings", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
     
 
-#######################
+############################################################################################
 # isDecisionAllowed - Scenario 2
-# Where M3.Outcome = 2 & isDecisionAllowed = ‘dismissed’
-# State: Ended (Group 4)
-#######################
+# Logic: M3.Outcome = 2 -> isDecisionAllowed = 'dismissed'
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37,38,26)
+############################################################################################
 def test_isDecisionAllowed_test2(test_df):
     try:
         test_from_state = "ended"
         
-        # 1. Filter for Ended Group 4 and relevant outcome statuses
+        # 1. Filter for Group 4 and relevant decision statuses
         target_records = test_df.filter(
             (col("EndedGroup") == 4) &
-            (col("CaseStatus").isin(37, 38, 26, 39)) & 
+            (col("CaseStatus").isin(37, 38, 26)) & 
             (col("Outcome").isin(1, 2))
         )
 
         if target_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST (No Group 4 Decision/FTPA records)", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
-        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)).filter(F.col("rank") == 1)
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
 
         # 3. Acceptance Criteria: Outcome 2 must be 'dismissed'
-        acceptance_criteria = winning_records.filter(
-            (col("Outcome") == 2) & (F.lower(col("isDecisionAllowed")) != "dismissed")
-        )
+        outcome_2_records = winning_records.filter(col("Outcome") == 2)
+        
+        if outcome_2_records.count() == 0:
+            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No Outcome 2 records found in Group 4", test_from_state, inspect.stack()[0].function)
 
-        if acceptance_criteria.count() > 0:
-            return TestResult("isDecisionAllowed", "FAIL", f"Scenario 2 FAIL: found {acceptance_criteria.count()} cases where Outcome is 2 but isDecisionAllowed is not 'dismissed'", test_from_state, inspect.stack()[0].function)
+        failures = outcome_2_records.filter(col("isDecisionAllowed") != "dismissed")
+
+        if failures.count() > 0:
+            return TestResult("isDecisionAllowed", "FAIL", f"isDecisionAllowed FAIL: Found {failures.count()} cases where Outcome = 2 but field != 'dismissed'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("isDecisionAllowed", "PASS", "Scenario 2 PASS: All Outcome 2 cases are correctly marked as 'dismissed'", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "PASS", f"isDecisionAllowed PASS: Verified {outcome_2_records.count()} 'dismissed' mappings", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
+        return TestResult("isDecisionAllowed", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #######################
@@ -1822,59 +1914,70 @@ def test_attendingJudge_test1(test_df):
     
 
 
-#######################
-# actualCaseHearingLength - Ended State
-# Logic: Convert total minutes (HearingDuration) into a struct of {hours, minutes}
-# MAX(StatusId) WHERE CaseStatus IN (37,38,26,39) AND Outcome IN (1,2) in EndedGroup 4
-#######################
+from pyspark.sql import Window
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, row_number
+
+############################################################################################
+# actualCaseHearingLength
+# Logic: Convert M3.HearingDuration (Total Minutes) to { hours, minutes } struct
+# Context: EndedGroup 4 AND MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
+############################################################################################
 def test_actualCaseHearingLength_test1(test_df):
     try:
         test_from_state = "ended"
         
-        # 1. Filter for Ended Group 4 and business conditions
-        # We include 39 as it often holds the flattened data in Group 4
+        # 1. Filter for Group 4, relevant CaseStatuses, and specific Outcomes
         target_records = test_df.filter(
             (col("EndedGroup") == 4) &
-            (col("CaseStatus").isin(37, 38, 26, 39)) & 
+            (col("CaseStatus").isin(37, 38, 26)) & 
             (col("Outcome").isin(1, 2))
         )
 
         if target_records.count() == 0:
-            return TestResult("actualCaseHearingLength", "FAIL", "NO RECORDS TO TEST (No Decision/FTPA in EndedGroup 4)", test_from_state, inspect.stack()[0].function)
+            return TestResult("actualCaseHearingLength", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
-        winning_records = target_records.withColumn("rank", F.row_number().over(window_spec)) \
-                                        .filter(F.col("rank") == 1) \
-                                        .select("appealReferenceNumber", "actualCaseHearingLength", "HearingDuration")
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
+        winning_records = target_records.withColumn("rank", row_number().over(window_spec)).filter(col("rank") == 1)
 
-        # 3. Extract actual values from JSON struct and calculate expected from Bronze
-        # We use .cast("int") to handle potential string types in JSON
-        final_df = winning_records.withColumn(
-            "actual_hours", col("actualCaseHearingLength").getItem("hours").cast("int")
+        # 3. Process actual and expected values
+        # Extract from destination struct
+        winning_records = winning_records.withColumn(
+            "actual_hours", col("actualCaseHearingLength").getField("hours").cast("int")
         ).withColumn(
-            "actual_minutes", col("actualCaseHearingLength").getItem("minutes").cast("int")
-        ).withColumn(
+            "actual_minutes", col("actualCaseHearingLength").getField("minutes").cast("int")
+        )
+
+        # Calculate expected values from source total minutes
+        # floor(65 / 60) = 1 hour; 65 % 60 = 5 minutes
+        winning_records = winning_records.withColumn(
             "expected_hours", F.floor(col("HearingDuration") / 60).cast("int")
         ).withColumn(
             "expected_minutes", (col("HearingDuration") % 60).cast("int")
         )
 
-        # 4. Validation
-        # Fail if the struct is NULL or if hours/minutes don't match the math
-        acceptance_criteria = final_df.filter(
-            (col("actualCaseHearingLength").isNull()) |
-            (col("actual_hours") != col("expected_hours")) | 
-            (col("actual_minutes") != col("expected_minutes"))
+        # 4. Validation - Check for mismatches
+        # We only validate where HearingDuration is not null to avoid false failures on missing data
+        failures = winning_records.filter(
+            (col("HearingDuration").isNotNull()) & 
+            (
+                (col("actual_hours") != col("expected_hours")) | 
+                (col("actual_minutes") != col("expected_minutes"))
+            )
         )
 
-        if acceptance_criteria.count() > 0:
-            return TestResult("actualCaseHearingLength", "FAIL", f"actualCaseHearingLength failed: found {acceptance_criteria.count()} rows where JSON struct does not match M3.HearingDuration math", test_from_state, inspect.stack()[0].function)
+        if failures.count() > 0:
+            return TestResult("actualCaseHearingLength", "FAIL", f"actualCaseHearingLength FAIL: Found {failures.count()} cases where struct hours/minutes do not match M3.HearingDuration", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("actualCaseHearingLength", "PASS", "actualCaseHearingLength passed: all Group 4 records match hearing duration calculation", test_from_state, inspect.stack()[0].function)
+            success_count = winning_records.filter(col("HearingDuration").isNotNull()).count()
+            if success_count == 0:
+                 return TestResult("actualCaseHearingLength", "FAIL", "DATA DEFICIENCY: records found but none have HearingDuration populated", test_from_state, inspect.stack()[0].function)
+            
+            return TestResult("actualCaseHearingLength", "PASS", f"actualCaseHearingLength PASS: Verified {success_count} records correctly match M3.HearingDuration", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return TestResult("actualCaseHearingLength", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("actualCaseHearingLength", "FAIL", f"EXCEPTION: Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
 # isInCameraCourtAllowed

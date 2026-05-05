@@ -2189,7 +2189,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         # 1. Filter for Ended Group 3/4 and InCamera = 1
         target_records = test_df.filter(
             (col("EndedGroup").isin(3, 4)) &
-            (col("InCamera") == 1)
+            (col("inCameraCourtDescription") == 1)
         )
         
         if target_records.count() == 0:
@@ -2240,7 +2240,7 @@ def test_inCameraCourtDescription_test2(json_data, M1_bronze, M3_bronze):
         # 1. Filter for Ended Group 3/4 and InCamera != 1
         target_records = test_df.filter(
             (col("EndedGroup").isin(3, 4)) &
-            (col("InCamera") != 1)
+            (col("inCameraCourtDescription") != 1)
         )
         
         if target_records.count() == 0:

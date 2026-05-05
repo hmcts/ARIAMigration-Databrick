@@ -1511,7 +1511,7 @@ def test_listCaseHearingCentre_test1(test_df):
             "Stockport Magistrates' Court": ["manchester", "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH"],
             "Taylor House": ["taylorHouse", "Taylor House Tribunal Hearing Centre, Rosebery Avenue, EC1R 4QU"],
             "Wigan and Leigh Magistrates' Court": ["manchester", "Manchester Tribunal Hearing Centre - Piccadilly Exchange, Piccadilly Plaza, M1 4AH"],
-            "Yarl's Wood": ["yarlsWord", "Yarls Wood Immigration And Asylum Hearing Centre, Twinwood Road, MK44 1FD"]
+            "Yarl's Wood": ["yarlsWood", "Yarls Wood Immigration And Asylum Hearing Centre, Twinwood Road, MK44 1FD"]
         }
 
         # 3. Apply Mapping and Compare

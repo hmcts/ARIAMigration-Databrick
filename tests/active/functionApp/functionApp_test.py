@@ -577,3 +577,32 @@ def test_idempotency_blob_path_includes_state_and_case_number(
     assert "CASE111" in called_path
     assert "paymentPending" in called_path
     assert "idempotency" in called_path
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_error_result_sent_even_when_delete_blob_raises(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """When delete_blob raises on ERROR, the result is still added to the batch and sent."""
+    mocks = _build_trigger_mocks()
+    mocks["idempotency_blob"].delete_blob.side_effect = Exception("Storage error")
+    mock_process_case.return_value = {
+        "Status": "ERROR",
+        "CaseNo": "CASE_DEL_FAIL",
+        "CCDCaseID": None,
+        "Error": "Processing failed",
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_DEL_FAIL", "run010", "paymentPending", {"key": "val"})]))
+
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
+    mocks["batch"].add.assert_called_once()
+    mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])

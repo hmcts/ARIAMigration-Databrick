@@ -402,3 +402,17 @@ def test_cleanup_called_even_when_event_processing_raises():
 
     mocks["kv_client"].close.assert_awaited_once()
     mocks["credential"].close.assert_awaited_once()
+
+
+def test_error_result_sent_even_when_delete_blob_raises():
+    """When delete_blob raises on ERROR, the result is still added to the batch and sent."""
+    mocks = setup_mocks(batch_len=1)
+    mocks["idempotency_blob"].delete_blob.side_effect = Exception("Storage error")
+    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active([make_mock_event()]))
+
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
+    mocks["batch"].add.assert_called_once()
+    mocks["producer"].send_batch.assert_awaited_once()

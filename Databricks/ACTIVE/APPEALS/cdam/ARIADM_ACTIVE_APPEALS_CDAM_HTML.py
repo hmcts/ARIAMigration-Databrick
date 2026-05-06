@@ -245,88 +245,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-# DBTITLE 1,Create or Validate Audit Delta Table in Azure
-# audit_schema = StructType([
-#     StructField("Runid", StringType(), True),
-#     StructField("Unique_identifier_desc", StringType(), True),
-#     StructField("Unique_identifier", StringType(), True),
-#     StructField("Table_name", StringType(), True),
-#     StructField("Stage_name", StringType(), True),
-#     StructField("Record_count", IntegerType(), True),
-#     StructField("Run_dt",TimestampType(), True),
-#     StructField("Batch_id", StringType(), True),
-#     StructField("Description", StringType(), True),
-#     StructField("File_name", StringType(), True),
-#     StructField("Status", StringType(), True)
-# ])
-
-# # Define Delta Table Path in Azure Storage
-# # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-#     # Create an empty DataFrame
-#     empty_df = spark.createDataFrame([], audit_schema)
-
-#     # Write the empty DataFrame in Delta format to create the table
-#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-#     print("✅ Empty Delta table successfully created in Azure Storage.")
-# else:
-#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-
-# COMMAND ----------
-
-# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-#     """
-#     Creates an audit DataFrame and writes it to Delta format.
-
-#     :param df: Input DataFrame from which unique identifiers are extracted.
-#     :param unique_identifier_desc: Column name that acts as a unique identifier.
-#     :param table_name: Name of the source table.
-#     :param stage_name: Name of the data processing stage.
-#     :param description: Description of the table.
-#     :param additional_columns: List of additional columns to include in the audit DataFrame.
-#     """
-
-#     dt_desc = datetime.utcnow()
-
-#     additional_columns = additional_columns or []  # Default to an empty list if None   
-#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-#     .withColumn("Runid", lit(run_id_value))\
-#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-#             .withColumn("Stage_name", lit(stage_name))\
-#                 .withColumn("Table_name", lit(table_name))\
-#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-#                         .withColumn("Description", lit(description))
-
-#     list_cols = audit_df.columns
-
-#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
-# # # def log_audit_entry(df,unique_identifier):
-# import uuid
-
-
-# def datetime_uuid():
-#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-# run_id_value = datetime_uuid()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Raw DLT Tables Creation
 # MAGIC
@@ -1099,7 +1017,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 )
 def bronze_appealcase_ca_apt_country_detc():
 
-    window = Window.partitionBy("ca.CaseNo")
+    window = Window.partitionBy("ca.AppellantId")
     df = dlt.read("raw_caseappellant").alias("ca") \
         .join(
             dlt.read("raw_appellant").alias("a"),
@@ -3197,7 +3115,7 @@ def silver_status_detail():
                               "st.DeterminationByJudgeSurname",
                               "st.DeterminationByJudgeForenames",
                               "st.DeterminationByJudgeTitle",
-                              col("mx.CaseStatusDescription").alias("CurrentStatus"),
+                              col("mx.CaseStatusDescription").alias("currentstatus"),
                               col("st.AdjournmentParentStatusId"),
                               when(col("st.IRISStatusOfCase") == 1, "Adjudicator Appeal")
                               .when(col("st.IRISStatusOfCase") == 10, "Preliminary Issue")
@@ -3584,15 +3502,23 @@ def silver_documents_detail():
     flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     cols = [c for c in documents_df.columns if c != "DoNotUse" and c != "DateReceived"]
-    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "left") \
+    joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner") \
         .withColumn("DocumentsReceived", when(col("doc.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None))) \
         .select(
             *[col(f"doc.{c}") for c in cols],
             col("doc.DateReceived").alias("DocumentsDateReceived"),
             col("DocumentsReceived")
         )
+    
+    grouped_df = joined_df.groupBy("CaseNo").agg(
+        collect_list(
+            struct(
+                *[col(c) for c in joined_df.columns if c != "CaseNo"]
+            )
+        ).alias("DocumentDetails")
+    ).withColumn("DocumentsReceived", when(col("DocumentDetails.ReceivedDocumentId").isNotNull(), lit("Documents Exist")).otherwise(lit(None)))
      
-    return joined_df
+    return grouped_df
 
 
 # COMMAND ----------
@@ -4589,11 +4515,8 @@ def stg_statichtml_data():
     df_link_details_derived = df_link_details.withColumn("connectedFiles", lit("Connected Files exist")).select("CaseNo", "connectedFiles").distinct()
 
     # Join all dataframes on CaseNo
-    df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") \
-                                                            .join(df_latest_status_details, "CaseNo", "outer") 
-                                                            #.join(df_link_details_derived, "CaseNo", "outer") \
-
-    # display(df_stg_static_html_data)
+    df_stg_static_html_data = df_transaction_details_derived.join(df_latest_history_details, "CaseNo", "outer") 
+                                                            # .join(df_latest_status_details, "CaseNo", "outer") 
 
 
     # *********************************************************************Red Text Flag logic***************************************************/
@@ -4606,8 +4529,6 @@ def stg_statichtml_data():
 
     # CTE for Flag_List
     flag_list = (df_category
-        # .join(df_status_details, "CaseNo")
-        # .filter(col("CaseStatus") == 35)
         .groupby("CaseNo")
         .agg(sort_array(collect_list(struct(col("Priority"), concat_ws('', lit('*'), col("Flag"), lit('*')))), asc=True).alias("sorted_flags")))
 
@@ -4621,15 +4542,6 @@ def stg_statichtml_data():
         )
     )
 
-
-    # display(flag_list.filter((size(col("sorted_flags")) > 3)))
-    # # AS/00003/2005
-
-
-    # display(cte_flag_3.filter(col("CaseNo") == lit("AS/00003/2005")))
-
-    # display(cte_rec)
-
     # CTE for Fee Flags (Fixing count() issue)
     df_transaction_filtered = df_transaction_details.filter(col("TransactionTypeId") == 1).groupby("CaseNo").agg(count("*").alias("txn_count"))
 
@@ -4640,23 +4552,6 @@ def stg_statichtml_data():
             .when((col("TotalPaymentsReceived") >= col("TotalFeeDue")) & (col("txn_count") > 0), "FEE PAID")
             .when((col("BalanceDue") > 0) & (col("txn_count") > 0), "FEE DUE")
             .otherwise(lit(None))))
-
-    # cte_feeflagordered = cte_feeflag.withColumn(
-    #     "Fee_Flag_num",
-    #     when(col("Fee_Flag") == "FEE REMISSION", 1)
-    #     .when(col("Fee_Flag") == "FEE EXEMPT", 2)
-    #     .when(col("Fee_Flag") == "FEE PAID", 3)
-    #     .when(col("Fee_Flag") == "FEE DUE", 4)
-    #     .otherwise(0)
-    # ).filter(col("Fee_Flag_num") != 0)
-
-    # max_fee_flag_num = cte_feeflagordered.groupby("CaseNo").agg(min("Fee_Flag_num").alias("max_Fee_Flag_num"))
-
-    # final_fee_flag = (cte_feeflagordered
-    #     .join(max_fee_flag_num, ["CaseNo"], "inner")
-    #     .filter((col("max_Fee_Flag_num") != 0) | (col("max_Fee_Flag_num") != " "))
-    #     .select("CaseNo", "Fee_Flag", "Fee_Flag_num"))
-
 
     # Assign numerical order based on priority
     cte_feeflagordered = cte_feeflag.withColumn(
@@ -4702,19 +4597,11 @@ def stg_statichtml_data():
     
     # *********************************************************************Red Text Flag logic***************************************************/
 
-    # df_stg_static_html_data = df_stg_static_html_data.alias("a").join(final_df.alias("b"),"CaseNo", "left").select("a.*","flag1","flag2","flag3")
-
     stg_static_html_data_columns_list = [col for col in df_stg_static_html_data.columns if col != 'CaseNo']
-
-    # df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
-    #                                               .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
-    #                                               .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), col("flag3"))
     
     df_stg_static_html_final_data = df_case.alias("a").join(final_df.alias("b"), col("a.CaseNo") == col("b.CaseNo"), "outer") \
                                                   .join(df_stg_static_html_data.alias("c"), col("a.CaseNo") == col("c.CaseNo"), "outer") \
                                                   .select(col("a.CaseNo"), *[col(c) for c in stg_static_html_data_columns_list], col("flag1"), col("flag2"), expr("regexp_replace(flag3, ',', '')").alias("flag3"))
-
-
 
     return df_stg_static_html_final_data
 
@@ -4957,8 +4844,9 @@ def stg_apl_combined():
     # M10
     df_case_detail = dlt.read("silver_case_detail")
     #M22
+    df_currentstatus = dlt.read("silver_status_detail").select(col("CaseNo"), col("currentstatus"))
     # df_hearingpointschange = dlt.read("silver_hearingpointschange_detail")
-    df_m15 = dlt.read("silver_documents_detail")
+    df_m15 = dlt.read("silver_documents_detail").select(col("CaseNo"), col("DocumentsReceived"))
 
     df_hearingpointschange = dlt.read("silver_hearingpointschange_detail").groupBy("CaseNo").agg(
     collect_list(
@@ -5000,9 +4888,7 @@ def stg_apl_combined():
         collect_list(struct('AppellantId', 'CaseAppellantRelationship', 'PortReference', 'AppellantName', 'AppellantForenames', 'AppellantTitle', 'AppellantBirthDate', 'AppellantAddress1', 'AppellantAddress2', 'AppellantAddress3', 'AppellantAddress4', 'AppellantAddress5', 'AppellantPostcode', 'AppellantTelephone', 'AppellantFax', 'Detained', 'AppellantEmail', 'FCONumber', 'PrisonRef', 'DetentionCentre', 'CentreTitle', 'DetentionCentreType', 'DCAddress1', 'DCAddress2', 'DCAddress3', 'DCAddress4', 'DCAddress5', 'DCPostcode', 'DCFax', 'DCSdx', 'Country', 'DependentNationality', 'Code', 'DoNotUseCountry', 'CountrySdx', 'DoNotUseNationality')).alias("DependentDetails")
     )
 
-    df_documents = dlt.read("silver_documents_detail").groupBy("CaseNo").agg(
-        collect_list(struct( 'ReceivedDocumentId', 'DateRequested', 'DateRequired', 'DocumentsDateReceived', 'NoLongerRequired', 'RepresentativeDate', 'POUDate', 'DocumentDescription', 'Auditable')).alias("DocumentDetails")
-    )
+    df_documents = dlt.read("silver_documents_detail").select(col("CaseNo"), col("DocumentDetails"))
 
     df_hearingpointshistory = dlt.read("silver_hearingpointshistory_detail").groupBy("CaseNo").agg(
         collect_list(struct('CaseNo', 'StatusId', 'HearingPointsHistoryId', 'HistDate', 'HistType', 'UserId', 'DefaultPoints', 'InitialPoints', 'FinalPoints')).alias("HearingPointHistoryDetails")
@@ -5104,10 +4990,10 @@ def stg_apl_combined():
         )).alias("ReviewSpecficDirectionDetails")
     )
 
-  
     # Join all tables
     df_combined = (
         df_appealcase
+        .join(df_currentstatus, "CaseNo", "left")
         .join(df_m15, "CaseNo", "left")
         .join(df_applicant, "CaseNo", "left")
         .join(df_dependent, "CaseNo", "left")
@@ -5134,8 +5020,7 @@ def stg_apl_combined():
         .join(df_required_incompatible_adjudicator, "CaseNo", "left")
         .join(df_case_adjudicator, "CaseNo", "left")
         .join(df_statusdecisiontype, "CaseNo", "left") 
-        
-    )
+    ).distinct()
 
     df_with_json_content = df_combined.withColumn("JSONcollection", to_json(struct(*df_combined.columns)))
 

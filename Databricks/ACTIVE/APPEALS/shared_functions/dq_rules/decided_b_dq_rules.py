@@ -182,6 +182,12 @@ class decidedBDQRules(DQRulesBase):
             
         )"""
 
+        checks["valid_updateTribunalDecisionDateRule32"] = """(
+            
+            updateTribunalDecisionDateRule32 = date_format(DecisionDate_decb,'yyyy-MM-dd') 
+            
+        )"""
+
 
         checks["valid_judgesNamesToExclude"] = """(
             CASE
@@ -205,5 +211,8 @@ class decidedBDQRules(DQRulesBase):
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text IS NULL
             END
         )"""
+
+
+        
 
         return checks

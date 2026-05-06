@@ -55,6 +55,10 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn" 
+                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out" 
 
             END
         )"""
@@ -103,6 +107,10 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
                 WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
 
             END
             )
@@ -183,7 +191,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
-
+                WHEN CaseStatus_end = 36 THEN stateBeforeEndAppeal = "appealSubmitted"
             END
             )
 

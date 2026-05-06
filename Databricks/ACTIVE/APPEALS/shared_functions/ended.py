@@ -152,17 +152,28 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
                 (F.col("dv_representation") == "AIP"),
                 "reasonsForAppealSubmitted"
             )
+            .when(col("CaseStatus") == 36,"appealSubmitted")
             .otherwise(F.col("es.stateBeforeEndAppeal"))
         )
 
                 
         .select(
             F.col("CaseNo"),
-            F.when(F.col("es.endAppealOutcome") == "Struck Out", "Struck out")
+            F.when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"Struck out")
+            .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(1,2)),"Struck out")
+            .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(25)),"Withdrawn")
+            .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"Struck out")
+            .when(F.col("es.endAppealOutcome") == "Struck Out", "Struck out")
             .when(F.col("es.endAppealOutcome") == "No Valid Appeal", "No valid appeal")
             .otherwise(F.col("es.endAppealOutcome"))
             .alias("endAppealOutcome"),
-            F.col("es.endAppealOutcomeReason"),
+            F.when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time.")
+            .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(1)),"This is a migrated case. The final outcome was Review of Cost Order | Allowed.")
+            .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(2)),"This is a migrated case. The final outcome was Review of Cost Order | Dismissed.")
+            .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(25)),"This is a migrated case. The final outcome was Review of Cost Order | Withdrawn.")
+            .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out.")
+            .otherwise(F.col("es.endAppealOutcomeReason"))
+            .alias("endAppealOutcomeReason"),
             F.col("endAppealApproverType"),
             F.col("endAppealApproverName"),
             F.col("endAppealDate"),

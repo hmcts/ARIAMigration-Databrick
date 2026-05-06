@@ -2,7 +2,7 @@ import Test_Functions.Ended_Tests as ended_tests
 from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
-def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silver, bac, M6_bronze, fields_to_exclude):
+def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, C, bhc, fields_to_exclude):
     all_test_results = []
 
     # ---------------------------------------------------------
@@ -31,7 +31,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
     # ---------------------------------------------------------
     # 3. hearingRequirements Tests
     # ---------------------------------------------------------
-    test_df, test_data_setup = ended_tests.test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, bac)
+    test_df, test_data_setup = ended_tests.test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, C)
     
     if test_data_setup is True and test_df is not None:
         if "isEvidenceFromOutsideUkOoc" not in fields_to_exclude:
@@ -73,7 +73,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
     # ---------------------------------------------------------
     # 4. hearingResponse Tests
     # ---------------------------------------------------------
-    test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, bac, M6_bronze, M1_silver, M2_bronze)
+    test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, C, M6_bronze, M1_silver, M2_bronze)
 
     if test_data_setup is True and test_df is not None:
         if "isAppealSuitableToFloat" not in fields_to_exclude:
@@ -205,7 +205,7 @@ def run_all_tests(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, M2_silv
     # ---------------------------------------------------------
     # 10. general Tests
     # ---------------------------------------------------------
-    test_df_gen, test_data_setup_gen = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, bac)
+    test_df_gen, test_data_setup_gen = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, C)
 
     if test_data_setup_gen is True and test_df_gen is not None:
         if "bundleFileNamePrefix" not in fields_to_exclude:

@@ -1174,7 +1174,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 )
 def bronze_appealcase_ca_apt_country_detc():
 
-    window = Window.partitionBy("ca.CaseNo")
+    window = Window.partitionBy("ca.AppellantId")
     df = dlt.read("raw_caseappellant").alias("ca") \
         .join(
             dlt.read("raw_appellant").alias("a"),

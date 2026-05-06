@@ -245,88 +245,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-# DBTITLE 1,Create or Validate Audit Delta Table in Azure
-# audit_schema = StructType([
-#     StructField("Runid", StringType(), True),
-#     StructField("Unique_identifier_desc", StringType(), True),
-#     StructField("Unique_identifier", StringType(), True),
-#     StructField("Table_name", StringType(), True),
-#     StructField("Stage_name", StringType(), True),
-#     StructField("Record_count", IntegerType(), True),
-#     StructField("Run_dt",TimestampType(), True),
-#     StructField("Batch_id", StringType(), True),
-#     StructField("Description", StringType(), True),
-#     StructField("File_name", StringType(), True),
-#     StructField("Status", StringType(), True)
-# ])
-
-# # Define Delta Table Path in Azure Storage
-# # audit_delta_path = "/mnt/ingest00curatedsboxsilver/ARIADM/ARM/AUDIT/BAILS/bl_cr_audit_table"
-
-
-# if not DeltaTable.isDeltaTable(spark, audit_delta_path):
-#     print(f"🛑 Delta table '{audit_delta_path}' does not exist. Creating an empty Delta table...")
-
-#     # Create an empty DataFrame
-#     empty_df = spark.createDataFrame([], audit_schema)
-
-#     # Write the empty DataFrame in Delta format to create the table
-#     empty_df.write.format("delta").mode("overwrite").save(audit_delta_path)
-
-#     print("✅ Empty Delta table successfully created in Azure Storage.")
-# else:
-#     print(f"⚡ Delta table '{audit_delta_path}' already exists.")
-
-
-# COMMAND ----------
-
-# def create_audit_df(df: DataFrame, unique_identifier_desc: str,table_name: str, stage_name: str, description: str, additional_columns: list = None) -> None:
-#     """
-#     Creates an audit DataFrame and writes it to Delta format.
-
-#     :param df: Input DataFrame from which unique identifiers are extracted.
-#     :param unique_identifier_desc: Column name that acts as a unique identifier.
-#     :param table_name: Name of the source table.
-#     :param stage_name: Name of the data processing stage.
-#     :param description: Description of the table.
-#     :param additional_columns: List of additional columns to include in the audit DataFrame.
-#     """
-
-#     dt_desc = datetime.utcnow()
-
-#     additional_columns = additional_columns or []  # Default to an empty list if None   
-#     additional_columns = [col(c) for c in additional_columns if c is not None]  # Filter out None values
-
-#     audit_df = df.select(col(unique_identifier_desc).alias("unique_identifier"),*additional_columns)\
-#     .withColumn("Runid", lit(run_id_value))\
-#         .withColumn("Unique_identifier_desc", lit(unique_identifier_desc))\
-#             .withColumn("Stage_name", lit(stage_name))\
-#                 .withColumn("Table_name", lit(table_name))\
-#                     .withColumn("Run_dt", lit(dt_desc).cast(TimestampType()))\
-#                         .withColumn("Description", lit(description))
-
-#     list_cols = audit_df.columns
-
-#     final_audit_df = audit_df.groupBy(*list_cols).agg(count("*").cast(IntegerType()).alias("Record_count"))
-
-#     final_audit_df.write.format("delta").mode("append").option("mergeSchema","true").save(audit_delta_path)
-
-
-
-# COMMAND ----------
-
-# # # def log_audit_entry(df,unique_identifier):
-# import uuid
-
-
-# def datetime_uuid():
-#     dt_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-#     return str(uuid.uuid5(uuid.NAMESPACE_DNS,dt_str))
-
-# run_id_value = datetime_uuid()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Raw DLT Tables Creation
 # MAGIC
@@ -1099,7 +1017,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 )
 def bronze_appealcase_ca_apt_country_detc():
 
-    window = Window.partitionBy("ca.CaseNo")
+    window = Window.partitionBy("ca.AppellantId")
     df = dlt.read("raw_caseappellant").alias("ca") \
         .join(
             dlt.read("raw_appellant").alias("a"),

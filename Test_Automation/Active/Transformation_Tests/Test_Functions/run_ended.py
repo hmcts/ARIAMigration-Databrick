@@ -169,6 +169,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test2(json_data, M3_bronze))
     if "ftpaRespondentSubmissionOutOfTime" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test1(json_data, M3_bronze))
+        all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test2(json_data, M3_bronze))
+        all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test3(json_data, M3_bronze))
+        all_test_results.append(ended_tests.test_ftpaRespondentSubmissionOutOfTime_test4(json_data, M3_bronze))
     if "ftpaRespondentOutOfTimeExplanation" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test1(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test2(json_data, M3_bronze))

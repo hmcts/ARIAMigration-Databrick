@@ -100,6 +100,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     # Process the file
                     result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
                     result["StartDateTime"] = start_datetime
+                    logger.info(f"Result returned: {result}")
 
                     # Mark processed if success
                     if result.get("Status") != "SUCCESS":

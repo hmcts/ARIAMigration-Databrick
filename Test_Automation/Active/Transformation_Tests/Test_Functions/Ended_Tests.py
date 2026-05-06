@@ -1415,7 +1415,7 @@ def test_listCaseHearingLength_test1(test_df):
             return TestResult("listCaseHearingLength", "FAIL", "No records found for Group 4.", "ended", "test_listCaseHearingLength_test1")
 
         # We verify the field is at least populated to ensure data exists
-        null_count = target_df.filter(F.col("actualCaseHearingLength").isNull()).count()
+        null_count = target_df.filter(F.col("listCaseHearingLength").isNull()).count()
         
         if null_count > 0:
             return TestResult(

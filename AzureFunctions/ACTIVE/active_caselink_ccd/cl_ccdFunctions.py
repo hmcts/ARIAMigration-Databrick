@@ -242,12 +242,14 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     # validate case
     print("Starting case validation")
     validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
-    print(f"Validation response for case {ccdReference}: {validate_case_response.status_code}")
 
     try:
-        print(json.dumps(validate_case_response.json(), indent=2))
+        print(f"Validation response for case {ccdReference}: {json.dumps(validate_case_response.json(), indent=2)}")
     except Exception:
-        print(validate_case_response.text)
+        try:
+            print(validate_case_response.text)
+        except Exception:
+            print(f"Unable to parse validate_case_response for case {ccdReference}")
 
     if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         if validate_case_response is not None:
@@ -276,7 +278,14 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     # submit case
     print("Starting case submission")
     submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
-    print(f"Submit case response = {submit_case_response}")
+
+    try:
+        print(f"Submit response for case {ccdReference}: {json.dumps(submit_case_response.json(), indent=2)}")
+    except Exception:
+        try:
+            print(submit_case_response.text)
+        except Exception:
+            print(f"Unable to parse submit_case_response for case {ccdReference}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         if submit_case_response is not None:

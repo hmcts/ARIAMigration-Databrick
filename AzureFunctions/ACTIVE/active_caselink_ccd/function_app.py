@@ -103,8 +103,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     if result.get("Status") == "SUCCESS":
                         logger.info(f"Case linking processed from: {ccdReference} to: {', '.join(str(obj['id']) for obj in data if 'id' in obj)}")
                     else:
-                        await idempotency_blob.delete_blob()
-                        logger.info(f"[IDEMPOTENCY][CASELINK] Deleting idempotency blob: {ccdReference}.")
+                        try:
+                            await idempotency_blob.delete_blob()
+                            logger.info(f"[IDEMPOTENCY][CASELINK] Deleting idempotency blob: {ccdReference}.")
+                        except Exception as delete_error:
+                            logger.warning(f"[IDEMPOTENCY][CASELINK] Failed to delete blob for {ccdReference}: {delete_error}")
 
                     result_json = json.dumps(result)
 

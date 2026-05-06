@@ -455,3 +455,19 @@ def test_in_progress_event_skipped_when_idempotency_blob_exists():
     mocks["idempotency_blob"].upload_blob.assert_awaited_once()
     mocks["batch"].add.assert_not_called()
     mocks["producer"].send_batch.assert_not_called()
+
+
+def test_error_result_sent_even_when_delete_blob_raises():
+    """When delete_blob raises on ERROR, the result is still added to the batch and sent."""
+    mocks = setup_mocks(batch_len=1)
+    mocks["idempotency_blob"].delete_blob.side_effect = Exception("Storage error")
+    events = [make_mock_event({"RunID": "run-del-fail", "CaseLinkPayload": []})]
+
+    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
+    mocks["batch"].add.assert_called_once()
+    mocks["producer"].send_batch.assert_awaited_once()

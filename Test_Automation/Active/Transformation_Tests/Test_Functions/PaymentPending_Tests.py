@@ -1252,10 +1252,10 @@ def test_appealType_ac13(test_df):
             test_df,
             CasePrefix = "RP",
             CCDAppealType = "RP",
-            expected_appealType = "protection",
-            expected_hmctsCaseCategory = "Protection",
-            expected_appealTypeDescription = "Refusal of protection claim",
-            expected_caseManagementCategory_label = "Refusal of protection claim"
+            expected_appealType = "revocationOfProtection",
+            expected_hmctsCaseCategory = "Revocation",
+            expected_appealTypeDescription = "Revocation of a protection status",
+            expected_caseManagementCategory_label = "Revocation of a protection status"
         )
 
         if test_passed == True:

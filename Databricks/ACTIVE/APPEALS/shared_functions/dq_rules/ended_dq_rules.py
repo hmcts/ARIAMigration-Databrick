@@ -292,7 +292,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaAppellantDocuments, ARRAY()) = COALESCE(ftpaAppellantDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantDocuments) = 0
+                ELSE ftpaAppellantDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantDocuments IS NULL
             END
@@ -305,7 +310,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaRespondentDocuments, ARRAY()) = COALESCE(ftpaRespondentDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentDocuments) = 0
+                ELSE ftpaRespondentDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentDocuments IS NULL
             END
@@ -318,7 +328,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaAppellantGroundsDocuments, ARRAY()) = COALESCE(ftpaAppellantGroundsDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantGroundsDocuments) = 0
+                ELSE ftpaAppellantGroundsDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantGroundsDocuments IS NULL
             END
@@ -331,7 +346,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaRespondentGroundsDocuments, ARRAY()) = COALESCE(ftpaRespondentGroundsDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentGroundsDocuments) = 0
+                ELSE ftpaRespondentGroundsDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentGroundsDocuments IS NULL
             END
@@ -344,7 +364,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaAppellantEvidenceDocuments, ARRAY()) = COALESCE(ftpaAppellantEvidenceDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantEvidenceDocuments) = 0
+                ELSE ftpaAppellantEvidenceDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantEvidenceDocuments IS NULL
             END
@@ -357,7 +382,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaRespondentEvidenceDocuments, ARRAY()) = COALESCE(ftpaRespondentEvidenceDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentEvidenceDocuments) = 0
+                ELSE ftpaRespondentEvidenceDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentEvidenceDocuments IS NULL
             END
@@ -370,7 +400,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaAppellantOutOfTimeDocuments, ARRAY()) = COALESCE(ftpaAppellantOutOfTimeDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantOutOfTimeDocuments) = 0
+                ELSE ftpaAppellantOutOfTimeDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantOutOfTimeDocuments IS NULL
             END
@@ -383,7 +418,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(ftpaRespondentOutOfTimeDocuments, ARRAY()) = COALESCE(ftpaRespondentOutOfTimeDocuments_ended, ARRAY())
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentOutOfTimeDocuments) = 0
+                ELSE ftpaRespondentOutOfTimeDocuments IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentOutOfTimeDocuments IS NULL
             END
@@ -413,7 +453,32 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(to_json(hearingChannel), '{}') = coalesce(to_json(hearingChannel_ended), '{}')
+                    (
+        -- Case: VisitVisaType = 1
+        (
+            VisitVisaType = 1 AND
+            element_at(hearingChannel, 'code') = 'ONPPRS' AND
+            element_at(hearingChannel, 'label') = 'On The Papers'
+        )
+        )
+        OR
+        (
+        -- Case: VisitVisaType = 2
+        (
+            VisitVisaType = 2 AND
+            element_at(hearingChannel, 'code') = 'INTER' AND
+            element_at(hearingChannel, 'label') = 'In Person'
+        )
+        )
+        OR
+        (
+        -- Case: Other / NULL VisitVisaType → both code and label must be NULL
+        (
+            (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
+            element_at(hearingChannel, 'code') IS NULL AND
+            element_at(hearingChannel, 'label') IS NULL
+        )
+        )
                 ELSE
                     hearingChannel IS NULL
             END
@@ -798,7 +863,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaAppellantApplicationDate, '') = coalesce(ftpaAppellantApplicationDate_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                ELSE ftpaAppellantApplicationDate IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantApplicationDate IS NULL
             END
@@ -811,7 +881,13 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaAppellantSubmissionOutOfTime, '') = coalesce(ftpaAppellantSubmissionOutOfTime_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime = 'No'
+                ELSE ftpaAppellantSubmissionOutOfTime IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantSubmissionOutOfTime IS NULL
             END
@@ -824,7 +900,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaAppellantOutOfTimeExplanation, '') = coalesce(ftpaAppellantOutOfTimeExplanation_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+                ELSE ftpaAppellantOutOfTimeExplanation IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantOutOfTimeExplanation IS NULL
             END
@@ -837,7 +918,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaRespondentApplicationDate, '') = coalesce(ftpaRespondentApplicationDate_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                ELSE ftpaRespondentApplicationDate IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentApplicationDate IS NULL
             END
@@ -850,7 +936,13 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaRespondentSubmissionOutOfTime, '') = coalesce(ftpaRespondentSubmissionOutOfTime_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentSubmissionOutOfTime = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime != 1 THEN ftpaRespondentSubmissionOutOfTime = 'No'
+                ELSE ftpaRespondentSubmissionOutOfTime IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentSubmissionOutOfTime IS NULL
             END
@@ -863,7 +955,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaRespondentOutOfTimeExplanation, '') = coalesce(ftpaRespondentOutOfTimeExplanation_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+                ELSE ftpaRespondentOutOfTimeExplanation IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentOutOfTimeExplanation IS NULL
             END
@@ -988,7 +1085,14 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(appealDecision, '') = coalesce(appealDecision_ended, '')
+                    (
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
+            CASE
+                WHEN Outcome_SD = 1 THEN (appealDecision = 'Allowed')
+                WHEN Outcome_SD = 2 THEN (appealDecision = 'Dismissed')
+            END
+        )
                 ELSE
                     appealDecision IS NULL
             END
@@ -1001,7 +1105,15 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isDecisionAllowed, '') = coalesce(isDecisionAllowed_ended, '')
+                    (
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
+            CASE
+                WHEN Outcome_SD = 1 THEN (isDecisionAllowed = 'allowed')
+                WHEN Outcome_SD = 2 THEN (isDecisionAllowed = 'dismissed')
+                ELSE (isDecisionAllowed IS NULL)
+            END
+        )
                 ELSE
                     isDecisionAllowed IS NULL
             END
@@ -1046,7 +1158,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isAppealSuitableToFloat, '') = coalesce(isAppealSuitableToFloat_ended, '')
+                    (
+                (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
+                OR
+                ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+            )
                 ELSE
                     isAppealSuitableToFloat IS NULL
             END
@@ -1098,7 +1214,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isInCameraCourtAllowed, '') = coalesce(isInCameraCourtAllowed_ended, '')
+                    (
+                (InCamera = 1 AND isInCameraCourtAllowed = 'Granted')
+                OR
+                (InCamera != 1 AND isInCameraCourtAllowed IS NULL)
+            )
                 ELSE
                     isInCameraCourtAllowed IS NULL
             END
@@ -1111,7 +1231,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(inCameraCourtTribunalResponse, '') = coalesce(inCameraCourtTribunalResponse_ended, '')
+                    (
+                (InCamera = 1 AND inCameraCourtTribunalResponse = 'This is a migrated ARIA case. Please refer to the documents.')
+                OR
+                (InCamera != 1 AND inCameraCourtTribunalResponse IS NULL)
+            )
                 ELSE
                     inCameraCourtTribunalResponse IS NULL
             END
@@ -1124,7 +1248,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(inCameraCourtDecisionForDisplay, '') = coalesce(inCameraCourtDecisionForDisplay_ended, '')
+                    (
+                (InCamera = 1 AND inCameraCourtDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')
+                OR
+                (InCamera != 1 AND inCameraCourtDecisionForDisplay IS NULL)
+            )
                 ELSE
                     inCameraCourtDecisionForDisplay IS NULL
             END
@@ -1137,7 +1265,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isSingleSexCourtAllowed, '') = coalesce(isSingleSexCourtAllowed_ended, '')
+                    (
+                (CourtPreference IN (1, 2) AND isSingleSexCourtAllowed = 'Granted')
+                OR
+                (CourtPreference NOT IN (1, 2) AND isSingleSexCourtAllowed IS NULL)
+            )
                 ELSE
                     isSingleSexCourtAllowed IS NULL
             END
@@ -1150,7 +1282,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(singleSexCourtTribunalResponse, '') = coalesce(singleSexCourtTribunalResponse_ended, '')
+                    (
+                (CourtPreference IN (1, 2) AND singleSexCourtTribunalResponse = 'This is a migrated ARIA case. Please refer to the documents.')
+                OR
+                (CourtPreference NOT IN (1, 2)  AND singleSexCourtTribunalResponse IS NULL)
+            )
                 ELSE
                     singleSexCourtTribunalResponse IS NULL
             END
@@ -1163,7 +1299,11 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(singleSexCourtDecisionForDisplay, '') = coalesce(singleSexCourtDecisionForDisplay_ended, '')
+                    (
+                (CourtPreference IN (1, 2)  AND singleSexCourtDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')
+                OR
+                (CourtPreference NOT IN (1, 2)  AND singleSexCourtDecisionForDisplay IS NULL)
+            )
                 ELSE
                     singleSexCourtDecisionForDisplay IS NULL
             END
@@ -1306,7 +1446,22 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(additionalInstructionsTribunalResponse, '') = coalesce(additionalInstructionsTribunalResponse_ended, '')
+                    additionalInstructionsTribunalResponse IS NULL OR
+            (
+                additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
+                additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+            )
                 ELSE
                     additionalInstructionsTribunalResponse IS NULL
             END
@@ -1405,7 +1560,13 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isInterpreterServicesNeeded, '') = coalesce(isInterpreterServicesNeeded_ended, '')
+                    (
+                (Interpreter <=> 1 AND isInterpreterServicesNeeded <=> 'Yes')
+                OR
+                (Interpreter <=> 2 AND isInterpreterServicesNeeded <=> 'No')
+                OR
+                (Interpreter NOT IN (1, 2) AND isInterpreterServicesNeeded <=> 'No')
+            )
                 ELSE
                     isInterpreterServicesNeeded IS NULL
             END
@@ -1615,7 +1776,13 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(singleSexCourt, '') = coalesce(singleSexCourt_ended, '')
+                    (
+                (CourtPreference <=> 0 AND singleSexCourt <=> 'No')
+                OR
+                ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourt <=> 'Yes')
+                OR
+                (CourtPreference NOT IN (0, 1, 2) AND singleSexCourt <=> 'No')
+            )
                 ELSE
                     singleSexCourt IS NULL
             END
@@ -1630,7 +1797,13 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(singleSexCourtType, '') = coalesce(singleSexCourtType_ended, '')
+                    (
+                (CourtPreference <=> 1 AND singleSexCourtType <=> 'All male')
+                OR
+                (CourtPreference <=> 2 AND singleSexCourtType <=> 'All female')
+                OR
+                (CourtPreference NOT IN (1, 2) AND singleSexCourtType IS NULL)
+            )
                 ELSE
                     singleSexCourtType IS NULL
             END
@@ -1645,7 +1818,11 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(singleSexCourtTypeDescription, '') = coalesce(singleSexCourtTypeDescription_ended, '')
+                    (
+                ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourtTypeDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court.')
+                OR
+                (CourtPreference NOT IN (1, 2) AND singleSexCourtTypeDescription IS NULL)
+            )
                 ELSE
                     singleSexCourtTypeDescription IS NULL
             END
@@ -1660,7 +1837,15 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(inCameraCourt, '') = coalesce(inCameraCourt_ended, '')
+                    (
+                (InCamera IS NULL AND inCameraCourt <=> 'No')
+                OR
+                (InCamera <=> 1 AND inCameraCourt <=> 'Yes')
+                OR
+                (InCamera <=> 0 AND inCameraCourt <=> 'No')
+                OR
+                (INT(InCamera) NOT IN (0, 1) AND inCameraCourt <=> 'No')
+            )
                 ELSE
                     inCameraCourt IS NULL
             END
@@ -1675,7 +1860,13 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(inCameraCourtDescription, '') = coalesce(inCameraCourtDescription_ended, '')
+                    (
+                (InCamera IS NULL AND inCameraCourtDescription IS NULL)
+                OR
+                (InCamera <=> 1 AND inCameraCourtDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court.')
+                OR
+                (NOT(InCamera <=> 1) AND inCameraCourtDescription IS NULL)
+            )
                 ELSE
                     inCameraCourtDescription IS NULL
             END
@@ -2033,7 +2224,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaAppellantSubmitted, '') = coalesce(ftpaAppellantSubmitted_ended, '')
+                   (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantSubmitted = 'Yes'
+                ELSE ftpaAppellantSubmitted IS NULL
+            END
+        )
                 ELSE
                     ftpaAppellantSubmitted IS NULL
             END
@@ -2046,7 +2242,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantDocsVisibleInDecided, '') = coalesce(isFtpaAppellantDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInDecided = 'No'
+                ELSE isFtpaAppellantDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantDocsVisibleInDecided IS NULL
             END
@@ -2059,7 +2260,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantDocsVisibleInSubmitted, '') = coalesce(isFtpaAppellantDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaAppellantDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantDocsVisibleInSubmitted IS NULL
             END
@@ -2072,7 +2278,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantOotDocsVisibleInDecided, '') = coalesce(isFtpaAppellantOotDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInDecided = 'No'
+                ELSE isFtpaAppellantOotDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantOotDocsVisibleInDecided IS NULL
             END
@@ -2085,7 +2296,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantOotDocsVisibleInSubmitted, '') = coalesce(isFtpaAppellantOotDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaAppellantOotDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantOotDocsVisibleInSubmitted IS NULL
             END
@@ -2098,7 +2314,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantGroundsDocsVisibleInDecided, '') = coalesce(isFtpaAppellantGroundsDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInDecided = 'No'
+                ELSE isFtpaAppellantGroundsDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantGroundsDocsVisibleInDecided IS NULL
             END
@@ -2111,7 +2332,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantEvidenceDocsVisibleInDecided, '') = coalesce(isFtpaAppellantEvidenceDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInDecided = 'No'
+                ELSE isFtpaAppellantEvidenceDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantEvidenceDocsVisibleInDecided IS NULL
             END
@@ -2124,7 +2350,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantGroundsDocsVisibleInSubmitted, '') = coalesce(isFtpaAppellantGroundsDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaAppellantGroundsDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantGroundsDocsVisibleInSubmitted IS NULL
             END
@@ -2137,7 +2368,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantEvidenceDocsVisibleInSubmitted, '') = coalesce(isFtpaAppellantEvidenceDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaAppellantEvidenceDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantEvidenceDocsVisibleInSubmitted IS NULL
             END
@@ -2150,7 +2386,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantOotExplanationVisibleInDecided, '') = coalesce(isFtpaAppellantOotExplanationVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInDecided = 'No'
+                ELSE isFtpaAppellantOotExplanationVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantOotExplanationVisibleInDecided IS NULL
             END
@@ -2163,7 +2404,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaAppellantOotExplanationVisibleInSubmitted, '') = coalesce(isFtpaAppellantOotExplanationVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInSubmitted = 'Yes'
+                ELSE isFtpaAppellantOotExplanationVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaAppellantOotExplanationVisibleInSubmitted IS NULL
             END
@@ -2176,7 +2422,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(ftpaRespondentSubmitted, '') = coalesce(ftpaRespondentSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentSubmitted = 'Yes'
+                ELSE ftpaRespondentSubmitted IS NULL
+            END
+        )
                 ELSE
                     ftpaRespondentSubmitted IS NULL
             END
@@ -2189,7 +2440,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentDocsVisibleInDecided, '') = coalesce(isFtpaRespondentDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInDecided = 'No'
+                ELSE isFtpaRespondentDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentDocsVisibleInDecided IS NULL
             END
@@ -2202,7 +2458,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentDocsVisibleInSubmitted, '') = coalesce(isFtpaRespondentDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaRespondentDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentDocsVisibleInSubmitted IS NULL
             END
@@ -2215,7 +2476,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentOotDocsVisibleInDecided, '') = coalesce(isFtpaRespondentOotDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInDecided = 'No'
+                ELSE isFtpaRespondentOotDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentOotDocsVisibleInDecided IS NULL
             END
@@ -2228,7 +2494,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentOotDocsVisibleInSubmitted, '') = coalesce(isFtpaRespondentOotDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaRespondentOotDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentOotDocsVisibleInSubmitted IS NULL
             END
@@ -2241,7 +2512,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentGroundsDocsVisibleInDecided, '') = coalesce(isFtpaRespondentGroundsDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInDecided = 'No'
+                ELSE isFtpaRespondentGroundsDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentGroundsDocsVisibleInDecided IS NULL
             END
@@ -2254,7 +2530,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentEvidenceDocsVisibleInDecided, '') = coalesce(isFtpaRespondentEvidenceDocsVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInDecided = 'No'
+                ELSE isFtpaRespondentEvidenceDocsVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentEvidenceDocsVisibleInDecided IS NULL
             END
@@ -2267,7 +2548,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentGroundsDocsVisibleInSubmitted, '') = coalesce(isFtpaRespondentGroundsDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaRespondentGroundsDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentGroundsDocsVisibleInSubmitted IS NULL
             END
@@ -2280,7 +2566,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentEvidenceDocsVisibleInSubmitted, '') = coalesce(isFtpaRespondentEvidenceDocsVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInSubmitted = 'Yes'
+                ELSE isFtpaRespondentEvidenceDocsVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentEvidenceDocsVisibleInSubmitted IS NULL
             END
@@ -2293,7 +2584,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentOotExplanationVisibleInDecided, '') = coalesce(isFtpaRespondentOotExplanationVisibleInDecided_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInDecided = 'No'
+                ELSE isFtpaRespondentOotExplanationVisibleInDecided IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentOotExplanationVisibleInDecided IS NULL
             END
@@ -2306,7 +2602,12 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted, '') = coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted_ended, '')
+                    (
+            CASE
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInSubmitted = 'Yes'
+                ELSE isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
+            END
+        )
                 ELSE
                     isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
             END

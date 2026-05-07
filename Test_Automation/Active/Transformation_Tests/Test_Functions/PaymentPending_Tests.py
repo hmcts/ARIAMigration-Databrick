@@ -1178,8 +1178,8 @@ def test_appealType_ac10(test_df):
             CCDAppealType = "PA",
             expected_appealType = "protection",
             expected_hmctsCaseCategory = "Protection",
-            expected_appealTypeDescription = "Refusal of a protection claim",
-            expected_caseManagementCategory_label = "Refusal of a protection claim"
+            expected_appealTypeDescription = "Refusal of protection claim",
+            expected_caseManagementCategory_label = "Refusal of protection claim"
         )
 
         if test_passed == True:

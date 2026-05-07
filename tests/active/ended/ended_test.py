@@ -145,7 +145,7 @@ def test_endAppealApproverName(spark,ended_outputs):
 
     results = ended_outputs
 
-    assert results["A1"]["endAppealApproverName"] == 'Brown Alice (Dr)'
+    assert results["A1"]["endAppealApproverName"] == 'Brown, Alice (Dr)'
     assert results["C1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["E1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["F1"]["endAppealApproverName"] == 'This is a migrated ARIA case'

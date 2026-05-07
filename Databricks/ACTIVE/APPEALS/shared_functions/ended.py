@@ -130,7 +130,7 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
             F.when(
                 F.col("CaseStatus") == 46,
                 F.concat(
-                    F.col("Adj_Determination_Surname"), F.lit(" "),
+                    F.col("Adj_Determination_Surname"), F.lit(", "),
                     F.col("Adj_Determination_Forenames"), F.lit(" ("),
                     F.col("Adj_Determination_Title"), F.lit(")"),
                 )

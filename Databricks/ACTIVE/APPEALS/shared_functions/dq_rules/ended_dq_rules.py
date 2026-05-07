@@ -13,6 +13,8 @@ class endedDQRules(DQRulesBase):
         checks = checks | self.get_checks_hearingResponse()
         checks = checks | self.get_checks_hearingRequirements()
         checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_casedata()
+
 
         return checks
 
@@ -126,7 +128,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_endAppealApproverName"] = """(
             CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,' ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
+                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,', ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
                 ELSE endAppealApproverName = 'This is a migrated ARIA case'
             END
         )"""
@@ -179,7 +181,6 @@ class endedDQRules(DQRulesBase):
             )
             
             AND
-            
             (
             CASE
                 WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25) THEN stateBeforeEndAppeal = "listing"
@@ -2308,6 +2309,24 @@ class endedDQRules(DQRulesBase):
                     coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted, '') = coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted_ended, '')
                 ELSE
                     isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
+            END
+        )
+        """
+
+        return checks
+    
+
+    def get_checks_casedata(self, checks={}):
+
+        checks["valid_outOfTimeDecisionType"] = """
+        (
+            CASE 
+                WHEN (
+                    (CaseStatus_max_no_filter = 10 AND Outcome_no_filter IN (120, 2, 105)) 
+                ) THEN
+                    outOfTimeDecisionType = 'rejected'
+                ELSE
+                    outOfTimeDecisionType = 'approved'
             END
         )
         """

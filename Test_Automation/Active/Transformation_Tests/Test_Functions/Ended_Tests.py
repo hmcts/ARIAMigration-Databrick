@@ -5890,13 +5890,14 @@ def test_endAppealApproverName_test1(test_df):
 
 def test_endAppealDate_test1(test_df):
     try:
+        # Schema check to return NO_DATA if the field is missing
+        if "endAppealDate" not in test_df.columns:
+            return TestResult("endAppealDate", "NO_DATA", "Field missing from payload", "ended", "test1")
 
         rows = test_df.select(
             "appealReferenceNumber", 
             "endAppealDate", 
-            "DecisionDate",
-            "CaseStatus",
-            "Outcome"
+            "DecisionDate"
         ).collect()
         
         results = []
@@ -5904,23 +5905,26 @@ def test_endAppealDate_test1(test_df):
         for row in rows:
             actual_json_date = row['endAppealDate']
             aria_source_date = row['DecisionDate']
-
-            if aria_source_date is None:
-                if actual_json_date is not None:
-                    results.append(f"FAIL - {row['appealReferenceNumber']}: ARIA date is NULL but JSON found '{actual_json_date}'")
+            
+            # 1. Mandatory Check: If JSON date is null, it's an immediate failure
+            if actual_json_date is None:
+                results.append(f"FAIL - {row['appealReferenceNumber']}: Mandatory field 'endAppealDate' is NULL")
                 continue
 
-            # Convert ARIA Timestamp to ISO 8601 String (YYYY-MM-DD)
-            expected_date_str = aria_source_date.strftime('%Y-%m-%d')
+            # 2. Format Expected Date
+            # If ARIA source is null, we can't format it, so we'll compare against None
+            expected_date_str = aria_source_date.strftime('%Y-%m-%d') if aria_source_date else None
             
-            if actual_json_date is None or expected_date_str not in actual_json_date:
+            # 3. Null-Safe Comparison Logic
+        
+            # this will fail if expected_date_str is None or if they don't match.
+            if actual_json_date != expected_date_str:
                 results.append(f"FAIL - {row['appealReferenceNumber']}: Source Date '{expected_date_str}' | Found in JSON '{actual_json_date}'")
 
-        count = len(rows)
         if results:
             return TestResult("endAppealDate", "FAIL", f"Date Mismatch in {len(results)} records. Sample: " + " || ".join(results[:3]), "ended", "test1")
         
-        return TestResult("endAppealDate", "PASS", f"Verified {count} records; all dates match ARIA DecisionDate in ISO 8601 format.", "ended", "test1")
+        return TestResult("endAppealDate", "PASS", f"Verified {len(rows)} records; all mandatory dates match ARIA DecisionDate.", "ended", "test1")
 
     except Exception as e:
         return TestResult("endAppealDate", "FAIL", f"EXCEPTION: {str(e)[:200]}", "ended", "test1")

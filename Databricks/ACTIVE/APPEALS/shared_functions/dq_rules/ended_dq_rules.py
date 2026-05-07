@@ -13,6 +13,8 @@ class endedDQRules(DQRulesBase):
         checks = checks | self.get_checks_hearingResponse()
         checks = checks | self.get_checks_hearingRequirements()
         checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_casedata()
+
 
         return checks
 
@@ -55,6 +57,10 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn" 
+                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out" 
 
             END
         )"""
@@ -103,6 +109,10 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
                 WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
 
             END
             )
@@ -118,7 +128,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_endAppealApproverName"] = """(
             CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,' ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
+                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,', ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
                 ELSE endAppealApproverName = 'This is a migrated ARIA case'
             END
         )"""
@@ -171,7 +181,6 @@ class endedDQRules(DQRulesBase):
             )
             
             AND
-            
             (
             CASE
                 WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25) THEN stateBeforeEndAppeal = "listing"
@@ -183,7 +192,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
-
+                WHEN CaseStatus_end = 36 THEN stateBeforeEndAppeal = "appealSubmitted"
             END
             )
 
@@ -2300,6 +2309,24 @@ class endedDQRules(DQRulesBase):
                     coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted, '') = coalesce(isFtpaRespondentOotExplanationVisibleInSubmitted_ended, '')
                 ELSE
                     isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
+            END
+        )
+        """
+
+        return checks
+    
+
+    def get_checks_casedata(self, checks={}):
+
+        checks["valid_outOfTimeDecisionType"] = """
+        (
+            CASE 
+                WHEN (
+                    (CaseStatus_max_no_filter = 10 AND Outcome_no_filter IN (120, 2, 105)) 
+                ) THEN
+                    outOfTimeDecisionType = 'rejected'
+                ELSE
+                    outOfTimeDecisionType = 'approved'
             END
         )
         """

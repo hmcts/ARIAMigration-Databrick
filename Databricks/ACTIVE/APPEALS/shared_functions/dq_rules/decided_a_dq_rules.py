@@ -72,6 +72,8 @@ class decidedADQRules(DQRulesBase):
 
         checks["valid_isDecisionAllowed"] = """
         (
+            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
+            AND 
             CASE
                 WHEN Outcome_SD = 1 THEN (isDecisionAllowed = 'allowed')
                 WHEN Outcome_SD = 2 THEN (isDecisionAllowed = 'dismissed')

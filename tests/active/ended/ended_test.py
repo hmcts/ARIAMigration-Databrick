@@ -113,7 +113,7 @@ def test_endAppealOutcome(spark,ended_outputs):
 
     assert results["A1"]["endAppealOutcome"] == 'Outcome_46_31'
     assert results["C1"]["endAppealOutcome"] == 'Outcome_51_94'
-    assert results["E1"]["endAppealOutcome"] == 'Outcome_36_1'
+    assert results["E1"]["endAppealOutcome"] == 'Struck out'
     assert results["F1"]["endAppealOutcome"] == 'Outcome_39_25'
     assert results["G1"]["endAppealOutcome"] == 'Outcome_52_91'
     assert results["H1"]["endAppealOutcome"] == 'Outcome_37_80'
@@ -124,7 +124,7 @@ def test_endAppealOutcomeReason(spark,ended_outputs):
 
     assert results["A1"]["endAppealOutcomeReason"] == 'Reason_46_31'
     assert results["C1"]["endAppealOutcomeReason"] == 'Reason_51_94'
-    assert results["E1"]["endAppealOutcomeReason"] == 'Reason_36_1'
+    assert results["E1"]["endAppealOutcomeReason"] == 'This is a migrated case. The final outcome was Review of Cost Order | Allowed.'
     assert results["F1"]["endAppealOutcomeReason"] == 'Reason_39_25'
     assert results["G1"]["endAppealOutcomeReason"] == 'Reason_52_91'
     assert results["H1"]["endAppealOutcomeReason"] == 'Reason_37_80'
@@ -145,7 +145,7 @@ def test_endAppealApproverName(spark,ended_outputs):
 
     results = ended_outputs
 
-    assert results["A1"]["endAppealApproverName"] == 'Brown Alice (Dr)'
+    assert results["A1"]["endAppealApproverName"] == 'Brown, Alice (Dr)'
     assert results["C1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["E1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
     assert results["F1"]["endAppealApproverName"] == 'This is a migrated ARIA case'
@@ -170,7 +170,7 @@ def test_stateBeforeEndAppeal(spark,ended_outputs):
 
     assert results["A1"]["stateBeforeEndAppeal"] == 'State_46'
     assert results["C1"]["stateBeforeEndAppeal"] == 'State_51'
-    assert results["E1"]["stateBeforeEndAppeal"] == 'State_36'
+    assert results["E1"]["stateBeforeEndAppeal"] == 'appealSubmitted'
     assert results["F1"]["stateBeforeEndAppeal"] == 'State_39'
     assert results["G1"]["stateBeforeEndAppeal"] == 'State_52'
     assert results["H1"]["stateBeforeEndAppeal"] == 'State_37'

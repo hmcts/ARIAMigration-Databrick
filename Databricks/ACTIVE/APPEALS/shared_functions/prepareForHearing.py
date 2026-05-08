@@ -64,7 +64,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                 )
     )
 
-    final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
+    final_df = silver_m1.join(m3_df, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",
                                 when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre"))  # ListedCentre
                     ).withColumn("Hearing Date",

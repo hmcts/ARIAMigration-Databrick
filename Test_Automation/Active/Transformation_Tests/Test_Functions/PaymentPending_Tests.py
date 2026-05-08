@@ -867,6 +867,10 @@ def test_appealType_init(json, M1_silver, C, bat):
             json_appealType["appealReferenceNumber"],
             M1_silver_appealType["dv_representation"]
         )
+
+        test_df_appealType = test_df_appealType.filter(
+            col("dv_representation") == "LR"
+        )
         
         return test_df_appealType, True
     except Exception as e:

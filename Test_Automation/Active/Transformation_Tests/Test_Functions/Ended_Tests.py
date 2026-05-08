@@ -206,7 +206,7 @@ def test_ended_defaultValues(test_df, fields_to_exclude):
         # FAIL omitted fields
         for field in omitted_fields:
             if field in fields_to_exclude: continue
-            results_list.append(TestResult(field, "FAIL", "No data to test: Field omitted from ended state", "ended", "DefaultMapping"))
+            results_list.append(TestResult(field, "FAIL", "NO RECORDS TO TEST: Field omitted from ended state", "ended", "DefaultMapping"))
 
 
         for field, expected in expected_defaults.items():
@@ -584,7 +584,7 @@ def test_singleSexCourt_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST: No records found with CourtPreference = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "No"
         failures = target_records.filter(col("singleSexCourt") != "No")
@@ -611,7 +611,7 @@ def test_singleSexCourt_test2(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST: No records found with CourtPreference = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         failures = target_records.filter(col("singleSexCourt") != "Yes")
 
@@ -637,7 +637,7 @@ def test_singleSexCourt_test3(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found with CourtPreference = 2 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST: No records found with CourtPreference = 2 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         failures = target_records.filter(col("singleSexCourt") != "Yes")
 
@@ -661,7 +661,7 @@ def test_singleSexCourt_test4(test_df):
         target_records = test_df.filter(col("EndedGroup").isin(3, 4))
 
         if target_records.count() == 0:
-            return TestResult("singleSexCourt", "FAIL", "DATA DEFICIENCY: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourt", "FAIL", "NO RECORDS TO TEST: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify any NULL values
         failures = target_records.filter(col("singleSexCourt").isNull())
@@ -685,7 +685,7 @@ def test_singleSexCourtType_test1(json_data, M1_bronze, M3_bronze):
             unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtType", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("CourtPreference") == 1))
         if target_records.count() == 0:
@@ -708,7 +708,7 @@ def test_singleSexCourtType_test2(json_data, M1_bronze, M3_bronze):
             unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtType", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("CourtPreference") == 2))
         if target_records.count() == 0:
@@ -731,7 +731,7 @@ def test_singleSexCourtType_test3(json_data, M1_bronze, M3_bronze):
             unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("singleSexCourtType", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtType", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (~col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
@@ -790,7 +790,7 @@ def test_singleSexCourtTypeDescription_test1(json_data, M1_bronze, M3_bronze):
 
             expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
         except Exception as e:
-            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # 1. Filter for Group 3/4 and CourtPreference 1
         target_records = test_df.filter(
@@ -846,7 +846,7 @@ def test_singleSexCourtTypeDescription_test2(json_data, M1_bronze, M3_bronze):
 
             expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
         except Exception as e:
-            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # 1. Filter for Group 3/4 and CourtPreference 2
         target_records = test_df.filter(
@@ -898,7 +898,7 @@ def test_singleSexCourtTypeDescription_test3(json_data, M1_bronze, M3_bronze):
             
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("singleSexCourtTypeDescription", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("singleSexCourtTypeDescription", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # 1. Filter for Group 3/4 and CourtPreference NOT 1 or 2
         target_records = test_df.filter(
@@ -940,7 +940,7 @@ def test_inCameraCourt_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found with inCamera = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST: No records found with inCamera = 1 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "Yes"
         failures = target_records.filter(col("inCameraCourt") != "Yes")
@@ -968,7 +968,7 @@ def test_inCameraCourt_test2(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found with inCamera = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST: No records found with inCamera = 0 in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "No"
         failures = target_records.filter(col("inCameraCourt") != "No")
@@ -993,7 +993,7 @@ def test_inCameraCourt_test3(test_df):
         target_records = test_df.filter(col("EndedGroup").isin(3, 4))
 
         if target_records.count() == 0:
-            return TestResult("inCameraCourt", "FAIL", "DATA DEFICIENCY: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("inCameraCourt", "FAIL", "NO RECORDS TO TEST: No records found in EndedGroup 3 or 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify any NULL values
         failures = target_records.filter(col("inCameraCourt").isNull())
@@ -1236,7 +1236,7 @@ def test_listingLength_test1(test_df):
         target_records = test_df.filter(col("EndedGroup") == 4)
         
         if target_records.count() == 0:
-            return TestResult("listingLength.hours", "FAIL", "DATA DEFICIENCY: No Group 4 records found.", test_from_state, inspect.stack()[0].function)
+            return TestResult("listingLength.hours", "FAIL", "NO RECORDS TO TEST: No Group 4 records found.", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         # We partition by the appeal reference and order by StatusId descending
@@ -1367,7 +1367,7 @@ def test_listingLocation_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("listingLocation", "FAIL", "DATA DEFICIENCY: No Status 37/38 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("listingLocation", "FAIL", "NO RECORDS TO TEST: No Status 37/38 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         # Included TimeEstimate in order as per your original logic for tie-breaking
@@ -1403,7 +1403,7 @@ def test_listingLocation_test1(test_df):
             # Check if we actually tested any populated ListedCentres
             tested_count = collapsed_df.filter(col("ListedCentre").isNotNull()).count()
             if tested_count == 0:
-                return TestResult("listingLocation", "FAIL", "DATA DEFICIENCY: Records found, but none had a populated ListedCentre to verify", test_from_state, inspect.stack()[0].function)
+                return TestResult("listingLocation", "FAIL", "NO RECORDS TO TEST: Records found, but none had a populated ListedCentre to verify", test_from_state, inspect.stack()[0].function)
             
             return TestResult("listingLocation", "PASS", f"listingLocation PASS: Verified {tested_count} records have matching location codes and labels", test_from_state, inspect.stack()[0].function)
 
@@ -1476,7 +1476,7 @@ def test_listCaseHearingDate_test1(test_df):
         target_df = ranked_df.filter(F.col("rn") == 1)
 
         if target_df.count() == 0:
-            return TestResult("listCaseHearingDate", "FAIL", "DATA DEFICIENCY: No historical Status 37/38 records found for these cases.", test_from_state, inspect.stack()[0].function)
+            return TestResult("listCaseHearingDate", "FAIL", "NO RECORDS TO TEST: No historical Status 37/38 records found for these cases.", test_from_state, inspect.stack()[0].function)
 
         # 3. Validation Logic
         target_df = target_df.withColumn("expected_date_str", 
@@ -1515,7 +1515,7 @@ def test_listCaseHearingCentre_test1(test_df):
         target_df = listing_history.withColumn("rn", F.row_number().over(window_spec)).filter(F.col("rn") == 1)
         
         if target_df.count() == 0:
-            return TestResult("listCaseHearingCentre", "FAIL", "DATA DEFICIENCY: No historical 37/38 records found.", test_from_state, inspect.stack()[0].function)
+            return TestResult("listCaseHearingCentre", "FAIL", "NO RECORDS TO TEST: No historical 37/38 records found.", test_from_state, inspect.stack()[0].function)
 
         # 2. Define the Mapping Table
         centre_mapping = {
@@ -1586,7 +1586,7 @@ def test_listCaseHearingCentreAddress_test1(test_df):
         target_df = listing_history.withColumn("rn", F.row_number().over(window_spec)).filter(F.col("rn") == 1)
         
         if target_df.count() == 0:
-            return TestResult("listCaseHearingCentreAddress", "FAIL", "DATA DEFICIENCY: No historical 37/38 records found.", test_from_state, inspect.stack()[0].function)
+            return TestResult("listCaseHearingCentreAddress", "FAIL", "NO RECORDS TO TEST: No historical 37/38 records found.", test_from_state, inspect.stack()[0].function)
 
         # 2. Define the Mapping Table
         address_mapping = {
@@ -1650,7 +1650,7 @@ def test_sendDecisionsAndReasonsDate_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("sendDecisionsAndReasonsDate", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("sendDecisionsAndReasonsDate", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1693,7 +1693,7 @@ def test_appealDate_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("appealDate", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealDate", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 and Outcome 1/2 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1736,7 +1736,7 @@ def test_appealDecision_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1746,7 +1746,7 @@ def test_appealDecision_test1(test_df):
         outcome_1_records = winning_records.filter(col("Outcome") == 1)
         
         if outcome_1_records.count() == 0:
-            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No Outcome 1 records found to verify 'Allowed' mapping", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST: No Outcome 1 records found to verify 'Allowed' mapping", test_from_state, inspect.stack()[0].function)
 
         failures = outcome_1_records.filter(col("appealDecision") != "Allowed")
 
@@ -1776,7 +1776,7 @@ def test_appealDecision_test2(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1786,7 +1786,7 @@ def test_appealDecision_test2(test_df):
         outcome_2_records = winning_records.filter(col("Outcome") == 2)
         
         if outcome_2_records.count() == 0:
-            return TestResult("appealDecision", "FAIL", "DATA DEFICIENCY: No Outcome 2 records found to verify 'Dismissed' mapping", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealDecision", "FAIL", "NO RECORDS TO TEST: No Outcome 2 records found to verify 'Dismissed' mapping", test_from_state, inspect.stack()[0].function)
 
         failures = outcome_2_records.filter(col("appealDecision") != "Dismissed")
 
@@ -1819,7 +1819,7 @@ def test_isDecisionAllowed_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1829,7 +1829,7 @@ def test_isDecisionAllowed_test1(test_df):
         outcome_1_records = winning_records.filter(col("Outcome") == 1)
         
         if outcome_1_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No Outcome 1 records found in Group 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST: No Outcome 1 records found in Group 4", test_from_state, inspect.stack()[0].function)
 
         failures = outcome_1_records.filter(col("isDecisionAllowed") != "allowed")
 
@@ -1859,7 +1859,7 @@ def test_isDecisionAllowed_test2(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1869,7 +1869,7 @@ def test_isDecisionAllowed_test2(test_df):
         outcome_2_records = winning_records.filter(col("Outcome") == 2)
         
         if outcome_2_records.count() == 0:
-            return TestResult("isDecisionAllowed", "FAIL", "DATA DEFICIENCY: No Outcome 2 records found in Group 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isDecisionAllowed", "FAIL", "NO RECORDS TO TEST: No Outcome 2 records found in Group 4", test_from_state, inspect.stack()[0].function)
 
         failures = outcome_2_records.filter(col("isDecisionAllowed") != "dismissed")
 
@@ -1948,7 +1948,7 @@ def test_actualCaseHearingLength_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("actualCaseHearingLength", "FAIL", "DATA DEFICIENCY: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("actualCaseHearingLength", "FAIL", "NO RECORDS TO TEST: No records found with Status 37/38/26 in EndedGroup 4", test_from_state, inspect.stack()[0].function)
 
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusID").desc())
@@ -1985,7 +1985,7 @@ def test_actualCaseHearingLength_test1(test_df):
         else:
             success_count = winning_records.filter(col("HearingDuration").isNotNull()).count()
             if success_count == 0:
-                 return TestResult("actualCaseHearingLength", "FAIL", "DATA DEFICIENCY: records found but none have HearingDuration populated", test_from_state, inspect.stack()[0].function)
+                 return TestResult("actualCaseHearingLength", "FAIL", "NO RECORDS TO TEST: records found but none have HearingDuration populated", test_from_state, inspect.stack()[0].function)
             
             return TestResult("actualCaseHearingLength", "PASS", f"actualCaseHearingLength PASS: Verified {success_count} records correctly match M3.HearingDuration", test_from_state, inspect.stack()[0].function)
 
@@ -2024,7 +2024,7 @@ def test_isInCameraCourtAllowed_test1(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found with Group 4 and InCamera=1.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found with Group 4 and InCamera=1.", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures using filter and count
         failures = target_records.filter(col(field_name) != "Granted")
@@ -2068,7 +2068,7 @@ def test_isInCameraCourtAllowed_test2(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found for Omission test (InCamera != 1).", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found for Omission test (InCamera != 1).", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures (Field should be NULL/Omitted)
         failures = target_records.filter(col(field_name).isNotNull())
@@ -2097,7 +2097,7 @@ def test_inCameraCourtTribunalResponse_test1(json_data, M1_bronze, M3_bronze):
             test_df = get_ended_group_id(unended_test_df)
             expected = "This is a migrated ARIA case. Please refer to the documents."
         except Exception as e:
-            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") == 1))
         
@@ -2123,7 +2123,7 @@ def test_inCameraCourtTribunalResponse_test2(json_data, M1_bronze, M3_bronze):
             unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtTribunalResponse", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("InCamera") != 1))
         
@@ -2166,7 +2166,7 @@ def test_inCameraCourtDecisionForDisplay_test1(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No Group 4 records with InCamera=1.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No Group 4 records with InCamera=1.", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures using filter
         failures = target_records.filter(col(field_name) != expected_val)
@@ -2209,7 +2209,7 @@ def test_inCameraCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found for Omission test.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found for Omission test.", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures (Field should be NULL)
         failures = target_records.filter(col(field_name).isNotNull())
@@ -2229,6 +2229,7 @@ def test_inCameraCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze):
 # Logic: If InCamera == 1 and EndedGroup 3/4 -> Long ARIA Migrated String
 ############################################################################################
 def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
+<<<<<<< Updated upstream
 
 
     try:
@@ -2259,7 +2260,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
 
             expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
         except Exception as e:
-            return TestResult("inCameraCourtDescription", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("inCameraCourtDescription", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
         
         # 1. Filter for Ended Group 3/4 and InCamera = 1
         target_records = test_df.filter(
@@ -2286,6 +2287,11 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
     field_name = "inCameraCourtDescription"
     expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
 
+=======
+    test_from_state = "ended"
+    field_name = "inCameraCourtDescription"
+    expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
+>>>>>>> Stashed changes
     
     try:
         # 1. Safe Column Check
@@ -2296,6 +2302,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         json_df = json_data.select("appealReferenceNumber", field_name)
         m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
         m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
+<<<<<<< Updated upstream
 
         # 1. Filter for Ended Group 3/4 and InCamera != 1
         target_records = test_df.filter(
@@ -2311,9 +2318,20 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         # 3. Filter for target scenario: Inclusion
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("InCamera") == 1))
         
+=======
+        
+        joined_df = json_df.join(m1_clean, col("appealReferenceNumber") == col("m1_CaseNo"), "inner") \
+                           .join(m3_clean, col("appealReferenceNumber") == col("m3_CaseNo"), "inner")
+        
+        test_df = get_ended_group_id(joined_df)
+
+        # 3. Filter for target scenario: Inclusion
+        target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("InCamera") == 1))
+        
+>>>>>>> Stashed changes
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found with Group 3/4 and InCamera=1.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found with Group 3/4 and InCamera=1.", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures (Mismatch or Null)
         failures = target_records.filter(col(field_name) != expected_string)
@@ -2356,7 +2374,7 @@ def test_inCameraCourtDescription_test2(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found for Omission test (InCamera != 1).", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found for Omission test (InCamera != 1).", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures (Field should be NULL)
         failures = target_records.filter(col(field_name).isNotNull())
@@ -2391,7 +2409,7 @@ def test_isSingleSexCourtAllowed_test1(json_data, M1_bronze, M3_bronze):
             # 5. Make ended group
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # Filter for Group 4 and Preference 1 or 2
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
@@ -2430,7 +2448,7 @@ def test_isSingleSexCourtAllowed_test2(json_data, M1_bronze, M3_bronze):
             # 5. Make ended group
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("isSingleSexCourtAllowed", "FAIL", f"No data to test: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("isSingleSexCourtAllowed", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
         
         # Filter for Group 4 and Preference NOT 1 or 2
         target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
@@ -2482,7 +2500,7 @@ def test_singleSexCourtTribunalResponse_test1(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found with Group 4 and CourtPreference 1/2.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found with Group 4 and CourtPreference 1/2.", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures
         failures = target_records.filter(col(field_name) != expected_val)
@@ -2526,7 +2544,7 @@ def test_singleSexCourtTribunalResponse_test2(json_data, M1_bronze, M3_bronze):
         
         total_count = target_records.count()
         if total_count == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No records found for Omission test (Pref != 1/2).", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found for Omission test (Pref != 1/2).", test_from_state, inspect.stack()[0].function)
 
         # 4. Identification of failures (Field should be NULL)
         failures = target_records.filter(col(field_name).isNotNull())
@@ -2555,7 +2573,7 @@ def test_singleSexCourtDecisionForDisplay_test1(json_data, M1_bronze, M3_bronze)
             test_df = get_ended_group_id(unended_test_df)
             expected = "Granted - This is a migrated ARIA case. Please refer to the documents."
         except Exception as e:
-            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
@@ -2580,7 +2598,7 @@ def test_singleSexCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze)
             unended_test_df = unended_test_df.join(m3_clean, unended_test_df["appealReferenceNumber"] == m3_clean["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"No data to test: {str(e)[:300]}", "ended", inspect.stack()[0].function)
+            return TestResult("singleSexCourtDecisionForDisplay", "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", inspect.stack()[0].function)
 
         target_records = test_df.filter((col("EndedGroup") == 4) & (~col("CourtPreference").isin(1, 2)))
         if target_records.count() == 0:
@@ -3316,7 +3334,7 @@ def test_ftpaRespondentApplicationDate_test1(json_data, M3_bronze):
         winning_records = target_records.withColumn("rn", row_number().over(window_spec)).filter(col("rn") == 1)
 
         if winning_records.count() == 0:
-            return TestResult("ftpaRespondentApplicationDate", "FAIL", "DATA DEFICIENCY: No Party 2 records found for Status 39.", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaRespondentApplicationDate", "FAIL", "NO RECORDS TO TEST: No Party 2 records found for Status 39.", test_from_state, inspect.stack()[0].function)
 
         # 4. Acceptance Criteria: IF Party 2 -> Use Data from ARIA (Mapped to OutOfTime)
         val_path = col("ftpaList")[0]["value"][field_name]
@@ -3362,7 +3380,7 @@ def test_ftpaRespondentApplicationDate_test2(json_data, M3_bronze):
         winning_records = target_records.withColumn("rn", row_number().over(window_spec)).filter(col("rn") == 1)
 
         if winning_records.count() == 0:
-            return TestResult("ftpaRespondentApplicationDate_Omit", "FAIL", "DATA DEFICIENCY: No Party 1 records found for Status 39.", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaRespondentApplicationDate_Omit", "FAIL", "NO RECORDS TO TEST: No Party 1 records found for Status 39.", test_from_state, inspect.stack()[0].function)
 
         # 4. Acceptance Criteria: IF Party 1 -> OMIT
         # We verify that for Party 1, the ftpaApplicant is NOT 'respondent'
@@ -3407,7 +3425,7 @@ def test_ftpaRespondentSubmissionOutOfTime_test1(json_data, M3_bronze):
         target_df = base_df.withColumn("rn", row_number().over(window_spec)).filter(col("rn") == 1)
 
         if target_df.count() == 0:
-            return TestResult(field_name, "FAIL", "DATA DEFICIENCY: No Group 4, Status 39 records found.", test_from_state, inspect.stack()[0].function)
+            return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No Group 4, Status 39 records found.", test_from_state, inspect.stack()[0].function)
 
         # 4. Acceptance Criteria: Must be "Yes"
         val_path = col("ftpaList")[0]["value"][field_name]
@@ -3827,7 +3845,7 @@ def test_ftpaAppellantSubmitted_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("ftpaAppellantSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaAppellantSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -3839,7 +3857,7 @@ def test_ftpaAppellantSubmitted_test1(test_df):
         p1_count = party1_records.count()
         
         if p1_count == 0:
-            return TestResult("ftpaAppellantSubmitted", "FAIL", "DATA DEFICIENCY: Found Status 39 in Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaAppellantSubmitted", "FAIL", "NO RECORDS TO TEST: Found Status 39 in Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         failures = party1_records.filter(col("ftpaAppellantSubmitted") != "Yes")
 
@@ -3868,7 +3886,7 @@ def test_ftpaAppellantSubmitted_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("ftpaAppellantSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaAppellantSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -3879,7 +3897,7 @@ def test_ftpaAppellantSubmitted_test2(test_df):
         p2_count = party2_records.count()
 
         if p2_count == 0:
-            return TestResult("ftpaAppellantSubmitted", "FAIL", "DATA DEFICIENCY: Found Status 39 in Group 4, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaAppellantSubmitted", "FAIL", "NO RECORDS TO TEST: Found Status 39 in Group 4, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
 
         failures = party2_records.filter(col("ftpaAppellantSubmitted").isNotNull())
 
@@ -3907,7 +3925,7 @@ def test_isFtpaAppellantDocsVisibleInDecided_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -3919,7 +3937,7 @@ def test_isFtpaAppellantDocsVisibleInDecided_test1(test_df):
         p1_count = party1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: Found Status 39 in Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: Found Status 39 in Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         failures = party1_records.filter(col("isFtpaAppellantDocsVisibleInDecided") != "No")
 
@@ -3948,7 +3966,7 @@ def test_isFtpaAppellantDocsVisibleInDecided_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -3959,7 +3977,7 @@ def test_isFtpaAppellantDocsVisibleInDecided_test2(test_df):
         p2_count = party2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 2 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 2 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
 
         # Fail if the field IS NOT NULL for Party 2
         failures = party2_records.filter(col("isFtpaAppellantDocsVisibleInDecided").isNotNull())
@@ -3992,7 +4010,7 @@ def test_isFtpaAppellantDocsVisibleInSubmitted_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4003,7 +4021,7 @@ def test_isFtpaAppellantDocsVisibleInSubmitted_test1(test_df):
         p1_count = party1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Status 39/Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Status 39/Group 4, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         # Fail if value is NOT 'Yes'
         failures = party1_records.filter(col("isFtpaAppellantDocsVisibleInSubmitted") != "Yes")
@@ -4033,7 +4051,7 @@ def test_isFtpaAppellantDocsVisibleInSubmitted_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 records found in EndedGroup 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4044,7 +4062,7 @@ def test_isFtpaAppellantDocsVisibleInSubmitted_test2(test_df):
         p2_count = party2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Status 39/Group 4, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Status 39/Group 4, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
 
         # Fail if the field IS NOT NULL for Party 2
         failures = party2_records.filter(col("isFtpaAppellantDocsVisibleInSubmitted").isNotNull())
@@ -4081,7 +4099,7 @@ def test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df):
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39))
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Get Max Status record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4091,7 +4109,7 @@ def test_isFtpaAppellantOotDocsVisibleInDecided_test1(test_df):
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") == 1))
         
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 1 OOT records found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 1 OOT records found", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInDecided") != "No")
         
@@ -4115,7 +4133,7 @@ def test_isFtpaAppellantOotDocsVisibleInDecided_test2(test_df):
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") != 1))
         
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 1 In-Time records found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 1 In-Time records found", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInDecided").isNotNull())
         
@@ -4139,7 +4157,7 @@ def test_isFtpaAppellantOotDocsVisibleInDecided_test3(test_df):
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") == 1))
         
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 2 OOT records found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 2 OOT records found", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInDecided").isNotNull())
         
@@ -4163,7 +4181,7 @@ def test_isFtpaAppellantOotDocsVisibleInDecided_test4(test_df):
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") != 1))
         
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 2 In-Time records found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 2 In-Time records found", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInDecided").isNotNull())
         
@@ -4188,7 +4206,7 @@ def test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df):
         # 1. Filter for Group 4 and Status 39
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39))
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4", test_from_state, inspect.stack()[0].function)
         
         # 2. Get Max Status record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4197,7 +4215,7 @@ def test_isFtpaAppellantOotDocsVisibleInSubmitted_test1(test_df):
         # 3. Check for P1 and OutOfTime == 1
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Party 1 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Party 1 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInSubmitted") != "Yes")
         if failures.count() > 0:
@@ -4219,7 +4237,7 @@ def test_isFtpaAppellantOotDocsVisibleInSubmitted_test2(test_df):
         # Check for P1 and NOT OutOfTime
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Party 1 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Party 1 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -4241,7 +4259,7 @@ def test_isFtpaAppellantOotDocsVisibleInSubmitted_test3(test_df):
         # Check for P2 and OutOfTime == 1
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Party 2 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Party 2 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -4263,7 +4281,7 @@ def test_isFtpaAppellantOotDocsVisibleInSubmitted_test4(test_df):
         # Check for P2 and NOT OutOfTime
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Party 2 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Party 2 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotDocsVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -4293,7 +4311,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInDecided_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4304,7 +4322,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInDecided_test1(test_df):
         p1_count = p1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 1 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 1 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
 
         failures = p1_records.filter(col("isFtpaAppellantGroundsDocsVisibleInDecided") != "No")
 
@@ -4332,7 +4350,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInDecided_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4343,7 +4361,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInDecided_test2(test_df):
         p2_count = p2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Party 2 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Party 2 records found in Group 4/Status 39", test_from_state, inspect.stack()[0].function)
 
         # Fail if the field IS NOT NULL for Party 2
         failures = p2_records.filter(col("isFtpaAppellantGroundsDocsVisibleInDecided").isNotNull())
@@ -4384,7 +4402,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4395,7 +4413,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test1(test_df):
         p1_count = p1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         failures = p1_records.filter(col("isFtpaAppellantEvidenceDocsVisibleInDecided") != "No")
 
@@ -4423,7 +4441,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4434,7 +4452,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInDecided_test2(test_df):
         p2_count = p2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInDecided", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
 
         # Fail if field is populated (isNotNull)
         failures = p2_records.filter(col("isFtpaAppellantEvidenceDocsVisibleInDecided").isNotNull())
@@ -4474,7 +4492,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4485,7 +4503,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test1(test_df):
         p1_count = p1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         failures = p1_records.filter(col("isFtpaAppellantGroundsDocsVisibleInSubmitted") != "Yes")
 
@@ -4513,7 +4531,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4524,7 +4542,7 @@ def test_isFtpaAppellantGroundsDocsVisibleInSubmitted_test2(test_df):
         p2_count = p2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantGroundsDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
 
         # Fail if field is populated (isNotNull)
         failures = p2_records.filter(col("isFtpaAppellantGroundsDocsVisibleInSubmitted").isNotNull())
@@ -4564,7 +4582,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test1(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4575,7 +4593,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test1(test_df):
         p1_count = p1_records.count()
         
         if p1_count == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 1", test_from_state, inspect.stack()[0].function)
 
         failures = p1_records.filter(col("isFtpaAppellantEvidenceDocsVisibleInSubmitted") != "Yes")
 
@@ -4603,7 +4621,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test2(test_df):
         )
         
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get latest record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4614,7 +4632,7 @@ def test_isFtpaAppellantEvidenceDocsVisibleInSubmitted_test2(test_df):
         p2_count = p2_records.count()
 
         if p2_count == 0:
-            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantEvidenceDocsVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: Found Group 4/Status 39, but 0 records are Party 2", test_from_state, inspect.stack()[0].function)
 
         # Fail if field is populated (isNotNull)
         failures = p2_records.filter(col("isFtpaAppellantEvidenceDocsVisibleInSubmitted").isNotNull())
@@ -4651,7 +4669,7 @@ def test_isFtpaAppellantOotExplanationVisibleInDecided_test1(test_df):
         # 1. Filter for Group 4 and Status 39
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39))
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Get Max Status record
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4660,7 +4678,7 @@ def test_isFtpaAppellantOotExplanationVisibleInDecided_test1(test_df):
         # 3. Acceptance Criteria: P1 OOT must be 'No'
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "DATA DEFICIENCY: No P1 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No P1 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInDecided") != "No")
         if failures.count() > 0:
@@ -4681,7 +4699,7 @@ def test_isFtpaAppellantOotExplanationVisibleInDecided_test2(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "DATA DEFICIENCY: No P1 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No P1 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInDecided").isNotNull())
         if failures.count() > 0:
@@ -4702,7 +4720,7 @@ def test_isFtpaAppellantOotExplanationVisibleInDecided_test3(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "DATA DEFICIENCY: No P2 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No P2 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInDecided").isNotNull())
         if failures.count() > 0:
@@ -4723,7 +4741,7 @@ def test_isFtpaAppellantOotExplanationVisibleInDecided_test4(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "DATA DEFICIENCY: No P2 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInDecided", "FAIL", "NO RECORDS TO TEST: No P2 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInDecided").isNotNull())
         if failures.count() > 0:
@@ -4754,7 +4772,7 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test1(test_df):
         # 1. Filter for Group 4 and Status 39
         target_records = test_df.filter((col("EndedGroup") == 4) & (col("CaseStatus") == 39))
         if target_records.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No Status 39 in Group 4 found", test_from_state, inspect.stack()[0].function)
         
         # 2. Identify latest record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
@@ -4763,7 +4781,7 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test1(test_df):
         # 3. Acceptance Criteria: P1 OOT must be 'Yes'
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No P1 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No P1 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInSubmitted") != "Yes")
         if failures.count() > 0:
@@ -4784,7 +4802,7 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test2(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 1) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No P1 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No P1 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -4805,7 +4823,7 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") == 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No P2 OOT records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No P2 OOT records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -4826,7 +4844,7 @@ def test_isFtpaAppellantOotExplanationVisibleInSubmitted_test4(test_df):
 
         scenario_df = winning_records.filter((col("Party") == 2) & (col("OutOfTime") != 1))
         if scenario_df.count() == 0:
-            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "DATA DEFICIENCY: No P2 In-Time records", test_from_state, inspect.stack()[0].function)
+            return TestResult("isFtpaAppellantOotExplanationVisibleInSubmitted", "FAIL", "NO RECORDS TO TEST: No P2 In-Time records", test_from_state, inspect.stack()[0].function)
 
         failures = scenario_df.filter(col("isFtpaAppellantOotExplanationVisibleInSubmitted").isNotNull())
         if failures.count() > 0:
@@ -5267,7 +5285,7 @@ def test_isFtpaRespondentGroundsDocsVisibleInDecided_test1(json_data, M3_bronze)
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test1")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test1")
@@ -5293,7 +5311,7 @@ def test_isFtpaRespondentGroundsDocsVisibleInDecided_test2(json_data, M3_bronze)
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test2")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test2")
@@ -5326,7 +5344,7 @@ def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test1(json_data, M3_bronze
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test1")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test1")
@@ -5352,7 +5370,7 @@ def test_isFtpaRespondentEvidenceDocsVisibleInDecided_test2(json_data, M3_bronze
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test2")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test2")
@@ -5385,7 +5403,7 @@ def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test1(json_data, M3_bronz
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test1")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test1")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test1")
@@ -5411,7 +5429,7 @@ def test_isFtpaRespondentGroundsDocsVisibleInSubmitted_test2(json_data, M3_bronz
             unended_test_df = json.join(m3, json["appealReferenceNumber"] == m3["m3_CaseNo"], "inner")
             test_df = get_ended_group_id(unended_test_df)
         except Exception as e:
-            return TestResult(field_name, "FAIL", f"No data to test: {str(e)[:300]}", "ended", "test2")
+            return TestResult(field_name, "FAIL", f"NO RECORDS TO TEST: {str(e)[:300]}", "ended", "test2")
 
         if field_name not in test_df.columns:
             return TestResult(field_name, "NO_DATA", "Field missing", "ended", "test2")

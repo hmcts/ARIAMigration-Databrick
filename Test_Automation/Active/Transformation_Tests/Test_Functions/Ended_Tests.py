@@ -2229,7 +2229,7 @@ def test_inCameraCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze):
 # Logic: If InCamera == 1 and EndedGroup 3/4 -> Long ARIA Migrated String
 ############################################################################################
 def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
-<<<<<<< Updated upstream
+
 
 
     try:
@@ -2287,11 +2287,11 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
     field_name = "inCameraCourtDescription"
     expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
 
-=======
+
     test_from_state = "ended"
     field_name = "inCameraCourtDescription"
     expected_string = "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
->>>>>>> Stashed changes
+
     
     try:
         # 1. Safe Column Check
@@ -2302,7 +2302,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         json_df = json_data.select("appealReferenceNumber", field_name)
         m1_clean = M1_bronze.select(col("CaseNo").alias("m1_CaseNo"), "InCamera")
         m3_clean = M3_bronze.select(col("CaseNo").alias("m3_CaseNo"), "CaseStatus")
-<<<<<<< Updated upstream
+
 
         # 1. Filter for Ended Group 3/4 and InCamera != 1
         target_records = test_df.filter(
@@ -2318,7 +2318,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         # 3. Filter for target scenario: Inclusion
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("InCamera") == 1))
         
-=======
+
         
         joined_df = json_df.join(m1_clean, col("appealReferenceNumber") == col("m1_CaseNo"), "inner") \
                            .join(m3_clean, col("appealReferenceNumber") == col("m3_CaseNo"), "inner")
@@ -2328,7 +2328,7 @@ def test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze):
         # 3. Filter for target scenario: Inclusion
         target_records = test_df.filter((col("EndedGroup").isin(3, 4)) & (col("InCamera") == 1))
         
->>>>>>> Stashed changes
+
         total_count = target_records.count()
         if total_count == 0:
             return TestResult(field_name, "FAIL", "NO RECORDS TO TEST: No records found with Group 3/4 and InCamera=1.", test_from_state, inspect.stack()[0].function)

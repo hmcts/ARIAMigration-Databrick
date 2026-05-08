@@ -1,7 +1,16 @@
 import asyncio
 import json
 import os
+import pytest
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
+
+SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
+
+
+@pytest.fixture(autouse=True)
+def no_retry_sleep():
+    with patch(SLEEP_PATH):
+        yield
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
 # Key Vault in __init__. Patch the Azure SDK before importing to prevent real

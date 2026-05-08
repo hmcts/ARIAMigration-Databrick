@@ -5261,12 +5261,12 @@ def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
             return TestResult("applicationOutOfTimeExplanation", "FAIL",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
         
         #Check we have Records To test
-        if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
+        if test_df.filter(col("OutOfTimeIssue") == 0).count() == 0:
             return TestResult("applicationOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_applicationOutOfTimeExplanation = test_df.filter(
             (
-                (col("OutOfTimeIssue") == 1)
+                (col("OutOfTimeIssue") == 0)
             ) &
             (
                 (col("applicationOutOfTimeExplanation").isNotNull()) &

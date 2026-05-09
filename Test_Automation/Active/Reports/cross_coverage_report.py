@@ -785,11 +785,31 @@ def build_and_display(
                 }}
                 function downloadFailuresCSV() {{
                     var rows = document.querySelectorAll('#field-matrix tbody tr.field-row');
-                    var header = ['from_state','field_group','test_name','verdict','states_covered','pass_states','P','F','E','ND','failed_in','errored_in'];
+                    var header = ['from_state','field_group','test_name','verdict','states_covered','pass_states','P','F','E','ND','failed_in','errored_in','messages'];
                     var lines = [header.join(',')];
                     rows.forEach(function(r) {{
                         var v = r.getAttribute('data-verdict');
                         if (v === 'PASSED' || v === 'NEEDS DATA') return;
+                        /* Extract messages from the (possibly hidden) detail drill-down row */
+                        var oc = r.getAttribute('onclick') || '';
+                        var idxM = oc.match(/\\d+/);
+                        var msgs = [];
+                        if (idxM) {{
+                            var det = document.getElementById('detail-' + idxM[0]);
+                            if (det) {{
+                                det.querySelectorAll('table tbody tr').forEach(function(nr) {{
+                                    /* Skip run-header rows (they carry an inline background style) */
+                                    if ((nr.getAttribute('style') || '').indexOf('background') !== -1) return;
+                                    var cells = nr.querySelectorAll('td');
+                                    if (cells.length >= 4) {{
+                                        var st  = (cells[2] ? cells[2].textContent : '').trim();
+                                        var msg = (cells[3] ? cells[3].textContent : '').trim();
+                                        if ((st === 'FAIL' || st === 'ERROR') && msg) msgs.push('[' + st + '] ' + msg);
+                                    }}
+                                }});
+                            }}
+                        }}
+                        var msgStr = msgs.join(' | ');
                         var vals = [
                             r.getAttribute('data-fromstate') || '',
                             r.getAttribute('data-field') || '',
@@ -802,9 +822,10 @@ def build_and_display(
                             r.getAttribute('data-error-count') || '0',
                             r.getAttribute('data-nodata-count') || '0',
                             r.getAttribute('data-fails-in') || '',
-                            r.getAttribute('data-errors-in') || ''
+                            r.getAttribute('data-errors-in') || '',
+                            msgStr
                         ].map(function(x){{
-                            if (x.indexOf(',') !== -1 || x.indexOf('"') !== -1) return '"' + x.replace(/"/g,'""') + '"';
+                            if (x.indexOf(',') !== -1 || x.indexOf('"') !== -1 || x.indexOf('\\n') !== -1) return '"' + x.replace(/"/g,'""') + '"';
                             return x;
                         }});
                         lines.push(vals.join(','));

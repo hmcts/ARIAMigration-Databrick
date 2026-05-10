@@ -299,8 +299,10 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     # 11. appellantInterpreter Tests
     # ---------------------------------------------------------
     test_df_lang, test_data_setup_lang = ended_tests.test_languages_init(json_data, M1_bronze, M3_bronze)
-    if test_data_setup_lang is True and test_df_lang is not None:
-        all_test_results.append(ended_tests.test_languageInterpreterMapping(test_df_lang))
+    if test_data_setup_lang is True and test_df_lang is not None:        
+        all_test_results.append(ended_tests.test_appellantInterpreterLanguageCategory(test_df_lang))
+        all_test_results.append(ended_tests.test_appellantInterpreterSpokenLanguage(test_df_lang))
+        all_test_results.append(ended_tests.test_appellantInterpreterSignLanguage(test_df_lang))
     else:
         all_test_results.append(test_data_setup_lang)
 

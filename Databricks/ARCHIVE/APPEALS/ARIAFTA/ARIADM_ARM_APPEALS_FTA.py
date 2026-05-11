@@ -4543,7 +4543,6 @@ def silver_case_adjudicator():
 )
 def silver_archive_metadata():
     from pyspark.sql import functions as F
-
     df_StatusOutcomeCombinations = spark.read.option("header", True).csv(
         f"abfss://external-csv@ingest{lz_key}external{env_name}.dfs.core.windows.net/ReferenceData/StatusOutcomeCombinations.csv"
     )
@@ -4593,10 +4592,7 @@ def silver_archive_metadata():
                 coalesce(col("decision_date_latest"), current_timestamp()),
                 "yyyy-MM-dd'T'HH:mm:ss'Z'"
             ).alias("event_date"),
-            date_format(
-                coalesce(col("decision_date_latest"), current_timestamp()),
-                "yyyy-MM-dd'T'HH:mm:ss'Z'"
-            ).alias("recordDate"),
+            date_format(F.current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
         lit("GBR").alias("region"),
         lit("ARIA").alias("publisher"),
         when(
@@ -4655,8 +4651,8 @@ def silver_archive_metadata():
             F.current_date()
         ).otherwise(F.current_date())
     ).withColumn(
-        "recordDate",
-        concat(F.col("retentionDate"), lit("T00:00:00.000Z"))
+        "event_date",
+        date_format(col("retentionDate"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
     ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
     
     return final_df

@@ -2097,10 +2097,7 @@ def silver_meta_data():
                 coalesce(col("decision_date_latest"), current_timestamp()),
                 "yyyy-MM-dd'T'HH:mm:ss'Z'"
             ).alias("event_date"),
-            date_format(
-                coalesce(col("decision_date_latest"), current_timestamp()),
-                "yyyy-MM-dd'T'HH:mm:ss'Z'"
-            ).alias("recordDate"),
+            date_format(F.current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             F.lit("GBR").alias("region"),
             F.lit("ARIA").alias("publisher"),
             F.when(
@@ -2152,20 +2149,18 @@ def silver_meta_data():
     "retentionDate",
     F.when(
         col("is_valid_status_outcome") == True,
-        F.add_months(col("event_date"), 240)
+        col("event_date")
     )
     .when(
         ((col("Outcome") == 38) & (col("CaseStatus") == 4)) | ((col("Outcome") == 38) & (col("CaseStatus") == 19)),
-        F.add_months(
-            coalesce(col("decision_date_prev"), F.current_date()),
-            240))
+            coalesce(col("decision_date_prev"), F.current_date()))
     .when(
         col("Outcome").isNull() & col("CaseStatus").isNull(),
         F.current_date()
     ).otherwise(F.current_date())
     ).withColumn(
-        "recordDate",
-        concat(F.col("retentionDate"), lit("T00:00:00.000Z"))
+        "event_date",
+        date_format(col("retentionDate"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
     ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
 
     return final_df

@@ -658,7 +658,9 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         # Create ONE OT0001 flag; choose a consistent comment:
         # If horef triggers it → "Dropped Case"; otherwise use default comment ("Expedite")
         ot0001_comment = when(col_horef.isNotNull(), "Dropped Case") \
-                        .otherwise(base_ot0001_data["comment"])
+                        .when(array_contains(col_category_ids, lit(8)), "Reclassified RFT") \
+                        .when(array_contains(col_category_ids, lit(24)), "EEA Family Permit") \
+                        .otherwise("Expedite")
 
         flags.append((
             ot0001_condition,

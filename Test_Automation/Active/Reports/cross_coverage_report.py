@@ -181,38 +181,59 @@ def build_and_display(
                     pair_runstate_tooltip[(pair, run_state)] = _attr_safe(" | ".join(shown))
 
 
-            # ---- Per-state totals ----
+            # ---- Per-state latest-run totals ----
+            # Build a lookup: state -> latest run row (all_runs_list is desc by datetime)
+            latest_run_per_state = {}
+            for r in all_runs_list:
+                if r.state_under_test not in latest_run_per_state:
+                    latest_run_per_state[r.state_under_test] = r
+
             state_totals = []
             for state in states_in_data:
-                state_rows = all_results[all_results["run_state"] == state]
-                if state_rows.empty: continue
-                sp = (state_rows["status_upper"] == "PASS").sum()
-                sf = (state_rows["status_upper"] == "FAIL").sum()
-                se = (state_rows["status_upper"] == "ERROR").sum()
-                sn = (state_rows["status_upper"] == "NO_DATA").sum()
+                latest_run = latest_run_per_state.get(state)
+                if not latest_run:
+                    continue
+                latest_id = latest_run.run_id
+                state_rows = all_results[all_results["run_id"] == latest_id]
+                if state_rows.empty:
+                    continue
+                sp = int((state_rows["status_upper"] == "PASS").sum())
+                sf = int((state_rows["status_upper"] == "FAIL").sum())
+                se = int((state_rows["status_upper"] == "ERROR").sum())
+                sn = int((state_rows["status_upper"] == "NO_DATA").sum())
                 stotal = len(state_rows)
-                sfields = state_rows["test_field"].nunique()
-                run_pass = sp + sf
-                pass_pct = round(sp / run_pass * 100, 1) if run_pass > 0 else 0.0
+                run_dt = str(latest_run.run_start_datetime)[:16]
+                # Pair-level verdict counts for this state from the latest results
+                v_passed = sum(1 for p in field_pair_runstate_latest if field_pair_runstate_latest[p].get(state) == "PASS")
+                v_failed = sum(1 for p in field_pair_runstate_latest if field_pair_runstate_latest[p].get(state) == "FAIL")
+                v_error  = sum(1 for p in field_pair_runstate_latest if field_pair_runstate_latest[p].get(state) == "ERROR")
+                v_nodata = sum(1 for p in field_pair_runstate_latest if field_pair_runstate_latest[p].get(state) == "NO_DATA")
                 state_totals.append({
-                    "state": state, "total": stotal, "pass": sp, "fail": sf,
-                    "error": se, "nodata": sn, "fields": sfields, "pass_pct": pass_pct,
+                    "state": state, "run_dt": run_dt,
+                    "total": stotal,
+                    "pass": sp, "fail": sf, "error": se, "nodata": sn,
+                    "v_passed": v_passed, "v_failed": v_failed, "v_error": v_error, "v_nodata": v_nodata,
                 })
 
             state_totals_rows = ""
             for s in state_totals:
                 state_totals_rows += (
-                    f'<tr data-state="{s["state"]}" data-total="{s["total"]}" data-fields="{s["fields"]}" '
+                    f'<tr data-state="{s["state"]}" data-total="{s["total"]}" '
                     f'data-pass="{s["pass"]}" data-fail="{s["fail"]}" data-error="{s["error"]}" '
-                    f'data-nodata="{s["nodata"]}" data-pct="{s["pass_pct"]}">'
+                    f'data-nodata="{s["nodata"]}" '
+                    f'data-vpassed="{s["v_passed"]}" data-vfailed="{s["v_failed"]}" '
+                    f'data-verror="{s["v_error"]}" data-vnodata="{s["v_nodata"]}">'
                     f'<td><b>{s["state"]}</b></td>'
-                    f'<td style="text-align:right">{s["total"]}</td>'
-                    f'<td style="text-align:right">{s["fields"]}</td>'
+                    f'<td style="color:#7f8c8d;font-size:11px;white-space:nowrap">{s["run_dt"]}</td>'
+                    f'<td style="text-align:right"><b>{s["total"]}</b></td>'
                     f'<td class="pass" style="text-align:right">{s["pass"]}</td>'
                     f'<td class="fail" style="text-align:right">{s["fail"]}</td>'
                     f'<td class="error" style="text-align:right">{s["error"]}</td>'
                     f'<td class="nodata" style="text-align:right">{s["nodata"]}</td>'
-                    f'<td style="text-align:right">{s["pass_pct"]}%</td>'
+                    f'<td class="pass" style="text-align:right"><b>{s["v_passed"]}</b></td>'
+                    f'<td class="fail" style="text-align:right"><b>{s["v_failed"]}</b></td>'
+                    f'<td class="error" style="text-align:right"><b>{s["v_error"]}</b></td>'
+                    f'<td class="nodata" style="text-align:right"><b>{s["v_nodata"]}</b></td>'
                     f'</tr>\n'
                 )
 
@@ -454,32 +475,37 @@ def build_and_display(
                     <b>Pass rule:</b> a (from_state, field) pair is PASSED if it passes in at least one run_state; other columns may still show FAIL / ERROR / NO_DATA.
                 </div>
 
-                <h2>Per-State Totals (by run_state)</h2>
+                <h2>Per-State Latest Run Totals</h2>
                 <div class="filter-bar">
                     <label>State contains:</label>
                     <input type="text" id="st-filter" class="text" placeholder="filter state name..." oninput="applyStateFilter()" />
                     <span class="group">
-                        <label>Pass % &ge;</label>
-                        <input type="number" class="num" id="st-minpct" min="0" max="100" value="" oninput="applyStateFilter()" />
-                    </span>
-                    <span class="group">
-                        <label>Total &ge;</label>
+                        <label>Tests &ge;</label>
                         <input type="number" class="num" id="st-mintotal" min="0" value="" oninput="applyStateFilter()" />
                     </span>
                     <button class="danger" onclick="clearStateFilter()">Clear</button>
                     <span id="states-match-count"></span>
                 </div>
                 <table id="state-totals">
-                    <thead><tr>
-                        <th data-sort-key="state">State (run_state)</th>
-                        <th data-sort-key="total" style="text-align:right">Total tests</th>
-                        <th data-sort-key="fields" style="text-align:right">Fields</th>
-                        <th data-sort-key="pass" style="text-align:right">Pass</th>
-                        <th data-sort-key="fail" style="text-align:right">Fail</th>
-                        <th data-sort-key="error" style="text-align:right">Error</th>
-                        <th data-sort-key="nodata" style="text-align:right">No Data</th>
-                        <th data-sort-key="pct" style="text-align:right">Pass %</th>
-                    </tr></thead>
+                    <thead>
+                        <tr>
+                            <th rowspan="2" data-sort-key="state">State</th>
+                            <th rowspan="2">Latest Run</th>
+                            <th rowspan="2" data-sort-key="total" style="text-align:right">Tests</th>
+                            <th colspan="4" style="text-align:center;border-bottom:1px solid #bdc3c7;font-size:11px;color:#7f8c8d">Results (latest run)</th>
+                            <th colspan="4" style="text-align:center;border-bottom:1px solid #bdc3c7;font-size:11px;color:#7f8c8d">Verdict (latest per pair)</th>
+                        </tr>
+                        <tr>
+                            <th data-sort-key="pass" style="text-align:right">Pass</th>
+                            <th data-sort-key="fail" style="text-align:right">Fail</th>
+                            <th data-sort-key="error" style="text-align:right">Error</th>
+                            <th data-sort-key="nodata" style="text-align:right">No Data</th>
+                            <th data-sort-key="vpassed" style="text-align:right">Passed</th>
+                            <th data-sort-key="vfailed" style="text-align:right">Failed</th>
+                            <th data-sort-key="verror" style="text-align:right">Error</th>
+                            <th data-sort-key="vnodata" style="text-align:right">Needs Data</th>
+                        </tr>
+                    </thead>
                     <tbody>{state_totals_rows}</tbody>
                 </table>
 
@@ -691,16 +717,13 @@ def build_and_display(
                 /* --- per-state totals filters --- */
                 function applyStateFilter() {{
                     var text = (document.getElementById('st-filter').value || '').trim().toLowerCase();
-                    var minPct = document.getElementById('st-minpct').value;
                     var minTotal = document.getElementById('st-mintotal').value;
                     var rows = document.querySelectorAll('#state-totals tbody tr');
                     var shown = 0;
                     rows.forEach(function(row) {{
                         var name = (row.getAttribute('data-state') || '').toLowerCase();
-                        var pct  = parseFloat(row.getAttribute('data-pct') || '0');
                         var tot  = parseInt(row.getAttribute('data-total') || '0');
                         var ok = (!text || name.indexOf(text) !== -1)
-                              && (minPct === '' || pct >= parseFloat(minPct))
                               && (minTotal === '' || tot >= parseInt(minTotal));
                         row.style.display = ok ? '' : 'none';
                         if (ok) shown++;
@@ -708,7 +731,7 @@ def build_and_display(
                     document.getElementById('states-match-count').textContent = shown + ' of ' + rows.length + ' states';
                 }}
                 function clearStateFilter() {{
-                    ['st-filter','st-minpct','st-mintotal'].forEach(function(id){{
+                    ['st-filter','st-mintotal'].forEach(function(id){{
                         document.getElementById(id).value = '';
                     }});
                     applyStateFilter();

@@ -2964,7 +2964,7 @@ def test_appellantInterpreterSpokenLanguage(test_df):
         target_rows = test_df.filter(~col("LanguageId").isin(SIGN_LANGUAGE_IDS) & (col("LanguageId") != 0) & (col("LanguageId").isNotNull())).collect()
 
         if not target_rows:
-            return TestResult("appellantInterpreterSpokenLanguage", "FAIL", "No spoken language requirements found in this data slice", "ended", inspect.stack()[0].function)
+            return TestResult("appellantInterpreterSpokenLanguage", "FAIL", "NO RECORDS TO TEST", "ended", inspect.stack()[0].function)
 
         for row in target_rows:
             case_no = row['appealReferenceNumber']

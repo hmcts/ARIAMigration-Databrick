@@ -1066,7 +1066,7 @@ def silver_archive_metadata():
             col("adj.Title").alias("bf_001"),
             col("adj.Forenames").alias("bf_002"),
             col("adj.Surname").alias("bf_003"),
-            date_format(coalesce(col('adj.DateOfBirth'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
+            date_format(coalesce(col('adj.DateOfBirth'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias('bf_004'),
             # col("env"),
             col("adj.DesignatedCentre").alias("bf_005")
         )

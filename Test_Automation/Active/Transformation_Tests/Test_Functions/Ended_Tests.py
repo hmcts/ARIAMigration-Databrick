@@ -526,7 +526,7 @@ def test_isInterpreterServicesNeeded_test1(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("isInterpreterServicesNeeded", "FAIL", "No records with Interpreter = 1 found.", "ended", inspect.stack()[0].function)
+            return TestResult("isInterpreterServicesNeeded", "FAIL", "No records found with Interpreter = 1 found.", "ended", inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "Yes"
         failures = target_records.filter(col("isInterpreterServicesNeeded") != "Yes")
@@ -550,7 +550,7 @@ def test_isInterpreterServicesNeeded_test2(test_df):
         )
 
         if target_records.count() == 0:
-            return TestResult("isInterpreterServicesNeeded", "FAIL", "No records with Interpreter != 1 found.", "ended", inspect.stack()[0].function)
+            return TestResult("isInterpreterServicesNeeded", "FAIL", "No records found with Interpreter != 1 found", "ended", inspect.stack()[0].function)
 
         # 2. Acceptance Criteria: Must be "No"
         failures = target_records.filter(col("isInterpreterServicesNeeded") != "No")
@@ -1273,7 +1273,7 @@ def test_listingLength_test2(test_df):
         target_records = test_df.filter(col("EndedGroup") == 4)
         
         if target_records.count() == 0:
-            return TestResult("listingLength.minutes", "FAIL", "No Group 4 records found.", "ended", inspect.stack()[0].function)
+            return TestResult("listingLength.minutes", "FAIL", "No data to test.", "ended", inspect.stack()[0].function)
 
         if "TimeEstimate" not in test_df.columns:
              return TestResult("listingLength.minutes", "FAIL", "Column 'TimeEstimate' missing from test_df", "ended", inspect.stack()[0].function)

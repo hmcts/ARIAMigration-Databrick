@@ -951,7 +951,7 @@ def silver_archive_metadata():
         col("iris.HORef").alias('bf_001'),
         col('iris.Forenames').alias('bf_002'),
         col('iris.Name').alias('bf_003'),
-        date_format(coalesce(col('iris.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
+        date_format(coalesce(col('iris.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias('bf_004'),
         col('iris.PortReference').alias('bf_005'),
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),

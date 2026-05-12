@@ -9,6 +9,7 @@ from pyspark.sql.functions import (
 from pyspark.sql.window import Window
 from functools import reduce
 from pyspark.sql import functions as F
+from itertools import chain
 
 from pyspark.sql.types import (
     StructType,
@@ -6859,7 +6860,118 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
             "manchester": ("Manchester", '{"region":"1","baseLocation":"512401"}', "Manchester Tribunal Hearing Centre - Piccadilly Exchange"),
             "newcastle": ("Newcastle", '{"region":"1","baseLocation":"366796"}', "Newcastle Civil And Family Courts And Tribunals Centre"),
             "newport": ("Newport", '{"region":"1","baseLocation":"227101"}', "Newport Tribunal Centre - Columbus House"),
-            "taylorHouse": ("Taylor House", '{"region":"1","baseLocation":"765324"}', "Taylor House Tribunal Hearing Centre")
+            "taylorHouse": ("Taylor House", '{"region":"1","baseLocation":"765324"}', "Taylor House Tribunal Hearing Centre"),
+            "yarlsWood": ("Yarlswood", '{"region":"1","baseLocation":"649000"}', "Yarl Wood Immigration And Asylum Hearing Centre")
+        }
+
+        detained_mapping = {
+            "1_2": "taylorHouse",
+            "1_5": "hattonCross",
+            "1_8": "taylorHouse",
+            "1_9": "birmingham",
+            "1_10": "hattonCross",
+            "1_13": "taylorHouse",
+            "1_14": "hattonCross",
+            "1_18": "taylorHouse",
+            "1_23": "glasgow",
+            "1_25": "manchester",
+            "1_26": "birmingham",
+            "1_28": "birmingham",
+            "1_29": "newcastle",
+            "1_30": "birmingham",
+            "1_31": "taylorHouse",
+            "1_32": "manchester",
+            "1_33": "bradford",
+            "1_34": "bradford",
+            "1_35": "hattonCross",
+            "1_36": "birmingham",
+            "1_37": "hattonCross",
+            "1_41": "taylorHouse",
+            "1_43": "hattonCross",
+            "1_44": "bradford",
+            "1_48": "hattonCross",
+            "1_50": "birmingham",
+            "1_52": "bradford",
+            "1_53": "hattonCross",
+            "1_56": "newport",
+            "1_57": "bradford",
+            "1_58": "taylorHouse",
+            "1_59": "manchester",
+            "1_62": "glasgow",
+            "1_66": "birmingham",
+            "1_68": "newport",
+            "1_76": "newport",
+            "1_79": "hattonCross",
+            "1_80": "bradford",
+            "1_81": "birmingham",
+            "1_82": "birmingham",
+            "1_83": "manchester",
+            "1_85": "manchester",
+            "1_88": "bradford",
+            "1_89": "birmingham",
+            "1_90": "birmingham",
+            "1_92": "glasgow",
+            "1_93": "manchester",
+            "1_94": "newport",
+            "1_95": "taylorHouse",
+            "1_96": "hattonCross",
+            "1_98": "taylorHouse",
+            "1_99": "bradford",
+            "1_100": "birmingham",
+            "1_101": "birmingham",
+            "1_107": "newport",
+            "1_110": "birmingham",
+            "1_111": "birmingham",
+            "1_112": "taylorHouse",
+            "1_113": "hattonCross",
+            "1_114": "glasgow",
+            "1_116": "taylorHouse",
+            "1_117": "birmingham",
+            "1_120": "birmingham",
+            "1_123": "birmingham",
+            "1_124": "bradford",
+            "1_128": "birmingham",
+            "1_129": "glasgow",
+            "1_130": "bradford",
+            "1_132": "birmingham",
+            "1_134": "hattonCross",
+            "1_140": "newport",
+            "1_141": "manchester",
+            "1_144": "manchester",
+            "1_152": "newport",
+            "1_155": "birmingham",
+            "1_156": "birmingham",
+            "1_160": "birmingham",
+            "1_166": "manchester",
+            "1_169": "birmingham",
+            "1_171": "birmingham",
+            "1_172": "birmingham",
+            "1_173": "manchester",
+            "1_174": "birmingham",
+            "1_175": "newport",
+            "1_180": "manchester",
+            "1_183": "manchester",
+            "1_188": "glasgow",
+            "1_190": "manchester",
+            "1_193": "glasgow",
+            "1_194": "birmingham",
+            "1_198": "taylorHouse",
+            "1_199": "taylorHouse",
+            "1_201": "taylorHouse",
+            "1_202": "birmingham",
+            "1_203": "glasgow",
+            "1_205": "glasgow",
+            "1_207": "hattonCross",
+            "1_211": "manchester",
+            "1_213": "manchester",
+            "2_7": "taylorHouse",
+            "2_46": "hattonCross",
+            "2_60": "glasgow",
+            "2_63": "yarlsWood",
+            "2_103": "hattonCross",
+            "2_126": "yarlsWood",
+            "2_195": "taylorHouse",
+            "2_212": "bradford"
         }
 
         # postcode and udf mappings
@@ -6878,6 +6990,7 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
         staff_map = F.create_map([F.lit(x) for x in sum([(k, v[0]) for k, v in master_requirements.items()], ())])
         cml_json_map = F.create_map([F.lit(x) for x in sum([(k, v[1]) for k, v in master_requirements.items()], ())])
         ref_map = F.create_map([F.lit(x) for x in sum([(k, v[2]) for k, v in master_requirements.items()], ())])
+        detained_expr = F.create_map([F.lit(x) for x in chain(*detained_mapping.items())])
         
         cml_schema = StructType([
             StructField("baseLocation", StringType(), True),
@@ -6926,12 +7039,32 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
         df = df.withColumn("pc_mapped", 
             F.when((F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull()),
                 F.coalesce(map_pc_udf(F.coalesce("Rep_Postcode", "CaseRep_Postcode", "Appellant_Postcode")), F.lit("newport"))
-            ).otherwise(F.lit("newport"))
-        ).withColumn("Expected_HC", 
-            F.when(F.col("prevFileLocation").isin(redirection_locations),
-                F.when(F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull(), F.col("pc_mapped"))
-                    .otherwise(mapping_expr[F.col("der_prevFileLocation")])
-            ).otherwise(mapping_expr[F.col("prevFileLocation")])
+            ).otherwise(F.lit("newport")))
+        
+        # ).withColumn("Expected_HC", 
+        #     F.when(F.col("prevFileLocation").isin(redirection_locations),
+        #         F.when(F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull(), F.col("pc_mapped"))
+        #             .otherwise(mapping_expr[F.col("der_prevFileLocation")])
+        #     ).otherwise(mapping_expr[F.col("prevFileLocation")])
+        # )
+
+        df = df.withColumn("detained_key", 
+            F.concat(
+                F.coalesce(F.col("Detained").cast("string"), F.lit("0")), 
+                F.lit("_"), 
+                F.coalesce(F.col("DetentionCentreId").cast("string"), F.lit("0"))
+            )
+        )
+
+        # Modified:
+        df = df.withColumn("Expected_HC", 
+            F.when(F.col("Detained").isin(1, 2), detained_expr[F.col("detained_key")]) # 1. Detained priority
+            .otherwise(
+                F.when(F.col("prevFileLocation").isin(redirection_locations), # 2. Redirection fallback
+                    F.when(F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull(), F.col("pc_mapped"))
+                        .otherwise(mapping_expr[F.col("der_prevFileLocation")])
+                ).otherwise(mapping_expr[F.col("prevFileLocation")]) # 3. Standard CentreId mapping
+            )
         )
 
         # auditing 
@@ -6962,10 +7095,10 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
                 msg = f"Case {r['CaseNo']} Failures in: {', '.join(errs)}. Expected: {r['Expected_HC']}, Got: {r['json_hearingCentre']}"
                 results.append(TestResult("payloadAudit", "FAIL", msg, test_from_state, inspect.stack()[0].function))
                 
-        return results
+        return audit, results
     except Exception as e:
         error_message = str(e)        
-        return TestResult("hearingCentre", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None, TestResult("hearingCentre", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 

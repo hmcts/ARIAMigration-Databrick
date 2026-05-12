@@ -6861,7 +6861,7 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
             "newcastle": ("Newcastle", '{"region":"1","baseLocation":"366796"}', "Newcastle Civil And Family Courts And Tribunals Centre"),
             "newport": ("Newport", '{"region":"1","baseLocation":"227101"}', "Newport Tribunal Centre - Columbus House"),
             "taylorHouse": ("Taylor House", '{"region":"1","baseLocation":"765324"}', "Taylor House Tribunal Hearing Centre"),
-            "yarlsWood": ("Yarlswood", '{"region":"1","baseLocation":"649000"}', "Yarl Wood Immigration And Asylum Hearing Centre")
+            "yarlsWood": ("Yarlswood", '{"region":"1","baseLocation":"649000"}', "Yarls Wood Immigration And Asylum Hearing Centre")
         }
 
         detained_mapping = {
@@ -7000,13 +7000,6 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
         # test dataframe construction
         m1 = M1_silver.filter(F.col("dv_targetState") == test_from_state).distinct()
         m2 = M2_silver.filter(F.col("Relationship").isNull())
-        
-        # win = Window.partitionBy("CaseNo").orderBy(F.col("HistoryId").desc())
-        # h_latest = H_silver.filter(F.col("HistType") == 6)\
-        #     .filter(~F.col("Comment").like("%Castle Park Storage%") & ~F.col("Comment").like("%Field House%") & ~F.col("Comment").like("%UT (IAC)%"))\
-        #     .withColumn("rn", F.row_number().over(win))\
-        #     .filter(F.col("rn") == 1)\
-        #     .select("CaseNo", "Comment", F.split(F.col("Comment"), ',')[0].alias("der_prevFileLocation"))
 
         case_list = [row.CaseNo for row in m1.select("CaseNo").collect()]
 
@@ -7040,13 +7033,6 @@ def hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, te
             F.when((F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull()),
                 F.coalesce(map_pc_udf(F.coalesce("Rep_Postcode", "CaseRep_Postcode", "Appellant_Postcode")), F.lit("newport"))
             ).otherwise(F.lit("newport")))
-        
-        # ).withColumn("Expected_HC", 
-        #     F.when(F.col("prevFileLocation").isin(redirection_locations),
-        #         F.when(F.col("der_prevFileLocation").isin(redirection_locations) | F.col("der_prevFileLocation").isNull(), F.col("pc_mapped"))
-        #             .otherwise(mapping_expr[F.col("der_prevFileLocation")])
-        #     ).otherwise(mapping_expr[F.col("prevFileLocation")])
-        # )
 
         df = df.withColumn("detained_key", 
             F.concat(

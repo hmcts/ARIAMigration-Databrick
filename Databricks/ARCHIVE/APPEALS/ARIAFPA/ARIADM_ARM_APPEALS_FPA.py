@@ -3004,13 +3004,6 @@ def stg_appeals_filtered():
 
 # COMMAND ----------
 
-# DBTITLE 1,***delete****
-display(spark.read.table('hive_metastore.ariadm_arm_fpa.stg_appeals_filtered').filter(col("CaseNo").contains("AA")))
-display(spark.read.table('hive_metastore.ariadm_arm_fta.stg_appeals_filtered').filter(col("CaseNo").contains("AA")))
-display(spark.read.table('hive_metastore.ariadm_arm_uta.stg_appeals_filtered').filter(col("CaseNo").contains("AA")))
-
-# COMMAND ----------
-
 # MAGIC
 # MAGIC %md
 # MAGIC ## Silver DLT Tables Creation
@@ -3181,12 +3174,6 @@ def silver_appealcase_detail():
     )
 
     return joined_df
-
-# COMMAND ----------
-
-# DBTITLE 1,***delete***
-display(spark.read.table('hive_metastore.ariadm_arm_fta.silver_appealcase_detail').filter(col("CaseNo").contains("AA")))
-
 
 # COMMAND ----------
 

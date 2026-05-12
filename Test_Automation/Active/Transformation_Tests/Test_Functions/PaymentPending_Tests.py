@@ -1388,7 +1388,9 @@ def test_caseFlags(test_df):
         # Test logic
         combine_results = lambda df1, df2: df1.union(df2)
         case_flag_mismatch_dfs = []
+
         for categoryid, expected in case_flag_lookup.items():
+            # Filter for records that have this CategoryId but mismatched flag details
             mismatch_df = exploded_caseflags.filter(
                 array_contains(col("CategoryIds"), lit(categoryid)) &
                 (
@@ -1398,19 +1400,26 @@ def test_caseFlags(test_df):
                     (col("caseflag_hearing") != lit(expected["hearing"]))  
                 )
             )
-            case_flag_mismatch_dfs.append(mismatch_df)
+            
+            # Enhance mismatch_df with 'expected' columns for easier debugging
+            if mismatch_df.count() > 0:
+                mismatch_df = mismatch_df.withColumn("triggering_category_id", lit(categoryid)) \
+                                         .withColumn("expected_name", lit(expected["name"])) \
+                                         .withColumn("expected_code", lit(expected["code"])) \
+                                         .withColumn("expected_comment", lit(expected["comment"])) \
+                                         .withColumn("expected_hearing", lit(expected["hearing"]))
+                case_flag_mismatch_dfs.append(mismatch_df)
 
-        ac_case_flag = reduce(combine_results, case_flag_mismatch_dfs)
+        ac_case_flag = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), case_flag_mismatch_dfs)
 
         # Output
         if ac_case_flag.count() != 0:
-            return TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
+            return ac_case_flag, TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("caseFlags","PASS", f"caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
+            return None, TestResult("caseFlags","PASS", f"caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
-        return TestResult("caseFlags", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-
+        return None, TestResult("caseFlags", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 #######################
@@ -3969,7 +3978,7 @@ def test_homeOfficeDecisionDate_ac2(test_df):
         error_message = str(e)        
         return TestResult("homeOfficeDecisionDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
+def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
     try:
         if "decisionLetterReceivedDate" not in json.columns:
             return None, TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
@@ -3986,7 +3995,13 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
 
         M1_bronze = M1_bronze.select(
             "CaseNo",
-            "DateOfApplicationDecision"
+            "DateOfApplicationDecision",
+            col("HORef").alias("HORef_M1")
+        )
+
+        M2_bronze = M2_bronze.select(
+            "CaseNo",
+            "FCONumber"
         )
 
         test_df = json.join(
@@ -4001,10 +4016,18 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
             "left"
         )
 
+        test_df = test_df.join(
+            M2_bronze,
+            test_df["appealReferenceNumber"] == M2_bronze["CaseNo"],
+            "inner"
+        )
+
         test_df = test_df.select(
             "appealReferenceNumber",
             "decisionLetterReceivedDate",
-            "CategoryId"
+            "CategoryId",
+            "HORef_M1",
+            "FCONumber"
         )
 
         test_df = (
@@ -4012,23 +4035,24 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze):
             .groupBy("appealReferenceNumber")
             .agg(
                 collect_list("CategoryId").alias("CategoryIds"),
-                first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate")
+                first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate"),
+                first("HORef_M1").alias("HORef_M1"),
+                first("FCONumber").alias("FCONumber")
             )
         )
 
-        return dlrd_test_df, True
+        return test_df, True
     except Exception as e:
-        dlrd_test_df = None
+        test_df = None
         error_message = str(e)        
         return None,TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #decisionLetterReceivedDate - If CategoryId not in 38 and decisionLetterReceivedDate not omitted
 #######################
-def test_decisionLetterReceivedDate_ac1(dlrd_test_df):
+def test_decisionLetterReceivedDate_ac1(test_df):
     try:
-        if dlrd_test_df != None:
-            test_df = dlrd_test_df
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (~(array_contains(col("CategoryIds"), 38)))
@@ -4052,10 +4076,9 @@ def test_decisionLetterReceivedDate_ac1(dlrd_test_df):
 #######################
 #decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision
 #######################
-def test_decisionLetterReceivedDate_ac2(dlrd_test_df):
+def test_decisionLetterReceivedDate_ac2(test_df):
     try:
-        if dlrd_test_df != None:
-            test_df = dlrd_test_df
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (array_contains(col("CategoryIds"), 38)) &
@@ -4087,10 +4110,9 @@ def test_decisionLetterReceivedDate_ac2(dlrd_test_df):
 #######################
 #decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted
 #######################
-def test_decisionLetterReceivedDate_ac3(dlrd_test_df):
+def test_decisionLetterReceivedDate_ac3(test_df):
     try:
-        if dlrd_test_df != None:
-            test_df = dlrd_test_df
+        if test_df != None:
             #Check we have Records To test
             if test_df.filter(
                 (array_contains(col("CategoryIds"), 38)) &
@@ -4376,9 +4398,9 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+                return ac_ref, TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return None, TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -5692,7 +5714,7 @@ def test_countryGovUkOocAdminJ_ac2(test_df_sd,external_storage,spark):
         error_message = str(e)        
         return TestResult("CountryGovUkAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-def test_legalRepDetails_init(json, M1_bronze,M1_silver):
+def test_legalRepDetails_init(json, M1_bronze, M1_silver):
     try:
         json_data = json.select(
                 "AppealReferenceNumber",

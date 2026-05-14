@@ -61,6 +61,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out" 
                 WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn" 
                 WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out" 
+                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out" 
 
             END
         )"""
@@ -88,8 +89,10 @@ class endedDQRules(DQRulesBase):
             AND
             
             (CASE
+                WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
                 WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
                 WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
                 WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
@@ -113,6 +116,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
                 WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
                 WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
 
             END
             )
@@ -183,16 +187,17 @@ class endedDQRules(DQRulesBase):
             AND
             (
             CASE
-                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25) THEN stateBeforeEndAppeal = "listing"
+                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal = "listing"
                 WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
                 WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
                 WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 51 AND Outcome_end in (94,93) THEN stateBeforeEndAppeal = "pendingPayment"
+                WHEN CaseStatus_end = 51 AND Outcome_end in (0,94,93) THEN stateBeforeEndAppeal = "pendingPayment"
                 WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal = "pendingPayment"
                 WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
                 WHEN CaseStatus_end = 36 THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end = 10 AND Outcome_end in (105) THEN stateBeforeEndAppeal = "appealSubmitted"
             END
             )
 

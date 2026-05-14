@@ -152,8 +152,8 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
                 (F.col("dv_representation") == "AIP"),
                 "reasonsForAppealSubmitted"
             )
-            .when(col("CaseStatus") == 36,"appealSubmitted")
-            .when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"appealSubmitted")
+            .when((col("CaseStatus") == 36) & (F.col("Outcome").isin(1,2,25)),"appealSubmitted")
+            .when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(13,105)),"appealSubmitted")
             .when((F.col("CaseStatus").isin(37,38)) & (F.col("Outcome").isin(125)),"listing")
             .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"pendingPayment")
             .otherwise(F.col("es.stateBeforeEndAppeal"))
@@ -163,8 +163,10 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
         .select(
             F.col("CaseNo"),
             F.when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"Struck out")
+            .when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(13)),"No valid appeal")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(1,2)),"Struck out")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(25)),"Withdrawn")
+            .when((F.col("CaseStatus").isin(37,38)) & (F.col("Outcome").isin(125)),"Struck out")
             .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"Struck out")
             .when(F.col("es.endAppealOutcome") == "Struck Out", "Struck out")
             .when(F.col("es.endAppealOutcome") == "No Valid Appeal", "No valid appeal")

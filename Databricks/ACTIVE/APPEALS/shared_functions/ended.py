@@ -153,6 +153,9 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
                 "reasonsForAppealSubmitted"
             )
             .when(col("CaseStatus") == 36,"appealSubmitted")
+            .when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"appealSubmitted")
+            .when((F.col("CaseStatus").isin(37,38)) & (F.col("Outcome").isin(125)),"listing")
+            .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"pendingPayment")
             .otherwise(F.col("es.stateBeforeEndAppeal"))
         )
 
@@ -171,6 +174,8 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(1)),"This is a migrated case. The final outcome was Review of Cost Order | Allowed.")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(2)),"This is a migrated case. The final outcome was Review of Cost Order | Dismissed.")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(25)),"This is a migrated case. The final outcome was Review of Cost Order | Withdrawn.")
+            .when((F.col("CaseStatus") == 37) & (F.col("Outcome").isin(125)),"This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD.")
+            .when((F.col("CaseStatus") == 38) & (F.col("Outcome").isin(125)),"This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD.")
             .when((F.col("CaseStatus") == 51) & (F.col("Outcome").isin(0)),"This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out.")
             .otherwise(F.col("es.endAppealOutcomeReason"))
             .alias("endAppealOutcomeReason"),

@@ -1317,7 +1317,8 @@ def test_flags_init(json, M1_bronze, C):
 
         M1_flags = M1_bronze.select(
             "CaseNo",
-            "CasePrefix"
+            "CasePrefix",
+            "HORef"
         )
 
         json_flags = json_flags.join(
@@ -1341,7 +1342,8 @@ def test_flags_init(json, M1_bronze, C):
                 first("caseFlags").alias("caseFlags"),
                 first("appellantLevelFlags").alias("appellantLevelFlags"),
                 first("isAriaMigratedFeeExemption").alias("isAriaMigratedFeeExemption"),
-                first("CasePrefix").alias("CasePrefix")
+                first("CasePrefix").alias("CasePrefix"),
+                first("HORef").alias("HORef")
             )
         )
 
@@ -1372,14 +1374,18 @@ def test_caseFlags(test_df):
             25: {"name": "RRO (Restricted Reporting Order / Anonymisation)", "code": "CF0012", "comment": None, "hearing": "Yes"}
         }
 
+        case_flag_mismatch_dfs = []
+
         exploded_caseflags = (
         test_df.select(
             "AppealReferenceNumber",
             "CategoryIds",
+            "HORef",
             col("caseFlags.details")[0].alias("caseflag_detail_0")
         ).select(
             "AppealReferenceNumber",
             "CategoryIds",
+            "HORef",
             col("caseflag_detail_0.value.name").alias("caseflag_name"),
             col("caseflag_detail_0.value.flagCode").alias("caseflag_code"),
             col("caseflag_detail_0.value.flagComment").alias("caseflag_comment"),
@@ -1387,12 +1393,9 @@ def test_caseFlags(test_df):
         ))
 
         # Test logic
-        combine_results = lambda df1, df2: df1.union(df2)
-        case_flag_mismatch_dfs = []
-
         for categoryid, expected in case_flag_lookup.items():
-            # Filter for records that have this CategoryId but mismatched flag details
             mismatch_df = exploded_caseflags.filter(
+                col("HORef").isNull() &
                 array_contains(col("CategoryIds"), lit(categoryid)) &
                 (
                     (col("caseflag_name") != lit(expected["name"])) |
@@ -1402,25 +1405,42 @@ def test_caseFlags(test_df):
                 )
             )
             
-            # Enhance mismatch_df with 'expected' columns for easier debugging
             if mismatch_df.count() > 0:
-                mismatch_df = mismatch_df.withColumn("triggering_category_id", lit(categoryid)) \
+                mismatch_df = mismatch_df.withColumn("triggering_condition", lit(f"CategoryID: {categoryid}")) \
                                          .withColumn("expected_name", lit(expected["name"])) \
                                          .withColumn("expected_code", lit(expected["code"])) \
                                          .withColumn("expected_comment", lit(expected["comment"])) \
                                          .withColumn("expected_hearing", lit(expected["hearing"]))
                 case_flag_mismatch_dfs.append(mismatch_df)
 
-        ac_case_flag = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), case_flag_mismatch_dfs)
+        # dropped case 
+        dropped_case_mismatch = exploded_caseflags.filter(
+            col("HORef").isNotNull() & 
+            (
+                (col("caseflag_name") != lit("Other")) |
+                (col("caseflag_code") != lit("OT0001")) |
+                (col("caseflag_comment") != lit("Dropped Case")) |
+                (col("caseflag_hearing") != lit("Yes"))
+            )
+        )
+
+        if dropped_case_mismatch.count() > 0:
+            dropped_case_mismatch = dropped_case_mismatch.withColumn("triggering_condition", lit("HORef is not null")) \
+                                                         .withColumn("expected_name", lit("Other")) \
+                                                         .withColumn("expected_code", lit("OT0001")) \
+                                                         .withColumn("expected_comment", lit("Dropped Case")) \
+                                                         .withColumn("expected_hearing", lit("Yes"))
+            case_flag_mismatch_dfs.append(dropped_case_mismatch)
 
         # Output
-        if ac_case_flag.count() != 0:
+        if len(case_flag_mismatch_dfs) > 0:
+            ac_case_flag = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), case_flag_mismatch_dfs)
             return ac_case_flag, TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
         else:
-            return None, TestResult("caseFlags","PASS", f"caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
+            return None, TestResult("caseFlags","PASS", "caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
+
     except Exception as e:
-        error_message = str(e)        
-        return None, TestResult("caseFlags", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None, TestResult("caseFlags", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 #######################

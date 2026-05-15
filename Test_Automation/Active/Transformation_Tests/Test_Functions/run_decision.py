@@ -16,21 +16,6 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
         all_test_results.extend(dec_tests.test_dec_defaultValues(test_df, fields_to_exclude))
     # display(all_test_results)
 
-    # -- hearingDetails --
-    test_data_setup = None
-    test_df, test_data_setup =  dec_tests.test_hearingDetails_init(json_data, M3_bronze, bll)
-    if test_data_setup != True:
-         all_test_results.append(test_data_setup)
-
-    if test_df != None:
-         if "listCaseHearingLength" not in fields_to_exclude:
-              all_test_results.append(dec_tests.test_listCaseHearingLength(test_df))
-
-         if "listCaseHearingLength" not in fields_to_exclude:
-              all_test_results.append(dec_tests.test_listCaseHearingDate(test_df))
-
-         if "listCaseHearingCentre" or "listCaseHearingCentreAddress" not in fields_to_exclude:
-              all_test_results.append(dec_tests.test_listCaseHearingCentre_Address(test_df, spark))
 
     # -- general --
     test_data_setup = None

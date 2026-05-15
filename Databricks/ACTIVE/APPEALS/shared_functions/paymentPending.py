@@ -1978,7 +1978,7 @@ def cleanReferenceNumber(ref):
     8. Handling no reference number e.g., null or '' -> "999999999"
     """
 
-    if ref is None or '':
+    if ref is None or ref == '' or ref.strip().upper() == 'NULL':
         return '999999999'
 
     if len(ref) > 9 and len(ref) < 16:
@@ -1998,7 +1998,8 @@ def cleanReferenceNumber(ref):
         return digits_only.rjust(9, '0')
 
     if len(ref) < 9 and not ('GWF' in ref or 'HO' in ref):
-        return ref.rjust(9, '0')
+        digits_only = re.sub(r"\D", "", ref)
+        return digits_only.rjust(9, '0')
     
     if ref.startswith("SHEF") and "/" in ref:
         return ref.split("/", 1)[1].rjust(9, '0')
@@ -2164,10 +2165,10 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                         .otherwise(None)
                         .alias("isHomeOfficeIntegrationEnabled"),
             # lit("Yes").alias("isHomeOfficeIntegrationEnabled"),
-            lit("Yes").alias("homeOfficeNotificationsEligible")
-            # col("HORef"),
-            # col("FCONumber"),
-            # col("lu_HORef")
+            lit("Yes").alias("homeOfficeNotificationsEligible"),
+            col("HORef"),
+            col("FCONumber"),
+            col("lu_HORef")
         )
     ).distinct()
 

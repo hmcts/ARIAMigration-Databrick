@@ -6714,7 +6714,7 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
             "isFeePaymentEnabled": "Yes",
             "isRemissionsEnabled": "Yes",
             "isOutOfCountryEnabled": "Yes",
-            "isIntegrated": "No",
+            "isIntegrated": "Yes",
             "isNabaEnabled": "No",
             "isNabaAdaEnabled": "Yes",
             "isNabaEnabledOoc": "No",

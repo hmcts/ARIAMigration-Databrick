@@ -59,6 +59,22 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "listingLocation" not in fields_to_exclude:
               all_test_results.append(pfh_tests.test_listingLocation_mapping(test_df))
 
+     # -- hearingDetails -- Moved from decsion
+    test_data_setup = None
+    test_df, test_data_setup =  pfh_tests.test_hearingDetails_init2(json_data, M3_bronze, bll)
+    if test_data_setup != True:
+         all_test_results.append(test_data_setup)
+
+    if test_df != None:
+         if "listCaseHearingLength" not in fields_to_exclude:
+              all_test_results.append(pfh_tests.test_listCaseHearingLength(test_df))
+
+         if "listCaseHearingDate" not in fields_to_exclude:
+              all_test_results.append(pfh_tests.test_listCaseHearingDate(test_df))
+
+         if "listCaseHearingCentre" or "listCaseHearingCentreAddress" not in fields_to_exclude:
+              all_test_results.append(pfh_tests.test_listCaseHearingCentre_Address(test_df, spark))
+
 
     # -- Default Mappings --
     test_data_setup = None

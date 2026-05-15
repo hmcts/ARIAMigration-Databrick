@@ -398,7 +398,6 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     # Add row_number to get the row with the highest StatusId per CaseNo
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     silver_m3_filtered_casestatus = silver_m3_max_statusid
@@ -576,6 +575,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 array(struct(col("TimeEstimate"))).alias("listingLength_inputValues"),
                 col("hd.listingLength"),
                 lit("Yes").alias("listingLength_Transformed"),
+
                 # hearingChannel
                 array(struct(lit("VisitVisaType"))).alias("hearingChannel_inputFields"),
                 array(struct(col("m1.VisitVisaType"))).alias("hearingChannel_inputValues"),
@@ -584,9 +584,7 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 
                 # listCaseHearingLength
                 array(struct(lit("CaseNo"),lit("TimeEstimate"))).alias("listCaseHearingLength_inputFields"),
-                # listCaseHearingLength_inputValues
                 array(struct(col("CaseNo"),col("TimeEstimate"))).alias("listCaseHearingLength_inputValues"),
-                # Transformed fields
                 col("hd.listCaseHearingLength").alias("listCaseHearingLength_value"),
                 lit("Yes").alias("listCaseHearingLength_Transformed"),
 

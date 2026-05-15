@@ -25,15 +25,6 @@ from pyspark.sql.functions import (
 ################################################################
 
 def hearingResponse(silver_m1, silver_m3, silver_m6):
-
-    # # Define window partitioned by CaseNo and ordered by descending StatusId
-    # window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-
-    # # Add row_number to get the row with the highest StatusId per CaseNo
-    # silver_m3_ranked = silver_m3.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-    # silver_m3_filtered_casestatus = silver_m3_max_statusid.filter(col("CaseStatus").isin(37, 38))
-
     window = Window.partitionBy("CaseNo").orderBy(F.desc("StatusId"))
     df_stg = silver_m3.filter(F.col("CaseStatus").isin([37, 38])).withColumn("rn", F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
 

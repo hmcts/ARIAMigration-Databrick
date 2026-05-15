@@ -2165,10 +2165,10 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                         .otherwise(None)
                         .alias("isHomeOfficeIntegrationEnabled"),
             # lit("Yes").alias("isHomeOfficeIntegrationEnabled"),
-            lit("Yes").alias("homeOfficeNotificationsEligible"),
-            col("HORef"),
-            col("FCONumber"),
-            col("lu_HORef")
+            lit("Yes").alias("homeOfficeNotificationsEligible")
+            # col("HORef"),
+            # col("FCONumber"),
+            # col("lu_HORef")
         )
     ).distinct()
 

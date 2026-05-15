@@ -143,7 +143,7 @@ def test_category_38_without_gwf_reference(homeOfficeDetails_outputs):
         row,
         decisionLetterReceivedDate="2022-09-05",
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber='000000000',
+        homeOfficeReferenceNumber='999999999',
         gwfReferenceNumber=None,
     )
 

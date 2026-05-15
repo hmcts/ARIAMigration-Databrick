@@ -1965,65 +1965,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 ##########            homeOffice Function            ###########
 ################################################################
 
-# Function to clean reference numbers (HORef, FCONumber) according to business rules
-# def cleanReferenceNumber(ref):
-#     """
-#     Cleans a reference number string according to the following rules:
-#     - If ref is None, return None.
-#     - If ref starts with 'GWF', return as is (no cleaning).
-#     - Remove all spaces and special characters except '/'.
-#     - If ref contains '/', split into prefix and suffix:
-#         - If prefix contains no digits, ignore it.
-#         - Extract digits from prefix and suffix.
-#         - If suffix has <=3 digits, remove leading zeros.
-#         - Concatenate prefix digits and suffix digits.
-#     - If ref does not contain '/', extract all digits.
-#     - If the cleaned result is 8 digits, pad with leading zero to make 9 digits.
-#     - If the cleaned result is not 9 digits, return None.
-#     - Only return if cleaned result is exactly 9 digits.
-#     """
-#     if ref is None:
-#         return None
-#     ref = ref.strip()
-#     if ref.startswith("GWF"):
-#         return ref
-#     # Remove all spaces and special chars except /
-#     ref = re.sub(r"[^A-Za-z0-9/]", "", ref)
-#     # Split on /
-#     parts = ref.split("/")
-#     if len(parts) == 2:
-#         prefix, suffix = parts
-#         # If prefix is not all digits, ignore it (for ISLAMABAD/123456789, NEWDELHI/12345678, etc.)
-#         if not re.search(r"\d", prefix):
-#             prefix_digits = ""
-#         else:
-#             prefix_digits = re.sub(r"\D", "", prefix)
-#             if not prefix_digits and prefix:
-#                 prefix_digits = prefix
-#         suffix_digits = re.sub(r"\D", "", suffix)
-#         if not suffix_digits:
-#             return None
-#         # Remove leading zeros for suffix if <=3 digits
-#         if len(suffix_digits) <= 3:
-#             try:
-#                 suffix_digits = str(int(suffix_digits))
-#             except:
-#                 return None
-#         cleaned = prefix_digits + suffix_digits
-#     elif len(parts) == 1:
-#         digits = re.sub(r"\D", "", ref)
-#         cleaned = digits
-#     else:
-#         return None
-#     # If cleaned is 8 digits, pad to 9
-#     if len(cleaned) == 8:
-#         cleaned = "0" + cleaned
-#     elif len(cleaned) != 9:
-#         return None
-#     if re.fullmatch(r"\d{9}", cleaned):
-#         return cleaned
-#     return None
-
 def cleanReferenceNumber(ref):
     import re
     """
@@ -2034,11 +1975,11 @@ def cleanReferenceNumber(ref):
     5. Handling special characters e.g., "1/1234567" -> "011234567"
     6. Handling too many numbers e.g., N1234567/006 -> "012345676"
     7. Handling too many numbers v2 e.g., "N1234567/015" -> "123456715"
-    8. Handling no reference number e.g., null or '' -> "000000000"
+    8. Handling no reference number e.g., null or '' -> "999999999"
     """
 
     if ref is None or '':
-        return '000000000'
+        return '999999999'
 
     if len(ref) > 9 and len(ref) < 16:
         no_letters = re.sub(r"[a-zA-Z]", "", ref)
@@ -2093,43 +2034,6 @@ def cleanReferenceNumber(ref):
 
 # Register the cleaning function as a Spark UDF
 cleanReferenceNumberUDF = udf(cleanReferenceNumber, StringType())
-
-# # Example usage: Clean HORef in silver_m1 and display results where HORef is not null and length > 9
-# silver_m1.withColumn("CleanedHORef", cleanReferenceNumberUDF(col("HORef"))).filter(col("HORef").isNotNull() & (F.length(col("HORef")) > 9)).select("HORef", "CleanedHORef").display()
-
-# # Example usage: Clean FCONumber in silver_m2 and display results where FCONumber is not null and length > 9
-# silver_m2.withColumn("CleanedFCONumber", cleanReferenceNumberUDF(col("FCONumber"))).filter(col("FCONumber").isNotNull() & (F.length(col("FCONumber")) > 9)).select("FCONumber", "CleanedFCONumber").display()
-
-# # after len(HORef) > 9 tHEN NULL
-# # IF starts with GWF the no cleaning eg GWF064069891
-# # remove charters and special char and if after / we like 001 its 1 and 022 its 22 and if its till = 9 the no more clening and if 8 then add leading 0 else null
-
-# # eg - A1222233/3(as 012222333) A14222233/3 (as 142222333 ) T1175081/2 (as 011750812)
-# # eg - ISLAMABAD/123456789 as (123456789) NEW DELHI/12345678 (as 012345678 )
-# # M1699430/002 (as 016994302 )
-# # B1985113/2 (as 019851132 )
-# # M0104326/010 (as 010432610 )
-# # F3009964/2 (M0104326/010)
-# # UKLPA/146205 (INVALID make it null)
-# # TN2/5197349 ( AS 025197349 )
-# # SHEFF1/4732574 (014732574)
-# # B1977303/002 (019773032)
-
-# bronze_HORef_cleansing = spark.table("ariadm_active_appeals.bronze_HORef_cleansing")
-
-# # Join bronze_HORef_cleansing to get CleansedHORef using CaseNo and coalesce(HORef, FCONumber)
-# bronze_cleansing = bronze_HORef_cleansing.select(
-#     col("CaseNo"),
-#     coalesce(col("HORef"), col("FCONumber")).alias("CleansedHORef"),
-#     col("HORef"),
-#     col("FCONumber"),
-#     cleanReferenceNumberUDF(col("HORef")).alias("CleanedHORef"),
-#     cleanReferenceNumberUDF(col("FCONumber")).alias("CleanedFCONumber")
-# )
-
-# display(bronze_cleansing.filter((~col("HORef").contains("GWF")) & (col("HORef").isNotNull()) & (F.length(col("HORef")) > 9)).select("HORef", "CleanedHORef"))
-# display(bronze_cleansing.filter((~col("FCONumber").contains("GWF")) & (col("FCONumber").isNotNull()) & (F.length(col("FCONumber")) > 9)).select("FCONumber", "CleanedFCONumber"))
-
 
 def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     conditions = (

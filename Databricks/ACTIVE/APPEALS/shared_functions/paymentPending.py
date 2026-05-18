@@ -2159,7 +2159,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             home_office_decision_date_expr.alias("homeOfficeDecisionDate"),
             decision_letter_received_date_expr.alias("decisionLetterReceivedDate"),
             date_entry_clearance_decision_expr.alias("dateEntryClearanceDecision"),
-            home_office_reference_number_expr.alias("homeOfficeReferenceNumber"),
+            when(home_office_reference_number_expr.isNull(), "999999999").otherwise(home_office_reference_number_expr).alias("homeOfficeReferenceNumber"),
             gwf_reference_number_expr.alias("gwfReferenceNumber"),
             when(col("dv_CCDAppealType").isin("RP", "PA"), "Yes")
                         .otherwise(None)

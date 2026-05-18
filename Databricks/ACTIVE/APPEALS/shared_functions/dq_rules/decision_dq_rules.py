@@ -4,7 +4,7 @@ from .dq_rules import DQRulesBase
 class decisionDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
-        checks = checks | self.get_checks_hearing_details()
+        # checks = checks | self.get_checks_hearing_details()
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_substantive_decision()
         checks = checks | self.get_checks_general_default()
@@ -12,38 +12,38 @@ class decisionDQRules(DQRulesBase):
 
         return checks
 
-    def get_checks_hearing_details(self, checks={}):
+    # def get_checks_hearing_details(self, checks={}):
 
-        checks["valid_listCaseHearingLength"] = ("""
-        (
-            CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
-            AND CaseStatus_dec IN (37,38)
-            AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
-        )
-        """)
+    #     checks["valid_listCaseHearingLength"] = ("""
+    #     (
+    #         CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
+    #         AND CaseStatus_dec IN (37,38)
+    #         AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
+    #     )
+    #     """)
 
-        checks["valid_listCaseHearingDate"] = (
-            """
-            (
-                listCaseHearingDate <=>
-                    CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
-                        CASE
-                        WHEN StartTime IS NULL THEN '00:00:00.000'
-                        ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
-                        END)
-                    AND CaseStatus_dec IN (37,38)
-            )
-            """)
+    #     checks["valid_listCaseHearingDate"] = (
+    #         """
+    #         (
+    #             listCaseHearingDate <=>
+    #                 CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+    #                     CASE
+    #                     WHEN StartTime IS NULL THEN '00:00:00.000'
+    #                     ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+    #                     END)
+    #                 AND CaseStatus_dec IN (37,38)
+    #         )
+    #         """)
 
-        checks["valid_listCaseHearingCentre"] = (
-            "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )" 
-        )
+    #     checks["valid_listCaseHearingCentre"] = (
+    #         "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )" 
+    #     )
 
-        checks["valid_listCaseHearingCentreAddress"] = (
-            "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IN (37,38))"
-        )
+    #     checks["valid_listCaseHearingCentreAddress"] = (
+    #         "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IN (37,38))"
+    #     )
 
-        return checks
+    #     return checks
 
     def get_checks_document(self, checks={}):
         

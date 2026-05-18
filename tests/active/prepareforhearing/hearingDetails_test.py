@@ -43,37 +43,44 @@ def hearingDetails_outputs(spark):
         ("CASE011", "AIP", "FT", None, 0, 0, True, 61)    # For m3 conditional tests - Additional Language Sign + Sign Manual
         ]
 
+    
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
         T.StructField("CaseStatus", T.IntegerType(), True),
         T.StructField("TimeEstimate", T.IntegerType(), True),
-        T.StructField("HearingCentre", T.StringType(), True)
+        T.StructField("HearingCentre", T.StringType(), True),
+        T.StructField("HearingDate", T.StringType(), True),
+        T.StructField("StartTime", T.StringType(), True),
     ])
 
     m3_data = [
-        ("CASE005", 1, 37, 180, "LOC001"),   # StatusId 1 Unused Additional Spoken Language Only
-        ("CASE005", 2, 37, 60, "LOC002"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
-        ("CASE006", 1, 38, 240, "LOC003"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
-        ("CASE007", 1, 38, 360, "LOC004"),   # Additional Sign Language (to Spoken + Sign)
-        ("CASE008", 1, 37, None, "LOC005"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
-        ("CASE009", 1, 37, 30, "LOC006"),   # Additional Sign Language (to Sign + Sign Manual)
-        ("CASE010", 1, 38, None, "LOC007"),  # Additional Manual Language Entry (to Sign + Spoken Manual)
-        ("CASE011", 1, 38, 45, "LOC008")   # Additional Sign Manual Language (to Sign + Sign Manual)
-        ]   
-
+        ("CASE005", 1, 37, 180, "LOC001","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),
+        ("CASE005", 2, 37, 60, "LOC002","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.000+00:00"),   
+        ("CASE006", 1, 38, 240, "LOC003","2026-12-03T00:00:00.000+00:00","1899-12-30T13:00:00.000+00:00"),   
+        ("CASE007", 1, 38, 360, "LOC004","2026-08-03T00:00:00.000+00:00","2000-12-30T07:10:58.000+00:00"),  
+        ("CASE008", 1, 37, None, "LOC005","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE009", 1, 37, 30, "LOC006","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE010", 1, 38, None, "LOC007","2024-10-02T00:00:00.000+00:00","1899-12-30T10:00:00.000+00:00"),  
+        ("CASE011", 1, 38, 45, "LOC008","2025-11-02T00:00:00.000+00:00","1899-12-30T12:00:00.999+00:00")   
+        ]  
+     
+    
     loc_schema = T.StructType([
         T.StructField("ListedCentre", T.StringType(), True),
         T.StructField("locationCode", T.StringType(), True),
-        T.StructField("locationLabel", T.StringType(), True)])
+        T.StructField("locationLabel", T.StringType(), True),
+        T.StructField("listCaseHearingCentre", T.StringType(), True),
+        T.StructField("listCaseHearingCentreAddress", T.StringType(), True)
+        ])
 
     loc_data = [
-        ("LOC001", "123", "Court1"),   # StatusId 1 Unused Additional Spoken Language Only
-        ("LOC002", "456", "Court2"),   # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
-        ("LOC003", "789", "Court3"),   # Additional Manual Language Entry (to Spoken + Spoken Manual)
-        ("LOC004", None, "Court4"),   # Additional Sign Language (to Spoken + Sign)
-        ("LOC005", None, "Court5"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
-        ("LOC006", "xyz", "Court6"),   # Additional Sign Language (to Sign + Sign Manual)
+        ("LOC001", "123", "Court1","Bham","123 xyz"),   
+        ("LOC002", "456", "Court2","Man","123 abc"),   
+        ("LOC003", "789", "Court3","Scot","456 asd"),   
+        ("LOC004", None, "Court4","Cov","7676 jgfd"),  
+        ("LOC005", None, "Court5","Nor","954 bbb"),   
+        ("LOC006", "xyz", "Court6","ply","456 mmm"),  
         ]
     
 

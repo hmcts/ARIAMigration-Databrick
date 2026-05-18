@@ -48,8 +48,9 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
+                WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
                 
-                WHEN CaseStatus_end in(37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
+                WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
 
                 WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
 
@@ -196,8 +197,8 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
-                WHEN CaseStatus_end = 36 THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 10 AND Outcome_end in (105) THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal = "appealSubmitted"
             END
             )
 

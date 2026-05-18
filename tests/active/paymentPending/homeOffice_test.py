@@ -109,7 +109,7 @@ def test_category_37_sets_home_office_decision_date(homeOfficeDetails_outputs):
         homeOfficeDecisionDate="2025-02-12",
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber=None,
     )
 
@@ -121,7 +121,7 @@ def test_category_38_with_gwf_reference(homeOfficeDetails_outputs):
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2022-06-30",
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber="061121374",
     )
 
@@ -132,7 +132,7 @@ def test_category_38_with_gwf_reference_second_case(homeOfficeDetails_outputs):
         row,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2020-02-15",
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber="063622668",
     )
 
@@ -155,7 +155,7 @@ def test_no_relevant_category_ids(homeOfficeDetails_outputs):
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber=None,
     )
 

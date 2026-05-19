@@ -96,6 +96,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal."
                 WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
                 WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
                 WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."

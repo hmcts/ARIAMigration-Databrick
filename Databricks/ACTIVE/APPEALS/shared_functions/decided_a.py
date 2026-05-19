@@ -29,8 +29,12 @@ from pyspark.sql.functions import (
 def documents(silver_m1): 
     documents_df, documents_audit = D.documents(silver_m1)
 
-    documents_df = documents_df.select("*",
+    documents_df = (
+        silver_m1.alias("m1").join(documents_df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in documents_df.columns if c != "CaseNo"],
                 lit([]).cast("array<string>").alias("finalDecisionAndReasonsDocuments"))
+        )
     
 
     documents_audit = (
@@ -78,8 +82,8 @@ def substantiveDecision(silver_m1,silver_m3):
                 col("sd.*"),
 
                 # Format dates as dd/MM/yyyy (after parsing the string with timezone)
-                date_format(decision_ts, "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
-                date_format(decision_ts, "dd/MM/yyyy").alias("appealDate"),
+                date_format(decision_ts, "yyyy-MM-dd").alias("sendDecisionsAndReasonsDate"),
+                date_format(decision_ts, "yyyy-MM-dd").alias("appealDate"),
 
                 # Outcome mapping
                 when(col("m3.Outcome") == 1, "Allowed")
@@ -87,8 +91,8 @@ def substantiveDecision(silver_m1,silver_m3):
                     .otherwise(None)
                     .alias("appealDecision"),
 
-                when(col("m3.Outcome") == 1, "Allowed")
-                    .when(col("m3.Outcome") == 2, "Dismissed")
+                when(col("m3.Outcome") == 1, "allowed")
+                    .when(col("m3.Outcome") == 2, "dismissed")
                     .otherwise(None)
                     .alias("isDecisionAllowed"),
 
@@ -169,7 +173,7 @@ def substantiveDecision(silver_m1,silver_m3):
 ##########              hearingActuals          ###########
 ################################################################
 
-def hearingActuals(silver_m3):
+def hearingActuals(silver_m1, silver_m3):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -180,19 +184,20 @@ def hearingActuals(silver_m3):
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     hearingActuals_df = (
-        silver_m3_max_statusid
+        silver_m1.alias("m1").join(silver_m3_max_statusid,on="CaseNo",how="left")
         .withColumn(
             "actualCaseHearingLength",
             F.create_map(
                 # key: "hours", value: hours calculation
                 F.lit("hours"),
-                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
-                .otherwise(F.floor(col("HearingDuration").cast("int") / 60)),
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("string"))
+                .otherwise(F.floor(col("HearingDuration").cast("int") / 60).cast("string")),
 
                 # key: "minutes", value: minutes calculation
                 F.lit("minutes"),
-                F.when(col("HearingDuration").isNull(), F.lit(None).cast("int"))
-                .otherwise(col("HearingDuration").cast("int") % 60)
+                F.when(col("HearingDuration").isNull(), F.lit(None).cast("string"))
+                .otherwise((F.col("HearingDuration").cast("int") % 60)).cast("string")
+
             )
         )
         .withColumn("attendingJudge",concat(col("Adj_Determination_Title"),lit(" "),col("Adj_Determination_Forenames"),lit(" "),col("Adj_Determination_Surname")))
@@ -225,7 +230,7 @@ def hearingActuals(silver_m3):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3,silver_c):
+def ftpa(silver_m1, silver_m3,silver_c):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -237,15 +242,15 @@ def ftpa(silver_m3,silver_c):
     silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"),col("CategoryId")).distinct()
     
     ftpa_df = (
-        silver_m3_max_statusid
-            .join(silver_c_filtered, on=["CaseNo"], how="left")
+        silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m2"),on="CaseNo",how="left")
+            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 date_format(
                     when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
-                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28))
-                    .otherwise(col("DecisionDate")),
-                    "dd/MM/yyyy"
+                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28)),
+                    # .otherwise(col("DecisionDate")),
+                    "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )
     )
@@ -267,7 +272,7 @@ def ftpa(silver_m3,silver_c):
                 ).alias("ftpaApplicationDeadline_inputFields"),
                 array(
                     struct(
-                        col("CategoryId"),
+                        col("c.CategoryId"),
                         col("CaseStatus"),
                         col("DecisionDate"),
                         col("Outcome")
@@ -283,6 +288,43 @@ def ftpa(silver_m3,silver_c):
 ################################################################
 
 ################################################################
+
+################################################################
+##########              general                      ###########
+################################################################
+
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+
+    general_df,general_audit = D.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    general_df = general_df.drop("TTL")
+
+    general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+                  .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
+        .select(
+            "m1.CaseNo",
+            *[c for c in general_df.columns if c != "CaseNo"],
+            "TTL",
+        )
+    )
+
+
+    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+
+    general_audit = (
+        general_audit.alias("audit")
+            .join(general_df.alias("gen"), on=["CaseNo"], how="left")
+            .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
+            .select(
+                "audit.*",
+                array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+                array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+                col("gen.TTL").alias("TTL_value"),
+                lit("Yes").alias("TTL_Transformation"),
+            )
+    )
+
+    return general_df, general_audit
 
 ################################################################
 ##########              generalDefault          ###########

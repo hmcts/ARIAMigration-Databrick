@@ -1,5 +1,6 @@
 from pyspark.sql.functions import col, struct, lit, concat, array
 from . import paymentPending as PP
+from . import paymentPendingDetained as PPD
 
 
 ##########################
@@ -7,7 +8,7 @@ from . import paymentPending as PP
 ##########################
 
 def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing): 
-    df_apellantDetails, df_audit_appellantDetails = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
+    df_apellantDetails, df_audit_appellantDetails = PPD.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
 
     # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
     df_apellantDetails = df_apellantDetails.withColumn("appellantFullName", concat(col("appellantGivenNames"), lit(" "), col("appellantFamilyName")))

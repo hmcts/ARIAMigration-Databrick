@@ -62,7 +62,7 @@ class TestAwaitingRespondentEvidenceAAppellantDetails:
         return spark.createDataFrame(caseList, PP_COLUMNS), spark.createDataFrame(caseList, PP_COLUMNS)
 
     def test_appellantFullName(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.AwaitingEvidenceRespondant_a.PP') as PP:
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.AwaitingEvidenceRespondant_a.PPD') as PP:
             PP.appellantDetails.return_value = self.payment_pending_appellant_details_df(spark)
 
             silver_m1 = spark.createDataFrame([
@@ -83,3 +83,4 @@ class TestAwaitingRespondentEvidenceAAppellantDetails:
                  "appellantInUk", "appealOutOfCountry", "oocAppealAdminJ", "appellantHasFixedAddress", "appellantHasFixedAddressAdminJ",
                  "appellantAddress", "addressLine1AdminJ", "addressLine2AdminJ", "addressLine3AdminJ", "addressLine4AdminJ", "countryGovUkOocAdminJ",
                  "appellantStateless", "appellantNationalities", "appellantNationalitiesDescription", "deportationOrderOptions"]
+            

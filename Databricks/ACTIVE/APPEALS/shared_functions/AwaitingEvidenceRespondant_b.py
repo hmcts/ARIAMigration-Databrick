@@ -6,10 +6,13 @@ from . import AwaitingEvidenceRespondant_a as AERa
 def generalDefault(silver_m1): 
     df_generalDefault = AERa.generalDefault(silver_m1)
 
+    df_generalDefault = df_generalDefault.drop("uploadHomeOfficeBundleAvailable")
+
     df_generalDefault = (
         df_generalDefault
         .select("*",
-                lit("No").alias("uploadHomeOfficeBundleActionAvailable"))
+                lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
+                lit("No").alias("uploadHomeOfficeBundleAvailable"))
     )
 
     return df_generalDefault
@@ -17,6 +20,8 @@ def generalDefault(silver_m1):
 
 def documents(silver_m1): 
     documents_df, documents_audit = PP.documents(silver_m1)
+    documents_df = (silver_m1.alias("m1").select("CaseNo").join(documents_df,on="CaseNo",how="left")
+    )
 
     documents_df = (
         documents_df

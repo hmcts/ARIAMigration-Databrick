@@ -18,6 +18,36 @@ def spark():
 @pytest.fixture(scope="session")
 def ftpa_outputs(spark):
 
+    m1_schema = T.StructType([
+    T.StructField("CaseNo", T.StringType(), True),
+    T.StructField("dv_representation", T.StringType(), True),
+    T.StructField("lu_appealType", T.StringType(), True),
+    T.StructField("Sponsor_Name", T.StringType(), True),
+    T.StructField("Interpreter", T.StringType(), True),
+    T.StructField("CourtPreference", T.StringType(), True),
+    T.StructField("InCamera", T.BooleanType(), True),
+    T.StructField("VisitVisaType", T.IntegerType(), True),
+    T.StructField("CentreId", T.IntegerType(), True),
+    T.StructField("Rep_Postcode", T.StringType(), True),
+    T.StructField("CaseRep_Postcode", T.StringType(), True),
+    T.StructField("PaymentRemissionRequested", T.IntegerType(), True),
+    T.StructField("lu_applicationChangeDesignatedHearingCentre", T.StringType(), True),
+    ])
+
+    m1_data = [
+        ("CASE001", "AIP", "FTPA", None, 0, 0, True, 1,1, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE002", "AIP", "FTPA", None, 0, 0, False, 2,2, "B12 0hf", "B12 0hf",2,"Man"),  
+        ("CASE003", "AIP", "FTPA", None, 0, 0, True, 2,3, "B12 0hf", "B12 0hf",3,"Man"),  
+        ("CASE004", "AIP", "FTPA", None, 0, 0, False, 2,4, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE005", "AIP", "FT", None, 0, 0, True, 3,5, "B12 0hf", "B12 0hf",2,"Man"), 
+        ("CASE006", "AIP", "FT", None, 0, 0, True, 4,6, "B12 0hf", "B12 0hf",4,"Man"),    
+        ("CASE007", "AIP", "FT", None, 0, 0, False, None,7, "B12 0hf", "B12 0hf",0,"Man"),    
+        ("CASE008", "AIP", "FT", None, 0, 0, False, None,8, "B12 0hf", "B12 0hf",None,"Man"),    
+        ("CASE009", "AIP", "FT", None, 0, 0, None, 2,9, "B12 0hf", "B12 0hf",7,"Man"),    
+        ("CASE010", "AIP", "FT", None, 0, 0, None, 2,None, "B12 0hf", "B12 0hf",1,"Man"),  
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61,0, "B12 0hf", "B12 0hf",1,"Man")
+        ]
+
 
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -69,11 +99,12 @@ def ftpa_outputs(spark):
         ("CASE011", 37),
         ]
     
+    df_m1 =  spark.createDataFrame(m1_data, m1_schema)
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_c =  spark.createDataFrame(c_data, c_schema)
 
 
-    ftpa_content,_ = ftpa(df_m3, df_c)
+    ftpa_content,_ = ftpa(df_m1, df_m3, df_c)
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     
     return results
@@ -90,7 +121,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='appellant',
-                ftpaApplicationDate='02/11/2025',
+                ftpaApplicationDate='2025-11-02',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -105,7 +136,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='appellant',
-                ftpaApplicationDate='03/12/2026',
+                ftpaApplicationDate='2026-12-03',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -120,7 +151,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='respondent',
-                ftpaApplicationDate='03/08/2026',
+                ftpaApplicationDate='2026-08-03',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -135,7 +166,7 @@ def test_ftpaList(spark, ftpa_outputs):
             id='1',
             value=Row(
                 ftpaApplicant='respondent',
-                ftpaApplicationDate='02/11/2025',
+                ftpaApplicationDate='2025-11-02',
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
@@ -148,8 +179,8 @@ def test_ftpaAppellantApplicationDate(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "02/11/2025"
-    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "03/12/2026"
+    assert results["CASE005"]["ftpaAppellantApplicationDate"] == "2025-11-02"
+    assert results["CASE006"]["ftpaAppellantApplicationDate"] == "2026-12-03"
     assert results["CASE007"]["ftpaAppellantApplicationDate"] == None
     assert results["CASE010"]["ftpaAppellantApplicationDate"] == None
 
@@ -178,8 +209,8 @@ def test_ftpaRespondentApplicationDate(spark,ftpa_outputs):
 
     assert results["CASE005"]["ftpaRespondentApplicationDate"] == None
     assert results["CASE006"]["ftpaRespondentApplicationDate"] == None
-    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "03/08/2026"
-    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "02/11/2025"
+    assert results["CASE007"]["ftpaRespondentApplicationDate"] == "2026-08-03"
+    assert results["CASE011"]["ftpaRespondentApplicationDate"] == "2025-11-02"
 
 
 def test_ftpaRespondentSubmissionOutOfTime(spark,ftpa_outputs):

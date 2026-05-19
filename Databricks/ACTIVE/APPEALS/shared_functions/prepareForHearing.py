@@ -13,10 +13,10 @@ from . import AwaitingEvidenceRespondant_b as AERb
 from . import listing as L
 
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, row_number, expr, 
+    col, when, lit, array, struct, collect_list,
+    max as spark_max, date_format, row_number, expr, nullif,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    collect_set, current_timestamp, transform, first, array_contains, rank, create_map, map_from_entries, map_from_arrays
 )
 
 
@@ -25,31 +25,41 @@ from pyspark.sql.functions import (
 ################################################################
 
 def hearingResponse(silver_m1, silver_m3, silver_m6):
-
-    # # Define window partitioned by CaseNo and ordered by descending StatusId
-    # window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
-
-    # # Add row_number to get the row with the highest StatusId per CaseNo
-    # silver_m3_ranked = silver_m3.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
-    # silver_m3_filtered_casestatus = silver_m3_max_statusid.filter(col("CaseStatus").isin(37, 38))
-
     window = Window.partitionBy("CaseNo").orderBy(F.desc("StatusId"))
-    df_stg = silver_m3.filter((F.col("CaseStatus").isin([37,38]))).withColumn("rn",F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
+    df_stg = silver_m3.filter(F.col("CaseStatus").isin([37, 38])).withColumn("rn", F.row_number().over(window)).filter(F.col("rn") == 1).drop(F.col("rn"))
 
-    m3_df = df_stg.withColumn("CourtClerkFull",
-                                            when((col("CourtClerk_Surname").isNotNull()) & (col("CourtClerk_Surname") != ""), concat_ws(" ", col("CourtClerk_Surname"), col("CourtClerk_Forenames"),
-        when((col("CourtClerk_Title").isNotNull()) & (col("CourtClerk_Title") != ""),
-            concat(lit("("), col("CourtClerk_Title"), lit(")"))).otherwise(lit(None))))
+    m3_df = (
+        df_stg
+             .withColumn("CourtClerkFull",
+                when((col("CourtClerk_Surname").isNotNull()) & (col("CourtClerk_Surname") != ""), concat_ws(" ", col("CourtClerk_Surname"), col("CourtClerk_Forenames"),
+                    when((col("CourtClerk_Title").isNotNull()) & (col("CourtClerk_Title") != ""),
+                        concat(lit("("), col("CourtClerk_Title"), lit(")"))).otherwise(lit(None))))
             ).withColumn("isAppealSuitableToFloat",when(col("ListTypeId") == 5, lit("Yes")).otherwise("No"))
- 
-    stg_m6 = silver_m6.withColumn("Transformed_Required",when(F.col("Required") == 0, lit('Not Required')).when(F.col("Required") == 1, lit('Required')))
+    )
 
-    final_df = m3_df.join(silver_m1, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
+    stg_m6 = (
+        silver_m6
+            .withColumn("Transformed_Required", when(F.col("Required") == '0', lit('Not Required')).when(F.col("Required") == '1', lit('Required')))
+            .withColumn("ConcatJudgeDetails", concat_ws(
+                " ",
+                col("Judge_Surname"),
+                col("Judge_Forenames"),
+                when(col("Judge_Title").isNotNull(), "("),
+                col("Judge_Title"),
+                when(col("Judge_Title").isNotNull(), ")"),
+                when(col("Transformed_Required").isNotNull(), ":"), col("Transformed_Required")
+            ))
+            .groupBy("CaseNo")
+                .agg(
+                    concat_ws("\n", collect_list(col("ConcatJudgeDetails"))).alias("ConcatJudgeDetails_List"),
+                )
+    )
+
+    final_df = silver_m1.join(m3_df, ["CaseNo"], "left").join(stg_m6, ["CaseNo"], "left").withColumn("CaseNo", trim(col("CaseNo"))
                     ).withColumn("Hearing Centre",
-                                when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre")) #ListedCentre
+                                when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre"))  # ListedCentre
                     ).withColumn("Hearing Date",
-                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate")) #KeyDate
+                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate"))  # KeyDate
                     ).withColumn("Hearing Type",
                                 when(col("HearingType").isNull(), "N/A").otherwise(col("HearingType"))
                     ).withColumn("Court",
@@ -59,55 +69,53 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("List Start Time",
                                 when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
                     ).withColumn("Judge First Tier",
-                                when(coalesce(col("Judge1FT_Surname"), col("Judge2FT_Surname"), col("Judge3FT_Surname")).isNotNull(),
-                                trim(concat_ws(" ",
-                                when(col("Judge1FT_Surname").isNotNull(),
-                                    concat_ws(" ", col("Judge1FT_Surname"), col("Judge1FT_Forenames"),
-                                    when(col("Judge1FT_Title").isNotNull() & (col("Judge1FT_Title") != ""),
-                                        concat(lit("("), col("Judge1FT_Title"), lit(")"))).otherwise(lit("")))).otherwise(lit("")),
- 
-                                when(col("Judge2FT_Surname").isNotNull(),
-                                    concat_ws(" ", col("Judge2FT_Surname"), col("Judge2FT_Forenames"),
-                                        when(col("Judge2FT_Title").isNotNull() & (col("Judge2FT_Title") != ""),
-                                            concat(lit("("), col("Judge2FT_Title"), lit(")"))).otherwise(lit("")))).otherwise(lit("")),
-                
-                                when(col("Judge3FT_Surname").isNotNull(),
-                                    concat_ws(" ", col("Judge3FT_Surname"), col("Judge3FT_Forenames"),
-                                        when(col("Judge3FT_Title").isNotNull() & (col("Judge3FT_Title") != ""),
-                                            concat(lit("("), col("Judge3FT_Title"), lit(")"))).otherwise(lit("")))
-                                    ).otherwise(lit(""))))
-                                ).otherwise(lit(None))
-                                
+                            when(coalesce(col("Judge1FT_Surname"), col("Judge2FT_Surname"), col("Judge3FT_Surname")).isNotNull(),
+                            trim(concat_ws(" ",
+                            when(col("Judge1FT_Surname").isNotNull(),
+                                concat_ws(" ", col("Judge1FT_Surname"), col("Judge1FT_Forenames"),
+                                when(col("Judge1FT_Title").isNotNull() & (col("Judge1FT_Title") != ""),
+                                    concat(lit("("), col("Judge1FT_Title"), lit(")"))).otherwise(lit("")))).otherwise(lit("")),
+
+                            when(col("Judge2FT_Surname").isNotNull(),
+                                concat_ws(" ", col("Judge2FT_Surname"), col("Judge2FT_Forenames"),
+                                    when(col("Judge2FT_Title").isNotNull() & (col("Judge2FT_Title") != ""),
+                                        concat(lit("("), col("Judge2FT_Title"), lit(")"))).otherwise(lit("")))).otherwise(lit("")),
+
+                            when(col("Judge3FT_Surname").isNotNull(),
+                                concat_ws(" ", col("Judge3FT_Surname"), col("Judge3FT_Forenames"),
+                                    when(col("Judge3FT_Title").isNotNull() & (col("Judge3FT_Title") != ""),
+                                        concat(lit("("), col("Judge3FT_Title"), lit(")"))).otherwise(lit("")))
+                                ).otherwise(lit(""))))
+
+                            ).otherwise(lit(None))
                     ).withColumn("Start Time",
                                 when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
                     ).withColumn("Estimated Duration",
                                 when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate").cast("string"))
-                    ).withColumn("Required/Incompatible Judicial Officers", concat_ws(" ", col("Judge_Surname"), col("Judge_Forenames")
-                    , when(col("Judge_Title").isNotNull(),"("),
-                    col("Judge_Title"),
-                    when(col("Judge_Title").isNotNull(),")"),
-                    when(col("Transformed_Required").isNotNull(),":"), col("Transformed_Required"))
+                    ).withColumn("Required/Incompatible Judicial Officers",
+                                when(col("ConcatJudgeDetails_List").isNotNull(), concat(lit("\n"), col("ConcatJudgeDetails_List")))
                     ).withColumn("Notes",
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
                                 concat(
-                                lit("Listed details from ARIA: "),
-                                lit("\n Hearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                lit("\n Hearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
-                                lit("\n Hearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
-                                lit("\n Court: "), coalesce(col("Court"), lit("N/A")),
-                                lit("\n List Type: "), coalesce(col("ListType"), lit("N/A")),
-                                lit("\n List Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
-                                lit("\n Judge First Tier: "), coalesce(col("Judge First Tier"), lit('')),
-                                lit("\n Court Clerk / Usher: "), expr("coalesce(nullif(concat_ws(', ', CourtClerkFull), ''), 'N/A')"),
-                                lit("\n Start Time: "), coalesce(col("Start Time"), lit("N/A")),
-                                lit("\n Estimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
-                                lit("\n Required/Incompatible Judicial Officers: "), coalesce(col("Required/Incompatible Judicial Officers"), lit("N/A")),
-                                lit("\n Notes: "), coalesce(col("Notes"), lit("N/A"))
+                                    lit("Listed details from ARIA: "),
+                                    lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
+                                    lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
+                                    lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
+                                    lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
+                                    lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),
+                                    lit("\nList Start Time: "), coalesce(col("List Start Time"), lit("N/A")),
+                                    lit("\nJudge First Tier: "), coalesce(col("Judge First Tier"), lit("")),
+                                    lit("\nCourt Clerk / Usher: "), coalesce(nullif(concat_ws(", ", col("CourtClerkFull")), lit("")), lit("N/A")),
+                                    lit("\nStart Time: "), coalesce(col("Start Time"), lit("N/A")),
+                                    lit("\nEstimated Duration: "), coalesce(col("Estimated Duration"), lit("N/A")),
+                                    lit("\nRequired/Incompatible Judicial Officers: "),
+                                    coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
+                                    lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
                             )
-                                
                     )
-    content_df = final_df.select(col("CaseNo"),col("additionalInstructionsTribunalResponse"),col("isAppealSuitableToFloat"),col("ListTypeId"))
+    
+    content_df = final_df.select(col("CaseNo"), col("additionalInstructionsTribunalResponse"), col("isAppealSuitableToFloat"), col("ListTypeId"))
 
 
     df_hearingResponse = (
@@ -390,12 +398,12 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     # Add row_number to get the row with the highest StatusId per CaseNo
     silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38))
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     silver_m3_filtered_casestatus = silver_m3_max_statusid
 
-    silver_m3_filtered_casestatus = silver_m3_filtered_casestatus.alias("m3").join(
+    allowed = [30,60,90,120,150,180,210,240,270,300,330,360]
+    silver_m3_filtered_casestatus =( silver_m3_filtered_casestatus.alias("m3").join(
         bronze_listing_location.alias("location"),
         on=col("m3.HearingCentre") == col("location.ListedCentre"),
         how="left"
@@ -407,8 +415,46 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 .otherwise(col("location.locationCode").alias("code")),
             F.lit("label"),
             F.when(col("location.ListedCentre").isNull(), F.lit(None).alias("code"))
-                .otherwise(col("location.locationLabel").alias("label"))
-    ))
+                .otherwise(col("location.locationLabel").alias("label")))
+        ).withColumn(
+            "listCaseHearingLength",
+            F.array_min(
+                F.transform(
+                    F.array(*[F.lit(x) for x in allowed]),
+                    lambda x: F.struct(
+                        F.abs(x - F.col("m3.TimeEstimate").cast("int")).alias("dist"),
+                        x.alias("value")
+                    )
+                )
+            ).getField("value").cast("string")
+        ).withColumn(
+                "hearing_date_str",
+                F.date_format(F.to_timestamp(F.col("m3.HearingDate")), "yyyy-MM-dd")
+        ).withColumn(
+            "start_time_str",
+            F.when(
+                F.col("m3.StartTime").isNull(),
+                F.lit("00:00:00.000")
+            ).otherwise(
+                F.date_format(F.to_timestamp(F.col("m3.StartTime")), "HH:mm:ss.SSS")
+            )
+        ).withColumn(
+            "HearingDateTime_ts",
+            F.to_timestamp(
+                F.concat_ws(" ", F.col("hearing_date_str"), F.col("start_time_str")),
+                "yyyy-MM-dd HH:mm:ss.SSS"
+            )
+        ).withColumn(
+            "listCaseHearingDate",
+                F.date_format(F.col("HearingDateTime_ts"), "yyyy-MM-dd'T'HH:mm:ss.SSS")
+        ).drop("hearing_date_str", "start_time_str", "HearingDateTime_ts")
+        # Centre values (keep as array to match earlier pattern)
+        .withColumn("listCaseHearingCentre", F.col("location.listCaseHearingCentre"))
+
+        # Address (keep as-is; change to array(...) if your target schema expects array)
+        .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))
+    )
+    
 
     content_df = silver_m3_filtered_casestatus.withColumn(
         "listingLength",
@@ -421,10 +467,17 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 .otherwise(F.col("TimeEstimate").cast("int") % 60).alias("minutes"))
         ).select(
             col("CaseNo").alias("CaseNo"),
+            col("listCaseHearingLength"),
+            col("listCaseHearingDate"),
+            col("listCaseHearingCentre"),
+            col("listCaseHearingCentreAddress"),
             col("listingLength"),
             col("listingLocation"),
             col("TimeEstimate"),
-            col("HearingCentre") 
+            col("HearingCentre"),
+            col("TimeEstimate"),
+            col("HearingDate"),
+            col("StartTime")
         )
             # F.when(
         #     F.col("TimeEstimate").isNull(),
@@ -479,6 +532,10 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
     .withColumn("witness10InterpreterSpokenLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
     .select(
     col("m1.CaseNo").alias("CaseNo"),
+    col("listCaseHearingLength"),
+    col("listCaseHearingDate"),
+    col("listCaseHearingCentre"),
+    col("listCaseHearingCentreAddress"),
     col("listingLength"),
     col("hearingChannel"),
     col("witnessDetails"),
@@ -518,11 +575,36 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 array(struct(col("TimeEstimate"))).alias("listingLength_inputValues"),
                 col("hd.listingLength"),
                 lit("Yes").alias("listingLength_Transformed"),
+
                 # hearingChannel
                 array(struct(lit("VisitVisaType"))).alias("hearingChannel_inputFields"),
                 array(struct(col("m1.VisitVisaType"))).alias("hearingChannel_inputValues"),
                 col("hd.hearingChannel"),
                 lit("Yes").alias("hearingChannel_Transformed"),
+
+                # listCaseHearingLength
+                array(struct(lit("CaseNo"),lit("TimeEstimate"))).alias("listCaseHearingLength_inputFields"),
+                array(struct(col("CaseNo"),col("TimeEstimate"))).alias("listCaseHearingLength_inputValues"),
+                col("hd.listCaseHearingLength").alias("listCaseHearingLength_value"),
+                lit("Yes").alias("listCaseHearingLength_Transformed"),
+
+                # listCaseHearingDate
+                array(struct(lit("CaseNo"),lit("HearingDate"),lit("StartTime"))).alias("listCaseHearingDate_inputFields"),
+                array(struct(col("CaseNo"),col("HearingDate"),col("StartTime"))).alias("listCaseHearingDate_inputValues"),
+                col("hd.listCaseHearingDate").alias("listCaseHearingDate_value"),
+                lit("Yes").alias("listCaseHearingDate_Transformed"),
+
+                # listCaseHearingCentre
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentre"))).alias("listCaseHearingCentre_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentre"))).alias("listCaseHearingCentre_inputValues"),
+                col("hd.listCaseHearingCentre").alias("listCaseHearingCentre_value"),
+                lit("Yes").alias("listCaseHearingCentre_Transformed"),
+
+                # listCaseHearingCentreAddress
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
+                col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
+                lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
 
                 # # listingLocation
                 
@@ -543,10 +625,39 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
 def documents(silver_m1): 
     documents_df, documents_audit = L.documents(silver_m1)
 
-    documents_df = documents_df.select("*",
-                lit([]).cast("array<string>").alias("hearingDocuments"),
-                lit([]).cast("array<string>").alias("letterBundleDocuments"))
+    documents_df = (
+        silver_m1.alias("m1")
+        .join(
+            documents_df.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in documents_df.columns if c != "CaseNo"],
+            lit([]).cast("array<string>").alias("hearingDocuments"),
+            lit([]).cast("array<string>").alias("letterBundleDocuments"),
+        )
+    )
+
     return documents_df, documents_audit
+
+################################################################
+
+################################################################
+##########              general                      ###########
+################################################################
+
+def generalDefault(silver_m1):
+
+    generalDefault_df= L.generalDefault(silver_m1)
+
+    generalDefault_df = generalDefault_df.drop("reviewedHearingRequirements")
+
+    generalDefault_df = (generalDefault_df.withColumn("reviewedHearingRequirements",lit("Yes")))
+
+
+    return generalDefault_df
 
 ################################################################
 

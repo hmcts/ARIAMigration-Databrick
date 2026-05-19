@@ -4,24 +4,22 @@ from pyspark.sql.functions import (
 from pyspark.sql.window import Window
 
 from . import paymentPending as PP
+from . import paymentPendingDetained as PPD
 from . import AwaitingEvidenceRespondant_b as AERb
 
 
 def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3.withColumn("row_num", row_number().over(window_spec))
-
-    silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (
+    silver_m3_filtered = silver_m3.filter(
+        (
             (
                 (col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
             ) | (
                 (col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))
             )
         )
-    )
+    ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
@@ -251,12 +249,12 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 .otherwise(lit(None))
             ))
             .withColumn("inCameraCourt", (
-                when((col("m1.InCamera") == 1), lit("Yes"))
-                .when((col("m1.InCamera") == 0), lit("No"))
+                when((col("m1.InCamera") == True), lit("Yes"))
+                .when((col("m1.InCamera") == False), lit("No"))
                 .otherwise(lit("No"))
             ))
             .withColumn("inCameraCourtDescription", (
-                when((col("m1.InCamera") == 1), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
+                when((col("m1.InCamera") == True), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
                 .otherwise(lit(None))
             ))
             .withColumn("additionalRequests", lit("Yes"))
@@ -447,9 +445,16 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
     return df_hearingRequirements, df_audit_hearingRequirements
 
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
-    df, df_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+    df, df_audit = PPD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_representation = silver_m1.select("CaseNo", "dv_representation", "lu_appealType")
+
+    df = (
+        silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in df.columns if c != "CaseNo"],
+                )
+        )
 
     df = df.join(df_representation, on="CaseNo", how="left")
 
@@ -496,7 +501,7 @@ def generalDefault(silver_m1):
             .withColumn("isFeePaymentEnabled", lit("Yes"))
             .withColumn("isRemissionsEnabled", lit("Yes"))
             .withColumn("isOutOfCountryEnabled", lit("Yes"))
-            .withColumn("isIntegrated", lit("No"))
+            .withColumn("isIntegrated", lit("Yes"))
             .withColumn("isNabaEnabled", lit("No"))
             .withColumn("isNabaAdaEnabled", lit("Yes"))
             .withColumn("isNabaEnabledOoc", lit("No"))
@@ -579,9 +584,20 @@ def documents(silver_m1):
     df_documents, df_audit_documents = AERb.documents(silver_m1)
 
     df_documents = (
-        df_documents
-            .withColumn("hearingRequirements", lit([]).cast("array<string>"))
+        silver_m1.alias("m1")
+        .join(
+            df_documents.alias("content"),
+            on="CaseNo",
+            how="left"
+        )
+        .select(
+            "m1.CaseNo",
+            *[c for c in df_documents.columns if c != "CaseNo"],
+            array().cast("array<string>").alias("hearingRequirements")
+        )
     )
+
+
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
 

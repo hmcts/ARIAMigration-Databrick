@@ -30,6 +30,7 @@ from pyspark.sql.functions import (
 def documents(silver_m1,silver_m3): 
     documents_df, documents_audit = DA.documents(silver_m1)
 
+
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     # Add row_number to get the row with the highest StatusId per CaseNo
@@ -38,7 +39,7 @@ def documents(silver_m1,silver_m3):
     silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
 
     silver_m3_content = (
-    silver_m3_max_statusid
+        silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m3"),on="CaseNo",how="left")
         .withColumn("ftpaAppellantDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
         .withColumn("ftpaRespondentDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
         .withColumn("ftpaAppellantGroundsDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
@@ -48,7 +49,7 @@ def documents(silver_m1,silver_m3):
         .withColumn("ftpaAppellantOutOfTimeDocuments", when(col("Party") == 1, lit([]).cast("array<string>")).otherwise(None))
         .withColumn("ftpaRespondentOutOfTimeDocuments", when(col("Party") == 2, lit([]).cast("array<string>")).otherwise(None))
         .select(
-            col("CaseNo"),
+            col("m1.CaseNo"),
             col("ftpaAppellantDocuments"),
             col("ftpaRespondentDocuments"),
             col("ftpaAppellantGroundsDocuments"),
@@ -60,7 +61,7 @@ def documents(silver_m1,silver_m3):
         )   
     )
     
-    documents_df = documents_df.join(silver_m3_content.alias("m3"), on="CaseNo", how="left")
+    documents_df = silver_m3_content.alias("m3").join(documents_df.alias("content"), on="CaseNo", how="left")
 
     
     documents_audit = (
@@ -118,9 +119,9 @@ def documents(silver_m1,silver_m3):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m3,silver_c):
+def ftpa(silver_m1,silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = DA.ftpa(silver_m3,silver_c)
+    ftpa_df,ftpa_audit = DA.ftpa(silver_m1,silver_m3,silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -134,11 +135,11 @@ def ftpa(silver_m3,silver_c):
     )
 
     silver_m3_content = (
-        silver_m3_max_statusid
+        silver_m1.join(silver_m3_max_statusid,on="CaseNo",how="left")
             # Appellant fields
             .withColumn(
                 "ftpaAppellantApplicationDate",
-                when(col("Party") == 1, date_format(datereceived_ts, "dd/MM/yyyy")).otherwise(None)
+                when(col("Party") == 1, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
             )
             .withColumn(
                 "ftpaAppellantSubmissionOutOfTime",
@@ -156,7 +157,7 @@ def ftpa(silver_m3,silver_c):
             # Respondent fields
             .withColumn(
                 "ftpaRespondentApplicationDate",
-                when(col("Party") == 2, date_format(datereceived_ts, "dd/MM/yyyy")).otherwise(None)
+                when(col("Party") == 2, date_format(datereceived_ts, "yyyy-MM-dd")).otherwise(None)
             )
             .withColumn(
                 "ftpaRespondentSubmissionOutOfTime",
@@ -220,10 +221,11 @@ def ftpa(silver_m3,silver_c):
     )
 
     ftpa_df = (
-        ftpa_df.alias("ftpa")
-            .join(silver_m3_content.alias("m3"), on=["CaseNo"], how="left")
+        silver_m3_content.alias("m3")
+            .join(ftpa_df.alias("ftpa"), on=["CaseNo"], how="left")
             .select(
-                "ftpa.*",
+                col("m3.CaseNo"),
+                *[col(f"ftpa.{c}") for c in ftpa_df.columns if c != "CaseNo"],
                 col("ftpaList"),
                 col("ftpaAppellantApplicationDate"),
                 col("ftpaAppellantSubmissionOutOfTime"),
@@ -287,9 +289,16 @@ def ftpa(silver_m3,silver_c):
 ##########              general          ###########
 ################################################################
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres):
+def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
-    general_df,general_audit = D.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
+    general_df,general_audit = D.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+    general_df = (
+        silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+        .select("m1.CaseNo",
+                *[c for c in general_df.columns if c != "CaseNo"],
+                )
+        )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     # Add row_number to get the row with the highest StatusId per CaseNo

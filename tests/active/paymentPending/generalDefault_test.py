@@ -56,7 +56,7 @@ def test_generalDefault_string_fields(generalDefault_outputs):
         "isFeePaymentEnabled": "Yes",
         "isRemissionsEnabled": "Yes",
         "isOutOfCountryEnabled": "Yes",
-        "isIntegrated": "No",
+        "isIntegrated": "Yes",
         "isNabaEnabled": "No",
         "isNabaAdaEnabled": "Yes",
         "isNabaEnabledOoc": "No",

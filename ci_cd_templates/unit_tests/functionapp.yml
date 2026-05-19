@@ -17,6 +17,6 @@ steps:
       export ENVIRONMENT=sbox
       export LZ_KEY=00
       export PR_NUMBER=$(System.PullRequest.PullRequestId)
-      export PYTHONPATH=$PYTHONPATH:$(Build.SourcesDirectory)/AzureFunctions
+      export PYTHONPATH=$PYTHONPATH:$(Build.SourcesDirectory)
       pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}
     displayName: 'Run pytest ${{ parameters.segment }} unit tests'

@@ -90,7 +90,7 @@ def hearingActuals_outputs(spark):
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_loc =  spark.createDataFrame(loc_data, loc_schema)
 
-    hearingDetails_content,_ = hearingActuals(df_m3)
+    hearingDetails_content,_ = hearingActuals(df_m1,df_m3)
     results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
     
     return results
@@ -99,11 +99,11 @@ def test_actualCaseHearingLength(spark,hearingActuals_outputs):
 
     results = hearingActuals_outputs
 
-    assert results["CASE005"]["actualCaseHearingLength"] == {'hours': 1, 'minutes': 0}
-    assert results["CASE006"]["actualCaseHearingLength"] == {'hours': 4, 'minutes': 0}
-    assert results["CASE007"]["actualCaseHearingLength"] == {'hours': 6, 'minutes': 0}
+    assert results["CASE005"]["actualCaseHearingLength"] == {'hours': '1', 'minutes': '0'}
+    assert results["CASE006"]["actualCaseHearingLength"] == {'hours': '4', 'minutes': '0'}
+    assert results["CASE007"]["actualCaseHearingLength"] == {'hours': '6', 'minutes': '0'}
     assert results["CASE010"]["actualCaseHearingLength"] == {'hours': None, 'minutes': None}
-    assert results["CASE011"]["actualCaseHearingLength"] == {'hours': 0, 'minutes': 45}
+    assert results["CASE011"]["actualCaseHearingLength"] == {'hours': '0', 'minutes': '45'}
 
 def test_attendingJudge(spark,hearingActuals_outputs):
 

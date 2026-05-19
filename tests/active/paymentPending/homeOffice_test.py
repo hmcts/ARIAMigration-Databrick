@@ -20,15 +20,16 @@ def homeOfficeDetails_outputs(spark):
         T.StructField("lu_appealType", T.StringType(), True),
         T.StructField("DateOfApplicationDecision", T.DateType(), True),
         T.StructField("HORef", T.StringType(), True),
+        T.StructField("dv_CCDAppealType", T.StringType(), True),
     ])
 
     m1_data = [    
-        ("EA/06826/2022", "LR",  "A", date(2022, 6, 30), None),
-        ("EA/09676/2022", "LR",  "A", date(2020, 2, 15), None),
-        ("EA/00591/2025", "LR",  "A", date(2022, 9, 5),  None),
-        ("EA/00441/2025", "AIP", "B", date(2025, 2, 12), None),
-        ("HU/00512/2025", "LR",  "A", date(2024, 7, 11), "R1277473"),
-        ("HU/02151/2024", "LR",  "A", None, None),
+        ("EA/06826/2022", "LR",  "A", date(2022, 6, 30), None,"RP"),
+        ("EA/09676/2022", "LR",  "A", date(2020, 2, 15), None,"RP"),
+        ("EA/00591/2025", "LR",  "A", date(2022, 9, 5),  None,"RP"),
+        ("EA/00441/2025", "AIP", "B", date(2025, 2, 12), None,"PA"),
+        ("HU/00512/2025", "LR",  "A", date(2024, 7, 11), "R1277473","PA"),
+        ("HU/02151/2024", "LR",  "A", None, None,"PA"),
     ]
 
     m2_schema = T.StructType([
@@ -108,7 +109,7 @@ def test_category_37_sets_home_office_decision_date(homeOfficeDetails_outputs):
         homeOfficeDecisionDate="2025-02-12",
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber=None,
     )
 
@@ -120,7 +121,7 @@ def test_category_38_with_gwf_reference(homeOfficeDetails_outputs):
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2022-06-30",
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber="061121374",
     )
 
@@ -131,7 +132,7 @@ def test_category_38_with_gwf_reference_second_case(homeOfficeDetails_outputs):
         row,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2020-02-15",
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber="063622668",
     )
 
@@ -142,7 +143,7 @@ def test_category_38_without_gwf_reference(homeOfficeDetails_outputs):
         row,
         decisionLetterReceivedDate="2022-09-05",
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber='000000000',
+        homeOfficeReferenceNumber='999999999',
         gwfReferenceNumber=None,
     )
 
@@ -154,7 +155,7 @@ def test_no_relevant_category_ids(homeOfficeDetails_outputs):
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision=None,
-        homeOfficeReferenceNumber=None,
+        homeOfficeReferenceNumber="999999999",
         gwfReferenceNumber=None,
     )
 

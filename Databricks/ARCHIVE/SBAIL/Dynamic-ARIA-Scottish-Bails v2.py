@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor, col, date_format, count, explode, round, regexp_extract, max
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -119,6 +119,8 @@ def simple_date_format(date_value):
 # COMMAND ----------
 
 
+# from pyspark.sql.functions import current_timestamp, lit
+
 # Function to recursively list all files in the ADLS directory
 def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
@@ -127,7 +129,7 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
     """
     output = set()  # Using a set to avoid duplicates
     if depth > max_depth:
-        return list(output)
+        return output
 
     try:
         children = dbutils.fs.ls(path)
@@ -136,12 +138,24 @@ def deep_ls(path: str, depth: int = 0, max_depth: int = 10) -> list:
                 output.add(child.path.strip())  # Add only .parquet files to the set
 
             if child.isDir:
+                # Recursively explore directories
                 output.update(deep_ls(child.path, depth=depth + 1, max_depth=max_depth))
 
     except Exception as e:
         print(f"Error accessing {path}: {e}")
 
-    return list(output)
+    return list(output)  # Convert the set back to a list before returning
+
+# Function to extract timestamp from the file path
+def extract_timestamp(file_path):
+    """
+    Extracts timestamp from the parquet file name based on an assumed naming convention.
+    """
+    # Split the path and get the filename part
+    filename = file_path.split('/')[-1]
+    # Extract the timestamp part from the filename
+    timestamp_str = filename.split('_')[-1].replace('.parquet', '')
+    return timestamp_str
 
 # Main function to read the latest parquet file, add audit columns, and return the DataFrame
 def read_latest_parquet(folder_name: str, view_name: str, process_name: str, base_path: str ) -> "DataFrame":
@@ -163,26 +177,16 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     # List all .parquet files in the folder
     all_files = deep_ls(folder_path)
     
-    # Check if files were found
+    # Ensure that files were found
     if not all_files:
         print(f"No .parquet files found in {folder_path}")
         return None
-
-    # Create a DataFrame from the file paths
-    file_df = spark.createDataFrame([(f,) for f in all_files], ["file_path"])
     
-    # Extract timestamp from the file name using a regex pattern (assuming it's the last underscore-separated part before ".parquet")
-    file_df = file_df.withColumn("timestamp", regexp_extract("file_path", r"_(\d+)\.parquet$", 1).cast("long"))
-    
-    # Find the maximum timestamp
-    max_timestamp = file_df.agg(max("timestamp")).collect()[0][0]
-    
-    # Filter to get the file with the maximum timestamp
-    latest_file_df = file_df.filter(col("timestamp") == max_timestamp)
-    latest_file = latest_file_df.first()["file_path"]
+    # Find the latest .parquet file
+    latest_file = max(all_files, key=extract_timestamp)
     
     # Print the latest file being loaded for logging purposes
-    # print(f"Reading latest file: {latest_file}")
+    print(f"Reading latest file: {latest_file}")
     
     # Read the latest .parquet file into a DataFrame
     df = spark.read.option("inferSchema", "true").parquet(latest_file)
@@ -200,7 +204,6 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
     
     # Return the DataFrame
     return df
-
 
 # COMMAND ----------
 
@@ -939,7 +942,8 @@ def bronze_sbail_ac_ca_apt_country_detc():
             col("dc.Postcode").alias("DetentionCentrePostcode"),
             col("dc.Fax").alias("DetentionCentreFax"),
             # Country Fields
-            col("c.DoNotUseNationality")
+            col("c.DoNotUseNationality"),
+            col("c.Country")
     )
     )
 
@@ -1787,10 +1791,6 @@ def silver_m2():
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## M3: silver_sbail_m3_hearing_details
 # MAGIC
@@ -1942,11 +1942,11 @@ def silver_m5():
            path=f"{silver_base_path}/silver_sbail_m6_link")
 def silver_m6():
     m6_df = dlt.read("bronze_sbail_ac_link_linkdetail").alias("m6")
-    segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
-    joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
+    # segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    # joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
 
-    df = joined_df.select("m6.CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
+    df = m6_df.select("CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
         col("Title"),col("Forenames"),col("Name")).alias("FullName")
     )
     df = df.withColumn("CaseNo", trim("CaseNo"))
@@ -1969,7 +1969,8 @@ def silver_m7():
 
     m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
 
-    m7_ref_df = m7_df.select(*m7_cleaned,
+    m7_ref_df = m7_df.withColumn("StatusPromulgated", date_format(col("StatusPromulgated"), "yyyy-MM-dd")   
+                        ).select(*m7_cleaned,
                         when(col("BailConditions") == 1,"Yes")
                         .when(col("BailConditions") == 2,"No")
                         .otherwise("Unknown").alias("BailConditionsDesc"),
@@ -2096,10 +2097,7 @@ def silver_meta_data():
                 coalesce(col("decision_date_latest"), current_timestamp()),
                 "yyyy-MM-dd'T'HH:mm:ss'Z'"
             ).alias("event_date"),
-            date_format(
-                coalesce(col("decision_date_latest"), current_timestamp()),
-                "yyyy-MM-dd'T'HH:mm:ss'Z'"
-            ).alias("recordDate"),
+            date_format(F.current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             F.lit("GBR").alias("region"),
             F.lit("ARIA").alias("publisher"),
             F.when(
@@ -2151,21 +2149,19 @@ def silver_meta_data():
     "retentionDate",
     F.when(
         col("is_valid_status_outcome") == True,
-        F.add_months(col("event_date"), 240)
+        col("event_date")
     )
     .when(
         ((col("Outcome") == 38) & (col("CaseStatus") == 4)) | ((col("Outcome") == 38) & (col("CaseStatus") == 19)),
-        F.add_months(
-            coalesce(col("decision_date_prev"), F.current_date()),
-            240))
+            coalesce(col("decision_date_prev"), F.current_date()))
     .when(
         col("Outcome").isNull() & col("CaseStatus").isNull(),
         F.current_date()
     ).otherwise(F.current_date())
     ).withColumn(
-        "recordDate",
-        concat(F.col("retentionDate"), lit("T00:00:00.000Z"))
-    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"))
+        "event_date",
+        date_format(col("retentionDate"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
 
     return final_df
 
@@ -2231,14 +2227,11 @@ case_status_mappings = {
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription"
 
-
-
-
     },
     4: {  # Bail Application
         "{{BailApplicationStatusOfBail}}": "CaseStatusDescription",
         "{{BailApplicationDateOfApplication}}": "DateReceived",
-        "{{BailApplicationDateOfHearing}}": "DecisionDate",
+        "{{BailApplicationDateOfHearing}}": "Keydate",
         "{{BailApplicationFC}}": "FC",
         "{{BailApplicationInterpreterRequired}}": "InterpreterRequiredDesc",
         "{{BailApplicationDateOfOrder}}": "MiscDate2",
@@ -2305,7 +2298,7 @@ case_status_mappings = {
         "{{PaymentLiabilityAddressLine4}}": "SCAddress4",
         "{{PaymentLiabilityAddressLine5}}": "SCAddress5",
         "{{PaymentLiabilityPostcode}}": "SCPostcode",
-        "{{PaymentLiabilityNotes}}": "Notes2",
+        "{{PaymentLiabilityNotes}}": "StatusNotes2",
         "{{PaymentLiabilityDateOfDecision}}": "DecisionDate",
         "{{PaymentLiabilityOutcome}}": "OutcomeDescription",
         "{{livesAndSleepsAt}}": "LivesAndSleepsAt",
@@ -2731,6 +2724,7 @@ stg_m1_m2_struct = struct(
     col("DetentionCentreAddress4"),
     col("DetentionCentreAddress5"),
     col("DetentionCentrePostcode"),
+    col("Country"),
     col("DetentionCentreFax"),
     col("DoNotUseNationality"),
     col("AppellantDetainedDesc"),
@@ -2804,23 +2798,44 @@ def stg_m3_m7():
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
     m7 = dlt.read("silver_sbail_m7_status")
-    #we need to join this to a table below
+    
+    m7 = m7.withColumn(
+    "StatusParty",
+    when(col("StatusParty") == 0, lit(None)) 
+    .when(col("StatusParty") == 1, "Appellant")
+    .when(col("StatusParty") == 2, "Respondent")
+    .otherwise(col("StatusParty"))
+    )   
 
     adjournment_parents = m7.filter(col("CaseStatus") == 17) \
-    .select(col("AdjournmentParentStatusId"), lit("Yes").alias("adjournmentFlag")) \
-    .withColumnRenamed("AdjournmentParentStatusId", "ParentStatusId") 
+    .select(col("AdjournmentParentStatusId").alias("ParentStatusId"), 
+            lit("Yes").alias("adjournmentFlag"), 
+            col("DateReceived").alias("adjDateOfApplication"), 
+            col("Keydate").alias("adjDateOfHearing"), 
+            col("StatusParty").alias("adjPartyMakingApp"), 
+            col("StatusNotes1").alias("adjDirections"), 
+            col("DecisionDate").alias("adjDateOfDecision"), 
+            col("OutcomeDescription").alias("adjOutcome"), 
+            col("StatusPromulgated").alias("adjdatePartiesNotified")) 
 
     adjourned_withdrawal_df = m7.join(
-        adjournment_parents,
+        adjournment_parents.alias("adjournment_parents"),
         m7.StatusId == adjournment_parents.ParentStatusId,
-        "inner")
+        "inner"
+        ).select(m7["*"], col("adjournmentFlag"), col("adjDateOfApplication"), col("adjDateOfHearing"), col("adjPartyMakingApp"), 
+        col("adjDirections"), col("adjDateOfDecision"), col("adjOutcome"), col("adjdatePartiesNotified"))
 
-    adjourned_withdrawal_new_df = m7.join(
-        adjourned_withdrawal_df.select(col("ParentStatusId"), col("adjournmentFlag")), 
-        (m7.CaseNo == adjourned_withdrawal_df.CaseNo) &
-        (m7.StatusId == adjourned_withdrawal_df.ParentStatusId),
+    adjourned_withdrawal_new_df = (
+        m7.alias("status")
+        .join(
+        adjourned_withdrawal_df.alias("adj"),
+        (col("status.CaseNo") == col("adj.CaseNo")) & (col("status.StatusId") == col("adj.StatusId")),
         "left")
-
+        .withColumn("adjDateOfApplication", date_format(col("adj.adjDateOfApplication"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfDecision", date_format(col("adj.adjDateOfDecision"), "yyyy-MM-dd"))
+        .withColumn("adjDateOfHearing",date_format(col("adj.adjDateOfHearing"), "yyyy-MM-dd"))
+        .withColumn("adjdatePartiesNotified",date_format(col("adj.adjdatePartiesNotified"), "yyyy-MM-dd"))
+        .select("status.CaseNo", "status.StatusId", "status.CaseStatus", "status.DateReceived", "status.StatusNotes1", "status.Keydate", "status.MiscDate1", "status.MiscDate2", "status.MiscDate3", "status.StatusNotes2", "status.DecisionDate", "status.Outcome", "status.OutcomeDescription", "status.StatusPromulgated", "status.StatusParty", "status.ResidenceOrder", "status.ReportingOrder", "status.BailedTimePlace", "status.BaileddateHearing", "status.BaileddateHearingDesc", "status.InterpreterRequired", "status.BailConditions", "status.LivesAndSleepsAt", "status.AppearBefore", "status.ReportTo", "status.AdjournmentParentStatusId", "status.HearingCentre", "status.DecisionSentToHODate", "status.VideoLink", "status.WorkAndStudyRestriction", "status.StatusBailConditionTagging", "status.OtherCondition", "status.OutcomeReasons", "status.FC", "status.CaseStatusDescription", "status.ContactStatus", "status.SCCourtName","status.SCAddress1", "status.SCAddress2", "status.SCAddress3", "status.SCAddress4", "status.SCAddress5", "status.SCPostcode", "status.SCTelephone", "status.LanguageDescription", "status.ListTypeId", "status.ListType", "status.HearingTypeId", "status.HearingType", "status.Judiciary1Id", "status.Judiciary1Name", "status.Judiciary2Id", "status.Judiciary2Name", "status.Judiciary3Id", "status.Judiciary3Name", "status.BailConditionsDesc", "status.InterpreterRequiredDesc", "status.ResidenceOrderDesc", "status.ReportingOrderDesc", "status.BailedTimePlaceDesc", "status.StatusPartyDesc", "status.TotalAmountOfFinancialCondition", "status.TotalSecurity", "adjDateOfApplication", "adjDateOfHearing", "adjPartyMakingApp", "adjDirections", "adjDateOfDecision", "adjOutcome", "adjdatePartiesNotified", "adjournmentFlag"))
 
     # Get all columns in m3 not in m7
     m3_new_columns = [col_name for col_name in pivoted_df.columns if col_name not in adjourned_withdrawal_new_df.columns]
@@ -2828,10 +2843,10 @@ def stg_m3_m7():
     #replaced m7 with adjournmentdf
     status_tab = adjourned_withdrawal_new_df.alias("m7").join(
         pivoted_df.select("CaseNo", "StatusId", *m3_new_columns).alias("m3"),
-        (adjourned_withdrawal_new_df.CaseNo == pivoted_df.CaseNo) &
-        (adjourned_withdrawal_new_df.StatusId == pivoted_df.StatusId),
-        how = "left"
-    ).drop(pivoted_df.CaseNo, pivoted_df.StatusId)
+        (col("m7.CaseNo") == col("m3.CaseNo")) &
+        (col("m7.StatusId") == col("m3.StatusId")),
+        how="left"
+    ).drop(col("m3.CaseNo"), col("m3.StatusId"))
 
     # create a nested list for the stausus table (m7_m3 tables)
     status_tab_sorted = status_tab.orderBy(col("m7.CaseNo"), col("StatusId").desc())
@@ -2851,6 +2866,7 @@ def stg_m3_m7():
             sort_udf(collect_list(status_tab_struct)).alias("all_status_objects")
         )
     )
+
 
     return m7_m3_statuses
 
@@ -3093,30 +3109,39 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 @dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     
-
     m1_m2_m3_m4_m5_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m7_m8")
-
-
-    # # Linked Files
-
-    # read in all tables
-
     m6 = dlt.read("silver_sbail_m6_link")
 
-
-    m6_linked_files_df = m6.groupBy(col("CaseNo")).agg(
-        collect_list(
+    link_details = (
+    m6
+    .groupBy("LinkNo").agg(collect_set(
             struct(
-                col("LinkDetailComment"),
-                col("LinkNo"),
-                col("FullName"),
-            )).alias("linked_files_details"))
+                "CaseNo",
+                "FullName",
+                "LinkDetailComment")
+        ).alias("AllLinkedCases")))
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(m6_linked_files_df, "CaseNo", "left")
+    df_link_files = m6.join(link_details, on="LinkNo", how="left")
 
+    m6_link_files = df_link_files.withColumn(
+        "linked_files_details",
+        expr("""
+            filter(
+                AllLinkedCases,
+                x -> x.CaseNo <> CaseNo
+            )
+        """)
+    )
+
+    case_links = (
+        m6_link_files.groupBy("CaseNo").agg(
+            flatten(collect_list("linked_files_details")).alias("linked_files_details")
+        )
+    )
+
+    m1_m2_m3_m4_m5_m6_m7_m8_df = m1_m2_m3_m4_m5_m7_m8_df.join(case_links, "CaseNo", "left")
 
     return m1_m2_m3_m4_m5_m6_m7_m8_df
-
 
 # COMMAND ----------
 
@@ -3153,8 +3178,17 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
     # read in all tables
     case_surety = dlt.read("bronze_case_surety_query")
 
+    case_surety = case_surety.withColumn(
+                                    "Solicitor_new",
+                                    when(col("Solicitor") == 0, lit(None))
+                                    .when(col("Solicitor") == 1, lit("Yes"))
+                                    .when(col("Solicitor") == 2, lit("No"))
+                                ).withColumn("CaseSuretyDateLodged", date_format(col("CaseSuretyDateLodged"), "yyyy-MM-dd")
+                                ).withColumn("AmountOfFinancialCondition", round(col("AmountOfFinancialCondition"), 2)
+                                ).withColumn("AmountOfTotalSecurity", round(col("AmountOfTotalSecurity"), 2))
+
     # Group and aggregate financial condition details
-    financial_condition_df = case_surety.groupBy(col("CaseNo")).agg(
+    financial_condition_df = case_surety.groupBy(trim(col("CaseNo")).alias("CaseNo")).agg(
         collect_list(
             struct(
                 col("SuretyId"),
@@ -3171,7 +3205,7 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
                 col("CaseSuretyPostcode"),
                 col("CaseSuretyDateLodged"),
                 col("Location"),
-                col("Solicitor"),
+                col("Solicitor_new").alias("Solicitor"),
                 col("CaseSuretyEmail"),
                 col("CaseSuretyTelephone")
             )
@@ -3245,13 +3279,7 @@ respondent_mapping = {
         "{{POU}}":"PouShortName",
         "{{RRrespondent}}":None
     }
-}
-
-
-
-
-
-        
+}        
 
 # COMMAND ----------
 
@@ -3343,6 +3371,18 @@ def final_staging_sbails():
 
 # COMMAND ----------
 
+def resolve_address_line(cd_row, centre_col, appellant_col):
+    if cd_row.AppellantDetainedDesc in ("IMP", "IRC"):
+        return centre_col
+
+    elif cd_row.AppellantDetainedDesc == "No":
+        return appellant_col
+
+    elif cd_row.AppellantDetainedDesc == "Other":
+        return centre_col if centre_col is not None else appellant_col
+
+    return ""
+
 def create_html_column(row, html_template=bails_html_dyn):
     """
     For a given a single row, this function returns the final HTML string.
@@ -3360,7 +3400,6 @@ def create_html_column(row, html_template=bails_html_dyn):
         }
         for key, value in replacements.items():
             html = html.replace(key, str(value) if value is not None else "")
-
 
         # Replace placeholders with actual values
         for cd_row in row.Case_detail:
@@ -3390,13 +3429,13 @@ def create_html_column(row, html_template=bails_html_dyn):
 
             # Parties Tab - Applicant Section
             "{{Centre}}": cd_row.DetentionCentre,
-            "{{AddressLine1}}": cd_row.DetentionCentreAddress1,
-            "{{AddressLine2}}": cd_row.DetentionCentreAddress2,
-            "{{AddressLine3}}": cd_row.DetentionCentreAddress3,
-            "{{AddressLine4}}": cd_row.DetentionCentreAddress4,
-            "{{AddressLine5}}": cd_row.DetentionCentreAddress5,
-            "{{Postcode}}": cd_row.DetentionCentrePostcode,
-            "{{Country}}": cd_row.CountryOfTravelOrigin,
+            "{{AddressLine1}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress1, cd_row.AppellantAddress1),
+            "{{AddressLine2}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress2, cd_row.AppellantAddress2),
+            "{{AddressLine3}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress3, cd_row.AppellantAddress3),
+            "{{AddressLine4}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress4, cd_row.AppellantAddress4),
+            "{{AddressLine5}}": resolve_address_line(cd_row, cd_row.DetentionCentreAddress5, cd_row.AppellantAddress5),
+            "{{Postcode}}": resolve_address_line(cd_row, cd_row.DetentionCentrePostcode, cd_row.AppellantPostcode),
+            "{{Country}}": cd_row.Country if cd_row.AppellantDetained == 3 else "",
             "{{phone}}": cd_row.AppellantTelephone,
             "{{email}}": cd_row.AppellantEmail,
             "{{PrisonRef}}": cd_row.AppellantPrisonRef,
@@ -3428,7 +3467,15 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{RepDxNo1}}": cd_row.RepDxNo1 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo1,
             "{{RepDxNo2}}": cd_row.RepDxNo2 if cd_row.RepRepresentativeId == 0 else cd_row.RepDxNo2,
             "{{RepLAARefNo}}": "",
-            "{{RepLAACommission}}": cd_row.CaseRepLSCCommission
+            "{{RepLAACommission}}": cd_row.CaseRepLSCCommission,
+
+            ## File specific contact tab
+            "{{repRef}}": cd_row.FileSpecifcContact,
+            "{{repContact}}": cd_row.FileSpecificPhone,
+            "{{repPhone}}": cd_row.FileSpecificReference,
+            "{{repFax}}": cd_row.FileSpecificFax,
+            "{{repEmail}}": cd_row.FileSpecificEmail
+
         }
             for key, value in m1_replacement.items():
                 html = html.replace(key, str(value) if value is not None else "")
@@ -3477,7 +3524,7 @@ def create_html_column(row, html_template=bails_html_dyn):
         linked_files_code = ''
         if row.linked_files_details is not None:
             for likedfile in row.linked_files_details:
-                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.LinkNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
+                linked_files_line = f"<tr><td id='midpadding'></td><td id='midpadding'>{likedfile.CaseNo}</td><td id='midpadding'>{likedfile.FullName}</td><td id='midpadding'>{likedfile.LinkDetailComment}</td></tr>"
                 linked_files_code += linked_files_line + "\n"
             html = html.replace("{{LinkedFilesPlaceholder}}", linked_files_code)
         else:
@@ -3506,6 +3553,8 @@ def create_html_column(row, html_template=bails_html_dyn):
                 for resp_placeholder, resp_field_name in current_respondent_mapping.items():
                     if resp_field_name:
                         value = cd_row[resp_field_name]
+                        if value is None:
+                            value = ""
                     else:
                         value = ""
                     html = html.replace(resp_placeholder,str(value))
@@ -3683,11 +3732,9 @@ def create_html_column(row, html_template=bails_html_dyn):
         "{{SponsorEmail}}":"CaseSuretyEmail",
         "{{AmountOfFinancialCondition}}":"AmountOfFinancialCondition",
         "{{SponsorSolicitor}}":"Solicitor",
-        "{{SponserDateLodged}}":"CaseSuretyDateLodged",
+        "{{SponsorDateLodged}}":"CaseSuretyDateLodged",
         "{{SponsorLocation}}":"Location",
         "{{AmountOfSecurity}}": "AmountOfTotalSecurity"
-        
-
     }
 
         financial_condition_code = ""
@@ -3716,14 +3763,10 @@ def create_html_column(row, html_template=bails_html_dyn):
         for cd_row in row.Case_detail:
             html = html.replace("{{HearingNotes}}",str(cd_row.AppealCaseNote))
 
-
-
         return html
     
     except Exception as e:
         return f"Failure Error: {e}"
-    
-
 
 # Register the UDF
 create_html_udf = udf(create_html_column, StringType())
@@ -3849,8 +3892,7 @@ def generate_a360(row):
                 "bf_002": row.bf_002 or "",
                 "bf_003": row.bf_003 or "",
                 "bf_004": str(row.bf_004) or "",
-                "bf_005": row.bf_005 or "",
-                "retentionDate": str(row.retentionDate) or ""
+                "bf_005": row.bf_005 or ""
             }
         }
  

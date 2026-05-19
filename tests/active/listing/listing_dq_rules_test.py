@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions import listing_dq_rules
+from Databricks.ACTIVE.APPEALS.shared_functions.dq_rules import listing_dq_rules
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, expr
@@ -15,9 +15,10 @@ def spark():
             .getOrCreate()
     )
 
+
 @pytest.fixture(scope="session")
 def dq_checks():
-    return listing_dq_rules.add_checks({})
+    return listing_dq_rules.listingDQRules().get_checks()
 
 
 class TestListingDQChecks():

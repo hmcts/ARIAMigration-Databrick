@@ -906,7 +906,7 @@
                                         <th style="vertical-align: top; text-align: left; padding-left:5px">Typing type</th>
                                     </tr>
                                     <tr>
-                                        <td style="text-align: center;"><input type="checkbox" id="file" disabled><label for="file">Files</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        <td style="text-align: center;"><input type="checkbox" id="file" checked><label for="file">Files</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                             <input type="checkbox" id="miscellaneous" disabled><label for="miscellaneous">Miscellaneous</label></td> 
                                     </tr>
                                 </tbody></table>
@@ -920,9 +920,9 @@
                                     </tr>
                                     <tr>
                                         <td id="labels"><label for="caseNo">File number : </label></td>
-                                        <td><input type="text" id="caseNo" value="" readonly></td>
+                                        <td><input type="text" id="caseNo" value="{{CaseNo}}" readonly></td>
                                         <td id="labels"><label for="fullName">Name : </label></td>
-                                        <td><input type="text" id="fullName" size="70" value=""readonly></td>
+                                        <td><input type="text" id="fullName" size="70" value="{{AppellantFullName}}"readonly></td>
                                     </tr>
                                     <tr>
                                         <td id="labels" style="vertical-align: top;"><label for="statusTypes">Status types : </label></td>
@@ -933,7 +933,7 @@
                                                     <th style="width:40%; text-align: left;">Status</th>
                                                     <th style="width:40%; text-align: left;">Outcome</th>
                                                 </tr>
-                                                <!-- {{StatusTypesPlaceHolder}} -->
+                                                {{StatusTypesPlaceHolder}}
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
                                                 <tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>
@@ -1653,16 +1653,16 @@
                                 <td style="vertical-align: top;" colspan="2">
                                     <table id="table7" style="vertical-align: top;">
                                         <tbody><tr>
-                                            <td id="labels"><label for="1stTierFee">1st Tier Fee : </label></td><td><input type="text" id="1stTierFee" name="1stTierFee" value="{{FirstTierFee}}" readonly></td>
-                                            <td id="labels"><label for="totalPaymentsReceived">Total Payments Received : </label></td><td><input type="text" id="totalPaymentsReceived" name="totalPaymentsReceived" value="{{TotalPaymentsReceived}}" readonly></td>
+                                            <td id="labels"><label for="1stTierFee">1st Tier Fee : </label></td><td><input type="text" id="1stTierFee" name="1stTierFee" value="£{{FirstTierFee}}" readonly></td>
+                                            <td id="labels"><label for="totalPaymentsReceived">Total Payments Received : </label></td><td><input type="text" id="totalPaymentsReceived" name="totalPaymentsReceived" value="£{{TotalPaymentsReceived}}" readonly></td>
                                         </tr>
                                         <tr>
-                                            <td id="labels"><label for="totalFeeAdj">Total Fee Adjustments : </label></td><td><input type="text" id="totalFeeAdj" name="totalFeeAdj" value="{{TotalFeeAdjustments}}" readonly></td>
-                                            <td id="labels"><label for="totalFeeAdj">Total Payment Adjustments : </label></td><td><input type="text" id="totalPaymentAdj" name="totalPaymentAdj" value="{{TotalPaymentAdjustments}}"readonly></td>
+                                            <td id="labels"><label for="totalFeeAdj">Total Fee Adjustments : </label></td><td><input type="text" id="totalFeeAdj" name="totalFeeAdj" value="£{{TotalFeeAdjustments}}" readonly></td>
+                                            <td id="labels"><label for="totalFeeAdj">Total Payment Adjustments : </label></td><td><input type="text" id="totalPaymentAdj" name="totalPaymentAdj" value="£{{TotalPaymentAdjustments}}"readonly></td>
                                         </tr>
                                         <tr>
-                                            <td id="labels"><label for="totalFeeDue"><strong>Total Fee Due : </strong></label></td><td><input type="text" id="totalFeeDue" name="totalFeeDue" value="{{TotalFeeDue}}" readonly></td>
-                                            <td id="labels"><label for="balanceDue"><strong>Balance Due : </strong></label></td><td><input type="text" id="balanceDue" name="balanceDue" value="{{BalanceDue}}" readonly></td>
+                                            <td id="labels"><label for="totalFeeDue"><strong>Total Fee Due : </strong></label></td><td><input type="text" id="totalFeeDue" name="totalFeeDue" value="£{{TotalFeeDue}}" readonly></td>
+                                            <td id="labels"><label for="balanceDue"><strong>Balance Due : </strong></label></td><td><input type="text" id="balanceDue" name="balanceDue" value="£{{BalanceDue}}" readonly></td>
                                         </tr>
                                     </tbody></table>
                                 </td>

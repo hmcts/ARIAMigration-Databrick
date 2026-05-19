@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    pipeline_pl_caseUnderReview_gold:
+      name: PL_caseUnderReview_gold
+      configuration:
+        pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
+      clusters:
+        - label: default
+          node_type_id: Standard_D4ads_v5
+          driver_node_type_id: Standard_D4ads_v5
+          autoscale:
+            min_workers: 1
+            max_workers: 8
+            mode: ENHANCED
+      libraries:
+        - notebook:
+            path: "/Workspace/live/ACTIVE/APPEALS/GOLD_CASE_UNDER_REVIEW_JSON"
+      target: caseUnderReview_gold
+      development: true

@@ -1435,12 +1435,12 @@ def test_caseFlags(test_df):
         # Output
         if len(case_flag_mismatch_dfs) > 0:
             ac_case_flag = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), case_flag_mismatch_dfs)
-            return ac_case_flag, TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
+            return TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
         else:
-            return None, TestResult("caseFlags","PASS", "caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
+            return TestResult("caseFlags","PASS", "caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
 
     except Exception as e:
-        return None, TestResult("caseFlags", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("caseFlags", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 #######################
@@ -4419,9 +4419,9 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
             )
 
             if ac_ref.count() != 0:
-                return ac_ref, TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
             else:
-                return None, TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:

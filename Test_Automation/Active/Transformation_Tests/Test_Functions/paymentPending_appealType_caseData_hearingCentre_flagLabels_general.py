@@ -72,11 +72,11 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
     # -- hearingCentre --
     check_fields = ["hearingCentre", "staffLocation", "caseManagementLocation", "selectedHearingCentreRefData", "applicationChangeDesignatedHearingCentre"]
     if not all(field in fields_to_exclude for field in check_fields):
-        hc_result = pp_tests.hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, state_under_test)
-        if isinstance(hc_result, list):
-            all_test_results.extend(hc_result)
+        audit_df, hc_results = pp_tests.hearing_centre_field_test(M1_silver, M2_silver, H_silver, bhc, json_data, state_under_test)
+        if isinstance(hc_results, list):
+            all_test_results.extend(hc_results)
         else:
-            all_test_results.append(hc_result)
+            all_test_results.append(hc_results)
 
     # -- flagLabels --
     test_data_setup = None

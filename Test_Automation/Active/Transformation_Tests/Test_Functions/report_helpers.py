@@ -16,6 +16,20 @@ from dataclasses import asdict
 import pandas as pd
 
 
+def _result_to_row(r):
+    try:
+        return asdict(r)
+    except TypeError as e:
+        print(f"REPORT_WRITER_WARNING: non-dataclass item  type={type(r).__name__}  error={e}  value={repr(r)[:300]}")
+        return {
+            "test_name":       f"<NON_DATACLASS type={type(r).__name__}>",
+            "test_field":      "",
+            "test_from_state": "",
+            "status":          "ERROR",
+            "message":         f"Non-dataclass item reached report writer (asdict failed). type={type(r).__name__}  value={repr(r)[:1500]}",
+        }
+
+
 # --------------------------------------------------------------------
 # Schemas (runs table has NO count columns — counts are derived from
 # the results table on demand in reports).
@@ -162,7 +176,7 @@ def build_report_folder(test_results_path, state_under_test, timestamp=None):
 def write_csv(all_test_results, state_under_test, folder, timestamp):
     safe = _safe_state_name(state_under_test)
     path = os.path.join(folder, f"test_results_{safe}_{timestamp}.csv")
-    df = pd.DataFrame([asdict(r) for r in all_test_results])
+    df = pd.DataFrame([_result_to_row(r) for r in all_test_results])
     df.to_csv(path, index=False)
     return path
 
@@ -170,7 +184,7 @@ def write_csv(all_test_results, state_under_test, folder, timestamp):
 def write_xlsx(all_test_results, state_under_test, folder, timestamp):
     safe = _safe_state_name(state_under_test)
     path = os.path.join(folder, f"test_results_{safe}_{timestamp}.xlsx")
-    df = pd.DataFrame([asdict(r) for r in all_test_results])
+    df = pd.DataFrame([_result_to_row(r) for r in all_test_results])
     try:
         df.style.applymap(_style_status, subset=["status"]).to_excel(
             path, index=False, engine="openpyxl")
@@ -182,7 +196,7 @@ def write_xlsx(all_test_results, state_under_test, folder, timestamp):
 def write_html(all_test_results, state_under_test, folder, timestamp, counts=None):
     safe = _safe_state_name(state_under_test)
     path = os.path.join(folder, f"test_results_{safe}_{timestamp}.html")
-    df = pd.DataFrame([asdict(r) for r in all_test_results])
+    df = pd.DataFrame([_result_to_row(r) for r in all_test_results])
 
     if counts is None:
         counts = {"PASS": 0, "FAIL": 0, "NO_DATA": 0, "ERROR": 0, "TOTAL": len(all_test_results)}

@@ -3,7 +3,7 @@ from models.test_result import TestResult
 from Test_Functions.test_helpers import classify_all
 
 
-def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bll, fields_to_exclude):
+def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bll, spark, fields_to_exclude):
     all_test_results = []
 
     # -- hearingResponse --

@@ -103,9 +103,12 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
                     # Mark processed if success
                     if result.get("Status") != "SUCCESS":
-                        await idempotency_blob.delete_blob()
-                        logger.info(f"[IDEMPOTENCY] Removing idempotency blob for failed processing of: {caseNo}")
-                        
+                        try:
+                            await idempotency_blob.delete_blob()
+                            logger.info(f"[IDEMPOTENCY] Removing idempotency blob for failed processing of: {caseNo}")
+                        except Exception as delete_error:
+                            logger.warning(f"[IDEMPOTENCY] Failed to delete blob for {caseNo}: {delete_error}")
+
                     result_json = json.dumps(result)
                     try:
                         event_data_batch.add(EventData(result_json))

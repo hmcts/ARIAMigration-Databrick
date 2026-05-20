@@ -1,3 +1,4 @@
+import json
 import requests
 from azure.storage.blob import BlobServiceClient
 from datetime import datetime, timezone
@@ -140,7 +141,14 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
     # submit case
     print("Starting CDAM upload")
     upload_document_response = upload_document(cdam_base_url, jid, ctid, caseNo, file_name, file_binary_in_bytes, file_content_type, idam_token, s2s_token)
-    print(f"CDAM upload response = {upload_document_response}")
+
+    try:
+        print(f"CDAM upload for case {caseNo}: {json.dumps(upload_document_response.json(), indent=2)}")
+    except Exception:
+        try:
+            print(upload_document_response.text)
+        except Exception:
+            print(f"Unable to parse upload_document_response for case {caseNo}")
 
     if upload_document_response is None or upload_document_response.status_code not in {201, 200}:
         if upload_document_response is not None:

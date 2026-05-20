@@ -2,6 +2,14 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
+SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
+
+
+@pytest.fixture(autouse=True)
+def no_retry_sleep():
+    with patch(SLEEP_PATH):
+        yield
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -137,10 +145,7 @@ class TestProcessCaseValidationFailure:
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
         mock_submit.assert_not_called()
 
-    def test_validate_response_none_raises(self):
-        # The None guard on validate_case_response occurs after a print statement
-        # that accesses .status_code, so a None response currently raises
-        # AttributeError before reaching the guard. This test documents that behaviour.
+    def test_validate_response_none_returns_error(self):
         with (
             patch(PATCH_IDAM),
             patch(PATCH_S2S_MGR) as mock_s2s_mgr,
@@ -154,15 +159,17 @@ class TestProcessCaseValidationFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            with pytest.raises(AttributeError):
-                process_case(
-                    env="sbox",
-                    caseNo="CASE-003",
-                    payloadData={},
-                    runId="run-3",
-                    state="appealSubmitted",
-                    PR_REFERENCE="pr-123",
-                )
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-003",
+                payloadData={},
+                runId="run-3",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert "Case validation failed" in result["Error"]
 
 
 class TestProcessCaseSubmitFailure:

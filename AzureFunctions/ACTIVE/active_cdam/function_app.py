@@ -109,8 +109,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                     if result.get("Status") == "SUCCESS":
                         logger.info(f"CDAM upload document for: {caseNo} is successful.")
                     else:
-                        await idempotency_blob.delete_blob()
-                        logger.info(f"[IDEMPOTENCY][CDAM] Deleting idempotency blob: {caseNo}.")
+                        try:
+                            await idempotency_blob.delete_blob()
+                            logger.info(f"[IDEMPOTENCY][CDAM] Deleting idempotency blob: {caseNo}.")
+                        except Exception as delete_error:
+                            logger.warning(f"[IDEMPOTENCY][CDAM] Failed to delete blob for {caseNo}: {delete_error}")
 
                     result_json = json.dumps(result)
 

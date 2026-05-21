@@ -1943,6 +1943,9 @@ def cleanReferenceNumber(ref):
     8. Handling no reference number e.g., null or '' -> "999999999"
     """
 
+    if ref and re.fullmatch(r"X{2,32}", ref.strip().upper()):
+        return None
+
     if ref is None or ref == '' or ref.strip().upper() == 'NULL':
         return None
 

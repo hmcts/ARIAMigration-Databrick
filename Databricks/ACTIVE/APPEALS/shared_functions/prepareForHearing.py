@@ -1,22 +1,10 @@
-from datetime import datetime
-import re
-import string
-import pycountry
-import pandas as pd
-import json
-
-from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
-from . import AwaitingEvidenceRespondant_b as AERb
 from . import listing as L
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    max as spark_max, date_format, row_number, expr, nullif,
-    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp, transform, first, array_contains, rank, create_map, map_from_entries, map_from_arrays
+    row_number, nullif, coalesce, concat_ws, concat, trim, map_from_arrays
 )
 
 
@@ -391,8 +379,14 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
 ##########              hearingDetails          ###########
 ################################################################
 
-def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
-        # Define window partitioned by CaseNo and ordered by descending StatusId
+def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
+    # Prep listing location listItems
+    listing_location_list = array([
+        struct(lit(row.locationCode).cast("string").alias("code"), lit(row.locationLabel).cast("string").alias("label"))
+        for row in bronze_listing_location.collect()
+    ])
+
+    # Define window partitioned by CaseNo and ordered by descending StatusId
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     # Add row_number to get the row with the highest StatusId per CaseNo
@@ -409,13 +403,17 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
         how="left"
     ).withColumn(
         "listingLocation",
-        F.create_map(
-            F.lit("code"),
-            F.when(col("location.ListedCentre").isNull(), F.lit(None).alias("code"))
-                .otherwise(col("location.locationCode").alias("code")),
-            F.lit("label"),
-            F.when(col("location.ListedCentre").isNull(), F.lit(None).alias("code"))
-                .otherwise(col("location.locationLabel").alias("label")))
+            F.struct(
+                F.struct(
+                    F.when(col("location.ListedCentre").isNull(), F.lit(None))
+                        .otherwise(col("location.locationCode"))
+                        .alias("code"),
+                    F.when(col("location.ListedCentre").isNull(), F.lit(None))
+                         .otherwise(col("location.locationLabel"))
+                         .alias("label")
+                ).alias("value"),
+                listing_location_list.alias("list_items")
+            )
         ).withColumn(
             "listCaseHearingLength",
             F.array_min(
@@ -493,20 +491,27 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
         #         (F.col("TimeEstimate").cast("int") % 60).alias("minutes")
         #     )
         # )
+
+    hearingChannelListItems = array(
+        struct(lit("ONPPRS").cast("string").alias("code"), lit("On The Papers").cast("string").alias("label")),
+        struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label"))
+    )
+
     df_hearingDetails = (
         silver_m1.alias("m1")
         .join(content_df.alias("m3_content"), ["CaseNo"], "left")
         .withColumn(
             "hearingChannel",
-            F.create_map(
-                F.lit("code"),
-                F.when(col("m1.VisitVisaType") == 1, F.lit("ONPPRS"))
-                .when(col("m1.VisitVisaType") == 2, F.lit("INTER"))
-                .otherwise(F.lit(None).cast("string")),
-                F.lit("label"),
-                F.when(col("m1.VisitVisaType") == 1, F.lit("On The Papers"))
-                .when(col("m1.VisitVisaType") == 2, F.lit("In Person"))
-                .otherwise(F.lit(None).cast("string"))
+            F.struct(
+                F.struct(
+                    F.when(col("m1.VisitVisaType") == 1, F.lit("ONPPRS"))
+                        .when(col("m1.VisitVisaType") == 2, F.lit("INTER"))
+                        .otherwise(F.lit(None).cast("string")).alias("code"),
+                    F.when(col("m1.VisitVisaType") == 1, F.lit("On The Papers"))
+                        .when(col("m1.VisitVisaType") == 2, F.lit("In Person"))
+                        .otherwise(F.lit(None).cast("string")).alias("label")
+                ).alias("value"),
+                hearingChannelListItems.alias("list_items")
             )
         )
     .withColumn("witnessDetails",lit([]).cast("array<string>"))
@@ -606,12 +611,11 @@ def hearingDetails(silver_m1,silver_m3,bronze_listing_location):
                 col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
                 lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
 
-                # # listingLocation
-                
+                # listingLocation
                 # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
                 # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
                 # col("hd.listingLocation"),
-                # lit("Yes").alias("listingLocation_Transformed"),
+                # lit("Yes").alias("listingLocation_Transformed")
         )
     )
 

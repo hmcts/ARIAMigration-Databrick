@@ -60,13 +60,13 @@ def appealType_outputs(spark):
 
     # EA (CategoryId IN [47,48,49]) -> euSettlementScheme (AIP)
     ("EA/00004/2020", "EA", "AIP", "euSettlementScheme", "EU Settlement Scheme",
-     "EU Settlement Scheme", None),
+     "EU Settlement Scheme", ccd_dynamic_list("euSettlementScheme", "EU Settlement Scheme")),
 
     ("EA/00005/2020", "EA", "AIP", "euSettlementScheme", "EU Settlement Scheme",
-     "EU Settlement Scheme", None),
+     "EU Settlement Scheme", ccd_dynamic_list("euSettlementScheme", "EU Settlement Scheme")),
 
     ("EA/00006/2020", "EA", "AIP", "euSettlementScheme", "EU Settlement Scheme",
-     "EU Settlement Scheme", None),
+     "EU Settlement Scheme", ccd_dynamic_list("euSettlementScheme", "EU Settlement Scheme")),
 
     # HU -> refusalOfHumanRights
     ("HU/00007/2020", "HU", "LR", "refusalOfHumanRights", "Human rights",
@@ -95,7 +95,7 @@ def appealType_outputs(spark):
 
     # LP -> protection (AIP)
     ("LP/00012/2020", "LP", "AIP", "protection", "Protection",
-     "Refusal of protection claim", None),
+     "Refusal of protection claim", ccd_dynamic_list("protection", "Protection")),
 
     # LR -> revocationOfProtection
     ("LR/00013/2020", "LR", "LR", "revocationOfProtection", "Revocation",
@@ -104,7 +104,7 @@ def appealType_outputs(spark):
 
     # PA -> protection (AIP)
     ("PA/00014/2020", "PA", "AIP", "protection", "Protection",
-     "Refusal of protection claim", None),
+     "Refusal of protection claim", ccd_dynamic_list("protection", "Protection")),
 
     # RP -> revocationOfProtection
     ("RP/00015/2020", "RP", "LR", "revocationOfProtection", "Revocation",
@@ -195,7 +195,7 @@ def test_aip_cases_have_is_appeal_reference_available_yes(appealType_outputs):
         row = appealType_outputs[case_no]
         assert row["isAppealReferenceNumberAvailable"] == "Yes"
 
-def test_aip_cases_have_null_case_management_category(appealType_outputs):
+def test_aip_cases_has_case_management_category(appealType_outputs):
     aip_cases = [
         "EA/00004/2020",
         "EA/00005/2020",
@@ -206,7 +206,8 @@ def test_aip_cases_have_null_case_management_category(appealType_outputs):
 
     for case_no in aip_cases:
         row = appealType_outputs[case_no]
-        assert row["caseManagementCategory"] is None
+        assert row["caseManagementCategory"] is not None
+        assert row["caseManagementCategory"]["value"]["code"] == row["appealType"]
 
 def test_lr_cases_have_null_is_appeal_reference_available(appealType_outputs):
     lr_cases = [

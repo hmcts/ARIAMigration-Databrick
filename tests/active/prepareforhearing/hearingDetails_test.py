@@ -81,7 +81,7 @@ def hearingDetails_outputs(spark):
         ("LOC004", None, "Court4","Cov","7676 jgfd"),  
         ("LOC005", None, "Court5","Nor","954 bbb"),   
         ("LOC006", "xyz", "Court6","ply","456 mmm"),  
-        ]
+    ]
     
 
     df_m1 =  spark.createDataFrame(m1_data, m1_schema)
@@ -89,7 +89,7 @@ def hearingDetails_outputs(spark):
     df_loc =  spark.createDataFrame(loc_data, loc_schema)
 
     hearingDetails_content,_ = hearingDetails(df_m1,df_m3,df_loc)
-    results = {row["CaseNo"]: row.asDict() for row in hearingDetails_content.collect()}
+    results = {row["CaseNo"]: row.asDict(recursive=True) for row in hearingDetails_content.collect()}
     return results
 
 def test_listingLength(spark,hearingDetails_outputs):
@@ -106,9 +106,14 @@ def test_hearingChannel(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
 
-    assert results["CASE001"]["hearingChannel"] == {'code': 'ONPPRS', 'label': 'On The Papers'}
-    assert results["CASE002"]["hearingChannel"] == {'code': 'INTER', 'label': 'In Person'}
-    assert results["CASE006"]["hearingChannel"] == {'code': None, 'label': None}
+    hearing_channel_list_items = [
+        {'code': 'ONPPRS', 'label': 'On The Papers'},
+        {'code': 'INTER', 'label': 'In Person'}
+    ]
+
+    assert results["CASE001"]["hearingChannel"] == {'value': {'code': 'ONPPRS', 'label': 'On The Papers'}, 'list_items': hearing_channel_list_items}
+    assert results["CASE002"]["hearingChannel"] == {'value': {'code': 'INTER', 'label': 'In Person'}, 'list_items': hearing_channel_list_items}
+    assert results["CASE006"]["hearingChannel"] == {'value': {'code': None, 'label': None}, 'list_items': hearing_channel_list_items}
 
 def test_witnessDetails(spark,hearingDetails_outputs):
 
@@ -123,10 +128,20 @@ def test_listingLocation(spark,hearingDetails_outputs):
 
     results = hearingDetails_outputs
 
+    # Formatted version of loc_data
+    list_items = [
+        {"code": "123", "label": "Court1"},
+        {"code": "456", "label": "Court2"},
+        {"code": "789", "label": "Court3"},
+        {"code": None, "label": "Court4"},
+        {"code": None, "label": "Court5"},
+        {"code": "xyz", "label": "Court6"}
+    ]
+
     assert results["CASE001"]["listingLocation"] == None
-    assert results["CASE006"]["listingLocation"] == {'code': '789', 'label': 'Court3'}
-    assert results["CASE008"]["listingLocation"] == {'code': None, 'label': 'Court5'}
-    assert results["CASE011"]["listingLocation"] == {'code': None, 'label': None}
+    assert results["CASE006"]["listingLocation"] == {'value': {'code': '789', 'label': 'Court3'}, 'list_items': list_items}
+    assert results["CASE008"]["listingLocation"] == {'value': {'code': None, 'label': 'Court5'}, 'list_items': list_items}
+    assert results["CASE011"]["listingLocation"] == {'value': {'code': None, 'label': None}, 'list_items': list_items}
 
 def test_witness1InterpreterSignLanguage(spark,hearingDetails_outputs):
 

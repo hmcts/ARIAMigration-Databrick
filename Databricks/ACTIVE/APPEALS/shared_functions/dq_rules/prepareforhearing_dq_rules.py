@@ -134,8 +134,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: VisitVisaType = 1
         (
             VisitVisaType = 1 AND
-            element_at(hearingChannel, 'code') = 'ONPPRS' AND
-            element_at(hearingChannel, 'label') = 'On The Papers'
+            hearingChannel.value.code = 'ONPPRS' AND
+            hearingChannel.value.label = 'On The Papers'
         )
         )
         OR
@@ -143,8 +143,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: VisitVisaType = 2
         (
             VisitVisaType = 2 AND
-            element_at(hearingChannel, 'code') = 'INTER' AND
-            element_at(hearingChannel, 'label') = 'In Person'
+            hearingChannel.value.code = 'INTER' AND
+            hearingChannel.value.label = 'In Person'
         )
         )
         OR
@@ -152,8 +152,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: Other / NULL VisitVisaType → both code and label must be NULL
         (
             (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
-            element_at(hearingChannel, 'code') IS NULL AND
-            element_at(hearingChannel, 'label') IS NULL
+            hearingChannel.value.code IS NULL AND
+            hearingChannel.value.label IS NULL
         )
         )
         """)
@@ -167,8 +167,8 @@ class prepareForHearingDQRules(DQRulesBase):
         ListedCentre IS NULL
         OR
         (
-            listingLocation.code = locationCode AND
-            listingLocation.label = locationLabel
+            listingLocation.value.code = locationCode AND
+            listingLocation.value.label = locationLabel
         )
         )
         """)
@@ -178,7 +178,7 @@ class prepareForHearingDQRules(DQRulesBase):
         (
         ListedCentre IS NOT NULL
         AND
-        (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
+        (listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL)
         )
         """)
 

@@ -234,32 +234,38 @@ def ftpa(silver_m1, silver_m3,silver_c):
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38,26) & col("Outcome").isin(1,2))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    silver_m3_filtered_casestatus = silver_m3.filter((col("CaseStatus").isin(37, 38, 26)) & (col("Outcome").isin(1, 2)))
+    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"), col("CategoryId")).distinct()
 
-    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"),col("CategoryId")).distinct()
-    
+    join_df = (
+        silver_m3_filtered_casestatus.alias("m3")
+        .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
+        .withColumn(
+            "rn",
+            row_number().over(window_spec)
+        )
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
     ftpa_df = (
-        silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m2"),on="CaseNo",how="left")
-            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
+        silver_m1.alias("m1")
+            .join(join_df, on="CaseNo", how="left")
             .select(
                 col("CaseNo"),
                 date_format(
                     when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
-                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28)),
-                    # .otherwise(col("DecisionDate")),
+                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28))
+                    .otherwise(col("DecisionDate")),
                     "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )
-    )
+        )
 
     # Build the audit DataFrame
     ftpa_audit = (
         ftpa_df.alias("ftpa")
-            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
+            .join(join_df.alias("m3"), on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 array(
@@ -272,7 +278,7 @@ def ftpa(silver_m1, silver_m3,silver_c):
                 ).alias("ftpaApplicationDeadline_inputFields"),
                 array(
                     struct(
-                        col("c.CategoryId"),
+                        col("CategoryId"),
                         col("CaseStatus"),
                         col("DecisionDate"),
                         col("Outcome")

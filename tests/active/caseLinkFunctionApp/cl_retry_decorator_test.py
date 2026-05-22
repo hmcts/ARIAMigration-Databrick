@@ -1,11 +1,17 @@
+import asyncio
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator import retry_on_result
 
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.time.sleep"
+SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.asyncio.sleep"
+TO_THREAD_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.asyncio.to_thread"
 
 RETRYABLE = lambda r: isinstance(r, dict) and r.get("Status") == "ERROR"
+
+
+async def _fake_to_thread(func, *args, **kwargs):
+    return func(*args, **kwargs)
 
 
 def make_results_fn(*results):
@@ -31,8 +37,9 @@ def test_success_on_first_attempt_no_sleep():
     fn = make_results_fn("ok")
     decorated = retry_on_result(max_retries=3, retry_on=RETRYABLE)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        result = decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated())
 
     assert result == "ok"
     assert fn.call_count == 1
@@ -44,8 +51,9 @@ def test_no_retry_when_retry_on_is_none():
     fn = make_results_fn({"Status": "ERROR"})
     decorated = retry_on_result(max_retries=3, retry_on=None)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        result = decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated())
 
     assert result == {"Status": "ERROR"}
     assert fn.call_count == 1
@@ -57,8 +65,9 @@ def test_retries_on_error_result_then_succeeds():
     fn = make_results_fn({"Status": "ERROR"}, {"Status": "ERROR"}, {"Status": "SUCCESS"})
     decorated = retry_on_result(max_retries=3, retry_on=RETRYABLE, base_delay=1.0, jitter=False)(fn)
 
-    with patch(SLEEP_PATH):
-        result = decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock), \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated())
 
     assert result == {"Status": "SUCCESS"}
     assert fn.call_count == 3
@@ -69,8 +78,9 @@ def test_returns_last_error_result_after_all_retries_exhausted():
     fn = make_results_fn(*[{"Status": "ERROR"} for _ in range(3)])
     decorated = retry_on_result(max_retries=2, retry_on=RETRYABLE, jitter=False)(fn)
 
-    with patch(SLEEP_PATH):
-        result = decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock), \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated())
 
     assert result["Status"] == "ERROR"
     assert fn.call_count == 3
@@ -81,8 +91,9 @@ def test_total_call_count_equals_max_retries_plus_one():
     fn = make_results_fn(*[{"Status": "ERROR"} for _ in range(5)])
     decorated = retry_on_result(max_retries=4, retry_on=RETRYABLE, jitter=False)(fn)
 
-    with patch(SLEEP_PATH):
-        decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock), \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        asyncio.run(decorated())
 
     assert fn.call_count == 5
 
@@ -92,8 +103,9 @@ def test_zero_retries_returns_error_result_immediately():
     fn = make_results_fn({"Status": "ERROR"})
     decorated = retry_on_result(max_retries=0, retry_on=RETRYABLE)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        result = decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated())
 
     assert result["Status"] == "ERROR"
     assert fn.call_count == 1
@@ -107,9 +119,10 @@ def test_exceptions_are_not_caught():
 
     decorated = retry_on_result(max_retries=3, retry_on=RETRYABLE)(fn)
 
-    with patch(SLEEP_PATH):
+    with patch(SLEEP_PATH, new_callable=AsyncMock), \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
         with pytest.raises(ValueError, match="boom"):
-            decorated()
+            asyncio.run(decorated())
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +134,9 @@ def test_no_sleep_after_final_failed_attempt():
     fn = make_results_fn(*[{"Status": "ERROR"}] * 3)
     decorated = retry_on_result(max_retries=2, retry_on=RETRYABLE, base_delay=1.0, jitter=False)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        asyncio.run(decorated())
 
     # 3 attempts → sleep after attempt 0 and 1 only
     assert mock_sleep.call_count == 2
@@ -133,8 +147,9 @@ def test_exponential_backoff_delay_without_jitter():
     fn = make_results_fn(*[{"Status": "ERROR"}] * 4)
     decorated = retry_on_result(max_retries=3, retry_on=RETRYABLE, base_delay=1.0, max_delay=999, jitter=False)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        asyncio.run(decorated())
 
     actual_delays = [c.args[0] for c in mock_sleep.call_args_list]
     assert actual_delays == [1.0, 2.0, 4.0]
@@ -145,8 +160,9 @@ def test_delay_capped_at_max_delay():
     fn = make_results_fn(*[{"Status": "ERROR"}] * 6)
     decorated = retry_on_result(max_retries=5, retry_on=RETRYABLE, base_delay=10.0, max_delay=15.0, jitter=False)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        asyncio.run(decorated())
 
     for c in mock_sleep.call_args_list:
         assert c.args[0] <= 15.0
@@ -157,8 +173,9 @@ def test_jitter_delay_within_expected_range():
     fn = make_results_fn({"Status": "ERROR"}, {"Status": "SUCCESS"})
     decorated = retry_on_result(max_retries=1, retry_on=RETRYABLE, base_delay=4.0, max_delay=999, jitter=True)(fn)
 
-    with patch(SLEEP_PATH) as mock_sleep:
-        decorated()
+    with patch(SLEEP_PATH, new_callable=AsyncMock) as mock_sleep, \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        asyncio.run(decorated())
 
     actual_delay = mock_sleep.call_args_list[0].args[0]
     # base_delay * 2^0 = 4.0; jitter range: [2.0, 4.0]
@@ -180,8 +197,9 @@ def test_passes_args_and_kwargs_to_wrapped_function():
 
     decorated = retry_on_result()(fn)
 
-    with patch(SLEEP_PATH):
-        result = decorated(1, 2, key="val")
+    with patch(SLEEP_PATH, new_callable=AsyncMock), \
+            patch(TO_THREAD_PATH, new=_fake_to_thread):
+        result = asyncio.run(decorated(1, 2, key="val"))
 
     assert result == "result"
     assert received["args"] == (1, 2)

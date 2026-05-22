@@ -1,10 +1,16 @@
 import json
 import requests
 from datetime import datetime, timezone
-try:
-    from .retry_decorator import retry_on_result
-except ImportError:
-    from retry_decorator import retry_on_result
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
+
+
+def _compact(value) -> str:
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, indent=2)
+    else:
+        text = str(value)
+    return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+
 
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
@@ -34,7 +40,7 @@ def get_case_details(ccd_base_url, uid, jid, ctid, cid, idam_token, s2s_token):
     }
     try:
         response = requests.get(get_case_url, headers=headers)
-        print(f"🔢 Get Case Details Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Get Case Details Response status: {response.status_code}:{_compact(response.text)}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {get_case_url}: {e}")
@@ -53,7 +59,7 @@ def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_to
     }
     try:
         response = requests.get(start_event_url, headers=headers)
-        print(f"🔢 Start Case Event Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Start Case Event Response status: {response.status_code}:{_compact(response.text)}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_event_url}: {e}")
@@ -85,11 +91,11 @@ def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadD
             "ignore_warning": True,
         }
 
-        print(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
+        print(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(validate_case_url, headers=headers, json=json_object)
 
-        print(f"🔢 Validate Response for {cid} = {response.status_code}: {response.text}")
+        print(f"🔢 Validate Response for {cid} = {response.status_code}: {_compact(response.text)}")
         return response
 
     except Exception as e:
@@ -124,11 +130,11 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
             "ignore_warning": True,
         }
 
-        print(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {headers} json = {json_object}\n")
+        print(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(submit_event_url, headers=headers, json=json_object)
 
-        print(f"🔢 Submit Response status for {cid}: {response.status_code}:{response.text}\n")
+        print(f"🔢 Submit Response status for {cid}: {response.status_code}:{_compact(response.text)}")
         return response
 
     except Exception as e:
@@ -136,13 +142,31 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         return None
 
 
-@retry_on_result(
-    max_retries=2,
-    base_delay=30,
-    max_delay=60,
-    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
+def _log_retry(retry_state):
+    result = retry_state.outcome.result() if retry_state.outcome else {}
+    error = result.get("Error", "") if isinstance(result, dict) else ""
+    print(
+        f"Retrying process_event — attempt {retry_state.attempt_number} failed "
+        f"(sleeping {retry_state.next_action.sleep:.0f}s): {error}"
+    )
+
+
+def _is_retryable(result):
+    RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+    if not (isinstance(result, dict) and result.get("Status") == "ERROR"):
+        return False
+    error = result.get("Error", "")
+    return any(f"failed: {code}" in error for code in RETRYABLE_STATUS_CODES)
+
+
+@retry(
+    retry=retry_if_result(_is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(min=30, max=60),
+    before_sleep=_log_retry,
+    retry_error_callback=lambda retry_state: retry_state.outcome.result(),
 )
-def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
+async def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
     print(f"Starting processing case for {ccdReference}")
 
     startDateTime = datetime.now(timezone.utc).isoformat()
@@ -244,10 +268,10 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
     try:
-        print(f"Validation response for case {ccdReference}: {json.dumps(validate_case_response.json(), indent=2)}")
+        print(f"Validation response for case {ccdReference}: {_compact(validate_case_response.json())}")
     except Exception:
         try:
-            print(validate_case_response.text)
+            print(_compact(validate_case_response.text))
         except Exception:
             print(f"Unable to parse validate_case_response for case {ccdReference}")
 
@@ -280,10 +304,10 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
     try:
-        print(f"Submit response for case {ccdReference}: {json.dumps(submit_case_response.json(), indent=2)}")
+        print(f"Submit response for case {ccdReference}: {_compact(submit_case_response.json())}")
     except Exception:
         try:
-            print(submit_case_response.text)
+            print(_compact(submit_case_response.text))
         except Exception:
             print(f"Unable to parse submit_case_response for case {ccdReference}")
 

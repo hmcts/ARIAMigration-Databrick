@@ -1,5 +1,6 @@
+import asyncio
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cdamFunctions does not hit Key Vault.
@@ -25,7 +26,6 @@ def mock_response(status_code, json_data=None, text=""):
 
 
 MODULE = "AzureFunctions.ACTIVE.active_cdam.cdamFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_cdam.retry_decorator.time.sleep"
 
 UPLOAD_COMMON = dict(
     cdam_base_url="http://ccd-case-document-am-api-aat.service.core-compute-aat.internal",
@@ -145,8 +145,7 @@ def test_upload_document_returns_non_201_response(mock_post):
 
 @pytest.fixture(autouse=True)
 def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
+    with patch("asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
@@ -180,7 +179,7 @@ def test_process_event_idam_token_failure_returns_error():
     with patch(f"{MODULE}.idam_token_mgr") as mock_idam:
         mock_idam.get_token.side_effect = Exception("IDAM unreachable")
 
-        result = process_event(**PROCESS_DEFAULTS)
+        result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "IDAM" in result["Error"] or "s2s" in result["Error"]
@@ -195,7 +194,7 @@ def test_process_event_s2s_token_failure_returns_error():
         mock_idam.get_token.return_value = ("tok", "uid")
         mock_s2s.get_token.side_effect = Exception("S2S unreachable")
 
-        result = process_event(**PROCESS_DEFAULTS)
+        result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
@@ -207,7 +206,7 @@ def test_process_event_s2s_token_failure_returns_error():
 
 def test_process_event_invalid_env_raises_value_error(mock_token_managers, mock_blob_client):
     with pytest.raises(ValueError, match="Invalid environment"):
-        process_event(
+        asyncio.run(process_event(
             env="invalid_env",
             caseNo="1234567890123456",
             runId="run-001",
@@ -215,7 +214,7 @@ def test_process_event_invalid_env_raises_value_error(mock_token_managers, mock_
             file_url="https://storage.blob.core.windows.net/container/blob",
             file_content_type="text/html",
             storage_credential=MagicMock(),
-        )
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +226,7 @@ def test_process_event_blob_read_failure_returns_error():
     with patch(f"{MODULE}.BlobServiceClient") as mock_blob_cls:
         mock_blob_cls.side_effect = Exception("Blob storage unavailable")
 
-        result = process_event(**PROCESS_DEFAULTS)
+        result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "blob" in result["Error"].lower() or "Failed" in result["Error"]
@@ -243,7 +242,7 @@ def test_process_event_blob_read_failure_returns_error():
 def test_process_event_upload_returns_none_returns_error(mock_upload, mock_blob_client):
     mock_upload.return_value = None
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "No response" in result["Error"]
@@ -254,7 +253,7 @@ def test_process_event_upload_returns_none_returns_error(mock_upload, mock_blob_
 def test_process_event_upload_non_2xx_returns_error(mock_upload, mock_blob_client):
     mock_upload.return_value = mock_response(500, text="Internal Server Error")
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "500" in result["Error"]
@@ -265,7 +264,7 @@ def test_process_event_upload_non_2xx_returns_error(mock_upload, mock_blob_clien
 def test_process_event_upload_400_returns_error(mock_upload, mock_blob_client):
     mock_upload.return_value = mock_response(400, text="Bad Request")
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "400" in result["Error"]
@@ -284,7 +283,7 @@ def test_process_event_success_with_201(mock_upload, mock_blob_client):
         json_data={"links": {"self": {"href": doc_href}}},
     )
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "SUCCESS"
     assert result["Error"] is None
@@ -301,7 +300,7 @@ def test_process_event_success_with_200(mock_upload, mock_blob_client):
         json_data={"links": {"self": {"href": doc_href}}},
     )
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "SUCCESS"
 
@@ -312,7 +311,7 @@ def test_process_event_result_contains_cdam_response(mock_upload, mock_blob_clie
     cdam_resp = {"links": {"self": {"href": "http://example.com/doc"}}}
     mock_upload.return_value = mock_response(201, json_data=cdam_resp)
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["CDAMResponse"] == cdam_resp
 
@@ -326,7 +325,7 @@ def test_process_event_passes_idam_token_string_not_tuple(mock_upload, mock_blob
         json_data={"links": {"self": {"href": "http://example.com/doc"}}},
     )
 
-    process_event(**PROCESS_DEFAULTS)
+    asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     # upload_document is called positionally; idam_token is at index 7 after the
     # new content_type arg was inserted at index 6.
@@ -346,7 +345,7 @@ def test_process_event_forwards_file_content_type(mock_upload, mock_blob_client)
         json_data={"links": {"self": {"href": "http://example.com/doc"}}},
     )
 
-    process_event(**{**PROCESS_DEFAULTS, "file_content_type": "application/pdf"})
+    asyncio.run(process_event(**{**PROCESS_DEFAULTS, "file_content_type": "application/pdf"}))
 
     call_args = mock_upload.call_args.args
     # content_type is the 7th positional arg (index 6)
@@ -361,7 +360,7 @@ def test_process_event_result_has_start_and_end_datetime(mock_upload, mock_blob_
         json_data={"links": {"self": {"href": "http://example.com/doc"}}},
     )
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert "StartDateTime" in result
     assert "EndDateTime" in result

@@ -1,4 +1,3 @@
-import asyncio
 import azure.functions as func
 import logging
 import json
@@ -92,7 +91,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.warning(f"[IDEMPOTENCY][CASELINK] Skipping in progress case {ccdReference}.")
                         continue
 
-                    result = await asyncio.to_thread(process_event, ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
+                    result = await process_event(ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
 
                     # Skip if marked for SKIPPED
                     if result.get("Status") == "SKIPPED":

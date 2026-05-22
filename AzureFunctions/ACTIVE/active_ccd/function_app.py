@@ -1,4 +1,3 @@
-import asyncio
 import azure.functions as func
 import logging
 import json
@@ -98,7 +97,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         continue
 
                     # Process the file
-                    result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
+                    result = await process_case(ENV, caseNo, data, run_id, state, PR_REFERENCE)
                     result["StartDateTime"] = start_datetime
 
                     # Mark processed if success

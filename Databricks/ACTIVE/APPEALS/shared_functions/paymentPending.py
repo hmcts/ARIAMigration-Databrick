@@ -27,7 +27,6 @@ from uk_postcodes_parsing import fix, postcode_utils
 # AppealType grouping
 def appealType(silver_m1):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
-    lr_condition = (col("dv_representation") == "LR") & (col("lu_appealType").isNotNull())
     aip_condition = (col("dv_representation") == "AIP") & (col("lu_appealType").isNotNull())
 
     df = silver_m1.select(
@@ -49,7 +48,7 @@ def appealType(silver_m1):
             col("lu_appealTypeDescription")
         ).otherwise(None).alias("appealTypeDescription"),
         when(
-            lr_condition,
+            conditions,
             col("lu_caseManagementCategory")
         ).otherwise(None).alias("caseManagementCategory"),
         when(

@@ -107,8 +107,11 @@ def test_hearingChannel(spark,hearingDetails_outputs):
     results = hearingDetails_outputs
 
     hearing_channel_list_items = [
+        {'code': 'INTER', 'label': 'In Person'},
+        {'code': 'NA', 'label': 'Not in Attendance'},
         {'code': 'ONPPRS', 'label': 'On The Papers'},
-        {'code': 'INTER', 'label': 'In Person'}
+        {'code': 'TEL', 'label': 'Telephone'},
+        {'code': 'VID', 'label': 'Video'}
     ]
 
     assert results["CASE001"]["hearingChannel"] == {'value': {'code': 'ONPPRS', 'label': 'On The Papers'}, 'list_items': hearing_channel_list_items}

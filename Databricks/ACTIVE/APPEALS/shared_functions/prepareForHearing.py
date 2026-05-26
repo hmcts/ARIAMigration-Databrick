@@ -493,8 +493,11 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         # )
 
     hearingChannelListItems = array(
+        struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label")),
+        struct(lit("NA").cast("string").alias("code"), lit("Not in Attendance").cast("string").alias("label")),
         struct(lit("ONPPRS").cast("string").alias("code"), lit("On The Papers").cast("string").alias("label")),
-        struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label"))
+        struct(lit("TEL").cast("string").alias("code"), lit("Telephone").cast("string").alias("label")),
+        struct(lit("VID").cast("string").alias("code"), lit("Video").cast("string").alias("label"))
     )
 
     df_hearingDetails = (

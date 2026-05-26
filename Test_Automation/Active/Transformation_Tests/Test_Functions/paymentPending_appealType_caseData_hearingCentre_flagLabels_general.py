@@ -58,7 +58,6 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
          if "recordedOutOfTimeDecision" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac1(json_data, M3_bronze, M1_bronze))
               all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac2(json_data, M3_bronze, M1_bronze))
-              all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac3(json_data, M3_bronze, M1_bronze))
 
          if "applicationOutOfTimeExplanation" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_applicationOutOfTimeExplanation(json_data, M1_bronze, M3_bronze))

@@ -5065,9 +5065,9 @@ def test_submissionOutOfTime_ac3(test_df):
         return TestResult("submissionOutOfTime", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#recordedOutOfTimeDecision - If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
-#######################    
-# If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
+# recordedOutOfTimeDecision (paymentPending / appealSubmitted only)
+# Rule: IF M1.OutOfTimeIssue == 1 AND M3.Outcome IS NOT NULL for MAX(StatusId) -> "Yes" ELSE omitted
+#######################
 def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
     try:
         try:
@@ -5087,44 +5087,37 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
                 "OutOfTimeIssue"
             )
         except Exception as e:
-            error_message = str(e)        
+            error_message = str(e)
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
         if test_df != None:
-            #Check we have Records To test
-            if test_df.filter(
-                (col("OutOfTimeIssue") == 1) &
-                (col("Outcome") != 0)
-                ).count() == 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-            
-            # Partition by Appeal, Order by desc StatusId
-            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
-                F.desc("StatusId")
-            )
-
-            # Select most relevant records
+            status_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
             test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
 
-            # If M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes
+            if test_df.filter(
+                (col("OutOfTimeIssue") == 1) &
+                (col("Outcome").isNotNull())
+                ).count() == 0:
+                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
             ac = test_df.filter(
-                (col("OutOfTimeIssue") == 1) & 
-                (col("Outcome") != 0) & 
-                (col("recordedOutOfTimeDecision") != "Yes")
+                (col("OutOfTimeIssue") == 1) &
+                (col("Outcome").isNotNull()) &
+                ((col("recordedOutOfTimeDecision") != "Yes") | (col("recordedOutOfTimeDecision").isNull()))
             )
 
             if ac.count() != 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue is 1 + M3.Outcome != 0 and recordedOutOfTimeDecision != Yes", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue == 1 AND M3.Outcome IS NOT NULL but recordedOutOfTimeDecision != 'Yes'", test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue is 1 + M3.Outcome != 0 have recordedOutOfTimeDecision = Yes", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue == 1 AND M3.Outcome IS NOT NULL have recordedOutOfTimeDecision = 'Yes'", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
+        error_message = str(e)
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
-# If OutOfTimeIssue is 1 + Outcome = 0 and recordedOutOfTimeDecision is not omitted
-def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
+
+
+def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
     try:
         try:
             test_df = json.join(
@@ -5143,94 +5136,31 @@ def test_recordedOutOfTimeDecision_ac2(json, M1_bronze, M3_bronze):
                 "OutOfTimeIssue"
             )
         except Exception as e:
-            error_message = str(e)        
+            error_message = str(e)
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
         if test_df != None:
-            #Check we have Records To test
-            if test_df.filter(
-                (col("OutOfTimeIssue") == 1) &
-                (col("Outcome") == 0)
-                ).count() == 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-            
-            # Partition by Appeal, Order by desc StatusId
-            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
-                F.desc("StatusId")
-            )
-
-            # Select most relevant records
+            status_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
             test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
 
+            if test_df.filter(
+                ~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()))
+                ).count() == 0:
+                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
             ac = test_df.filter(
-                (col("OutOfTimeIssue") == 1) & 
-                (col("Outcome") == 0) & 
+                (~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()))) &
                 (col("recordedOutOfTimeDecision").isNotNull())
             )
 
             if ac.count() != 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue is 1 + M3.Outcome == 0 and recordedOutOfTimeDecision is not omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where NOT(M1.OutOfTimeIssue == 1 AND M3.Outcome IS NOT NULL) but recordedOutOfTimeDecision is not omitted", test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue is 1 + M3.Outcome = 0 have recordedOutOfTimeDecision is omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where NOT(M1.OutOfTimeIssue == 1 AND M3.Outcome IS NOT NULL) have recordedOutOfTimeDecision omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
-# If OutOfTimeIssue != 1 + Outcome != 0 and recordedOutOfTimeDecision is not omitted
-def test_recordedOutOfTimeDecision_ac3(json, M1_bronze, M3_bronze):
-    try:
-        try:
-            test_df = json.join(
-                M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
-                "inner"
-            ).join(
-                M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
-                "inner"
-            ).select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision",
-                "Outcome",
-                "StatusId",
-                "OutOfTimeIssue"
-            )
-        except Exception as e:
-            error_message = str(e)        
-            return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-
-        if test_df != None:
-            #Check we have Records To test
-            if test_df.filter(
-                (col("OutOfTimeIssue") != 1) &
-                (col("Outcome") != 0)
-                ).count() == 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-            
-            # Partition by Appeal, Order by desc StatusId
-            status_window = Window.partitionBy("appealReferenceNumber").orderBy(
-                F.desc("StatusId")
-            )
-
-            # Select most relevant records
-            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
-
-            ac = test_df.filter(
-                (col("OutOfTimeIssue") != 1) & 
-                (col("Outcome") != 0) & 
-                (col("recordedOutOfTimeDecision").isNotNull())
-            )
-
-            if ac.count() != 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue != 1 + M3.Outcome != 0 and recordedOutOfTimeDecision is not null", test_from_state, inspect.stack()[0].function)
-            else:
-                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue != 1 + M3.Outcome != 0 have recordedOutOfTimeDecision is not null", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
+        error_message = str(e)
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################

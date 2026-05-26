@@ -146,34 +146,27 @@ def test_appellantFullName_test1(test_df):
 
 #######################
 # recordedOutOfTimeDecision (awaitingRespondentEvidence(a) onwards)
-# Rule: IF M1.OutOfTimeIssue == 1 for MAX(StatusId) -> "Yes" ELSE omitted
-# (Outcome is not considered — once a case has progressed past pp/as, the out-of-time decision is assumed made.)
+# Rule: IF M1.OutOfTimeIssue == 1 -> "Yes" ELSE omitted
+# Outcome is not considered — once a case has progressed past pp/as, the out-of-time decision is assumed made.
+# M1 is effectively one row per CaseNo, so no window or M3 join is needed.
 #######################
-def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
+def test_recordedOutOfTimeDecision_ac1(json, M1_bronze):
     try:
         try:
             test_df = json.join(
-                M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
-                "inner"
-            ).join(
                 M1_bronze,
                 json["appealReferenceNumber"] == M1_bronze["CaseNo"],
                 "inner"
             ).select(
                 "appealReferenceNumber",
                 "recordedOutOfTimeDecision",
-                "StatusId",
                 "OutOfTimeIssue"
-            )
+            ).dropDuplicates(["appealReferenceNumber"])
         except Exception as e:
             error_message = str(e)
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
         if test_df != None:
-            status_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
-            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
-
             if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
@@ -193,31 +186,23 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
         return TestResult("recordedOutOfTimeDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
-def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
+def test_recordedOutOfTimeDecision_ac2(json, M1_bronze):
     try:
         try:
             test_df = json.join(
-                M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
-                "inner"
-            ).join(
                 M1_bronze,
                 json["appealReferenceNumber"] == M1_bronze["CaseNo"],
                 "inner"
             ).select(
                 "appealReferenceNumber",
                 "recordedOutOfTimeDecision",
-                "StatusId",
                 "OutOfTimeIssue"
-            )
+            ).dropDuplicates(["appealReferenceNumber"])
         except Exception as e:
             error_message = str(e)
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to setup test data, no data exists for 'recordedOutOfTimeDecision'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
         if test_df != None:
-            status_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
-            test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
-
             if test_df.filter(
                 (col("OutOfTimeIssue").isNull()) | (col("OutOfTimeIssue") != 1)
                 ).count() == 0:

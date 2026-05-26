@@ -29,8 +29,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
     # -- recordedOutOfTimeDecision (applies in ARE(a) and every subsequent state) --
     # Distinct key from the pp version: state notebooks exclude "recordedOutOfTimeDecision"
     # to suppress the pp test while keeping the simpler ARE(a)-onwards test running here.
+    # Rule references M1 only; no M3 join needed.
     if "recordedOutOfTimeDecision_simple" not in fields_to_exclude:
-        all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac1(json_data, M3_bronze, M1_bronze))
-        all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac2(json_data, M3_bronze, M1_bronze))
+        all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac1(json_data, M1_bronze))
+        all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac2(json_data, M1_bronze))
 
     return classify_all(all_test_results)

@@ -70,10 +70,12 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
          if "addressLine1AdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_addressLine1AdminJ_ac1(test_df))
               all_test_results.append(pp_tests.test_addressLine1AdminJ_ac2(test_df))
+              all_test_results.append(pp_tests.test_addressLine1AdminJ_ac3(test_df))
 
          if "addressLine2AdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_addressLine2AdminJ_ac1(test_df))
               all_test_results.append(pp_tests.test_addressLine2AdminJ_ac2(test_df))
+              all_test_results.append(pp_tests.test_addressLine2AdminJ_ac3(test_df))
 
          if "addressLine3AdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_addressLine3AdminJ_ac1(test_df))

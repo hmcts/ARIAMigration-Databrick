@@ -2480,6 +2480,31 @@ def test_addressLine1AdminJ_ac2(test_df):
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine1AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+#addressLine1AdminJ - If CategoryId is null and addressLine1AdminJ not omitted
+#######################
+def test_addressLine1AdminJ_ac3(test_df):
+    try:
+        is_category_null = (col("CategoryIds").isNull()) | (F.size(col("CategoryIds")) <= 0)
+
+        #Check we have Records To test
+        if test_df.filter(
+            is_category_null
+            ).count() == 0:
+            return TestResult("addressLine1AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        ac_addressLine1AdminJ = test_df.filter(
+            is_category_null & (col("addressLine1AdminJ").isNotNull())        
+        )
+
+        if ac_addressLine1AdminJ.count() != 0:
+            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is null and addressLine1AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where CategoryId is null have addressLine1AdminJ omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("addressLine1AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #addressLine2AdminJ - If CategoryId not in 38 and addressLine2AdminJ not omitted
@@ -2535,6 +2560,31 @@ def test_addressLine2AdminJ_ac2(test_df):
             return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases have been found where addressLine2AdminJ is not mapped correctly." , test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where addressLine2AdminJ is not mapped correctly.", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("addressLine2AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+#addressLine2AdminJ - If CategoryId is null and addressLine2AdminJ not omitted
+#######################
+def test_addressLine2AdminJ_ac3(test_df):
+    try:
+        is_category_null = (col("CategoryIds").isNull()) | (F.size(col("CategoryIds")) <= 0)
+
+        #Check we have Records To test
+        if test_df.filter(
+            is_category_null
+            ).count() == 0:
+            return TestResult("addressLine2AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        ac_addressLine1AdminJ = test_df.filter(
+            is_category_null & (col("addressLine2AdminJ").isNotNull())        
+        )
+
+        if ac_addressLine1AdminJ.count() != 0:
+            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is null and addressLine2AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where CategoryId is null have addressLine2AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine2AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

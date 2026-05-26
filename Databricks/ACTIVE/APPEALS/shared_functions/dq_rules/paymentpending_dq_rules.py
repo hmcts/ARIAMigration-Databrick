@@ -840,7 +840,8 @@ class paymentPendingDQRules(DQRulesBase):
                     AND
                     addressLine1AdminJ IS NOT NULL
                 )
-                OR (addressLine1AdminJ IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
+                OR (valid_categoryIdList IS NULL AND addressLine1AdminJ IS NULL)
             )"""
         )
 
@@ -854,7 +855,8 @@ class paymentPendingDQRules(DQRulesBase):
                     AND
                     addressLine2AdminJ IS NOT NULL
                 )
-                OR (addressLine2AdminJ IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
+                OR (valid_categoryIdList IS NULL AND addressLine2AdminJ IS NULL)
             )"""
         )
 

@@ -8536,3 +8536,55 @@ def test_sponsorAddressForDisplay_ac2(test_df):
     except Exception as e:
         error_message = str(e)        
         return TestResult("sponsorAddressForDisplay", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+############################################################################################
+#######################
+#timeToLive Init code
+#######################
+def test_timeToLive_detained(json, M1_bronze):
+    try:
+        test_df = json.join(
+            M1_bronze, 
+            M1_bronze["CaseNo"] == json["appealReferenceNumber"], 
+            "left").drop("CaseNo")
+        
+        test_df = test_df.select(
+            "appealReferenceNumber", 
+            "TTL", 
+            "DateLodged"
+        )
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)
+        return None,TestResult("timeToLive", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+def test_timeToLive_ac1(test_df):
+    try:
+        TTL_date_fails = test_df.filter(
+            col("TTL.SystemTTL").cast("date") != F.add_months(col("DateLodged"), 1200).cast("date")
+        )
+
+        if TTL_date_fails.count() != 0:
+            return TestResult("timeToLive", "FAIL", f"timeToLive acceptance criteria failed: found {TTL_date_fails.count()} cases where TTL.SystemTTL does not equal DateLodged + 100 years/1200 months", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("timeToLive", "PASS", f"timeToLive acceptance criteria passed: all cases have TTL.SystemTTL which equal DateLodged + 100 years/1200 months", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("timeToLive", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+def test_timeToLive_ac2(test_df):
+    try:
+        TTL_suspended_fails = test_df.filter(
+            col("TTL.Suspended") != "No"
+        )
+
+        if TTL_date_fails.count() != 0:
+            return TestResult("timeToLive", "FAIL", f"timeToLive acceptance criteria failed: found {TTL_date_fails.count()} cases where TTL.Suspended does not equal No", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("timeToLive", "PASS", f"timeToLive acceptance criteria passed: all cases have TTL.SystemTTL which equal No", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("timeToLive", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

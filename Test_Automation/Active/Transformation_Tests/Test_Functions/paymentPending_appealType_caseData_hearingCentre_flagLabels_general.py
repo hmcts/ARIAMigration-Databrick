@@ -107,4 +107,15 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
             all_test_results.append(pp_tests.test_isServiceRequestTabVisibleConsideringRemissions_ac3(test_df))
             all_test_results.append(pp_tests.test_isServiceRequestTabVisibleConsideringRemissions_ac4(test_df))
 
+     # -- timeToLive --
+    test_data_setup = None
+    test_df, test_data_setup =  pp_tests.test_timeToLive_detained(json_data, M1_bronze)
+    if test_data_setup != True:
+         all_test_results.append(test_data_setup)
+
+    if test_df != None:
+        if "timeToLive" not in fields_to_exclude:
+            all_test_results.append(pp_tests.test_timeToLive_ac1(test_df))
+            all_test_results.append(pp_tests.test_timeToLive_ac2(test_df))
+
     return all_test_results

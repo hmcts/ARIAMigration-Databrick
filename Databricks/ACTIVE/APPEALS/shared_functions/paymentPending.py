@@ -364,7 +364,11 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     ).withColumn(
         "tribunalReceivedDate", date_format(col("m1.DateAppealReceived"), "yyyy-MM-dd")
     ).withColumn(
-        "recordedOutOfTimeDecision",when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("Yes")).otherwise(None)
+        "recordedOutOfTimeDecision", when((col("m1.dv_TargetState").isin(["paymentPending", "appealSubmitted"]))
+            & (col("m1.OutOfTimeIssue") == True) & (col("m3.Outcome").isNotNull()),lit("Yes"))
+        
+        .when((~col("m1.dv_TargetState").isin(["paymentPending", "appealSubmitted"])) & (col("m1.OutOfTimeIssue") == True), lit("Yes"))
+        .otherwise(None)
     ).withColumn(
         "outOfTimeDecisionType",when((col("OutOfTimeIssue") == True) & (col("Outcome") != 0), lit("approved")).otherwise(None)
     ).withColumn(

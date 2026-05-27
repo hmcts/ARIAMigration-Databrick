@@ -306,4 +306,12 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     else:
         all_test_results.append(test_data_setup_lang)
 
+    # ---------------------------------------------------------
+    # 12. Time To Live Ended Tests
+    # ---------------------------------------------------------
+    test_df_ttl, test_data_setup_ttl = ended_tests.test_timeToLiveEnded_detained(json_data, M1_bronze, M3_bronze)
+    if test_data_setup_ttl is True and test_df_ttl is not None:
+        if "timeToLiveEnded" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_timeToLiveEnded_ac1(test_df_ttl))
+
     return classify_all(all_test_results)

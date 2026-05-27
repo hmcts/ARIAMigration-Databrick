@@ -6317,3 +6317,47 @@ def test_ftpaAppellantSubmissionOutOfTime_test4(test_df):
     except Exception as e:
         return TestResult("ftpaAppellantSubmissionOutOfTime", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
+############################################################################################
+#######################
+#timeToLiveEnded Init code
+#######################
+def test_timeToLiveEnded_detained(json, M1_bronze, M3_bronze):
+    try:
+        test_df = json.join(
+            M1_bronze, 
+            M1_bronze["CaseNo"] == json["appealReferenceNumber"], 
+            "left").drop("CaseNo").join(
+            M3_bronze, 
+            M3_bronze["CaseNo"] == json["appealReferenceNumber"], 
+            "left").drop("CaseNo")
+        
+        test_df = test_df.select(
+            "appealReferenceNumber", 
+            "TTL", 
+            "DecisionDate",
+            "StatusId"
+        )
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)
+        return None,TestResult("timeToLiveEnded", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+def test_timeToLiveEnded_ac1(test_df):
+    try:
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
+        ranked_df = test_df.withColumn("row_rank", row_number().over(window_spec))
+        winning_records = ranked_df.filter(col("row_rank") == 1)
+
+        TTL_date_fails = winning_records.filter(
+            col("TTL.SystemTTL").cast("date") != F.add_months(col("DecisionDate"), 24).cast("date")
+        )
+
+        if TTL_date_fails.count() != 0:
+            return TestResult("timeToLiveEnded", "FAIL", f"timeToLiveEnded acceptance criteria failed: found {TTL_date_fails.count()} cases where TTL.SystemTTL does not equal DateLodged + 2 years/24 months with latest StatusId", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("timeToLiveEnded", "PASS", f"timeToLiveEnded acceptance criteria passed: all cases have TTL.SystemTTL which equal DateLodged + 2 years/24 months with latest StatusId", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("timeToLiveEnded", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

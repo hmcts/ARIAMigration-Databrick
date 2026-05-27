@@ -143,7 +143,7 @@ def appellantDetails_outputs(spark):
     ]
 
     bronze_nationalities_schema = T.StructType([
-        T.StructField("NationalityId", T.SringType(), True),
+        T.StructField("NationalityId", T.StringType(), True),
         T.StructField("Description", T.StringType(), True),
         T.StructField("countryCode", T.StringType(), True),
         T.StructField("appellantNationalitiesDescription", T.StringType(), True),

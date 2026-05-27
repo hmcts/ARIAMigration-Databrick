@@ -1,13 +1,12 @@
+import asyncio
 import json
 import pytest
-from unittest.mock import Mock, patch
-
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
+from unittest.mock import AsyncMock, Mock, patch
 
 
 @pytest.fixture(autouse=True)
 def no_retry_sleep():
-    with patch(SLEEP_PATH):
+    with patch("asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
@@ -69,14 +68,14 @@ class TestProcessCaseSuccess:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-001",
                 payloadData={"appealReferenceNumber": "HU/001/2024"},
                 runId="run-1",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "SUCCESS"
         assert result["CCDCaseID"] == SUBMIT_CASE_ID
@@ -98,14 +97,14 @@ class TestProcessCaseSuccess:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-001",
                 payloadData={"appealReferenceNumber": "HU/001/2024"},
                 runId="run-1",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         for key in ("RunID", "CaseNo", "State", "Status", "Error", "EndDateTime", "CCDCaseID", "SuccessResponse", "StartResponse"):
             assert key in result, f"Missing key: {key}"
@@ -131,14 +130,14 @@ class TestProcessCaseValidationFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-002",
                 payloadData={"appealReferenceNumber": "HU/002/2024"},
                 runId="run-2",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "Case validation failed" in result["Error"]
@@ -159,14 +158,14 @@ class TestProcessCaseValidationFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-003",
                 payloadData={},
                 runId="run-3",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "Case validation failed" in result["Error"]
@@ -191,14 +190,14 @@ class TestProcessCaseSubmitFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-004",
                 payloadData={"appealReferenceNumber": "HU/004/2024"},
                 runId="run-4",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "Case submission failed" in result["Error"]
@@ -226,14 +225,14 @@ class TestProcessCaseStartFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-005",
                 payloadData={},
                 runId="run-5",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "Case creation failed" in result["Error"]
@@ -256,14 +255,14 @@ class TestProcessCaseStartFailure:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-006",
                 payloadData={},
                 runId="run-6",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "No response from API" in result["Error"]
@@ -285,14 +284,14 @@ class TestProcessCaseTokenFailures:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-007",
                 payloadData={},
                 runId="run-7",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "IDAM" in result["Error"]
@@ -309,14 +308,14 @@ class TestProcessCaseTokenFailures:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-008",
                 payloadData={},
                 runId="run-8",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "s2s" in result["Error"]
@@ -338,14 +337,14 @@ class TestProcessCaseInvalidEnv:
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
             with pytest.raises(ValueError, match="Invalid environment"):
-                process_case(
+                asyncio.run(process_case(
                     env="unknown",
                     caseNo="CASE-009",
                     payloadData={},
                     runId="run-9",
                     state="appealSubmitted",
                     PR_REFERENCE="pr-123",
-                )
+                ))
 
 
 class TestProcessCaseSubmitNone:
@@ -366,14 +365,14 @@ class TestProcessCaseSubmitNone:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            result = process_case(
+            result = asyncio.run(process_case(
                 env="sbox",
                 caseNo="CASE-010",
                 payloadData={"appealReferenceNumber": "HU/010/2024"},
                 runId="run-10",
                 state="appealSubmitted",
                 PR_REFERENCE="pr-123",
-            )
+            ))
 
         assert result["Status"] == "ERROR"
         assert "No response from API" in result["Error"]

@@ -1,6 +1,7 @@
+import asyncio
 import json
 import pytest
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import AsyncMock, patch, MagicMock, ANY
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cl_ccdFunctions does not hit Key Vault.
@@ -276,13 +277,11 @@ PROCESS_DEFAULTS = dict(
 )
 
 MODULE = "AzureFunctions.ACTIVE.active_caselink_ccd.cl_ccdFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.time.sleep"
 
 
 @pytest.fixture(autouse=True)
 def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
+    with patch("asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
@@ -310,7 +309,7 @@ def test_process_event_success(mock_start, mock_validate, mock_submit):
         {"id": "9876543210987654", "case_data": {"caseLinks": [{}, {}, {}]}},
     )
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "SUCCESS"
     assert result["CaseLinkCount"] == 3
@@ -324,7 +323,7 @@ def test_process_event_success(mock_start, mock_validate, mock_submit):
 def test_process_event_start_fails_non_200(mock_start):
     mock_start.return_value = mock_response(401, text="Unauthorized")
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert "401" in result["Error"]
@@ -336,7 +335,7 @@ def test_process_event_start_fails_non_200(mock_start):
 def test_process_event_start_returns_none(mock_start):
     mock_start.return_value = None
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert result["CaseLinkCount"] == 0
@@ -349,7 +348,7 @@ def test_process_event_validation_fails(mock_start, mock_validate):
     mock_start.return_value = mock_response(200, {"token": "tok123"})
     mock_validate.return_value = mock_response(400, text="Bad payload")
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert result["CaseLinkCount"] == 0
@@ -366,7 +365,7 @@ def test_process_event_success_null_case_data(mock_start, mock_validate, mock_su
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "case_data": None})
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "SUCCESS"
     assert result["CaseLinkCount"] == 0
@@ -381,7 +380,7 @@ def test_process_event_submission_fails(mock_start, mock_validate, mock_submit):
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(500, text="Server error")
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert result["CaseLinkCount"] == 0
@@ -397,7 +396,7 @@ def test_process_event_submission_returns_none(mock_start, mock_validate, mock_s
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = None
 
-    result = process_event(**PROCESS_DEFAULTS)
+    result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     assert result["Status"] == "ERROR"
     assert result["CaseLinkCount"] == 0
@@ -411,20 +410,20 @@ def test_process_event_invalid_env():
         mock_s2s.get_token.return_value = "s2s"
 
         with pytest.raises(ValueError, match="Invalid environment"):
-            process_event(
+            asyncio.run(process_event(
                 env="invalid_env",
                 ccdReference="1234567890123456",
                 caseLinkPayload=[],
                 runId="run-001",
                 PR_REFERENCE="1234",
-            )
+            ))
 
 
 def test_process_event_idam_token_failure():
     with patch(f"{MODULE}.idam_token_mgr") as mock_idam:
         mock_idam.get_token.side_effect = Exception("IDAM unreachable")
 
-        result = process_event(**PROCESS_DEFAULTS)
+        result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
         assert result["Status"] == "ERROR"
         assert result["CaseLinkCount"] == 0
@@ -437,7 +436,7 @@ def test_process_event_s2s_token_failure():
         mock_idam.get_token.return_value = ("tok", "uid")
         mock_s2s.get_token.side_effect = Exception("S2S unreachable")
 
-        result = process_event(**PROCESS_DEFAULTS)
+        result = asyncio.run(process_event(**PROCESS_DEFAULTS))
 
         assert result["Status"] == "ERROR"
         assert result["CaseLinkCount"] == 0
@@ -452,7 +451,7 @@ def test_process_event_url_uses_pr_number(mock_start, mock_validate, mock_submit
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "link": 1})
 
-    process_event(**PROCESS_DEFAULTS)
+    asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     called_url = mock_start.call_args[0][0]
     assert PROCESS_DEFAULTS["PR_REFERENCE"] in called_url
@@ -468,7 +467,7 @@ def test_process_event_no_notification_flag_in_payload(mock_start, mock_validate
     mock_validate.return_value = mock_response(200)
     mock_submit.return_value = mock_response(201, {"id": "9876543210987654", "link": 1})
 
-    process_event(**PROCESS_DEFAULTS)
+    asyncio.run(process_event(**PROCESS_DEFAULTS))
 
     # payloadData is the 8th positional arg to validate_case
     full_case_data = mock_validate.call_args[0][7]

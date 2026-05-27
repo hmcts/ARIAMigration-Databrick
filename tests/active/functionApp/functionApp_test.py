@@ -4,12 +4,9 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
 
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
-
-
 @pytest.fixture(autouse=True)
 def no_retry_sleep():
-    with patch(SLEEP_PATH):
+    with patch.object(process_case.retry, "sleep", new_callable=AsyncMock):
         yield
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
@@ -272,14 +269,14 @@ def test_process_funciton_success(mock_start_case_creation_response,
     mock_validate_case_response.return_value = mock_validate_case
     mock_submit_case_response.return_value = mock_submit_case
 
-    results = process_case(
+    results = asyncio.run(process_case(
         env="sbox",
         caseNo="CASE123",
         payloadData={"key": "value"},
         runId="run123",
         state="paymentPending",
         PR_REFERENCE="2866"
-    )
+    ))
 
     assert results["Status"] == "SUCCESS"
     assert results["CCDCaseID"] == "1234567891011"
@@ -301,14 +298,14 @@ def test_process_case_url_uses_pr_number(mock_start_case_creation, mock_s2s_mana
     mock_start_case_creation.return_value = mock_response(401, text="Unauthorized")
 
     pr_number = "9999"
-    process_case(
+    asyncio.run(process_case(
         env="sbox",
         caseNo="CASE123",
         payloadData={"key": "value"},
         runId="run123",
         state="paymentPending",
         PR_REFERENCE=pr_number,
-    )
+    ))
 
     called_url = mock_start_case_creation.call_args[0][0]
     assert pr_number in called_url
@@ -325,14 +322,14 @@ def test_process_case_start_case_fail(mock_start_case_creation, mock_s2s_manager
     mock_start_case_response = mock_response(401, {"text": "bad response"})
     mock_start_case_creation.return_value = mock_start_case_response
 
-    results = process_case(
+    results = asyncio.run(process_case(
         env="sbox",
         caseNo="CASE123",
         payloadData={"key": "value"},
         runId="run123",
         state="paymentPending",
         PR_REFERENCE="2866"
-    )
+    ))
 
     assert results["Status"] == "ERROR"
     assert results["Error"] is not None
@@ -349,14 +346,14 @@ def test_process_case_validation_fails(mock_start, mock_validate, mock_s2s_manag
     mock_start.return_value = mock_response(200, {"token": "abc123"})
     mock_validate.return_value = mock_response(400, text="Invalid payload")
 
-    result = process_case(
+    result = asyncio.run(process_case(
         env="sbox",
         caseNo="CASE888",
         payloadData={},
         runId="run123",
         state="paymentPending",
         PR_REFERENCE="2866"
-    )
+    ))
 
     assert result["Status"] == "ERROR"
     assert result["Error"] is not None
@@ -375,14 +372,14 @@ def test_process_case_submission_fails(mock_start, mock_validate, mock_submit, m
     mock_validate.return_value = mock_response(201)
     mock_submit.return_value = mock_response(500, text="Server error")
 
-    result = process_case(
+    result = asyncio.run(process_case(
         env="sbox",
         caseNo="CASE777",
         payloadData={},
         runId="run123",
         state="paymentPending",
         PR_REFERENCE="2866"
-    )
+    ))
 
     assert result["Status"] == "ERROR"
     assert result["Error"] is not None
@@ -438,7 +435,7 @@ def _build_trigger_mocks():
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_eventhub_trigger_uploads_idempotency_blob_on_success(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -466,7 +463,7 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_eventhub_trigger_deletes_idempotency_blob_on_error(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -494,7 +491,7 @@ def test_eventhub_trigger_deletes_idempotency_blob_on_error(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_eventhub_trigger_skips_event_when_blob_upload_fails(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -515,7 +512,7 @@ def test_eventhub_trigger_skips_event_when_blob_upload_fails(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_idempotency_blob_not_deleted_when_process_case_raises(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -539,7 +536,7 @@ def test_idempotency_blob_not_deleted_when_process_case_raises(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_process_case_called_with_correct_args(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -568,7 +565,7 @@ def test_process_case_called_with_correct_args(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_idempotency_blob_path_includes_state_and_case_number(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):
@@ -592,7 +589,7 @@ def test_idempotency_blob_path_includes_state_and_case_number(
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
-@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case", new_callable=AsyncMock)
 def test_error_result_sent_even_when_delete_blob_raises(
         mock_process_case, mock_credential, mock_secret_client,
         mock_blob_service, mock_eh_producer):

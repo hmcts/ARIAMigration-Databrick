@@ -1,4 +1,3 @@
-import asyncio
 import azure.functions as func
 import logging
 import json
@@ -103,7 +102,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.warning(f"[IDEMPOTENCY][CDAM] Skipping in progress case {caseNo}.")
                         continue
 
-                    result = await asyncio.to_thread(process_event, ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
+                    result = await process_event(ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
 
                     # Mark processed if success
                     if result.get("Status") == "SUCCESS":

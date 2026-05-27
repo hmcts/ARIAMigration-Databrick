@@ -285,7 +285,7 @@ def test_appellant_stateless(appellantDetails_outputs):
         row = appellantDetails_outputs["HU/00005/2025"]
 
         assert row["appellantStateless"] == "isStateless"
-        assert row["appellantNationalities"] == None
+        assert row["appellantNationalities"] == "ZZ"
         assert row["appellantNationalitiesDescription"] == "Stateless"
 
 def test_appellant_nationalities(appellantDetails_outputs):

@@ -107,7 +107,7 @@ def patched(mocks, to_thread_mock=None):
         patch(f"{MODULE}.ClientSecretCredential", return_value=mocks["storage_credential"]),
     ]
     if to_thread_mock is not None:
-        patches.append(patch("asyncio.to_thread", new=to_thread_mock))
+        patches.append(patch(f"{MODULE}.process_event", new=to_thread_mock))
     return patches
 
 
@@ -271,7 +271,6 @@ def test_process_event_called_with_correct_args():
         run(eventhub_trigger_active(events))
 
     to_thread.assert_awaited_once_with(
-        app_module.process_event,
         app_module.ENV,
         case_no,
         run_id,

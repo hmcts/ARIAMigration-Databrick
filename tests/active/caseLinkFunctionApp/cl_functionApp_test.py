@@ -116,7 +116,7 @@ def patched(mocks, to_thread_mock=None, extra_patches=None):
         ),
     ]
     if to_thread_mock is not None:
-        patches.append(patch("asyncio.to_thread", new=to_thread_mock))
+        patches.append(patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.process_event", new=to_thread_mock))
     if extra_patches:
         patches.extend(extra_patches)
     return patches
@@ -229,7 +229,6 @@ def test_process_event_called_with_correct_args():
         run(eventhub_trigger_active(events))
 
     to_thread.assert_awaited_once_with(
-        app_module.process_event,
         app_module.ENV,
         partition_key,
         payload["RunID"],
@@ -268,7 +267,6 @@ def test_overwrite_flag_passed_from_payload():
         run(eventhub_trigger_active(events))
 
     to_thread.assert_awaited_once_with(
-        app_module.process_event,
         app_module.ENV,
         partition_key,
         payload["RunID"],

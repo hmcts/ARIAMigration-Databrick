@@ -142,6 +142,21 @@ def appellantDetails_outputs(spark):
         ("Zimbabwe", "WZ")
     ]
 
+    bronze_nationalities_schema = T.StructType([
+        T.StructField("NationalityId", T.IntegerType(), True),
+        T.StructField("Description", T.StringType(), True),
+        T.StructField("countryCode", T.StringType(), True),
+        T.StructField("appellantNationalitiesDescription", T.StringType(), True),
+    ])
+
+    bronze_nationalities_data = [
+        (0, "No Nationality", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
+        (1, "Afghan", "AF", "Afghanistan"),
+        (2, "Albanian", "AL", "Albania"),
+        (3, "Algerian", "DZ", "Algeria"),
+        (211, "Stateless", "ZZ", "Stateless"),
+    ]
+
     bronze_HORef_cleansing_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("HORef", T.StringType(), True),
@@ -156,11 +171,12 @@ def appellantDetails_outputs(spark):
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
     silver_m2 =  spark.createDataFrame(m2_data, m2_schema)
     silver_c =  spark.createDataFrame(silver_c_data, silver_c_schema)
+    bronze_nationalities = spark.createDataFrame(bronze_nationalities_data, bronze_nationalities_schema)
     bronze_countryFromAddress =  spark.createDataFrame(bronze_countryFromAddress_data, bronze_countryFromAddress_schema)
     bronze_HORef_cleansing =  spark.createDataFrame(bronze_HORef_cleansing_data, bronze_HORef_cleansing_schema)
 
     appellantDetails_content, _ = appellantDetails(
-        silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing
+        silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities
     )
 
     results = {row["CaseNo"]: row.asDict() for row in appellantDetails_content.collect()}
@@ -253,20 +269,24 @@ def test_appellant_address_fields(appellantDetails_outputs):
               appellantHasFixedAddressAdminJ="Yes"
              )
     
-def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
-    row = appellantDetails_outputs["HU/00487/2025"]
-    normalized_nationalities = normalise_rows(row["appellantNationalities"])
-    assert normalized_nationalities == [{'id': '4f7b9a0a-90fa-4258-a530-395aedebfc02',
-                                         'value': {'code': 'AF'}}]
+def test_appellant_stateless(appellantDetails_outputs):
 
-def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
-    # No mapped nationality
-    row_stateless = appellantDetails_outputs["HU/00560/2025"]
-    assert_equals(row_stateless,
-                  appellantStateless="hasNationality",
-                  appellantNationalities=None,
-                  appellantNationalitiesDescription=None
-                 )
+        row = appellantDetails_outputs["HU/00560/2025"]
+
+        assert_equals(
+            row,
+            appellantStateless="isStateless",
+            appellantNationalities=None,
+            appellantNationalitiesDescription="Stateless"
+        )
+
+def test_appellant_nationalities(appellantDetails_outputs):
+
+    row = appellantDetails_outputs["HU/00487/2025"]
+
+    assert row["appellantStateless"] == "hasNationality"
+    assert row["appellantNationalities"] == "Afghan"
+    assert row["appellantNationalitiesDescription"] == "Afghanistan"
 
 def test_deportation_order_options(appellantDetails_outputs):
     """Check deportation order options for CategoryId 48."""

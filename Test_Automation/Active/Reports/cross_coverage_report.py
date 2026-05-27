@@ -38,6 +38,7 @@ def build_and_display(
     matrix_compact_font_px=10,
     heatmap_cell_min_width_px=18,
     report_version="v?",
+    since_days=None,
 ):
     if chain_order is None:
         chain_order = DEFAULT_CHAIN_ORDER
@@ -46,7 +47,12 @@ def build_and_display(
     REPORT_VERSION = report_version
 
 
-    from pyspark.sql.functions import col, desc
+    from pyspark.sql import functions as F
+    from pyspark.sql.functions import (
+        col, desc, upper, trim, substring, coalesce, lit, when,
+        sum as ssum, max as smax, row_number,
+    )
+    from pyspark.sql.window import Window
     from collections import defaultdict
     import pandas as pd
 
@@ -56,6 +62,13 @@ def build_and_display(
     results_df = spark.table(results_table)
 
     trans_runs = runs_df.filter(col("run_by_automation_name") == "Transformation_Tests")
+
+    # Optional rolling-window filter on run start datetime to keep collected data bounded.
+    if since_days is not None:
+        trans_runs = trans_runs.filter(
+            col("run_start_datetime") >= F.date_sub(F.current_timestamp(), int(since_days))
+        )
+
     all_runs_list = trans_runs.orderBy(desc("run_start_datetime")).collect()
     run_lookup = {r.run_id: r for r in all_runs_list}
     all_run_ids = [r.run_id for r in all_runs_list]
@@ -63,77 +76,161 @@ def build_and_display(
     if not all_run_ids:
         print(f"No runs found in {runs_table}")
     else:
-        all_results = results_df.filter(col("run_id").isin(all_run_ids)).toPandas()
-        run_to_state = {r.run_id: r.state_under_test for r in all_runs_list}
-        all_results["run_state"] = all_results["run_id"].map(run_to_state)
-        all_results["status_upper"] = all_results["status"].str.upper().str.strip()
-
+        # ---- Spark-side prep ----
+        # Reclassify status using message patterns and truncate message in Spark so we
+        # collect a much smaller pandas frame downstream.
         NO_DATA_PATTERNS = ["NO RECORDS TO TEST", "NO MATCHING TEST DATA", "DOES NOT EXIST IN THE",
                             "NO RECORDS FOUND", "NO DATA AVAILABLE", "NO DATA TO TEST",
                             "NO DATA EXISTS FOR", "UNRESOLVED_COLUMN"]
         ERROR_PATTERNS = ["IS NOT DEFINED", "TEST CRASHED:", "FAILED TO SETUP DATA"]
 
-        def reclassify(row):
-            status = row["status_upper"]
-            if status == "PASS": return "PASS"
-            msg = str(row.get("message", "") or "").upper()
-            for p in NO_DATA_PATTERNS:
-                if p in msg: return "NO_DATA"
-            for p in ERROR_PATTERNS:
-                if p in msg: return "ERROR"
-            return status
+        msg_upper_expr = upper(coalesce(col("message"), lit("")))
 
-        all_results["status_upper"] = all_results.apply(reclassify, axis=1)
+        def _any_contains(c, patterns):
+            cond = lit(False)
+            for p in patterns:
+                cond = cond | c.contains(p)
+            return cond
 
-        if all_results.empty:
+        status_upper_expr = trim(upper(col("status")))
+        reclassified_expr = (
+            when(status_upper_expr == "PASS", lit("PASS"))
+            .when(_any_contains(msg_upper_expr, NO_DATA_PATTERNS), lit("NO_DATA"))
+            .when(_any_contains(msg_upper_expr, ERROR_PATTERNS), lit("ERROR"))
+            .otherwise(status_upper_expr)
+        )
+
+        runs_meta = trans_runs.select(
+            col("run_id"),
+            col("state_under_test").alias("run_state"),
+            col("run_start_datetime").alias("__run_dt"),
+        )
+
+        prepped = (
+            results_df.join(runs_meta, on="run_id", how="inner")
+            .withColumn("status_upper", reclassified_expr)
+            .withColumn("message", substring(coalesce(col("message"), lit("")), 1, 200))
+            .select(
+                "run_id",
+                "test_from_state",
+                "test_field",
+                "test_name",
+                "run_state",
+                "__run_dt",
+                "status_upper",
+                "message",
+            )
+        )
+
+        # Filter to only states we care about (active_states) before any aggregation
+        prepped = prepped.filter(col("test_from_state").isin(active_states))
+
+        # ---- Spark-side aggregations ----
+        priority_to_status = F.create_map(
+            lit(4), lit("PASS"),
+            lit(3), lit("FAIL"),
+            lit(2), lit("ERROR"),
+            lit(1), lit("NO_DATA"),
+        )
+        status_to_priority = F.create_map(
+            lit("PASS"), lit(4),
+            lit("FAIL"), lit(3),
+            lit("ERROR"), lit(2),
+            lit("NO_DATA"), lit(1),
+        )
+
+        with_p = prepped.withColumn("priority", status_to_priority[col("status_upper")])
+
+        # Best status + counts per (pair × run_state)
+        pair_state_counts = (
+            with_p.groupBy("test_from_state", "test_field", "test_name", "run_state")
+            .agg(
+                smax("priority").alias("best_p"),
+                ssum(when(col("status_upper") == "PASS", 1).otherwise(0)).alias("pass_n"),
+                ssum(when(col("status_upper") == "FAIL", 1).otherwise(0)).alias("fail_n"),
+                ssum(when(col("status_upper") == "ERROR", 1).otherwise(0)).alias("error_n"),
+                ssum(when(col("status_upper") == "NO_DATA", 1).otherwise(0)).alias("nodata_n"),
+            )
+            .withColumn("best_status", F.coalesce(priority_to_status[col("best_p")], lit("")))
+        )
+
+        # Latest status per (pair × run_state)
+        latest_win = (
+            Window.partitionBy("test_from_state", "test_field", "test_name", "run_state")
+            .orderBy(desc("__run_dt"))
+        )
+        pair_state_latest = (
+            prepped.withColumn("__rn", row_number().over(latest_win))
+            .filter(col("__rn") == 1)
+            .select(
+                "test_from_state", "test_field", "test_name", "run_state",
+                col("status_upper").alias("latest_status"),
+            )
+        )
+
+        pair_state_pd = (
+            pair_state_counts.join(
+                pair_state_latest,
+                ["test_from_state", "test_field", "test_name", "run_state"],
+                "inner",
+            )
+            .toPandas()
+        )
+
+        if pair_state_pd.empty:
             print("No results found")
         else:
+            # Per-row frame for tooltips, drill-down, state_totals and run-compare.
+            # Sorted by datetime ascending so the iterators below can build "latest wins" naturally.
+            all_results = prepped.orderBy("__run_dt").toPandas()
+
+            # Build the legacy nested dicts from pair_state_pd (no per-row work in pandas).
             field_pair_runstate_best = defaultdict(dict)
             field_pair_runstate_latest = defaultdict(dict)
-            field_pair_runstate_runs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
             priority = {"PASS": 4, "FAIL": 3, "ERROR": 2, "NO_DATA": 1, "": 0}
 
-            all_results["__run_dt"] = all_results["run_id"].map(
-                lambda rid: getattr(run_lookup.get(rid), "run_start_datetime", None)
-            )
-            all_results = all_results.sort_values("__run_dt", na_position="first")
+            for _, row in pair_state_pd.iterrows():
+                pair = (row["test_from_state"], row["test_field"], row["test_name"])
+                rs = row["run_state"]
+                field_pair_runstate_best[pair][rs] = row["best_status"] or ""
+                field_pair_runstate_latest[pair][rs] = row["latest_status"] or ""
 
+            # field_pair_runstate_runs is used for tooltips (cap 4) and drill-down.
+            # We still need per-row data here, but it now operates on the already-narrowed
+            # all_results (truncated message, reclassified status, only active_states).
+            field_pair_runstate_runs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
             for _, row in all_results.iterrows():
-                field = str(row.get("test_field", "") or "").strip()
-                from_state = str(row.get("test_from_state", "") or "").strip()
-                run_state = str(row.get("run_state", "") or "").strip()
-                test_name = str(row.get("test_name", "") or "").strip()
-                rs = row["status_upper"]
-                run_id = row.get("run_id", "")
-                if not field or not from_state or not run_state or not test_name: continue
-                if from_state not in active_states: continue
+                from_state = row["test_from_state"]
+                field = row["test_field"]
+                test_name = row["test_name"]
+                run_state = row["run_state"]
+                run_id = row["run_id"]
+                if not (from_state and field and test_name and run_state):
+                    continue
                 pair = (from_state, field, test_name)
                 field_pair_runstate_runs[pair][run_state][run_id].append({
-                    "status": rs,
-                    "message": str(row.get("message", ""))[:300],
+                    "status": row["status_upper"],
+                    "message": row["message"] or "",
                 })
-                field_pair_runstate_latest[pair][run_state] = rs
-                current = field_pair_runstate_best[pair].get(run_state, "")
-                if priority.get(rs, 0) > priority.get(current, 0):
-                    field_pair_runstate_best[pair][run_state] = rs
 
             states_in_data = sorted(
                 set(rs for m in field_pair_runstate_latest.values() for rs in m.keys()),
                 key=lambda s: chain_order.index(s) if s in chain_order else 999
             )
 
+            # pair_stats now built directly from pair_state_pd (no per-row iteration).
             pair_stats = {}
-            for pair, run_state_latest_for_pair in field_pair_runstate_latest.items():
-                latest_vals = list(run_state_latest_for_pair.values())
-                total_p = total_f = total_e = total_nd = 0
-                for run_state, runs_map in field_pair_runstate_runs[pair].items():
-                    for rid, rlist in runs_map.items():
-                        for r in rlist:
-                            s = r["status"]
-                            if s == "PASS": total_p += 1
-                            elif s == "FAIL": total_f += 1
-                            elif s == "ERROR": total_e += 1
-                            elif s == "NO_DATA": total_nd += 1
+            for pair, latest_map in field_pair_runstate_latest.items():
+                pair_rows = pair_state_pd[
+                    (pair_state_pd["test_from_state"] == pair[0])
+                    & (pair_state_pd["test_field"] == pair[1])
+                    & (pair_state_pd["test_name"] == pair[2])
+                ]
+                total_p = int(pair_rows["pass_n"].sum())
+                total_f = int(pair_rows["fail_n"].sum())
+                total_e = int(pair_rows["error_n"].sum())
+                total_nd = int(pair_rows["nodata_n"].sum())
+                latest_vals = list(latest_map.values())
                 if "PASS" in latest_vals: v = "PASSED"
                 elif "FAIL" in latest_vals: v = "FAILED"
                 elif "ERROR" in latest_vals: v = "ERROR"
@@ -141,7 +238,7 @@ def build_and_display(
                 pair_stats[pair] = {
                     "verdict": v,
                     "states_covered": len(latest_vals),
-                    "pass_states": sum(1 for v in latest_vals if v == "PASS"),
+                    "pass_states": sum(1 for x in latest_vals if x == "PASS"),
                     "pass": total_p, "fail": total_f, "error": total_e, "nodata": total_nd,
                     "total": total_p + total_f + total_e + total_nd,
                 }

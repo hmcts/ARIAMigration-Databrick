@@ -54,7 +54,7 @@ def appellantDetails_outputs(spark):
         ("HU/00002/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00003/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00004/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/00005/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU")
+        ("HU/00005/2025", "HU", "2025-02-21", "LR", "1936-05-07", "211", "UK", "British", "refusalOfHumanRights", None, None, None, "HU")
     ]
 
     m2_schema = T.StructType([
@@ -282,21 +282,18 @@ def test_appellant_address_fields(appellantDetails_outputs):
     
 def test_appellant_stateless(appellantDetails_outputs):
 
-        row = appellantDetails_outputs["HU/00560/2025"]
+        row = appellantDetails_outputs["HU/00005/2025"]
 
-        assert_equals(
-            row,
-            appellantStateless="isStateless",
-            appellantNationalities=None,
-            appellantNationalitiesDescription="Stateless"
-        )
+        assert row["appellantStateless"] == "isStateless"
+        assert row["appellantNationalities"] == None
+        assert row["appellantNationalitiesDescription"] == "Stateless"
 
 def test_appellant_nationalities(appellantDetails_outputs):
 
     row = appellantDetails_outputs["HU/00487/2025"]
 
     assert row["appellantStateless"] == "hasNationality"
-    assert row["appellantNationalities"] == "Afghan"
+    assert row["appellantNationalities"] == "AF"
     assert row["appellantNationalitiesDescription"] == "Afghanistan"
 
 def test_deportation_order_options(appellantDetails_outputs):

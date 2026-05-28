@@ -23,7 +23,7 @@ def test_m2_bronze_table(config):
         },
         {
             "name": "Appellant",
-            "include" : ["AppellantId", "Name", "Forenames","BirthDate","Email", "Telephone","Address1", "Address2", "Address3", "Address4", "Address5", "Postcode", "Detained", "AppellantCountryId", "FCONumber"],
+            "include" : ["AppellantId", "Name", "Forenames","BirthDate","Email", "Telephone","Address1", "Address2", "Address3", "Address4", "Address5", "Postcode", "Detained", "AppellantCountryId", "FCONumber", "DetentionCentreId", "PrisonRef"],
             "renames": {
                 "Name": "Appellant_Name",
                 "Forenames": "Appellant_Forenames",

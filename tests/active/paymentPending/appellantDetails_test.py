@@ -28,33 +28,37 @@ def appellantDetails_outputs(spark):
 
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("DateLodged", T.StringType(), True),
         T.StructField("dv_CCDAppealType", T.StringType(), True),
+        T.StructField("DateLodged", T.StringType(), True),
+        T.StructField("dv_representation", T.StringType(), True),
         T.StructField("BirthDate", T.StringType(), True),
         T.StructField("NationalityId", T.StringType(), True),
         T.StructField("lu_countryCode", T.StringType(), True),
-        T.StructField("lu_appellantNationalitiesDescription", T.StringType(), True)
+        T.StructField("lu_appellantNationalitiesDescription", T.StringType(), True),
+        T.StructField("lu_appealType", T.StringType(), True),
+        T.StructField("DeportationDate", T.StringType(), True),
+        T.StructField("RemovalDate", T.StringType(), True),
+        T.StructField("HORef", T.StringType(), True),
+        T.StructField("CasePrefix", T.StringType(), True),
     ])
 
     m1_data = [
-        ("HU/00487/2025", "2025-03-07", "HU", "1961-05-18", "1", "AF", "Afghanistan"),
-        ("HU/00365/2025", "2024-11-06", "HU", "2017-05-06", "27", "BI", "Burundi"),
-        ("EA/03208/2023", "2023-09-15", "EA", "1995-07-23", "63", "GR", "Greece"),
-        ("EA/01698/2024", "2024-07-31", "EA", "2000-04-28", "94", "LR", "Liberia"),
-        ("HU/00560/2025", "2025-03-31", "HU", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
-        ("HU/00532/2025", "2025-03-24", "HU", "1983-08-08", "169", "TR", "Turkey"),
-        ("HU/00423/2025", "2025-02-21", "HU", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)"),
-        ("HU/00001/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British"),
-        ("HU/00002/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British"),
-        ("HU/00003/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British"),
-        ("HU/00004/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British"),
-        ("HU/00005/2025", "2025-02-21", "HU", "1936-05-07", "179", "UK", "British")
+        ("HU/00487/2025", "HU", "2025-03-07", "LR", "1961-05-18", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00365/2025", "HU", "2024-11-06", "LR", "2017-05-06", "27", "BI", "Burundi", "euSettlementScheme", None, None, None, "HU"),
+        ("EA/03208/2023", "EA", "2023-09-15", "AIP", "1995-07-23", "63", "GR", "Greece", "refusalOfEu", None, None, None, "EA"),
+        ("EA/01698/2024", "EA", "2024-07-31", "AIP", "2000-04-28", "94", "LR", "Liberia", "euSettlementScheme", None, None, "T1113940", "EA"),
+        ("HU/00560/2025", "HU", "2025-03-31", "LR", "1950-11-06", "201", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00532/2025", "HU", "2025-03-24", "LR", "1983-08-08", "169", "TR", "Turkey", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00423/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "VE", "Venezuela (Bolivarian Republic of)", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00001/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00002/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00003/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00004/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00005/2025", "HU", "2025-02-21", "LR", "1936-05-07", "211", "UK", "British", "refusalOfHumanRights", None, None, None, "HU")
     ]
 
     m2_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("dv_representation", T.StringType(), True),
-        T.StructField("lu_appealType", T.StringType(), True),
         T.StructField("Appellant_Name", T.StringType(), True),
         T.StructField("Appellant_Forenames", T.StringType(), True),
         T.StructField("Appellant_Email", T.StringType(), True),
@@ -65,10 +69,6 @@ def appellantDetails_outputs(spark):
         T.StructField("Appellant_Address4", T.StringType(), True),
         T.StructField("Appellant_Address5", T.StringType(), True),
         T.StructField("Appellant_Postcode", T.StringType(), True),
-        T.StructField("DeportationDate", T.StringType(), True),
-        T.StructField("RemovalDate", T.StringType(), True),
-        T.StructField("HORef", T.StringType(), True),
-        T.StructField("CasePrefix", T.StringType(), True),
         T.StructField("AppellantCountryId", T.IntegerType(), True),
         T.StructField("Relationship", T.StringType(), True),
         T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
@@ -77,42 +77,53 @@ def appellantDetails_outputs(spark):
     ])
 
     m2_data = [
-        ("HU/00487/2025", "LR", "refusalOfHumanRights", "RobinsonX", "AdamX", None, None,
-         "7759 Rios SquareX", "Paul WalksX", "KristinfurtX", "Trinidad and TobagoX", None, "W3 8PF",
-         None, None, None, "HU", 133, None, None, None, 0),
-        ("HU/00365/2025", "AIP", "euSettlementScheme", "SandersX", "AmandaX", "smithjohn@example.net", None,
-         "4280 Michael Highway Suite 815X", "Stephanie AlleyX", "Port DanielX", "GibraltarX", None, "DD3 1HW",
-         None, None, None, "HU", 128, None, "GI", "XXXXXXX", 0),
-        ("EA/03208/2023", "LR", "refusalOfEu", "PachecoX", "KiaraX", "chelsea42@example.net", None,
-         "7706 Barbara Gateway Apt. 725X", "Daniel BurgsX", "North JillportX", None, None, "LS3M 4BX",
-         None, None, None, "EA", 155, None, None, None, 0),
-        ("EA/01698/2024", "AIP", "euSettlementScheme", "ColemanX", "AlyssaX", "betty23@example.net", None,
-         "06382 Bryan MountX", "Kimberly ThroughwayX", "ZacharyburghX", None, None, "B37 5LW",
-         None, None, "T1113940", "EA", 124, None, None, None, 0),
-        ("HU/00560/2025", "LR", "refusalOfHumanRights", "MccallX", "ThomasX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 86, None, None, None, 0),
-        ("HU/00532/2025", "LR", "refusalOfHumanRights", "AlvarezX", "JasmineX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 152, None, None, None, 0),
-        ("HU/00423/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 191, None, None, None, 0),
-        ("HU/00001/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 191, None, None, None, 1),
-        ("HU/00002/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 191, None, None, None, 2),
-        ("HU/00003/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, None, None,
-         None, None, None, "HU", 191, None, None, None, 4),
-        ("HU/00004/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, "UK", None,
-         None, None, None, "HU", 191, None, None, None, 0),
-        ("HU/00005/2025", "LR", "refusalOfHumanRights", "WilliamsX", "SarahX", None, None,
-         None, None, None, None, "NotUK", None,
-         None, None, None, "HU", 191, None, None, None, 0)
+        ("HU/00487/2025", "RobinsonX", "AdamX", None, None,
+        "7759 Rios SquareX", "Paul WalksX", "KristinfurtX", "Trinidad and TobagoX", None, "W3 8PF",
+        None, None, None, None, 0),
+
+        ("HU/00365/2025", "SandersX", "AmandaX", "smithjohn@example.net", None,
+        "4280 Michael Highway Suite 815X", "Stephanie AlleyX", "Port DanielX", "GibraltarX", None, "DD3 1HW",
+        None, None, "GI", "XXXXXXX", 0),
+
+        ("EA/03208/2023", "PachecoX", "KiaraX", "chelsea42@example.net", None,
+        "7706 Barbara Gateway Apt. 725X", "Daniel BurgsX", "North JillportX", None, None, "LS3M 4BX",
+        None, None, None, None, 0),
+
+        ("EA/01698/2024", "ColemanX", "AlyssaX", "betty23@example.net", None,
+        "06382 Bryan MountX", "Kimberly ThroughwayX", "ZacharyburghX", None, None, "B37 5LW",
+        None, None, None, "T1113940", 0),
+
+        ("HU/00560/2025", "MccallX", "ThomasX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 0),
+
+        ("HU/00532/2025", "AlvarezX", "JasmineX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 0),
+
+        ("HU/00423/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 0),
+
+        ("HU/00001/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 1),
+
+        ("HU/00002/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 2),
+
+        ("HU/00003/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, None, None,
+        None, None, None, None, 4),
+
+        ("HU/00004/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, "UK", None,
+        None, None, None, None, 0),
+
+        ("HU/00005/2025", "WilliamsX", "SarahX", None, None,
+        None, None, None, None, "NotUK", None,
+        None, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -142,6 +153,21 @@ def appellantDetails_outputs(spark):
         ("Zimbabwe", "WZ")
     ]
 
+    bronze_nationalities_schema = T.StructType([
+        T.StructField("NationalityId", T.StringType(), True),
+        T.StructField("Description", T.StringType(), True),
+        T.StructField("countryCode", T.StringType(), True),
+        T.StructField("appellantNationalitiesDescription", T.StringType(), True),
+    ])
+
+    bronze_nationalities_data = [
+        (0, "No Nationality", "NO MAPPING REQUIRED", "NO MAPPING REQUIRED"),
+        (1, "Afghan", "AF", "Afghanistan"),
+        (2, "Albanian", "AL", "Albania"),
+        (3, "Algerian", "DZ", "Algeria"),
+        (211, "Stateless", "ZZ", "Stateless"),
+    ]
+
     bronze_HORef_cleansing_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("HORef", T.StringType(), True),
@@ -156,11 +182,12 @@ def appellantDetails_outputs(spark):
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
     silver_m2 =  spark.createDataFrame(m2_data, m2_schema)
     silver_c =  spark.createDataFrame(silver_c_data, silver_c_schema)
+    bronze_nationalities = spark.createDataFrame(bronze_nationalities_data, bronze_nationalities_schema)
     bronze_countryFromAddress =  spark.createDataFrame(bronze_countryFromAddress_data, bronze_countryFromAddress_schema)
     bronze_HORef_cleansing =  spark.createDataFrame(bronze_HORef_cleansing_data, bronze_HORef_cleansing_schema)
 
     appellantDetails_content, _ = appellantDetails(
-        silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing
+        silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities
     )
 
     results = {row["CaseNo"]: row.asDict() for row in appellantDetails_content.collect()}
@@ -253,20 +280,21 @@ def test_appellant_address_fields(appellantDetails_outputs):
               appellantHasFixedAddressAdminJ="Yes"
              )
     
-def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
-    row = appellantDetails_outputs["HU/00487/2025"]
-    normalized_nationalities = normalise_rows(row["appellantNationalities"])
-    assert normalized_nationalities == [{'id': '4f7b9a0a-90fa-4258-a530-395aedebfc02',
-                                         'value': {'code': 'AF'}}]
+def test_appellant_stateless(appellantDetails_outputs):
 
-def test_appellant_stateless_and_nationalities(appellantDetails_outputs):
-    # No mapped nationality
-    row_stateless = appellantDetails_outputs["HU/00560/2025"]
-    assert_equals(row_stateless,
-                  appellantStateless="hasNationality",
-                  appellantNationalities=None,
-                  appellantNationalitiesDescription=None
-                 )
+        row = appellantDetails_outputs["HU/00005/2025"]
+
+        assert row["appellantStateless"] == "isStateless"
+        assert row["appellantNationalities"] == "ZZ"
+        assert row["appellantNationalitiesDescription"] == "Stateless"
+
+def test_appellant_nationalities(appellantDetails_outputs):
+
+    row = appellantDetails_outputs["HU/00487/2025"]
+
+    assert row["appellantStateless"] == "hasNationality"
+    assert row["appellantNationalities"] == "AF"
+    assert row["appellantNationalitiesDescription"] == "Afghanistan"
 
 def test_deportation_order_options(appellantDetails_outputs):
     """Check deportation order options for CategoryId 48."""

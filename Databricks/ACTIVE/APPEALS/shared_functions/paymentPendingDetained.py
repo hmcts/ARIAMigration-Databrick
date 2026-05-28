@@ -304,9 +304,9 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 ##########             appellantDetails Function              ###########
 ################################################################
 
-def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing):
+def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities):
 
-    appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
+    appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities)
 
     appellantDetails_df = appellantDetails_df.drop("appellantInUk","appealOutOfCountry","appellantHasFixedAddress")
     # appellantDetails_audit = appellantDetails_audit.drop("appellantAddress")

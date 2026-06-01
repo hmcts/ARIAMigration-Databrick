@@ -1,7 +1,7 @@
 from Databricks.ACTIVE.APPEALS.shared_functions import listing
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import IntegerType, StringType, BooleanType, StructField, StructType
+from pyspark.sql import SparkSession, Row
+from pyspark.sql.types import ArrayType, IntegerType, StringType, BooleanType, StructField, StructType
 from pyspark.testing.utils import assertDataFrameEqual
 from unittest.mock import patch
 
@@ -384,3 +384,149 @@ class TestListingState():
 
             assertDataFrameEqual(df, expected_output_df, showOnlyDiff=True)
             # assertDataFrameEqual(df_audit, expected_audit_output_df, showOnlyDiff=True)
+
+    def test_flags_labels(self, spark, bronze_interpreter_languages_test_data):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.listing.PP') as mock_PP:
+            path_item_schema = StructType([
+                StructField("id", StringType(), True),
+                StructField("value", StringType(), True),
+            ])
+            flag_value_schema = StructType([
+                StructField("name", StringType(), True),
+                StructField("path", ArrayType(path_item_schema), True),
+                StructField("status", StringType(), True),
+                StructField("flagCode", StringType(), True),
+                StructField("flagComment", StringType(), True),
+                StructField("subTypeKey", StringType(), True),
+                StructField("subTypeValue", StringType(), True),
+                StructField("dateTimeCreated", StringType(), True),
+                StructField("hearingRelevant", StringType(), True),
+            ])
+            flag_detail_schema = StructType([
+                StructField("id", StringType(), True),
+                StructField("value", flag_value_schema, True),
+            ])
+            appellant_flags_schema = StructType([
+                StructField("details", ArrayType(flag_detail_schema), True),
+                StructField("partyName", StringType(), True),
+                StructField("roleOnCase", StringType(), True),
+            ])
+            base_df_schema = StructType([
+                StructField("CaseNo", StringType(), True),
+                StructField("appellantLevelFlags", appellant_flags_schema, True),
+            ])
+
+            base_data = [
+                Row(CaseNo="CASE1", appellantLevelFlags=None),
+                Row(CaseNo="CASE2", appellantLevelFlags=None),
+                Row(CaseNo="CASE3", appellantLevelFlags=Row(
+                    details=[Row(
+                        id="existing-id",
+                        value=Row(
+                            name="Prior Flag",
+                            path=[Row(id="path-id", value="Party")],
+                            status="Active",
+                            flagCode="PF0012",
+                            flagComment=None,
+                            subTypeKey=None,
+                            subTypeValue=None,
+                            dateTimeCreated="2024-01-01T00:00:00Z",
+                            hearingRelevant="Yes"
+                        )
+                    )],
+                    partyName="Jane Doe",
+                    roleOnCase="Appellant"
+                )),
+                Row(CaseNo="CASE4", appellantLevelFlags=None),
+                Row(CaseNo="CASE5", appellantLevelFlags=None),
+            ]
+
+            mock_base_df = spark.createDataFrame(base_data, base_df_schema)
+            mock_PP.flagsLabels.return_value = (mock_base_df, mock_base_df)
+
+            m1_schema = StructType([
+                StructField("CaseNo", StringType(), True),
+                StructField("AppellantForenames", StringType(), True),
+                StructField("AppellantName", StringType(), True),
+                StructField("LanguageId", IntegerType(), True),
+            ])
+            silver_m1 = spark.createDataFrame([
+                ("CASE1", "Alice", "Smith", None),   # no interpreter language
+                ("CASE2", "Bob", "Jones", 1),         # spoken English (non-manual)
+                ("CASE3", "Jane", "Doe", 6),          # sign BSL (non-manual)
+                ("CASE4", "Tom", "Brown", 5),         # spoken manual entry
+                ("CASE5", "Mary", "White", 8),        # sign manual entry
+            ], m1_schema)
+
+            m2_schema = StructType([
+                StructField("CaseNo", StringType(), True),
+                StructField("Relationship", StringType(), True),
+                StructField("Appellant_Forenames", StringType(), True),
+                StructField("Appellant_Name", StringType(), True),
+            ])
+            silver_m2 = spark.createDataFrame([
+                ("CASE1", None, "Alice", "Smith"),
+                ("CASE2", None, "Bob", "Jones"),
+                ("CASE3", None, "Jane", "Doe"),
+                ("CASE4", None, "Tom", "Brown"),
+                ("CASE5", None, "Mary", "White"),
+            ], m2_schema)
+
+            silver_c = spark.createDataFrame([
+                ("CASE2", 41),
+                ("CASE3", 41),
+                ("CASE4", 41),
+                ("CASE5", 41),
+            ], self.C_COLUMNS)
+
+            silver_m3 = spark.createDataFrame([], self.M3_COLUMNS)
+
+            df, _ = listing.flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_languages_test_data)
+            results = {row["CaseNo"]: row.asDict() for row in df.collect()}
+
+            # CASE1: no existing flags, no interpreter → gets 3 static flags
+            case1_flags = results["CASE1"]["appellantLevelFlags"]
+            assert case1_flags is not None
+            case1_codes = [d["value"]["flagCode"] for d in case1_flags["details"]]
+            assert case1_codes == ["RA0019", "RA0043", "PF0014"]
+            assert case1_flags["partyName"] == "Alice Smith"
+            assert case1_flags["roleOnCase"] == "Appellant"
+
+            # CASE2: spoken English → 3 static flags + Language Interpreter (PF0015)
+            case2_flags = results["CASE2"]["appellantLevelFlags"]
+            assert case2_flags is not None
+            case2_codes = [d["value"]["flagCode"] for d in case2_flags["details"]]
+            assert case2_codes == ["RA0019", "RA0043", "PF0014", "PF0015"]
+            assert case2_flags["partyName"] == "Bob Jones"
+            assert case2_flags["roleOnCase"] == "Appellant"
+            case2_pf0015 = next(d for d in case2_flags["details"] if d["value"]["flagCode"] == "PF0015")
+            assert case2_pf0015["value"]["subTypeKey"] == "en"
+            assert case2_pf0015["value"]["subTypeValue"] == "English"
+
+            # CASE3: existing flags, sign BSL → prior flag + 3 static + Sign Language Interpreter (RA0042)
+            case3_flags = results["CASE3"]["appellantLevelFlags"]
+            assert case3_flags is not None
+            case3_codes = [d["value"]["flagCode"] for d in case3_flags["details"]]
+            assert case3_codes == ["PF0012", "RA0019", "RA0043", "PF0014", "RA0042"]
+            assert len(case3_flags["details"]) == 5
+            case3_ra0042 = next(d for d in case3_flags["details"] if d["value"]["flagCode"] == "RA0042")
+            assert case3_ra0042["value"]["subTypeKey"] == "bfi"
+            assert case3_ra0042["value"]["subTypeValue"] == "British Sign Language (BSL)"
+
+            # CASE4: has category, spoken manual entry → 3 static + Language Interpreter (PF0015, no subTypeKey)
+            case4_flags = results["CASE4"]["appellantLevelFlags"]
+            assert case4_flags is not None
+            case4_codes = [d["value"]["flagCode"] for d in case4_flags["details"]]
+            assert case4_codes == ["RA0019", "RA0043", "PF0014", "PF0015"]
+            case4_pf0015 = next(d for d in case4_flags["details"] if d["value"]["flagCode"] == "PF0015")
+            assert case4_pf0015["value"]["subTypeKey"] is None
+            assert case4_pf0015["value"]["subTypeValue"] == "Manual Entry"
+
+            # CASE5: has category, sign manual entry → 3 static + Sign Language Interpreter (RA0042, no subTypeKey)
+            case5_flags = results["CASE5"]["appellantLevelFlags"]
+            assert case5_flags is not None
+            case5_codes = [d["value"]["flagCode"] for d in case5_flags["details"]]
+            assert case5_codes == ["RA0019", "RA0043", "PF0014", "RA0042"]
+            case5_ra0042 = next(d for d in case5_flags["details"] if d["value"]["flagCode"] == "RA0042")
+            assert case5_ra0042["value"]["subTypeKey"] is None
+            assert case5_ra0042["value"]["subTypeValue"] == "Sign Language (Other)"

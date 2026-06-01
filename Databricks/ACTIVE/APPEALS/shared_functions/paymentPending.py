@@ -1488,12 +1488,24 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
                         when(conditions & (col("NationalityId") == 211), lit("isStateless"))
                         .when(conditions, lit("hasNationality"))
                         .otherwise(None)
-                    ).select("CaseNo", 
+                    ).select("CaseNo",
                              "NationalityId",
                              "Description",
                              when(col("countryCode") == lit('NO MAPPING REQUIRED'), lit(None)).otherwise(col("countryCode")).alias("countryCode"),
                              when(col("appellantNationalitiesDescription") == lit('NO MAPPING REQUIRED'), lit(None)).otherwise(col("appellantNationalitiesDescription")).alias("appellantNationalitiesDescription"),
                              "appellantStateless")
+
+    # Create DataFrame with CaseNo and collection of lu_countryCode from silver_m1
+    silver_m1_country_grouped = silver_m1.groupBy("CaseNo").agg(
+        transform(
+            collect_list(col("lu_countryCode")),
+            lambda code: struct(
+                expr("uuid()").alias("id"),
+                struct(code.alias("code")).alias("value")
+            )
+        ).alias("appellantNationalities"),
+        collect_list(col("lu_countryCode")).alias("lu_countryCodeList")
+    )
 
     # isAppellantMinor: BirthDate > (DateLodged - 18 years) using year subtraction
     is_minor_expr = when(
@@ -1707,6 +1719,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         .join(silver_m2_derived.alias("silver_m2"), ["CaseNo"], "left") \
         .join(silver_c_grouped, ["CaseNo"], "left") \
         .join(appellant_nationalities, ["CaseNo"], "left") \
+        .join(silver_m1_country_grouped, ["CaseNo"], "left") \
         .join(bronze_cleansing, ["CaseNo"], "left") \
         .select(
             col("CaseNo"),
@@ -1747,8 +1760,17 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
             country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
             col("appellantStateless").alias("appellantStateless"),
-            col("countryCode").alias("appellantNationalities"),
-            col("appellantNationalitiesDescription").alias("appellantNationalitiesDescription"),
+            when(
+                conditions,
+                when(
+                    (size(col("appellantNationalities")) == 0) |
+                    (array_contains(expr("transform(appellantNationalities, x -> x.value.code)"), "NO MAPPING REQUIRED")),
+                    lit(None)
+                ).otherwise(col("appellantNationalities"))
+            ).otherwise(lit(None)).alias("appellantNationalities"),
+            when(conditions,
+                 when(col("lu_appellantNationalitiesDescription").eqNullSafe("NO MAPPING REQUIRED"), lit(None)).otherwise(col("lu_appellantNationalitiesDescription"))
+            ).otherwise(None).alias("appellantNationalitiesDescription"),
             when(conditions & deportation_condition,
                 lit("Yes")
             ).when(conditions, lit("No")).otherwise(None).alias("deportationOrderOptions")
@@ -1760,6 +1782,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     df_audit = silver_m1.join(silver_m2_derived, ["CaseNo"], "left") \
         .alias("audit") \
         .join(silver_c_grouped, ["CaseNo"], "left") \
+        .join(silver_m1_country_grouped, ["CaseNo"], "left") \
         .join(df.alias("content"), ["CaseNo"],"left") \
         .join(bronze_cleansing.alias("content_c"), ["CaseNo"],"left") \
         .select(
@@ -1832,8 +1855,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             lit("yes").alias("appellantStateless_Transformation"),
 
             # Audit appellantNationalities
-            array(struct(*common_inputFields, lit("appellantNationalities"))).alias("appellantNationalities_inputfields"),
-            array(struct(*common_inputValues, col("appellantNationalities"))).alias("appellantNationalities_inputvalues"),
+            array(struct(*common_inputFields, lit("lu_countryCodeList"))).alias("appellantNationalities_inputfields"),
+            array(struct(*common_inputValues, col("lu_countryCodeList"))).alias("appellantNationalities_inputvalues"),
             col("content.appellantNationalities"),
             lit("yes").alias("appellantNationalities_Transformation"),
 

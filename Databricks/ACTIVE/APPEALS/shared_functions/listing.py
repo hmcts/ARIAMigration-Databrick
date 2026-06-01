@@ -1,11 +1,70 @@
 from pyspark.sql.functions import (
-    array, array_compact, array_contains, array_distinct, array_size, col, collect_list, concat_ws, expr, lit, row_number, struct, when
+    array, array_compact, array_contains, array_distinct, array_size, col, collect_list, concat, concat_ws,
+    current_timestamp, date_format, expr, lit, row_number, struct, when
 )
 from pyspark.sql.window import Window
 
 from . import paymentPending as PP
 from . import paymentPendingDetained as PPD
 from . import AwaitingEvidenceRespondant_b as AERb
+
+
+def flagsLabels(silver_m1, silver_m2, silver_c):
+    df, df_audit = PP.flagsLabels(silver_m1, silver_m2, silver_c)
+
+    def make_appellant_flag_struct(name, code, comment, hearing):
+        return struct(
+            lit(expr("uuid()")).alias("id"),
+            struct(
+                lit(name).alias("name"),
+                array(struct(expr("uuid()").alias("id"), lit("Party").alias("value"))).alias("path"),
+                lit("Active").alias("status"),
+                lit(code).alias("flagCode"),
+                lit(comment).cast("string").alias("flagComment"),
+                date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("dateTimeCreated"),
+                lit(hearing).alias("hearingRelevant")
+            ).alias("value")
+        )
+    
+    flags_array = array(
+        make_appellant_flag_struct("Step free / wheelchair access", "RA0019", None, "Yes"),
+        make_appellant_flag_struct("Hearing loop (hearing enhancement system)", "RA0043", None, "Yes"),
+        make_appellant_flag_struct("Audio / Video Evidence", "PF0014", None, "Yes")
+    )
+
+    df = (
+        df.join(
+            silver_m1.select(
+                "CaseNo",
+                col("AppellantForenames").alias("m1_AppellantForenames"),
+                col("AppellantName").alias("m1_AppellantName")
+            ),
+            on="CaseNo",
+            how="left"
+        )
+        .join(
+            silver_c.where(col("CategoryId").isNotNull())
+            .select("CaseNo", "CategoryId")
+            .dropDuplicates(["CaseNo"]), on="CaseNo", how="left"
+        )
+        .withColumn(
+            "appellantLevelFlags",
+            when(
+                col("appellantLevelFlags").isNotNull(),
+                col("appellantLevelFlags").withField("details", concat(col("appellantLevelFlags.details"), flags_array))
+            ).when(
+                col("CategoryId").isNotNull(),
+                struct(
+                    flags_array.alias("details"),
+                    concat_ws(' ', col("m1_AppellantForenames"), col("m1_AppellantName")).alias("partyName"),
+                    lit("Appellant").alias("roleOnCase")
+                )
+            )
+        )
+        .select(*df.columns)
+    )
+
+    return df, df_audit
 
 
 def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):

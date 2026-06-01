@@ -1747,7 +1747,13 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             address_line4_adminj_expr.alias("addressLine4AdminJ"),
             country_gov_uk_ooc_adminj_expr.alias("countryGovUkOocAdminJ"),
             col("appellantStateless").alias("appellantStateless"),
-            col("countryCode").alias("appellantNationalities"),
+            when(
+                conditions & col("countryCode").isNotNull(),
+                array(struct(
+                    expr("uuid()").alias("id"),
+                    struct(col("countryCode").alias("code")).alias("value")
+                ))
+            ).otherwise(lit(None)).alias("appellantNationalities"),
             col("appellantNationalitiesDescription").alias("appellantNationalitiesDescription"),
             when(conditions & deportation_condition,
                 lit("Yes")

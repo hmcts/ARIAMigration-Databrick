@@ -17,8 +17,6 @@ def normalise_rows(row_list):
             return [row_to_dict(x) for x in r]
         elif isinstance(r, tuple) or isinstance(r, T.Row):
             return {k: row_to_dict(v) for k, v in r.asDict().items()}
-        elif isinstance(r, Row):
-            return {k: row_to_dict(v) for k, v in r.asDict().items()}
         else:
             return r
     return row_to_dict(row_list)
@@ -281,20 +279,24 @@ def test_appellant_address_fields(appellantDetails_outputs):
              )
     
 def test_appellant_stateless(appellantDetails_outputs):
+    row = appellantDetails_outputs["HU/00005/2025"]
 
-        row = appellantDetails_outputs["HU/00005/2025"]
+    assert_equals(row,
+                  appellantStateless="isStateless",
+                  appellantNationalitiesDescription="Stateless")
 
-        assert row["appellantStateless"] == "isStateless"
-        assert row["appellantNationalities"] == "ZZ"
-        assert row["appellantNationalitiesDescription"] == "Stateless"
+    normalized_nationalities = normalise_rows(row["appellantNationalities"])
+    assert normalized_nationalities == [{'id': normalized_nationalities[0]['id'], 'value': {'code': 'ZZ'}}]
 
 def test_appellant_nationalities(appellantDetails_outputs):
-
     row = appellantDetails_outputs["HU/00487/2025"]
 
-    assert row["appellantStateless"] == "hasNationality"
-    assert row["appellantNationalities"] == "AF"
-    assert row["appellantNationalitiesDescription"] == "Afghanistan"
+    assert_equals(row,
+                  appellantStateless="hasNationality",
+                  appellantNationalitiesDescription="Afghanistan")
+
+    normalized_nationalities = normalise_rows(row["appellantNationalities"])
+    assert normalized_nationalities == [{'id': normalized_nationalities[0]['id'], 'value': {'code': 'AF'}}]
 
 def test_deportation_order_options(appellantDetails_outputs):
     """Check deportation order options for CategoryId 48."""

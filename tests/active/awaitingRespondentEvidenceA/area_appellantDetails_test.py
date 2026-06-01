@@ -70,7 +70,7 @@ class TestAwaitingRespondentEvidenceAAppellantDetails:
                 ("2", "rep", "appeal")
             ], self.SILVER_M1_SCHEMA)
 
-            df, df_audit = appellantDetails(silver_m1, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = appellantDetails(silver_m1, MagicMock(), MagicMock(), MagicMock(), MagicMock())
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("appellantFullName").collect()
 

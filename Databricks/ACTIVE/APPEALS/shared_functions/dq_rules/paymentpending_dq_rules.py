@@ -72,28 +72,9 @@ class paymentPendingDQRules(DQRulesBase):
             "(submissionOutOfTime IS NOT NULL AND submissionOutOfTime IN ('Yes', 'No'))"
         )
         checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
-        """
-            (
-                recordedOutOfTimeDecision IS NULL
-                OR
-                (
-                    recordedOutOfTimeDecision = 'Yes'
-                    AND OutOfTimeIssue = True
-                    AND (
-                        (
-                            ariaDesiredState IN ('paymentPending', 'appealSubmitted')
-                            AND Outcome IS NOT NULL
-                        )
-                        OR
-                        (
-                            ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
-                        )
-                    )
-                )
-            )
-        """)
- 
-
+            """ (recordedOutOfTimeDecision IS NULL OR 
+                (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND recordedOutOfTimeDecision = 'Yes'))"""
+        )
         checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
         )
@@ -312,11 +293,7 @@ class paymentPendingDQRules(DQRulesBase):
             """(
                 (lu_appellantNationalitiesDescription <=> 'NO MAPPING REQUIRED' AND appellantNationalitiesDescription IS NULL)
                 OR
-                (lu_countryCode IS NOT NULL AND appellantNationalitiesDescription IS NOT NULL)
-                OR
-                (appellantStateless = "hasNationality" AND appellantNationalitiesDescription IS NOT NULL)
-                OR
-                (appellantStateless = "isStateless" AND appellantNationalitiesDescription IS NULL)
+                (appellantNationalitiesDescription <=> lu_appellantNationalitiesDescription)
             )"""
         )
 
@@ -324,11 +301,7 @@ class paymentPendingDQRules(DQRulesBase):
             """(
                 (lu_countryCode <=> 'NO MAPPING REQUIRED' AND appellantNationalities IS NULL)
                 OR
-                (lu_countryCode IS NOT NULL AND appellantNationalities IS NOT NULL)
-                OR
-                (appellantStateless = "hasNationality" AND appellantNationalities IS NOT NULL)
-                OR
-                (appellantStateless = "isStateless" AND appellantNationalities IS NULL)
+                (ELEMENT_AT(appellantNationalities, 1).value.code <=> lu_countryCode)
             )"""
         )
 

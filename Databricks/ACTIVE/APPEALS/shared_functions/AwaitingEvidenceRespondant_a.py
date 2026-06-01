@@ -7,8 +7,8 @@ from . import paymentPendingDetained as PPD
 # Appellant Details
 ##########################
 
-def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities): 
-    df_apellantDetails, df_audit_appellantDetails = PPD.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities)
+def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing): 
+    df_apellantDetails, df_audit_appellantDetails = PPD.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing)
 
     # Update column changeDirectionDueDateActionAvailable and add two new colums per mapping document 
     df_apellantDetails = df_apellantDetails.withColumn("appellantFullName", concat(col("appellantGivenNames"), lit(" "), col("appellantFamilyName")))

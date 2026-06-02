@@ -87,7 +87,7 @@ class TestAppealSubmittedPaymentType:
                 ("3", 3, 1, 0.0, True, False, 3),     # valid condition
                 ("4", 3, 1, 0.0, True, False, 3),     # valid condition
                 ("5", 3, 1, 0.0, True, False, 3),     # valid condition
-                ("6", 3, 1, 0.0, False, False, 3),     # SumBalance = 0
+                ("6", 3, 1, 0.0, False, False, 3),    # SumBalance = 0
                 ("7", 1, 1, 0.0, True, False, 3),     # TransactionId = 1
                 ("8", 2, 1, 0.0, True, False, 3),     # TransactionId = 2
                 ("9", 3, 1, 100.0, True, False, 3),   # Amount > 0
@@ -96,7 +96,7 @@ class TestAppealSubmittedPaymentType:
                 ("11", 6, 19, 0.0, True, False, 2),   # Case 11 - TransactionTypeId = 19, TransactionId = 6
                 ("11", 7, 1, 0.0, True, False, 3),    # Case 11 - TransactionTypeId = 1, TransactionId = 7
                 ("12", 8, 1, 100.0, True, False, 0),  # Case 12 - TransactionTypeId = 1, TransactionId = 8
-                ("12", 9, 19, 0.0, False, False, 8)    # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
+                ("12", 9, 19, 0.0, False, False, 8)   # Case 12 - TransactionTypeId = 19, TransactionId = 9, ReferringTransaction 8, SumBalance = 0
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -195,18 +195,32 @@ class TestAppealSubmittedPaymentType:
 
     def test_paidDate(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.paymentType.return_value = self.payment_pending_df(spark, 5)
+            PP.paymentType.return_value = self.payment_pending_df(spark, 7)
 
             m1_data = [
-                ("1", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case - paidDate set
-                ("2", "EU", "LR", 0, datetime(2000, 2, 5)),    # EU Case - paidDate set
-                ("3", "HU", "AIP", 0, datetime(2000, 3, 10)),  # HU Case - paidDate set
-                ("4", "PA", "LR", 0, datetime(2000, 4, 15)),   # PA Case - paidDate set
-                ("5", "RP", "AIP", 0, datetime(2000, 1, 1))    # RP Case - none
+                ("1", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case - in valid_cases, paidDate set
+                ("2", "EU", "LR", 0, datetime(2000, 2, 5)),    # EU Case - in valid_cases, paidDate set
+                ("3", "HU", "AIP", 0, datetime(2000, 3, 10)),  # HU Case - in valid_cases, paidDate set
+                ("4", "PA", "LR", 0, datetime(2000, 4, 15)),   # PA Case - in valid_cases, paidDate set
+                ("5", "RP", "AIP", 0, datetime(2000, 1, 1)),   # RP Case - none
+                ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with no txn = 3
+                ("7", "EA", "AIP", 0, datetime(2000, 1, 1))    # EA Case with transactionTypeId not in 6 or 19
+            ]
+
+            m4_data = [
+                ("98", 1, 6, 100.0, False, False, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
+                ("99", 1, 19, 100.0, False, False, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
+                ("1", 1, 3, 0.0, False, False, 3),      # txn = 3 and valid
+                ("2", 2, 3, 0.0, False, False, 3),      # txn = 3 and valid
+                ("3", 1, 3, 0.0, False, False, 3),      # txn = 3 and valid
+                ("4", 2, 3, 0.0, False, False, 3),      # txn = 3 and valid
+                ("5", 1, 3, 0.0, False, False, 3),      # txn = 3 not valid
+                ("6", 2, 10, 0.0, False, False, 3),     # txn != 3 not valid
+                ("7", 3, 3, 0.0, False, False, 3)       # txn = 3 but TransactionId not part of ReferringTransactionId in (6, 19) not valid
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
-            silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
 
             df, df_audit = paymentType(silver_m1, silver_m4)
 
@@ -214,11 +228,12 @@ class TestAppealSubmittedPaymentType:
 
             assert resultList[0][0] == "2000-01-01" and resultList[1][0] == "2000-02-05"
             assert resultList[2][0] == "2000-03-10" and resultList[3][0] == "2000-04-15"
-            assert resultList[4][0] is None
+            assert resultList[4][0] is None and resultList[5][0] is None
+            assert resultList[6][0] is None
 
     def test_paidAmount(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.paymentType.return_value = self.payment_pending_df(spark, 9)
+            PP.paymentType.return_value = self.payment_pending_df(spark, 10)
 
             m1_data = [
                 ("1", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with valid condition - paidAmount set
@@ -227,25 +242,27 @@ class TestAppealSubmittedPaymentType:
                 ("4", "PA", "LR", 0, datetime(2000, 4, 15)),   # PA Case with valid condition - paidAmount set
                 ("5", "RP", "AIP", 0, datetime(2000, 1, 1)),   # RP Case - none
                 ("6", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with SumTotalPay = 0 - 0 set
-                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 6 - 0 set
-                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with ReferringTransactionId = TransactionId with Type in 19 - 0 set
-                ("9", "EA", "AIP", 0, datetime(2000, 1, 1))    # EA Case with valid condition and multiple transactions - sum paidAmount set
+                ("7", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case without ReferringTransactionId = TransactionId with Type in 6 - null
+                ("8", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case without ReferringTransactionId = TransactionId with Type in 19 - null
+                ("9", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case with valid condition and multiple transactions - sum paidAmount set
+                ("10", "EA", "AIP", 0, datetime(2000, 1, 1))   # EA Case with no TransactionTypeId = 3
             ]
 
             m4_data = [
                 ("98", 1, 6, 100.0, False, True, 1),   # TransactionTypeId = 6, ReferringTransationId = 1
                 ("99", 1, 19, 100.0, False, True, 2),  # TransactionTypeId = 19, ReferringTransationId = 2
-                ("1", 3, 1, 100.0, False, True, 3),    # valid condition
-                ("2", 3, 3, 100.0, False, True, 3),    # valid condition
-                ("3", 2, 3, 100.0, False, True, 1),    # valid condition
-                ("4", 2, 1, 100.0, False, True, 3),    # valid condition
-                ("5", 3, 1, 100.0, False, True, 3),    # valid condition
-                ("6", 3, 1, 100.0, False, False, 3),    # SumTotalPay = 0
-                ("7", 1, 1, 100.0, False, True, 3),    # TransactionId = 1
-                ("8", 2, 1, 100.0, False, True, 3),    # TransactionId = 2
-                ("9", 3, 1, 100.0, False, True, 3),    # valid condition for same case
-                ("9", 3, 1, 150.0, False, True, 3),    # valid condition for same case
-                ("9", 3, 3, 250.0, False, True, 3)     # valid condition for same case
+                ("1", 1, 3, 100.0, False, True, 3),    # valid condition
+                ("2", 2, 3, 100.0, False, True, 3),    # valid condition
+                ("3", 1, 3, 100.0, False, True, 3),    # valid condition
+                ("4", 2, 3, 100.0, False, True, 3),    # valid condition
+                ("5", 1, 3, 100.0, False, True, 3),    # valid condition but not valid appealType
+                ("6", 2, 3, 100.0, False, False, 3),   # SumTotalPay = 0
+                ("7", 3, 3, 100.0, False, True, 3),    # TransactionId not in ReferringTransationId
+                ("8", 3, 3, 100.0, False, True, 3),    # TransactionId not in ReferringTransationId
+                ("9", 1, 1, 100.0, False, True, 3),    # valid condition for same case
+                ("9", 2, 2, 150.0, False, True, 3),    # valid condition for same case
+                ("9", 1, 3, 250.0, False, True, 3),    # valid condition for same case
+                ("10", 1, 10, 250.0, False, True, 3)   # TransactionTypeId != 3
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -255,30 +272,38 @@ class TestAppealSubmittedPaymentType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
-            assert resultList[0][0] == "0" 
-            assert resultList[1][0] == "0" 
-            assert resultList[2][0] == "100" 
-            assert resultList[3][0] == "0" 
+            assert resultList[0][0] == "100"
+            assert resultList[1][0] == "100"
+            assert resultList[2][0] == "100"
+            assert resultList[3][0] == "100"
             assert resultList[4][0] is None
             assert resultList[5][0] == "0"
-            assert resultList[6][0] == "0"
-            assert resultList[7][0] == "0" 
-            assert resultList[8][0] == "0"
+            assert resultList[6][0] is None
+            assert resultList[7][0] is None
+            assert resultList[8][0] == "500"
+            assert resultList[9][0] is None
 
     def test_additionalPaymentInfo(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
             PP.paymentType.return_value = self.payment_pending_df(spark, 5)
 
             m1_data = [
-                ("1", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case - additionalPaymentInfo set
-                ("2", "EU", "LR", 0, datetime(2000, 1, 1)),    # EU Case - additionalPaymentInfo set
-                ("3", "HU", "AIP", 0, datetime(2000, 1, 1)),  # HU Case - additionalPaymentInfo set
-                ("4", "PA", "LR", 0, datetime(2000, 1, 1)),   # PA Case - additionalPaymentInfo set
+                ("1", "EA", "AIP", 0, datetime(2000, 1, 1)),   # EA Case - in valid_cases, additionalPaymentInfo set
+                ("2", "EU", "LR", 0, datetime(2000, 1, 1)),    # EU Case - in valid_cases, additionalPaymentInfo set
+                ("3", "HU", "AIP", 0, datetime(2000, 1, 1)),   # HU Case - in valid_cases, additionalPaymentInfo set
+                ("4", "PA", "LR", 0, datetime(2000, 1, 1)),    # PA Case - in valid_cases, additionalPaymentInfo set
                 ("5", "RP", "AIP", 0, datetime(2000, 1, 1))    # RP Case - none
+            ]
+            
+            m4_data = [
+                ("1", 10, 3, 0.0, False, False, 99),
+                ("2", 11, 3, 0.0, False, False, 99),
+                ("3", 12, 3, 0.0, False, False, 99),
+                ("4", 13, 3, 0.0, False, False, 99),
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
-            silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
 
             df, df_audit = paymentType(silver_m1, silver_m4)
 

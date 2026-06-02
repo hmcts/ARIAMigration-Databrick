@@ -25,17 +25,14 @@ def paymentType(silver_m1, silver_m4):
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
-    ref_txn_df = (
+    filtered_rows = silver_m4.alias("t").join(
         silver_m4.filter(~col("TransactionTypeId").isin(6, 19))
         .select("ReferringTransactionId")
         .where(col("ReferringTransactionId").isNotNull())
         .distinct()
-    )
-
-    filtered_rows = silver_m4.alias("t").join(
-        ref_txn_df.alias("r"),
+        .alias("r"),
         col("t.TransactionId") == col("r.ReferringTransactionId"),
-        "left_anti", #not in
+        "left_anti",
     )
 
     valid_cases = (
@@ -51,7 +48,7 @@ def paymentType(silver_m1, silver_m4):
 
     final_filtered_df = filtered_rows.join(valid_cases, "CaseNo", "inner")
 
-    ref_txn_df1 = (
+    ref_txn_df = (
         silver_m4.filter(col("TransactionTypeId").isin(6, 19))
         .select("ReferringTransactionId")
         .where(col("ReferringTransactionId").isNotNull())
@@ -60,7 +57,7 @@ def paymentType(silver_m1, silver_m4):
 
     payment_status = (
         silver_m4.alias("m4")
-        .join(ref_txn_df1.alias("r_txn"),
+        .join(ref_txn_df.alias("r_txn"),
             col("m4.TransactionId") == col("r_txn.ReferringTransactionId"),
             "left_anti")
         .filter(col("SumBalance") == True)
@@ -103,6 +100,7 @@ def paymentType(silver_m1, silver_m4):
         .join(silver_m1, ["CaseNo"], "left")
         .join(paid_amount, ["CaseNo"], "left")
         .join(payment_status.alias("payment_status"), ["CaseNo"], "left")
+        .join(valid_cases.withColumn("has_valid_txn", lit(True)), ["CaseNo"], "left")
         .select(
             "payment_content.*",
             when(
@@ -125,19 +123,15 @@ def paymentType(silver_m1, silver_m4):
             )
             .alias("rpDcAppealHearingOption"),
             when(
-                conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")
+                conditions_all & col("has_valid_txn"), date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")
             ).alias("paidDate"),
             when(
-                conditions_all,
-                (
-                    when(col("paidAmount").isNotNull(), col("paidAmount"))
-                    .otherwise(lit(0))
-                    .cast(IntegerType())
-                    .cast(StringType())
-                ),
+                conditions_all & col("has_valid_txn"),
+                when(col("paidAmount").isNotNull(), col("paidAmount").cast(IntegerType()).cast(StringType()))
+                .otherwise(lit("0")),
             ).alias("paidAmount"),
             when(
-                conditions_all,
+                conditions_all & col("has_valid_txn"),
                 lit(
                     "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes."
                 ),

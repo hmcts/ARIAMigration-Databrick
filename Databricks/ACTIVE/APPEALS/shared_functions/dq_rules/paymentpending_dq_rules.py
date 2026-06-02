@@ -316,7 +316,7 @@ class paymentPendingDQRules(DQRulesBase):
                 OR
                 (appellantStateless = "hasNationality" AND appellantNationalitiesDescription IS NOT NULL)
                 OR
-                (appellantStateless = "isStateless" AND appellantNationalitiesDescription IS NULL)
+                (appellantStateless = "isStateless" AND appellantNationalitiesDescription IS NOT NULL)
             )"""
         )
 
@@ -328,7 +328,7 @@ class paymentPendingDQRules(DQRulesBase):
                 OR
                 (appellantStateless = "hasNationality" AND appellantNationalities IS NOT NULL)
                 OR
-                (appellantStateless = "isStateless" AND appellantNationalities IS NULL)
+                (appellantStateless = "isStateless" AND appellantNationalities IS NOT NULL)
             )"""
         )
 

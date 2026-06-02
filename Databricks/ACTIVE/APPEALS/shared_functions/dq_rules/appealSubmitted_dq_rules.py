@@ -150,13 +150,27 @@ class appealSubmittedDQRules(DQRulesBase):
         )
 
         checks["valid_paidDate"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND (paidDate IS NOT NULL OR paidDate IS NULL)) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND paidDate IS NULL))"
+            """(
+                (
+                    dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                    AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
+                )
+                OR
+                (
+                    (
+                        dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')
+                        OR NOT SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
+                    )
+                    AND paidDate IS NULL
+                )
+            )"""
         )
 
         checks["valid_paidAmount"] = (
             """(
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+                    AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
                     AND
                     (paidAmount <=> (
                         CAST(ABS(CAST(AGGREGATE(
@@ -173,6 +187,13 @@ class appealSubmittedDQRules(DQRulesBase):
                 )
                 OR
                 (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+                    AND NOT SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
+                    AND
+                    (paidAmount IS NULL)
+                )
+                OR
+                (
                     (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA'))
                     AND
                     (paidAmount IS NULL)
@@ -181,7 +202,24 @@ class appealSubmittedDQRules(DQRulesBase):
         )
 
         checks["valid_additionalPaymentInfo"] = (
-            "((dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND additionalPaymentInfo <=> 'This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.') OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND additionalPaymentInfo IS NULL))"
+            """(
+                (
+                    dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                    AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
+                    AND additionalPaymentInfo <=> 'This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes.'
+                )
+                OR
+                (
+                    dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                    AND NOT SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
+                    AND additionalPaymentInfo IS NULL
+                )
+                OR
+                (
+                    (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA'))
+                    AND additionalPaymentInfo IS NULL
+                )
+            )"""
         )
 
         checks["valid_paymentDescription"] = (

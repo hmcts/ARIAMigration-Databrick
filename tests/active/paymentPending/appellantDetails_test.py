@@ -52,7 +52,10 @@ def appellantDetails_outputs(spark):
         ("HU/00002/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00003/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00004/2025", "HU", "2025-02-21", "LR", "1936-05-07", "179", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/00005/2025", "HU", "2025-02-21", "LR", "1936-05-07", "211", "UK", "British", "refusalOfHumanRights", None, None, None, "HU")
+        ("HU/00005/2025", "HU", "2025-02-21", "LR", "1936-05-07", "211", "UK", "British", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00006/2025", "HU", "2025-04-01", "LR", "1975-03-15", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00007/2025", "HU", "2025-04-01", "LR", "1975-03-15", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00008/2025", "HU", "2025-04-01", "LR", "1975-03-15", "211", "ZZ", "Stateless", "refusalOfHumanRights", None, None, None, "HU"),
     ]
 
     m2_schema = T.StructType([
@@ -122,6 +125,21 @@ def appellantDetails_outputs(spark):
         ("HU/00005/2025", "WilliamsX", "SarahX", None, None,
         None, None, None, None, "NotUK", None,
         None, None, None, None, 0),
+
+        # Marshall Islands (MH) — was previously mapped to NO MAPPING REQUIRED → NULL, now passes through as "MH"
+        ("HU/00006/2025", "TestNameX", "TestGivenX", None, None,
+        None, None, None, None, None, None,
+        None, None, "MH", None, 0),
+
+        # Monaco (MC) — was missing from allowed list, now valid
+        ("HU/00007/2025", "TestNameX", "TestGivenX", None, None,
+        None, None, None, None, None, None,
+        None, None, "MC", None, 0),
+
+        # Stateless (ZZ) — was missing from allowed list, now valid
+        ("HU/00008/2025", "TestNameX", "TestGivenX", None, None,
+        None, None, None, None, None, None,
+        None, None, "ZZ", None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -136,7 +154,10 @@ def appellantDetails_outputs(spark):
         ("EA/01698/2024", 3), ("EA/01698/2024", 11), ("EA/01698/2024", 37), ("EA/01698/2024", 38), ("EA/01698/2024", 48),
         ("HU/00560/2025", 3), ("HU/00560/2025", 10), ("HU/00560/2025", 31), ("HU/00560/2025", 37), ("HU/00560/2025", 39),
         ("HU/00532/2025", 3), ("HU/00532/2025", 10), ("HU/00532/2025", 32), ("HU/00532/2025", 37), ("HU/00532/2025", 39),
-        ("HU/00423/2025", 3), ("HU/00423/2025", 10), ("HU/00423/2025", 31), ("HU/00423/2025", 37), ("HU/00423/2025", 39)
+        ("HU/00423/2025", 3), ("HU/00423/2025", 10), ("HU/00423/2025", 31), ("HU/00423/2025", 37), ("HU/00423/2025", 39),
+        ("HU/00006/2025", 38),
+        ("HU/00007/2025", 38),
+        ("HU/00008/2025", 38),
     ]
 
     bronze_countryFromAddress_schema = T.StructType([
@@ -321,3 +342,14 @@ def test_appellant_in_uk_field_conditions(appellantDetails_outputs):
     assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "Yes"  # Detained 4
     assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # Appellant_Address5 in UK
     assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # Appellant_Address5 not in UK
+
+
+def test_country_gov_uk_ooc_adminj_new_codes(appellantDetails_outputs):
+    """MH, MC and ZZ are now valid countryGovUkOocAdminJ codes with category 38.
+
+    MH was previously mapped to NO MAPPING REQUIRED (→ NULL); it now passes through as 'MH'.
+    MC and ZZ were missing from the DQ allowed list and are now included.
+    """
+    assert_equals(appellantDetails_outputs["HU/00006/2025"], countryGovUkOocAdminJ="MH")
+    assert_equals(appellantDetails_outputs["HU/00007/2025"], countryGovUkOocAdminJ="MC")
+    assert_equals(appellantDetails_outputs["HU/00008/2025"], countryGovUkOocAdminJ="ZZ")

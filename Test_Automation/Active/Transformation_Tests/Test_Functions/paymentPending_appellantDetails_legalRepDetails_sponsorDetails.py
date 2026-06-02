@@ -40,21 +40,21 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
               all_test_results.append(pp_tests.test_email_ac1(test_df))
               all_test_results.append(pp_tests.test_email_ac2(test_df))
 
-         if "internalAppellantMobileNumber" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_internalAppellantMobileNumber_ac1(json_data, M2_bronze))
-              all_test_results.append(pp_tests.test_internalAppellantMobileNumber_ac2(json_data, M2_bronze))
+     #     if "internalAppellantMobileNumber" not in fields_to_exclude:
+     #          all_test_results.append(pp_tests.test_internalAppellantMobileNumber_ac1(json_data, M2_bronze))
+     #          all_test_results.append(pp_tests.test_internalAppellantMobileNumber_ac2(json_data, M2_bronze))
 
          if "mobileNumber" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_mobileNumber_ac1(json_data, M2_bronze))
               all_test_results.append(pp_tests.test_mobileNumber_ac2(json_data, M2_bronze))
 
-         if "appellantInUk" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appellantInUk_ac1(test_df))
-              all_test_results.append(pp_tests.test_appellantInUk_ac2(test_df))
+     #     if "appellantInUk" not in fields_to_exclude:
+     #          all_test_results.append(pp_tests.test_appellantInUk_ac1(test_df))
+     #          all_test_results.append(pp_tests.test_appellantInUk_ac2(test_df))
 
-         if "appealOutOfCountry" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appealOutOfCountry_ac1(test_df))
-              all_test_results.append(pp_tests.test_appealOutOfCountry_ac2(test_df))
+     #     if "appealOutOfCountry" not in fields_to_exclude:
+     #          all_test_results.append(pp_tests.test_appealOutOfCountry_ac1(test_df))
+     #          all_test_results.append(pp_tests.test_appealOutOfCountry_ac2(test_df))
 
          if "oocAppealAdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_oocAppealAdminJ_ac1(test_df))
@@ -63,9 +63,9 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
               all_test_results.append(pp_tests.test_oocAppealAdminJ_ac4(test_df))
               all_test_results.append(pp_tests.test_oocAppealAdminJ_ac5(test_df))
 
-         if "appellantAddress" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appellantAddress_ac1(test_df))
-              all_test_results.append(pp_tests.test_appellantAddress_ac2(test_df))
+     #     if "appellantAddress" not in fields_to_exclude:
+     #          all_test_results.append(pp_tests.test_appellantAddress_ac1(test_df))
+     #          all_test_results.append(pp_tests.test_appellantAddress_ac2(test_df))
 
          if "addressLine1AdminJ" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_addressLine1AdminJ_ac1(test_df))

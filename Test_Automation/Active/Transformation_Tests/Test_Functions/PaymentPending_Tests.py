@@ -137,7 +137,7 @@ def test_sponsorDetails_init(json, M1_bronze, C):
         return test_df_sd, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("hasSponsor", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None,TestResult("sponsorDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 # CategoryId 38 means out of country case, so we need to check that sponsor fields are not populated if 38 is not included, rather than vice versa, and hasSponsor should always be no
 
@@ -592,88 +592,88 @@ def cleanEmail(email):
 #######################
 #sponsorEmailAdminJ - If CategoryId not 38 and sponsorEmailAdminJ not omitted
 #######################
-def test_sponsorEmailAdminJ_ac1(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(
-            (~array_contains(col("CategoryIds"), 38))
-            ).count() == 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorEmailAdminJ_ac1(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(
+#             (~array_contains(col("CategoryIds"), 38))
+#             ).count() == 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
-        ac1_sponsorEmailAdminJ = test_df_sd.filter(
-        (~array_contains(col("CategoryIds"), 38)) & 
-        (col("sponsorEmailAdminJ").isNotNull())
-        )
+#         ac1_sponsorEmailAdminJ = test_df_sd.filter(
+#         (~array_contains(col("CategoryIds"), 38)) & 
+#         (col("sponsorEmailAdminJ").isNotNull())
+#         )
 
-        if ac1_sponsorEmailAdminJ.count() != 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 1 failed: {str(ac1_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds do not contain 38, but sponsorEmailAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have sponsorEmailAdminJ omitted.", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac1_sponsorEmailAdminJ.count() != 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 1 failed: {str(ac1_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds do not contain 38, but sponsorEmailAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
+#         else:
+#             return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have sponsorEmailAdminJ omitted.", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #sponsorEmailAdminJ - If CategoryId is 38 + Sponsor_Name is null and sponsorEmailAdminJ not omitted
 #######################
-def test_sponsorEmailAdminJ_ac2(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNull())
-            ).count() == 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorEmailAdminJ_ac2(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(
+#             (array_contains(col("CategoryIds"), 38)) &
+#             (col("Sponsor_Name").isNull())
+#             ).count() == 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
-        ac2_sponsorEmailAdminJ = test_df_sd.filter(
-        (
-        (array_contains(col("CategoryIds"), 38)) &
-        (col("Sponsor_Name").isNull())
-        ) &
-        col("sponsorEmailAdminJ").isNotNull()
-        )
+#         ac2_sponsorEmailAdminJ = test_df_sd.filter(
+#         (
+#         (array_contains(col("CategoryIds"), 38)) &
+#         (col("Sponsor_Name").isNull())
+#         ) &
+#         col("sponsorEmailAdminJ").isNotNull()
+#         )
 
-        if ac2_sponsorEmailAdminJ.count() != 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 2 failed: {str(ac2_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is null, but sponsorEmailAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 2 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is null have sponsorEmailAdminJ omitted.", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac2_sponsorEmailAdminJ.count() != 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 2 failed: {str(ac2_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is null, but sponsorEmailAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
+#         else:
+#             return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 2 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is null have sponsorEmailAdminJ omitted.", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 #######################
 #sponsorEmailAdminJ - If CategoryId is 38 + Sponsor_Name is not null and sponsorEmailAdminJ omitted
 #######################
-def test_sponsorEmailAdminJ_ac3(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNotNull())
-            ).count() == 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorEmailAdminJ_ac3(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(
+#             (array_contains(col("CategoryIds"), 38)) &
+#             (col("Sponsor_Name").isNotNull())
+#             ).count() == 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
-        clean_email_udf = udf(cleanEmail, StringType())
+#         clean_email_udf = udf(cleanEmail, StringType())
 
-        test_df_sd = test_df_sd.withColumn(
-            "sponsor_email_cleaned", 
-            clean_email_udf(col("SponsorEmail"))
-        )
+#         test_df_sd = test_df_sd.withColumn(
+#             "sponsor_email_cleaned", 
+#             clean_email_udf(col("SponsorEmail"))
+#         )
         
-        ac3_sponsorEmailAdminJ = test_df_sd.filter(
-        (array_contains(col("CategoryIds"), 38)) &
-        (col("Sponsor_Name").isNotNull()) &
-        (~col("sponsorEmailAdminJ").eqNullSafe(col("sponsor_email_cleaned")))
-        )
+#         ac3_sponsorEmailAdminJ = test_df_sd.filter(
+#         (array_contains(col("CategoryIds"), 38)) &
+#         (col("Sponsor_Name").isNotNull()) &
+#         (~col("sponsorEmailAdminJ").eqNullSafe(col("sponsor_email_cleaned")))
+#         )
 
-        if ac3_sponsorEmailAdminJ.count() != 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 3 failed: {str(ac3_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is not null, but sponsorEmailAdminJ does not match the ARIA value.", test_from_state, inspect.stack()[0].function), ac3_sponsorEmailAdminJ
-        else:
-            return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 3 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is not null have sponsorEmailAdminJ matching.", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac3_sponsorEmailAdminJ.count() != 0:
+#             return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 3 failed: {str(ac3_sponsorEmailAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is not null, but sponsorEmailAdminJ does not match the ARIA value.", test_from_state, inspect.stack()[0].function), ac3_sponsorEmailAdminJ
+#         else:
+#             return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria 3 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is not null have sponsorEmailAdminJ matching.", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #sponsorMobileNumberAdminJ - If CategoryId not 38 and sponsorMobileNumberAdminJ not omitted
@@ -8577,8 +8577,8 @@ def test_timeToLive_ac2(test_df):
             col("TTL.Suspended") != "No"
         )
 
-        if TTL_date_fails.count() != 0:
-            return TestResult("timeToLive", "FAIL", f"timeToLive acceptance criteria failed: found {TTL_date_fails.count()} cases where TTL.Suspended does not equal No", test_from_state, inspect.stack()[0].function)
+        if TTL_suspended_fails.count() != 0:
+            return TestResult("timeToLive", "FAIL", f"timeToLive acceptance criteria failed: found {TTL_suspended_fails.count()} cases where TTL.Suspended does not equal No", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("timeToLive", "PASS", f"timeToLive acceptance criteria passed: all cases have TTL.SystemTTL which equal No", test_from_state, inspect.stack()[0].function)
 

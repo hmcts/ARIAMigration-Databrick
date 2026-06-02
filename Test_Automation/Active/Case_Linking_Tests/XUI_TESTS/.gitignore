@@ -1,0 +1,10 @@
+# Secrets and session state - never commit
+.env
+auth_state.json
+
+# Run artefacts
+screenshots/
+evidence/
+results/
+*.log
+__pycache__/

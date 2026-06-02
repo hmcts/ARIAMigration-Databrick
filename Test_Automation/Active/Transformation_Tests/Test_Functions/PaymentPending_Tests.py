@@ -2711,47 +2711,47 @@ def test_countryGovUkOocAdminJ_ac1(test_df):
         return TestResult("countryGovUkOocAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#appellantStateless - If M2.AppellantCountryId is 211 and appellantStateless is not isStateless
+#appellantStateless - If M1.NationalityId is 211 and appellantStateless is not isStateless
 #######################
 def test_appellantStateless_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (col("AppellantCountryId") == "211")
+            (col("NationalityId") == "211")
             ).count() == 0:
             return TestResult("appellantStateless", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_appellantStateless = test_df.filter(
-            (col("AppellantCountryId") == "211") & (col("appellantStateless") != "isStateless")
+            (col("NationalityId") == "211") & (col("appellantStateless") != "isStateless")
         )
 
         if ac_appellantStateless.count() != 0:
-            return TestResult("appellantStateless", "FAIL", f"appellantStateless acceptance criteria failed: {str(ac_appellantStateless.count())} cases have been found where M2.AppellantCountryId is 211 and appellantStateless is not isStateless" , test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantStateless", "FAIL", f"appellantStateless acceptance criteria failed: {str(ac_appellantStateless.count())} cases have been found where M1.NationalityId is 211 and appellantStateless is not isStateless" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantStateless", "PASS", f"appellantStateless acceptance criteria passed, all cases where M2.AppellantCountryId is 211 have appellantStateless is isStateless", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantStateless", "PASS", f"appellantStateless acceptance criteria passed, all cases where M1.NationalityId is 211 have appellantStateless is isStateless", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantStateless", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantStateless - If M2.AppellantCountryId is not 211 and appellantStateless is not hasNationality
+#appellantStateless - If M1.NationalityId is not 211 and appellantStateless is not hasNationality
 #######################
 def test_appellantStateless_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (col("AppellantCountryId") != "211")
+            (col("NationalityId") != "211")
             ).count() == 0:
             return TestResult("appellantStateless", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_appellantStateless = test_df.filter(
-            (col("AppellantCountryId") != "211") & (col("appellantStateless") != "hasNationality")
+            (col("NationalityId") != "211") & (col("appellantStateless") != "hasNationality")
         )
 
         if ac_appellantStateless.count() != 0:
-            return TestResult("appellantStateless", "FAIL", f"appellantStateless acceptance criteria failed: {str(ac_appellantStateless.count())} cases have been found where M2.AppellantCountryId is not 211 and appellantStateless is not hasNationality" , test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantStateless", "FAIL", f"appellantStateless acceptance criteria failed: {str(ac_appellantStateless.count())} cases have been found where M1.NationalityId is not 211 and appellantStateless is not hasNationality" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantStateless", "PASS", f"appellantStateless acceptance criteria passed, all cases where M2.AppellantCountryId is not 211 have appellantStateless is hasNationality", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantStateless", "PASS", f"appellantStateless acceptance criteria passed, all cases where M1.NationalityId is not 211 have appellantStateless is hasNationality", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantStateless", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

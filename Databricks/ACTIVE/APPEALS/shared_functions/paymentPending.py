@@ -1678,9 +1678,12 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
 
-    silver_m2_derived = silver_m2_derived.alias('main').join(bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left").select("main.*", when(col("lu_cfa_contryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
-                                                                                                                                                                                    .when(col("dv_countryGovUkOocAdminJ").isin(["MH"]), lit("NO MAPPING REQUIRED"))
-          .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
+    silver_m2_derived = (silver_m2_derived.alias('main').join(
+        bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left")
+        .select("main.*",
+                when(col("lu_cfa_contryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
+                .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
+    )
 
     country_gov_uk_ooc_adminj_expr = when(
         conditions & expr("array_contains(CategoryIdList, 38)"),
@@ -1832,8 +1835,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             lit("yes").alias("isAppellantMinor_Transformation"),
 
             # Audit appellantStateless
-            array(struct(*common_inputFields, lit("AppellantCountryId"))).alias("appellantStateless_inputfields"),
-            array(struct(*common_inputValues, col("AppellantCountryId"))).alias("appellantStateless_inputvalues"),
+            array(struct(*common_inputFields, lit("NationalityId"))).alias("appellantStateless_inputfields"),
+            array(struct(*common_inputValues, col("NationalityId"))).alias("appellantStateless_inputvalues"),
             col("content.appellantStateless"),
             lit("yes").alias("appellantStateless_Transformation"),
 

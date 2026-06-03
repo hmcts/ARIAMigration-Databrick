@@ -444,18 +444,20 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         ])
     )
 
+    condition = col("dv_CCDAppealType").isin(["PA", "RP"])
+
     df_final = (
         df_final
-        .withColumn("homeOfficeSearchStatus", lit("SUCCESS"))
-        .withColumn("homeOfficeSearchNoMatch", lit("NO_MATCH"))
-        .withColumn("matchingAppellantDetailsFound", lit("No"))
-        .withColumn("homeOfficeAppellantsList", from_json(lit("""
+        .withColumn("homeOfficeSearchStatus", when(condition, lit("SUCCESS")).otherwise(lit(None)))
+        .withColumn("homeOfficeSearchNoMatch", when(condition, lit("NO_MATCH")).otherwise(lit(None)))
+        .withColumn("matchingAppellantDetailsFound", when(condition, lit("No")).otherwise(lit(None)))
+        .withColumn("homeOfficeAppellantsList", when(condition, from_json(lit("""
             {
                 "list_items":[{"code":"NoMatch","label":"No Match"}],
                 "value":{"code":"NoMatch","label":"No Match"}
             }
-        """), homeOfficeAppellantList_schema))
-        .withColumn("homeOfficeCaseStatusDate", from_json(lit("""
+        """), homeOfficeAppellantList_schema)).otherwise(lit(None)))
+        .withColumn("homeOfficeCaseStatusDate", when(condition, from_json(lit("""
             {
                 "applicationStatus": {
                     "ccdHomeOfficeMetadata": [],
@@ -477,7 +479,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                     "yearOfBirth": 0
                 }
             }
-        """), homOfficeCaseStatusDate_schema))
+        """), homOfficeCaseStatusDate_schema)).otherwise(lit(None)))
     )
 
     common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
@@ -487,8 +489,9 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     ]
 
     df_audit = (
-        df_audit
+        df_audit.alias("audit")
         .join(df_final.alias("content"), ["CaseNo"], "left")
+        .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
         .select(
             "audit.*",
             array(struct(*common_inputFields)).alias("homeOfficeSearchStatus_inputFields"),

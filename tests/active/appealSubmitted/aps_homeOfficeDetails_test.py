@@ -15,56 +15,127 @@ def spark():
         .getOrCreate()
 
 
-class TestAppealSubmittedHomeOfficeDetails:
-    CASE_NO_COLUMNS = StructType([
-        StructField("CaseNo", StringType())
-    ])
+SILVER_M1_SCHEMA = StructType([
+    StructField("CaseNo", StringType()),
+    StructField("dv_CCDAppealType", StringType()),
+    StructField("dv_representation", StringType()),
+])
 
-    def pp_df(self, spark, num_of_cases=0):
+CASE_NO_COLUMNS = StructType([
+    StructField("CaseNo", StringType()),
+    StructField("dv_CCDAppealType", StringType()),
+])
+
+
+class TestAppealSubmittedHomeOfficeDetails:
+
+    def silver_m1(self, spark, case_nos, appeal_type="PA"):
+        return spark.createDataFrame(
+            [(cn, appeal_type, "LR") for cn in case_nos],
+            SILVER_M1_SCHEMA,
+        )
+
+    def pp_df(self, spark, num_of_cases=0, appeal_type="PA"):
         case_no_df = spark.createDataFrame(
-            ((str(n),) for n in range(1, num_of_cases + 1)),
-            self.CASE_NO_COLUMNS
+            [(str(n), appeal_type) for n in range(1, num_of_cases + 1)],
+            CASE_NO_COLUMNS,
         )
         return case_no_df, case_no_df
 
-    def test_homeOfficeSearchStatus(self, spark):
+    def test_homeOfficeSearchStatus_pa(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2)
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
 
-            df, df_audit = homeOfficeDetails(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("homeOfficeSearchStatus").collect()
 
             assert resultList[0][0] == "SUCCESS"
             assert resultList[1][0] == "SUCCESS"
 
-    def test_homeOfficeSearchNoMatch(self, spark):
+    def test_homeOfficeSearchStatus_rp(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2)
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="RP")
 
-            df, df_audit = homeOfficeDetails(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="RP"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("homeOfficeSearchStatus").collect()[0][0] == "SUCCESS"
+
+    def test_homeOfficeSearchStatus_non_pa_rp(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="EA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("homeOfficeSearchStatus").collect()[0][0] is None
+
+    def test_homeOfficeSearchNoMatch_pa(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("homeOfficeSearchNoMatch").collect()
 
             assert resultList[0][0] == "NO_MATCH"
             assert resultList[1][0] == "NO_MATCH"
 
-    def test_matchingAppellantDetailsFound(self, spark):
+    def test_homeOfficeSearchNoMatch_non_pa_rp(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2)
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="HU")
 
-            df, df_audit = homeOfficeDetails(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="HU"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("homeOfficeSearchNoMatch").collect()[0][0] is None
+
+    def test_matchingAppellantDetailsFound_pa(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("matchingAppellantDetailsFound").collect()
 
             assert resultList[0][0] == "No"
             assert resultList[1][0] == "No"
 
-    def test_homeOfficeAppellantsList(self, spark):
+    def test_matchingAppellantDetailsFound_non_pa_rp(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1)
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="DC")
 
-            df, df_audit = homeOfficeDetails(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="DC"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("matchingAppellantDetailsFound").collect()[0][0] is None
+
+    def test_homeOfficeAppellantsList_pa(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="PA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
 
             result = df.select(
                 col("homeOfficeAppellantsList.value.code").alias("value_code"),
@@ -78,11 +149,25 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert result[0]["list_item_code"] == "NoMatch"
             assert result[0]["list_item_label"] == "No Match"
 
-    def test_homeOfficeCaseStatusDate(self, spark):
+    def test_homeOfficeAppellantsList_non_pa_rp(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1)
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EU")
 
-            df, df_audit = homeOfficeDetails(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="EU"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("homeOfficeAppellantsList").collect()[0][0] is None
+
+    def test_homeOfficeCaseStatusDate_pa(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="PA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
 
             result = df.select(
                 col("homeOfficeCaseStatusDate.displayDateOfBirth").alias("displayDateOfBirth"),
@@ -113,3 +198,14 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert result[0]["nationality_code"] == "No match"
             assert result[0]["roleType_code"] == "No match"
             assert result[0]["roleSubType_code"] == "No match"
+
+    def test_homeOfficeCaseStatusDate_non_pa_rp(self, spark):
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
+            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
+
+            df, df_audit = homeOfficeDetails(
+                self.silver_m1(spark, ["1"], appeal_type="EA"),
+                MagicMock(), MagicMock(), MagicMock()
+            )
+
+            assert df.select("homeOfficeCaseStatusDate").collect()[0][0] is None

@@ -2,11 +2,17 @@
 # - read permissions on the ingest meta002 vault and also read permissions.
 # - read permissions on the ingest curated storage account.
 # - be on F5 VPN to access the curated storage account.
+# To get the count of records to be deleted, run:
+# python3 dm_store_meta_cleardown.py --lz-key 01 --env stg
+# To perform the actual delete, run:
+# python3 dm_store_meta_cleardown.py --lz-key 01 --env stg --delete-run
 
 import argparse
 import logging
+import adlfs
 import pandas as pd
 import psycopg2
+import pyarrow.dataset as ds
 from azure.identity import AzureCliCredential
 from azure.keyvault.secrets import SecretClient
 from deltalake import DeltaTable
@@ -21,6 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lz-key", default="00")
     parser.add_argument("--env", default="sbox")
+    parser.add_argument("--delete-run", action="store_true")
     return parser.parse_args()
 
 SECRET_KEYS = [
@@ -55,15 +62,20 @@ def connect(secrets: dict[str, str]) -> psycopg2.extensions.connection:
     return conn
 
 
-def read_delta(storage_account, delta_path, credential: AzureCliCredential) -> pd.DataFrame:
-    token = credential.get_token("https://storage.azure.com/.default").token
+def read_delta(storage_account: str, delta_path: str, credential: AzureCliCredential) -> pd.DataFrame:
     storage_options = {
-        "azure_storage_account_name": storage_account,
-        "azure_storage_token": token,
+        "account_name": storage_account,
+        "use_azure_cli": "true",
     }
-    logger.info(f"Reading Delta table from: {delta_path}")
+    logger.info(f"Reading delta table from: {delta_path}")
     dt = DeltaTable(delta_path, storage_options=storage_options)
-    df = dt.to_pandas()
+
+    active_files = [f.removeprefix("az://") for f in dt.file_uris()]
+    logger.info(f"Found {len(active_files)} active parquet files in transaction log")
+
+    fs = adlfs.AzureBlobFileSystem(account_name=storage_account, credential=credential)
+    dataset = ds.dataset(active_files, filesystem=fs, format="parquet")
+    df = dataset.to_table().to_pandas()
     logger.info(f"Read {len(df):,} rows from ack_audit")
     return df
 
@@ -75,16 +87,38 @@ def main():
     ack_audit_path = "az://silver/ARIADM/ACTIVE/CCD/AUDIT/APPEALS/CDAM/ack_audit"
     audit_results = read_delta(f"ingest{args.lz_key}curated{args.env}", ack_audit_path, credential)
 
-    audit_results.show()
+    uuids = audit_results["document_url"].str.split("/").str[-1].tolist()
+    logger.info(f"Extracted {len(uuids):,} UUIDs from document_url")
+    logger.info(uuids)
+
+    if args.delete_run:
+        query = """
+            DELETE FROM documentmetadata
+            WHERE name = 'case_id'
+            AND documentmetadata_id IN %s
+        """
+    else:
+        query = """
+            SELECT COUNT(*) FROM documentmetadata
+            WHERE name = 'case_id'
+            AND documentmetadata_id IN %s
+        """
+
+    logger.info("About to run query:")
+    logger.info(query)
 
     keyvault_url = f"https://ingest{args.lz_key}-meta002-{args.env}.vault.azure.net/"
     secrets = get_secrets(keyvault_url, credential)
     conn = connect(secrets)
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT version();")
-            version = cur.fetchone()
-            logger.info(f"Connected to: {version[0]}")
+            cur.execute(query, (tuple(uuids),))
+            if args.delete_run:
+                logger.info(f"Deleted {cur.rowcount:,} rows from documentmetadata")
+            else:
+                count = cur.fetchone()[0]
+                logger.info(f"Count of records for deletion = {count:,}")
+        conn.commit()
     finally:
         conn.close()
         logger.info("Connection closed")

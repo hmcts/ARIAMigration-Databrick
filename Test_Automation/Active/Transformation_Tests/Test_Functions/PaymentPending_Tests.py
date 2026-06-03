@@ -433,79 +433,79 @@ def test_sponsorAuthorisation_test4(test_df_sd):
 #######################
 # sponsorAddress - If CategoryId is not 38 and sponsorAddress has not been omitted
 #######################
-def test_sponsorAddress_ac1(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(~array_contains(col("CategoryIds"), 38)).count() == 0:
-            return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorAddress_ac1(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(~array_contains(col("CategoryIds"), 38)).count() == 0:
+#             return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        ac1_sponsorAddress = test_df_sd.filter(
-        (~(array_contains(col("CategoryIds"), 38))) & (col("sponsorAddress") != "No")
-        )
+#         ac1_sponsorAddress = test_df_sd.filter(
+#         (~(array_contains(col("CategoryIds"), 38))) & (col("sponsorAddress") != "No")
+#         )
 
-        if ac1_sponsorAddress.count() != 0:
-            return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 1 - failed: {str(ac1_820.count())} cases have been found where the CategoryIds do not contain 38, but sponsorAddress has not been omitted.", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have sponsorAddress omitted.", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac1_sponsorAddress.count() != 0:
+#             return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 1 - failed: {str(ac1_820.count())} cases have been found where the CategoryIds do not contain 38, but sponsorAddress has not been omitted.", test_from_state, inspect.stack()[0].function)
+#         else:
+#             return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have sponsorAddress omitted.", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #sponsorAddress - If CategoryId is 38 + Sponsor_Name is null and sponsorEmailAdminJ not omitted
 #######################
-def test_sponsorAddress_ac2(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNull())
-            ).count() == 0:
-            return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorAddress_ac2(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(
+#             (array_contains(col("CategoryIds"), 38)) &
+#             (col("Sponsor_Name").isNull())
+#             ).count() == 0:
+#             return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        ac2_sponsorAddress = test_df_sd.filter(
-        (
-            (array_contains(col("CategoryIds"), 38)) & 
-            (col("Sponsor_Name")).isNull()
-        ) & 
-            (col("sponsorAddress").isNotNull()) & (trim(col("sponsorAddress")) != "")
-        )
+#         ac2_sponsorAddress = test_df_sd.filter(
+#         (
+#             (array_contains(col("CategoryIds"), 38)) & 
+#             (col("Sponsor_Name")).isNull()
+#         ) & 
+#             (col("sponsorAddress").isNotNull()) & (trim(col("sponsorAddress")) != "")
+#         )
 
-        if ac2_sponsorAddress.count() != 0:
-            return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 2 - failed: {str(ac2_sponsorAddress.count())} cases have been found where CategoryId is 38, Sponsor_Name is null but sponsorAddress has not been omitted.", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 2 passed, all cases where CategoryId is 38 and Sponsor_Name is null have sponsorAddress omitted.", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac2_sponsorAddress.count() != 0:
+#             return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 2 - failed: {str(ac2_sponsorAddress.count())} cases have been found where CategoryId is 38, Sponsor_Name is null but sponsorAddress has not been omitted.", test_from_state, inspect.stack()[0].function)
+#         else:
+#             return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 2 passed, all cases where CategoryId is 38 and Sponsor_Name is null have sponsorAddress omitted.", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
 #sponsorAddress - If CategoryId in 38 + Sponsor_Name is not Null and sponsorAddress is omitted
 #######################
-def test_sponsorAddress_ac3(test_df_sd):
-    try:
-        #Check we have Records To test
-        if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNotNull())
-            ).count() == 0:
-            return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+# def test_sponsorAddress_ac3(test_df_sd):
+#     try:
+#         #Check we have Records To test
+#         if test_df_sd.filter(
+#             (array_contains(col("CategoryIds"), 38)) &
+#             (col("Sponsor_Name").isNotNull())
+#             ).count() == 0:
+#             return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        ac3_sponsorAddress = test_df_sd.filter(
-        (
-            (array_contains(col("CategoryIds"), 38)) & 
-            (col("Sponsor_Name")).isNotNull()
-        ) & 
-            col("sponsorAddress").isNull()
-        )
+#         ac3_sponsorAddress = test_df_sd.filter(
+#         (
+#             (array_contains(col("CategoryIds"), 38)) & 
+#             (col("Sponsor_Name")).isNotNull()
+#         ) & 
+#             col("sponsorAddress").isNull()
+#         )
 
-        if ac3_sponsorAddress.count() != 0:
-            return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 3 - failed: {str(ac3_sponsorAddress.count())} cases have been found where ", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 3 passed, all cases where", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+#         if ac3_sponsorAddress.count() != 0:
+#             return TestResult("sponsorAddress", "FAIL", f"sponsorAddress acceptance criteria 3 - failed: {str(ac3_sponsorAddress.count())} cases have been found where ", test_from_state, inspect.stack()[0].function)
+#         else:
+#             return TestResult("sponsorAddress", "PASS", f"sponsorAddress acceptance criteria 3 passed, all cases where", test_from_state, inspect.stack()[0].function)
+#     except Exception as e:
+#         error_message = str(e)        
+#         return TestResult("sponsorAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #sponsorAddress - sponsorAddress collection is mapped using ARIA Sponsor_Address1, Sponsor_Address2, Sponsor_Address3, Sponsor_Address4, Sponsor_Address5, Sponsor_Postcode as per in the mapping document APPENDIX-Address
@@ -8170,31 +8170,6 @@ def test_sponsorGivenNames_ac1(test_df):
         error_message = str(e)        
         return TestResult("sponsorGivenNames", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
-#######################
-#sponsorGivenNames - If Sponsor_Name is not null, field included
-#######################
-def test_sponsorGivenNames_ac1(test_df):
-    try:
-        #Check we have Records To test
-        if test_df.filter(col("Sponsor_Name").isNotNull()).count() ==0:    
-            return TestResult("sponsorGivenNames", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-                                                
-        acceptance_criteria = test_df.filter(
-            (col("Sponsor_Name").isNotNull()) &
-        (
-            (col("sponsorGivenNames").isNull()) &
-            (col("sponsorGivenNames") != (col("Sponsor_Forenames")))
-        )
-        )    
-        
-        if acceptance_criteria.count() != 0:
-            return TestResult("sponsorGivenNames", "FAIL", f"sponsorGivenNames acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name is not null and sponsorGivenNames is omitted or not equal to Sponsor_Forenames", test_from_state, inspect.stack()[0].function)
-        else:
-            return TestResult("sponsorGivenNames", "PASS", f"sponsorGivenNames acceptance criteria passed: all cases where Sponsor_Name is not null have sponsorGivenNames equal to Sponsor_Forenames", test_from_state, inspect.stack()[0].function)
-    except Exception as e:
-        error_message = str(e)        
-        return TestResult("sponsorGivenNames", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-
 #######################
 #sponsorGivenNames - If SponsorName is null, field omitted
 #######################

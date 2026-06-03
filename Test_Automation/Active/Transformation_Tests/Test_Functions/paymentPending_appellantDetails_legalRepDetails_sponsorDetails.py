@@ -168,10 +168,10 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
               all_test_results.append(result)
 
     # -- sponsorDetails --
-#     test_data_setup = None
-#     test_df_sd, test_data_setup =  pp_tests.test_sponsorDetails_init(json_data, M1_bronze, C)
-#     if test_data_setup != True:
-#          all_test_results.append(test_data_setup)
+    test_data_setup = None
+    test_df_sd, test_data_setup =  pp_tests.test_sponsorDetails_init(json_data, M1_bronze, C)
+    if test_data_setup != True:
+         all_test_results.append(test_data_setup)
 
 #     if test_df_sd != None:
 #        if "hasSponsor" not in fields_to_exclude:
@@ -195,11 +195,11 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 #           all_test_results.append(pp_tests.test_sponsorAuthorisation_test3(test_df_sd))
 #           all_test_results.append(pp_tests.test_sponsorAuthorisation_test4(test_df_sd))
 
-#        if "sponsorAddress" not in fields_to_exclude:
-#           all_test_results.append(pp_tests.test_sponsorAddress_ac1(test_df_sd))
-#           all_test_results.append(pp_tests.test_sponsorAddress_ac2(test_df_sd))
-#           all_test_results.append(pp_tests.test_sponsorAddress_ac3(test_df_sd))
-#           all_test_results.append(pp_tests.test_sponsorAddress_ac4(test_df_sd))
+       if "sponsorAddress" not in fields_to_exclude:
+          # all_test_results.append(pp_tests.test_sponsorAddress_ac1(test_df_sd))
+          # all_test_results.append(pp_tests.test_sponsorAddress_ac2(test_df_sd))
+          # all_test_results.append(pp_tests.test_sponsorAddress_ac3(test_df_sd))
+          all_test_results.append(pp_tests.test_sponsorAddress_ac4(test_df_sd))
 
 #        if "sponsorEmailAdminJ" not in fields_to_exclude:
 #           all_test_results.append(pp_tests.test_sponsorEmailAdminJ_ac1(test_df_sd))

@@ -4950,7 +4950,7 @@ def test_remission_ac12(test_df):
 #######################
 #caseData Init code
 #######################
-def test_caseData_init(json, M1_bronze, M1_silver):
+def test_caseData_init(json, M1_bronze, M1_silver, M3_bronze):
     try:
         json = json.select(
             "appealReferenceNumber",
@@ -4962,7 +4962,9 @@ def test_caseData_init(json, M1_bronze, M1_silver):
             "tribunalReceivedDate",
             "appellantsRepresentation",
             "hearingCentreDynamicList",
-            "caseManagementLocationRefData"
+            "caseManagementLocationRefData",
+            "outOfTimeDecisionType",
+            "outOfTimeDecisionMaker"
         )
 
         M1_bronze = M1_bronze.select(
@@ -4977,6 +4979,12 @@ def test_caseData_init(json, M1_bronze, M1_silver):
             "dv_representation"
         )
 
+        M3_bronze = M3_bronze.select(
+            col("CaseNo").alias("CaseNo-M3"),
+            "Outcome",
+            "StatusId"
+        )
+
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
@@ -4985,7 +4993,13 @@ def test_caseData_init(json, M1_bronze, M1_silver):
 
         test_df = test_df.join(
             M1_silver,
-            json["appealReferenceNumber"] == M1_silver["CaseNo-silver"],
+            test_df["appealReferenceNumber"] == M1_silver["CaseNo-silver"],
+            "inner"
+        )
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo-M3"],
             "inner"
         )
 
@@ -4993,6 +5007,72 @@ def test_caseData_init(json, M1_bronze, M1_silver):
     except Exception as e:
         error_message = str(e)        
         return None,TestResult("caseData", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+#outOfTimeDecisionType - IF OutOfTimeIssue IS 1 AND Outcome !=0 = Include
+#######################
+def test_outOfTimeDecisionType(test_df):
+    try:
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
+        
+        # Filter down to only rows where StatusId is at its MAX
+        latest_df = test_df.withColumn("status_rn", F.row_number().over(window_spec)).filter(col("status_rn") == 1)
+
+        #Check we have Records To test
+        if latest_df.filter(
+            (col("OutOfTimeIssue") == 1) &
+            (col("Outcome") != 0)
+            ).count() == 0:
+            return TestResult("outOfTimeDecisionType", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        acceptance_criteria = latest_df.filter(
+            (col("OutOfTimeIssue") == 1) &
+            (col("Outcome") != 0) &
+            (
+                (col("outOfTimeDecisionType") != "approved") | (col("outOfTimeDecisionType").isNull())
+            )
+        )
+
+        if acceptance_criteria.count() != 0:
+            return TestResult("outOfTimeDecisionType", "FAIL", f"outOfTimeDecisionType acceptance criteria failed: {str(acceptance_criteria.count())} cases have been found where OutOfTimeIssue IS 1 AND Outcome !=0 but outOfTimeDecisionType is null" , test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("outOfTimeDecisionType", "PASS", f"outOfTimeDecisionType acceptance criteria passed, all cases where where OutOfTimeIssue IS 1 AND Outcome !=0 have outOfTimeDecisionType = approved", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("outOfTimeDecisionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+#outOfTimeDecisionMaker - IF OutOfTimeIssue IS 1 AND Outcome !=0 = Include
+#######################
+def test_outOfTimeDecisionMaker(test_df):
+    try:
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
+        
+        # Filter down to only rows where StatusId is at its MAX
+        latest_df = test_df.withColumn("status_rn", F.row_number().over(window_spec)).filter(col("status_rn") == 1)
+
+        #Check we have Records To test
+        if latest_df.filter(
+            (col("OutOfTimeIssue") == 1) &
+            (col("Outcome") != 0)
+            ).count() == 0:
+            return TestResult("outOfTimeDecisionMaker", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        acceptance_criteria = latest_df.filter(
+            (col("OutOfTimeIssue") == 1) &
+            (col("Outcome") != 0) &
+            (
+                (col("outOfTimeDecisionMaker") != "Tribunal Caseworker") | (col("outOfTimeDecisionMaker").isNull())
+            )
+        )
+
+        if acceptance_criteria.count() != 0:
+            return TestResult("outOfTimeDecisionMaker", "FAIL", f"outOfTimeDecisionMaker acceptance criteria failed: {str(acceptance_criteria.count())} cases have been found where OutOfTimeIssue IS 1 AND Outcome !=0 but outOfTimeDecisionMaker is null" , test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("outOfTimeDecisionMaker", "PASS", f"outOfTimeDecisionMaker acceptance criteria passed, all cases where where OutOfTimeIssue IS 1 AND Outcome !=0 have outOfTimeDecisionMaker = Tribunal Caseworker", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)        
+        return TestResult("outOfTimeDecisionMaker", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 #submissionOutOfTime - If OutOfTimeIssue is 1 and submissionOutOfTime != Yes

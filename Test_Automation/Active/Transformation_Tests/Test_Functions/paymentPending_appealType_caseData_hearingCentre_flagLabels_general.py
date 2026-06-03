@@ -32,41 +32,47 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 
     # -- caseData --
     test_data_setup = None
-    test_df, test_data_setup =  pp_tests.test_caseData_init(json_data, M1_bronze, M1_silver)
+    test_df, test_data_setup =  pp_tests.test_caseData_init(json_data, M1_bronze, M1_silver, M3_bronze)
     if test_data_setup != True:
          all_test_results.append(test_data_setup)
 
     if test_df != None:
-         if "submissionOutOfTime" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_submissionOutOfTime_ac1(test_df))
-              all_test_results.append(pp_tests.test_submissionOutOfTime_ac2(test_df))
-              all_test_results.append(pp_tests.test_submissionOutOfTime_ac3(test_df))
+          if "outOfTimeDecisionType" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_outOfTimeDecisionType(test_df))
 
-         if "appealSubmissionDate" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appealSubmissionDate(test_df))
+          if "outOfTimeDecisionMaker" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_outOfTimeDecisionMaker(test_df))
 
-         if "appealSubmissionInternalDate" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appealSubmissionInternalDate(test_df))
+          if "submissionOutOfTime" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_submissionOutOfTime_ac1(test_df))
+               all_test_results.append(pp_tests.test_submissionOutOfTime_ac2(test_df))
+               all_test_results.append(pp_tests.test_submissionOutOfTime_ac3(test_df))
 
-         if "tribunalReceivedDate" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_tribunalReceivedDate(test_df))
+          if "appealSubmissionDate" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_appealSubmissionDate(test_df))
 
-         if "appellantsRepresentation" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_appellantsRepresentation_ac1(test_df))
-              all_test_results.append(pp_tests.test_appellantsRepresentation_ac2(test_df))
+          if "appealSubmissionInternalDate" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_appealSubmissionInternalDate(test_df))
 
-         if "recordedOutOfTimeDecision" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac1(json_data, M3_bronze, M1_bronze))
-              all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac2(json_data, M3_bronze, M1_bronze))
+          if "tribunalReceivedDate" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_tribunalReceivedDate(test_df))
 
-         if "applicationOutOfTimeExplanation" not in fields_to_exclude:
+          if "appellantsRepresentation" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_appellantsRepresentation_ac1(test_df))
+               all_test_results.append(pp_tests.test_appellantsRepresentation_ac2(test_df))
+
+          if "recordedOutOfTimeDecision" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac1(json_data, M3_bronze, M1_bronze))
+               all_test_results.append(pp_tests.test_recordedOutOfTimeDecision_ac2(json_data, M3_bronze, M1_bronze))
+
+          if "applicationOutOfTimeExplanation" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_applicationOutOfTimeExplanation(json_data, M1_bronze, M3_bronze))
 
-         if "caseManagementLocationRefData" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_caseManagementLocationRefData(test_df))
+          if "caseManagementLocationRefData" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_caseManagementLocationRefData(test_df))
 
-         if "hearingCentreDynamicList" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_hearingCentreDynamicList(test_df))
+          if "hearingCentreDynamicList" not in fields_to_exclude:
+               all_test_results.append(pp_tests.test_hearingCentreDynamicList(test_df))
 
     # -- hearingCentre --
     check_fields = ["hearingCentre", "staffLocation", "caseManagementLocation", "selectedHearingCentreRefData", "applicationChangeDesignatedHearingCentre"]

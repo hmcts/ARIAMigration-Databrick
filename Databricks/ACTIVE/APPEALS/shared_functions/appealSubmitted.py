@@ -408,7 +408,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         ])
     )
 
-    homOfficeCaseStatusDate_schema = (
+    homeOfficeCaseStatusData_schema = (
         StructType([
             StructField("applicationStatus", StructType([
                 StructField("ccdHomeOfficeMetadata", ArrayType(StringType()), True),
@@ -458,7 +458,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                 "value":{"code":"NoMatch","label":"No Match"}
             }
         """), homeOfficeAppellantList_schema)).otherwise(lit(None)))
-        .withColumn("homeOfficeCaseStatusDate", when(condition, from_json(lit("""
+        .withColumn("homeOfficeCaseStatusData", when(condition, from_json(lit("""
             {
                 "applicationStatus": {
                     "ccdHomeOfficeMetadata": [],
@@ -480,14 +480,14 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                     "yearOfBirth": 0
                 }
             }
-        """), homOfficeCaseStatusDate_schema)).otherwise(lit(None)))
+        """), homeOfficeCaseStatusData_schema)).otherwise(lit(None)))
         .select(
             "source.*",
             "homeOfficeSearchStatus",
             "homeOfficeSearchNoMatch",
             "matchingAppellantDetailsFound",
             "homeOfficeAppellantsList",
-            "homeOfficeCaseStatusDate",
+            "homeOfficeCaseStatusData",
         )
     )
 
@@ -519,10 +519,10 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             array(struct(*common_inputValues)).alias("homeOfficeAppellantsList_inputValues"),
             col("content.homeOfficeAppellantsList"),
             lit("yes").alias("homeOfficeAppellantsList_Transformed"),
-            array(struct(*common_inputFields)).alias("homeOfficeCaseStatusDate_inputFields"),
-            array(struct(*common_inputValues)).alias("homeOfficeCaseStatusDate_inputValues"),
-            col("content.homeOfficeCaseStatusDate"),
-            lit("yes").alias("homeOfficeCaseStatusDate_Transformed")
+            array(struct(*common_inputFields)).alias("homeOfficeCaseStatusData_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeCaseStatusData_inputValues"),
+            col("content.homeOfficeCaseStatusData"),
+            lit("yes").alias("homeOfficeCaseStatusData_Transformed")
         )
     )
 

@@ -159,7 +159,7 @@ class TestAppealSubmittedHomeOfficeDetails:
 
             assert df.select("homeOfficeAppellantsList").collect()[0][0] is None
 
-    def test_homeOfficeCaseStatusDate_pa(self, spark):
+    def test_homeOfficeCaseStatusData_pa(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
             PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
 
@@ -169,19 +169,19 @@ class TestAppealSubmittedHomeOfficeDetails:
             )
 
             result = df.select(
-                col("homeOfficeCaseStatusDate.displayDateOfBirth").alias("displayDateOfBirth"),
-                col("homeOfficeCaseStatusDate.displayAppellantDetailsTitle").alias("displayAppellantDetailsTitle"),
-                col("homeOfficeCaseStatusDate.displayApplicationDetailsTitle").alias("displayApplicationDetailsTitle"),
-                col("homeOfficeCaseStatusDate.person.familyName").alias("familyName"),
-                col("homeOfficeCaseStatusDate.person.fullName").alias("fullName"),
-                col("homeOfficeCaseStatusDate.person.givenName").alias("givenName"),
-                col("homeOfficeCaseStatusDate.person.dayOfBirth").alias("dayOfBirth"),
-                col("homeOfficeCaseStatusDate.person.monthOfBirth").alias("monthOfBirth"),
-                col("homeOfficeCaseStatusDate.person.yearOfBirth").alias("yearOfBirth"),
-                col("homeOfficeCaseStatusDate.person.gender.code").alias("gender_code"),
-                col("homeOfficeCaseStatusDate.person.nationality.code").alias("nationality_code"),
-                col("homeOfficeCaseStatusDate.applicationStatus.roleType.code").alias("roleType_code"),
-                col("homeOfficeCaseStatusDate.applicationStatus.roleSubType.code").alias("roleSubType_code"),
+                col("homeOfficeCaseStatusData.displayDateOfBirth").alias("displayDateOfBirth"),
+                col("homeOfficeCaseStatusData.displayAppellantDetailsTitle").alias("displayAppellantDetailsTitle"),
+                col("homeOfficeCaseStatusData.displayApplicationDetailsTitle").alias("displayApplicationDetailsTitle"),
+                col("homeOfficeCaseStatusData.person.familyName").alias("familyName"),
+                col("homeOfficeCaseStatusData.person.fullName").alias("fullName"),
+                col("homeOfficeCaseStatusData.person.givenName").alias("givenName"),
+                col("homeOfficeCaseStatusData.person.dayOfBirth").alias("dayOfBirth"),
+                col("homeOfficeCaseStatusData.person.monthOfBirth").alias("monthOfBirth"),
+                col("homeOfficeCaseStatusData.person.yearOfBirth").alias("yearOfBirth"),
+                col("homeOfficeCaseStatusData.person.gender.code").alias("gender_code"),
+                col("homeOfficeCaseStatusData.person.nationality.code").alias("nationality_code"),
+                col("homeOfficeCaseStatusData.applicationStatus.roleType.code").alias("roleType_code"),
+                col("homeOfficeCaseStatusData.applicationStatus.roleSubType.code").alias("roleSubType_code"),
             ).collect()
 
             assert result[0]["displayDateOfBirth"] == "No match"
@@ -198,7 +198,7 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert result[0]["roleType_code"] == "No match"
             assert result[0]["roleSubType_code"] == "No match"
 
-    def test_homeOfficeCaseStatusDate_non_pa_rp(self, spark):
+    def test_homeOfficeCaseStatusData_non_pa_rp(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
             PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
 
@@ -207,4 +207,4 @@ class TestAppealSubmittedHomeOfficeDetails:
                 MagicMock(), MagicMock(), MagicMock()
             )
 
-            assert df.select("homeOfficeCaseStatusDate").collect()[0][0] is None
+            assert df.select("homeOfficeCaseStatusData").collect()[0][0] is None

@@ -447,7 +447,8 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     condition = col("dv_CCDAppealType").isin(["PA", "RP"])
 
     df_final = (
-        df_final
+        df_final.alias("source")
+        .join(silver_m1.select("CaseNo", "dv_CCDAppealType"), ["CaseNo"], "left")
         .withColumn("homeOfficeSearchStatus", when(condition, lit("SUCCESS")).otherwise(lit(None)))
         .withColumn("homeOfficeSearchNoMatch", when(condition, lit("NO_MATCH")).otherwise(lit(None)))
         .withColumn("matchingAppellantDetailsFound", when(condition, lit("No")).otherwise(lit(None)))
@@ -480,6 +481,14 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
                 }
             }
         """), homOfficeCaseStatusDate_schema)).otherwise(lit(None)))
+        .select(
+            "source.*",
+            "homeOfficeSearchStatus",
+            "homeOfficeSearchNoMatch",
+            "matchingAppellantDetailsFound",
+            "homeOfficeAppellantsList",
+            "homeOfficeCaseStatusDate",
+        )
     )
 
     common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]

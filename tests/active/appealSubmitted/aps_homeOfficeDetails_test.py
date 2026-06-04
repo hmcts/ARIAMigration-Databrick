@@ -23,7 +23,6 @@ SILVER_M1_SCHEMA = StructType([
 
 CASE_NO_COLUMNS = StructType([
     StructField("CaseNo", StringType()),
-    StructField("dv_CCDAppealType", StringType()),
 ])
 
 
@@ -37,7 +36,7 @@ class TestAppealSubmittedHomeOfficeDetails:
 
     def pp_df(self, spark, num_of_cases=0, appeal_type="PA"):
         case_no_df = spark.createDataFrame(
-            [(str(n), appeal_type) for n in range(1, num_of_cases + 1)],
+            [(str(n),) for n in range(1, num_of_cases + 1)],
             CASE_NO_COLUMNS,
         )
         return case_no_df, case_no_df

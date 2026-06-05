@@ -16,6 +16,16 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
         all_test_results.extend(as_tests.test_AS_defaultValues(test_df,fields_to_exclude))
     #display(all_test_results)
 
+    # -- Home Office Mappings (DIAC-2371) --
+    ho_test_setup = None
+    ho_test_df, ho_test_setup = as_tests.test_ho_mapping_init(json_data, M1_silver)
+    if ho_test_setup != True:
+        all_test_results.append(ho_test_setup)
+
+    if ho_test_df != None:
+        all_test_results.extend(as_tests.test_AS_homeOfficeDefaultValues(ho_test_df, fields_to_exclude))
+
+
     # -- Payment --
     test_data_setup = None
     test_df, test_data_setup =  as_tests.test_payment_init(json_data, M1_bronze, M4_silver)

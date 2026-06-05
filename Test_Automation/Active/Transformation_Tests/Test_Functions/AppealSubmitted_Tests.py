@@ -127,6 +127,109 @@ def test_AS_defaultValues(test_df,fields_to_exclude):
 
 ############################################################################################
 #######################
+# homeOffice Init code
+#######################
+def test_ho_mapping_init(json, M1_silver):
+    try:
+        test_df = json.select(
+            "appealReferenceNumber",
+            "appealType",  
+            "homeOfficeSearchStatus",
+            "homeOfficeSearchNoMatch",
+            "matchingAppellantDetailsFound",
+            "homeOfficeAppellantsList",
+            "homeOfficeCaseStatusData"
+        )
+
+        M1_silver = M1_silver.select(
+            "CaseNo"
+        )
+
+        test_df = test_df.join(
+            M1_silver,
+            json["appealReferenceNumber"] == M1_silver["CaseNo"],
+            "inner"
+        ).drop(M1_silver["CaseNo"])
+
+        return test_df, True
+    except Exception as e:
+        error_message = str(e)        
+        return None, TestResult("HOMappingInit", "FAIL", f"Failed to Setup Data for HO Test: Error: {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+############################################################################################
+#######################
+# homeOffice default mapping test
+#######################
+def test_AS_homeOfficeDefaultValues(test_df, fields_to_exclude):
+    try:
+        results_list = []
+        
+        ho_df = test_df.filter(col("appealType").isin("protection", "revocationOfProtection"))
+        
+        if ho_df.count() == 0:
+            return [TestResult("homeOfficeFields", "PASS", "No PA or RP appeals found in batch to evaluate.", test_from_state, inspect.stack()[0].function)]
+
+        # 1. homeOfficeSearchStatus
+        if "homeOfficeSearchStatus" not in fields_to_exclude:
+            fail_status = ho_df.filter(col("homeOfficeSearchStatus") != "SUCCESS")
+            if fail_status.count() != 0:
+                results_list.append(TestResult("homeOfficeSearchStatus", "FAIL", f"Expected 'SUCCESS' - found {fail_status.count()} records not matching", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult("homeOfficeSearchStatus", "PASS", "Checked default mapping: found correct value", test_from_state, inspect.stack()[0].function))
+
+        # 2. homeOfficeSearchNoMatch
+        if "homeOfficeSearchNoMatch" not in fields_to_exclude:
+            fail_no_match = ho_df.filter(col("homeOfficeSearchNoMatch") != "NO_MATCH")
+            if fail_no_match.count() != 0:
+                results_list.append(TestResult("homeOfficeSearchNoMatch", "FAIL", f"Expected 'NO_MATCH' - found {fail_no_match.count()} records not matching", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult("homeOfficeSearchNoMatch", "PASS", "Checked default mapping: found correct value", test_from_state, inspect.stack()[0].function))
+
+        # 3. matchingAppellantDetailsFound
+        if "matchingAppellantDetailsFound" not in fields_to_exclude:
+            fail_details_found = ho_df.filter(col("matchingAppellantDetailsFound") != "No")
+            if fail_details_found.count() != 0:
+                results_list.append(TestResult("matchingAppellantDetailsFound", "FAIL", f"Expected 'No' - found {fail_details_found.count()} records not matching", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult("matchingAppellantDetailsFound", "PASS", "Checked default mapping: found correct value", test_from_state, inspect.stack()[0].function))
+
+        # 4. homeOfficeAppellantsList 
+        if "homeOfficeAppellantsList" not in fields_to_exclude:
+            expected_list_json = '{"list_items":[{"code":"NoMatch","label":"No Match"}],"value":{"code":"NoMatch","label":"No Match"}}'
+            
+            is_array = isinstance(ho_df.schema["homeOfficeAppellantsList"].dataType, F.ArrayType)
+            target_col = col("homeOfficeAppellantsList").getItem(0) if is_array else col("homeOfficeAppellantsList")
+            
+            fail_app_list = ho_df.filter(F.to_json(target_col) != expected_list_json)
+            
+            if fail_app_list.count() != 0:
+                results_list.append(TestResult("homeOfficeAppellantsList", "FAIL", f"Default list metadata mismatch - found {fail_app_list.count()} records corrupt", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult("homeOfficeAppellantsList", "PASS", "Checked default list structure: found correct values", test_from_state, inspect.stack()[0].function))
+
+        # 5. homeOfficeCaseStatusData
+        if "homeOfficeCaseStatusData" not in fields_to_exclude:
+            expected_case_data_json = '{"applicationStatus":{"ccdHomeOfficeMetadata":[],"ccdRejectionReasons":[],"roleSubType":{"code":"No match","description":"No match"},"roleType":{"code":"No match","description":"No match"}},"displayAppellantDetailsTitle":"<h2>Appellant details</h2>","displayApplicationDetailsTitle":"<h2>Application details</h2>","displayDateOfBirth":"No match","person":{"dayOfBirth":0,"familyName":"No match","fullName":"No match","gender":{"code":"No match","description":"No match"},"givenName":"No match","monthOfBirth":0,"nationality":{"code":"No match","description":"No match"},"yearOfBirth":0}}'
+            expected_clean = "".join(expected_case_data_json.split())
+            
+            fail_case_data = ho_df.filter(
+                F.regexp_replace(F.to_json(col("homeOfficeCaseStatusData")), r"\s+", "") != expected_clean
+            )
+            
+            if fail_case_data.count() != 0:
+                results_list.append(TestResult("homeOfficeCaseStatusData", "FAIL", f"Nested Case Status Data mismatch - found {fail_case_data.count()} records corrupt", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult("homeOfficeCaseStatusData", "PASS", "Checked nested Case Status Data: found correct values", test_from_state, inspect.stack()[0].function))
+
+        return results_list
+
+    except Exception as e:
+        error_message = str(e)        
+        return [TestResult("homeOfficeFields", "FAIL", f"TEST FAILED WITH EXCEPTION: Error: {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
+
+############################################################################################
+#######################
 #payment group
 #######################
 def test_payment_init(json, M1_bronze, M4_silver):

@@ -1516,8 +1516,6 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     ).when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("No")
     ).when(
-        conditions & (col("silver_m2.Detained").isin(1, 2, 4)), lit("Yes")
-    ).when(
         conditions & (upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("Yes")
     ).when(
         conditions & ~(upper(col("silver_m2.Appellant_Address5")).eqNullSafe("UK")), lit("No")

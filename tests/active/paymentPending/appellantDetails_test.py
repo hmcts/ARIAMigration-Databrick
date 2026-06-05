@@ -336,10 +336,10 @@ def test_missing_fields_are_none(appellantDetails_outputs):
 
 
 def test_appellant_in_uk_field_conditions(appellantDetails_outputs):
-    # No category 37 or 38
-    assert appellantDetails_outputs["HU/00001/2025"]["appellantInUk"] == "Yes"  # Detained 1
-    assert appellantDetails_outputs["HU/00002/2025"]["appellantInUk"] == "Yes"  # Detained 2
-    assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "Yes"  # Detained 4
+    # No category 37 or 38; detained cases are handled by paymentPendingDetained, not here
+    assert appellantDetails_outputs["HU/00001/2025"]["appellantInUk"] == "No"   # Detained 1 — no longer sets Yes in paymentPending
+    assert appellantDetails_outputs["HU/00002/2025"]["appellantInUk"] == "No"   # Detained 2 — no longer sets Yes in paymentPending
+    assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "No"   # Detained 4 — no longer sets Yes in paymentPending
     assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # Appellant_Address5 in UK
     assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # Appellant_Address5 not in UK
 

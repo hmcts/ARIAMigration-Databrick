@@ -9,8 +9,9 @@ from pyspark.sql.functions import (
     date_format,
     abs,
     sum as sum_,
+    from_json,
 )
-from pyspark.sql.types import IntegerType, StringType
+from pyspark.sql.types import ArrayType, IntegerType, StringType, StructField, StructType
 
 from . import paymentPending as PP
 
@@ -380,6 +381,148 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             ).alias("amountLeftToPay_inputValues"),
             col("content.amountLeftToPay"),
             lit("yes").alias("amountLeftToPay_Transformed"),
+        )
+    )
+
+    return df_final, df_audit
+
+
+###############################################################
+#########          homeOffice extended              ###########
+###############################################################
+def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
+    df_final, df_audit = PP.homeOfficeDetails(
+        silver_m1, silver_m2, silver_c, bronze_HORef_cleansing
+    )
+
+    homeOfficeAppellantList_schema = (
+        StructType([
+            StructField("list_items", ArrayType(StructType([
+                StructField("code", StringType(), True),
+                StructField("label", StringType(), True)
+            ])), True),
+            StructField("value", StructType([
+                StructField("code", StringType(), True),
+                StructField("label", StringType(), True)
+            ]), True)
+        ])
+    )
+
+    homeOfficeCaseStatusData_schema = (
+        StructType([
+            StructField("applicationStatus", StructType([
+                StructField("ccdHomeOfficeMetadata", ArrayType(StringType()), True),
+                StructField("ccdRejectionReasons", ArrayType(StringType()), True),
+                StructField("roleSubType", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("roleType", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True)
+            ]), True),
+            StructField("displayAppellantDetailsTitle", StringType(), True),
+            StructField("displayApplicationDetailsTitle", StringType(), True),
+            StructField("displayDateOfBirth", StringType(), True),
+            StructField("person", StructType([
+                StructField("dayOfBirth", IntegerType(), True),
+                StructField("familyName", StringType(), True),
+                StructField("fullName", StringType(), True),
+                StructField("gender", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("givenName", StringType(), True),
+                StructField("monthOfBirth", IntegerType(), True),
+                StructField("nationality", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("yearOfBirth", IntegerType(), True)
+            ]), True)
+        ])
+    )
+
+    condition = col("dv_CCDAppealType").isin(["PA", "RP"])
+
+    df_final = (
+        df_final.alias("source")
+        .join(silver_m1.select("CaseNo", "dv_CCDAppealType"), ["CaseNo"], "left")
+        .withColumn("homeOfficeSearchStatus", when(condition, lit("SUCCESS")).otherwise(lit(None)))
+        .withColumn("homeOfficeSearchNoMatch", when(condition, lit("NO_MATCH")).otherwise(lit(None)))
+        .withColumn("matchingAppellantDetailsFound", when(condition, lit("No")).otherwise(lit(None)))
+        .withColumn("homeOfficeAppellantsList", when(condition, from_json(lit("""
+            {
+                "list_items":[{"code":"NoMatch","label":"No Match"}],
+                "value":{"code":"NoMatch","label":"No Match"}
+            }
+        """), homeOfficeAppellantList_schema)).otherwise(lit(None)))
+        .withColumn("homeOfficeCaseStatusData", when(condition, from_json(lit("""
+            {
+                "applicationStatus": {
+                    "ccdHomeOfficeMetadata": [],
+                    "ccdRejectionReasons": [],
+                    "roleSubType": {"code": "No match", "description": "No match"},
+                    "roleType": {"code": "No match", "description": "No match"}
+                },
+                "displayAppellantDetailsTitle": "<h2>Appellant details</h2>",
+                "displayApplicationDetailsTitle": "<h2>Application details</h2>",
+                "displayDateOfBirth": "No match",
+                "person": {
+                    "dayOfBirth": 0,
+                    "familyName": "No match",
+                    "fullName": "No match",
+                    "gender": {"code": "No match", "description": "No match"},
+                    "givenName": "No match",
+                    "monthOfBirth": 0,
+                    "nationality": {"code": "No match", "description": "No match"},
+                    "yearOfBirth": 0
+                }
+            }
+        """), homeOfficeCaseStatusData_schema)).otherwise(lit(None)))
+        .select(
+            "source.*",
+            "homeOfficeSearchStatus",
+            "homeOfficeSearchNoMatch",
+            "matchingAppellantDetailsFound",
+            "homeOfficeAppellantsList",
+            "homeOfficeCaseStatusData",
+        )
+    )
+
+    common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
+    common_inputValues = [
+        col("m1_audit.dv_CCDAppealType"),
+        col("m1_audit.dv_representation"),
+    ]
+
+    df_audit = (
+        df_audit.alias("audit")
+        .join(df_final.alias("content"), ["CaseNo"], "left")
+        .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
+        .select(
+            "audit.*",
+            array(struct(*common_inputFields)).alias("homeOfficeSearchStatus_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeSearchStatus_inputValues"),
+            col("content.homeOfficeSearchStatus"),
+            lit("yes").alias("homeOfficeSearchStatus_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeSearchNoMatch_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeSearchNoMatch_inputValues"),
+            col("content.homeOfficeSearchNoMatch"),
+            lit("yes").alias("homeOfficeSearchNoMatch_Transformed"),
+            array(struct(*common_inputFields)).alias("matchingAppellantDetailsFound_inputFields"),
+            array(struct(*common_inputValues)).alias("matchingAppellantDetailsFound_inputValues"),
+            col("content.matchingAppellantDetailsFound"),
+            lit("yes").alias("matchingAppellantDetailsFound_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeAppellantsList_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeAppellantsList_inputValues"),
+            col("content.homeOfficeAppellantsList"),
+            lit("yes").alias("homeOfficeAppellantsList_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeCaseStatusData_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeCaseStatusData_inputValues"),
+            col("content.homeOfficeCaseStatusData"),
+            lit("yes").alias("homeOfficeCaseStatusData_Transformed")
         )
     )
 

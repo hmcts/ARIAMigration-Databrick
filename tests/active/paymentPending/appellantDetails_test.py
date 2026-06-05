@@ -119,11 +119,11 @@ def appellantDetails_outputs(spark):
         None, None, None, None, 4),
 
         ("HU/00004/2025", "WilliamsX", "SarahX", None, None,
-        None, None, None, None, "UK", None,
+        None, None, None, None, None, "SW1A 1AA",
         None, None, None, None, 0),
 
         ("HU/00005/2025", "WilliamsX", "SarahX", None, None,
-        None, None, None, None, "NotUK", None,
+        None, None, None, None, None, None,
         None, None, None, None, 0),
 
         # Marshall Islands (MH) — was previously mapped to NO MAPPING REQUIRED → NULL, now passes through as "MH"
@@ -340,8 +340,8 @@ def test_appellant_in_uk_field_conditions(appellantDetails_outputs):
     assert appellantDetails_outputs["HU/00001/2025"]["appellantInUk"] == "No"   # Detained 1 — no longer sets Yes in paymentPending
     assert appellantDetails_outputs["HU/00002/2025"]["appellantInUk"] == "No"   # Detained 2 — no longer sets Yes in paymentPending
     assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "No"   # Detained 4 — no longer sets Yes in paymentPending
-    assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # Appellant_Address5 in UK
-    assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # Appellant_Address5 not in UK
+    assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # valid UK postcode → dv_countryGovUkOocAdminJ = 'GB'
+    assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # no postcode, no lu_countryGovUkOocAdminJ → dv_countryGovUkOocAdminJ != 'GB'
 
 
 def test_country_gov_uk_ooc_adminj_new_codes(appellantDetails_outputs):

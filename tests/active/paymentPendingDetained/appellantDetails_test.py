@@ -140,7 +140,7 @@ def test_detained_4_appellant_in_uk(appellantDetails_outputs):
 
 
 def test_detained_appeal_out_of_country(appellantDetails_outputs):
-    """Detained cases must produce appealOutOfCountry='No' regardless of other conditions."""
+    """Detained cases have appellantInUk='Yes', so appealOutOfCountry must be the inverse: 'No'."""
     assert appellantDetails_outputs["HU/DET/0001"]["appealOutOfCountry"] == "No"
     assert appellantDetails_outputs["HU/DET/0002"]["appealOutOfCountry"] == "No"
     assert appellantDetails_outputs["HU/DET/0003"]["appealOutOfCountry"] == "No"

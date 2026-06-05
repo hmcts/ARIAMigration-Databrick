@@ -308,15 +308,30 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities)
 
-    appellantDetails_df = appellantDetails_df.drop("appellantInUk","appealOutOfCountry","appellantHasFixedAddress")
+    appellantDetails_df = appellantDetails_df.drop("appellantInUk", "appealOutOfCountry", "appellantHasFixedAddress")
     # appellantDetails_audit = appellantDetails_audit.drop("appellantAddress")
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
-    
+    silver_m2_enriched = (
+        silver_m2
+        .withColumn("appellantFullAddress", concat_ws(", ",
+            col("Appellant_Address1"), col("Appellant_Address2"),
+            col("Appellant_Address3"), col("Appellant_Address4"),
+            col("Appellant_Address5"), col("Appellant_Postcode")
+        ))
+        .withColumn("ukPostcodeAppellant", PP.getUkPostcodeUDF(col("Appellant_Postcode")))
+        .withColumn("dv_countryGovUkOocAdminJ", PP.getCountryApp_udf(
+            col("lu_countryGovUkOocAdminJ"),
+            col("ukPostcodeAppellant"),
+            col("appellantFullAddress"),
+            col("Appellant_Postcode")
+        ))
+    )
+
     appellantDetails_df = (
         appellantDetails_df.alias("content")
-        .join(silver_m2.alias("m2"), on="CaseNo", how="left")
+        .join(silver_m2_enriched.alias("m2"), on="CaseNo", how="left")
         .join(silver_c_grouped.alias("mc"), on="CaseNo", how="left")
 
         # -----------------------------
@@ -324,8 +339,11 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "appellantInUk",
-            when(col("m2.Detained").isin(1, 2, 4) | expr("array_contains(CategoryIdList, 37)"), "Yes")
+            when(col("m2.Detained").isin(1, 2, 4), "Yes")
+            .when(expr("array_contains(CategoryIdList, 37)"), "Yes")
             .when(expr("array_contains(CategoryIdList, 38)"), "No")
+            .when(col("m2.dv_countryGovUkOocAdminJ").eqNullSafe("GB"), "Yes")
+            .when(~col("m2.dv_countryGovUkOocAdminJ").eqNullSafe("GB"), "No")
             .otherwise(None)
         )
 
@@ -334,8 +352,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "appealOutOfCountry",
-            when(col("m2.Detained").isin(1, 2, 4) | expr("array_contains(CategoryIdList, 37)"), "No")
-            .when(expr("array_contains(CategoryIdList, 38)"), "Yes")
+            when(col("appellantInUk") == "Yes", "No")
+            .when(col("appellantInUk") == "No", "Yes")
             .otherwise(None)
         )
 

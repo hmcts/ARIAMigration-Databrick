@@ -1476,6 +1476,23 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_
 
 getCountryApp_udf = udf(getCountryApp, StringType())
 
+def derive_country_silver_m2(silver_m2):
+    return (
+        silver_m2
+        .withColumn("appellantFullAddress", concat_ws(", ",
+            col("Appellant_Address1"), col("Appellant_Address2"),
+            col("Appellant_Address3"), col("Appellant_Address4"),
+            col("Appellant_Address5"), col("Appellant_Postcode")
+        ))
+        .withColumn("ukPostcodeAppellant", getUkPostcodeUDF(col("Appellant_Postcode")))
+        .withColumn("dv_countryGovUkOocAdminJ", getCountryApp_udf(
+            col("lu_countryGovUkOocAdminJ"),
+            col("ukPostcodeAppellant"),
+            col("appellantFullAddress"),
+            col("Appellant_Postcode")
+        ))
+    )
+
 def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities):
     conditions = (col("dv_representation").isin('LR', 'AIP')) & (col("lu_appealType").isNotNull())
 
@@ -1651,29 +1668,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     ).otherwise(None)
 
     silver_m2 = silver_m2.filter(col("Relationship").isNull())
-    
-    silver_m2_derived = silver_m2.withColumn(
-        "appellantFullAddress",
-            concat_ws(", ",
-                col("Appellant_Address1"),
-                col("Appellant_Address2"),
-                col("Appellant_Address3"),
-                col("Appellant_Address4"),
-                col("Appellant_Address5"),
-                col("Appellant_Postcode")
-            )
-    ).withColumn(
-        "ukPostcodeAppellant",
-        getUkPostcodeUDF(col("Appellant_Postcode"))
-    ).withColumn(
-        "dv_countryGovUkOocAdminJ",
-        getCountryApp_udf(
-            col("lu_countryGovUkOocAdminJ").alias("country"),
-            col("ukPostcodeAppellant"),
-            col("appellantFullAddress"),
-            col("Appellant_Postcode")
-        )
-    )
+
+    silver_m2_derived = derive_country_silver_m2(silver_m2)
 
     bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
 

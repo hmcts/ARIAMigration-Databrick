@@ -1,34 +1,24 @@
-from datetime import datetime
 import re
-import string
-import pycountry
-import pandas as pd
-import json
 
-from datetime import datetime
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
-from pyspark.sql.types import StringType,StructType,StructField
+from pyspark.sql.types import StringType, StructType, StructField
 from . import paymentPending as PP
 
-
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
-    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    col, when, lit, array, struct, collect_list,
+    date_format, date_add, expr,
+    udf, coalesce, concat_ws, first
 )
+
 
 ################################################################
 ##########          Detained State Function          ###########
 ################################################################
+def detained(silver_m1, silver_m2, bronze_detention_centres):
 
-def detained(silver_m1, silver_m2,bronze_detention_centres):
-
-    joined_m1_m2 =(
+    joined_m1_m2 = (
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"), on="CaseNo", how="left")
-        
     )
 
     detained_df = (
@@ -150,16 +140,15 @@ def detained(silver_m1, silver_m2,bronze_detention_centres):
 
     return detained_df, detained_audit
 
+
 ################################################################
 ##########              caseData grouping            ###########
 ################################################################
-
-# caseData grouping
 def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
     case_mgmt_schema = StructType([
-    StructField("region", StringType(), True),
-    StructField("baseLocation", StringType(), True)
+        StructField("region", StringType(), True),
+        StructField("baseLocation", StringType(), True)
     ])
 
     bronze_detention_centres = bronze_detention_centres.withColumn(
@@ -237,13 +226,13 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
             col("selectedHearingCentreRefData1").alias("selectedHearingCentreRefData"),
         )
     ).distinct()
-    
+
     return caseData_df, caseData_audit
+
 
 ################################################################
 ##########             General Function              ###########
 ################################################################
-
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
     general_df, general_audit = PP.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres)
@@ -261,7 +250,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"), on="CaseNo", how="left")
         )
-    
+
     general_df = (
         general_df.alias("content").join(joined_m1_m2.alias("m2"),on="CaseNo", how="left")
         .join(bronze_detention_centres.alias("det"), on="DetentionCentreId", how="left")
@@ -294,16 +283,15 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                             array(struct(lit("None"),col("m2.DateLodged"))).alias("TTL_inputValues"),
                             col("content.TTL").alias("TTL_value"),
                             lit("Yes").alias("TTL_Transformation"),
-                            )
-                     
+                            )                
                      )
 
     return general_df, general_audit
 
+
 ################################################################
 ##########             appellantDetails Function              ###########
 ################################################################
-
 def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities):
 
     appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities)
@@ -313,21 +301,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
-    silver_m2_enriched = (
-        silver_m2
-        .withColumn("appellantFullAddress", concat_ws(", ",
-            col("Appellant_Address1"), col("Appellant_Address2"),
-            col("Appellant_Address3"), col("Appellant_Address4"),
-            col("Appellant_Address5"), col("Appellant_Postcode")
-        ))
-        .withColumn("ukPostcodeAppellant", PP.getUkPostcodeUDF(col("Appellant_Postcode")))
-        .withColumn("dv_countryGovUkOocAdminJ", PP.getCountryApp_udf(
-            col("lu_countryGovUkOocAdminJ"),
-            col("ukPostcodeAppellant"),
-            col("appellantFullAddress"),
-            col("Appellant_Postcode")
-        ))
-    )
+    silver_m2_enriched = PP.derive_country_silver_m2(silver_m2)
 
     appellantDetails_df = (
         appellantDetails_df.alias("content")
@@ -401,7 +375,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 def cleanEmail(email):
     if email is None:
         return None
-    
+
     email = re.sub(r"\s+", "", email)             # Remove all whitespace
     email = re.sub(r"\s", "", email)              # 2. Remove internal whitespace
     email = re.sub(r"^\.", "", email)             # 3. Remove leading .

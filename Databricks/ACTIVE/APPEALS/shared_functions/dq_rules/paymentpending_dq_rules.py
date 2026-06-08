@@ -375,21 +375,17 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_name_in_list"] = """(
             (
                 (
-                    (valid_categoryIdList IS NOT NULL)
-                    AND
-                    (EXISTS(valid_categoryIdList, x -> x IN (7, 25)))
+                    EXISTS(valid_categoryIdList, x -> x IN (7, 25))
                 )
                 AND
                 EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)
             )
             OR
-            (caseFlags.details IS NULL)
+            (caseFlags IS NULL OR caseFlags.details IS NULL)
             OR
             (
                 (
-                    (valid_categoryIdList IS NULL)
-                    OR
-                    (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)))
+                    NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25))
                 )
                 AND
                 ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name), caseFlags.details[0].value.name)
@@ -423,25 +419,28 @@ class paymentPendingDQRules(DQRulesBase):
             )
         )
         """
-        # IF CategoryId not in [7,8,24,25,31,32,41] or valid_categoryIdList is NULL or lu_HOANRef is NULL then caseFlags is NULL
+        # IF CategoryId not in [7,8,24,25,31,32,41] or lu_HOANRef is NULL then caseFlags is NULL
         # IF CategoryId in [7,8,24,25,31,32,41] and lu_HOANRef is not NULL then caseFlags is not NULL
         # IF CategoryId in [7,25] and lu_HOANRef is not NULL, then all flagComment are NULL
         # IF CategoryId in [8,24,31,32,41] and lu_HOANRef is not NULL, then all flagComment are NOT NULL
 
         checks["valid_caseFlags_flagComment_in_list"] = """
         (
-            valid_categoryIdList IS NULL
-            OR lu_HORef IS NULL
-            OR
             (
-                NOT (
-                    array_contains(valid_categoryIdList, 7) OR
-                    array_contains(valid_categoryIdList, 8) OR
-                    array_contains(valid_categoryIdList, 24) OR
-                    array_contains(valid_categoryIdList, 25) OR
-                    array_contains(valid_categoryIdList, 31) OR
-                    array_contains(valid_categoryIdList, 32) OR
-                    array_contains(valid_categoryIdList, 41)
+                (
+                    lu_HORef IS NULL
+                    OR
+                    (
+                        NOT (
+                            array_contains(valid_categoryIdList, 7) OR
+                            array_contains(valid_categoryIdList, 8) OR
+                            array_contains(valid_categoryIdList, 24) OR
+                            array_contains(valid_categoryIdList, 25) OR
+                            array_contains(valid_categoryIdList, 31) OR
+                            array_contains(valid_categoryIdList, 32) OR
+                            array_contains(valid_categoryIdList, 41)
+                        )
+                    )
                 )
                 AND caseFlags IS NULL
             )
@@ -844,7 +843,6 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_appellantHasFixedAddressAdminJ"] = (
             """(
                 (array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No'))
-                OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)
                 OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL)
             )"""
         )
@@ -860,7 +858,6 @@ class paymentPendingDQRules(DQRulesBase):
                     addressLine1AdminJ IS NOT NULL
                 )
                 OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
-                OR (valid_categoryIdList IS NULL AND addressLine1AdminJ IS NULL)
             )"""
         )
 
@@ -875,7 +872,6 @@ class paymentPendingDQRules(DQRulesBase):
                     addressLine2AdminJ IS NOT NULL
                 )
                 OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
-                OR (valid_categoryIdList IS NULL AND addressLine2AdminJ IS NULL)
             )"""
         )
 
@@ -994,7 +990,7 @@ class paymentPendingDQRules(DQRulesBase):
             """(
                 (
                     NOT array_contains(valid_categoryIdList, 38)
-                    AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
+                    AND (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
                     AND homeOfficeReferenceNumber IS NOT NULL
                 )

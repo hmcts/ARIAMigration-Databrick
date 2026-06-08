@@ -556,6 +556,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(detained_df, on="CaseNo", how="left")
             .join(cs46_out31, on="CaseNo", how="left")
             .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
+            .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))
     ).dropDuplicates(["CaseNo"])
 
 

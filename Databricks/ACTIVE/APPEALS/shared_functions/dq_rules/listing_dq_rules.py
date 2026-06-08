@@ -56,8 +56,6 @@ class listingDQRules(DQRulesBase):
 
         checks["valid_isEvidenceFromOutsideUkOoc"] = (
             """(
-                (valid_categoryIdList IS NULL AND isEvidenceFromOutsideUkOoc IS NULL)
-                OR
                 (NOT(ARRAY_CONTAINS(valid_categoryIdList, 38)) AND isEvidenceFromOutsideUkOoc IS NULL)
                 OR
                 (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkOoc <=> 'Yes')
@@ -68,8 +66,6 @@ class listingDQRules(DQRulesBase):
 
         checks["valid_isEvidenceFromOutsideUkInCountry"] = (
             """(
-                (valid_categoryIdList IS NULL AND isEvidenceFromOutsideUkInCountry IS NULL)
-                OR
                 (NOT(ARRAY_CONTAINS(valid_categoryIdList, 37)) AND isEvidenceFromOutsideUkInCountry IS NULL)
                 OR
                 (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkInCountry <=> 'Yes')

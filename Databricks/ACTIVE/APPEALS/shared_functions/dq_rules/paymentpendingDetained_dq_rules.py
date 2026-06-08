@@ -396,18 +396,18 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_appellantInUk"] = ("""
-            CASE    WHEN Detained IN (1,2,4) OR array_contains(valid_categoryIdList, 37) THEN appellantInUk = 'Yes'
+            CASE    WHEN Detained IN (1,2,4) THEN appellantInUk = 'Yes'
+                    WHEN array_contains(valid_categoryIdList, 37) THEN appellantInUk = 'Yes'
                     WHEN array_contains(valid_categoryIdList, 38) THEN appellantInUk = 'No'
-                    ELSE appellantInUk IS  NULL
+                    ELSE appellantInUk IN ('Yes', 'No')
             END
         """)
 
         checks["valid_appealOutOfCountry"] = ("""
-            CASE    WHEN Detained IN (1,2,4) OR array_contains(valid_categoryIdList, 37) THEN appealOutOfCountry = 'No'
-                    WHEN array_contains(valid_categoryIdList, 38) THEN appealOutOfCountry = 'Yes'
-                    ELSE appealOutOfCountry IS  NULL
+            CASE    WHEN appellantInUk = 'Yes' THEN appealOutOfCountry = 'No'
+                    WHEN appellantInUk = 'No' THEN appealOutOfCountry = 'Yes'
+                    ELSE appealOutOfCountry IS NULL
             END
-
         """)
 
         ##############################

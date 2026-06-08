@@ -5,7 +5,6 @@ import pycountry
 import pandas as pd
 import json
 
-from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
@@ -1447,26 +1446,22 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ################################################################
 ##########         appellantDetails Function         ###########
 ################################################################
-
-from pyspark.sql.functions import udf, col
-from pyspark.sql.types import StringType
-import pandas as pd
-
-def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress, Appellant_Postcode):
+def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress):
     countryFromAddress = []
     try:
         country = country
         uk_postcode = ukPostcodeAppellant
-        full_address = appellantFullAddress
+        full_address = ', '.join(filter(None, appellantFullAddress)) if appellantFullAddress else ''
 
         if (country is not None and country != 0) or (country is not None and pd.notna(country)):
             countryFromAddress.append(str(country))
             return ', '.join(countryFromAddress)
         else:
-            if uk_postcode is True or uk_postcode == "True":
+            if (uk_postcode is True or uk_postcode == "True"
+                or any(line is not None and line.lower() in ['gb', 'uk', 'united kingdom'] for line in appellantFullAddress)):
                 countryFromAddress.append('GB')
                 return ', '.join(countryFromAddress)
-            if uk_postcode is False or uk_postcode == "False":
+            else:
                 searched_country = getCountryFromAddress(full_address)
                 countryFromAddress.append(searched_country)
                 return ', '.join(countryFromAddress)
@@ -1479,7 +1474,7 @@ getCountryApp_udf = udf(getCountryApp, StringType())
 def derive_country_silver_m2(silver_m2):
     return (
         silver_m2
-        .withColumn("appellantFullAddress", concat_ws(", ",
+        .withColumn("appellantFullAddress", array(
             col("Appellant_Address1"), col("Appellant_Address2"),
             col("Appellant_Address3"), col("Appellant_Address4"),
             col("Appellant_Address5"), col("Appellant_Postcode")
@@ -1488,8 +1483,7 @@ def derive_country_silver_m2(silver_m2):
         .withColumn("dv_countryGovUkOocAdminJ", getCountryApp_udf(
             col("lu_countryGovUkOocAdminJ"),
             col("ukPostcodeAppellant"),
-            col("appellantFullAddress"),
-            col("Appellant_Postcode")
+            col("appellantFullAddress")
         ))
     )
 

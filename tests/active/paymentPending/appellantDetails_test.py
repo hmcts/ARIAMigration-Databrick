@@ -56,6 +56,12 @@ def appellantDetails_outputs(spark):
         ("HU/00006/2025", "HU", "2025-04-01", "LR", "1975-03-15", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00007/2025", "HU", "2025-04-01", "LR", "1975-03-15", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00008/2025", "HU", "2025-04-01", "LR", "1975-03-15", "211", "ZZ", "Stateless", "refusalOfHumanRights", None, None, None, "HU"),
+        # getCountryApp path tests
+        ("HU/00009/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00010/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00011/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00012/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00013/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
     ]
 
     m2_schema = T.StructType([
@@ -140,6 +146,31 @@ def appellantDetails_outputs(spark):
         ("HU/00008/2025", "TestNameX", "TestGivenX", None, None,
         None, None, None, None, None, None,
         None, None, "ZZ", None, 0),
+
+        # getCountryApp: Appellant_Address5 = 'UK' → any() address match → GB
+        ("HU/00009/2025", "TestX", "TestX", None, None,
+        None, None, None, None, "UK", None,
+        None, None, None, None, 0),
+
+        # getCountryApp: valid UK postcode, no Appellant_Address5 → ukPostcodeAppellant = "True" → GB
+        ("HU/00010/2025", "TestX", "TestX", None, None,
+        None, None, None, None, None, "W3 8PF",
+        None, None, None, None, 0),
+
+        # getCountryApp: no postcode, address contains 'Poland' → getCountryFromAddress → PL via bronze lookup
+        ("HU/00011/2025", "TestX", "TestX", None, None,
+        "123 StreetX", None, "Poland", None, None, None,
+        None, None, None, None, 0),
+
+        # getCountryApp: Appellant_Address4 = 'GB' → any() address match → GB
+        ("HU/00012/2025", "TestX", "TestX", None, None,
+        None, None, None, "GB", None, None,
+        None, None, None, None, 0),
+
+        # getCountryApp: Appellant_Address3 = 'United Kingdom' → any() address match → GB
+        ("HU/00013/2025", "TestX", "TestX", None, None,
+        None, None, "United Kingdom", None, None, None,
+        None, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -158,6 +189,11 @@ def appellantDetails_outputs(spark):
         ("HU/00006/2025", 38),
         ("HU/00007/2025", 38),
         ("HU/00008/2025", 38),
+        ("HU/00009/2025", 38),
+        ("HU/00010/2025", 38),
+        ("HU/00011/2025", 38),
+        ("HU/00012/2025", 38),
+        ("HU/00013/2025", 38),
     ]
 
     bronze_countryFromAddress_schema = T.StructType([
@@ -353,3 +389,28 @@ def test_country_gov_uk_ooc_adminj_new_codes(appellantDetails_outputs):
     assert_equals(appellantDetails_outputs["HU/00006/2025"], countryGovUkOocAdminJ="MH")
     assert_equals(appellantDetails_outputs["HU/00007/2025"], countryGovUkOocAdminJ="MC")
     assert_equals(appellantDetails_outputs["HU/00008/2025"], countryGovUkOocAdminJ="ZZ")
+
+
+def test_country_gov_uk_ooc_adminj_from_appellant_address5(appellantDetails_outputs):
+    """getCountryApp returns GB when Appellant_Address5 is 'UK' — matched via any() check on appellantFullAddress values."""
+    assert_equals(appellantDetails_outputs["HU/00009/2025"], countryGovUkOocAdminJ="GB")
+
+
+def test_country_gov_uk_ooc_adminj_from_uk_postcode(appellantDetails_outputs):
+    """getCountryApp returns GB when Appellant_Postcode is a valid UK postcode and lu_countryGovUkOocAdminJ is None."""
+    assert_equals(appellantDetails_outputs["HU/00010/2025"], countryGovUkOocAdminJ="GB")
+
+
+def test_country_gov_uk_ooc_adminj_from_address_lookup(appellantDetails_outputs):
+    """getCountryApp falls through to getCountryFromAddress when no postcode and no UK Address5; bronze lookup maps the result."""
+    assert_equals(appellantDetails_outputs["HU/00011/2025"], countryGovUkOocAdminJ="PL")
+
+
+def test_country_gov_uk_ooc_adminj_from_gb_in_address(appellantDetails_outputs):
+    """getCountryApp returns GB when an address field is exactly 'GB' — matched via any() check."""
+    assert_equals(appellantDetails_outputs["HU/00012/2025"], countryGovUkOocAdminJ="GB")
+
+
+def test_country_gov_uk_ooc_adminj_from_united_kingdom_in_address(appellantDetails_outputs):
+    """getCountryApp returns GB when an address field is exactly 'United Kingdom' — matched via any() check."""
+    assert_equals(appellantDetails_outputs["HU/00013/2025"], countryGovUkOocAdminJ="GB")

@@ -4,10 +4,40 @@ from .dq_rules import DQRulesBase
 class listingDQRules(DQRulesBase):
 
     def get_checks(self, checks={}):
+        checks = checks | self.get_checks_flags()
         checks = checks | self.get_checks_hearing_requirements()
         checks = checks | self.get_checks_general()
         checks = checks | self.get_checks_general_default()
         checks = checks | self.get_checks_document()
+
+        return checks
+
+    def get_checks_flags(self, checks={}):
+        checks["valid_appellantLevelFlags"] = """
+        (
+            (appellantLevelFlags IS NOT NULL)
+            AND
+            (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
+            AND
+            (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0019'))
+            AND
+            (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0043'))
+            AND
+            (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0014'))
+            AND
+            (
+                (appellantInterpreterSpokenLanguage IS NULL AND NOT ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0015'))
+                OR
+                (appellantInterpreterSpokenLanguage IS NOT NULL AND ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0015'))
+            )
+            AND
+            (
+                (appellantInterpreterSignLanguage IS NULL AND NOT ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0042'))
+                OR
+                (appellantInterpreterSignLanguage IS NOT NULL AND ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0042'))
+            )
+        )
+        """
 
         return checks
 

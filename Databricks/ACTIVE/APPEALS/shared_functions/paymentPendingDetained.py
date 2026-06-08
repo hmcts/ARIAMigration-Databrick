@@ -301,11 +301,11 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
-    silver_m2_enriched = PP.derive_country_silver_m2(silver_m2)
+    silver_m2_dervied = PP.derive_country_silver_m2(silver_m2)
 
     appellantDetails_df = (
         appellantDetails_df.alias("content")
-        .join(silver_m2_enriched.alias("m2"), on="CaseNo", how="left")
+        .join(silver_m2_dervied.alias("m2"), on="CaseNo", how="left")
         .join(silver_c_grouped.alias("mc"), on="CaseNo", how="left")
 
         # -----------------------------

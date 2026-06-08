@@ -91,6 +91,59 @@ def test_AREA_defaultValues(test_df, fields_to_exclude):
         error_message = str(e)        
         return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
     
+############################################################################################
+#######################
+#homeoffice negative test code
+# #######################
+
+def test_ARE_homeOfficeExclusion(json_data):
+    try:
+
+        results_list = []
+        
+        forbidden_fields = [
+            "homeOfficeSearchStatus", 
+            "homeOfficeSearchNoMatch", 
+            "matchingAppellantDetailsFound", 
+            "homeOfficeAppellantsList", 
+            "homeOfficeCaseStatusData"
+        ]
+        
+        for field in forbidden_fields:
+            if field not in json_data.columns:
+                results_list.append(TestResult(
+                    field,
+                    "PASS",
+                    f"Negative Test Passed: {field} is completely excluded from this state's schema.", 
+                    test_from_state, 
+                    inspect.stack()[0].function
+                ))
+            else:
+                leaked_records = json_data.filter(col(field).isNotNull() & (col(field) != ""))
+                if leaked_records.count() > 0:
+                    results_list.append(TestResult(
+                        field,
+                        "FAIL", 
+                        f"Leak detected: {field} should be excluded, but found {leaked_records.count()} records with data.", 
+                        test_from_state, 
+                        inspect.stack()[0].function
+                    ))
+                else:
+                    results_list.append(TestResult(
+                        field, 
+                        "PASS", 
+                        f"Negative Test Passed: {field} exists in schema but is correctly null/empty.", 
+                        test_from_state, 
+                        inspect.stack()[0].function
+                    ))
+                    
+
+        return results_list
+
+    except Exception as e:
+        error_message = str(e)
+        return [TestResult("homeOfficeExclusion", "FAIL", f"Negative test exception: {error_message[:100]}", test_from_state, inspect.stack()[0].function)]
+        
 
 
 ############################################################################################

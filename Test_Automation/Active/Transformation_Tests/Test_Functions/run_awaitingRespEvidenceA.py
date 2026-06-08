@@ -33,5 +33,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
     if "recordedOutOfTimeDecision_simple" not in fields_to_exclude:
         all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac1(json_data, M1_bronze))
         all_test_results.append(are_a_tests.test_recordedOutOfTimeDecision_ac2(json_data, M1_bronze))
+        
+    # -- Home Office Negative Exclusion Test (DIAC-2371) --
+    # Verifies that the 5 temporary fields are strictly excluded/not coming out in this state
+    all_test_results.extend(are_a_tests.test_ARE_homeOfficeExclusion(json_data))
 
     return classify_all(all_test_results)

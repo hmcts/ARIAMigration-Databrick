@@ -6,7 +6,7 @@ from . import paymentPending as PP
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    date_format, date_add, expr,
+    date_format, date_add, expr, array_contains,
     udf, coalesce, concat_ws, first
 )
 

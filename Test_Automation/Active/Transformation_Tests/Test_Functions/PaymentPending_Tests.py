@@ -4963,8 +4963,8 @@ def test_caseData_init(json, M1_bronze, M1_silver, M3_bronze):
             "appellantsRepresentation",
             "hearingCentreDynamicList",
             "caseManagementLocationRefData",
-            "outOfTimeDecisionType",
-            "outOfTimeDecisionMaker"
+            # "outOfTimeDecisionType",
+            # "outOfTimeDecisionMaker"
         )
 
         M1_bronze = M1_bronze.select(
@@ -5011,8 +5011,40 @@ def test_caseData_init(json, M1_bronze, M1_silver, M3_bronze):
 #######################
 #outOfTimeDecisionType - IF OutOfTimeIssue IS 1 AND Outcome !=0 = Include
 #######################
-def test_outOfTimeDecisionType(test_df):
+def test_outOfTimeDecisionType(json, M1_bronze, M3_bronze):
     try:
+        if "outOfTimeDecisionType" not in json.columns:
+            return TestResult("outOfTimeDecisionType", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        json = json.select(
+            "appealReferenceNumber",
+            "outOfTimeDecisionType",
+            "outOfTimeDecisionMaker"
+        )
+
+        M1_bronze = M1_bronze.select(
+            "CaseNo",
+            "OutOfTimeIssue"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "Outcome",
+            "StatusId"
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            "inner"
+        ).drop("CaseNo")
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        ).drop("CaseNo")
+
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
         
         # Filter down to only rows where StatusId is at its MAX
@@ -5046,6 +5078,38 @@ def test_outOfTimeDecisionType(test_df):
 #######################
 def test_outOfTimeDecisionMaker(test_df):
     try:
+        if "outOfTimeDecisionMaker" not in json.columns:
+            return TestResult("outOfTimeDecisionMaker", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
+        json = json.select(
+            "appealReferenceNumber",
+            "outOfTimeDecisionType",
+            "outOfTimeDecisionMaker"
+        )
+
+        M1_bronze = M1_bronze.select(
+            "CaseNo",
+            "OutOfTimeIssue"
+        )
+
+        M3_bronze = M3_bronze.select(
+            "CaseNo",
+            "Outcome",
+            "StatusId"
+        )
+
+        test_df = json.join(
+            M1_bronze,
+            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            "inner"
+        ).drop("CaseNo")
+
+        test_df = test_df.join(
+            M3_bronze,
+            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            "inner"
+        ).drop("CaseNo")
+
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
         
         # Filter down to only rows where StatusId is at its MAX

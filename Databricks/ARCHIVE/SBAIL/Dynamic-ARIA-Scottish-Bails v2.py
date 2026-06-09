@@ -2141,27 +2141,19 @@ def silver_meta_data():
         .drop("lk_case_status", "lk_outcome")
     )
 
-    ## Set retention dates based on status/outcome combinations
-    ## if combo exists, set retention date to + 240 (20 yrs) months from Dateofdecision
-    ## if combo is (38, 4) or (38, 19) set retention date to + 240 (20 yrs) months from decision_date_prev, otherwise null -> set to current date
-    ## if combo is null, set retention date to current date
     final_df = comparison_df.withColumn(
-    "retentionDate",
-    F.when(
-        col("is_valid_status_outcome") == True,
-        col("event_date")
-    )
-    .when(
-        ((col("Outcome") == 38) & (col("CaseStatus") == 4)) | ((col("Outcome") == 38) & (col("CaseStatus") == 19)),
+            "retentionDate",
+        when(col("is_valid_status_outcome") == True, col("event_date"))
+        .when(((
+            col("Outcome") == 38) & (col("CaseStatus") == 4)) | ((col("Outcome") == 38) & (col("CaseStatus") == 19)),
             coalesce(col("decision_date_prev"), F.current_date()))
-    .when(
-        col("Outcome").isNull() & col("CaseStatus").isNull(),
-        F.current_date()
-    ).otherwise(F.current_date())
-    ).withColumn(
-        "event_date",
+        .when(col("Outcome").isNull() & col("CaseStatus").isNull(), F.current_date())
+        .otherwise(F.current_date())
+
+        ).withColumn(
+            "event_date",
         date_format(col("retentionDate"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-    ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
+        ).drop(col("CaseStatus"), col("Outcome"), col("decision_date_prev"), col("is_valid_status_outcome"), col("retentionDate"))
 
     return final_df
 

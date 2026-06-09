@@ -5076,7 +5076,7 @@ def test_outOfTimeDecisionType(json, M1_bronze, M3_bronze):
 #######################
 #outOfTimeDecisionMaker - IF OutOfTimeIssue IS 1 AND Outcome !=0 = Include
 #######################
-def test_outOfTimeDecisionMaker(test_df):
+def test_outOfTimeDecisionMaker(json, M1_bronze, M3_bronze):
     try:
         if "outOfTimeDecisionMaker" not in json.columns:
             return TestResult("outOfTimeDecisionMaker", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)

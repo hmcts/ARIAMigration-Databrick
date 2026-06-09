@@ -38,10 +38,10 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 
     if test_df != None:
           if "outOfTimeDecisionType" not in fields_to_exclude:
-               all_test_results.append(pp_tests.test_outOfTimeDecisionType(test_df))
+               all_test_results.append(pp_tests.test_outOfTimeDecisionType(json_data, M1_bronze, M3_bronze))
 
           if "outOfTimeDecisionMaker" not in fields_to_exclude:
-               all_test_results.append(pp_tests.test_outOfTimeDecisionMaker(test_df))
+               all_test_results.append(pp_tests.test_outOfTimeDecisionMaker(json_data, M1_bronze, M3_bronze))
 
           if "submissionOutOfTime" not in fields_to_exclude:
                all_test_results.append(pp_tests.test_submissionOutOfTime_ac1(test_df))

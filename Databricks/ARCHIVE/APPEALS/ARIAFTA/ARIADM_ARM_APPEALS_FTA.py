@@ -5094,7 +5094,6 @@ def generate_html(row, templates=templates):
         html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
         html_template = html_template.replace(f"{{{{additional-tabs-size}}}}", str(additional_tabs_size))
 
-
         # StatusDetails tabs
         nested_table_number = 999
         nested_tab_group_number = 999
@@ -5119,7 +5118,7 @@ def generate_html(row, templates=templates):
                 if should_strikethrough(SDP.StatusId, row.ListDetails):
                     doh_style = "text-decoration: line-through;"
                 else:
-                    doh_style = "" 
+                    doh_style = ""
 
                 line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
                                         .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
@@ -5243,6 +5242,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
                                         .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
                                         .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
+                                        .replace("{{AssignedjudicialofficersPlaceHolder}}", f"<tr><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 in ('Judge First Tier', 'Des Judge First Tier') else '')}</td><td id=\"midpadding\">{(SDP.CourtClerkUsher or '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Upper Trib Judge' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Upper Trib Judge' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Upper Trib Judge' else '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Non-Legal Member' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Non-Legal Member' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Non-Legal Member' else '')}</td></tr>") \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
@@ -5254,12 +5254,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{rstd.ReviewStandardDirectionId}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredIND)}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredAppellantRep)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedIND)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedAppellantRep)}</td></tr>"
                                                 for i, rstd in enumerate(SDP.ReviewStandardDirectionDirectionDetails or [])
-                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
-                                        # .replace("{{AssignedjudicialofficersPlaceHolder}}", str("\n".join(
-                                        #         f"<tr><td id=\"midpadding\">{adjd.JudgeFT}</td><td id=\"midpadding\">{adjd.CourtClerkUsher}</td><td id=\"midpadding\"></td><td id=\"midpadding\"></td></tr>"
-                                        #         for i, adjd in enumerate(SDP.CaseStatusAdjudicatorDetails or [])
-                                        #     ) or '<tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>'))     
- 
+                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'))
 
                 status_details_code += line + '\n'
         else:
@@ -5267,11 +5262,8 @@ def generate_html(row, templates=templates):
             line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
                                     .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
                                     .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
-                                        
-                                                                                
+                                                                                             
             status_details_code += line + '\n'
-
-            # displayHTML(status_details_code)
 
         html_template = html_template.replace(f"{{{{StatusDetailsPlaceHolder}}}}", status_details_code)
         

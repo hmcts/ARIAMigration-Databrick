@@ -4969,17 +4969,17 @@ def generate_html(row, templates=templates):
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
+            "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
         ]
 
-        date_correct_fee_received = row_dict.get("dateCorrectFeeReceived")
+        date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
         date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
 
-        if date_correct_fee_received is not None and date_correct_fee_deemed_received is None:
+        if date_correct_fee_received and not date_correct_fee_deemed_received:
             row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
 
-        elif date_correct_fee_received is None and date_correct_fee_deemed_received is not None:
-            row_dict["dateCorrectFeeReceived"] = None
+        elif date_correct_fee_deemed_received and not date_correct_fee_received:
+            row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
         
         detained = row_dict.get("Detained")
 

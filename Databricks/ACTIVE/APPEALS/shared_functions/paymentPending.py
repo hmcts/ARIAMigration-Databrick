@@ -570,7 +570,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
     grouped = joined.groupBy("CaseNo").agg(
         # Collecting all CategoryId into an array to avoid multiples rows per CaseNo
         collect_set("CategoryId").alias("CategoryIds"),
-        first("HORef", ignorenulls=True).alias("HORef"),
+        first("HOANRef", ignorenulls=True).alias("HOANRef"),
         first("CasePrefix", ignorenulls=True).alias("CasePrefix"),
         first("dv_representation", ignorenulls=True).alias("dv_representation"),
         first("Detained", ignorenulls=True).alias("Detained"),
@@ -593,7 +593,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                 lit(hearing).alias("hearingRelevant")
                 ).alias("value")
         )
-    
+
     ## Building appellantLevelFlags struct based off format shown in the mapping document in APPENDIX-Categories sheet
     def make_appellant_flag_struct(name, code, comment, hearing):
         return struct(
@@ -609,33 +609,11 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                 ).alias("value")
         )
 
-    ## Creating list of caseFlags for each row based on the conditions in the caseFlags lookup and the extra condition where the field 'HORef' (from silver_m1) is used
-    # def generate_case_flag_details(col_category_ids, col_horef):
-    #     flags = []
-    #     for cat_id, data in case_flag_lookup.items():
-    #         flags.append((array_contains(col_category_ids, lit(cat_id)), make_flag_struct(**data)))
-    #     flags.append((col_horef.isNotNull(), make_flag_struct("Other", "OT0001", "Dropped Case", "Yes")))
-
-    #     exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
-    #     return F.flatten(F.array(*exprs))
-    
-    ## Creating list of appellantLevelFlags for each row based on conditions in the appellantLevelFlags lookup and the extra condition where the field 'Detained' (from silver_m2) is used
-    # def generate_appellant_flag_details(col_category_ids, col_detained):
-    #     flags = []
-    #     for cat_id, data in appellant_flag_lookup.items():
-    #         flags.append((array_contains(col_category_ids, lit(cat_id)), make_appellant_flag_struct(**data)))
-    #     flags.append((col_detained.isin(1,2,4), make_appellant_flag_struct("Detained individual", "PF0019", None, "No")))
-
-    #     exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
-    #     return F.flatten(F.array(*exprs))
-
-    
     case_flag_groups = defaultdict(list)
     for cat_id, data in case_flag_lookup.items():
         case_flag_groups[data["code"]].append(cat_id)
 
- 
-    def generate_case_flag_details(col_category_ids, col_horef):
+    def generate_case_flag_details(col_category_ids, col_hoanref):
 
         flags = []
 
@@ -649,20 +627,20 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
 
         # Condition: ANY of the OT0001 category IDs present OR HOREQ is not null
         ot0001_condition = (
-            col_horef.isNotNull() |
-            array_contains(col_category_ids, lit(ot0001_cat_ids[0])) |
-            array_contains(col_category_ids, lit(ot0001_cat_ids[1])) |
-            array_contains(col_category_ids, lit(ot0001_cat_ids[2])) |
-            array_contains(col_category_ids, lit(ot0001_cat_ids[3])) |
-            array_contains(col_category_ids, lit(ot0001_cat_ids[4]))
+            col_hoanref.isNotNull()
+            | array_contains(col_category_ids, lit(ot0001_cat_ids[0]))
+            | array_contains(col_category_ids, lit(ot0001_cat_ids[1]))
+            | array_contains(col_category_ids, lit(ot0001_cat_ids[2]))
+            | array_contains(col_category_ids, lit(ot0001_cat_ids[3]))
+            | array_contains(col_category_ids, lit(ot0001_cat_ids[4]))
         )
 
         # Create ONE OT0001 flag; choose a consistent comment:
-        # If horef triggers it → "Dropped Case"; otherwise use default comment ("Expedite")
-        ot0001_comment = when(col_horef.isNotNull(), "Dropped Case") \
-                        .when(array_contains(col_category_ids, lit(8)), "Reclassified RFT") \
-                        .when(array_contains(col_category_ids, lit(24)), "EEA Family Permit") \
-                        .otherwise("Expedite")
+        # If HOANRef triggers it → "Dropped Case"; otherwise use default comment ("Expedite")
+        ot0001_comment = when(col_hoanref.isNotNull(), "Dropped Case") \
+            .when(array_contains(col_category_ids, lit(8)), "Reclassified RFT") \
+            .when(array_contains(col_category_ids, lit(24)), "EEA Family Permit") \
+            .otherwise("Expedite")
 
         flags.append((
             ot0001_condition,
@@ -689,8 +667,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         # -----------------------------------------------------
         exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
         return F.flatten(F.array(*exprs))
-   
-    
+
     # Build a reverse mapping: flagCode -> list of category IDs that map to it
     appellant_flag_groups = defaultdict(list)
     for cat_id, data in appellant_flag_lookup.items():
@@ -705,13 +682,13 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         pf0012_data = appellant_flag_lookup[pf0012_cat_ids[0]]  # All have same structure
 
         flags.append((
-            array_contains(col_category_ids, lit(pf0012_cat_ids[0])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[1])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[2])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[3])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[4])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[5])) |
-            array_contains(col_category_ids, lit(pf0012_cat_ids[6])),
+            array_contains(col_category_ids, lit(pf0012_cat_ids[0]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[1]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[2]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[3]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[4]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[5]))
+            | array_contains(col_category_ids, lit(pf0012_cat_ids[6])),
             make_appellant_flag_struct(**pf0012_data)
         ))
 
@@ -731,9 +708,8 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
         exprs = [when(cond, array(flag)).otherwise(array()) for cond, flag in flags]
         return F.flatten(F.array(*exprs))
 
-
     ## Applying flag generators
-    grouped = grouped.withColumn("caseFlagDetails", generate_case_flag_details(col("CategoryIds"), col("HORef")))
+    grouped = grouped.withColumn("caseFlagDetails", generate_case_flag_details(col("CategoryIds"), col("HOANRef")))
     grouped = grouped.withColumn("appellantFlagDetails", generate_appellant_flag_details(col("CategoryIds"), col("Detained")))
     ## Formatting caseFlags into final structure or Null/None if no conditions are met
     grouped = grouped.withColumn(
@@ -792,43 +768,43 @@ def flagsLabels(silver_m1, silver_m2, silver_c):
                         .join(grouped.alias("grp"), ["CaseNo"], "left").select(
         col("CaseNo"),
 
-        #Audit caseFlags
-        array(struct(*common_inputFields, lit("CategoryIds"), lit("HORef"))).alias("caseFlags_inputFields"),
-        array(struct(*common_inputValues, col("grp.CategoryIds"), col("audit.HORef"))).alias("caseFlags_inputValues"),
+        # Audit caseFlags
+        array(struct(*common_inputFields, lit("CategoryIds"), lit("HOANRef"))).alias("caseFlags_inputFields"),
+        array(struct(*common_inputValues, col("grp.CategoryIds"), col("audit.HOANRef"))).alias("caseFlags_inputValues"),
         col("content.caseFlags"),
         lit("yes").alias("caseFlags_Transformation"),
 
-        #Audit appellantLevelFlags
+        # Audit appellantLevelFlags
         array(struct(*common_inputFields, lit("CategoryIds"), lit("Detained"))).alias("appellantLevelFlags_inputFields"),
         array(struct(*common_inputValues, col("grp.CategoryIds"), col("m2.Detained"))).alias("appellantLevelFlags_inputValues"),
         col("content.appellantLevelFlags"),
         lit("yes").alias("appellantLevelFlags_Transformation"),
 
-        #Audit s94bStatus
+        # Audit s94bStatus
         array(struct(*common_inputFields)).alias("s94bStatus_inputFields"),
         array(struct(*common_inputValues)).alias("s94bStatus_inputValues"),
         col("content.s94bStatus"),
         lit("yes").alias("s94bStatus_Transformation"),
 
-        #Audit journeyType
+        # Audit journeyType
         # array(struct(*common_inputFields)).alias("journeyType_inputFields"),
         # array(struct(*common_inputValues)).alias("journeyType_inputValues"),
         # col("content.journeyType"),
         # lit("yes").alias("journeyType_Transformation"),
 
-        #Audit isAdmin
+        # Audit isAdmin
         array(struct(*common_inputFields)).alias("isAdmin_inputFields"),
         array(struct(*common_inputValues)).alias("isAdmin_inputValues"),
         col("content.isAdmin"),
         lit("yes").alias("isAdmin_Transformation"),
 
-        #Audit isAriaMigratedFeeExemption
+        # Audit isAriaMigratedFeeExemption
         array(struct(*common_inputFields, lit("CasePrefix"))).alias("isAriaMigratedFeeExemption_inputFields"),
         array(struct(*common_inputValues, col("audit.CasePrefix"))).alias("isAriaMigratedFeeExemption_inputValues"),
         col("content.isAriaMigratedFeeExemption"),
         lit("yes").alias("isAriaMigratedFeeExemption_Transformation"),
 
-        #Audit isEjp
+        # Audit isEjp
         array(struct(*common_inputFields)).alias("isEjp_inputFields"),
         array(struct(*common_inputValues)).alias("isEjp_inputValues"),
         col("content.isEjp"),

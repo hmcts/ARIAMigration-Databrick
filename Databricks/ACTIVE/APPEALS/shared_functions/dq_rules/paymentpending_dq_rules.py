@@ -429,7 +429,7 @@ class paymentPendingDQRules(DQRulesBase):
         (
             (
                 (
-                    lu_HORef IS NULL
+                    HOANRef IS NULL
                     OR
                     (
                         NOT (
@@ -458,7 +458,7 @@ class paymentPendingDQRules(DQRulesBase):
                         array_contains(valid_categoryIdList, 41)
                     )
                     OR
-                    (lu_HORef IS NOT NULL)
+                    (HOANRef IS NOT NULL)
                 )
                 AND caseFlags IS NOT NULL
                 AND
@@ -480,7 +480,7 @@ class paymentPendingDQRules(DQRulesBase):
                     )
                     OR
                     (
-                        (lu_HORef IS NOT NULL)
+                        (HOANRef IS NOT NULL)
                         AND
                         EXISTS(
                             TRANSFORM(caseFlags.details, x -> x.value.flagComment), x -> x <=> 'Dropped Case'

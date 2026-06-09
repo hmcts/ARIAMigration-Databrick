@@ -15,14 +15,14 @@ def flags_labels_outputs(spark):
 
     m1_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
-        T.StructField("HORef", T.StringType(), True),
+        T.StructField("HOANRef", T.StringType(), True),
         T.StructField("CasePrefix", T.StringType(), True),
         T.StructField("dv_representation", T.StringType(), True),
         T.StructField("lu_appealType", T.StringType(), True),
     ])
 
     m1_data = [
-        ("CASE1", "H123", "EA", "LR", "type1"),   # HORef → Dropped Case
+        ("CASE1", "H123", "EA", "LR", "type1"),   # HOANRef → Dropped Case
         ("CASE2", None, "EA", "LR", "type1"),     # Category → Expedite
         ("CASE3", None, "EA", "LR", "type1"),     # No flags
         ("CASE4", None, "EA", "LR", "type1"),     # PF0012 dedupe
@@ -87,7 +87,7 @@ def get_flag_comments(flag_struct):
 
 ##tests
 
-def test_horef_creates_dropped_case(flags_labels_outputs):
+def test_hoanref_creates_dropped_case(flags_labels_outputs):
     row = flags_labels_outputs["CASE1"]
 
     assert "OT0001" in get_flag_codes(row["caseFlags"])

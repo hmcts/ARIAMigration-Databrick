@@ -79,9 +79,9 @@ def appellantDetails_outputs(spark):
         ("HU/DET/0005", "SmithX", "JohnX", None, None, "1 High StreetX", None, None, None, None, "SW1A 1AAX", None, None, None, None, 0),
         ("HU/DET/0006", "SmithX", "JohnX", None, None, None, None, None, None, None, None, None, None, None, None, 0),
         # derive_country_silver_m2 path tests (not detained, no categories)
-        ("HU/DET/0007", "SmithX", "JohnX", None, None, None, None, None, None, "UK", None, None, None, None, None, 0),
-        ("HU/DET/0008", "SmithX", "JohnX", None, None, None, None, None, None, None, "W3 8PF", None, None, None, None, 0),
-        ("HU/DET/0009", "SmithX", "JohnX", None, None, "123 StreetX", None, "Poland", None, None, None, None, None, None, None, 0),
+        ("HU/DET/0007", "SmithX", "JohnX", None, None, None, None, None, None, "UK", None, 0, None, None, None, 0),
+        ("HU/DET/0008", "SmithX", "JohnX", None, None, None, None, None, None, None, "W3 8PF", 0, None, None, None, 0),
+        ("HU/DET/0009", "SmithX", "JohnX", None, None, "123 StreetX", None, "Poland", None, None, None, 0, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([

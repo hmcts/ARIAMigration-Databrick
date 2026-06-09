@@ -1446,17 +1446,17 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ################################################################
 ##########         appellantDetails Function         ###########
 ################################################################
-def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress):
+def getCountryApp(countryId, country, ukPostcodeAppellant, appellantFullAddress):
     countryFromAddress = []
     try:
         country = country
         uk_postcode = ukPostcodeAppellant
         full_address = ', '.join(filter(None, appellantFullAddress)) if appellantFullAddress else ''
 
-        if (country is not None and country != 0) or (country is not None and pd.notna(country)):
+        if (country is not None and countryId != 0) or (country is not None and pd.notna(country)):
             countryFromAddress.append(str(country))
             return ', '.join(countryFromAddress)
-        else:
+        elif countryId == 0:  # Only do the country search when countryId = 0
             if (uk_postcode is True or uk_postcode == "True"
                 or any(line is not None and line.lower() in ['gb', 'uk', 'united kingdom'] for line in appellantFullAddress)):
                 countryFromAddress.append('GB')
@@ -1465,7 +1465,8 @@ def getCountryApp(country, ukPostcodeAppellant, appellantFullAddress):
                 searched_country = getCountryFromAddress(full_address)
                 countryFromAddress.append(searched_country)
                 return ', '.join(countryFromAddress)
-        return ', '.join(countryFromAddress)
+        else:
+            return "NO MAPPING REQUIRED"  # AppellantCountryId is null or not in the postal lookup.
     except Exception:
         return None
 
@@ -1481,6 +1482,7 @@ def derive_country_silver_m2(silver_m2):
         ))
         .withColumn("ukPostcodeAppellant", getUkPostcodeUDF(col("Appellant_Postcode")))
         .withColumn("dv_countryGovUkOocAdminJ", getCountryApp_udf(
+            col("AppellantCountryId"),
             col("lu_countryGovUkOocAdminJ"),
             col("ukPostcodeAppellant"),
             col("appellantFullAddress")

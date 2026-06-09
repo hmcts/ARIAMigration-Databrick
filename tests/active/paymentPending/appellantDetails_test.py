@@ -126,7 +126,7 @@ def appellantDetails_outputs(spark):
 
         ("HU/00004/2025", "WilliamsX", "SarahX", None, None,
         None, None, None, None, None, "SW1A 1AA",
-        None, None, None, None, 0),
+        0, None, None, None, 0),
 
         ("HU/00005/2025", "WilliamsX", "SarahX", None, None,
         None, None, None, None, None, None,
@@ -150,27 +150,27 @@ def appellantDetails_outputs(spark):
         # getCountryApp: Appellant_Address5 = 'UK' → any() address match → GB
         ("HU/00009/2025", "TestX", "TestX", None, None,
         None, None, None, None, "UK", None,
-        None, None, None, None, 0),
+        0, None, None, None, 0),
 
         # getCountryApp: valid UK postcode, no Appellant_Address5 → ukPostcodeAppellant = "True" → GB
         ("HU/00010/2025", "TestX", "TestX", None, None,
         None, None, None, None, None, "W3 8PF",
-        None, None, None, None, 0),
+        0, None, None, None, 0),
 
         # getCountryApp: no postcode, address contains 'Poland' → getCountryFromAddress → PL via bronze lookup
         ("HU/00011/2025", "TestX", "TestX", None, None,
         "123 StreetX", None, "Poland", None, None, None,
-        None, None, None, None, 0),
+        0, None, None, None, 0),
 
         # getCountryApp: Appellant_Address4 = 'GB' → any() address match → GB
         ("HU/00012/2025", "TestX", "TestX", None, None,
         None, None, None, "GB", None, None,
-        None, None, None, None, 0),
+        0, None, None, None, 0),
 
         # getCountryApp: Appellant_Address3 = 'United Kingdom' → any() address match → GB
         ("HU/00013/2025", "TestX", "TestX", None, None,
         None, None, "United Kingdom", None, None, None,
-        None, None, None, None, 0),
+        0, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([

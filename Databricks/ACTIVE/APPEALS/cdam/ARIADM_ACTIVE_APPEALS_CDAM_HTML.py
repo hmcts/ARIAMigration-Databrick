@@ -4820,11 +4820,6 @@ def stg_statusdetail_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,***delete***
-spark.read.table('hive_metastore.ariadm_active_appeals_cdam_html.stg_statusdetail_data').filter(col("CaseNo") == "DA/00022/2025").display()
-
-# COMMAND ----------
-
 # DBTITLE 1,Transformation: stg_apl_combined
 @dlt.table(
     name="stg_apl_combined",

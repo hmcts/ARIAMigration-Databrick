@@ -1691,7 +1691,7 @@ def linked_cases_cost_award():
            path=f"{silver_base_path}/silver_scottish_sbails_funds")
 def silver_scottish_sbails_funds():
     df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
-        col("Caseno/ Bail Ref no").alias("CaseNo"),
+        col("CaseNo").alias("CaseNo"),
         lit("ScottishBailsFunds").alias("BaseBailType")
         ).na.drop(subset=["CaseNo"])
 

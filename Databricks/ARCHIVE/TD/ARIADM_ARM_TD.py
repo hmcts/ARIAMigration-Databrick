@@ -936,7 +936,25 @@ def silver_archive_metadata():
         col('td.HearingCentreDescription').alias('bf_006'),
         col("td.DepartmentDescription").alias('bf_007'),
         col("td.Note").alias('bf_008'),
-         when((env_name == lit('sbox')), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when(
+            env_name == lit('sbox'),
+            date_format(
+                coalesce(
+                    when((col('td.DestructionDate').isNull()) | (col('td.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('td.DestructionDate')),
+                    current_timestamp()
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).otherwise(
+            date_format(
+                coalesce(
+                    when((col('td.DestructionDate').isNull()) | (col('td.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('td.DestructionDate')),
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).alias('bf_010')
         
     )
     iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
@@ -956,7 +974,25 @@ def silver_archive_metadata():
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),
         col("iris.Note").alias('bf_008'),
-        when((env_name == lit('sbox') ), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when(
+            env_name == lit('sbox'),
+            date_format(
+                coalesce(
+                    when((col('iris.DestructionDate').isNull()) | (col('iris.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('iris.DestructionDate')),
+                    current_timestamp()
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).otherwise(
+            date_format(
+                coalesce(
+                    when((col('iris.DestructionDate').isNull()) | (col('iris.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('iris.DestructionDate')),
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).alias('bf_010')
     )
     df = td_df.unionByName(iris_df)
 

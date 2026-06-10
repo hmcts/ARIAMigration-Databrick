@@ -37,9 +37,10 @@ def appellantDetails_outputs(spark):
     #   DET/0005:      not detained, category 37 (in-UK) → "Yes"
     #   DET/0006:      not detained, category 38 (OOC)  → "No"
     # Three cases for derive_country_silver_m2 / getCountryApp paths (no category 37/38, not detained):
-    #   DET/0007:      Appellant_Address5='UK', no postcode → dv_countryGovUkOocAdminJ='GB' → appellantInUk="Yes"
-    #   DET/0008:      valid UK postcode, no Address5     → dv_countryGovUkOocAdminJ='GB' → appellantInUk="Yes"
-    #   DET/0009:      address text 'Poland', no postcode → bronze lookup → appellantInUk="No"
+    #   DET/0007:      Appellant_Address5='UK', no postcode → dv_addressInUk=True → appellantInUk="Yes"
+    #   DET/0008:      valid UK postcode, no Address5     → dv_addressInUk=True → appellantInUk="Yes"
+    #   DET/0009:      address text 'Poland', no postcode → bronze lookup → dv_addressInUk=False → appellantInUk="No"
+    #   DET/0010:      AppellantCountryId=188 (UK)        → dv_addressInUk=True immediately → appellantInUk="Yes"
     m1_data = [
         ("HU/DET/0001", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/DET/0002", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
@@ -50,6 +51,7 @@ def appellantDetails_outputs(spark):
         ("HU/DET/0007", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/DET/0008", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/DET/0009", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/DET/0010", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
     ]
 
     m2_schema = T.StructType([
@@ -68,7 +70,7 @@ def appellantDetails_outputs(spark):
         T.StructField("Relationship", T.StringType(), True),
         T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
         T.StructField("FCONumber", T.StringType(), True),
-        T.StructField("Detained", T.StringType(), True),
+        T.StructField("Detained", T.IntegerType(), True),
     ])
 
     m2_data = [
@@ -82,6 +84,8 @@ def appellantDetails_outputs(spark):
         ("HU/DET/0007", "SmithX", "JohnX", None, None, None, None, None, None, "UK", None, 0, None, None, None, 0),
         ("HU/DET/0008", "SmithX", "JohnX", None, None, None, None, None, None, None, "W3 8PF", 0, None, None, None, 0),
         ("HU/DET/0009", "SmithX", "JohnX", None, None, "123 StreetX", None, "Poland", None, None, None, 0, None, None, None, 0),
+        # getIsInUk: AppellantCountryId=188 (UK) → True immediately, no address/postcode needed
+        ("HU/DET/0010", "SmithX", "JohnX", None, None, None, None, None, None, None, None, 188, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -179,13 +183,13 @@ def test_non_detained_category_38_out_of_country(appellantDetails_outputs):
 
 
 def test_appellant_address5_uk_sets_gb(appellantDetails_outputs):
-    """Appellant_Address5='UK' with no lu_countryGovUkOocAdminJ → dv_countryGovUkOocAdminJ='GB' → appellantInUk='Yes'."""
+    """Appellant_Address5='UK' → searchCountry returns 'GB' → dv_addressInUk=True → appellantInUk='Yes'."""
     assert appellantDetails_outputs["HU/DET/0007"]["appellantInUk"] == "Yes"
     assert appellantDetails_outputs["HU/DET/0007"]["appealOutOfCountry"] == "No"
 
 
 def test_uk_postcode_sets_gb(appellantDetails_outputs):
-    """Valid UK postcode with no lu_countryGovUkOocAdminJ → dv_countryGovUkOocAdminJ='GB' → appellantInUk='Yes'."""
+    """Valid UK postcode → searchCountry returns 'GB' → dv_addressInUk=True → appellantInUk='Yes'."""
     assert appellantDetails_outputs["HU/DET/0008"]["appellantInUk"] == "Yes"
     assert appellantDetails_outputs["HU/DET/0008"]["appealOutOfCountry"] == "No"
 
@@ -194,3 +198,9 @@ def test_address_lookup_non_uk_country(appellantDetails_outputs):
     """Address containing 'Poland' with no postcode → bronze lookup → non-GB → appellantInUk='No'."""
     assert appellantDetails_outputs["HU/DET/0009"]["appellantInUk"] == "No"
     assert appellantDetails_outputs["HU/DET/0009"]["appealOutOfCountry"] == "Yes"
+
+
+def test_appellant_in_uk_from_country_id_188(appellantDetails_outputs):
+    """AppellantCountryId=188 (UK) → getIsInUk returns True immediately → appellantInUk='Yes'."""
+    assert appellantDetails_outputs["HU/DET/0010"]["appellantInUk"] == "Yes"
+    assert appellantDetails_outputs["HU/DET/0010"]["appealOutOfCountry"] == "No"

@@ -7,7 +7,7 @@ import json
 
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, BooleanType
 from collections import defaultdict
 
 from pyspark.sql.functions import (
@@ -1446,31 +1446,45 @@ getCountryLRUDF = udf(getCountryLR, StringType())
 ################################################################
 ##########         appellantDetails Function         ###########
 ################################################################
+def searchCountry(ukPostcodeAppellant, appellantFullAddress):
+    full_address = ', '.join(filter(None, appellantFullAddress)) if appellantFullAddress else ''
+
+    if (ukPostcodeAppellant is True or ukPostcodeAppellant == "True"
+        or any(line is not None and line.lower() in ['gb', 'uk', 'united kingdom'] for line in appellantFullAddress)):
+        return 'GB'
+    else:
+        searched_country = getCountryFromAddress(full_address)
+        return searched_country
+
 def getCountryApp(countryId, country, ukPostcodeAppellant, appellantFullAddress):
     countryFromAddress = []
     try:
-        country = country
-        uk_postcode = ukPostcodeAppellant
-        full_address = ', '.join(filter(None, appellantFullAddress)) if appellantFullAddress else ''
-
         if (country is not None and countryId != 0) or (country is not None and pd.notna(country)):
             countryFromAddress.append(str(country))
             return ', '.join(countryFromAddress)
         elif countryId == 0:  # Only do the country search when countryId = 0
-            if (uk_postcode is True or uk_postcode == "True"
-                or any(line is not None and line.lower() in ['gb', 'uk', 'united kingdom'] for line in appellantFullAddress)):
-                countryFromAddress.append('GB')
-                return ', '.join(countryFromAddress)
-            else:
-                searched_country = getCountryFromAddress(full_address)
-                countryFromAddress.append(searched_country)
-                return ', '.join(countryFromAddress)
+            countryFromAddress.append(searchCountry(ukPostcodeAppellant, appellantFullAddress))
+            return ','.join(countryFromAddress)
         else:
             return "NO MAPPING REQUIRED"  # AppellantCountryId is null or not in the postal lookup.
     except Exception:
         return None
+    
+def getIsInUk(countryId, ukPostcodeAppellant, appellantFullAddress):
+    try:
+        if (countryId == 188):  # 188 = UK Country ID, 'GB' is standard country code for UK.
+            return True
+        else:
+            country = searchCountry(ukPostcodeAppellant, appellantFullAddress)
+            if (country == 'GB' or country == 'UK' or country == 'United Kingdom'):
+                return True
+            else:
+                return False
+    except Exception:
+        return None
 
 getCountryApp_udf = udf(getCountryApp, StringType())
+getIsInUkUDF = udf(getIsInUk, BooleanType())
 
 def derive_country_silver_m2(silver_m2):
     return (
@@ -1487,6 +1501,7 @@ def derive_country_silver_m2(silver_m2):
             col("ukPostcodeAppellant"),
             col("appellantFullAddress")
         ))
+        .withColumn("dv_addressInUk", getIsInUkUDF(col("AppellantCountryId"), col("ukPostcodeAppellant"), col("appellantFullAddress")))
     )
 
 def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities):
@@ -1531,9 +1546,9 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     ).when(
         conditions & (expr("array_contains(CategoryIdList, 38)")), lit("No")
     ).when(
-        conditions & (col("dv_countryGovUkOocAdminJ").eqNullSafe("GB")), lit("Yes")
+        conditions & (col("dv_addressInUk")), lit("Yes")
     ).when(
-        conditions & ~(col("dv_countryGovUkOocAdminJ").eqNullSafe("GB")), lit("No")
+        conditions & (~col("dv_addressInUk")), lit("No")
     ).otherwise(None)
 
     # appealOutOfCountry logic
@@ -1551,8 +1566,11 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     # appellantAddress logic
     # Only include if CategoryIdList contains 37 and conditions
-    include_appellant_address = (conditions & (expr("array_contains(CategoryIdList, 37)") ) & 
-                                    (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull()))
+    include_appellant_address = (
+        conditions
+        & (expr("array_contains(CategoryIdList, 37)"))
+        & (coalesce(col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"), col("Appellant_Address5"), col("Appellant_Postcode")).isNotNull())
+    )
     
     appellant_address_struct = when(
         include_appellant_address,
@@ -1667,12 +1685,16 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     silver_m2_derived = derive_country_silver_m2(silver_m2)
 
-    bronze_countries_countryFromAddress = bronze_countryFromAddress.withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ")).withColumn("lu_cfa_contryFromAddress", col("countryFromAddress"))
+    bronze_countries_countryFromAddress = (
+        bronze_countryFromAddress
+        .withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ"))
+        .withColumn("lu_cfa_countryFromAddress", col("countryFromAddress"))
+    )
 
     silver_m2_derived = (silver_m2_derived.alias('main').join(
-        bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_contryFromAddress"), "left")
+        bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_countryFromAddress"), "left")
         .select("main.*",
-                when(col("lu_cfa_contryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
+                when(col("lu_cfa_countryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
                 .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
     )
 
@@ -1808,8 +1830,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             lit("yes").alias("deportationOrderOptions_Transformation"),
 
             # Audit appellantInUk
-            array(struct(*common_inputFields, lit("CategoryId"), lit("dv_countryGovUkOocAdminJ"))).alias("appellantInUk_inputfields"),
-            array(struct(*common_inputValues, col("CategoryIdList"), col("audit.dv_countryGovUkOocAdminJ"))).alias("appellantInUk_inputvalues"),
+            array(struct(*common_inputFields, lit("CategoryId"), lit("dv_addressInUk"))).alias("appellantInUk_inputfields"),
+            array(struct(*common_inputValues, col("CategoryIdList"), col("audit.dv_addressInUk"))).alias("appellantInUk_inputvalues"),
             col("content.appellantInUk"),
             lit("yes").alias("appellantInUk_Transformation"),
 
@@ -2012,9 +2034,17 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     )
 
     # Create DataFrame with CaseNo and list of CategoryId
-    silver_c_grouped = silver_c.groupBy("CaseNo").agg(
-        collect_list(col("CategoryId")).alias("CategoryIdList"),
-        first("CategoryId", ignorenulls=True).alias("CategoryId")
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    silver_m2 = silver_m2.filter(col("Relationship").isNull())
+    silver_m2_derived = (
+        derive_country_silver_m2(silver_m2)
+        .join(silver_c_grouped, ["CaseNo"], "left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("array_contains(CategoryIdList, 37)"), lit(True))
+            .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
+            .otherwise(col("dv_addressInUk"))
+        )
     )
 
     # Join bronze_HORef_cleansing to get CleansedHORef using CaseNo and coalesce(HORef, FCONumber)
@@ -2023,32 +2053,27 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
     )
 
-    # homeOfficeDecisionDate
+    # homeOfficeDecisionDate - IF IN = Include; ELSE OMIT | ISO 8601 Standard
     home_office_decision_date_expr = when(
-        expr("array_contains(CategoryIdList, 37)") & col("DateOfApplicationDecision").isNotNull(),
+        col("dv_appellantIsInUk") & col("DateOfApplicationDecision").isNotNull(),
         date_format(col("DateOfApplicationDecision"), "yyyy-MM-dd")
     )
-    # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber NOT LIKE '%GWF%' = Include; ELSE OMIT | ISO 8601 Standard
+    
+    # IF OOC AND IF CleansedHORef OR M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' = Include; ELSE OMIT | ISO 8601 Standard
     # decisionLetterReceivedDate
     decision_letter_received_date_expr = when(
-    (col("lu_HORef").like("%GWF%")) |
-    (col("HORef").like("%GWF%")) |
-    (col("FCONumber").like("%GWF%")),
-    lit(None)
-    ).when(
-        (expr("array_contains(CategoryIdList, 38)")) &
+        (~col("dv_appellantIsInUk")) &
+        (~coalesce(col("lu_HORef"), col("HORef"), col("FCONumber"), lit("")).like("%GWF%")) &
         (col("DateOfApplicationDecision").isNotNull()),
         date_format(col("DateOfApplicationDecision"), "yyyy-MM-dd")
     ).otherwise(None)
 
-
-
-    # IF CategoryId IN [38] AND  IF lu_HORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include;; ELSE OMIT | ISO 8601 Standard
+    # IF OOC AND IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT | ISO 8601 Standard
     # dateEntryClearanceDecision
     date_entry_clearance_decision_expr = when(
-        (expr("array_contains(CategoryIdList, 38)")) &
-       (
-           (col("lu_HORef").like("%GWF%")) |
+        (~col("dv_appellantIsInUk")) &
+        (
+            (col("lu_HORef").like("%GWF%")) |
             (col("HORef").like("%GWF%")) |
             (col("FCONumber").like("%GWF%")) 
         ) &
@@ -2058,34 +2083,33 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
 
     
     # homeOfficeReferenceNumber
-    # IF CategoryId IN [38] AND IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = OMIT; ELSE Include
-    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
+    # IF IN OR (OOC AND  IF CleansedHORef OR M1.HORef OR M2.FCONumber NOT LIKE '%GWF%') = Include; ELSE OMIT
+    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber. Apply cleansing logic.
     # homeOfficeReferenceNumber logic
     home_office_reference_number_expr = when(
-        expr("array_contains(CategoryIdList, 38)") &
+        col("dv_appellantIsInUk") |
+        (
+            ~col("dv_appellantIsInUk") &
+            ~coalesce(col("lu_HORef"), col("HORef"), col("FCONumber"), lit("")).like("%GWF%")
+        ),
+        coalesce(
+            cleanReferenceNumberUDF(col("lu_HORef")),
+            cleanReferenceNumberUDF(col("HORef")),
+            cleanReferenceNumberUDF(col("FCONumber")),
+            lit("999999999")
+        )
+    ).otherwise(None)
+
+    # IF OOC AND IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
+    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber. Apply cleansing logic.
+    # gwfReferenceNumber logic
+    gwf_reference_number_expr = when(
+        ~col("dv_appellantIsInUk") &
         (
             col("lu_HORef").like("%GWF%") |
             col("HORef").like("%GWF%") |
             col("FCONumber").like("%GWF%")
         ),
-        lit(None)
-    ).when(
-        expr("array_contains(CategoryIdList, 38)"),
-        coalesce(
-            cleanReferenceNumberUDF(col("lu_HORef")),
-            cleanReferenceNumberUDF(col("HORef")),
-            cleanReferenceNumberUDF(col("FCONumber"))
-        )
-    ).otherwise(lit("999999999"))
-
-    # IF CategoryId IN [38] AND  IF CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
-    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
-    # gwfReferenceNumber logic
-    gwf_reference_number_expr = when(
-        expr("array_contains(CategoryIdList, 38)") 
-        & ( col("lu_HORef").like("%GWF%") |
-            col("HORef").like("%GWF%") |
-            col("FCONumber").like("%GWF%")),
         coalesce(
             cleanReferenceNumberUDF(col("lu_HORef")),
             cleanReferenceNumberUDF(col("HORef")),
@@ -2094,36 +2118,14 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
     ).otherwise(
         lit(None)
     )
-
-    # IF CategoryId IN [38] AND  IF CleansedHORef & M1.HORef & M2.FCONumber LIKE '%GWF%' = Include; ELSE OMIT
-    # IF CleansedHORef IS NULL USE HORef; IF HORef IS NULL USE FCONumber
-
-    # gwfReferenceNumber logic
-    gwf_reference_number_expr = when(
-        expr("array_contains(CategoryIdList, 38)") 
-        & ( col("lu_HORef").like("%GWF%") |
-            col("HORef").like("%GWF%") |
-            col("FCONumber").like("%GWF%")),
-        coalesce(
-            cleanReferenceNumberUDF(col("lu_HORef")),
-            cleanReferenceNumberUDF(col("HORef")),
-            cleanReferenceNumberUDF(col("FCONumber"))
-        )
-    ).otherwise(
-        lit(None)
-    )
-
-    silver_m2 = silver_m2.filter(col("Relationship").isNull())
 
     df = (
         silver_m1
-        .join(silver_c_grouped, ["CaseNo"], "left")
-        .join(silver_m2, ["CaseNo"], "left")
+        .join(silver_m2_derived, ["CaseNo"], "left")
         .join(bronze_cleansing, ["CaseNo"], "left")
         .filter(conditions)
         .select(
             col("CaseNo"),
-            # col("CategoryIdList"),
             home_office_decision_date_expr.alias("homeOfficeDecisionDate"),
             decision_letter_received_date_expr.alias("decisionLetterReceivedDate"),
             date_entry_clearance_decision_expr.alias("dateEntryClearanceDecision"),
@@ -2132,11 +2134,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
             when(col("dv_CCDAppealType").isin("RP", "PA"), "Yes")
                         .otherwise(None)
                         .alias("isHomeOfficeIntegrationEnabled"),
-            # lit("Yes").alias("isHomeOfficeIntegrationEnabled"),
             lit("Yes").alias("homeOfficeNotificationsEligible")
-            # col("HORef"),
-            # col("FCONumber"),
-            # col("lu_HORef")
         )
     ).distinct()
 
@@ -2145,34 +2143,33 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
 
     df_audit = (
         silver_m1.alias("audit")
-        .join(silver_m2.alias("audit_m2"), ["CaseNo"], "left")
+        .join(silver_m2_derived.alias("audit_m2"), ["CaseNo"], "left")
         .join(df.alias("content"), ["CaseNo"], "left")
-        .join(silver_c_grouped.alias("audit_c"), ["CaseNo"], "left")
         .join(bronze_cleansing.alias("content_c"), ["CaseNo"], "left")
         .select(
             col("CaseNo"),
-            array(struct(*common_inputFields, lit("audit_c.CategoryIdList"))).alias("homeOfficeDecisionDate_inputFields"),
-            array(struct(*common_inputValues, col("audit_c.CategoryIdList"))).alias("homeOfficeDecisionDate_inputValues"),
+            array(struct(*common_inputFields, lit("audit_m2.dv_appellantIsInUk"))).alias("homeOfficeDecisionDate_inputFields"),
+            array(struct(*common_inputValues, col("audit_m2.dv_appellantIsInUk"))).alias("homeOfficeDecisionDate_inputValues"),
             col("content.homeOfficeDecisionDate"),
             lit("yes").alias("homeOfficeDecisionDate_Transformed"),
 
-            array(struct(*common_inputFields, lit("audit_c.CategoryIdList"),  lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("decisionLetterReceivedDate_inputFields"),
-            array(struct(*common_inputValues, col("audit_c.CategoryIdList"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("decisionLetterReceivedDate_inputValues"),
+            array(struct(*common_inputFields, lit("audit_m2.dv_appellantIsInUk"),  lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("decisionLetterReceivedDate_inputFields"),
+            array(struct(*common_inputValues, col("audit_m2.dv_appellantIsInUk"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("decisionLetterReceivedDate_inputValues"),
             col("content.decisionLetterReceivedDate"),
             lit("yes").alias("decisionLetterReceivedDate_Transformed"),
 
-            array(struct(*common_inputFields, lit("audit_c.CategoryIdList"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("dateEntryClearanceDecision_inputFields"),
-            array(struct(*common_inputValues, col("audit_c.CategoryIdList"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("dateEntryClearanceDecision_inputValues"),
+            array(struct(*common_inputFields, lit("audit_m2.dv_appellantIsInUk"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("dateEntryClearanceDecision_inputFields"),
+            array(struct(*common_inputValues, col("audit_m2.dv_appellantIsInUk"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("dateEntryClearanceDecision_inputValues"),
             col("content.dateEntryClearanceDecision"),
             lit("yes").alias("dateEntryClearanceDecision_Transformed"),
 
-            array(struct(*common_inputFields, lit("audit_c.CategoryIdList"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("homeOfficeReferenceNumber_inputFields"),
-            array(struct(*common_inputValues, col("audit_c.CategoryIdList"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("homeOfficeReferenceNumber_inputValues"),
+            array(struct(*common_inputFields, lit("audit_m2.dv_appellantIsInUk"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("homeOfficeReferenceNumber_inputFields"),
+            array(struct(*common_inputValues, col("audit_m2.dv_appellantIsInUk"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("homeOfficeReferenceNumber_inputValues"),
             col("content.homeOfficeReferenceNumber"),
             lit("yes").alias("homeOfficeReferenceNumber_Transformed"),
 
-            array(struct(*common_inputFields, lit("audit_c.CategoryIdList"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("gwfReferenceNumber_inputFields"),
-            array(struct(*common_inputValues, col("audit_c.CategoryIdList"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("gwfReferenceNumber_inputValues"),
+            array(struct(*common_inputFields, lit("audit_m2.dv_appellantIsInUk"), lit("content_c.lu_HORef"), lit("audit.HORef"), lit("audit_m2.FCONumber"))).alias("gwfReferenceNumber_inputFields"),
+            array(struct(*common_inputValues, col("audit_m2.dv_appellantIsInUk"), col("content_c.lu_HORef"), col("audit.HORef"), col("audit_m2.FCONumber"))).alias("gwfReferenceNumber_inputValues"),
             col("content.gwfReferenceNumber"),
             lit("yes").alias("gwfReferenceNumber_Transformed"),
         

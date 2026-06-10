@@ -118,7 +118,7 @@ class prepareForHearingDQRules(DQRulesBase):
 
     def get_checks_hearing_details(self, checks={}):
 
-        checks["valid_listinglength"] = ("""
+        checks["valid_listingLength"] = ("""
             (
                 TimeEstimate IS NULL AND
                 element_at(listingLength, 'hours') IS NULL AND
@@ -184,9 +184,6 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_witness1InterpreterSignLanguage"] = (
             "(size(witness1InterpreterSignLanguage) = 0)"
-        )
-        checks["valid_witness2InterpreterSignLanguage"] = (
-            "(size(witness2InterpreterSignLanguage) = 0)"
         )
         checks["valid_witness2InterpreterSignLanguage"] = (
             "(size(witness2InterpreterSignLanguage) = 0)"

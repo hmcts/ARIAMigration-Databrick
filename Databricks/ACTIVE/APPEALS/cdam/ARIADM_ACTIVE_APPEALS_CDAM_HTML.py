@@ -2959,7 +2959,7 @@ def silver_status_detail():
     from pyspark.sql.functions import row_number
     
     appeals_df = dlt.read("bronze_appealcase_status_sc_ra_cs").alias("st")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
     window = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     status_ranked = appeals_df.withColumn("rn", row_number().over(window))

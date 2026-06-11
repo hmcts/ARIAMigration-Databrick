@@ -3,7 +3,7 @@ from Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted import remission
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, BooleanType
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import pytest
 
 
@@ -19,7 +19,7 @@ BRONZE_REMISSION_SCHEMA = StructType([
     StructField("helpWithFeesReferenceNumber", StringType()),
 ])
 
-EXTENDED_M1_SCHEMA = StructType([
+SILVER_M1_SCHEMA = StructType([
     StructField("CaseNo", StringType()),
     StructField("dv_CCDAppealType", StringType()),
     StructField("dv_representation", StringType()),
@@ -46,14 +46,6 @@ class TestAppealSubmittedRemissionType:
         StructField("CaseNo", StringType())
     ])
 
-    SILVER_M1_SCHEMA = StructType([
-        StructField("CaseNo", StringType()),
-        StructField("dv_CCDAppealType", StringType()),
-        StructField("dv_representation", StringType()),
-        StructField("PaymentRemissionGranted", IntegerType()),
-        StructField("lu_appealType", StringType()),
-    ])
-
     SILVER_M4_SCHEMA = StructType([
         StructField("CaseNo", StringType()),
         StructField("TransactionId", IntegerType()),
@@ -74,19 +66,20 @@ class TestAppealSubmittedRemissionType:
             PP.remissionTypes.return_value = self.payment_pending_df(spark, 7)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection"),  # EA Case - remissionDecision approved
-                ("2", "EU", "LR", 1,"protection"),   # EU Case - remissionDecision approved
-                ("3", "HU", "AIP", 1,"protection"),  # HU Case - remissionDecision approved
-                ("4", "PA", "LR", 1,"protection"),   # PA Case - remissionDecision approved
-                ("5", "RP", "AIP", 1,"protection"),  # RP Case - none
-                ("6", "EA", "AIP", 0,"protection"),  # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection")   # PaymentRemissionGranted = 2 - remissionDecision rejected
+                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),  # EA Case - remissionDecision approved
+                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),   # EU Case - remissionDecision approved
+                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),  # HU Case - remissionDecision approved
+                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),   # PA Case - remissionDecision approved
+                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),  # RP Case - none
+                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),  # PaymentRemissionGranted = 0 - none
+                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None)   # PaymentRemissionGranted = 2 - remissionDecision rejected
             ]
 
-            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
-            df, df_audit = remissionTypes(silver_m1, MagicMock(), silver_m4)
+            df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("remissionDecision").collect()
 
@@ -100,19 +93,20 @@ class TestAppealSubmittedRemissionType:
             PP.remissionTypes.return_value = self.payment_pending_df(spark, 7)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection"),  # EA Case - remissionDecision approved
-                ("2", "EU", "LR", 1,"protection"),   # EU Case - remissionDecision approved
-                ("3", "HU", "AIP", 1,"protection"),  # HU Case - remissionDecision approved
-                ("4", "PA", "LR", 1,"protection"),   # PA Case - remissionDecision approved
-                ("5", "RP", "AIP", 1,"protection"),  # RP Case - none
-                ("6", "EA", "AIP", 0,"protection"),  # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection")   # PaymentRemissionGranted = 2 - rejected
+                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),  # EA Case - remissionDecision approved
+                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),   # EU Case - remissionDecision approved
+                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),  # HU Case - remissionDecision approved
+                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),   # PA Case - remissionDecision approved
+                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),  # RP Case - none
+                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),  # PaymentRemissionGranted = 0 - none
+                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None)   # PaymentRemissionGranted = 2 - rejected
             ]
 
-            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
-            df, df_audit = remissionTypes(silver_m1, MagicMock(), silver_m4)
+            df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("remissionDecisionReason").collect()
 
@@ -129,17 +123,17 @@ class TestAppealSubmittedRemissionType:
             PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection"),   # EA Case and valid conditions - amountRemitted set
-                ("2", "EU", "LR", 1,"protection"),    # EU Case and valid conditions - amountRemitted set
-                ("3", "HU", "AIP", 1,"protection"),   # HU Case and valid conditions - amountRemitted set
-                ("4", "PA", "LR", 1,"protection"),    # PA Case and valid conditions - amountRemitted set
-                ("5", "RP", "AIP", 1,"protection"),   # RP Case and valid conditions - none
-                ("6", "EA", "AIP", 0,"protection"),   # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection"),   # PaymentRemissionGranted = 2 - none
-                ("8", "EA", "AIP", 1,"protection"),   # TransactionTypeId != 5 - 0 set
-                ("9", "EA", "AIP", 1,"protection"),   # Status == 3 - 0 set
-                ("10", "EA", "AIP", 1,"protection"),  # TransactionTypeId != 5 and Status == 3 - 0 set
-                ("11", "EA", "AIP", 1,"protection")   # Multiple matching conditions - sum of amountRemitted
+                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),   # EA Case and valid conditions - amountRemitted set
+                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),    # EU Case and valid conditions - amountRemitted set
+                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),   # HU Case and valid conditions - amountRemitted set
+                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),    # PA Case and valid conditions - amountRemitted set
+                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),   # RP Case and valid conditions - none
+                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),   # PaymentRemissionGranted = 0 - none
+                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None),   # PaymentRemissionGranted = 2 - none
+                ("8", "EA", "AIP", 1,"protection", None, None, None, None, None),   # TransactionTypeId != 5 - no valid txns → None
+                ("9", "EA", "AIP", 1,"protection", None, None, None, None, None),   # Status == 3 - no valid txns → None
+                ("10", "EA", "AIP", 1,"protection", None, None, None, None, None),  # TransactionTypeId != 5 and Status == 3 - no valid txns → None
+                ("11", "EA", "AIP", 1,"protection", None, None, None, None, None)   # Multiple matching conditions - sum of amountRemitted
             ]
 
             m4_data = [
@@ -158,10 +152,11 @@ class TestAppealSubmittedRemissionType:
                 ("11", 1, 5, 1, 250.0, True, 1)   # Multiple valid
             ]
 
-            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
+            bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
-            df, df_audit = remissionTypes(silver_m1, MagicMock(), silver_m4)
+            df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("amountRemitted").collect()
 
@@ -175,17 +170,17 @@ class TestAppealSubmittedRemissionType:
             PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection"),   # EA Case and valid conditions - amountLeftToPay set
-                ("2", "EU", "LR", 1,"protection"),    # EU Case and valid conditions - amountLeftToPay set
-                ("3", "HU", "AIP", 1,"protection"),   # HU Case and valid conditions - amountLeftToPay set
-                ("4", "PA", "LR", 1,"protection"),    # PA Case and valid conditions - amountLeftToPay set
-                ("5", "RP", "AIP", 1,"protection"),   # RP Case and valid conditions - none
-                ("6", "EA", "AIP", 0,"protection"),   # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection"),   # PaymentRemissionGranted = 2 - none
-                ("8", "EA", "AIP", 1,"protection"),   # SumTotalFee == 0 - 0 set
-                ("9", "EA", "AIP", 1,"protection"),   # TransactionId = 1 in ReferringTransactionId with TransactionTypeId 6 - 0 set
-                ("10", "EA", "AIP", 1,"protection"),  # TransactionId = 2 in ReferringTransactionId with TransactionTypeId 19 - 0 set
-                ("11", "EA", "AIP", 1,"protection")   # Multiple matching conditions - sum of amountLeftToPay
+                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),   # EA Case and valid conditions - amountLeftToPay set
+                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),    # EU Case and valid conditions - amountLeftToPay set
+                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),   # HU Case and valid conditions - amountLeftToPay set
+                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),    # PA Case and valid conditions - amountLeftToPay set
+                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),   # RP Case and valid conditions - none
+                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),   # PaymentRemissionGranted = 0 - none
+                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None),   # PaymentRemissionGranted = 2 - none
+                ("8", "EA", "AIP", 1,"protection", None, None, None, None, None),   # SumTotalFee == False - no valid txns → None
+                ("9", "EA", "AIP", 1,"protection", None, None, None, None, None),   # TransactionId anti-joined by type-6 refund → None
+                ("10", "EA", "AIP", 1,"protection", None, None, None, None, None),  # TransactionId anti-joined by type-19 refund → None
+                ("11", "EA", "AIP", 1,"protection", None, None, None, None, None)   # Multiple matching conditions - sum of amountLeftToPay
             ]
 
             m4_data = [
@@ -206,10 +201,11 @@ class TestAppealSubmittedRemissionType:
                 ("11", 3, 1, 1, 250.0, True, 3)    # Multiple valid
             ]
 
-            silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
             silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
+            bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
-            df, df_audit = remissionTypes(silver_m1, MagicMock(), silver_m4)
+            df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("amountLeftToPay").collect()
 
@@ -238,7 +234,7 @@ class TestRemissionJoinAndTransforms:
             case_no_df = spark.createDataFrame(((c,) for c in pp_case_nos), self.CASE_NO_SCHEMA)
             PP.remissionTypes.return_value = (case_no_df, case_no_df)
 
-            silver_m1 = spark.createDataFrame(m1_rows, EXTENDED_M1_SCHEMA)
+            silver_m1 = spark.createDataFrame(m1_rows, SILVER_M1_SCHEMA)
             bronze = spark.createDataFrame(bronze_rows, BRONZE_REMISSION_SCHEMA)
             silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
 
@@ -319,6 +315,10 @@ class TestRemissionJoinAndTransforms:
         assert row["remissionType"] is None
         assert row["remissionClaim"] is None
         assert row["feeRemissionType"] is None
+        assert row["exceptionalCircumstances"] is None
+        assert row["legalAidAccountNumber"] is None
+        assert row["asylumSupportReference"] is None
+        assert row["helpWithFeesReferenceNumber"] is None
 
     # --- Field transforms: M1 sentinel lookups ---
 

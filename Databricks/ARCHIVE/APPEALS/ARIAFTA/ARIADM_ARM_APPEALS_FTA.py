@@ -5051,7 +5051,7 @@ def generate_html(row, templates=templates):
                                              .replace("{{ExpectedDate}}", format_date_iso(payment.ExpectedDate)) \
                                              .replace("{{clearedDate}}", format_date_iso(payment.ClearedDate)) \
                                              .replace("{{Amount}}", str(payment.Amount or '')) \
-                                             .replace("{{Amount_new}}", str(payment.Amount_new or '')) \
+                                             .replace("{{Amount_new}}", "" if payment.Amount_new is None else str(payment.Amount_new)) \
                                              .replace("{{TransactionMethodDesc}}", str(payment.TransactionMethodDesc or '')) \
                                              .replace("{{Last4DigitsCard}}", str(payment.Last4DigitsCard or '')) \
                                              .replace("{{CreateUserId}}", str(payment.CreateUserId or '')) \

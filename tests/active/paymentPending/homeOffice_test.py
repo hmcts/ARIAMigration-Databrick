@@ -36,15 +36,26 @@ def homeOfficeDetails_outputs(spark):
         T.StructField("CaseNo", T.StringType(), False),
         T.StructField("FCONumber", T.StringType(), True),
         T.StructField("Relationship", T.StringType(), True),
+        T.StructField("AppellantCountryId", T.IntegerType(), True),
+        T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
+        T.StructField("Appellant_Address1", T.StringType(), True),
+        T.StructField("Appellant_Address2", T.StringType(), True),
+        T.StructField("Appellant_Address3", T.StringType(), True),
+        T.StructField("Appellant_Address4", T.StringType(), True),
+        T.StructField("Appellant_Address5", T.StringType(), True),
+        T.StructField("Appellant_Postcode", T.StringType(), True),
     ])
 
     m2_data = [
-        ("EA/06826/2022", "XXXXXX", None),
-        ("EA/09676/2022", "XXXXXX", None),
-        ("EA/00591/2025", "XXXXXX", None),
-        ("EA/00441/2025", None,      None),
-        ("HU/00512/2025", None,      None),
-        ("HU/02151/2024", "XXXXXXXXXXXX", None),
+        # OOC cases: null addresses → dv_appellantIsInUk=False
+        ("EA/06826/2022", "XXXXXX",       None, None, None, None, None, None, None, None, None),
+        ("EA/09676/2022", "XXXXXX",       None, None, None, None, None, None, None, None, None),
+        ("EA/00591/2025", "XXXXXX",       None, None, None, None, None, None, None, None, None),
+        # in-UK cases: valid UK postcode → dv_appellantIsInUk=True
+        ("EA/00441/2025", None,           None, None, None, None, None, None, None, None, "SW1A 1AA"),
+        ("HU/00512/2025", None,           None, None, None, None, None, None, None, None, "SW1A 1AA"),
+        # no DateOfApplicationDecision → all date fields null regardless
+        ("HU/02151/2024", "XXXXXXXXXXXX", None, None, None, None, None, None, None, None, None),
     ]
 
     silver_c_schema = T.StructType([

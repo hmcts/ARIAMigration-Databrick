@@ -482,5 +482,86 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             )
         """)
 
+        #########################################
+        # ARIADM-2023 (homeOfficeDetails - Detained)
+        #########################################
+
+        # homeOfficeDecisionDate: populated when detained (1,2,4) OR in-UK; otherwise null.
+        checks["valid_homeOfficeDecisionDate_format"] = (
+            """(
+                (
+                    (Detained IN (1,2,4) OR dv_appellantIsInUk)
+                    AND homeOfficeDecisionDate IS NOT NULL
+                    AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                )
+                OR (homeOfficeDecisionDate IS NULL)
+            )"""
+        )
+
+        # decisionLetterReceivedDate: only for OOC (not detained, not in-UK) AND not GWF; otherwise null.
+        checks["valid_decisionLetterReceivedDate_format"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND decisionLetterReceivedDate IS NOT NULL
+                    AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
+                )
+                OR (decisionLetterReceivedDate IS NULL)
+            )"""
+        )
+
+        # dateEntryClearanceDecision: only for OOC (not detained, not in-UK) AND GWF; otherwise null.
+        checks["valid_dateEntryClearanceDecision_format"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
+                    AND dateEntryClearanceDecision IS NOT NULL
+                    AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                )
+                OR (dateEntryClearanceDecision IS NULL)
+            )"""
+        )
+
+        # homeOfficeReferenceNumber: populated for detained/in-UK/non-GWF; '999999999' fallback for OOC+GWF.
+        checks["valid_homeOfficeReferenceNumber_not_null"] = (
+            """(
+                (
+                    (Detained IN (1,2,4) OR dv_appellantIsInUk
+                     OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
+                    AND homeOfficeReferenceNumber IS NOT NULL
+                )
+                OR
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
+                    AND homeOfficeReferenceNumber = '999999999'
+                )
+            )"""
+        )
+
+        # gwfReferenceNumber: only for OOC (not detained, not in-UK) AND GWF; otherwise null.
+        checks["valid_gwfReferenceNumber_not_null"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
+                    AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
+                    AND gwfReferenceNumber IS NOT NULL
+                )
+                OR
+                (
+                    dv_appellantIsInUk
+                    OR Detained IN (1,2,4)
+                    OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
+                    OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
+                )
+            )"""
+        )
 
         return checks

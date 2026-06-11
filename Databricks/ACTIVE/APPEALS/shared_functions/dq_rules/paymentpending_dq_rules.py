@@ -956,19 +956,16 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-788 and ARIADM-792 (homeOffice)
         #########################################
         checks["valid_homeOfficeDecisionDate_format"] = (
-            "((array_contains(valid_categoryIdList, 37) AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
+            "((dv_appellantIsInUk AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
         )
 
         checks["valid_decisionLetterReceivedDate_format"] = (
             """(
                 (
-                    decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
-                    AND array_contains(valid_categoryIdList, 38)
-                    AND (
-                        (lu_HORef IS NULL OR lu_HORef not LIKE '%GWF%')
-                        AND (HORef IS NULL OR HORef not LIKE '%GWF%')
-                        AND (FCONumber IS NULL OR FCONumber not LIKE '%GWF%')
-                    )
+                    NOT dv_appellantIsInUk
+                    AND decisionLetterReceivedDate IS NOT NULL
+                    AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
                 )
                 OR (decisionLetterReceivedDate IS NULL)
             )"""
@@ -977,8 +974,8 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_dateEntryClearanceDecision_format"] = (
             """(
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND dateEntryClearanceDecision IS NOT NULL
                     AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
                 )
@@ -986,20 +983,19 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
+        # homeOfficeReferenceNumber: populated for in-UK/non-GWF; '999999999' fallback for OOC+GWF.
         checks["valid_homeOfficeReferenceNumber_not_null"] = (
             """(
                 (
-                    NOT array_contains(valid_categoryIdList, 38)
-                    AND (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
-                    AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
+                    (dv_appellantIsInUk
+                     OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
                     AND homeOfficeReferenceNumber IS NOT NULL
                 )
                 OR
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    OR (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
-                    OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
-                    OR homeOfficeReferenceNumber IS NULL
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
+                    AND homeOfficeReferenceNumber = '999999999'
                 )
             )"""
         )
@@ -1007,17 +1003,16 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_gwfReferenceNumber_not_null"] = (
             """(
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    AND  (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
                     AND gwfReferenceNumber IS NOT NULL
                 )
                 OR
                 (
-                    NOT array_contains(valid_categoryIdList, 38)
-                    OR (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
+                    dv_appellantIsInUk
+                    OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
                     OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
-                    OR gwfReferenceNumber IS NULL
                 )
             )"""
         )

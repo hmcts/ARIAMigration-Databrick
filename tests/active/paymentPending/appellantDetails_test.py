@@ -62,6 +62,7 @@ def appellantDetails_outputs(spark):
         ("HU/00011/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00012/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
         ("HU/00013/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/00014/2025", "HU", "2025-04-01", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
     ]
 
     m2_schema = T.StructType([
@@ -171,6 +172,11 @@ def appellantDetails_outputs(spark):
         ("HU/00013/2025", "TestX", "TestX", None, None,
         None, None, "United Kingdom", None, None, None,
         0, None, None, None, 0),
+
+        # getIsInUk: AppellantCountryId=188 (UK) → dv_addressInUk=True → appellantInUk='Yes'
+        ("HU/00014/2025", "TestX", "TestX", None, None,
+        None, None, None, None, None, None,
+        188, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -376,8 +382,8 @@ def test_appellant_in_uk_field_conditions(appellantDetails_outputs):
     assert appellantDetails_outputs["HU/00001/2025"]["appellantInUk"] == "No"   # Detained 1 — no longer sets Yes in paymentPending
     assert appellantDetails_outputs["HU/00002/2025"]["appellantInUk"] == "No"   # Detained 2 — no longer sets Yes in paymentPending
     assert appellantDetails_outputs["HU/00003/2025"]["appellantInUk"] == "No"   # Detained 4 — no longer sets Yes in paymentPending
-    assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # valid UK postcode → dv_countryGovUkOocAdminJ = 'GB'
-    assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # no postcode, no lu_countryGovUkOocAdminJ → dv_countryGovUkOocAdminJ != 'GB'
+    assert appellantDetails_outputs["HU/00004/2025"]["appellantInUk"] == "Yes"  # valid UK postcode → dv_addressInUk = True
+    assert appellantDetails_outputs["HU/00005/2025"]["appellantInUk"] == "No"   # no postcode, no address match → dv_addressInUk = False
 
 
 def test_country_gov_uk_ooc_adminj_new_codes(appellantDetails_outputs):
@@ -414,3 +420,9 @@ def test_country_gov_uk_ooc_adminj_from_gb_in_address(appellantDetails_outputs):
 def test_country_gov_uk_ooc_adminj_from_united_kingdom_in_address(appellantDetails_outputs):
     """getCountryApp returns GB when an address field is exactly 'United Kingdom' — matched via any() check."""
     assert_equals(appellantDetails_outputs["HU/00013/2025"], countryGovUkOocAdminJ="GB")
+
+
+def test_appellant_in_uk_from_country_id_188(appellantDetails_outputs):
+    """AppellantCountryId=188 (UK) → getIsInUk returns True immediately → appellantInUk='Yes'."""
+    assert appellantDetails_outputs["HU/00014/2025"]["appellantInUk"] == "Yes"
+    assert appellantDetails_outputs["HU/00014/2025"]["appealOutOfCountry"] == "No"

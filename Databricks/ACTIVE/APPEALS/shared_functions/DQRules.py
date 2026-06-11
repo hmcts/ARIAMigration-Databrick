@@ -6,12 +6,13 @@ from shared_functions.dq_rules import (
     decided_b_dq_rules, paymentpendingDetained_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp, 
-                                   array_min,transform, array, abs, concat_ws, concat)
+from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp,
+                                   array_min, transform, array, abs, concat_ws, concat, array_contains)
 from pyspark.sql.types import ArrayType, LongType
 
 # import shared_functions.ended as E
 from . import ended as E
+from .paymentPending import derive_country_silver_m2
 
 logger = logging.getLogger(__name__)
 
@@ -69,22 +70,22 @@ def add_state_dq_rules(state: str) -> dict:
 
 def previous_state_map(state: str):
     previous_state = {
-        "appealSubmitted":               "paymentPending",
         "paymentPending":                "paymentPendingDetained",
+        "appealSubmitted":               "paymentPending",
         "awaitingRespondentEvidence(a)": "appealSubmitted",
         "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
         "caseUnderReview":               "awaitingRespondentEvidence(b)",
         "reasonsForAppealSubmitted":     "awaitingRespondentEvidence(b)",
         "listing":                       "awaitingRespondentEvidence(b)",
         "prepareForHearing":             "listing",
-        "decision":                      "prepareHearing",
+        "decision":                      "prepareForHearing",
         "decided(a)":                    "decision",
-        "decided(b)":                    "ftpaSubmitted(a)",
         "ftpaSubmitted(a)":              "decided(a)",
         "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
         "remitted":                      "ftpaDecided",
-        "ended":                         "ftpaSubmitted(a)"
+        "ended":                         "ftpaSubmitted(a)",
+        "decided(b)":                    "ftpaSubmitted(a)"
     }
 
     return previous_state.get(state, None)
@@ -117,6 +118,10 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
         col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber"), col("Appellant_Name")
     ).filter(col("Relationship").isNull())
+    valid_isInUk = (
+        derive_country_silver_m2(silver_m2.filter(col("Relationship").isNull()))
+        .select(col("CaseNo"), col("dv_addressInUk"))
+    )
     valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
     valid_country_list = bronze_countries_postal_lookup_df.select(
         col("countryGovUkOocAdminJ").alias("valid_countryGovUkOocAdminJ")
@@ -536,6 +541,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_country_list, on=col("CaseRep_Address5") == col("valid_countryGovUkOocAdminJ"), how="left")
             .join(valid_catagoryid_list, on="CaseNo", how="left")
             .join(valid_appealant_address, on="CaseNo", how="left")
+            .join(valid_isInUk, on="CaseNo", how="left")
             .join(valid_HORef_cleansing, on="CaseNo", how="left")
             .join(valid_reasonDescription, on="CaseNo", how="left")
             .join(valid_payment_type, on="CaseNo", how="left")
@@ -556,8 +562,13 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(detained_df, on="CaseNo", how="left")
             .join(cs46_out31, on="CaseNo", how="left")
             .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
-            .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))  # No need to add extra categoryIdList IS NULL rules in the DQ. 
+            .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))  # No need to add extra categoryIdList IS NULL rules in the DQ.
             .withColumn("lu_HORef", coalesce(col("lu_HORef"), col("HORef"), col("FCONumber")))  # HORef in conditionals can also come from silver_m1, not just the bronze cleansing. The bronze cleansing will be used as priority.
+            .withColumn("dv_appellantIsInUk",
+                when(col("lu_appealType").isNotNull() & array_contains(col("valid_categoryIdList"), lit(37)), lit(True))
+                .when(col("lu_appealType").isNotNull() & array_contains(col("valid_categoryIdList"), lit(38)), lit(False))
+                .otherwise(col("dv_addressInUk"))
+            )
     ).dropDuplicates(["CaseNo"])
 
 

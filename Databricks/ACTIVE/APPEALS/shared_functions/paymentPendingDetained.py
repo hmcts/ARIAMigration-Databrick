@@ -316,8 +316,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
             when(col("m2.Detained").isin(1, 2, 4), "Yes")
             .when(expr("array_contains(CategoryIdList, 37)"), "Yes")
             .when(expr("array_contains(CategoryIdList, 38)"), "No")
-            .when(col("m2.dv_countryGovUkOocAdminJ").eqNullSafe("GB"), "Yes")
-            .when(~col("m2.dv_countryGovUkOocAdminJ").eqNullSafe("GB"), "No")
+            .when(col("m2.dv_addressInUk"), "Yes")
+            .when(~col("m2.dv_addressInUk"), "No")
             .otherwise(None)
         )
 
@@ -366,6 +366,115 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
     ).distinct()
 
     return appellantDetails_df, appellantDetails_audit
+
+################################################################
+##########       homeOfficeDetails Function          ###########
+################################################################
+
+def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
+
+    homeOfficeDetails_df, homeOfficeDetails_audit = PP.homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing)
+
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    silver_m2_derived = (
+        PP.derive_country_silver_m2(silver_m2)
+        .join(silver_c_grouped, on="CaseNo", how="left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("array_contains(CategoryIdList, 37)"), lit(True))
+            .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
+            .otherwise(col("dv_addressInUk"))
+        )
+    )
+
+    bronze_cleansing = bronze_HORef_cleansing.select(
+        col("CaseNo"),
+        coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
+    )
+
+    is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
+
+    # homeOfficeDecisionDate - IF DETAINED OR IN = Include; ELSE OMIT | ISO 8601 Standard
+    home_office_decision_date_expr = when(
+        is_detained_or_in_uk & col("m1.DateOfApplicationDecision").isNotNull(),
+        date_format(col("m1.DateOfApplicationDecision"), "yyyy-MM-dd")
+    )
+
+    # IF OOC (not detained & not in UK) AND NOT GWF = Include; ELSE OMIT | ISO 8601 Standard
+    # decisionLetterReceivedDate
+    decision_letter_received_date_expr = when(
+        (~is_detained_or_in_uk) &
+        (~coalesce(col("bc.lu_HORef"), col("m1.HORef"), col("m2.FCONumber"), lit("")).like("%GWF%")) &
+        (col("m1.DateOfApplicationDecision").isNotNull()),
+        date_format(col("m1.DateOfApplicationDecision"), "yyyy-MM-dd")
+    ).otherwise(None)
+
+    # IF OOC AND GWF = Include; ELSE OMIT | ISO 8601 Standard
+    # dateEntryClearanceDecision
+    date_entry_clearance_decision_expr = when(
+        (~is_detained_or_in_uk) &
+        (
+            (col("bc.lu_HORef").like("%GWF%")) |
+            (col("m1.HORef").like("%GWF%")) |
+            (col("m2.FCONumber").like("%GWF%"))
+        ) &
+        (col("m1.DateOfApplicationDecision").isNotNull()),
+        date_format(col("m1.DateOfApplicationDecision"), "yyyy-MM-dd")
+    ).otherwise(None)
+
+    # homeOfficeReferenceNumber
+    # IF DETAINED OR IN OR (OOC AND NOT GWF) = Include; ELSE OMIT
+    home_office_reference_number_expr = when(
+        is_detained_or_in_uk |
+        (
+            ~is_detained_or_in_uk &
+            ~coalesce(col("bc.lu_HORef"), col("m1.HORef"), col("m2.FCONumber"), lit("")).like("%GWF%")
+        ),
+        coalesce(
+            PP.cleanReferenceNumberUDF(col("bc.lu_HORef")),
+            PP.cleanReferenceNumberUDF(col("m1.HORef")),
+            PP.cleanReferenceNumberUDF(col("m2.FCONumber")),
+            lit("999999999")
+        )
+    ).otherwise(None)
+
+    # IF OOC AND GWF = Include; ELSE OMIT
+    # gwfReferenceNumber
+    gwf_reference_number_expr = when(
+        ~is_detained_or_in_uk &
+        (
+            col("bc.lu_HORef").like("%GWF%") |
+            col("m1.HORef").like("%GWF%") |
+            col("m2.FCONumber").like("%GWF%")
+        ),
+        coalesce(
+            PP.cleanReferenceNumberUDF(col("bc.lu_HORef")),
+            PP.cleanReferenceNumberUDF(col("m1.HORef")),
+            PP.cleanReferenceNumberUDF(col("m2.FCONumber"))
+        )
+    ).otherwise(lit(None))
+
+    homeOfficeDetails_df = homeOfficeDetails_df.drop(
+        "homeOfficeDecisionDate", "decisionLetterReceivedDate",
+        "dateEntryClearanceDecision", "homeOfficeReferenceNumber", "gwfReferenceNumber"
+    )  # Discard columns for re-compute.
+
+    homeOfficeDetails_df = (
+        homeOfficeDetails_df.alias("content")
+        .join(silver_m1.alias("m1"), on="CaseNo", how="left")
+        .join(silver_m2_derived.alias("m2"), on="CaseNo", how="left")
+        .join(bronze_cleansing.alias("bc"), on="CaseNo", how="left")
+        .withColumn("homeOfficeDecisionDate", home_office_decision_date_expr)
+        .withColumn("decisionLetterReceivedDate", decision_letter_received_date_expr)
+        .withColumn("dateEntryClearanceDecision", date_entry_clearance_decision_expr)
+        .withColumn("homeOfficeReferenceNumber",
+            when(home_office_reference_number_expr.isNull(), "999999999").otherwise(home_office_reference_number_expr))
+        .withColumn("gwfReferenceNumber", gwf_reference_number_expr)
+        .select("content.*", "homeOfficeDecisionDate", "decisionLetterReceivedDate",
+                "dateEntryClearanceDecision", "homeOfficeReferenceNumber", "gwfReferenceNumber")
+    ).distinct()
+
+    return homeOfficeDetails_df, homeOfficeDetails_audit
 
 ################################################################
 ##########           cleanEmail Function             ###########

@@ -63,47 +63,70 @@ class TestAppealSubmittedRemissionType:
 
     def test_remissionDecision(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.remissionTypes.return_value = self.payment_pending_df(spark, 7)
+            PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),  # EA Case - remissionDecision approved
-                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),   # EU Case - remissionDecision approved
-                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),  # HU Case - remissionDecision approved
-                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),   # PA Case - remissionDecision approved
-                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),  # RP Case - none
-                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),  # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None)   # PaymentRemissionGranted = 2 - remissionDecision rejected
+                ("1", "EA", "AIP", 1, "protection", None, None, None, None, None),  # EA, granted=1 → approved
+                ("2", "EU", "LR", 1, "protection", None, None, None, None, None),  # EU, granted=1 → approved
+                ("3", "HU", "AIP", 1, "protection", None, None, None, None, None),  # HU, granted=1 → approved
+                ("4", "PA", "LR", 1, "protection", None, None, None, None, None),  # PA, granted=1 → approved
+                ("5", "RP", "AIP", 1, "protection", None, None, None, None, None),  # RP not in conditions_all → None
+                ("6", "EA", "AIP", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected
+                ("7", "EA", "AIP", 2, "protection", None, None, None, None, None),  # granted=2 → rejected
+                ("8", "EA", "AIP", 0, "protection", None, None, None, None, None),  # granted=0, has type5 txn → approved
+                ("9", "EA", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, has type5 txn → approved
+                ("10", "EU", "LR", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected
+                ("11", "HU", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, no type5 txn → rejected
+            ]
+
+            m4_data = [
+                ("8", 1, 5, 1, 100.0, True, None),  # type5 txn → case 8 approved
+                ("9", 2, 5, 1, 100.0, True, None),  # type5 txn → case 9 approved
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
-            silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
             bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
             df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("remissionDecision").collect()
 
-            assert resultList[0][0] == "approved" and resultList[1][0] == "approved"
-            assert resultList[2][0] == "approved" and resultList[3][0] == "approved"
-            assert resultList[4][0] is None and resultList[5][0] is None
-            assert resultList[6][0] == "rejected"
+            assert resultList[0][0] == "approved" and resultList[1][0] == "approved"  # cases 1-2
+            assert resultList[2][0] == "approved" and resultList[3][0] == "approved"  # cases 3-4
+            assert resultList[4][0] is None  # case 5 (RP)
+            assert resultList[5][0] == "rejected"  # case 6 (granted=0, no type5)
+            assert resultList[6][0] == "rejected"  # case 7 (granted=2)
+            assert resultList[7][0] == "approved"  # case 8 (granted=0, has type5)
+            assert resultList[8][0] == "approved"  # case 9 (granted=NULL, has type5)
+            assert resultList[9][0] == "rejected"  # case 10 (granted=0, no type5)
+            assert resultList[10][0] == "rejected"  # case 11 (granted=NULL, no type5)
 
     def test_remissionDecisionReason(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.remissionTypes.return_value = self.payment_pending_df(spark, 7)
+            PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
 
             m1_data = [
-                ("1", "EA", "AIP", 1,"protection", None, None, None, None, None),  # EA Case - remissionDecision approved
-                ("2", "EU", "LR", 1,"protection", None, None, None, None, None),   # EU Case - remissionDecision approved
-                ("3", "HU", "AIP", 1,"protection", None, None, None, None, None),  # HU Case - remissionDecision approved
-                ("4", "PA", "LR", 1,"protection", None, None, None, None, None),   # PA Case - remissionDecision approved
-                ("5", "RP", "AIP", 1,"protection", None, None, None, None, None),  # RP Case - none
-                ("6", "EA", "AIP", 0,"protection", None, None, None, None, None),  # PaymentRemissionGranted = 0 - none
-                ("7", "EA", "AIP", 2,"protection", None, None, None, None, None)   # PaymentRemissionGranted = 2 - rejected
+                ("1", "EA", "AIP", 1, "protection", None, None, None, None, None),  # EA, granted=1 → granted string
+                ("2", "EU", "LR", 1, "protection", None, None, None, None, None),  # EU, granted=1 → granted string
+                ("3", "HU", "AIP", 1, "protection", None, None, None, None, None),  # HU, granted=1 → granted string
+                ("4", "PA", "LR", 1, "protection", None, None, None, None, None),  # PA, granted=1 → granted string
+                ("5", "RP", "AIP", 1, "protection", None, None, None, None, None),  # RP not in conditions_all → None
+                ("6", "EA", "AIP", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected string
+                ("7", "EA", "AIP", 2, "protection", None, None, None, None, None),  # granted=2 → rejected string
+                ("8", "EA", "AIP", 0, "protection", None, None, None, None, None),  # granted=0, has type5 txn → granted string
+                ("9", "EA", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, has type5 txn → granted string
+                ("10", "EU", "LR", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected string
+                ("11", "HU", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, no type5 txn → rejected string
+            ]
+
+            m4_data = [
+                ("8", 1, 5, 1, 100.0, True, None),  # type5 txn → case 8 granted
+                ("9", 2, 5, 1, 100.0, True, None),  # type5 txn → case 9 granted
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, SILVER_M1_SCHEMA)
-            silver_m4 = spark.createDataFrame([], self.SILVER_M4_SCHEMA)
+            silver_m4 = spark.createDataFrame(m4_data, self.SILVER_M4_SCHEMA)
             bronze = spark.createDataFrame([], BRONZE_REMISSION_SCHEMA)
 
             df, df_audit = remissionTypes(silver_m1, bronze, silver_m4)
@@ -113,10 +136,15 @@ class TestAppealSubmittedRemissionType:
             expected_approved_string = "This is a migrated case. The remission was granted."
             expected_rejected_string = "This is a migrated case. The remission was rejected."
 
-            assert resultList[0][0] == expected_approved_string and resultList[1][0] == expected_approved_string
-            assert resultList[2][0] == expected_approved_string and resultList[3][0] == expected_approved_string
-            assert resultList[4][0] is None and resultList[5][0] is None
-            assert resultList[6][0] == expected_rejected_string
+            assert resultList[0][0] == expected_approved_string and resultList[1][0] == expected_approved_string  # cases 1-2
+            assert resultList[2][0] == expected_approved_string and resultList[3][0] == expected_approved_string  # cases 3-4
+            assert resultList[4][0] is None  # case 5 (RP)
+            assert resultList[5][0] == expected_rejected_string  # case 6 (granted=0, no type5)
+            assert resultList[6][0] == expected_rejected_string  # case 7 (granted=2)
+            assert resultList[7][0] == expected_approved_string  # case 8 (granted=0, has type5)
+            assert resultList[8][0] == expected_approved_string  # case 9 (granted=NULL, has type5)
+            assert resultList[9][0] == expected_rejected_string  # case 10 (granted=0, no type5)
+            assert resultList[10][0] == expected_rejected_string  # case 11 (granted=NULL, no type5)
 
     def test_amountRemitted(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

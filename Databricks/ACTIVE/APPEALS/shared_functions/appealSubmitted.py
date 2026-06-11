@@ -279,6 +279,13 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         )
     )
 
+    has_type5_txn = (
+        silver_m4.filter(col("TransactionTypeId") == 5)
+        .select("CaseNo")
+        .distinct()
+        .withColumn("has_type5_txn", lit(True))
+    )
+
     df_final = df_final.drop(
         "remissionType", "remissionClaim", "feeRemissionType", "exceptionalCircumstances",
         "legalAidAccountNumber", "asylumSupportReference", "helpWithFeesReferenceNumber"
@@ -301,46 +308,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             ),
             how="left"
         )
-        .withColumn(
-            "remissionDecision",
-            when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                lit("approved"),
-            ).when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 2),
-                lit("rejected"),
-            ),
-        )
-        .withColumn(
-            "remissionDecisionReason",
-            when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                lit("This is a migrated case. The remission was granted."),
-            ).when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 2),
-                lit("This is a migrated case. The remission was rejected."),
-            ),
-        )
-        .withColumn(
-            "amountRemitted",
-            when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                when(col("amountRemitted").isNotNull(), col("amountRemitted") * 100)
-                .otherwise(lit(None))
-                .cast(IntegerType())
-                .cast(StringType()),
-            ),
-        )
-        .withColumn(
-            "amountLeftToPay",
-            when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
-                when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay"))
-                .otherwise(lit(None))
-                .cast(IntegerType())
-                .cast(StringType()),
-            ),
-        )
+        .join(has_type5_txn, ["CaseNo"], "left")
         .withColumn(
             "remissionType",
             when(col("remissionType") == lit("NO MAPPING REQUIRED"), None)
@@ -396,6 +364,58 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
                 col("helpWithFeesReferenceNumber") == lit("M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'"),
                 when(col("PaymentRemissionReasonNote").isNotNull(), col("PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
             ).otherwise(col("helpWithFeesReferenceNumber"))
+        )
+        .withColumn(
+            "remissionDecision",
+            when(
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 1)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn") == True))
+                ),
+                lit("approved"),
+            ).when(
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 2)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                ),
+                lit("rejected"),
+            ),
+        )
+        .withColumn(
+            "remissionDecisionReason",
+            when(
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 1)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn") == True))
+                ),
+                lit("This is a migrated case. The remission was granted."),
+            ).when(
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 2)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                ),
+                lit("This is a migrated case. The remission was rejected."),
+            ),
+        )
+        .withColumn(
+            "amountRemitted",
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                when(col("amountRemitted").isNotNull(), col("amountRemitted") * 100)
+                .otherwise(lit(None))
+                .cast(IntegerType())
+                .cast(StringType()),
+            ),
+        )
+        .withColumn(
+            "amountLeftToPay",
+            when(
+                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                when(col("amountLeftToPay").isNotNull(), col("amountLeftToPay"))
+                .otherwise(lit(None))
+                .cast(IntegerType())
+                .cast(StringType()),
+            ),
         )
         .select(
             "source.*",

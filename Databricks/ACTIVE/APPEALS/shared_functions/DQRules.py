@@ -131,27 +131,27 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
     valid_reasonDescription = (
         silver_m1.alias("m1")
-            .join(bronze_remission_lookup_df.alias("rem"), on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .join(bronze_remission_lookup_df.alias("remPP"), on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
             .join(
-                bronze_remission_lookup_df.alias("rem_ext"),
+                bronze_remission_lookup_df.alias("remAPS"),
                 on=(
-                    (col("m1.PaymentRemissionReason") == col("rem_ext.PaymentRemissionReason")) &
-                    (col("m1.PaymentRemissionRequested") == col("rem_ext.PaymentRemissionRequested"))
+                    (col("m1.PaymentRemissionReason") == col("remAPS.PaymentRemissionReason")) &
+                    (col("m1.PaymentRemissionRequested") == col("remAPS.PaymentRemissionRequested"))
                 ) | (
                     (col("m1.PaymentRemissionReason") > 0) &
-                    (col("m1.PaymentRemissionReason") == col("rem_ext.PaymentRemissionReason")) &
+                    (col("m1.PaymentRemissionReason") == col("remAPS.PaymentRemissionReason")) &
                     (col("m1.PaymentRemissionRequested").isNull() | (col("m1.PaymentRemissionRequested") == 0))
                 ),
                 how="left"
             )
             .select(
-                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", col("rem.ReasonDescription").alias("ReasonDescription"),
-                col("rem.remissionClaim").alias("lu_remissionClaim"), col("rem.feeRemissionType").alias("lu_feeRemissionType"),
-                col("rem.PaymentRemissionReason").alias("PaymentRemissionReason_rem"), col("rem.PaymentRemissionRequested").alias("PaymentRemissionRequested_rem"),
+                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", col("remPP.ReasonDescription").alias("ReasonDescription"),
+                col("remPP.remissionClaim").alias("lu_remissionClaim"), col("remPP.feeRemissionType").alias("lu_feeRemissionType"),
+                col("remPP.PaymentRemissionReason").alias("PaymentRemissionReason_remPP"), col("remPP.PaymentRemissionRequested").alias("PaymentRemissionRequested_remPP"),
                 col("m1.PaymentRemissionReason").alias("PaymentRemissionReason"), col("m1.PaymentRemissionRequested").alias("PaymentRemissionRequested"),
-                col("rem_ext.PaymentRemissionReason").alias("PaymentRemissionReason_rem_ext"), col("rem_ext.PaymentRemissionRequested").alias("PaymentRemissionRequested_rem_ext"),
-                col("rem_ext.remissionType").alias("lu_remissionType_ext"), col("rem_ext.remissionClaim").alias("lu_remissionClaim_ext"),
-                col("rem_ext.feeRemissionType").alias("lu_feeRemissionType_ext"),
+                col("remAPS.PaymentRemissionReason").alias("PaymentRemissionReason_remAPS"), col("remAPS.PaymentRemissionRequested").alias("PaymentRemissionRequested_remAPS"),
+                col("remAPS.remissionType").alias("lu_remissionType_remAPS"), col("remAPS.remissionClaim").alias("lu_remissionClaim_remAPS"),
+                col("remAPS.feeRemissionType").alias("lu_feeRemissionType_remAPS"),
             )
     )
 

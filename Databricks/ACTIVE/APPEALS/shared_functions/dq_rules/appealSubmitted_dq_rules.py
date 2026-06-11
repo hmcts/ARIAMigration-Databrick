@@ -88,7 +88,6 @@ class appealSubmittedDQRules(DQRulesBase):
             """
         )
 
-
         checks["valid_paAppealTypePaymentOption"] = (
             """(
                 (
@@ -373,10 +372,6 @@ class appealSubmittedDQRules(DQRulesBase):
                     (amountLeftToPay IS NULL)
                 )
             )"""
-        )
-
-        checks["valid_caseNotes"] = (
-            "(caseNotes IS NOT NULL)"
         )
 
         return checks

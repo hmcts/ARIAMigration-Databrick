@@ -51,6 +51,16 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "inCameraCourtDescription" not in fields_to_exclude:
               all_test_results.append(list_tests.test_inCameraCourtDescription_test1(test_df))
               all_test_results.append(list_tests.test_inCameraCourtDescription_test2(test_df))
+         
+         if "appellantLevelFlags" not in fields_to_exclude:
+             flags_df, flags_setup_pass = list_tests.test_flags_init(json_data, M1_bronze, C)
+
+             if flags_setup_pass != True:
+                 all_test_results.append(flags_setup_pass)
+
+             elif flags_df is not None and flags_setup_pass == True:
+                 all_test_results.append(list_tests.test_appellantFlags(flags_df))
+                 all_test_results.append(list_tests.test_interpreterFlags(flags_df))
 
          # if language fields not in fields_to_exclude here:
          #      language tests here

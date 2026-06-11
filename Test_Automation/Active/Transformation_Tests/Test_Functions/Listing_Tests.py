@@ -1,5 +1,5 @@
 from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
+    col, when, lit, array, struct, collect_list, explode, explode_outer, 
     max as spark_max, date_format, row_number, expr, 
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
     collect_set, current_timestamp,transform, first, array_contains
@@ -10,6 +10,7 @@ import inspect
 from models.test_result import TestResult
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
+from functools import reduce
 
 test_from_state = "listing"
 
@@ -677,6 +678,178 @@ def test_inCameraCourtDescription_test2(test_df):
     except Exception as e:
         error_message = str(e)
         return TestResult("inCameraCourtDescription", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
+    
+
+################################################
+#flagLabels Init Code (from listing and onwards)
+################################################
+def test_flags_init(json, M1_bronze, C):
+    try:
+        json_flags = json.select(
+            "AppealReferenceNumber",
+            "caseFlags",
+            "appellantLevelFlags",
+            "isAriaMigratedFeeExemption"
+        )
+
+        C = C.select("CaseNo", "CategoryId")
+        M1_flags = M1_bronze.select("CaseNo", "CasePrefix", "HORef")
+
+        json_flags = json_flags.join(C, json_flags.AppealReferenceNumber == C.CaseNo, "inner")
+        json_flags = json_flags.join(M1_flags, json_flags.AppealReferenceNumber == M1_flags.CaseNo, "inner")
+
+        test_df = (
+            json_flags
+            .groupBy("AppealReferenceNumber")
+            .agg(
+                collect_list("CategoryId").alias("CategoryIds"),
+                first("caseFlags").alias("caseFlags"),
+                first("appellantLevelFlags", ignorenulls=True).alias("appellantLevelFlags"),
+                first("isAriaMigratedFeeExemption").alias("isAriaMigratedFeeExemption"),
+                first("CasePrefix").alias("CasePrefix"),
+                first("HORef").alias("HORef")
+            )
+        )
+
+        return test_df, True
+    except Exception as e:
+        return None, TestResult("flagLabels", "FAIL", f"Failed to Setup Data for Test : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+
+#####################################################
+# NEW appellantFlags Test (from listing and onwards)
+#####################################################
+def test_appellantFlags(test_df):
+    try:
+        if test_df.filter(col("appellantLevelFlags").isNotNull()).count() == 0:
+            return TestResult("appellantLevelFlags", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        has_comment_field = "comment" in test_df.select("appellantLevelFlags.*").schema.simpleString()
+
+        if has_comment_field:
+            exploded_appellantflags = test_df.select(
+                "AppealReferenceNumber", "CategoryIds", explode_outer("appellantLevelFlags.details").alias("flag_item")
+            ).select(
+                "AppealReferenceNumber", "CategoryIds",
+                col("flag_item.value.name").alias("appellantflag_name"),
+                col("flag_item.value.flagCode").alias("appellantflag_code"),
+                col("flag_item.value.comment").alias("appellantflag_comment"),
+                col("flag_item.value.hearingRelevant").alias("appellantflag_hearing")
+            )
+        else:
+            exploded_appellantflags = test_df.select(
+                "AppealReferenceNumber", "CategoryIds", explode_outer("appellantLevelFlags.details").alias("flag_item")
+            ).select(
+                "AppealReferenceNumber", "CategoryIds",
+                col("flag_item.value.name").alias("appellantflag_name"),
+                col("flag_item.value.flagCode").alias("appellantflag_code"),
+                lit(None).alias("appellantflag_comment"), 
+                col("flag_item.value.hearingRelevant").alias("appellantflag_hearing")
+            )
+
+        appellant_flag_lookup = {
+            9:  {"name": "Unaccompanied minor", "code": "PF0013", "hearing": "No"},
+            17: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            29: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            30: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            39: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            40: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            48: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"},
+            19: {"name": "Foreign national offender", "code": "PF0012", "hearing": "Yes"}
+        }
+
+        mandatory_default_flags_lookup = {
+            "RA0019": {"name": "Step free / wheelchair access", "hearing": "Yes"},
+            "RA0043": {"name": "Hearing loop (hearing enhancement system)", "hearing": "Yes"},
+            "PF0014": {"name": "Audio / Video Evidence", "hearing": "Yes"}
+        }
+
+        combine_results = lambda df1, df2: df1.union(df2)
+        mismatch_dfs = []
+
+        # Validate Category Specific Flags 
+        for categoryid, expected in appellant_flag_lookup.items():
+            mismatch = exploded_appellantflags.filter(
+                array_contains(col("CategoryIds"), lit(categoryid)) &
+                (col("appellantflag_code") == lit(expected["code"])) &
+                ((col("appellantflag_name") != lit(expected["name"])) | (col("appellantflag_hearing") != lit(expected["hearing"])))
+            )
+            mismatch_dfs.append(mismatch)
+
+        # Validate Mandatory Listing Default Flags are Correctly Mapped 
+        for default_code, expected in mandatory_default_flags_lookup.items():
+            mismatch = exploded_appellantflags.filter(
+                (col("appellantflag_code") == lit(default_code)) & 
+                ((col("appellantflag_name") != lit(expected["name"])) | (col("appellantflag_hearing") != lit(expected["hearing"])))
+            )
+            mismatch_dfs.append(mismatch)
+
+        # Validate Mandatory Listing Defaults are actually Present on the case
+        case_summary_df = exploded_appellantflags.groupBy("AppealReferenceNumber").agg(collect_list("appellantflag_code").alias("codes_list"))
+        for default_code in mandatory_default_flags_lookup.keys():
+            missing = case_summary_df.filter(~array_contains(col("codes_list"), lit(default_code)))
+            
+            missing_full_schema = exploded_appellantflags.join(missing.select("AppealReferenceNumber"), "AppealReferenceNumber", "inner")
+            mismatch_dfs.append(missing_full_schema)
+
+        all_mismatches = reduce(combine_results, mismatch_dfs)
+
+        if all_mismatches.count() != 0:
+            return TestResult("appellantLevelFlags", "FAIL", f"Acceptance criteria failed: {all_mismatches.count()} case anomalies found.", test_from_state, inspect.stack()[0].function)
+        
+        return TestResult("appellantLevelFlags", "PASS", "All appellantLevelFlags mapped correctly.", test_from_state, inspect.stack()[0].function)
+            
+    except Exception as e:
+        return TestResult("appellantLevelFlags", "FAIL", f"TEST FAILED WITH EXCEPTION : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# interpreterFlags Test
+#######################
+def test_interpreterFlags(test_df):
+    try:
+        if test_df.filter(col("appellantLevelFlags").isNotNull()).count() == 0:
+            return TestResult("interpreterFlags", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        has_comment_field = "comment" in test_df.select("appellantLevelFlags.*").schema.simpleString()
+
+        if has_comment_field:
+            exploded_appellantflags = test_df.select(
+                "AppealReferenceNumber", explode_outer("appellantLevelFlags.details").alias("flag_item")
+            ).select(
+                "AppealReferenceNumber",
+                col("flag_item.value.name").alias("appellantflag_name"),
+                col("flag_item.value.flagCode").alias("appellantflag_code"),
+                col("flag_item.value.hearingRelevant").alias("appellantflag_hearing")
+            )
+        else:
+            exploded_appellantflags = test_df.select(
+                "AppealReferenceNumber", explode_outer("appellantLevelFlags.details").alias("flag_item")
+            ).select(
+                "AppealReferenceNumber",
+                col("flag_item.value.name").alias("appellantflag_name"),
+                col("flag_item.value.flagCode").alias("appellantflag_code"),
+                col("flag_item.value.hearingRelevant").alias("appellantflag_hearing")
+            )
+
+        spoken_interpreter_mismatch = exploded_appellantflags.filter(
+            (col("appellantflag_code") == lit("PF0015")) & ((col("appellantflag_name") != lit("Language Interpreter")) | (col("appellantflag_hearing") != lit("Yes")))
+        )
+
+        sign_interpreter_mismatch = exploded_appellantflags.filter(
+            (col("appellantflag_code") == lit("RA0042")) & ((col("appellantflag_name") != lit("Sign Language Interpreter")) | (col("appellantflag_hearing") != lit("Yes")))
+        )
+
+        combine_results = lambda df1, df2: df1.union(df2)
+        all_interpreter_mismatches = combine_results(spoken_interpreter_mismatch, sign_interpreter_mismatch)
+
+        if all_interpreter_mismatches.count() != 0:
+            return TestResult("interpreterFlags", "FAIL", "Interpreter flags mapped incorrectly.", test_from_state, inspect.stack()[0].function)
+        
+        return TestResult("interpreterFlags", "PASS", "All interpreter flags mapped correctly.", test_from_state, inspect.stack()[0].function)
+
+    except Exception as e:
+        return TestResult("interpreterFlags", "FAIL", f"TEST FAILED WITH EXCEPTION : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
 
 ############################################################################################
 #######################

@@ -428,6 +428,7 @@ stages:
                 inputs:
                   versionSpec: '3.x'
               - script: |
+                  export HOMEBREW_NO_SANDBOX_LINUX=1
                   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   brew install databricks/tap/databricks

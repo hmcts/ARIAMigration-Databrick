@@ -10,6 +10,8 @@ from pyspark.sql.functions import (
     abs,
     sum as sum_,
     from_json,
+    concat,
+    length,
 )
 from pyspark.sql.types import ArrayType, IntegerType, StringType, StructField, StructType
 
@@ -277,11 +279,28 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         )
     )
 
+    df_final = df_final.drop(
+        "remissionType", "remissionClaim", "feeRemissionType", "exceptionalCircumstances",
+        "legalAidAccountNumber", "asylumSupportReference", "helpWithFeesReferenceNumber"
+    )  # Dropped for re-compute.
+
     df_final = (
         df_final.alias("source")
-        .join(silver_m1, ["CaseNo"], "left")
+        .join(silver_m1.alias("m1"), ["CaseNo"], "left")
         .join(amount_remitted, ["CaseNo"], "left")
         .join(amount_left_to_pay, ["CaseNo"], "left")
+        .join(
+            bronze_remission_lookup_df.alias("r"),
+            on=(
+                (col("m1.PaymentRemissionReason") == col("r.PaymentRemissionReason"))
+                & (col("m1.PaymentRemissionRequested") == col("r.PaymentRemissionRequested"))
+            ) | (
+                (col("m1.PaymentRemissionReason") > 0)
+                & (col("m1.PaymentRemissionReason") == col("r.PaymentRemissionReason"))
+                & (col("m1.PaymentRemissionRequested").isNull() | (col("m1.PaymentRemissionRequested") == 0))
+            ),
+            how="left"
+        )
         .withColumn(
             "remissionDecision",
             when(
@@ -322,8 +341,71 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
                 .cast(StringType()),
             ),
         )
+        .withColumn(
+            "remissionType",
+            when(col("remissionType") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("remissionType"))
+        )
+        .withColumn(
+            "remissionClaim",
+            when(col("remissionClaim") == lit("OMIT"), None)
+            .when(col("remissionClaim") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("remissionClaim"))
+        )
+        .withColumn(
+            "feeRemissionType",
+            when(col("feeRemissionType") == lit("OMIT"), None)
+            .when(col("feeRemissionType") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("feeRemissionType"))
+        )
+        .withColumn(
+            "exceptionalCircumstances",
+            when(col("exceptionalCircumstances") == lit("OMIT"), None)
+            .when(col("exceptionalCircumstances") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("exceptionalCircumstances"))
+        )
+        .withColumn(
+            "legalAidAccountNumber",
+            when(col("legalAidAccountNumber") == lit("OMIT"), None)
+            .when(col("legalAidAccountNumber") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),
+                when(
+                    col("LSCReference").isNotNull(),
+                    when(length(col("LSCReference")) == 5, concat(lit("0"), col("LSCReference")))
+                    .when(length(col("LSCReference")) == 4, concat(lit("00"), col("LSCReference")))
+                    .when(length(col("LSCReference")) == 3, concat(lit("000"), col("LSCReference")))
+                    .otherwise(col("LSCReference"))
+                ).otherwise(lit("Unknown"))
+            ).otherwise(col("legalAidAccountNumber"))
+        )
+        .withColumn(
+            "asylumSupportReference",
+            when(col("asylumSupportReference") == lit("OMIT"), None)
+            .when(col("asylumSupportReference") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("asylumSupportReference") == lit("M1.ASFReferenceNo ELSE IF NULL 'Unknown'"),
+                when(col("ASFReferenceNo").isNotNull(), col("ASFReferenceNo")).otherwise(lit("Unknown"))
+            ).otherwise(col("asylumSupportReference"))
+        )
+        .withColumn(
+            "helpWithFeesReferenceNumber",
+            when(col("helpWithFeesReferenceNumber") == lit("OMIT"), None)
+            .when(col("helpWithFeesReferenceNumber") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("helpWithFeesReferenceNumber") == lit("M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'"),
+                when(col("PaymentRemissionReasonNote").isNotNull(), col("PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
+            ).otherwise(col("helpWithFeesReferenceNumber"))
+        )
         .select(
             "source.*",
+            "remissionType",
+            "remissionClaim",
+            "feeRemissionType",
+            "exceptionalCircumstances",
+            "legalAidAccountNumber",
+            "asylumSupportReference",
+            "helpWithFeesReferenceNumber",
             "remissionDecision",
             "remissionDecisionReason",
             "amountRemitted",

@@ -2390,21 +2390,31 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     df = silver_m1.alias("m1").filter(conditions_remissionTypes & conditions).join(bronze_remission_lookup_df, on=["PaymentRemissionReason","PaymentRemissionRequested"], how="left").join(silver_m4, on=["CaseNo"], how="left"
         ).withColumn(
         "remissionType",
-        col("remissionType")
+        when(col("remissionType") == lit("NO MAPPING REQUIRED"), None
+        ).otherwise(col("remissionType"))
     ).withColumn(
         "remissionClaim",
-        when(col("remissionClaim") == lit("OMIT"), None).otherwise(col("remissionClaim"))
+        when(col("remissionClaim") == lit("OMIT"), None
+        ).when(col("remissionClaim") == lit("NO MAPPING REQUIRED"), None
+        ).otherwise(col("remissionClaim"))
     ).withColumn(
         "feeRemissionType",
-        when(col("feeRemissionType") == lit("OMIT"), None).otherwise(col("feeRemissionType"))
+        when(col("feeRemissionType") == lit("OMIT"), None
+        ).when(col("feeRemissionType") == lit("NO MAPPING REQUIRED"), None
+        ).otherwise(col("feeRemissionType"))
     ).withColumn(
         "exceptionalCircumstances",
-        when(col("exceptionalCircumstances") == lit("OMIT"), None).otherwise(col("exceptionalCircumstances"))
+        when(col("exceptionalCircumstances") == lit("OMIT"), None
+        ).when(col("exceptionalCircumstances") == lit("NO MAPPING REQUIRED"), None
+        ).otherwise(col("exceptionalCircumstances"))
 
     ).withColumn(
         "legalAidAccountNumber",
         when(
             col("legalAidAccountNumber") == lit("OMIT"),
+            None
+        ).when(
+            col("legalAidAccountNumber") == lit("NO MAPPING REQUIRED"),
             None
         ).when(
             col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),
@@ -2427,6 +2437,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     ).withColumn(
         "asylumSupportReference",
         when(col("asylumSupportReference") == lit("OMIT"), None                                  #When set to OMIT, replace with NULL
+        ).when(col("asylumSupportReference") == lit("NO MAPPING REQUIRED"), None
         ).when(col("asylumSupportReference") == lit("M1.ASFReferenceNo ELSE IF NULL 'Unknown'"),      #If record matches the string
         when(col("m1.ASFReferenceNo").isNotNull(), col("m1.ASFReferenceNo")).otherwise(lit("Unknown")) #Perform logic in the string
     ).otherwise(col("asylumSupportReference"))
@@ -2434,6 +2445,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
     ).withColumn(
         "helpWithFeesReferenceNumber",
         when(col("helpWithFeesReferenceNumber") == lit("OMIT"), None                             #As above
+        ).when(col("helpWithFeesReferenceNumber") == lit("NO MAPPING REQUIRED"), None
         ).when(col("helpWithFeesReferenceNumber") == lit("M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'"),
         when(col("m1.PaymentRemissionReasonNote").isNotNull(), col("m1.PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
         ).otherwise(col("helpWithFeesReferenceNumber"))

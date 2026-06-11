@@ -379,4 +379,46 @@ class appealSubmittedDQRules(DQRulesBase):
             "(caseNotes IS NOT NULL)"
         )
 
+        # ARIADM-1920 (remissionTypes extended join)
+        checks["valid_remissionType_in_list"] = (
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
+                OR
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem_ext)
+                    AND remissionType IS NULL
+                )
+            )"""
+        )
+
+        checks["valid_remissionClaim_in_list"] = (
+            """(
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+                    AND
+                    (remissionClaim IS NOT NULL AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver'))
+                )
+                OR
+                (
+                    (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim_ext <=> 'OMIT')
+                    AND remissionClaim IS NULL
+                )
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem_ext)
+                    AND remissionClaim IS NULL
+                )
+            )"""
+        )
+
+        checks["valid_feeRemissionType_not_null"] = (
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
+                OR
+                ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType_ext <=> 'OMIT') AND feeRemissionType IS NULL)
+            )"""
+        )
+
         return checks

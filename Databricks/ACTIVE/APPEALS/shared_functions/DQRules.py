@@ -145,7 +145,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                 how="left"
             )
             .select(
-                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", "ReasonDescription",
+                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", col("rem.ReasonDescription").alias("ReasonDescription"),
                 col("rem.remissionClaim").alias("lu_remissionClaim"), col("rem.feeRemissionType").alias("lu_feeRemissionType"),
                 col("rem.PaymentRemissionReason").alias("PaymentRemissionReason_rem"), col("rem.PaymentRemissionRequested").alias("PaymentRemissionRequested_rem"),
                 col("m1.PaymentRemissionReason").alias("PaymentRemissionReason"), col("m1.PaymentRemissionRequested").alias("PaymentRemissionRequested"),

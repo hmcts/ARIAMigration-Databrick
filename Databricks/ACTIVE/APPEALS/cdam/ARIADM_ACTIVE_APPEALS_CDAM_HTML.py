@@ -2955,13 +2955,26 @@ def silver_link_detail():
     path=f"{silver_mnt}/silver_status_detail"
 )
 def silver_status_detail():
+    from pyspark.sql.window import Window
+    from pyspark.sql.functions import row_number
+    
     appeals_df = dlt.read("bronze_appealcase_status_sc_ra_cs").alias("st")
     flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
-    max_statusid = appeals_df.groupBy("CaseNo").agg(max("StatusId").alias("StatusId"))
+    window = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+    status_ranked = appeals_df.withColumn("rn", row_number().over(window))
 
-    df_currentstatus = appeals_df.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
-    .select(col("a.CaseStatus"), col("CaseStatusDescription"), col("a.CaseNo"))
+    rn1 = status_ranked.filter(col("rn") == 1)
+    rn2 = status_ranked.filter(col("rn") == 2)
+
+    joined = rn1.alias("r1").join(rn2.alias("r2"), on="CaseNo", how="left")
+
+    df_currentstatus = joined.select(
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.CaseStatus"), col("r1.CaseStatus"))).otherwise(col("r1.CaseStatus")).alias("CaseStatus"),
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.CaseStatusDescription"), col("r1.CaseStatusDescription"))).otherwise(col("r1.CaseStatusDescription")).alias("CaseStatusDescription"),
+        col("r1.CaseNo").alias("CaseNo"),
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.rn"), col("r1.rn"))).otherwise(col("r1.rn")).alias("rn")
+    )
 
     joined_df = appeals_df.join(flt_df, col("st.CaseNo") == col("flt.CaseNo"), "inner") \
                           .join(df_currentstatus.alias("mx"), (col("st.CaseNo") == col("mx.CaseNo")), "left") \
@@ -4011,7 +4024,6 @@ def generate_html(row, templates=templates):
                 format_date_iso(value)
                 if key in date_fields
                 and value is not None
-                and not (key == "DateOfApplicationDecision" and row_dict.get("CaseFeeSummaryId") is None)
                 else str(value) if value is not None else ""
             )
             for key, value in row_dict.items()

@@ -249,23 +249,36 @@ class appealSubmittedDQRules(DQRulesBase):
         checks["valid_remissionDecision"] = (
             """(
                 (
-                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
-                AND
-                (
-                    (PaymentRemissionGranted = 1 AND remissionDecision <=> 'approved')
-                    OR
-                    (PaymentRemissionGranted = 2 AND remissionDecision <=> 'rejected')
-                )
+                    dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                    AND
+                    (
+                        (
+                            (
+                                PaymentRemissionGranted = 1
+                                OR (
+                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) > 0
+                                )
+                            )
+                            AND remissionDecision <=> 'approved'
+                        )
+                        OR
+                        (
+                            (
+                                PaymentRemissionGranted = 2
+                                OR (
+                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
+                                )
+                            )
+                            AND remissionDecision <=> 'rejected'
+                        )
+                    )
                 )
                 OR
                 (
-                (
                     (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA'))
-                    OR
-                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted NOT IN (1, 2))
-                )
-                AND
-                (remissionDecision IS NULL)
+                    AND remissionDecision IS NULL
                 )
             )"""
         )
@@ -273,23 +286,36 @@ class appealSubmittedDQRules(DQRulesBase):
         checks["valid_remissionDecisionReason"] = (
             """(
                 (
-                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
-                AND
-                (
-                    (PaymentRemissionGranted = 1 AND remissionDecisionReason <=> 'This is a migrated case. The remission was granted.')
-                    OR
-                    (PaymentRemissionGranted = 2 AND remissionDecisionReason <=> 'This is a migrated case. The remission was rejected.')
-                )
+                    dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
+                    AND
+                    (
+                        (
+                            (
+                                PaymentRemissionGranted = 1
+                                OR (
+                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) > 0
+                                )
+                            )
+                            AND remissionDecisionReason <=> 'This is a migrated case. The remission was granted.'
+                        )
+                        OR
+                        (
+                            (
+                                PaymentRemissionGranted = 2
+                                OR (
+                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
+                                )
+                            )
+                            AND remissionDecisionReason <=> 'This is a migrated case. The remission was rejected.'
+                        )
+                    )
                 )
                 OR
                 (
-                (
                     (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA'))
-                    OR
-                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted NOT IN (1, 2))
-                )
-                AND
-                (remissionDecisionReason IS NULL)
+                    AND remissionDecisionReason IS NULL
                 )
             )"""
         )
@@ -377,6 +403,48 @@ class appealSubmittedDQRules(DQRulesBase):
 
         checks["valid_caseNotes"] = (
             "(caseNotes IS NOT NULL)"
+        )
+
+        # ARIADM-1920 (remissionTypes extended join)
+        checks["valid_remissionType_in_list"] = (
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
+                OR
+                (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remAPS)
+                    AND remissionType IS NULL
+                )
+            )"""
+        )
+
+        checks["valid_remissionClaim_in_list"] = (
+            """(
+                (
+                    (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
+                    AND
+                    (remissionClaim IS NOT NULL AND remissionClaim IN ('asylumSupport', 'legalAid', 'section17', 'section20', 'homeOfficeWaiver'))
+                )
+                OR
+                (
+                    (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_remissionClaim_remAPS <=> 'OMIT')
+                    AND remissionClaim IS NULL
+                )
+                OR
+                (
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remAPS)
+                    AND remissionClaim IS NULL
+                )
+            )"""
+        )
+
+        checks["valid_feeRemissionType_not_null"] = (
+            """(
+                (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
+                OR
+                ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType_remAPS <=> 'OMIT') AND feeRemissionType IS NULL)
+            )"""
         )
 
         return checks

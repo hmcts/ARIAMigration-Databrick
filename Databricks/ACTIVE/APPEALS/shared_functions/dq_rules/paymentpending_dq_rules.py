@@ -681,8 +681,8 @@ class paymentPendingDQRules(DQRulesBase):
                 (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
                 OR
                 (
-                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
-                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remPP)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_remPP)
                     AND remissionType IS NULL
                 )
             )"""
@@ -702,8 +702,8 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 OR
                 (
-                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
-                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remPP)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_remPP)
                     AND remissionClaim IS NULL
                 )
             )"""

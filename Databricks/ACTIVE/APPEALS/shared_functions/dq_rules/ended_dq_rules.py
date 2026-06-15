@@ -13,6 +13,7 @@ class endedDQRules(DQRulesBase):
         checks = checks | self.get_checks_hearingResponse()
         checks = checks | self.get_checks_hearingRequirements()
         checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_TTL()
         checks = checks | self.get_checks_casedata()
 
 
@@ -2630,7 +2631,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentOotExplanationVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2647,7 +2648,18 @@ class endedDQRules(DQRulesBase):
         """
 
         return checks
-    
+
+
+    def get_checks_TTL(self, checks={}):
+
+        checks["valid_TTL"] = """(
+            TTL.Suspended = 'No'
+            AND
+            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_end), 730), 'yyyy-MM-dd')
+        )"""
+
+        return checks
+
 
     def get_checks_casedata(self, checks={}):
 

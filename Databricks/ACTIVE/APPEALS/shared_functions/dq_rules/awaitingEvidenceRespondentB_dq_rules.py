@@ -11,6 +11,6 @@ class awaitingEvidenceRespondentBDQRules(DQRulesBase):
     def get_base_checks(self, checks={}):
         checks["valid_uploadHomeOfficeBundleActionAvailable"] = "(uploadHomeOfficeBundleActionAvailable <=> 'No')"
 
-        checks["valid_respondentDocuments_not_null"] = "(respondentDocuments IS NOT NULL)"
+        checks["valid_respondentDocuments"] = "(respondentDocuments IS NOT NULL)"
 
         return checks

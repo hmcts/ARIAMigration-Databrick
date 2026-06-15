@@ -252,22 +252,6 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-        checks["valid_respondentDocuments_not_null"] = """
-        (
-            CASE
-                WHEN (
-                    (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
-                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
-                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
-                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN
-                    respondentDocuments IS NOT NULL
-                ELSE
-                    respondentDocuments IS NULL
-            END
-        )
-        """
-
         checks["valid_hearingRequirements"] = """
         (
             CASE 
@@ -553,21 +537,6 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     coalesce(to_json(listingLocation), '{}') = coalesce(to_json(listingLocation_ended), '{}')
-                ELSE
-                    listingLocation IS NULL
-            END
-        )
-        """
-
-        checks["valid_listinglocation_null_when_not_matched"] = """
-        (
-            CASE
-                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
-                    (
-                        ListedCentre IS NOT NULL
-                        AND
-                        (listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL)
-                    )
                 ELSE
                     listingLocation IS NULL
             END
@@ -2004,22 +1973,6 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-        checks["valid_directions_not_null"] = """
-        (
-            CASE
-                WHEN (
-                    (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
-                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
-                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
-                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN
-                    directions IS NOT NULL
-                ELSE
-                    directions IS NULL
-            END
-        )
-        """
-
         checks["valid_uploadHomeOfficeBundleAvailable"] = """
         (
             CASE 
@@ -2138,21 +2091,6 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     coalesce(amendResponseActionAvailable, '') = coalesce(amendResponseActionAvailable_ended, '')
-                ELSE
-                    amendResponseActionAvailable IS NULL
-            END
-        )
-        """
-
-        checks["valid_amendResponseActionAvailableamendResponseActionAvailable"] = """
-        (
-            CASE
-                WHEN (
-                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
-                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
-                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN
-                    amendResponseActionAvailable <=> 'Yes'
                 ELSE
                     amendResponseActionAvailable IS NULL
             END

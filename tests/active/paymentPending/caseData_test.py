@@ -210,7 +210,10 @@ def caseData_outputs(spark):
         T.StructField("OutOfTime", T.BooleanType(), True),
     ])
 
-    m3_data = []
+    m3_data = [
+        ("EA/01698/2024", 1, "0", True),   # OutOfTimeIssue=True, appealSubmitted, Outcome=0 → recordedOutOfTimeDecision None
+        ("HU/00576/2025", 1, "1", True),   # OutOfTimeIssue=True, appealSubmitted, Outcome=1 → recordedOutOfTimeDecision Yes
+    ]
 
     silver_h_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -484,9 +487,17 @@ def test_submission_out_of_time(caseData_outputs):
     for case, value in expected.items():
         assert caseData_outputs[case]["submissionOutOfTime"] == value
 
-def test_recorded_out_of_time_decision_omitted(caseData_outputs):
-    for data in caseData_outputs.values():
-        assert data.get("recordedOutOfTimeDecision") is None
+def test_recorded_out_of_time_decision(caseData_outputs):
+    expected = {
+        "EA/01698/2024": None,   # OutOfTimeIssue=True, appealSubmitted, Outcome="0" → None (0 excluded)
+        "HU/00576/2025": "Yes",  # OutOfTimeIssue=True, appealSubmitted, Outcome="1" → Yes
+        "EA/10544/2022": None,   # OutOfTimeIssue=False
+        "HU/00516/2025": None,   # OutOfTimeIssue=False
+        "HU/00240/2022": None,   # OutOfTimeIssue=False
+        "HU/00366/2025": None,   # OutOfTimeIssue=False
+    }
+    for case, value in expected.items():
+        assert caseData_outputs[case].get("recordedOutOfTimeDecision") == value
 
 def test_application_out_of_time_explanation(caseData_outputs):
     expected_cases = ["EA/01698/2024", "HU/00576/2025"]

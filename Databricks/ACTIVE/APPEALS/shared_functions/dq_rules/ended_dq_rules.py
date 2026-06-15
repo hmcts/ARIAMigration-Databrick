@@ -22,187 +22,213 @@ class endedDQRules(DQRulesBase):
     def get_checks_ended(self, checks={}):
 
         checks["valid_endAppealOutcome"] = """(
-            
-            
-            (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
-                OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
-                OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
-                OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
-                OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
-                OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
-                OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
-                OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
-            )
-
-            AND
-
             CASE
-                WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
-                
-                WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (
+                        (
+                            (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                            OR
+                            (CaseStatus_end = 46 AND Outcome_end = 31)
+                            OR
+                            (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                            OR
+                            (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                            OR
+                            (CaseStatus_end = 39 AND Outcome_end = 25)
+                            OR
+                            (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                            OR
+                            (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                            OR
+                            (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                        )
 
-                WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
+                        AND
 
-                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn" 
-                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out" 
+                        CASE
+                            WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
+                            WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
+                            WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
+                            WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
 
+                            WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
+
+                            WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
+
+                            WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn"
+                            WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out"
+                            WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
+                        END
+                    )
+                ELSE
+                    endAppealOutcome IS NULL
             END
         )"""
 
         checks["valid_endAppealOutcomeReason"] = """(
-            
-            (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
-                OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
-                OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
-                OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
-                OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
-                OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
-                OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
-                OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
-            )
-            
-            AND
-            
-            (CASE
-                WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | No Valid Appeal."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Withdrawn."
-                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Withdrawn."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Withdrawn."
-                WHEN CaseStatus_end = 52 AND Outcome_end = 91 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt."
-                WHEN CaseStatus_end = 52 AND Outcome_end = 95 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Write Off."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 93 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
-                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
+            CASE
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (
+                        (
+                            (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                            OR
+                            (CaseStatus_end = 46 AND Outcome_end = 31)
+                            OR
+                            (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                            OR
+                            (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                            OR
+                            (CaseStatus_end = 39 AND Outcome_end = 25)
+                            OR
+                            (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                            OR
+                            (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                            OR
+                            (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                        )
 
+                        AND
+
+                        (CASE
+                            WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
+                            WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal."
+                            WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
+                            WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
+                            WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal."
+                            WHEN CaseStatus_end = 26 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | No Valid Appeal."
+                            WHEN CaseStatus_end = 37 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn."
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Withdrawn."
+                            WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Withdrawn."
+                            WHEN CaseStatus_end = 26 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Withdrawn."
+                            WHEN CaseStatus_end = 52 AND Outcome_end = 91 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt."
+                            WHEN CaseStatus_end = 52 AND Outcome_end = 95 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Write Off."
+                            WHEN CaseStatus_end = 51 AND Outcome_end = 93 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure."
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
+                            WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
+                            WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
+                            WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
+                            WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
+                            WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
+                            WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
+                        END
+                        )
+                    )
+                ELSE
+                    endAppealOutcomeReason IS NULL
             END
-            )
-            
         )"""
 
         checks["valid_endAppealApproverType"] = """(
-            CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverType = 'Judge'
-                ELSE endAppealApproverType = 'Case Worker'
+            CASE
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (CASE
+                        WHEN CaseStatus_end = 46 THEN endAppealApproverType = 'Judge'
+                        ELSE endAppealApproverType = 'Case Worker'
+                    END)
+                ELSE
+                    endAppealApproverType IS NULL
             END
         )"""
 
         checks["valid_endAppealApproverName"] = """(
-            CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,', ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
-                ELSE endAppealApproverName = 'This is a migrated ARIA case'
+            CASE
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (CASE
+                        WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat(Adj_Determination_Surname_end, ', ', Adj_Determination_Forenames_end, ' (', Adj_Determination_Title_end, ')')
+                        ELSE endAppealApproverName = 'This is a migrated ARIA case'
+                    END)
+                ELSE
+                    endAppealApproverName IS NULL
             END
         )"""
 
         checks["valid_endAppealDate"] = """(
-            
+            CASE
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (
+                        (
+                            (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                            OR
+                            (CaseStatus_end = 46 AND Outcome_end = 31)
+                            OR
+                            (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                            OR
+                            (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                            OR
+                            (CaseStatus_end = 39 AND Outcome_end = 25)
+                            OR
+                            (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                            OR
+                            (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                            OR
+                            (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                        )
 
-            (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
-                OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
-                OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
-                OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
-                OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
-                OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
-                OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
-                OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
-            )
-            
-            AND
+                        AND
 
-            (endAppealDate = date_format(to_date(DecisionDate_end), 'yyyy-MM-dd'))
-
+                        (endAppealDate = date_format(to_date(DecisionDate_end), 'yyyy-MM-dd'))
+                    )
+                ELSE
+                    endAppealDate IS NULL
+            END
         )"""
 
         checks["valid_stateBeforeEndAppeal"] = """(
-            
-             (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
-                OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
-                OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
-                OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
-                OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
-                OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
-                OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
-                OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
-            )
-            
-            AND
-            (
             CASE
-                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal = "listing"
-                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
-                WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 51 AND Outcome_end in (0,94,93) THEN stateBeforeEndAppeal = "pendingPayment"
-                WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal = "pendingPayment"
-                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
-                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
-                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
-                WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal = "appealSubmitted"
-            END
-            )
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (
+                        (
+                            (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                            OR
+                            (CaseStatus_end = 46 AND Outcome_end = 31)
+                            OR
+                            (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                            OR
+                            (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                            OR
+                            (CaseStatus_end = 39 AND Outcome_end = 25)
+                            OR
+                            (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                            OR
+                            (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                            OR
+                            (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                        )
 
+                        AND
+
+                        (CASE
+                            WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal = "listing"
+                            WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
+                            WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
+                            WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN stateBeforeEndAppeal = "appealSubmitted"
+                            WHEN CaseStatus_end = 51 AND Outcome_end in (0,94,93) THEN stateBeforeEndAppeal = "pendingPayment"
+                            WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal = "pendingPayment"
+                            WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
+                            WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
+                            WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
+                            WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal = "appealSubmitted"
+                            WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal = "appealSubmitted"
+                        END)
+                    )
+                ELSE
+                    stateBeforeEndAppeal IS NULL
+            END
         )"""
 
         return checks
@@ -212,7 +238,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_respondentDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -220,6 +246,22 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     COALESCE(respondentDocuments, ARRAY()) = COALESCE(respondentDocuments_ended, ARRAY())
+                ELSE
+                    respondentDocuments IS NULL
+            END
+        )
+        """
+
+        checks["valid_respondentDocuments_not_null"] = """
+        (
+            CASE
+                WHEN (
+                    (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
+                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
+                ) THEN
+                    respondentDocuments IS NOT NULL
                 ELSE
                     respondentDocuments IS NULL
             END
@@ -506,11 +548,26 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_listingLocation"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     coalesce(to_json(listingLocation), '{}') = coalesce(to_json(listingLocation_ended), '{}')
+                ELSE
+                    listingLocation IS NULL
+            END
+        )
+        """
+
+        checks["valid_listinglocation_null_when_not_matched"] = """
+        (
+            CASE
+                WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
+                    (
+                        ListedCentre IS NOT NULL
+                        AND
+                        (listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL)
+                    )
                 ELSE
                     listingLocation IS NULL
             END
@@ -1933,7 +1990,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_directions"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -1941,6 +1998,22 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     COALESCE(directions, ARRAY()) = COALESCE(directions_ended, ARRAY())
+                ELSE
+                    directions IS NULL
+            END
+        )
+        """
+
+        checks["valid_directions_not_null"] = """
+        (
+            CASE
+                WHEN (
+                    (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
+                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
+                ) THEN
+                    directions IS NOT NULL
                 ELSE
                     directions IS NULL
             END
@@ -2058,13 +2131,28 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_amendResponseActionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     coalesce(amendResponseActionAvailable, '') = coalesce(amendResponseActionAvailable_ended, '')
+                ELSE
+                    amendResponseActionAvailable IS NULL
+            END
+        )
+        """
+
+        checks["valid_amendResponseActionAvailableamendResponseActionAvailable"] = """
+        (
+            CASE
+                WHEN (
+                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
+                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
+                ) THEN
+                    amendResponseActionAvailable <=> 'Yes'
                 ELSE
                     amendResponseActionAvailable IS NULL
             END

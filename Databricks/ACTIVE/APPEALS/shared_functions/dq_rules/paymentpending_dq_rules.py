@@ -83,6 +83,7 @@ class paymentPendingDQRules(DQRulesBase):
                         (
                             ariaDesiredState IN ('paymentPending', 'appealSubmitted')
                             AND Outcome IS NOT NULL
+                            AND Outcome != 0
                         )
                         OR
                         (

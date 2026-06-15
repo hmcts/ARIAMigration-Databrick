@@ -162,23 +162,24 @@ class prepareForHearingDQRules(DQRulesBase):
             "(size(witnessDetails) = 0)"
         )
 
-        checks["listing_location_struct_consistent_when_matched"] = ("""
+        checks["valid_listingLocation"] = ("""
         (
-        ListedCentre IS NULL
-        OR
-        (
-            listingLocation.value.code = locationCode AND
-            listingLocation.value.label = locationLabel
-        )
-        )
-        """)
-
-        # If no match, both fields in listingLocation must be NULL.
-        checks["valid_listinglocation_null_when_not_matched"] = ("""
-        (
-        ListedCentre IS NOT NULL
-        AND
-        (listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL)
+            (
+                ListedCentre IS NULL
+                OR
+                (
+                    listingLocation.value.code = locationCode AND
+                    listingLocation.value.label = locationLabel
+                )
+            )
+            OR
+            (
+                ListedCentre IS NOT NULL
+                AND
+                (
+                    listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL
+                )
+            )
         )
         """)
 

@@ -13,6 +13,7 @@ class endedDQRules(DQRulesBase):
         checks = checks | self.get_checks_hearingResponse()
         checks = checks | self.get_checks_hearingRequirements()
         checks = checks | self.get_checks_general()
+        checks = checks | self.get_checks_TTL()
         checks = checks | self.get_checks_casedata()
 
 
@@ -22,8 +23,6 @@ class endedDQRules(DQRulesBase):
     def get_checks_ended(self, checks={}):
 
         checks["valid_endAppealOutcome"] = """(
-            
-            
             (
                 (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
@@ -49,26 +48,24 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
                 WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
-                
+
                 WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
 
                 WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
 
                 WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn" 
-                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out" 
-                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out" 
-
+                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
             END
         )"""
 
         checks["valid_endAppealOutcomeReason"] = """(
-            
             (
                 (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
@@ -86,9 +83,9 @@ class endedDQRules(DQRulesBase):
                 OR
                 (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
             )
-            
+
             AND
-            
+
             (CASE
                 WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
                 WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
@@ -119,29 +116,25 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
                 WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
                 WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
-
             END
             )
-            
         )"""
 
         checks["valid_endAppealApproverType"] = """(
-            CASE 
+            CASE
                 WHEN CaseStatus_end = 46 THEN endAppealApproverType = 'Judge'
                 ELSE endAppealApproverType = 'Case Worker'
             END
         )"""
 
         checks["valid_endAppealApproverName"] = """(
-            CASE 
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat( Adj_Determination_Surname_end,', ', Adj_Determination_Forenames_end, ' (',Adj_Determination_Title_end, ')')
+            CASE
+                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat(Adj_Determination_Surname_end, ', ', Adj_Determination_Forenames_end, ' (', Adj_Determination_Title_end, ')')
                 ELSE endAppealApproverName = 'This is a migrated ARIA case'
             END
         )"""
 
         checks["valid_endAppealDate"] = """(
-            
-
             (
                 (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
@@ -159,16 +152,14 @@ class endedDQRules(DQRulesBase):
                 OR
                 (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
             )
-            
+
             AND
 
             (endAppealDate = date_format(to_date(DecisionDate_end), 'yyyy-MM-dd'))
-
         )"""
 
         checks["valid_stateBeforeEndAppeal"] = """(
-            
-             (
+            (
                 (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
                 (CaseStatus_end = 46 AND Outcome_end = 31)
@@ -185,10 +176,10 @@ class endedDQRules(DQRulesBase):
                 OR
                 (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
             )
-            
+
             AND
-            (
-            CASE
+
+            (CASE
                 WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal = "listing"
                 WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
                 WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
@@ -200,9 +191,7 @@ class endedDQRules(DQRulesBase):
                 WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
                 WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal = "appealSubmitted"
                 WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal = "appealSubmitted"
-            END
-            )
-
+            END)
         )"""
 
         return checks
@@ -212,7 +201,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_respondentDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -506,7 +495,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_listingLocation"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1933,7 +1922,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_directions"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -2058,7 +2047,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_amendResponseActionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2604,7 +2593,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentOotExplanationVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2621,7 +2610,18 @@ class endedDQRules(DQRulesBase):
         """
 
         return checks
-    
+
+
+    def get_checks_TTL(self, checks={}):
+
+        checks["valid_TTL"] = """(
+            TTL.Suspended = 'No'
+            AND
+            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_end), 730), 'yyyy-MM-dd')
+        )"""
+
+        return checks
+
 
     def get_checks_casedata(self, checks={}):
 

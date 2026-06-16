@@ -2334,26 +2334,26 @@ def partyID(silver_m1):
         col("CaseNo"),
 
         #Audit appellantPartyId - ARIADM-779
-        array(struct(*common_inputFields, lit("content.appellantPartyId"))).alias("appellantPartyId_inputFields"),
-        array(struct(*common_inputValues, col("content.appellantPartyId"))).alias("appellantPartyId_inputValues"),
+        array(struct(*common_inputFields)).alias("appellantPartyId_inputFields"),
+        array(struct(*common_inputValues)).alias("appellantPartyId_inputValues"),
         col("content.appellantPartyId"),
         lit("yes").alias("appellantPartyId_Transformation"),
 
         #Audit legalRepIndividualPartyId - ARIADM-779
-        array(struct(*common_inputFields, lit("content.legalRepIndividualPartyId"))).alias("legalRepIndividualPartyId_inputFields"),
-        array(struct(*common_inputValues, col("content.legalRepIndividualPartyId"))).alias("legalRepIndividualPartyId_inputValues"),
+        array(struct(*common_inputFields)).alias("legalRepIndividualPartyId_inputFields"),
+        array(struct(*common_inputValues)).alias("legalRepIndividualPartyId_inputValues"),
         col("content.legalRepIndividualPartyId"),
         lit("yes").alias("legalRepIndividualPartyId_Transformation"),
 
         #Audit legalRepOrganisationPartyId - ARIADM-779
-        array(struct(*common_inputFields, lit("content.legalRepOrganisationPartyId"))).alias("legalRepOrganisationPartyId_inputFields"),
-        array(struct(*common_inputValues, col("content.legalRepOrganisationPartyId"))).alias("legalRepOrganisationPartyId_inputValues"),
+        array(struct(*common_inputFields)).alias("legalRepOrganisationPartyId_inputFields"),
+        array(struct(*common_inputValues)).alias("legalRepOrganisationPartyId_inputValues"),
         col("content.legalRepOrganisationPartyId"),
         lit("yes").alias("legalRepOrganisationPartyId_Transformation"),
 
         #Audit sponsorPartyId - ARIADM-779
-        array(struct(*common_inputFields, lit("content.sponsorPartyId"))).alias("sponsorPartyId_inputFields"),
-        array(struct(*common_inputValues, col("content.sponsorPartyId"))).alias("sponsorPartyId_inputValues"),
+        array(struct(*common_inputFields, lit("audit.Sponsor_Name"))).alias("sponsorPartyId_inputFields"),
+        array(struct(*common_inputValues, col("audit.Sponsor_Name"))).alias("sponsorPartyId_inputValues"),
         col("content.sponsorPartyId"),
         lit("yes").alias("sponsorPartyId_Transformation")
     ).distinct()

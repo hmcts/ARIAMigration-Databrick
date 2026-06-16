@@ -288,7 +288,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND 
                 CASE 
                     WHEN Detained IN (1,2)  
-                    THEN staffLocation IN ('Taylor House','Hatton Cross','Birmingham','Glasgow','Manchester','Newcastle','Bradford','Newport','YarlsWood')
+                    THEN staffLocation IN ('Taylor House','Hatton Cross','Birmingham','Glasgow','Manchester','Newcastle','Bradford','Newport','Yarls Wood')
                     ELSE staffLocation IN ('Bradford','Birmingham','Glasgow','Hatton Cross','Manchester','Newcastle','Newport','Taylor House')
                 END
 

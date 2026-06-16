@@ -2302,23 +2302,10 @@ def paymentType(silver_m1):
 # Create UDF to generate UUID for relevant field as a string type
 uuid4_udf = udf(lambda: str(uuid.uuid4()), StringType())
 
-def partyID(silver_m1, silver_m3,silver_c):
+def partyID(silver_m1):
     conditions_all = (col("lu_appealType").isNotNull())
-    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    # Add row_number to get the row with the highest StatusId per CaseNo
-    silver_m3_ranked = silver_m3.withColumn("row_num", row_number().over(window_spec))
-
-    # Filter the top-ranked rows where Outcome is not null
-    silver_m3_filtered = silver_m3_ranked.filter(
-        (col("row_num") == 1) & (col("Outcome").isNotNull())
-    ).select(col("CaseNo"))
-
-    # Create DataFrame with CaseNo and list of CategoryId
-    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("categoryId")).alias("CategoryIdList"))
-
-    df = silver_m1.alias("m1").join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left").join(silver_c_grouped.alias("c"), ["CaseNo"], "left"
-    ).withColumn(
+    df = silver_m1.alias("m1").withColumn(
         "appellantsRepresentation", when(((col("m1.dv_representation") == "LR") &  (col("lu_appealType").isNotNull())), "No").when(((col("m1.dv_representation") == "AIP") & (col("lu_appealType").isNotNull())), "Yes").otherwise(None)
     ).withColumn(
         "appellantPartyId",
@@ -2331,7 +2318,7 @@ def partyID(silver_m1, silver_m3,silver_c):
         when((col("appellantsRepresentation") == 'No'), expr("uuid()")).otherwise(None) #If appelRep = LR (no) then valid
     ).withColumn(
         "sponsorPartyId",
-        when(conditions_all & col("m1.Sponsor_Name").isNotNull() & (array_contains(col("CategoryIdList"), 38)), expr("uuid()")).otherwise(None) 
+        when(conditions_all & col("m1.Sponsor_Name").isNotNull(), expr("uuid()")).otherwise(None)
     ).select(
         col("m1.CaseNo"),
         col("appellantPartyId"),
@@ -2343,7 +2330,7 @@ def partyID(silver_m1, silver_m3,silver_c):
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
 
-    df_audit = silver_m1.join(silver_c, ["CaseNo"], "left").alias("audit").join(df.alias("content"), ["CaseNo"],"left").select(
+    df_audit = silver_m1.alias("audit").join(df.alias("content"), ["CaseNo"], "left").select(
         col("CaseNo"),
 
         #Audit appellantPartyId - ARIADM-779

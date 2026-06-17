@@ -1740,7 +1740,7 @@ def silver_normal_bail():
         F.when(F.col("h.Comment").like("%indefinite retention%"), 'Legal Hold')
         .when(F.col("h.Comment").like("%indefinate retention%"), 'Legal Hold')
         .when(
-            add_months(F.col("t.DecisionDate"), 24) < to_date(lit("2026-02-01")),
+            add_months(F.col("t.DecisionDate"), 24) < to_date(lit("2026-06-05")),
             'Destroy'
         )
         .otherwise('Archive'))

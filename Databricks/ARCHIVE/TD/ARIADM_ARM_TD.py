@@ -706,7 +706,7 @@ def bronze_iris_extract():
 # MAGIC 		(t.CaseStatus = '36' AND t.Outcome = 25 AND (st.CaseStatus NOT IN ('40','41','42','43','44','45','53','27','28','29','34','32','33') OR st.CaseStatus IS NULL))
 # MAGIC 		)
 # MAGIC 		AND
-# MAGIC 		DATEADD(MONTH,6,t.decisiondate) >= '2026-02-01' THEN 'CCD'	-- FT Retained CCD
+# MAGIC 		DATEADD(MONTH,6,t.decisiondate) >= '2026-06-05' THEN 'CCD'	-- FT Retained CCD
 # MAGIC WHEN 	(
 # MAGIC 		(ac.CasePrefix IN ('DA','DC','EA','HU','PA','RP') AND us.CaseStatus IS NULL)
 # MAGIC 		OR
@@ -722,7 +722,7 @@ def bronze_iris_extract():
 # MAGIC 		OR
 # MAGIC 		(t.CaseStatus = '52' AND t.Outcome IN (91,95) AND st.CaseStatus IN ('37','38','39','17'))
 # MAGIC 		) 
-# MAGIC 		AND DATEADD(MONTH,6,t.decisiondate) >= '2026-02-01'  THEN 'CCD'	-- FT Retained CCD
+# MAGIC 		AND DATEADD(MONTH,6,t.decisiondate) >= '2026-06-05'  THEN 'CCD'	-- FT Retained CCD
 # MAGIC WHEN	ac.CasePrefix IN ('IA','LD','LE','LH','LP','LR') AND ac.HOANRef IS NULL 
 # MAGIC 		THEN 'Tribunal Decision' -- If there is no CCD number against these prefixes it is no longer considered a skeleton case so needs a TD
 # MAGIC WHEN	ac.CasePrefix IN ('IA','LD','LE','LH','LP','LR') AND us.CaseStatus IS NOT NULL 
@@ -858,7 +858,7 @@ def bronze_appeal_case_tribunal_decision():
                 | lp_hoanref_recent
             )
             & retain_cond_1
-            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-02-01")),
+            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
             "CCD"
         )
         .when(
@@ -868,7 +868,7 @@ def bronze_appeal_case_tribunal_decision():
                 | lp_hoanref_recent
             )
             & retain_cond_2
-            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-02-01")),
+            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
             "CCD"
         )
         .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNull(), "Tribunal Decision")

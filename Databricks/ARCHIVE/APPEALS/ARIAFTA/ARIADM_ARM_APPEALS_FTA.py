@@ -2536,7 +2536,7 @@ def stg_appealcasestatus_filtered():
                         ((col("t.CaseStatus") == 52) & col("t.Outcome").isin('91', '95') & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('37', '38', '39', '17', '40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))) | 
                         ((col("t.CaseStatus") == 36) & (col("t.Outcome") == 25) & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33')))
                     ) & 
-                    (add_months(col("t.DecisionDate"), 6) >= lit('2026-02-01'))
+                    (add_months(col("t.DecisionDate"), 6) >= lit('2026-06-05'))
                 ), "FT Retained - CCD"
             ).when(
                 # FT Retained - CCD (6 months) - Second condition
@@ -2551,7 +2551,7 @@ def stg_appealcasestatus_filtered():
                         ((col("t.CaseStatus") == 36) & col("t.Outcome").isin('1', '2', '50', '108')) | 
                         ((col("t.CaseStatus") == 52) & col("t.Outcome").isin('91', '95') & col("st.CaseStatus").isin('37', '38', '39', '17'))
                     ) & 
-                    (add_months(col("t.DecisionDate"), 6) >= lit('2026-02-01'))
+                    (add_months(col("t.DecisionDate"), 6) >= lit('2026-06-05'))
                 ), "FT Retained - CCD"
             ).when(
                 # FT Retained - ARM (24 months) - First condition
@@ -2602,7 +2602,7 @@ def stg_appealcasestatus_filtered():
                         (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
                     )
                 ) & 
-                (add_months(col("t.DecisionDate"), 24) >= lit('2026-02-01')), 
+                (add_months(col("t.DecisionDate"), 24) >= lit('2026-06-05')), 
                 "FT Retained - ARM"
             ).when(
                 # FT Retained - ARM (24 months) - Second condition
@@ -2638,7 +2638,7 @@ def stg_appealcasestatus_filtered():
                         (col("st.CaseStatus").isin('37', '38', '39', '17'))
                     )
                 ) & 
-                (add_months(col("st.DecisionDate"), 24) >= lit('2026-02-01')), 
+                (add_months(col("st.DecisionDate"), 24) >= lit('2026-06-05')), 
                 "FT Retained - ARM"
             ).when(
                 # FT Overdue - First condition
@@ -2689,7 +2689,7 @@ def stg_appealcasestatus_filtered():
                         (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
                     )
                 ) & 
-                (add_months(col("t.DecisionDate"), 24) < lit('2026-02-01')), 
+                (add_months(col("t.DecisionDate"), 24) < lit('2026-06-05')), 
                 "FT Overdue"
             ).when(
                 # FT Overdue - Second condition
@@ -2725,7 +2725,7 @@ def stg_appealcasestatus_filtered():
                         (col("st.CaseStatus").isin('37', '38', '39', '17'))
                     )
                 ) & 
-                (add_months(col("st.DecisionDate"), 24) < lit('2026-02-01')), 
+                (add_months(col("st.DecisionDate"), 24) < lit('2026-06-05')), 
                 "FT Overdue"
             ).when(
                 (col("ac.CasePrefix") == 'IA') & 
@@ -2734,16 +2734,16 @@ def stg_appealcasestatus_filtered():
                 (col("us.CaseStatus").isNotNull()) & 
                 (~col("t.CaseStatus").isin('36', '52')) & 
                 (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) >= lit('2026-02-01')), "UT Retained"
+                (add_months(col("us.DecisionDate"), 60) >= lit('2026-06-05')), "UT Retained"
             ).when(
                 (col("us.CaseStatus").isNotNull()) & 
                 (col("t.CaseStatus").isin('36', '52')) & 
                 (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) >= lit('2026-02-01')), "UT Retained"
+                (add_months(col("us.DecisionDate"), 60) >= lit('2026-06-05')), "UT Retained"
             ).when(
                 (col("us.CaseStatus").isNotNull()) & 
                 (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) < lit('2026-02-01')), "UT Overdue"
+                (add_months(col("us.DecisionDate"), 60) < lit('2026-06-05')), "UT Overdue"
             ).when(
                 (col("ac.CasePrefix").isin('IA', 'LD', 'LE', 'LH', 'LP', 'LR')) & 
                 (col("ac.HOANRef").isNotNull()) & 
@@ -2847,7 +2847,7 @@ def stg_skeleton_filtered():
             col("ac.CasePrefix").isin(prefix_list) &
             col("ac.HOANRef").isNotNull() &
             (
-                (add_months(col("t.DecisionDate"), 24) >= lit("2026-02-01")) |
+                (add_months(col("t.DecisionDate"), 24) >= lit("2026-06-05")) |
                 col("t.DecisionDate").isNull()
             ),
             "Archive"

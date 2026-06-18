@@ -20,6 +20,27 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
+
+def _get_res_body_as_text(response) -> str:
+    try:
+        return str(response.text)
+    except Exception:
+        try:
+            return (getattr(response, 'content', None) or b'').decode('utf-8', errors='replace')
+        except Exception:
+            return 'Unable to get response body as text'
+
+
+def _compact(value) -> str:
+    try:
+        if isinstance(value, (dict, list)):
+            return json.dumps(value)
+        text = str(value)
+        return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+    except Exception as e:
+        print(f"Unable to compact the log. {e}")
+
+
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
 idam_token_mgr = IDAMTokenManager(env="sbox")
 s2s_manager = S2S_Manager(env="sbox")
@@ -39,7 +60,7 @@ def start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_toke
     }
     try:
         response = requests.get(start_case_creation_url, headers=headers)
-        print(f"🔢 Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Response status: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_case_creation_url}: {e}")
@@ -74,11 +95,11 @@ def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token,
         }
 
         caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
-        print(f"🔢 Validate posting payload for {caseNo}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
+        print(f"🔢 Validate posting payload for {caseNo}: validate_case_url = {validate_case_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(validate_case_url, headers=headers, json=json_object)
 
-        print(f"🔢 Validate Response for {caseNo}= {response.status_code}: {response.text}")
+        print(f"🔢 Validate Response for {caseNo}= {response.status_code}: {_compact(_get_res_body_as_text(response))}")
         return response
 
     except Exception as e:
@@ -116,11 +137,11 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
         }
 
         caseNo = json_object.get("data", {}).get("appealReferenceNumber", "N/A")
-        print(f"🔢 Submit payload for {caseNo}: submit_case_url = {submit_case_url} headers = {headers} json = {json_object}\n")
+        print(f"🔢 Submit payload for {caseNo}: submit_case_url = {submit_case_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(submit_case_url, headers=headers, json=json_object)
 
-        print(f"🔢 Submit Response status for {caseNo}: {response.status_code}:{response.text}\n")
+        print(f"🔢 Submit Response status for {caseNo}: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
 
     except Exception as e:
@@ -186,12 +207,12 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
 
     print("Starting case creation")
     start_response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
-    print("Started case creation = {start_response}")
+    print(f"Started case creation = {_compact(start_response)}")
 
     if start_response is None or start_response.status_code != 200:
         if start_response is not None:
             status_code = start_response.status_code
-            text = start_response.text
+            text = _get_res_body_as_text(start_response)
         else:
             status_code = "N/A"
             text = "No response from API"
@@ -218,17 +239,17 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     validate_case_response = validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
 
     try:
-        print(f"Validation response for case {caseNo}: {json.dumps(validate_case_response.json(), indent=2)}")
+        print(f"Validation response for case {caseNo}: {_compact(validate_case_response.json())}")
     except Exception:
         try:
-            print(validate_case_response.text)
+            print(_compact(_get_res_body_as_text(validate_case_response)))
         except Exception:
             print(f"Unable to parse validate_case_response for case {caseNo}")
 
     if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         if validate_case_response is not None:
             status_code = validate_case_response.status_code
-            text = validate_case_response.text
+            text = _get_res_body_as_text(validate_case_response)
         else:
             status_code = "N/A"
             text = "No response from API"
@@ -254,17 +275,17 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     submit_case_response = submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
 
     try:
-        print(f"Submit response for case {caseNo}: {json.dumps(submit_case_response.json(), indent=2)}")
+        print(f"Submit response for case {caseNo}: {_compact(submit_case_response.json())}")
     except Exception:
         try:
-            print(submit_case_response.text)
+            print(_compact(_get_res_body_as_text(submit_case_response)))
         except Exception:
             print(f"Unable to parse submit_case_response for case {caseNo}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         if submit_case_response is not None:
             status_code = submit_case_response.status_code
-            text = submit_case_response.text
+            text = _get_res_body_as_text(submit_case_response)
         else:
             status_code = "N/A"
             text = "No response from API"
@@ -297,7 +318,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             ),
             "StartResponse": start_response_data
         }
-        print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
+        print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {result.get('CCDCaseID', 'N/A')}")
         return result
 
 

@@ -15,15 +15,37 @@ class decidedADQRules(DQRulesBase):
     def get_checks_hearing_actuals(self, checks={}):
 
         checks["valid_actualCaseHearingLength"] = ("""
-        
-        (
-            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
-            AND element_at(actualCaseHearingLength, 'hours') =
-                CAST(FLOOR(CAST(HearingDuration AS INT) / 60) AS STRING)
-            AND element_at(actualCaseHearingLength, 'minutes') =
-                CAST(CAST(HearingDuration AS INT) % 60 AS STRING)
-            )
-        """)
+                (
+                    (
+                        CaseStatus_SD IN (37,38,26)
+                        AND Outcome_SD IN (1,2)
+                        AND element_at(actualCaseHearingLength, 'hours') =
+                            CAST(FLOOR(CAST(HearingDuration AS INT) / 60) AS STRING)
+                        AND element_at(actualCaseHearingLength, 'minutes') =
+                            CAST(CAST(HearingDuration AS INT) % 60 AS STRING)
+                    )
+                    OR
+                    (
+                        CaseStatus_SD NOT IN (37,38,26)
+                        AND Outcome_SD NOT IN (1,2)
+                        AND element_at(actualCaseHearingLength, 'hours') IS NULL
+                        AND element_at(actualCaseHearingLength, 'minutes') IS NULL
+                    )
+                    OR
+                    (
+                        CaseStatus_SD IS NOT NULL
+                        AND Outcome_SD IS NULL
+                        AND element_at(actualCaseHearingLength, 'hours') IS NULL
+                        AND element_at(actualCaseHearingLength, 'minutes') IS NULL
+                    )
+                    OR
+                    (
+                        hearingDuration IS NULL
+                        AND element_at(actualCaseHearingLength, 'hours') IS NULL
+                        AND element_at(actualCaseHearingLength, 'minutes') IS NULL
+                    )
+                )
+                """)
 
         checks["valid_attendingJudge"] = (
             """

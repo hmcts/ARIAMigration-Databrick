@@ -419,7 +419,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
 
     #Audit recordedOutOfTimeDecision
     array(struct(*common_inputFields,lit("Outcome"),lit("OutOfTimeIssue"))).alias("recordedOutOfTimeDecision_inputFields"),
-    array(struct(*common_inputValues,col("m3.Outcome"),col("m3.OutOfTimeIssue"))).alias("recordedOutOfTimeDecision_inputValues"),
+    array(struct(*common_inputValues,col("m3.Outcome"),col("audit.OutOfTimeIssue"))).alias("recordedOutOfTimeDecision_inputValues"),
     col("content.recordedOutOfTimeDecision"),
     lit("yes").alias("recordedOutOfTimeDecision_Transformation"),
 

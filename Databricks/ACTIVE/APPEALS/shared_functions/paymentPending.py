@@ -364,8 +364,7 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
         "tribunalReceivedDate", date_format(col("m1.DateAppealReceived"), "yyyy-MM-dd")
     ).withColumn(
         "recordedOutOfTimeDecision", when((col("m1.dv_TargetState").isin(["paymentPending", "appealSubmitted"]))
-            & (col("m1.OutOfTimeIssue") == True) & (col("m3.Outcome").isNotNull()) & (col("m3.Outcome") != 0),lit("Yes"))
-        
+            & (col("m1.OutOfTimeIssue") == True) & (col("m3.Outcome").isNotNull()) & (col("m3.Outcome") != 0), lit("Yes"))
         .when((~col("m1.dv_TargetState").isin(["paymentPending", "appealSubmitted"])) & (col("m1.OutOfTimeIssue") == True), lit("Yes"))
         .otherwise(None)
     ).withColumn(
@@ -419,8 +418,8 @@ def caseData(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, 
     lit("yes").alias("submissionOutOfTime_Transformation"),
 
     #Audit recordedOutOfTimeDecision
-    array(struct(*common_inputFields,lit("Outcome"),lit("OutOfTime"))).alias("recordedOutOfTimeDecision_inputFields"),
-    array(struct(*common_inputValues,col("m3.Outcome"),col("m3.OutOfTime"))).alias("recordedOutOfTimeDecision_inputValues"),
+    array(struct(*common_inputFields,lit("Outcome"),lit("OutOfTimeIssue"))).alias("recordedOutOfTimeDecision_inputFields"),
+    array(struct(*common_inputValues,col("m3.Outcome"),col("m3.OutOfTimeIssue"))).alias("recordedOutOfTimeDecision_inputValues"),
     col("content.recordedOutOfTimeDecision"),
     lit("yes").alias("recordedOutOfTimeDecision_Transformation"),
 

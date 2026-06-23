@@ -97,25 +97,6 @@ class decidedADQRules(DQRulesBase):
         return checks
 
     def get_checks_ftpa(self, checks={}):
-
-        # checks["valid_ftpaApplicationDeadline"] = """
-        #     (
-        #         (DecisionDate IS NULL AND ftpaApplicationDeadline IS NULL)
-        #         OR
-        #         CASE
-        #             WHEN Outcome_SD IN (1, 2) AND CaseStatus_SD IN (37, 38, 26) AND CategoryId_37 = 37 THEN
-        #                 date_add(DecisionDate, 14) = to_date(ftpaApplicationDeadline)
-        #             WHEN Outcome_SD IN (1, 2) AND CaseStatus_SD IN (37, 38, 26) AND CategoryId_37 = 38 THEN
-        #                 date_add(DecisionDate, 28) = to_date(ftpaApplicationDeadline)
-        #             ELSE
-        #                 date_add(DecisionDate, 0) = to_date(ftpaApplicationDeadline)
-        #         END
-        #     )
-        #     """
-
-        # return checks
-    
-        
         
         checks["valid_ftpaApplicationDeadline"] = """
         (
@@ -125,18 +106,25 @@ class decidedADQRules(DQRulesBase):
                         AND CaseStatus_SD IN (37, 38, 26)
                         AND CategoryId = 37
                     THEN
-                        to_date(ftpaApplicationDeadline) = date_add(DecisionDate, 14)
+                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate, 14))
 
                     WHEN Outcome_SD IN (1, 2)
                         AND CaseStatus_SD IN (37, 38, 26)
                         AND CategoryId = 38
                     THEN
-                        to_date(ftpaApplicationDeadline) = date_add(DecisionDate, 28)
+                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate, 28))
                 END
+            )
+            OR
+            (
+                (
+                    (Outcome_SD IS NULL OR Outcome_SD NOT IN (1,2))
+                    OR (CaseStatus_SD IS NULL OR CaseStatus_SD NOT IN (37,38,26))
+                    OR (CategoryId IS NULL OR CategoryId NOT IN (37,38))
+                )
+                AND ftpaApplicationDeadline IS NULL
             )
         )
         """
         return checks
-
-
 

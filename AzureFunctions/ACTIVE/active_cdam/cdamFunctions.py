@@ -8,6 +8,24 @@ try:
 except ImportError:
     from retry_decorator import retry_on_result
 
+
+def _compact(value) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    text = str(value)
+    return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+
+
+def _get_res_body_as_text(response) -> str:
+    try:
+        return str(response.text)
+    except Exception:
+        try:
+            return (getattr(response, 'content', None) or b'').decode('utf-8', errors='replace')
+        except Exception:
+            return 'Unable to get response body as text'
+
+
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_cdam`.
 # Use a robust import that works both when running under the Functions host
@@ -45,11 +63,11 @@ def upload_document(cdam_base_url, jid, ctid, cid, file_name, doc_binary, conten
             ("files", (file_name, doc_binary, content_type))
         ]
 
-        print(f"🔢 Uploading document for CaseNo {cid}: upload_document_url = {upload_document_url}, headers = {headers}, body = {body}\n")
+        print(f"🔢 Uploading document for CaseNo {cid}: upload_document_url = {upload_document_url}, headers = {_compact(headers)}, body = {_compact(body)}")
 
         response = requests.post(upload_document_url, headers=headers, data=body, files=files)
 
-        print(f"🔢 Upload document response status for {cid}: {response.status_code}:{response.text}\n")
+        print(f"🔢 Upload document response status for {cid}: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
 
     except Exception as e:
@@ -143,17 +161,17 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
     upload_document_response = upload_document(cdam_base_url, jid, ctid, caseNo, file_name, file_binary_in_bytes, file_content_type, idam_token, s2s_token)
 
     try:
-        print(f"CDAM upload for case {caseNo}: {json.dumps(upload_document_response.json(), indent=2)}")
+        print(f"CDAM upload for case {caseNo}: {_compact(upload_document_response.json())}")
     except Exception:
         try:
-            print(upload_document_response.text)
+            print(_compact(_get_res_body_as_text(upload_document_response)))
         except Exception:
             print(f"Unable to parse upload_document_response for case {caseNo}")
 
     if upload_document_response is None or upload_document_response.status_code not in {201, 200}:
         if upload_document_response is not None:
             status_code = upload_document_response.status_code
-            text = upload_document_response.text
+            text = _get_res_body_as_text(upload_document_response)
         else:
             status_code = "N/A"
             text = "No response from API"

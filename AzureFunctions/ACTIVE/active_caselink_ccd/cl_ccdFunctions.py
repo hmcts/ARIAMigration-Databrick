@@ -6,6 +6,24 @@ try:
 except ImportError:
     from retry_decorator import retry_on_result
 
+
+def _compact(value) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    text = str(value)
+    return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+
+
+def _get_res_body_as_text(response) -> str:
+    try:
+        return str(response.text)
+    except Exception:
+        try:
+            return (getattr(response, 'content', None) or b'').decode('utf-8', errors='replace')
+        except Exception:
+            return 'Unable to get response body as text'
+
+
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
 # Use a robust import that works both when running under the Functions host
@@ -34,7 +52,7 @@ def get_case_details(ccd_base_url, uid, jid, ctid, cid, idam_token, s2s_token):
     }
     try:
         response = requests.get(get_case_url, headers=headers)
-        print(f"🔢 Get Case Details Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Get Case Details Response status: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {get_case_url}: {e}")
@@ -53,7 +71,7 @@ def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_to
     }
     try:
         response = requests.get(start_event_url, headers=headers)
-        print(f"🔢 Start Case Event Response status: {response.status_code}:{response.text}")
+        print(f"🔢 Start Case Event Response status: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_event_url}: {e}")
@@ -85,11 +103,11 @@ def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadD
             "ignore_warning": True,
         }
 
-        print(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {headers} json = {json_object}")
+        print(f"🔢 Validate posting payload for {cid}: validate_case_url = {validate_case_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(validate_case_url, headers=headers, json=json_object)
 
-        print(f"🔢 Validate Response for {cid} = {response.status_code}: {response.text}")
+        print(f"🔢 Validate Response for {cid} = {response.status_code}: {_compact(_get_res_body_as_text(response))}")
         return response
 
     except Exception as e:
@@ -124,11 +142,11 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
             "ignore_warning": True,
         }
 
-        print(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {headers} json = {json_object}\n")
+        print(f"🔢 Submit payload for {cid}: submit_case_url = {submit_event_url} headers = {_compact(headers)} json = {_compact(json_object)}")
 
         response = requests.post(submit_event_url, headers=headers, json=json_object)
 
-        print(f"🔢 Submit Response status for {cid}: {response.status_code}:{response.text}\n")
+        print(f"🔢 Submit Response status for {cid}: {response.status_code}:{_compact(_get_res_body_as_text(response))}")
         return response
 
     except Exception as e:
@@ -217,7 +235,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     if start_response is None or start_response.status_code != 200:
         if start_response is not None:
             status_code = start_response.status_code
-            text = start_response.text
+            text = _get_res_body_as_text(start_response)
         else:
             status_code = "N/A"
             text = "No response from API"
@@ -244,17 +262,17 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     validate_case_response = validate_case(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
     try:
-        print(f"Validation response for case {ccdReference}: {json.dumps(validate_case_response.json(), indent=2)}")
+        print(f"Validation response for case {ccdReference}: {_compact(validate_case_response.json())}")
     except Exception:
         try:
-            print(validate_case_response.text)
+            print(_compact(_get_res_body_as_text(validate_case_response)))
         except Exception:
             print(f"Unable to parse validate_case_response for case {ccdReference}")
 
     if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         if validate_case_response is not None:
             status_code = validate_case_response.status_code
-            text = validate_case_response.text
+            text = _get_res_body_as_text(validate_case_response)
         else:
             status_code = "N/A"
             text = "No response from API"
@@ -280,17 +298,17 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     submit_case_response = submit_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, event_token, caseLinkPayload, idam_token, s2s_token)
 
     try:
-        print(f"Submit response for case {ccdReference}: {json.dumps(submit_case_response.json(), indent=2)}")
+        print(f"Submit response for case {ccdReference}: {_compact(submit_case_response.json())}")
     except Exception:
         try:
-            print(submit_case_response.text)
+            print(_compact(_get_res_body_as_text(submit_case_response)))
         except Exception:
             print(f"Unable to parse submit_case_response for case {ccdReference}")
 
     if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         if submit_case_response is not None:
             status_code = submit_case_response.status_code
-            text = submit_case_response.text
+            text = _get_res_body_as_text(submit_case_response)
         else:
             status_code = "N/A"
             text = "No response from API"

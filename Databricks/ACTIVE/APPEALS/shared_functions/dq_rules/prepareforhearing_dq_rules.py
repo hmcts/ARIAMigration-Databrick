@@ -15,9 +15,22 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_isAppealSuitableToFloat"] = (
             """(
-                (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
-                OR
-                (listTypeId != 5 AND isAppealSuitableToFloat = 'No')
+                CaseStatus_dec IN (37,38)
+                AND
+                (
+                    (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
+                    OR
+                    ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+                )
+            )
+            OR
+            (
+                CaseStatus_dec NOT IN (37,38)
+                AND isAppealSuitableToFloat IS NULL
+            )
+            OR
+            (
+                CaseStatus_dec IS NULL AND isAppealSuitableToFloat IS NULL
             )"""
         )
 

@@ -100,10 +100,10 @@ def build_state_flow(state: str, flow: list):
     return build_state_flow(previous_state, [previous_state] + flow)
 
 
-def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,silver_h,
+def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c, silver_h,
                                 bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
-                                bronze_interpreter_languages, bronze_listing_location,bronze_ended_states,
-                                bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+                                bronze_interpreter_languages, bronze_listing_location, bronze_ended_states,
+                                bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
@@ -111,8 +111,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_representation = silver_m1.select(
         col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
         col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
-        col("Sponsor_Authorisation"), col("Sponsor_Name"),col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
-        ,col("OutOfTimeIssue"),col("DateLodged")
+        col("Sponsor_Authorisation"), col("Sponsor_Name"), col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription"),
+        col("OutOfTimeIssue"), col("DateLodged"), col("HOANRef")
     )
     valid_appealant_address = silver_m2.select(
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),

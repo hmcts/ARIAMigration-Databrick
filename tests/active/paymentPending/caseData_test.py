@@ -211,7 +211,7 @@ def caseData_outputs(spark):
     ])
 
     m3_data = [
-        ("EA/01698/2024", 1, "0", True),   # OutOfTimeIssue=True, appealSubmitted, Outcome=0 → recordedOutOfTimeDecision None
+        ("EA/01698/2024", 1, "0", True),   # OutOfTimeIssue=True, appealSubmitted, Outcome=0 → recordedOutOfTimeDecision No
         ("HU/00576/2025", 1, "1", True),   # OutOfTimeIssue=True, appealSubmitted, Outcome=1 → recordedOutOfTimeDecision Yes
     ]
 
@@ -489,7 +489,7 @@ def test_submission_out_of_time(caseData_outputs):
 
 def test_recorded_out_of_time_decision(caseData_outputs):
     expected = {
-        "EA/01698/2024": None,   # OutOfTimeIssue=True, appealSubmitted, Outcome="0" → None (0 excluded)
+        "EA/01698/2024": "No",   # OutOfTimeIssue=True, appealSubmitted, Outcome="0" → No (0 excluded from Yes)
         "HU/00576/2025": "Yes",  # OutOfTimeIssue=True, appealSubmitted, Outcome="1" → Yes
         "EA/10544/2022": None,   # OutOfTimeIssue=False
         "HU/00516/2025": None,   # OutOfTimeIssue=False

@@ -2617,7 +2617,7 @@ class endedDQRules(DQRulesBase):
         checks["valid_TTL"] = """(
             TTL.Suspended = 'No'
             AND
-            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_end), 730), 'yyyy-MM-dd')
+            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_no_filter), 730), 'yyyy-MM-dd')
         )"""
 
         return checks

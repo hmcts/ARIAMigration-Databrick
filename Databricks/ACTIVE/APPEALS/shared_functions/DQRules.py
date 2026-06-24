@@ -285,7 +285,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                 col("Adj_Determination_Title"),
                 col("Adj_Determination_Forenames"),
                 col("Adj_Determination_Surname"),
-                col("DecisionDate"),
+                col("DecisionDate").alias("DecisionDate_decided"),
             )
     )
 
@@ -302,11 +302,16 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         silver_m3.filter((col("Outcome").isNotNull()))
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1)
-            .select("CaseNo",col("Outcome").alias("Outcome_no_filter"),col("CaseStatus").alias("CaseStatus_max_no_filter"),col("OutOfTime").alias("OutOfTime_no_filter"))
+            .select("CaseNo",
+                    col("Outcome").alias("Outcome_no_filter"),
+                    col("CaseStatus").alias("CaseStatus_max_no_filter"),
+                    col("OutOfTime").alias("OutOfTime_no_filter"),
+                    col("DecisionDate").alias("DecisionDate_no_filter")
+            )
     )
 
     silver_m3_max_casestatus_no_filter = (
-        silver_m1.alias("m1").select("CaseNo").join(silver_m3_max_casestatus_no_filter,on="CaseNo",how="left")
+        silver_m1.alias("m1").select("CaseNo").join(silver_m3_max_casestatus_no_filter,on="CaseNo", how="left")
     )
 
     
@@ -532,12 +537,12 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_all = silver_m3.withColumn("row_num", row_number().over(window_spec))
 
     # Filter the top-ranked rows where Outcome is not null
-    silver_m3_all = silver_m3_all.filter(col("row_num") == 1)
+    silver_m3_latest_status = silver_m3_all.filter(col("row_num") == 1)
 
     detained_df = (
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"),on="CaseNo",how="left")
-        .join(silver_m3_all.alias("m3"),on="CaseNo",how="left")
+        .join(silver_m3_latest_status.alias("m3"),on="CaseNo",how="left")
         .join(bronze_detention_centres.alias("det"),on="DetentionCentreId",how="left")
         .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId").alias("DetentionCentreId"),col("m3.Outcome"),
             *[col(f"det.{c}").alias(f"{c}_det")

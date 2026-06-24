@@ -120,8 +120,8 @@ def test_judgesNamesToExclude(spark,setAside_outputs):
     results = setAside_outputs
 
     assert results["CASE005"]["judgesNamesToExclude"] == 'Black, Tim (Sir)'
-    assert results["CASE006"]["judgesNamesToExclude"] == ''
-    assert results["CASE007"]["judgesNamesToExclude"] == ''
+    assert results["CASE006"]["judgesNamesToExclude"] == None
+    assert results["CASE007"]["judgesNamesToExclude"] == None
     assert results["CASE010"]["judgesNamesToExclude"] == 'pearn, Leo (Mr)'
     assert results["CASE011"]["judgesNamesToExclude"] == 'Finney, Alex (Prof)'
 

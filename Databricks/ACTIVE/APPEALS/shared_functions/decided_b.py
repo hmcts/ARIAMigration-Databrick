@@ -16,7 +16,7 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays, nullif
 )
 
 
@@ -92,7 +92,7 @@ def setAside(silver_m1, silver_m3, silver_m6):
     silver_m6_conditional = silver_m6.withColumn("formatted_judge",when(col("Required") == False, formatted_judge).otherwise(None))
 
     # Step 3: Group by case and join using newline separator
-    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(concat_ws("\n", collect_list("formatted_judge")).alias("Judges")))
+    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(nullif(concat_ws("\n", collect_list("formatted_judge")), lit("")).alias("Judges")))
 
 
     # Window: highest StatusId per CaseNo
@@ -119,10 +119,6 @@ def setAside(silver_m1, silver_m3, silver_m6):
             .join(silver_m3_max_casestatus.alias("casemax"), on="CaseNo", how="left")
     )
 
-
-
-
-    
     # Build remittal content
     setaside_df = (
         silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m3"), on="CaseNo", how="left")

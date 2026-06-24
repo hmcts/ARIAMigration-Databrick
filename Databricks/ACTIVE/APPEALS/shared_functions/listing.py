@@ -333,7 +333,9 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
             )
             .withColumn("appellantLevelFlags_inputFields", col("appellantLevelFlags_listing_inputFields"))
             .withColumn("appellantLevelFlags_inputValues", col("appellantLevelFlags_listing_inputValues"))
-            .drop("appellantLevelFlags_listing_inputFields", "appellantLevelFlags_listing_inputValues")  # No longer needed after replacing the original columns
+            .withColumn("appellantLevelFlags", col("appellantLevelFlags_listing_value"))
+            .withColumn("appellantLevelFlags_Transformation", col("appellantLevelFlags_listing_Transformed"))
+            .drop("appellantLevelFlags_listing_inputFields", "appellantLevelFlags_listing_inputValues", "appellantLevelFlags_listing_value", "appellantLevelFlags_listing_Transformed")
     )
 
     return df, df_audit

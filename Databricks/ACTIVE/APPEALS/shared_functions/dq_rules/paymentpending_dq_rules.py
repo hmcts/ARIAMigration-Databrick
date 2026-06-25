@@ -74,7 +74,10 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
         """
             (
-                recordedOutOfTimeDecision IS NULL
+                (
+                    recordedOutOfTimeDecision IS NULL
+                    AND (OutOfTimeIssue IS NULL OR OutOfTimeIssue = False)
+                )
                 OR
                 (
                     recordedOutOfTimeDecision = 'Yes'
@@ -83,12 +86,20 @@ class paymentPendingDQRules(DQRulesBase):
                         (
                             ariaDesiredState IN ('paymentPending', 'appealSubmitted')
                             AND Outcome IS NOT NULL
+                            AND Outcome != 0
                         )
                         OR
                         (
                             ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
                         )
                     )
+                )
+                OR
+                (
+                    recordedOutOfTimeDecision = 'No'
+                    AND OutOfTimeIssue = True
+                    AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                    AND (Outcome IS NULL OR Outcome = 0)
                 )
             )
         """)

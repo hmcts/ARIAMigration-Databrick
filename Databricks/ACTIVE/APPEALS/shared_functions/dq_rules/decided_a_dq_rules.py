@@ -64,7 +64,7 @@ class decidedADQRules(DQRulesBase):
                 CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
                 AND 
                 to_date(
-                    to_timestamp(DecisionDate, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
+                    to_timestamp(DecisionDate_decided, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
                 ) = to_date(trim(sendDecisionsAndReasonsDate), 'yyyy-MM-dd')
             )
             OR
@@ -85,7 +85,7 @@ class decidedADQRules(DQRulesBase):
             (
                 CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
                 AND 
-                to_date(DecisionDate, 'yyyy-MM-dd') = to_date(appealDate, 'yyyy-MM-dd')
+                to_date(DecisionDate_decided, 'yyyy-MM-dd') = to_date(appealDate, 'yyyy-MM-dd')
             )
             OR
             (
@@ -173,13 +173,13 @@ class decidedADQRules(DQRulesBase):
                         AND CaseStatus_SD IN (37, 38, 26)
                         AND CategoryId = 37
                     THEN
-                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate, 14))
+                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate_decided, 14))
 
                     WHEN Outcome_SD IN (1, 2)
                         AND CaseStatus_SD IN (37, 38, 26)
                         AND CategoryId = 38
                     THEN
-                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate, 28))
+                        to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate_decided, 28))
                 END
             )
             OR

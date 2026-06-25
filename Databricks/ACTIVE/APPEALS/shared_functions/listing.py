@@ -298,6 +298,46 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
         .select(*df.columns)
     )
 
+    df_audit = (
+        df_audit.alias("audit")
+            .join(df.alias("content"), on="CaseNo", how="left")
+            .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
+            .join(
+                silver_m2.filter(col("Relationship").isNull())
+                .select(
+                    "CaseNo",
+                    col("Appellant_Forenames").alias("m2_AppellantForenames"),
+                    col("Appellant_Name").alias("m2_AppellantName")
+                )
+                .dropDuplicates(["CaseNo"])
+                .alias("m2_audit"),
+                on="CaseNo",
+                how="left"
+            )
+            .select(
+                "audit.*",
+                array(struct(
+                    lit("lu_appellantInterpreterSpokenLanguage"),
+                    lit("lu_appellantInterpreterSignLanguage"),
+                    lit("Appellant_Forenames"),
+                    lit("Appellant_Name")
+                )).alias("appellantLevelFlags_listing_inputFields"),
+                array(struct(
+                    col("ilu.lu_appellantInterpreterSpokenLanguage"),
+                    col("ilu.lu_appellantInterpreterSignLanguage"),
+                    col("m2_audit.m2_AppellantForenames"),
+                    col("m2_audit.m2_AppellantName")
+                )).alias("appellantLevelFlags_listing_inputValues"),
+                col("content.appellantLevelFlags").alias("appellantLevelFlags_listing_value"),
+                lit("Yes").alias("appellantLevelFlags_listing_Transformed")
+            )
+            .withColumn("appellantLevelFlags_inputFields", col("appellantLevelFlags_listing_inputFields"))
+            .withColumn("appellantLevelFlags_inputValues", col("appellantLevelFlags_listing_inputValues"))
+            .withColumn("appellantLevelFlags", col("appellantLevelFlags_listing_value"))
+            .withColumn("appellantLevelFlags_Transformation", col("appellantLevelFlags_listing_Transformed"))
+            .drop("appellantLevelFlags_listing_inputFields", "appellantLevelFlags_listing_inputValues", "appellantLevelFlags_listing_value", "appellantLevelFlags_listing_Transformed")
+    )
+
     return df, df_audit
 
 

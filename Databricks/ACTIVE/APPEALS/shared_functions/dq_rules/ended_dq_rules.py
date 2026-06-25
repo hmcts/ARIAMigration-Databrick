@@ -1900,7 +1900,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_datesToAvoidYesNo"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1909,6 +1909,53 @@ class endedDQRules(DQRulesBase):
                     coalesce(datesToAvoidYesNo, '') = coalesce(datesToAvoidYesNo_ended, '')
                 ELSE
                     datesToAvoidYesNo IS NULL
+            END
+        )
+        """
+
+        checks["valid_appellantLevelFlags"] = """
+        (
+            CASE
+                WHEN (
+                    (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
+                    (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
+                    (CaseStatus_ended = 39 AND Outcome_ended = 25)
+                ) THEN
+                    (
+                        (appellantLevelFlags IS NOT NULL)
+                        AND
+                        (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0019'))
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0043'))
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0014'))
+                        AND
+                        (
+                            (appellantInterpreterSpokenLanguage IS NULL AND NOT ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0015'))
+                            OR
+                            (appellantInterpreterSpokenLanguage IS NOT NULL AND ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0015'))
+                        )
+                        AND
+                        (
+                            (appellantInterpreterSignLanguage IS NULL AND NOT ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0042'))
+                            OR
+                            (appellantInterpreterSignLanguage IS NOT NULL AND ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0042'))
+                        )
+                    )
+                ELSE
+                    (
+                        (appellantLevelFlags IS NOT NULL)
+                        AND
+                        (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0019'))
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'RA0043'))
+                        AND
+                        (ARRAY_CONTAINS(TRANSFORM(appellantLevelFlags.details, x -> x.value.flagCode), 'PF0014'))
+                    )
             END
         )
         """
@@ -2617,7 +2664,7 @@ class endedDQRules(DQRulesBase):
         checks["valid_TTL"] = """(
             TTL.Suspended = 'No'
             AND
-            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_end), 730), 'yyyy-MM-dd')
+            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_no_filter), 730), 'yyyy-MM-dd')
         )"""
 
         return checks

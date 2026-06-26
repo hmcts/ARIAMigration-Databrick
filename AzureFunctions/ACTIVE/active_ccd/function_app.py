@@ -11,6 +11,7 @@ from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
 from datetime import datetime, timezone
+from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
 
 from typing import List
 # from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
@@ -39,6 +40,22 @@ idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.window
 idempotency_container_name = "af-idempotency"
 
 app = func.FunctionApp()
+
+
+def _log_retry(retry_state):
+    result = retry_state.outcome.result() if retry_state.outcome else {}
+    error = result.get("Error", "") if isinstance(result, dict) else ""
+    logger.warning(
+        f"Retrying process_case — attempt {retry_state.attempt_number} failed "
+        f"(sleeping {retry_state.next_action.sleep:.0f}s): {error}"
+    )
+
+
+def _is_retryable(result):
+    RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+    if not (isinstance(result, dict) and result.get("Status") == "ERROR"):
+        return False
+    return result.get("StatusCode") in RETRYABLE_STATUS_CODES
 
 
 @app.function_name("eventhub_trigger")
@@ -110,7 +127,16 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                             continue
 
                         # Process the file
-                        result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
+                        async def _process():
+                            return await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
+
+                        result = await AsyncRetrying(
+                            retry=retry_if_result(_is_retryable),
+                            stop=stop_after_attempt(3),
+                            wait=wait_exponential(min=30, max=60),
+                            before_sleep=_log_retry,
+                            retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+                        )(_process)
                         result["StartDateTime"] = start_datetime
 
                         # Mark processed if success
@@ -121,6 +147,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                             except Exception as delete_error:
                                 logger.warning(f"[IDEMPOTENCY] Failed to delete blob for {caseNo}: {delete_error}")
 
+                        result.pop("StatusCode", None)
                         result_json = json.dumps(result)
                         try:
                             event_data_batch.add(EventData(result_json))

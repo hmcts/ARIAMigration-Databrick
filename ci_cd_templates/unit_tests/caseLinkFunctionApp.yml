@@ -1,0 +1,22 @@
+parameters:
+  segment: 'caseLinkFunctionApp'
+
+steps:
+  - task: UsePythonVersion@0
+    displayName: 'Use Python 3.x'
+    inputs:
+      versionSpec: '3.x'
+
+  - script: |
+      pip install uv
+      uv pip install -r $(Build.SourcesDirectory)/tests/requirements.txt --system
+    displayName: 'Install dependencies'
+  
+  - script: |
+      echo "Running ${{ parameters.segment }} unit tests"
+      export ENVIRONMENT=sbox
+      export LZ_KEY=00
+      export PR_NUMBER=$(System.PullRequest.PullRequestId)
+      export PYTHONPATH=$PYTHONPATH:$(Build.SourcesDirectory)
+      pytest $(Build.SourcesDirectory)/tests/active/${{ parameters.segment }}
+    displayName: 'Run pytest ${{ parameters.segment }} unit tests'

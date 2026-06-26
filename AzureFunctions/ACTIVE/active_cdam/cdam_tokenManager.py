@@ -5,6 +5,13 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from datetime import datetime, timezone, timedelta
 
+
+class TokenError(RuntimeError):
+    def __init__(self, message, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class IDAMTokenManager:
     def __init__(self, env: str, skew: int = 900):
         self.env = env
@@ -64,7 +71,7 @@ class IDAMTokenManager:
         idam_response = requests.post(self.token_url, headers=headers, data=data)
 
         if idam_response.status_code != 200:
-            raise RuntimeError(f"Token request failed: {idam_response.status_code} {idam_response.text}")
+            raise TokenError(f"Token request failed: {idam_response.status_code} {idam_response.text}", status_code=idam_response.status_code)
 
         payload = idam_response.json()
 
@@ -186,7 +193,7 @@ class S2S_Manager():
             raise EOFError(f"Error reuesting service to service token: {e}")
         # Ensure you get a 200 response else raise an error
         if s2s_response.status_code != 200:
-            raise RuntimeError(f"Error requesting service to service token: {s2s_response.text}")
+            raise TokenError(f"Error requesting service to service token: {s2s_response.status_code} {s2s_response.text}", status_code=s2s_response.status_code)
 
         # Extract token from response
         try:

@@ -13,7 +13,7 @@ _mock_app.event_hub_message_trigger.return_value = lambda f: f
 
 with patch.dict(os.environ, {"ENVIRONMENT": "sbox", "LZ_KEY": "testlz"}), \
         patch("azure.functions.FunctionApp", MagicMock(return_value=_mock_app)):
-    from AzureFunctions.ACTIVE.active_cdam.function_app import eventhub_trigger_active
+    from AzureFunctions.ACTIVE.active_cdam.function_app import eventhub_trigger_active, _is_retryable
     import AzureFunctions.ACTIVE.active_cdam.function_app as app_module
 
 
@@ -111,7 +111,7 @@ def patched(mocks, to_thread_mock=None):
         patch(f"{MODULE}.ClientSecretCredential", return_value=mocks["storage_credential"]),
     ]
     if to_thread_mock is not None:
-        patches.append(patch("asyncio.to_thread", new=to_thread_mock))
+        patches.append(patch(f"{MODULE}.process_event", new=to_thread_mock))
     return patches
 
 
@@ -133,7 +133,7 @@ def test_idempotency_blob_uploaded_atomically_before_processing():
     """upload_blob(b"", overwrite=False) is called before process_event runs."""
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event()]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -146,7 +146,7 @@ def test_idempotency_blob_path_contains_case_number_and_idempotency():
     mocks = setup_mocks(batch_len=1)
     case_no = "9999000011112222"
     events = [make_mock_event(case_no=case_no)]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -159,7 +159,7 @@ def test_idempotency_blob_path_contains_case_number_and_idempotency():
 def test_idempotency_container_is_af_idempotency():
     """The BlobServiceClient is asked for the 'af-idempotency' container."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -176,12 +176,12 @@ def test_in_progress_event_skipped_when_idempotency_blob_exists():
     mocks = setup_mocks(batch_len=0)
     mocks["idempotency_blob"].upload_blob.side_effect = ResourceExistsError()
     events = [make_mock_event()]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    to_thread.assert_not_awaited()
+    to_thread.assert_not_called()
     mocks["batch"].add.assert_not_called()
     mocks["producer"].send_batch.assert_not_called()
 
@@ -199,12 +199,12 @@ def test_duplicate_skip_continues_to_next_event():
     ]
 
     events = [make_mock_event(case_no="1111111111111111"), make_mock_event(case_no="2222222222222222")]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    to_thread.assert_awaited_once()
+    to_thread.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ def test_duplicate_skip_continues_to_next_event():
 def test_idempotency_blob_not_deleted_on_success():
     """SUCCESS result: idempotency blob is kept to prevent future duplicate runs."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -225,7 +225,7 @@ def test_idempotency_blob_not_deleted_on_success():
 def test_idempotency_blob_deleted_on_error_result():
     """ERROR result: idempotency blob is deleted so the event can be retried."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_ERROR_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -251,7 +251,7 @@ def test_idempotency_blob_not_touched_when_no_events():
 def test_single_event_success_sends_final_batch():
     """Happy path: one event processed, result batch sent."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -269,13 +269,12 @@ def test_process_event_called_with_correct_args():
     file_content_type = "application/pdf"
     events = [make_mock_event(case_no=case_no, run_id=run_id, file_name=file_name,
                               file_url=file_url, file_content_type=file_content_type)]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    to_thread.assert_awaited_once_with(
-        app_module.process_event,
+    to_thread.assert_called_once_with(
         app_module.ENV,
         case_no,
         run_id,
@@ -311,7 +310,7 @@ def test_producer_created_from_kv_secret_value():
 def test_error_result_is_still_added_to_batch():
     """ERROR results are sent to the results Event Hub (so downstream can handle them)."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_ERROR_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -334,7 +333,7 @@ def test_multiple_events_all_results_added_to_batch():
     """Three events → three add() calls and one final send_batch."""
     mocks = setup_mocks(batch_len=3)
     events = [make_mock_event(case_no=f"REF{i:016d}") for i in range(3)]
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -353,7 +352,7 @@ def test_batch_overflow_flushes_old_batch_and_creates_new_one():
     mocks["batch"].add.side_effect = ValueError("Batch is full")
     mocks["producer"].create_batch = AsyncMock(side_effect=[mocks["batch"], second_batch])
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -368,7 +367,7 @@ def test_individual_event_error_does_not_stop_other_events():
     mocks = setup_mocks(batch_len=1)
     call_count = 0
 
-    async def side_effect(*_):
+    def side_effect(*_):
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -387,7 +386,7 @@ def test_individual_event_error_does_not_stop_other_events():
 def test_cleanup_always_called_on_success():
     """kv_client.close and credential.close are awaited in the finally block."""
     mocks = setup_mocks(batch_len=1)
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -399,7 +398,7 @@ def test_cleanup_always_called_on_success():
 def test_cleanup_called_even_when_event_processing_raises():
     """Cleanup runs even when an event raises an exception."""
     mocks = setup_mocks(batch_len=0)
-    to_thread = AsyncMock(side_effect=Exception("processing failed"))
+    to_thread = MagicMock(side_effect=Exception("processing failed"))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -412,7 +411,7 @@ def test_error_result_sent_even_when_delete_blob_raises():
     """When delete_blob raises on ERROR, the result is still added to the batch and sent."""
     mocks = setup_mocks(batch_len=1)
     mocks["idempotency_blob"].delete_blob.side_effect = Exception("Storage error")
-    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_ERROR_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active([make_mock_event()]))
@@ -420,3 +419,77 @@ def test_error_result_sent_even_when_delete_blob_raises():
     mocks["idempotency_blob"].delete_blob.assert_awaited_once()
     mocks["batch"].add.assert_called_once()
     mocks["producer"].send_batch.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# _is_retryable unit tests
+# ---------------------------------------------------------------------------
+
+def test_cdam_is_retryable_true_for_retryable_status_codes():
+    for code in [408, 409, 429, 500, 502, 503, 504]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is True, f"Expected retryable for {code}"
+
+
+def test_cdam_is_retryable_false_for_non_retryable_status_codes():
+    for code in [200, 201, 400, 401, 403, 404, 422]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is False, f"Expected non-retryable for {code}"
+
+
+def test_cdam_is_retryable_false_when_status_is_success():
+    assert _is_retryable({"Status": "SUCCESS", "StatusCode": 500}) is False
+
+
+def test_cdam_is_retryable_false_when_status_code_is_none():
+    assert _is_retryable({"Status": "ERROR", "StatusCode": None}) is False
+
+
+def test_cdam_is_retryable_false_for_non_dict_result():
+    assert _is_retryable("error string") is False
+    assert _is_retryable(None) is False
+
+
+# ---------------------------------------------------------------------------
+# Retry integration tests
+# ---------------------------------------------------------------------------
+
+def test_cdam_non_retryable_error_not_retried():
+    """process_event is NOT retried for a non-retryable status code (422)."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={"Status": "ERROR", "StatusCode": 422, "Error": "Unprocessable"})
+
+    extra = [patch(f"{MODULE}.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread) + extra, mocks):
+        run(eventhub_trigger_active([make_mock_event()]))
+
+    assert to_thread.call_count == 1
+
+
+def test_cdam_retryable_error_is_retried_3_times():
+    """process_event is retried up to 3 times for a retryable status code (500)."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={"Status": "ERROR", "StatusCode": 500, "Error": "Server Error"})
+
+    extra = [patch(f"{MODULE}.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread) + extra, mocks):
+        run(eventhub_trigger_active([make_mock_event()]))
+
+    assert to_thread.call_count == 3
+
+
+def test_cdam_retryable_error_stops_retrying_on_success():
+    """After a retryable error, success on the second attempt stops further retries."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(side_effect=[
+        {"Status": "ERROR", "StatusCode": 502, "Error": "Bad Gateway"},
+        dict(PROCESS_SUCCESS_RESULT),
+    ])
+
+    extra = [patch(f"{MODULE}.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread) + extra, mocks):
+        run(eventhub_trigger_active([make_mock_event()]))
+
+    assert to_thread.call_count == 2
+    mocks["idempotency_blob"].delete_blob.assert_not_called()

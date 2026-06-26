@@ -2,14 +2,6 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
-
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    with patch(SLEEP_PATH):
-        yield
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -80,6 +72,7 @@ class TestProcessCaseSuccess:
 
         assert result["Status"] == "SUCCESS"
         assert result["CCDCaseID"] == SUBMIT_CASE_ID
+        assert result["StatusCode"] == 201
         assert json.loads(result["SuccessResponse"]) == {"id": SUBMIT_CASE_ID, "case_data": SUBMIT_CASE_DATA}
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
 
@@ -107,7 +100,7 @@ class TestProcessCaseSuccess:
                 PR_REFERENCE="pr-123",
             )
 
-        for key in ("RunID", "CaseNo", "State", "Status", "Error", "EndDateTime", "CCDCaseID", "SuccessResponse", "StartResponse"):
+        for key in ("RunID", "CaseNo", "State", "Status", "StatusCode", "Error", "EndDateTime", "CCDCaseID", "SuccessResponse", "StartResponse"):
             assert key in result, f"Missing key: {key}"
         assert result["Error"] is None
 
@@ -141,6 +134,7 @@ class TestProcessCaseValidationFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 422
         assert "Case validation failed" in result["Error"]
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
         mock_submit.assert_not_called()
@@ -169,6 +163,7 @@ class TestProcessCaseValidationFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "Case validation failed" in result["Error"]
 
 
@@ -201,6 +196,7 @@ class TestProcessCaseSubmitFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 500
         assert "Case submission failed" in result["Error"]
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
         assert "SuccessResponse" not in result
@@ -236,6 +232,7 @@ class TestProcessCaseStartFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 503
         assert "Case creation failed" in result["Error"]
         assert "StartResponse" not in result
         mock_validate.assert_not_called()
@@ -266,6 +263,7 @@ class TestProcessCaseStartFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "No response from API" in result["Error"]
         mock_validate.assert_not_called()
         mock_submit.assert_not_called()
@@ -295,6 +293,7 @@ class TestProcessCaseTokenFailures:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "IDAM" in result["Error"]
 
     def test_s2s_token_failure_returns_error(self):
@@ -319,6 +318,7 @@ class TestProcessCaseTokenFailures:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "s2s" in result["Error"]
 
 
@@ -376,4 +376,5 @@ class TestProcessCaseSubmitNone:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "No response from API" in result["Error"]

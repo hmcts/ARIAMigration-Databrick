@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cdamFunctions does not hit Key Vault.
@@ -25,7 +25,6 @@ def mock_response(status_code, json_data=None, text=""):
 
 
 MODULE = "AzureFunctions.ACTIVE.active_cdam.cdamFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_cdam.retry_decorator.time.sleep"
 
 UPLOAD_COMMON = dict(
     cdam_base_url="http://ccd-case-document-am-api-aat.service.core-compute-aat.internal",
@@ -142,12 +141,6 @@ def test_upload_document_returns_non_201_response(mock_post):
 # ---------------------------------------------------------------------------
 # process_event fixtures
 # ---------------------------------------------------------------------------
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
-        yield
 
 
 @pytest.fixture

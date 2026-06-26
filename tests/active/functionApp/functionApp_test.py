@@ -1,16 +1,7 @@
 import asyncio
 import json
 import os
-import pytest
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
-
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
-
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    with patch(SLEEP_PATH):
-        yield
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
 # Key Vault in __init__. Patch the Azure SDK before importing to prevent real
@@ -27,7 +18,7 @@ _mock_app.event_hub_message_trigger.return_value = lambda f: f
 
 with patch.dict(os.environ, {"ENVIRONMENT": "sbox", "LZ_KEY": "test0", "PR_NUMBER": "9999"}), \
         patch("azure.functions.FunctionApp", MagicMock(return_value=_mock_app)):
-    from AzureFunctions.ACTIVE.active_ccd.function_app import eventhub_trigger_active
+    from AzureFunctions.ACTIVE.active_ccd.function_app import eventhub_trigger_active, _is_retryable
 
 # FUNCTIONS  - this is to be removed once we import the functions at the top of the script (This was only done because we could not merge)
 
@@ -619,3 +610,178 @@ def test_error_result_sent_even_when_delete_blob_raises(
     mocks["idempotency_blob"].delete_blob.assert_awaited_once()
     mocks["batch"].add.assert_called_once()
     mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+
+
+# ---------------------------------------------------------------------------
+# _is_retryable unit tests
+# ---------------------------------------------------------------------------
+
+def test_is_retryable_true_for_all_retryable_status_codes():
+    for code in [408, 409, 429, 500, 502, 503, 504]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is True, f"Expected retryable for {code}"
+
+
+def test_is_retryable_false_for_non_retryable_status_codes():
+    for code in [200, 201, 400, 401, 403, 404, 422]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is False, f"Expected non-retryable for {code}"
+
+
+def test_is_retryable_false_when_status_is_success():
+    assert _is_retryable({"Status": "SUCCESS", "StatusCode": 500}) is False
+
+
+def test_is_retryable_false_when_status_code_is_none():
+    assert _is_retryable({"Status": "ERROR", "StatusCode": None}) is False
+
+
+def test_is_retryable_false_for_non_dict_result():
+    assert _is_retryable("error string") is False
+    assert _is_retryable(None) is False
+
+
+# ---------------------------------------------------------------------------
+# StatusCode stripping before event hub publish
+# ---------------------------------------------------------------------------
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_status_code_stripped_from_event_hub_payload(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """StatusCode is an internal routing field and must not appear in the published event."""
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "SUCCESS",
+        "StatusCode": 201,
+        "CaseNo": "CASE_SC",
+        "CCDCaseID": "777",
+        "Error": None,
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_SC", "run_sc", "paymentPending", {"key": "val"})]))
+
+    mocks["batch"].add.assert_called_once()
+    published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert "StatusCode" not in published_payload
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_non_retryable_error_not_retried(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer, mock_wait_exp):
+    """process_case is NOT retried when StatusCode is non-retryable (e.g. 422)."""
+    from tenacity import wait_none
+    mock_wait_exp.return_value = wait_none()
+
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "ERROR", "StatusCode": 422, "CaseNo": "CASE_NO_RETRY", "Error": "Unprocessable"
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_NO_RETRY", "run_nr", "paymentPending", {"key": "val"})]))
+
+    assert mock_process_case.call_count == 1
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_retryable_error_is_retried_3_times(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer, mock_wait_exp):
+    """process_case is retried up to stop_after_attempt(3) when StatusCode is retryable."""
+    from tenacity import wait_none
+    mock_wait_exp.return_value = wait_none()
+
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "ERROR", "StatusCode": 500, "CaseNo": "CASE_R3", "Error": "Server Error"
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_R3", "run_r3", "paymentPending", {"key": "val"})]))
+
+    assert mock_process_case.call_count == 3
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_retryable_error_result_published_and_blob_deleted_after_all_retries_exhausted(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer, mock_wait_exp):
+    """After all 3 retries with a retryable code, the error result is published and blob deleted."""
+    from tenacity import wait_none
+    mock_wait_exp.return_value = wait_none()
+
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "ERROR", "StatusCode": 503, "CaseNo": "CASE_EX", "Error": "Service Unavailable"
+    }
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_EX", "run_ex", "paymentPending", {"key": "val"})]))
+
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
+    mocks["batch"].add.assert_called_once()
+    published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert "StatusCode" not in published_payload
+    assert published_payload["Status"] == "ERROR"
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_retryable_error_stops_retrying_on_success(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer, mock_wait_exp):
+    """When a retryable error is followed by a success, process_case is called exactly twice."""
+    from tenacity import wait_none
+    mock_wait_exp.return_value = wait_none()
+
+    mocks = _build_trigger_mocks()
+    mock_process_case.side_effect = [
+        {"Status": "ERROR", "StatusCode": 502, "CaseNo": "CASE_OK2", "Error": "Bad Gateway"},
+        {"Status": "SUCCESS", "StatusCode": 201, "CaseNo": "CASE_OK2", "CCDCaseID": "999", "Error": None},
+    ]
+    mock_credential.return_value = AsyncMock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_OK2", "run_ok2", "paymentPending", {"key": "val"})]))
+
+    assert mock_process_case.call_count == 2
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+    mocks["batch"].add.assert_called_once()

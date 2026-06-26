@@ -1,6 +1,6 @@
 import json
 import pytest
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import AsyncMock, patch, MagicMock, ANY
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cl_ccdFunctions does not hit Key Vault.
@@ -276,14 +276,7 @@ PROCESS_DEFAULTS = dict(
 )
 
 MODULE = "AzureFunctions.ACTIVE.active_caselink_ccd.cl_ccdFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.time.sleep"
 
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
-        yield
 
 
 @pytest.fixture

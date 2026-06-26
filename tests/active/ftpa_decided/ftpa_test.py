@@ -109,7 +109,7 @@ def ftpa_outputs(spark):
     ]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
-    df_m2 =  spark.createDataFrame(m2_data, m2_schema)
+    silver_m2 =  spark.createDataFrame(m2_data, m2_schema)
     silver_m3 = spark.createDataFrame(m3_data, m3_schema)
     silver_c = spark.createDataFrame(c_data, c_schema)
 

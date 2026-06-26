@@ -44,6 +44,20 @@ def ftpa_outputs(spark):
         ("CASE011", "AIP", "FT", None, 0, 0, True, 61,0, "B12 0hf", "B12 0hf",1,"Man")
         ]
 
+    m2_schema = T.StructType([
+    T.StructField("CaseNo", T.StringType(), True),
+    T.StructField("Appellant_Name", T.StringType(), True),
+    T.StructField("Appellant_Postcode", T.StringType(), True),
+    T.StructField("Relationship", T.StringType(), True)])
+    
+    m2_data = [
+        ("CASE001", "Gold", "B12 0hf","Relationship1"),  
+        ("CASE002", "Smith", "M8 1XY","Relationship2"),  
+        ("CASE003", "Johns", "DE4 9HN","Relationship3"),  
+        ("CASE004", "Black", "BN6 0PA","Relationship4"),  
+        ("CASE005", "Green", "DD7 7PT",None), 
+        ]
+
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
         T.StructField("StatusId", T.IntegerType(), True),
@@ -80,10 +94,11 @@ def ftpa_outputs(spark):
     ]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
+    df_m2 =  spark.createDataFrame(m2_data, m2_schema)
     silver_m3 = spark.createDataFrame(m3_data, m3_schema)
     silver_c = spark.createDataFrame(c_data, c_schema)
 
-    ftpa_content, _ = ftpa(silver_m1,silver_m3, silver_c)
+    ftpa_content, _ = ftpa(silver_m1, silver_m2, silver_m3, silver_c)
 
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     return results

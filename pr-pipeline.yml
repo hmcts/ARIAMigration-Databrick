@@ -17,6 +17,16 @@ stages:
         steps:
           - template: ci_cd_templates/unit_tests/functionapp.yml
 
+      - job: CdamFunctionAppTests
+        displayName: 'Run CDAM Function App Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/cdamFunctionApp.yml
+
+      - job: CaseLinkFunctionAppTests
+        displayName: 'Run Case Link Function App Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/caseLinkFunctionApp.yml
+
       - job: PaymentPendingTests
         displayName: 'Run Payment Pending Tests'
         steps:
@@ -28,14 +38,24 @@ stages:
           - template: ci_cd_templates/unit_tests/active/appealSubmitted.yml
 
       - job: AwaitingRespondentEvidenceATests
-        displayName: 'Run AwaitingRespondentEvidenceATests Tests'
+        displayName: 'Run AwaitingRespondentEvidenceA Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/awaitingRespondentEvidenceA.yml
 
       - job: AwaitingRespondentEvidenceBTests
-        displayName: 'Run AwaitingRespondentEvidenceBTests Tests'
+        displayName: 'Run AwaitingRespondentEvidenceB Tests'
         steps:
           - template: ci_cd_templates/unit_tests/active/awaitingRespondentEvidenceB.yml
+
+      - job: CaseUnderReviewTests
+        displayName: 'Run CaseUnderReview Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/caseUnderReview.yml
+
+      - job: ReasonForAppealSubmittedTests
+        displayName: 'Run ReasonForAppealSubmitted Tests'
+        steps:
+          - template: ci_cd_templates/unit_tests/active/reasonForAppealSubmitted.yml
 
       - job: ListingTests
         displayName: 'Run Listing Tests'

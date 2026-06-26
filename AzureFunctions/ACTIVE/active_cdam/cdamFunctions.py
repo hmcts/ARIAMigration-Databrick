@@ -3,10 +3,6 @@ import requests
 from azure.storage.blob import BlobServiceClient
 from datetime import datetime, timezone
 from urllib.parse import urlparse
-try:
-    from .retry_decorator import retry_on_result
-except ImportError:
-    from retry_decorator import retry_on_result
 
 
 def _compact(value) -> str:
@@ -75,12 +71,6 @@ def upload_document(cdam_base_url, jid, ctid, cid, file_name, doc_binary, conten
         return None
 
 
-@retry_on_result(
-    max_retries=2,
-    base_delay=30,
-    max_delay=60,
-    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
-)
 def process_event(env, caseNo, runId, file_name, file_url, file_content_type, storage_credential):
     print(f"Starting document upload for {caseNo} for {file_name} using file path {file_url} with content type {file_content_type}")
 
@@ -95,6 +85,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather IDAM token: {e}",
             "CDAMResponse": ""
         }
@@ -109,6 +100,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather s2s token: {e}",
             "CDAMResponse": ""
         }
@@ -149,6 +141,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": None,
             "Error": f"Failed to read given blob: {e}",
             "CDAMResponse": ""
         }
@@ -184,6 +177,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": upload_document_response.status_code if upload_document_response is not None else None,
             "Error": f"Document upload failed: {status_code} - {text}",
             "CDAMResponse": ""
         }
@@ -197,6 +191,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "SUCCESS",
+            "StatusCode": upload_document_response.status_code,
             "Error": None,
             "CDAMResponse": upload_document_response.json()
         }

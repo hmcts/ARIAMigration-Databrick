@@ -1,10 +1,24 @@
 import json
 import requests
 from datetime import datetime, timezone
-try:
-    from .retry_decorator import retry_on_result
-except ImportError:
-    from retry_decorator import retry_on_result
+
+
+def _compact(value) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    text = str(value)
+    return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+
+
+def _get_res_body_as_text(response) -> str:
+    try:
+        return str(response.text)
+    except Exception:
+        try:
+            return (getattr(response, 'content', None) or b'').decode('utf-8', errors='replace')
+        except Exception:
+            return 'Unable to get response body as text'
+
 
 
 def _compact(value) -> str:
@@ -154,12 +168,6 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
         return None
 
 
-@retry_on_result(
-    max_retries=2,
-    base_delay=30,
-    max_delay=60,
-    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
-)
 def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
     print(f"Starting processing case for {ccdReference}")
 
@@ -175,6 +183,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather IDAM token: {e}"
         }
         return result
@@ -189,6 +198,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather s2s token: {e}"
         }
         return result
@@ -249,6 +259,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": start_response.status_code if start_response is not None else None,
             "Error": f"Case link event failed: {status_code} - {text}"
         }
         return result
@@ -286,6 +297,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": validate_case_response.status_code if validate_case_response is not None else None,
             "Error": f"Case link validation failed: {status_code} - {text}",
         }
         return result
@@ -322,6 +334,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": submit_case_response.status_code if submit_case_response is not None else None,
             "Error": f"Case link submission failed: {status_code} - {text}",
         }
 
@@ -335,6 +348,7 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "SUCCESS",
+            "StatusCode": submit_case_response.status_code,
             "Error": None
         }
 

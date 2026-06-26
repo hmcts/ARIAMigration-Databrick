@@ -4,6 +4,8 @@ import logging
 import json
 import os
 
+from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
+
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
@@ -30,6 +32,22 @@ eventhub_name = f"evh-active-cdam-pub-{ENV}-{LZ_KEY}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
 app = func.FunctionApp()
+
+
+def _log_retry(retry_state):
+    result = retry_state.outcome.result() if retry_state.outcome else {}
+    error = result.get("Error", "") if isinstance(result, dict) else ""
+    logger.warning(
+        f"Retrying process_event — attempt {retry_state.attempt_number} failed "
+        f"(sleeping {retry_state.next_action.sleep:.0f}s): {error}"
+    )
+
+
+def _is_retryable(result):
+    RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+    if not (isinstance(result, dict) and result.get("Status") == "ERROR"):
+        return False
+    return result.get("StatusCode") in RETRYABLE_STATUS_CODES
 
 
 @app.function_name("eventhub_trigger")
@@ -103,7 +121,16 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.warning(f"[IDEMPOTENCY][CDAM] Skipping in progress case {caseNo}.")
                         continue
 
-                    result = await asyncio.to_thread(process_event, ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
+                    async def _process():
+                        return await asyncio.to_thread(process_event, ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
+
+                    result = await AsyncRetrying(
+                        retry=retry_if_result(_is_retryable),
+                        stop=stop_after_attempt(3),
+                        wait=wait_exponential(min=30, max=60),
+                        before_sleep=_log_retry,
+                        retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+                    )(_process)
 
                     # Mark processed if success
                     if result.get("Status") == "SUCCESS":
@@ -115,6 +142,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         except Exception as delete_error:
                             logger.warning(f"[IDEMPOTENCY][CDAM] Failed to delete blob for {caseNo}: {delete_error}")
 
+                    result.pop("StatusCode", None)
                     result_json = json.dumps(result)
 
                     try:

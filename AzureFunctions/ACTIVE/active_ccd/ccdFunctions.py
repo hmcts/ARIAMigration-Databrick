@@ -2,10 +2,6 @@ import json
 import logging
 import requests
 from datetime import datetime, timezone
-try:
-    from .retry_decorator import retry_on_result
-except ImportError:
-    from retry_decorator import retry_on_result
 
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
@@ -126,7 +122,7 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
         except json.JSONDecodeError as e:
             print(f"❌ Error decoding payloadData JSON string: {e}")
 
-    print("🎁 payload recieved for submission:", type(payloadData))
+    print("🎁 payload type recieved for submission:", type(payloadData))
 
     try:
         json_object = {
@@ -149,13 +145,6 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
         return None
 
 
-# caseNo = event.key, payloadData = event.value
-@retry_on_result(
-    max_retries=2,
-    base_delay=30,
-    max_delay=60,
-    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
-)
 def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     print(f"Starting processing case for {caseNo}")
 
@@ -168,6 +157,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather IDAM token: {e}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
         }
@@ -181,6 +171,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
             "Error": f"failed to gather s2s token: {e}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
         }
@@ -224,6 +215,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
+            "StatusCode": start_response.status_code if start_response is not None else None,
             "Error": f"Case creation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
@@ -260,7 +252,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "RunID": runId,
             "CaseNo": caseNo,
             "State": state,
-            "Status": "ERROR",  # change this to the validate response code
+            "Status": "ERROR",
+            "StatusCode": validate_case_response.status_code if validate_case_response is not None else None,
             "Error": f"Case validation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "StartResponse": start_response_data
@@ -297,6 +290,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
+            "StatusCode": submit_case_response.status_code if submit_case_response is not None else None,
             "Error": f"Case submission failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "StartResponse": start_response_data
@@ -310,6 +304,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "SUCCESS",
+            "StatusCode": submit_case_response.status_code,
             "Error": None,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "CCDCaseID": submit_case_response.json()["id"],

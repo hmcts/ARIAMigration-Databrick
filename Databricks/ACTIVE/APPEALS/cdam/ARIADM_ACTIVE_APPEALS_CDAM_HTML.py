@@ -4486,8 +4486,8 @@ data = [
 
 columns = ["id", "description", "HTMLName", "path"]
 lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
-casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
-lookup_list = lookup_df.collect()
+# casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
+# lookup_list = lookup_df.collect()
 # display(lookup_df)
 
 

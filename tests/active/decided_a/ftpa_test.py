@@ -49,18 +49,33 @@ def ftpa_outputs(spark):
         ]
     
     m2_schema = T.StructType([
-    T.StructField("CaseNo", T.StringType(), True),
-    T.StructField("Appellant_Name", T.StringType(), True),
-    T.StructField("Appellant_Postcode", T.StringType(), True),
-    T.StructField("Relationship", T.StringType(), True)])
-    
+        T.StructField("CaseNo", T.StringType(), True),
+        T.StructField("Detained", T.IntegerType(), True),
+        T.StructField("AppellantCountryId", T.IntegerType(), True),
+        T.StructField("Appellant_Postcode", T.StringType(), True),
+        T.StructField("Appellant_Address1", T.StringType(), True),
+        T.StructField("Appellant_Address2", T.StringType(), True),
+        T.StructField("Appellant_Address3", T.StringType(), True),
+        T.StructField("Appellant_Address4", T.StringType(), True),
+        T.StructField("Appellant_Address5", T.StringType(), True),
+    ])
+
     m2_data = [
-        ("CASE001", "Gold", "B12 0hf","Relationship1"),  
-        ("CASE002", "Smith", "M8 1XY","Relationship2"),  
-        ("CASE003", "Johns", "DE4 9HN","Relationship3"),  
-        ("CASE004", "Black", "BN6 0PA","Relationship4"),  
-        ("CASE005", "Green", "DD7 7PT",None), 
-        ]
+        # stage_detained: Detained==3 → OOC (short-circuits everything)
+        ("CASE005", 3,    None, None,      None,           None, None, None, None),
+        # stage_category: CategoryId==37 → IN
+        ("CASE006", None, None, None,      None,           None, None, None, None),
+        # stage_category: CategoryId==38 → OUT
+        ("CASE007", None, None, None,      None,           None, None, None, None),
+        # stage_country: AppellantCountryId==188 → IN
+        ("CASE008", None, 188,  None,      None,           None, None, None, None),
+        # stage_postcode: valid UK postcode → IN
+        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None),
+        # stage_address: address contains "united kingdom" → IN
+        ("CASE010", None, None, None,      "123 Some Road","Birmingham","United Kingdom", None, None),
+        # falls through all stages → OOC
+        ("CASE011", None, None, None,      "123 Rue de la Paix", "Paris", "France", None, None),
+    ]
 
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -109,7 +124,7 @@ def ftpa_outputs(spark):
     df_c =  spark.createDataFrame(c_data, c_schema)
 
 
-    ftpa_content,_ = ftpa(df_m1,df_m3, df_c)
+    ftpa_content,_ = ftpa(df_m1, df_m2, df_m3, df_c)
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     
     return results
@@ -118,8 +133,8 @@ def test_ftpaApplicationDeadline(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaApplicationDeadline"] == "2025-11-16"
-    assert results["CASE006"]["ftpaApplicationDeadline"] == "2026-12-31"
+    assert results["CASE005"]["ftpaApplicationDeadline"] == "2025-11-30" #detained = 3, +28 days
+    assert results["CASE006"]["ftpaApplicationDeadline"] == None
     assert results["CASE007"]["ftpaApplicationDeadline"] == None
     assert results["CASE010"]["ftpaApplicationDeadline"] == None
 

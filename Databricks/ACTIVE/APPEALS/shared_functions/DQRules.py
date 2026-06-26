@@ -7,12 +7,13 @@ from shared_functions.dq_rules import (
 )
 from pyspark.sql import Window
 from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp,
-                                   array_min, transform, array, abs, concat_ws, concat, array_contains)
-from pyspark.sql.types import ArrayType, LongType
+                                   array_min, transform, array, abs, concat_ws, concat, array_contains, lower, udf)
+from pyspark.sql.types import ArrayType, LongType, StringType
 
 # import shared_functions.ended as E
 from . import ended as E
 from .paymentPending import derive_country_silver_m2
+from uk_postcodes_parsing import fix, postcode_utils
 
 logger = logging.getLogger(__name__)
 
@@ -331,8 +332,100 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(min("Required").alias("Required"), 
                                                                           concat_ws("\n", collect_list("formatted_judge")).alias("Judges"))
                               )
-
     
+    #decided_a ftpaApplicationDeadline
+
+    def getUkPostcode(postcode):
+        try:
+            if postcode is None or str(postcode).strip() == "":
+                return "False"
+            if postcode_utils.is_valid(postcode):
+                return "True"
+            clean_postcode = fix(postcode)
+            if postcode_utils.is_valid(clean_postcode):
+                return "True"
+        except Exception as e:
+            print(f"Error processing {postcode}: {e}")
+            pass
+        return "False"
+
+    getUkPostcodeUDF = udf(getUkPostcode, StringType())
+
+    ftpaInOrOut_lookup = (
+        silver_m2
+        .join(silver_c, on="CaseNo", how="left")
+        .withColumn(
+            "stage_detained",
+            when(col("Detained") == 3, lit("OOC"))
+            .otherwise(lit(None))
+        )
+        .withColumn(
+            "stage_category",
+            when(
+                col("stage_detained").isNull(),
+                when(col("CategoryId") == 37, lit("IN"))
+                .when(col("CategoryId") == 38, lit("OUT"))
+            )
+        )
+        .withColumn(
+            "stage_country",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull(),
+                when(col("AppellantCountryId") == 188, lit("IN"))
+            )
+        )
+        .withColumn(
+            "stage_postcode",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull(),
+                when(getUkPostcodeUDF(col("Appellant_Postcode")) == "True", lit("IN"))
+            )
+        )
+        .withColumn("appellantFullAddress", concat_ws(", ",
+                col("Appellant_Address1"), col("Appellant_Address2"),
+                col("Appellant_Address3"), col("Appellant_Address4"),
+                col("Appellant_Address5"), col("Appellant_Postcode")
+            ))
+        .withColumn(
+            "stage_address",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull() &
+                col("stage_postcode").isNull(),
+                when(
+                    lower(col("appellantFullAddress")).rlike(r"\b(uk|gb|united kingdom)\b") == True,
+                    lit("IN")
+                )
+            )
+        )
+        .withColumn(
+            "INorOUT",
+            coalesce(
+                col("stage_detained"),
+                col("stage_category"),
+                col("stage_country"),
+                col("stage_postcode"),
+                col("stage_address"),
+                lit("OOC")
+            )
+        )
+        .withColumn("rn", row_number().over(
+            Window.partitionBy("CaseNo").orderBy(
+                when(col("INorOUT") == "IN", 0).otherwise(1)
+            )
+        ))
+        .filter(col("rn") == 1)
+        .select(col("CaseNo"), col("INorOUT"), col("stage_detained"), col("stage_category"), col("stage_country"), col("stage_postcode"), col("stage_address"))
+    )
+
+    silver_m1_with_in_or_out = (
+        silver_m1.select("CaseNo")
+        .join(ftpaInOrOut_lookup, on="CaseNo", how="left")
+    )
 
 
     # ftpaSubmitted - ftpa - decided(b)
@@ -447,7 +540,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number").select(col("CaseNo"),col("StatusId"),col("CaseStatus"),col("Outcome"))
 
     df_documents, df_documents_audit = E.documents(silver_m1,silver_m3)
-    df_ftpa, df_ftpa_audit = E.ftpa(silver_m1,silver_m3,silver_c)
+    df_ftpa, df_ftpa_audit = E.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
     df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
     df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
@@ -581,6 +674,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(detained_df, on="CaseNo", how="left")
             .join(cs46_out31, on="CaseNo", how="left")
             .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
+            .join(silver_m1_with_in_or_out, on="CaseNo", how="left")
             .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))  # No need to add extra categoryIdList IS NULL rules in the DQ.
             .withColumn("lu_HORef", coalesce(col("lu_HORef"), col("HORef"), col("FCONumber")))  # HORef in conditionals can also come from silver_m1, not just the bronze cleansing. The bronze cleansing will be used as priority.
             .withColumn("dv_appellantIsInUk",

@@ -164,34 +164,35 @@ class decidedADQRules(DQRulesBase):
         return checks
 
     def get_checks_ftpa(self, checks={}):
-        
+
         checks["valid_ftpaApplicationDeadline"] = """
         (
             (
                 CASE
-                    WHEN Outcome_SD IN (1, 2)
-                        AND CaseStatus_SD IN (37, 38, 26)
-                        AND CategoryId = 37
+                    WHEN INorOUT = 'IN'
                     THEN
                         to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate_decided, 14))
 
-                    WHEN Outcome_SD IN (1, 2)
-                        AND CaseStatus_SD IN (37, 38, 26)
-                        AND CategoryId = 38
+                    WHEN INorOUT = 'OOC'
                     THEN
                         to_date(ftpaApplicationDeadline) = to_date(date_add(DecisionDate_decided, 28))
+
+                    WHEN INorOUT = 'OOC' OR INorOUT IS NULL
+                    THEN
+                        ftpaApplicationDeadline IS NULL
                 END
             )
             OR
             (
-                (
-                    (Outcome_SD IS NULL OR Outcome_SD NOT IN (1,2))
-                    OR (CaseStatus_SD IS NULL OR CaseStatus_SD NOT IN (37,38,26))
-                    OR (CategoryId IS NULL OR CategoryId NOT IN (37,38))
-                )
-                AND ftpaApplicationDeadline IS NULL
+                ftpaApplicationDeadline IS NULL AND (stage_detained = "OOC" OR stage_category = "OOC" OR stage_country = "OOC" 
+                OR stage_postcode = "OOC" OR stage_address = "OOC")
+            )
+            OR
+            (
+                ftpaApplicationDeadline IS NULL AND DecisionDate_decided IS NULL
             )
         )
         """
+
         return checks
 

@@ -48,6 +48,34 @@ def ftpa_outputs(spark):
         ("CASE011", "AIP", "FT", None, 0, 0, True, 61,0, "B12 0hf", "B12 0hf",1,"Man")
         ]
 
+    m2_schema = T.StructType([
+        T.StructField("CaseNo", T.StringType(), True),
+        T.StructField("Detained", T.IntegerType(), True),
+        T.StructField("AppellantCountryId", T.IntegerType(), True),
+        T.StructField("Appellant_Postcode", T.StringType(), True),
+        T.StructField("Appellant_Address1", T.StringType(), True),
+        T.StructField("Appellant_Address2", T.StringType(), True),
+        T.StructField("Appellant_Address3", T.StringType(), True),
+        T.StructField("Appellant_Address4", T.StringType(), True),
+        T.StructField("Appellant_Address5", T.StringType(), True),
+    ])
+
+    m2_data = [
+        # stage_detained: Detained==3 → OOC (short-circuits everything)
+        ("CASE005", 3,    None, None,      None,           None, None, None, None),
+        # stage_category: CategoryId==37 → IN
+        ("CASE006", None, None, None,      None,           None, None, None, None),
+        # stage_category: CategoryId==38 → OUT
+        ("CASE007", None, None, None,      None,           None, None, None, None),
+        # stage_country: AppellantCountryId==188 → IN
+        ("CASE008", None, 188,  None,      None,           None, None, None, None),
+        # stage_postcode: valid UK postcode → IN
+        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None),
+        # stage_address: address contains "united kingdom" → IN
+        ("CASE010", None, None, None,      "123 Some Road","Birmingham","United Kingdom", None, None),
+        # falls through all stages → OOC
+        ("CASE011", None, None, None,      "123 Rue de la Paix", "Paris", "France", None, None),
+    ]
 
     m3_schema = T.StructType([
         T.StructField("CaseNo", T.StringType(), True),
@@ -100,11 +128,12 @@ def ftpa_outputs(spark):
         ]
     
     df_m1 =  spark.createDataFrame(m1_data, m1_schema)
+    df_m2 =  spark.createDataFrame(m2_data, m2_schema)
     df_m3 =  spark.createDataFrame(m3_data, m3_schema)
     df_c =  spark.createDataFrame(c_data, c_schema)
 
 
-    ftpa_content,_ = ftpa(df_m1,df_m3, df_c)
+    ftpa_content,_ = ftpa(df_m1, df_m2, df_m3, df_c)
     results = {row["CaseNo"]: row.asDict() for row in ftpa_content.collect()}
     
     return results

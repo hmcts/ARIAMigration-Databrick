@@ -1444,9 +1444,9 @@ def hearingActuals(silver_m1,silver_m3):
 ################################################################
 
 
-def ftpa(silver_m1, silver_m3, silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
 
-    ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m2, silver_m3, silver_c)
 
     
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.

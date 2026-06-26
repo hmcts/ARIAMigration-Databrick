@@ -29,7 +29,7 @@ from pyspark.sql.functions import (
 ##########              ftpa (Field Group)          ###########
 ################################################################
 
-def ftpa(silver_m1, silver_m3, silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
     """
     Mapping alignment
       - Decision/outcome fields (ftpaFirstDecision, DecisionDates, FinalDecisionForDisplay, RJ outcome types, ApplicantType)
@@ -47,7 +47,7 @@ def ftpa(silver_m1, silver_m3, silver_c):
     """
 
     # Base ftpa fields (judge allocation etc.)
-    ftpa_df, ftpa_audit = FSB.ftpa(silver_m1, silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSB.ftpa(silver_m1, silver_m2, silver_m3, silver_c)
 
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
     window_spec = (

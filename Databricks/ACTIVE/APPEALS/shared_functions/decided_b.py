@@ -210,9 +210,9 @@ def setAside(silver_m1, silver_m3, silver_m6):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m1, silver_m3,silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m3,silver_c)
+    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
 
     ftpa_df = ftpa_df.drop("ftpaList")
     ftpa_audit = ftpa_audit.drop("ftpaList_value","ftpaList_inputFields","ftpaList_inputValues","ftpaList_Transformation")

@@ -4,7 +4,7 @@ from . import listing as L
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    row_number, nullif, coalesce, concat_ws, concat, trim, map_from_arrays
+    row_number, nullif, coalesce, concat_ws, concat, trim, map_from_arrays, to_date, date_format
 )
 
 
@@ -47,7 +47,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("Hearing Centre",
                                 when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre"))  # ListedCentre
                     ).withColumn("Hearing Date",
-                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate"))  # KeyDate
+                                when(col("HearingDate").isNull(), "N/A").otherwise(date_format(col("HearingDate"), "yyyy-MM-dd"))  # KeyDate
                     ).withColumn("Hearing Type",
                                 when(col("HearingType").isNull(), "N/A").otherwise(col("HearingType"))
                     ).withColumn("Court",
@@ -55,7 +55,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("List Type",
                                 when(col("ListType").isNull(), "N/A").otherwise(col("ListType"))
                     ).withColumn("List Start Time",
-                                when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
+                                when(col("StartTime").isNull(), "N/A").otherwise(date_format(col("StartTime"), "HH:mm:ss"))
                     ).withColumn("Judge First Tier",
                             when(coalesce(col("Judge1FT_Surname"), col("Judge2FT_Surname"), col("Judge3FT_Surname")).isNotNull(),
                             trim(concat_ws(" ",
@@ -77,7 +77,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
 
                             ).otherwise(lit(None))
                     ).withColumn("Start Time",
-                                when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
+                                when(col("StartTime").isNull(), "N/A").otherwise(date_format(col("StartTime"), "HH:mm:ss"))
                     ).withColumn("Estimated Duration",
                                 when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate").cast("string"))
                     ).withColumn("Required/Incompatible Judicial Officers",

@@ -1466,13 +1466,11 @@ def gold_td_iris_with_html():
     if read_hive:
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(256)
-
     # Upload HTML files to Azure Blob Storage (optional)
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
-    df_with_upload_status = repartitioned_df.withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(256) overrides this and forces an unnecessary shuffle
+    df_with_upload_status = df_combined.withColumn(
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
@@ -1514,11 +1512,9 @@ def gold_td_iris_with_json():
     if read_hive:
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
-    # Use more partitions to reduce per-partition memory pressure
-    repartitioned_df = df_combined.repartition(256)
-
     # Only call upload_udf when JSON_Content is present; otherwise mark status accordingly.
-    df_with_upload_status = repartitioned_df.withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(256) overrides this and forces an unnecessary shuffle
+    df_with_upload_status = df_combined.withColumn(
         "Status",
         when(col("JSON_Content").isNull(), lit("NoContent"))
         .otherwise(upload_udf(col("JSON_File_Name"), col("JSON_Content")))
@@ -1565,14 +1561,11 @@ def gold_td_iris_with_a360():
             .agg(concat_ws("\n", collect_list("A360_Content")).alias("consolidate_A360Content")) \
             .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
-    # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(optimal_partitions)
-
     # Remove existing files
     # dbutils.fs.rm(f"{gold_outputs}/A360", True)
 
-    # Generate A360 content
-    df_with_a360 = repartitioned_df.withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition overrides this and forces an unnecessary shuffle
+    df_with_a360 = df_agg.withColumn(
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 

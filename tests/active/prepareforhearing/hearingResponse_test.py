@@ -55,7 +55,7 @@ def hearingResponse_outputs(spark):
     T.StructField("CourtClerk_Title", T.StringType(), True),
     T.StructField("ListTypeId", T.IntegerType(), True),
     T.StructField("ListType", T.StringType(), True),
-    T.StructField("HearingDate", T.StringType(), True),  # <-- keep this
+    T.StructField("KeyDate", T.StringType()),  # <-- keep this
     T.StructField("HearingType", T.StringType(), True),
     T.StructField("CourtName", T.StringType(), True),
     T.StructField("StartTime", T.StringType(), True),

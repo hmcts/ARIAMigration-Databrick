@@ -242,7 +242,7 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
             when(
                 col("stage_detained").isNull(),
                 when(col("CategoryId") == 37, lit("IN"))
-                .when(col("CategoryId") == 38, lit("OUT"))
+                .when(col("CategoryId") == 38, lit("OOC"))
             )
         )
         .withColumn(

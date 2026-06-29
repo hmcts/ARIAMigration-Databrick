@@ -2308,7 +2308,7 @@ def partyID(silver_m1, silver_m3,silver_c):
         when((col("appellantsRepresentation") == 'No'), expr("uuid()")).otherwise(None) #If appelRep = LR (no) then valid
     ).withColumn(
         "sponsorPartyId",
-        when(conditions_all & col("m1.Sponsor_Name").isNotNull() & (array_contains(col("CategoryIdList"), 38)), expr("uuid()")).otherwise(None) 
+        when(conditions_all & col("m1.Sponsor_Name").isNotNull(), expr("uuid()")).otherwise(None) 
     ).select(
         col("m1.CaseNo"),
         col("appellantPartyId"),

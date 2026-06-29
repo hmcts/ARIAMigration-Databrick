@@ -56,9 +56,12 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
         # Blob Storage credentials
         # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
-        container_name = "dropzone"
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        # account_url = "https://a360c2x2555dz.blob.core.windows.net"
+        # container_name = "dropzone"
+        # container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
+        account_url = "https://ingest01landingstg.blob.core.windows.net"
+        container_name = "test-archive"
+        container_secret = (await kv_client.get_secret("TEST-ARCHIVE-SAS")).value
         # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
         source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
         logging.info('Assigned container secret value')
@@ -174,7 +177,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # -----------------------------------------------
         try:
             idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
-            idempotency_container_name = "af-idempotency"
+            idempotency_container_name = "test-af-idempotency"
             idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
             idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
             idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"

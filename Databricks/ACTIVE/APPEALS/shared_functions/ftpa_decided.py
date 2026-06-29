@@ -126,14 +126,14 @@ def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
                                             .when(col("ftpaFinalDescOutcome.Outcome") == 14, lit("notAdmitted"))
                                             .otherwise(lit(None)))
 
-            .withColumn("ftpaAppellantRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
-                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
-                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+            .withColumn("ftpaAppellantRjDecisionOutcomeType", when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 30), lit("granted"))
+                                                                .when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 31), lit("refused"))
+                                                                .when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 14), lit("notAdmitted"))
                                                                 .otherwise(lit(None)))
             
-            .withColumn("ftpaRespondentRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
-                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
-                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+            .withColumn("ftpaRespondentRjDecisionOutcomeType", when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 30), lit("granted"))
+                                                                .when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 31), lit("refused"))
+                                                                .when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 14), lit("notAdmitted"))
                                                                 .otherwise(lit(None)))
             
             .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 1, lit("No")).otherwise(lit(None)))

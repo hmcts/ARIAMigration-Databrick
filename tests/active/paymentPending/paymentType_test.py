@@ -88,7 +88,7 @@ def test_paymentStatus(spark, paymentType_outputs):
 def test_feeVersion(spark, paymentType_outputs):
     results = paymentType_outputs
     for case in ["CASE001", "CASE002", "CASE003"]:
-        assert results[case]["feeVersion"] == "2"
+        assert results[case]["feeVersion"] == "3"
     assert results["CASE004"]["feeVersion"] is None
 
 

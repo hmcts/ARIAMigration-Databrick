@@ -107,6 +107,7 @@ def ftpa_outputs(spark):
         ("PA/01921/2025", 37),
         ("PA/03789/2024", 37),
         ("PA/03885/2024", 37),
+        ("PA/03886/2024", 37),
     ]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)

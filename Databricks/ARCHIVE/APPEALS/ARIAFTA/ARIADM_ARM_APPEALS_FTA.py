@@ -5349,8 +5349,6 @@ data = [
 
 columns = ["id", "description", "HTMLName", "path"]
 lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
-casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
-lookup_list = lookup_df.collect()
 # display(lookup_df)
 
 
@@ -6061,10 +6059,8 @@ def gold_appeals_with_json():
     # if read_hive:
     #     df_unified = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_unified.repartition(200)
-
-    df_with_upload_status = repartitioned_df.filter(~col("JSON_content").like("Error%")).withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(200) overrides this and forces an unnecessary shuffle
+    df_with_upload_status = df_unified.filter(~col("JSON_content").like("Error%")).withColumn(
             "Status", upload_udf(col("JSON_File_Name"), col("JSON_content"))
         )
 
@@ -6093,11 +6089,8 @@ def gold_appeals_with_html():
     # if read_hive:
     #     df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_appeals_unified")
 
-    # Repartition to optimize parallelism
-    repartitioned_df = df_combined.repartition(200)
-
-    # Trigger upload logic for each row
-    df_with_upload_status = repartitioned_df.filter(~col("HTML_Content").like("Error%")).withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(200) overrides this and forces an unnecessary shuffle
+    df_with_upload_status = df_combined.filter(~col("HTML_Content").like("Error%")).withColumn(
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
@@ -6134,14 +6127,11 @@ def gold_appeals_with_a360():
     .withColumn("consolidate_A360Content", concat_ws("\n", col("unique_lines"))) \
     .select(col("File_Name"), col("consolidate_A360Content"), col("A360_BatchId"))
 
-    # Repartition the DataFrame to optimize parallelism
-    repartitioned_df = df_agg.repartition(200)
-
     # Remove existing files
     dbutils.fs.rm(f"{gold_outputs}/A360", True)
 
-    # Generate A360 content
-    df_with_a360 = repartitioned_df.withColumn(
+    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(200) overrides this and forces an unnecessary shuffle
+    df_with_a360 = df_agg.withColumn(
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
    

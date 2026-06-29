@@ -47,7 +47,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("Hearing Centre",
                                 when(col("HearingCentre").isNull(), "N/A").otherwise(col("HearingCentre"))  # ListedCentre
                     ).withColumn("Hearing Date",
-                                when(col("HearingDate").isNull(), "N/A").otherwise(col("HearingDate"))  # KeyDate
+                                when(col("HearingDate").isNull(), "N/A").otherwise(date_format(col("HearingDate"), "yyyy-MM-dd"))  # KeyDate
                     ).withColumn("Hearing Type",
                                 when(col("HearingType").isNull(), "N/A").otherwise(col("HearingType"))
                     ).withColumn("Court",
@@ -88,7 +88,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                 concat(
                                     lit("Listed details from ARIA: "),
                                     lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                    lit("\nHearing Date: "), coalesce(to_date(col("Hearing Date")), lit("N/A")),
+                                    lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
                                     lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
                                     lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
                                     lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),

@@ -94,6 +94,7 @@ def ftpa_outputs(spark):
         ("PA/01921/2025", 1, 39, 45, "LOC002", "2025-09-01T00:00:00.000+00:00", None, "Ms", "Jane", "Doe", 1, 0, None),
         ("PA/03789/2024", 1, 39, 30, "LOC003", "2025-10-02T00:00:00.000+00:00", None, "Mr", "Guy", "Random", 1, 0, None),
         ("PA/03885/2024", 1, 39, None, "LOC004", "2025-11-02T00:00:00.000+00:00", None, "Sir", "Alex", "Smith", 1, 0, None),
+        ("PA/03886/2024", 1, 39, None, "LOC004", "2025-11-02T00:00:00.000+00:00", "2025-11-10T00:00:00.000+00:00", "Sir", "Alex", "Smith", 1, 0, 30),
     ]
 
     c_schema = T.StructType([
@@ -106,6 +107,7 @@ def ftpa_outputs(spark):
         ("PA/01921/2025", 37),
         ("PA/03789/2024", 37),
         ("PA/03885/2024", 37),
+        ("PA/03886/2024", 37),
     ]
 
     silver_m1 =  spark.createDataFrame(m1_data, m1_schema)
@@ -149,9 +151,11 @@ def test_decision_dates_by_party_iso8601(ftpa_outputs):
 def test_rj_outcome_types(ftpa_outputs):
     r = ftpa_outputs
     assert r["HU/01897/2024"]["ftpaRespondentRjDecisionOutcomeType"] == "refused"
-    assert r["HU/01897/2024"]["ftpaAppellantRjDecisionOutcomeType"] == "refused"
+    assert r["HU/01897/2024"]["ftpaAppellantRjDecisionOutcomeType"] is None
     assert r["PA/01921/2025"]["ftpaAppellantRjDecisionOutcomeType"] is None
     assert r["PA/03789/2024"]["ftpaAppellantRjDecisionOutcomeType"] is None
+    assert r["PA/03886/2024"]["ftpaAppellantRjDecisionOutcomeType"] == "granted"
+
 
 def test_notice_of_decision_set_aside_flags(ftpa_outputs):
     r = ftpa_outputs

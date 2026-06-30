@@ -239,32 +239,34 @@ class ftpaSubmittedADQRules(DQRulesBase):
     def get_checks_ftpa(self, checks={}):
 
         checks["valid_ftpaList"] = """
-            (CASE
-        WHEN dq_cs39_status = 39 AND Party = 1 THEN
-            ftpaList IS NOT NULL
-        AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'appellant'
-        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantApplicationDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaAppellantOutOfTimeExplanation
+            (
+                (CASE
+            WHEN dq_cs39_status = 39 AND Party = 1 THEN
+                ftpaList IS NOT NULL
+            AND size(ftpaList) = 1
+            AND element_at(ftpaList, 1).id = '1'
+            AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'appellant'
+            AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantApplicationDate
+            AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
+            AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
+            AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
+            AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaAppellantOutOfTimeExplanation
 
-        WHEN dq_cs39_status = 39 AND Party = 2 THEN
-            ftpaList IS NOT NULL
-        AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'respondent'
-        AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentApplicationDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaRespondentOutOfTimeExplanation
-        END
-        )
-        OR
-        ftpaList IS NULL
+            WHEN dq_cs39_status = 39 AND Party = 2 THEN
+                ftpaList IS NOT NULL
+            AND size(ftpaList) = 1
+            AND element_at(ftpaList, 1).id = '1'
+            AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'respondent'
+            AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentApplicationDate
+            AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
+            AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
+            AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
+            AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaRespondentOutOfTimeExplanation
+            END
+            )
+            OR
+            ftpaList IS NULL
+            )
         """
 
         ####### Appellant #######

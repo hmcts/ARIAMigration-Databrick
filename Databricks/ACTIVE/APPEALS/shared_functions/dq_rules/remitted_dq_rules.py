@@ -83,9 +83,11 @@ class remittedDQRules(DQRulesBase):
 
         checks["valid_caseFlagSetAsideReheardExists"] = (
             """
-                (caseFlagSetAsideReheardExists = 'Yes') 
-                AND caseFlagSetAsideReheardExists IS NOT NULL
-                AND caseFlagSetAsideReheardExists != ""
+                (
+                    (caseFlagSetAsideReheardExists = 'Yes')
+                    AND caseFlagSetAsideReheardExists IS NOT NULL
+                    AND caseFlagSetAsideReheardExists != ""
+                )
             """)
 
         return checks

@@ -15,22 +15,24 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_isAppealSuitableToFloat"] = (
             """(
-                CaseStatus_dec IN (37,38)
-                AND
                 (
-                    (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
-                    OR
-                    ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+                    CaseStatus_dec IN (37,38)
+                    AND
+                    (
+                        (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
+                        OR
+                        ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+                    )
                 )
-            )
-            OR
-            (
-                CaseStatus_dec NOT IN (37,38)
-                AND isAppealSuitableToFloat IS NULL
-            )
-            OR
-            (
-                CaseStatus_dec IS NULL AND isAppealSuitableToFloat IS NULL
+                OR
+                (
+                    CaseStatus_dec NOT IN (37,38)
+                    AND isAppealSuitableToFloat IS NULL
+                )
+                OR
+                (
+                    CaseStatus_dec IS NULL AND isAppealSuitableToFloat IS NULL
+                )
             )"""
         )
 
@@ -109,21 +111,23 @@ class prepareForHearingDQRules(DQRulesBase):
         checks["valid_isAdditionalInstructionAllowed"] = ("(isAdditionalInstructionAllowed = 'Yes')")
 
         checks["valid_additionalInstructionsTribunalResponse"] = ("""
-            additionalInstructionsTribunalResponse IS NULL OR
             (
-                additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+                additionalInstructionsTribunalResponse IS NULL OR
+                (
+                    additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
+                    additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+                )
             )
         """)
 
@@ -133,41 +137,36 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_listingLength"] = ("""
             (
-                TimeEstimate IS NULL AND
-                element_at(listingLength, 'hours') IS NULL AND
-                element_at(listingLength, 'minutes') IS NULL
-            ) OR (
-                TimeEstimate IS NOT NULL AND
-                element_at(listingLength, 'hours') = floor(TimeEstimate / 60) AND
-                element_at(listingLength, 'minutes') = (TimeEstimate % 60)
+                (
+                    TimeEstimate IS NULL AND
+                    element_at(listingLength, 'hours') IS NULL AND
+                    element_at(listingLength, 'minutes') IS NULL
+                ) OR (
+                    TimeEstimate IS NOT NULL AND
+                    element_at(listingLength, 'hours') = floor(TimeEstimate / 60) AND
+                    element_at(listingLength, 'minutes') = (TimeEstimate % 60)
+                )
             )""")
 
         checks["valid_hearingChannel"] = ("""
         (
-        -- Case: VisitVisaType = 1
-        (
-            VisitVisaType = 1 AND
-            hearingChannel.value.code = 'ONPPRS' AND
-            hearingChannel.value.label = 'On The Papers'
-        )
-        )
-        OR
-        (
-        -- Case: VisitVisaType = 2
-        (
-            VisitVisaType = 2 AND
-            hearingChannel.value.code = 'INTER' AND
-            hearingChannel.value.label = 'In Person'
-        )
-        )
-        OR
-        (
-        -- Case: Other / NULL VisitVisaType → both code and label must be NULL
-        (
-            (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
-            hearingChannel.value.code IS NULL AND
-            hearingChannel.value.label IS NULL
-        )
+            (
+                VisitVisaType = 1 AND
+                hearingChannel.value.code = 'ONPPRS' AND
+                hearingChannel.value.label = 'On The Papers'
+            )
+            OR
+            (
+                VisitVisaType = 2 AND
+                hearingChannel.value.code = 'INTER' AND
+                hearingChannel.value.label = 'In Person'
+            )
+            OR
+            (
+                (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
+                hearingChannel.value.code IS NULL AND
+                hearingChannel.value.label IS NULL
+            )
         )
         """)
 

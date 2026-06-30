@@ -1469,8 +1469,8 @@ def gold_td_iris_with_html():
     # Upload HTML files to Azure Blob Storage (optional)
     # df_combined.select("CaseNo","Forenames","Name", "HTMLContent","HTMLFileName").repartition(64).foreachPartition(upload_html_partition)
 
-    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(256) overrides this and forces an unnecessary shuffle
-    df_with_upload_status = df_combined.withColumn(
+    repartitioned_df = df_combined.repartition(256)
+    df_with_upload_status = repartitioned_df.withColumn(
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
@@ -1513,8 +1513,8 @@ def gold_td_iris_with_json():
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
 
     # Only call upload_udf when JSON_Content is present; otherwise mark status accordingly.
-    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition(256) overrides this and forces an unnecessary shuffle
-    df_with_upload_status = df_combined.withColumn(
+    repartitioned_df = df_combined.repartition(256)
+    df_with_upload_status = repartitioned_df.withColumn(
         "Status",
         when(col("JSON_Content").isNull(), lit("NoContent"))
         .otherwise(upload_udf(col("JSON_File_Name"), col("JSON_Content")))
@@ -1564,8 +1564,8 @@ def gold_td_iris_with_a360():
     # Remove existing files
     # dbutils.fs.rm(f"{gold_outputs}/A360", True)
 
-    # AQE (enabled by default on Databricks) dynamically coalesces partitions — explicit repartition overrides this and forces an unnecessary shuffle
-    df_with_a360 = df_agg.withColumn(
+    repartitioned_df = df_agg.repartition(optimal_partitions)
+    df_with_a360 = repartitioned_df.withColumn(
         "Status", upload_udf(col("File_Name"), col("consolidate_A360Content"))
     )
 

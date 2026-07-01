@@ -1,6 +1,6 @@
 resources:
   clusters:
-    my-pool-${bundle.target}_pool:
+    aria-pool:
       instance_pool_name: my-pool-${bundle.target}
       node_type_id: Standard_D8ds_v5
       min_idle_instances: 0

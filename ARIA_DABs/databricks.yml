@@ -4,7 +4,7 @@ bundle:
 include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
-  - "resources/clisters/*.yml"
+  - "resources/clusters/*.yml"
 
 variables:
   instance_pool_id:

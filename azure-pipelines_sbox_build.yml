@@ -284,7 +284,7 @@ stages:
         displayName: 'Deploy HTML and Databricks for ${{ deployment.environment }} LZ${{ lz.landing_zone }}'
         dependsOn:
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_ccd
-          - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_caselink_ccd
+          # - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_caselink_ccd
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_active_cdam
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_bails
           - Deploy_Functions_${{ deployment.environment }}_LZ${{ lz.landing_zone }}_apluta

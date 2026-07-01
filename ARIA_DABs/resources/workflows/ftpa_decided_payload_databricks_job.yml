@@ -2,16 +2,20 @@ resources:
   jobs:
     ftpa_decided_payload_databricks_job:
       name: ftpa_decided_payload_databricks_job
-
       job_clusters:
         - job_cluster_key: ftpa_decided_payload_databricks_job
+          # new_cluster:
+          #   spark_version: 14.3.x-scala2.12
+          #   node_type_id: Standard_D8ads_v5
+          #   num_workers: 8
           new_cluster:
-            spark_version: 14.3.x-scala2.12
-            node_type_id: Standard_D8ads_v5
+            spark_version: ${var.cluster_config.spark_version}
             num_workers: 8
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
 
       tasks:
-        # 1) Build/ensure wheel is available
         - task_key: run-my-wheel
           job_cluster_key: ftpa_decided_payload_databricks_job
           python_wheel_task:
@@ -19,16 +23,12 @@ resources:
             package_name: shared_functions
           libraries:
             - whl: "dbfs:/FileStore/packages/shared_functions-0.6.6-py3-none-any.whl"
-
-        # 2) Trigger DLT pipeline for ftpa_decided
         - task_key: DLT_ftpa_decided
           depends_on:
             - task_key: run-my-wheel
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_pl_ftpa_decided_gold.id}
             full_refresh: true
-
-        # 3) Publish HTML JSON (same publish notebook, just change state)
         - task_key: active_publish_EH_HTML_JSON
           depends_on:
             - task_key: DLT_ftpa_decided
@@ -38,6 +38,5 @@ resources:
             source: WORKSPACE
             base_parameters:
               state: ftpaDecided
-
       queue:
         enabled: true

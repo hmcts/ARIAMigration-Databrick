@@ -1,5 +1,0 @@
-# resources:
-#   clusters:
-#     aria-pool:
-#       instance_pool_id: aria-pool-${bundle.target}
-#       node_type_id: Standard_D8ds_v5

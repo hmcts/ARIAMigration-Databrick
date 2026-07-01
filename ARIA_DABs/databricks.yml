@@ -4,13 +4,19 @@ bundle:
 include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
-  - "resources/clusters/*.yml"
 
 variables:
   instance_pool_id:
     description: "Pre-existing instance pool ID, resolved by name per target"
     lookup:
       instance_pool: aria-pool-${bundle.target}
+
+  cluster_config:
+    default:
+      spark_version: 14.3.x-scala2.12
+      instance_pool_id: ${var.instance_pool_id}
+      driver_instance_pool_id: ${var.instance_pool_id}
+      runtime_engine: PHOTON
 
 targets:
   sbox00:

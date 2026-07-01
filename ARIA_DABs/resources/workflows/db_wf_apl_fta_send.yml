@@ -9,6 +9,7 @@ resources:
             num_workers: 8
             instance_pool_id: ${var.instance_pool_id}
             driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
             
       tasks:
         - task_key: run-my-wheel

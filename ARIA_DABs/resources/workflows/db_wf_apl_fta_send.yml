@@ -6,8 +6,10 @@ resources:
         - job_cluster_key: db_wf_apl_fta_send_job
           new_cluster:
             spark_version: 14.3.x-scala2.12
-            node_type_id: Standard_E8_v3
+            # node_type_id: Standard_E8_v3
             num_workers: 8
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_apl_fta_send_job

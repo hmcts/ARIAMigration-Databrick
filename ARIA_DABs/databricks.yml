@@ -4,6 +4,13 @@ bundle:
 include:
   - "resources/pipelines/*.yml"
   - "resources/workflows/*.yml"
+  - "resources/clisters/*.yml"
+
+variables:
+  instance_pool_id:
+    description: "Pre-existing instance pool ID, resolved by name per target"
+    lookup:
+      instance_pool: aria-pool-${bundle.target}
 
 targets:
   sbox00:
@@ -12,20 +19,6 @@ targets:
       default : true
       presets:
         name_prefix: "[Sandbox00] "
-
-  sbox01:
-      workspace: 
-        host: https://adb-376876256300083.3.azuredatabricks.net
-      default : true
-      presets:
-        name_prefix: "[Sandbox01] "
-
-  sbox02:
-      workspace: 
-        host: https://adb-1879076228317698.18.azuredatabricks.net
-      default : true
-      presets:
-        name_prefix: "[Sandbox02] "
 
   stg00:
       workspace: 

@@ -1,0 +1,8 @@
+resources:
+  clusters:
+    my-pool-${bundle.target}_pool:
+      instance_pool_name: my-pool-${bundle.target}
+      node_type_id: Standard_D8ds_v5
+      min_idle_instances: 0
+      max_idle_instances: 27
+      idle_instance_autotermination_minutes: 60

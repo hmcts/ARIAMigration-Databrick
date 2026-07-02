@@ -1,7 +1,6 @@
 import azure.functions as func
 import logging
 import json
-from azure.keyvault.secrets._models import KeyVaultSecret
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient, BlobClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
@@ -18,11 +17,16 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-
 ARIA_SEGMENT = "apluta"
 ARM_SEGMENT = "UTADEV" if env == 'sbox' else "UTA"
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
+
+_credential = DefaultAzureCredential()
+_kv_client = SecretClient(
+    vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net",
+    credential=_credential
+)
 
 app = func.FunctionApp()
 
@@ -41,80 +45,62 @@ app = func.FunctionApp()
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
 
-    # Retrieve credentials
-    credential = DefaultAzureCredential()
-    logging.info('Connected to Azure Credentials')
-    kv_client = SecretClient(
-        vault_url=f"https://ingest{lz_key}-meta002-{env}.vault.azure.net", credential=credential
+    ev_dl_secret, ev_ack_secret, container_secret, source_container_secret = await asyncio.gather(
+        _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key"),
+        _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key"),
+        _kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN"),
+        _kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN"),
     )
-    logging.info('Connected to KeyVault')
+    ev_dl_key = ev_dl_secret.value
+    ev_ack_key = ev_ack_secret.value
+    container_secret = container_secret.value
+    source_container_secret = source_container_secret.value
+    logging.info('Acquired all KV secrets')
+
+    account_url = "https://a360c2x2555dz.blob.core.windows.net"
+    container_name = "dropzone"
+    container_url = f"{account_url}/{container_name}?{container_secret}"
+    logging.info(f'Created container URL: {container_url}')
+
+    sub_dir = f"ARIA{ARM_SEGMENT}/submission"
+    logging.info(f'Created sub_dir: {sub_dir}')
 
     try:
-        # Retrieve Event Hub secrets
-        ev_dl_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key")).value
-        ev_ack_key = (await kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key")).value
-        logging.info('Acquired KV secrets for DL and ACK')
+        container_service_client = ContainerClient.from_container_url(container_url)
+        logging.info('Created container service client')
+    except Exception as e:
+        logging.error(f"Failed to connect to ARM Container Client {e}")
 
-        # Blob Storage credentials
-        # account_url = f"https://ingest{lz_key}curated{env}.blob.core.windows.net"
-        account_url = "https://a360c2x2555dz.blob.core.windows.net"
-        container_name = "dropzone"
-        container_secret = (await kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN")).value
-        # container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value
-        source_container_secret = (await kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN")).value #AM 030625: added to test sas token value vs. cnxn string manipulation
-        logging.info('Assigned container secret value')
-        
+    idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
 
-        # full_secret = (await kv_client.get_secret(f"CURATED-{env}-SAS-TOKEN")).value
-        # if "SharedAccessSignature=" in full_secret:
-        #     # Remove the prefix if it's a connection string
-        #     container_secret = full_secret.split("SharedAccessSignature=")[-1].lstrip('?')
-        # else:
-        #     container_secret = full_secret.lstrip('?')  # fallbak
+    try:
+        async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
+                   EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client, \
+                   BlobServiceClient(idempotency_account_url, _credential) as idempotency_blob_service:
 
-        container_url = f"{account_url}/{container_name}?{container_secret}"
-        logging.info(f'Created container URL: {container_url}')
+            idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
 
-        sub_dir = f"ARIA{ARM_SEGMENT}/submission"
-        logging.info(f'Created sub_dir: {sub_dir}')
-
-        try:
-            container_service_client = ContainerClient.from_container_url(container_url)
-            logging.info('Created container service client')
-        except Exception as e:
-            logging.error(f"Failed to connect to ARM Container Client {e}")
-
-        try:
-            async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
-                       EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client:
-
-                logging.info('Processing messages')
-                tasks = [
-                    process_messages(
-                        event,
-                        container_service_client,
-                        sub_dir,
-                        dl_producer_client,
-                        ack_producer_client,
-                        source_container_secret,
-                        credential
-                    )
-                    for event in azeventhub
-                ]
-                await asyncio.gather(*tasks)
-                logging.info('Finished processing messages')
-        finally:
-            await container_service_client.close()
-
+            logging.info('Processing messages')
+            await asyncio.gather(*[
+                process_messages(
+                    event,
+                    container_service_client,
+                    sub_dir,
+                    dl_producer_client,
+                    ack_producer_client,
+                    source_container_secret,
+                    idempotency_container
+                )
+                for event in azeventhub
+            ])
+            logging.info('Finished processing messages')
     finally:
-        # Explicitly close SecretClient to avoid session leaks
-        await kv_client.close()
-        await credential.close()
+        await container_service_client.close()
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=30, min=30, max=60),
+    stop=stop_after_attempt(3),
     retry=retry_if_exception_type(Exception),
     reraise=True,
     before_sleep=lambda r: logging.warning(
@@ -122,11 +108,11 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     ),
 )
 async def upload_blob_with_retry(blob_client, message, capture_response):
-    logging.info(f'Uploading blob')
+    logging.info('Uploading blob')
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret,credential):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container):
     ## set up results logging
     results: dict[str, any] = {
         "filename": None,
@@ -170,24 +156,15 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         if not blob_url:
             raise ValueError("Missing blob_url in the event message")
 
-        # -----------------------------------------------
-        #  IDEMPOTENCY CHECK  (ADDED)
-        # -----------------------------------------------
         try:
-            idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
-            idempotency_container_name = "af-idempotency"
-            idempotency_blob_service = BlobServiceClient(idempotency_account_url, credential)
-            idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
             idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
-            idempotency_blob = idempotency_container.get_blob_client(
-                f"{idempotency_base}/{file_name}.flag"
-            )
+            idempotency_blob = idempotency_container.get_blob_client(f"{idempotency_base}/{file_name}.flag")
 
             if await idempotency_blob.exists():
                 logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
                 results["filename"] = file_name
                 results["http_message"] = "Duplicate skipped by idempotency"
-                results["timestamp"] = datetime.datetime.utcnow().isoformat()
+                results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 results["http_response"] = 201
                 await send_to_eventhub(ack_producer_client, json.dumps(results), key)
                 return results
@@ -196,15 +173,15 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             try:
                 await idempotency_blob.upload_blob(b"processed", overwrite=False)
                 logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
-            except Exception as ex:
+            except Exception:
                 logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
                 results["filename"] = file_name
                 results["http_message"] = "Duplicate skipped due to race-condition flag"
-                results["timestamp"] = datetime.datetime.utcnow().isoformat()
+                results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 results["http_response"] = 201
                 await send_to_eventhub(ack_producer_client, json.dumps(results), key)
                 return results
-            
+
         except Exception as e:
             logging.warning(f"[IDEMPOTENCY] Check failed, proceeding anyway: {e}", exc_info=True)
 
@@ -220,10 +197,9 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 
         # Download file from source
-        source_blob_client = BlobClient.from_blob_url(source_blob_url_with_sas)
-        stream = await source_blob_client.download_blob()
-        file_content = await stream.readall()
-        await source_blob_client.close()
+        async with BlobClient.from_blob_url(source_blob_url_with_sas) as source_blob_client:
+            stream = await source_blob_client.download_blob()
+            file_content = await stream.readall()
 
         # Upload to target
         full_blob_name = f"{subdirectory}/{file_name}"
@@ -234,7 +210,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         await upload_blob_with_retry(blob_client, file_content, capture_response)
         logging.info(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
-        results["timestamp"] = datetime.datetime.utcnow().isoformat()
+        results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         logging.info("Uploaded blob successfully: %s", key)
 
     except Exception as e:

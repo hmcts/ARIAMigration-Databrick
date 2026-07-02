@@ -97,8 +97,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
 
 @retry(
-    wait=wait_exponential(multiplier=30, min=30, max=60),
-    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=10, max=30),
+    stop=stop_after_attempt(2),
     retry=retry_if_exception_type(Exception),
     reraise=True,
     before_sleep=lambda r: logging.warning(

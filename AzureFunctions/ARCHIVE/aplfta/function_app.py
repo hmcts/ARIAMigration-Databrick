@@ -45,21 +45,26 @@ app = func.FunctionApp()
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
 
-    ev_dl_secret, ev_ack_secret, container_secret, source_container_secret = await asyncio.gather(
+    ev_dl_secret, ev_ack_secret, container_secret, source_container_secret, test_container_secret = await asyncio.gather(
         _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key"),
         _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key"),
         _kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN"),
         _kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN"),
+        _kv_client.get_secret("TEST-ARCHIVE-SAS"),
     )
     ev_dl_key = ev_dl_secret.value
     ev_ack_key = ev_ack_secret.value
     container_secret = container_secret.value
     source_container_secret = source_container_secret.value
+    test_container_secret = test_container_secret.value
     logging.info('Acquired all KV secrets')
 
-    account_url = "https://a360c2x2555dz.blob.core.windows.net"
-    container_name = "dropzone"
-    container_url = f"{account_url}/{container_name}?{container_secret}"
+    # account_url = "https://a360c2x2555dz.blob.core.windows.net"
+    # container_name = "dropzone"
+    account_url = "https://ingest01landingstg.blob.core.windows.net"
+    container_name = "test-archive"
+
+    container_url = f"{account_url}/{container_name}?{test_container_secret}"
     logging.info(f'Created container URL: {container_url}')
 
     sub_dir = f"ARIA{ARM_SEGMENT}/submission"

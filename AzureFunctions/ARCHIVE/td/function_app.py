@@ -225,34 +225,22 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         # Send failed message to dead-letter event hub
         if message is not None and key is not None:
-            try:
-                await send_to_eventhub(dl_producer_client, message, key)
-            except Exception as e:
-                logging.error(f"Failed to upload {key} to EventHub: {e}")
+            await send_to_eventhub(dl_producer_client, message, key)
         else:
             logging.error("Cannot send to dead-letter queue because message or key is None.")
 
     # Always send acknowledgment
-    try:
-        await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-        logging.info(f"{key}: Ack stored successfully")
-    except Exception as e:
-        logging.error(f"Failed to upload {key} to EventHub: {e}")
+    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+    logging.info(f"{key}: Ack stored successfully")
     return results
 
 
-@retry(
-    wait=wait_exponential(multiplier=30, min=30, max=60),
-    stop=stop_after_attempt(3),
-    retry=retry_if_exception_type(Exception),
-    reraise=True,
-    before_sleep=lambda r: logging.warning(
-        f"Retrying EventHub send attempt {r.attempt_number} due to: {r.outcome.exception()}"
-    ),
-)
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
     """Sends messages to an Event Hub."""
-    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-    event_data_batch.add(EventData(message))
-    await producer_client.send_batch(event_data_batch)
-    logging.info(f"Message added to Event Hub with partition key: {partition_key}")
+    try:
+        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+        event_data_batch.add(EventData(message))
+        await producer_client.send_batch(event_data_batch)
+        logging.info(f"Message added to Event Hub with partition key: {partition_key}")
+    except Exception as e:
+        logging.error(f"Failed to upload {partition_key} to EventHub: {e}")

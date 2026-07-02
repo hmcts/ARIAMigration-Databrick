@@ -1,0 +1,106 @@
+resources:
+  jobs:
+    run_all_gold_pipelines:
+      name: run_all_gold_pipelines
+      tasks:
+        - task_key: CUR
+          pipeline_task:
+            pipeline_id: a29234a4-dd41-44cf-8140-7e8d8f8a254c
+            full_refresh: true
+        - task_key: PP
+          pipeline_task:
+            pipeline_id: 304ce112-b56a-416e-819d-7e6e7de9f002
+            full_refresh: true
+        - task_key: APS
+          depends_on:
+            - task_key: PP
+          pipeline_task:
+            pipeline_id: b58520c2-af67-4fcb-86a2-c6f24b82e376
+            full_refresh: true
+        - task_key: AREa
+          depends_on:
+            - task_key: APS
+          pipeline_task:
+            pipeline_id: 75199e62-2e85-4636-a0c5-baa2df0217a2
+            full_refresh: true
+        - task_key: AREb
+          depends_on:
+            - task_key: AREa
+          pipeline_task:
+            pipeline_id: 1d43d11c-b7c7-475a-af6f-7e50defbecee
+            full_refresh: true
+        - task_key: RFAPS
+          depends_on:
+            - task_key: CUR
+          pipeline_task:
+            pipeline_id: 1d76d15b-c7f1-4dbb-9a38-aa476a42c711
+            full_refresh: true
+        - task_key: decision
+          pipeline_task:
+            pipeline_id: a272fc43-c4aa-4ba4-a026-ba31ad116cd1
+            full_refresh: true
+        - task_key: decidedA
+          depends_on:
+            - task_key: decision
+          pipeline_task:
+            pipeline_id: d36b998c-50f5-4ba0-ba75-10a0b3ce4eab
+            full_refresh: true
+        - task_key: ftpaDecided
+          pipeline_task:
+            pipeline_id: c954469d-466b-47ae-a601-4e0f4ffa98d9
+            full_refresh: true
+        - task_key: decidedB
+          depends_on:
+            - task_key: ftpaDecided
+          pipeline_task:
+            pipeline_id: 2128c123-3361-49e3-9df3-636c59532fdf
+            full_refresh: true
+        - task_key: ended
+          depends_on:
+            - task_key: decidedB
+          pipeline_task:
+            pipeline_id: c3744f8b-83fb-42f9-9d12-35ade7ab227c
+            full_refresh: true
+        - task_key: ftpaSubmittedA
+          depends_on:
+            - task_key: decidedA
+          pipeline_task:
+            pipeline_id: 0ed9b993-bfce-4bab-adc2-1e2c97287c28
+            full_refresh: true
+        - task_key: ftpaSubmittedB
+          depends_on:
+            - task_key: ftpaSubmittedA
+          pipeline_task:
+            pipeline_id: 28b47077-3c7c-4478-b018-eabd68d2ca20
+            full_refresh: true
+        - task_key: listing
+          depends_on:
+            - task_key: RFAPS
+          pipeline_task:
+            pipeline_id: 7bf5613f-f24c-47b0-bcc6-df72c17ecfa4
+            full_refresh: true
+        - task_key: PFH
+          depends_on:
+            - task_key: listing
+          pipeline_task:
+            pipeline_id: 155e5b42-829e-4a47-8790-89d49dd81847
+            full_refresh: true
+        - task_key: remitted
+          depends_on:
+            - task_key: ended
+          pipeline_task:
+            pipeline_id: 5683b779-e993-4f0c-b6ff-4d7c1b907f3b
+            full_refresh: true
+      job_clusters:
+        - job_cluster_key: db_wf_apl_fpa_send_job
+          new_cluster:
+            cluster_name: ""
+            spark_version: 14.3.x-scala2.12
+            instance_pool_id: 0701-164649-iron17-pool-v7oc4mum
+            driver_instance_pool_id: 0701-164649-iron17-pool-v7oc4mum
+            data_security_mode: SINGLE_USER
+            runtime_engine: PHOTON
+            num_workers: 1
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED

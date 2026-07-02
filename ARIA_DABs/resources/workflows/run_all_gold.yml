@@ -92,15 +92,13 @@ resources:
             pipeline_id: 5683b779-e993-4f0c-b6ff-4d7c1b907f3b
             full_refresh: true
       job_clusters:
-        - job_cluster_key: db_wf_apl_fpa_send_job
+        - job_cluster_key: Job_cluster
           new_cluster:
-            cluster_name: ""
-            spark_version: 14.3.x-scala2.12
-            instance_pool_id: 0701-164649-iron17-pool-v7oc4mum
-            driver_instance_pool_id: 0701-164649-iron17-pool-v7oc4mum
-            data_security_mode: SINGLE_USER
-            runtime_engine: PHOTON
+            spark_version: ${var.cluster_config.spark_version}
             num_workers: 1
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
       queue:
         enabled: true
       performance_target: PERFORMANCE_OPTIMIZED

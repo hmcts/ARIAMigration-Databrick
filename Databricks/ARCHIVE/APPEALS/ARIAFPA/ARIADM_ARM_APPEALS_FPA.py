@@ -951,7 +951,7 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
             col("cr.RespondentId") == col("e.EmbassyId"),
             "left_outer"
         ).join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer"
-        ).join(dlt.read("raw_hearingCentre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer"
+        ).join(dlt.read("raw_hearingcentre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer"
         ).select(
             # Appeal Case columns
             trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
@@ -1456,7 +1456,7 @@ def bronze_appealcase_status_sc_ra_cs():
             ).join(dlt.read("raw_listrequirementtype").alias("lrt"),
                    col("s.ListRequirementTypeId") == col("lrt.ListRequirementTypeId"),
                 "left_outer"
-            ).join(dlt.read("raw_hearingCentre").alias("hc"), col("s.DecidingCentre") == col("hc.CentreId"), "left_outer"
+            ).join(dlt.read("raw_hearingcentre").alias("hc"), col("s.DecidingCentre") == col("hc.CentreId"), "left_outer"
             ).join(dlt.read("raw_UpperTribunalHearingDirection").alias("uthd"), col("s.UpperTribunalHearingDirectionId") == col("uthd.UpperTribunalHearingDirectionId"), "left_outer"
             ).select(
                 # Status fields
@@ -5304,9 +5304,9 @@ data = [
 
 columns = ["id", "description", "HTMLName", "path"]
 lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
-casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
-lookup_list = lookup_df.collect()
-display(lookup_df)
+# casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
+# lookup_list = lookup_df.collect()
+# display(lookup_df)
 
 
 # COMMAND ----------

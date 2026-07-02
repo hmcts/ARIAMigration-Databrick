@@ -4,10 +4,17 @@ resources:
       name: db_wf_apl_uta_send_job
       job_clusters:
         - job_cluster_key: db_wf_apl_uta_send_job
+          # new_cluster:
+          #   spark_version: 14.3.x-scala2.12
+          #   node_type_id: Standard_D8ds_v5
+          #   num_workers: 8
           new_cluster:
-            spark_version: 14.3.x-scala2.12
-            node_type_id: Standard_D8ds_v5
+            spark_version: ${var.cluster_config.spark_version}
             num_workers: 8
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+
       tasks:
         - task_key: run-my-wheel
           job_cluster_key: db_wf_apl_uta_send_job

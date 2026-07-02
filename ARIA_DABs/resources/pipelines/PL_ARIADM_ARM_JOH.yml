@@ -5,11 +5,10 @@ resources:
       allow_duplicate_names: true
       clusters:
         - label: default
-          node_type_id: Standard_DS4_v2
-          driver_node_type_id: Standard_DS4_v2
+          instance_pool_id: ${var.instance_pool_id}
           autoscale:
-            min_workers: 2
-            max_workers: 5
+            min_workers: 5
+            max_workers: 8
             mode: ENHANCED
       libraries:
         - notebook:

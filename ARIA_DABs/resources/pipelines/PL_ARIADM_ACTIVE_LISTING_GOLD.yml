@@ -6,10 +6,9 @@ resources:
         pipelines.tableManagedByMultiplePipelinesCheck.enabled: "false"
       clusters:
         - label: default
-          node_type_id: Standard_D4ads_v5
-          driver_node_type_id: Standard_D4ads_v5
+          instance_pool_id: ${var.instance_pool_id}
           autoscale:
-            min_workers: 2
+            min_workers: 5
             max_workers: 8
             mode: ENHANCED
       libraries:

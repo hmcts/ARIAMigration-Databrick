@@ -1,0 +1,157 @@
+resources:
+  jobs:
+    run_all_publish:
+      name: run_all_publish
+      tasks:
+        - task_key: PP
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: paymentPending
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: APS
+          depends_on:
+            - task_key: PP
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: appealSubmitted
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: AREa
+          depends_on:
+            - task_key: APS
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: awaitingRespondentEvidence(a)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: AREb
+          depends_on:
+            - task_key: AREa
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: awaitingRespondentEvidence(b)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: CUR
+          depends_on:
+            - task_key: AREb
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: caseUnderReview
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: RFAPS
+          depends_on:
+            - task_key: CUR
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: reasonsForAppealSubmitted
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: listing
+          depends_on:
+            - task_key: RFAPS
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: listing
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: PFH
+          depends_on:
+            - task_key: listing
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: prepareForHearing
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: decision
+          depends_on:
+            - task_key: PFH
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decision
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: decidedA
+          depends_on:
+            - task_key: decision
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decided(a)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: ftpaSubmittedA
+          depends_on:
+            - task_key: decidedA
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaSubmitted(a)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: ftpaSubmittedB
+          depends_on:
+            - task_key: ftpaSubmittedA
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaSubmitted(b)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: ftpaDecided
+          depends_on:
+            - task_key: ftpaSubmittedB
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ftpaDecided
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: decidedB
+          depends_on:
+            - task_key: ftpaDecided
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: decided(b)
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: ended
+          depends_on:
+            - task_key: decidedB
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: ended
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+        - task_key: remitted
+          depends_on:
+            - task_key: ended
+          notebook_task:
+            notebook_path: /Workspace/live/ACTIVE/MVP/Active_Publish_EH_HTML_JSON
+            base_parameters:
+              state: remitted
+            source: WORKSPACE
+          job_cluster_key: Job_cluster
+      job_clusters:
+        - job_cluster_key: Job_cluster
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 1
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      queue:
+        enabled: true

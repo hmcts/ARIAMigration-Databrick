@@ -5,91 +5,91 @@ resources:
       tasks:
         - task_key: CUR
           pipeline_task:
-            pipeline_id: a29234a4-dd41-44cf-8140-7e8d8f8a254c
+            pipeline_id: ${resources.pipelines.pipeline_pl_caseUnderReview_gold.id}
             full_refresh: true
         - task_key: PP
           pipeline_task:
-            pipeline_id: 304ce112-b56a-416e-819d-7e6e7de9f002
+            pipeline_id: ${resources.pipelines.pipeline_pl_paymentPending_gold.id}
             full_refresh: true
         - task_key: APS
           depends_on:
             - task_key: PP
           pipeline_task:
-            pipeline_id: b58520c2-af67-4fcb-86a2-c6f24b82e376
+            pipeline_id: ${resources.pipelines.pipeline_pl_appealSubmitted_gold.id}
             full_refresh: true
         - task_key: AREa
           depends_on:
             - task_key: APS
           pipeline_task:
-            pipeline_id: 75199e62-2e85-4636-a0c5-baa2df0217a2
+            pipeline_id: ${resources.pipelines.pipeline_pl_awaitingRespondentEvidenceA_gold.id}
             full_refresh: true
         - task_key: AREb
           depends_on:
             - task_key: AREa
           pipeline_task:
-            pipeline_id: 1d43d11c-b7c7-475a-af6f-7e50defbecee
+            pipeline_id: ${resources.pipelines.pipeline_pl_awaitingRespondentEvidenceB_gold.id}
             full_refresh: true
         - task_key: RFAPS
           depends_on:
             - task_key: CUR
           pipeline_task:
-            pipeline_id: 1d76d15b-c7f1-4dbb-9a38-aa476a42c711
+            pipeline_id: ${resources.pipelines.pipeline_pl_reasonsForAppealSubmitted_gold.id}
             full_refresh: true
         - task_key: decision
           pipeline_task:
-            pipeline_id: a272fc43-c4aa-4ba4-a026-ba31ad116cd1
+            pipeline_id: ${resources.pipelines.pipeline_pl_decision_gold.id}
             full_refresh: true
         - task_key: decidedA
           depends_on:
             - task_key: decision
           pipeline_task:
-            pipeline_id: d36b998c-50f5-4ba0-ba75-10a0b3ce4eab
+            pipeline_id: ${resources.pipelines.pipeline_pl_decided_a_gold.id}
             full_refresh: true
         - task_key: ftpaDecided
           pipeline_task:
-            pipeline_id: c954469d-466b-47ae-a601-4e0f4ffa98d9
+            pipeline_id: ${resources.pipelines.pipeline_pl_ftpa_decided_gold.id}
             full_refresh: true
         - task_key: decidedB
           depends_on:
             - task_key: ftpaDecided
           pipeline_task:
-            pipeline_id: 2128c123-3361-49e3-9df3-636c59532fdf
+            pipeline_id: ${resources.pipelines.pipeline_pl_decided_b_gold.id}
             full_refresh: true
         - task_key: ended
           depends_on:
             - task_key: decidedB
           pipeline_task:
-            pipeline_id: c3744f8b-83fb-42f9-9d12-35ade7ab227c
+            pipeline_id: ${resources.pipelines.pipeline_pl_ended_gold.id}
             full_refresh: true
         - task_key: ftpaSubmittedA
           depends_on:
             - task_key: decidedA
           pipeline_task:
-            pipeline_id: 0ed9b993-bfce-4bab-adc2-1e2c97287c28
+            pipeline_id: ${resources.pipelines.pipeline_pl_ftpa_submitted_a_gold.id}
             full_refresh: true
         - task_key: ftpaSubmittedB
           depends_on:
             - task_key: ftpaSubmittedA
           pipeline_task:
-            pipeline_id: 28b47077-3c7c-4478-b018-eabd68d2ca20
+            pipeline_id: ${resources.pipelines.pipeline_pl_ftpa_submitted_b_gold.id}
             full_refresh: true
         - task_key: listing
           depends_on:
             - task_key: RFAPS
           pipeline_task:
-            pipeline_id: 7bf5613f-f24c-47b0-bcc6-df72c17ecfa4
+            pipeline_id: ${resources.pipelines.pipeline_pl_listing_gold.id}
             full_refresh: true
         - task_key: PFH
           depends_on:
             - task_key: listing
           pipeline_task:
-            pipeline_id: 155e5b42-829e-4a47-8790-89d49dd81847
+            pipeline_id: ${resources.pipelines.pipeline_pl_prepareForHearing_gold.id}
             full_refresh: true
         - task_key: remitted
           depends_on:
             - task_key: ended
           pipeline_task:
-            pipeline_id: 5683b779-e993-4f0c-b6ff-4d7c1b907f3b
+            pipeline_id: ${resources.pipelines.pipeline_pl_remitted_gold.id}
             full_refresh: true
       job_clusters:
         - job_cluster_key: Job_cluster

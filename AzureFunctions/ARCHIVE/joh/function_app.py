@@ -17,8 +17,8 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 env: str = os.environ["ENVIRONMENT"]
 lz_key = os.environ["LZ_KEY"]
 
-ARM_SEGMENT = "JRDEV" if env == "sbox" else "JR"
 ARIA_SEGMENT = "joh"
+ARM_SEGMENT = "JRDEV" if env == "sbox" else "JR"
 eventhub_name = f"evh-{ARIA_SEGMENT}-pub-{lz_key}-uks-dlrm-01"
 eventhub_connection = "sboxdlrmeventhubns_RootManageSharedAccessKey_EVENTHUB"
 
@@ -42,7 +42,7 @@ app = func.FunctionApp()
     max_batch_size=500,
     data_type='binary'
 )
-async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
+async def eventhub_trigger_joh(azeventhub: List[func.EventHubEvent]):
     logging.info(f"Processing a batch of {len(azeventhub)} events")
 
     ev_dl_secret, ev_ack_secret, container_secret, source_container_secret = await asyncio.gather(
@@ -59,17 +59,16 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
     account_url = "https://a360c2x2555dz.blob.core.windows.net"
     container_name = "dropzone"
-    container_url = f"{account_url}/{container_name}?{container_secret}"
-    logging.info(f'Created container URL: {container_url}')
 
+    container_url = f"{account_url}/{container_name}?{container_secret}"
     sub_dir = f"ARIA{ARM_SEGMENT}/submission"
-    logging.info(f'Created sub_dir: {sub_dir}')
 
     try:
         container_service_client = ContainerClient.from_container_url(container_url)
-        logging.info('Created container service client')
+        logging.info(f"Connected to ARM Container Client on url {container_url} with sub directory {sub_dir}")
     except Exception as e:
         logging.error(f"Failed to connect to ARM Container Client {e}")
+        raise e
 
     idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
 
@@ -81,8 +80,8 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
             idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
 
             logging.info('Processing messages')
-            await asyncio.gather(*[
-                process_messages(
+            for event in azeventhub:
+                await process_messages(
                     event,
                     container_service_client,
                     sub_dir,
@@ -91,16 +90,14 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
                     source_container_secret,
                     idempotency_container
                 )
-                for event in azeventhub
-            ])
             logging.info('Finished processing messages')
     finally:
         await container_service_client.close()
 
 
 @retry(
-    wait=wait_exponential(multiplier=30, min=30, max=60),
-    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(5),
     retry=retry_if_exception_type(Exception),
     reraise=True,
     before_sleep=lambda r: logging.warning(
@@ -108,20 +105,17 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     ),
 )
 async def upload_blob_with_retry(blob_client, message, capture_response):
-    logging.info('Uploading blob')
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
 async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container):
-    ## set up results logging
-    results: dict[str, any] = {
+    results: dict = {
         "filename": None,
         "http_response": None,
         "timestamp": None,
         "http_message": None
     }
 
-    ## call back function to capture responses
     def capture_response(response):
         http_response = response.http_response
         results["http_response"] = http_response.status_code
@@ -153,8 +147,12 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             blob_url = message
             logging.info(f"Message was plain blob URL for file {file_name}")
 
+        results["filename"] = file_name
+
         if not blob_url:
-            raise ValueError("Missing blob_url in the event message")
+            logging.error("Missing blob_url in the event message")
+            await send_to_dead_letter(dl_producer_client, message, key)
+            return
 
         try:
             idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
@@ -162,12 +160,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
             if await idempotency_blob.exists():
                 logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for file: {file_name}")
-                results["filename"] = file_name
-                results["http_message"] = "Duplicate skipped by idempotency"
-                results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                results["http_response"] = 201
-                await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-                return results
+                return
 
             # Create flag immediately (first writer wins)
             try:
@@ -175,18 +168,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                 logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
             except Exception:
                 logging.warning(f"[IDEMPOTENCY] Another instance already created the flag, skipping: {file_name}")
-                results["filename"] = file_name
-                results["http_message"] = "Duplicate skipped due to race-condition flag"
-                results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                results["http_response"] = 201
-                await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-                return results
+                return
 
         except Exception as e:
             logging.warning(f"[IDEMPOTENCY] Check failed, proceeding anyway: {e}", exc_info=True)
-
-        # ✅ Print blob_url for debugging
-        logging.info(f"blob_url received: {blob_url}")
 
         # Append SAS token if missing
         if "?" in blob_url:
@@ -203,15 +188,25 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         # Upload to target
         full_blob_name = f"{subdirectory}/{file_name}"
-        results["filename"] = file_name
         blob_client = container_service_client.get_blob_client(blob=full_blob_name)
         logging.info(f'Uploading to target blob: {full_blob_name}')
 
         await upload_blob_with_retry(blob_client, file_content, capture_response)
+
+        # In case raw_response_hook did not trigger correctly.
+        if results["http_response"] is None:
+            logging.warning(f"No response captured for {file_name}, verifying blob uploaded.")
+            await blob_client.get_blob_properties()
+            results["http_response"] = 201
+            results["http_message"] = "Created with missed response hook"
+            logging.info(f"Blob exists for {file_name}. Responses set.")
+
         logging.info(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
         results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         logging.info("Uploaded blob successfully: %s", key)
+
+        await send_to_eventhub(ack_producer_client, json.dumps(results), key)
 
     except Exception as e:
         logging.error(f"Failed to process event with key '{key}': {e}", exc_info=True)
@@ -219,24 +214,33 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         logging.error(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
         # Send failed message to dead-letter event hub
-        if message is not None and key is not None:
+        await send_to_dead_letter(dl_producer_client, message, key)
+
+
+@retry(
+    wait=wait_exponential(min=15, max=60),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(Exception),
+    reraise=True,
+    before_sleep=lambda r: logging.warning(
+        f"Retrying EventHub send attempt {r.attempt_number} due to: {r.outcome.exception()}"
+    ),
+)
+async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None):
+    logging.info(f"Creating ack batch for {partition_key}.")
+    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+    event_data_batch.add(EventData(message))
+    logging.info(f"Sending ack for {partition_key}.")
+    await producer_client.send_batch(event_data_batch, timeout=60)
+    logging.info(f"Message added to Event Hub with partition key: {partition_key}")
+
+
+async def send_to_dead_letter(dl_producer_client, message, key):
+    if message is not None:
+        try:
             await send_to_eventhub(dl_producer_client, message, key)
-        else:
-            logging.error("Cannot send to dead-letter queue because message or key is None.")
-
-    # Always send acknowledgment
-    await send_to_eventhub(ack_producer_client, json.dumps(results), key)
-    logging.info(f"{key}: Ack stored successfully")
-    return results
-
-
-async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str):
-    """Sends messages to an Event Hub."""
-    try:
-        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-        event_data_batch.add(EventData(message))
-        await producer_client.send_batch(event_data_batch)
-        logging.info(f"Message added to Event Hub with partition key: {partition_key}")
-    except Exception as e:
-        logging.error(f"Failed to upload {partition_key} to EventHub: {e}")
-        raise
+            logging.info(f"{key}: Sent to dead letter queue")
+        except Exception as e:
+            logging.error(f"Failed to send {key} to dead-letter EventHub: {e}")
+    else:
+        logging.error("Cannot send to dead-letter queue because message is None.")

@@ -11,5 +11,16 @@
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
+  },
+  "extensions": {
+    "eventHubs": {
+      "eventProcessorOptions": {
+        "ownershipExpirationInterval": "00:00:30",
+        "loadBalancingUpdateInterval": "00:00:10"
+      },
+      "maxEventBatchSize": 200,
+      "prefetchCount": 400,
+      "batchCheckpointFrequency": 1
+    }
   }
 }

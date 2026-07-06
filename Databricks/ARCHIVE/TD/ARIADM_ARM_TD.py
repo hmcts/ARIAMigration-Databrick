@@ -496,61 +496,6 @@ def bronze_ac_ca_ant_fl_dt_hc():
 
 # COMMAND ----------
 
-# df = spark.read.table("hive_metastore.ariadm_arm_td.raw_appealcase").alias("ac") \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_caseappellant").alias("ca"),
-#             col("ac.CaseNo") == col("ca.CaseNo"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_appellant").alias("a"),
-#             col("ca.AppellantId") == col("a.AppellantId"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_filelocation").alias("fl"),
-#             col("ac.CaseNo") == col("fl.CaseNo"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_department").alias("d"),
-#             col("fl.DeptId") == col("d.DeptId"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_hearingcentre").alias("hc"),
-#             col("d.CentreId") == col("hc.CentreId"),
-#             "left_outer"
-#         ).filter(col("ca.RelationShip").isNull()) \
-#         .select(
-#             col("ac.CaseNo"),
-#             col("a.Forenames"),
-#             col("a.Name"),
-#             col("a.BirthDate"),
-#             col("ac.DestructionDate"),
-#             col("ac.HORef"),
-#             col("a.PortReference"),
-#             col("hc.Description").alias("HearingCentreDescription"),
-#             col("d.Description").alias("DepartmentDescription"),
-#             col("fl.Note"),
-#             col("ca.RelationShip"),
-#             col("ac.AdtclmnFirstCreatedDatetime"),
-#             col("ac.AdtclmnModifiedDatetime"),
-#             col("ac.SourceFileName"),
-#             col("ac.InsertedByProcessName")
-#         )
-
-# # display(df.filter(col("CaseNo") == lit("VA/00003/2009")))
-# display(df.filter(col("Forenames").isNull()))
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_td.bronze_ac_ca_ant_fl_dt_hc
-# where CaseNo = 'VA/00003/2009'
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation bronze_iris_extract 
 
@@ -921,15 +866,20 @@ def silver_tribunaldecision_detail():
             coalesce(col("BirthDate"), lit("1900-01-01").cast("date")),
             "yyyy-MM-dd"
         )
-    ).withColumn(
-        "DestructionDate",
-            date_format(
-                coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
-            "yyyy-MM-dd"
-        )
-    )
-    
+    ).drop(col("DestructionDate"))
+    #.withColumn(
+    #     "DestructionDate",
+    #         date_format(
+    #             coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
+    #         "yyyy-MM-dd"
+    #     )
+    # )
+        
     return df
+
+# COMMAND ----------
+
+spark.read.table('hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail').display()
 
 # COMMAND ----------
 
@@ -1174,7 +1124,7 @@ def generate_html(row, html_template=html_template):
             "{{Forenames}}": str(row['Forenames'] or ''),
             "{{Name}}": str(row['Name'] or ''),
             "{{BirthDate}}": format_date_dd_mm_yyyy(row['BirthDate']),
-            "{{DestructionDate}}": format_date_dd_mm_yyyy(row['DestructionDate']),
+            # "{{DestructionDate}}": format_date_dd_mm_yyyy(row['DestructionDate']),
             "{{HORef}}": str(row['HORef'] or ''),
             "{{PortReference}}": str(row['PortReference'] or ''),
             "{{HearingCentreDescription}}": str(row['HearingCentreDescription'] or ''),

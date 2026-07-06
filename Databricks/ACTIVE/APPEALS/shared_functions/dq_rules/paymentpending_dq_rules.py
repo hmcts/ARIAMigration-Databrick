@@ -577,7 +577,7 @@ class paymentPendingDQRules(DQRulesBase):
             "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
         checks["valid_sponsorPartyId_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorPartyId IS NOT NULL) OR (sponsorPartyID IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND sponsorPartyId IS NOT NULL) OR (sponsorPartyId IS NULL))"
         )
 
         # ##############################

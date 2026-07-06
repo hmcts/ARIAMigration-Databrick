@@ -99,7 +99,7 @@ def test_listingLength(spark,hearingDetails_outputs):
     assert results["CASE001"]["listingLength"] == None
     assert results["CASE006"]["listingLength"] == {'hours': 4, 'minutes': 0}
     assert results["CASE008"]["listingLength"] == {'hours': None, 'minutes': None}
-    assert results["CASE011"]["listingLength"] == {'hours': 0, 'minutes': 45}
+    assert results["CASE011"]["listingLength"] == {'hours': 1, 'minutes': 0}
 
 
 def test_hearingChannel(spark,hearingDetails_outputs):

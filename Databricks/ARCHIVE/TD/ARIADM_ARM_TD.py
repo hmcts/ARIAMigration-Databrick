@@ -879,10 +879,6 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
-spark.read.table('hive_metastore.ariadm_arm_td.silver_tribunaldecision_detail').display()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation silver_archive_metadata
 # MAGIC <table style='float:left;'>

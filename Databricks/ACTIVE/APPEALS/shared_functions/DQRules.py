@@ -6,12 +6,14 @@ from shared_functions.dq_rules import (
     decided_b_dq_rules, paymentpendingDetained_dq_rules
 )
 from pyspark.sql import Window
-from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp, 
-                                   array_min,transform, array, abs, concat_ws, concat)
-from pyspark.sql.types import ArrayType, LongType
+from pyspark.sql.functions import (coalesce, col, collect_list, lit, row_number, struct, when, min, max, date_format, to_timestamp,
+                                   array_min, transform, array, abs, concat_ws, concat, array_contains, lower, udf)
+from pyspark.sql.types import ArrayType, LongType, StringType
 
 # import shared_functions.ended as E
 from . import ended as E
+from .paymentPending import derive_country_silver_m2
+from uk_postcodes_parsing import fix, postcode_utils
 
 logger = logging.getLogger(__name__)
 
@@ -69,22 +71,22 @@ def add_state_dq_rules(state: str) -> dict:
 
 def previous_state_map(state: str):
     previous_state = {
-        "appealSubmitted":               "paymentPending",
         "paymentPending":                "paymentPendingDetained",
+        "appealSubmitted":               "paymentPending",
         "awaitingRespondentEvidence(a)": "appealSubmitted",
         "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
         "caseUnderReview":               "awaitingRespondentEvidence(b)",
         "reasonsForAppealSubmitted":     "awaitingRespondentEvidence(b)",
         "listing":                       "awaitingRespondentEvidence(b)",
         "prepareForHearing":             "listing",
-        "decision":                      "prepareHearing",
+        "decision":                      "prepareForHearing",
         "decided(a)":                    "decision",
-        "decided(b)":                    "ftpaSubmitted(a)",
         "ftpaSubmitted(a)":              "decided(a)",
         "ftpaSubmitted(b)":              "ftpaSubmitted(a)",
         "ftpaDecided":                   "ftpaSubmitted(b)",
         "remitted":                      "ftpaDecided",
-        "ended":                         "ftpaSubmitted(a)"
+        "ended":                         "ftpaSubmitted(a)",
+        "decided(b)":                    "ftpaSubmitted(a)"
     }
 
     return previous_state.get(state, None)
@@ -99,10 +101,10 @@ def build_state_flow(state: str, flow: list):
     return build_state_flow(previous_state, [previous_state] + flow)
 
 
-def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c,silver_h,
+def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silver_m4, silver_m6, silver_c, silver_h,
                                 bronze_countries_postal_lookup_df, bronze_HORef_cleansing, bronze_remission_lookup_df,
-                                bronze_interpreter_languages, bronze_listing_location,bronze_ended_states,
-                                bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
+                                bronze_interpreter_languages, bronze_listing_location, bronze_ended_states,
+                                bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
@@ -110,13 +112,17 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     valid_representation = silver_m1.select(
         col("CaseNo"), col("dv_representation"), col("dv_CCDAppealType"), col("lu_appealType"), col("CasePrefix"),
         col("CaseRep_Address5"), col("CaseRep_Postcode"), col("MainRespondentId"), col("HORef"),
-        col("Sponsor_Authorisation"), col("Sponsor_Name"),col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription")
-        ,col("OutOfTimeIssue"),col("DateLodged")
+        col("Sponsor_Authorisation"), col("Sponsor_Name"), col("Sponsor_Forenames"), col("RepresentativeId"), col("lu_countryCode"), col("lu_appellantNationalitiesDescription"),
+        col("OutOfTimeIssue"), col("DateLodged"), col("HOANRef")
     )
     valid_appealant_address = silver_m2.select(
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
         col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber"), col("Appellant_Name")
     ).filter(col("Relationship").isNull())
+    valid_isInUk = (
+        derive_country_silver_m2(silver_m2.filter(col("Relationship").isNull()))
+        .select(col("CaseNo"), col("dv_addressInUk"))
+    )
     valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
     valid_country_list = bronze_countries_postal_lookup_df.select(
         col("countryGovUkOocAdminJ").alias("valid_countryGovUkOocAdminJ")
@@ -126,13 +132,27 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     )
     valid_reasonDescription = (
         silver_m1.alias("m1")
-            .join(bronze_remission_lookup_df.alias("rem"), on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .join(bronze_remission_lookup_df.alias("remPP"), on=["PaymentRemissionReason", "PaymentRemissionRequested"], how="left")
+            .join(
+                bronze_remission_lookup_df.alias("remAPS"),
+                on=(
+                    (col("m1.PaymentRemissionReason") == col("remAPS.PaymentRemissionReason")) &
+                    (col("m1.PaymentRemissionRequested") == col("remAPS.PaymentRemissionRequested"))
+                ) | (
+                    (col("m1.PaymentRemissionReason") > 0) &
+                    (col("m1.PaymentRemissionReason") == col("remAPS.PaymentRemissionReason")) &
+                    (col("m1.PaymentRemissionRequested").isNull() | (col("m1.PaymentRemissionRequested") == 0))
+                ),
+                how="left"
+            )
             .select(
-                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", "ReasonDescription",
-                col("remissionClaim").alias("lu_remissionClaim"), col("feeRemissionType").alias("lu_feeRemissionType"),
-                col("rem.PaymentRemissionReason").alias("PaymentRemissionReason_rem"),col("rem.PaymentRemissionRequested").alias("PaymentRemissionRequested_rem"),
-                col("m1.PaymentRemissionReason").alias("PaymentRemissionReason"),col("m1.PaymentRemissionRequested").alias("PaymentRemissionRequested")
-
+                "CaseNo", "VisitVisaType", "PaymentRemissionGranted", col("remPP.ReasonDescription").alias("ReasonDescription"),
+                col("remPP.remissionClaim").alias("lu_remissionClaim"), col("remPP.feeRemissionType").alias("lu_feeRemissionType"),
+                col("remPP.PaymentRemissionReason").alias("PaymentRemissionReason_remPP"), col("remPP.PaymentRemissionRequested").alias("PaymentRemissionRequested_remPP"),
+                col("m1.PaymentRemissionReason").alias("PaymentRemissionReason"), col("m1.PaymentRemissionRequested").alias("PaymentRemissionRequested"),
+                col("remAPS.PaymentRemissionReason").alias("PaymentRemissionReason_remAPS"), col("remAPS.PaymentRemissionRequested").alias("PaymentRemissionRequested_remAPS"),
+                col("remAPS.remissionType").alias("lu_remissionType_remAPS"), col("remAPS.remissionClaim").alias("lu_remissionClaim_remAPS"),
+                col("remAPS.feeRemissionType").alias("lu_feeRemissionType_remAPS"),
             )
     )
 
@@ -266,7 +286,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                 col("Adj_Determination_Title"),
                 col("Adj_Determination_Forenames"),
                 col("Adj_Determination_Surname"),
-                col("DecisionDate"),
+                col("DecisionDate").alias("DecisionDate_decided"),
             )
     )
 
@@ -283,11 +303,16 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         silver_m3.filter((col("Outcome").isNotNull()))
             .withColumn("row_number", row_number().over(window_spec))
             .filter(col("row_number") == 1)
-            .select("CaseNo",col("Outcome").alias("Outcome_no_filter"),col("CaseStatus").alias("CaseStatus_max_no_filter"),col("OutOfTime").alias("OutOfTime_no_filter"))
+            .select("CaseNo",
+                    col("Outcome").alias("Outcome_no_filter"),
+                    col("CaseStatus").alias("CaseStatus_max_no_filter"),
+                    col("OutOfTime").alias("OutOfTime_no_filter"),
+                    col("DecisionDate").alias("DecisionDate_no_filter")
+            )
     )
 
     silver_m3_max_casestatus_no_filter = (
-        silver_m1.alias("m1").select("CaseNo").join(silver_m3_max_casestatus_no_filter,on="CaseNo",how="left")
+        silver_m1.alias("m1").select("CaseNo").join(silver_m3_max_casestatus_no_filter,on="CaseNo", how="left")
     )
 
     
@@ -307,8 +332,100 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(min("Required").alias("Required"), 
                                                                           concat_ws("\n", collect_list("formatted_judge")).alias("Judges"))
                               )
-
     
+    #decided_a ftpaApplicationDeadline
+
+    def getUkPostcode(postcode):
+        try:
+            if postcode is None or str(postcode).strip() == "":
+                return "False"
+            if postcode_utils.is_valid(postcode):
+                return "True"
+            clean_postcode = fix(postcode)
+            if postcode_utils.is_valid(clean_postcode):
+                return "True"
+        except Exception as e:
+            print(f"Error processing {postcode}: {e}")
+            pass
+        return "False"
+
+    getUkPostcodeUDF = udf(getUkPostcode, StringType())
+
+    ftpaInOrOut_lookup = (
+        silver_m2
+        .join(silver_c, on="CaseNo", how="left")
+        .withColumn(
+            "stage_detained",
+            when(col("Detained") == 3, lit("OOC"))
+            .otherwise(lit(None))
+        )
+        .withColumn(
+            "stage_category",
+            when(
+                col("stage_detained").isNull(),
+                when(col("CategoryId") == 37, lit("IN"))
+                .when(col("CategoryId") == 38, lit("OUT"))
+            )
+        )
+        .withColumn(
+            "stage_country",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull(),
+                when(col("AppellantCountryId") == 188, lit("IN"))
+            )
+        )
+        .withColumn(
+            "stage_postcode",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull(),
+                when(getUkPostcodeUDF(col("Appellant_Postcode")) == "True", lit("IN"))
+            )
+        )
+        .withColumn("appellantFullAddress", concat_ws(", ",
+                col("Appellant_Address1"), col("Appellant_Address2"),
+                col("Appellant_Address3"), col("Appellant_Address4"),
+                col("Appellant_Address5"), col("Appellant_Postcode")
+            ))
+        .withColumn(
+            "stage_address",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull() &
+                col("stage_postcode").isNull(),
+                when(
+                    lower(col("appellantFullAddress")).rlike(r"\b(uk|gb|united kingdom)\b") == True,
+                    lit("IN")
+                )
+            )
+        )
+        .withColumn(
+            "INorOUT",
+            coalesce(
+                col("stage_detained"),
+                col("stage_category"),
+                col("stage_country"),
+                col("stage_postcode"),
+                col("stage_address"),
+                lit("OOC")
+            )
+        )
+        .withColumn("rn", row_number().over(
+            Window.partitionBy("CaseNo").orderBy(
+                when(col("INorOUT") == "IN", 0).otherwise(1)
+            )
+        ))
+        .filter(col("rn") == 1)
+        .select(col("CaseNo"), col("INorOUT"), col("stage_detained"), col("stage_category"), col("stage_country"), col("stage_postcode"), col("stage_address"))
+    )
+
+    silver_m1_with_in_or_out = (
+        silver_m1.select("CaseNo")
+        .join(ftpaInOrOut_lookup, on="CaseNo", how="left")
+    )
 
 
     # ftpaSubmitted - ftpa - decided(b)
@@ -423,7 +540,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_max_statusid_state_2_3_4 = silver_m3_ranked_state_2_3_4.filter(col("row_number") == 1).drop("row_number").select(col("CaseNo"),col("StatusId"),col("CaseStatus"),col("Outcome"))
 
     df_documents, df_documents_audit = E.documents(silver_m1,silver_m3)
-    df_ftpa, df_ftpa_audit = E.ftpa(silver_m1,silver_m3,silver_c)
+    df_ftpa, df_ftpa_audit = E.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
     df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
     df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
@@ -513,12 +630,12 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     silver_m3_all = silver_m3.withColumn("row_num", row_number().over(window_spec))
 
     # Filter the top-ranked rows where Outcome is not null
-    silver_m3_all = silver_m3_all.filter(col("row_num") == 1)
+    silver_m3_latest_status = silver_m3_all.filter(col("row_num") == 1)
 
     detained_df = (
         silver_m1.alias("m1")
         .join(silver_m2.alias("m2"),on="CaseNo",how="left")
-        .join(silver_m3_all.alias("m3"),on="CaseNo",how="left")
+        .join(silver_m3_latest_status.alias("m3"),on="CaseNo",how="left")
         .join(bronze_detention_centres.alias("det"),on="DetentionCentreId",how="left")
         .select(col("m1.CaseNo"),col("m1.RemovalDate"),col("m2.PrisonRef"),col("m2.Detained"),col("m2.DetentionCentreId").alias("DetentionCentreId"),col("m3.Outcome"),
             *[col(f"det.{c}").alias(f"{c}_det")
@@ -536,6 +653,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(valid_country_list, on=col("CaseRep_Address5") == col("valid_countryGovUkOocAdminJ"), how="left")
             .join(valid_catagoryid_list, on="CaseNo", how="left")
             .join(valid_appealant_address, on="CaseNo", how="left")
+            .join(valid_isInUk, on="CaseNo", how="left")
             .join(valid_HORef_cleansing, on="CaseNo", how="left")
             .join(valid_reasonDescription, on="CaseNo", how="left")
             .join(valid_payment_type, on="CaseNo", how="left")
@@ -556,8 +674,15 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(detained_df, on="CaseNo", how="left")
             .join(cs46_out31, on="CaseNo", how="left")
             .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
-
-    )
+            .join(silver_m1_with_in_or_out, on="CaseNo", how="left")
+            .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))  # No need to add extra categoryIdList IS NULL rules in the DQ.
+            .withColumn("lu_HORef", coalesce(col("lu_HORef"), col("HORef"), col("FCONumber")))  # HORef in conditionals can also come from silver_m1, not just the bronze cleansing. The bronze cleansing will be used as priority.
+            .withColumn("dv_appellantIsInUk",
+                when(col("lu_appealType").isNotNull() & array_contains(col("valid_categoryIdList"), lit(37)), lit(True))
+                .when(col("lu_appealType").isNotNull() & array_contains(col("valid_categoryIdList"), lit(38)), lit(False))
+                .otherwise(col("dv_addressInUk"))
+            )
+    ).dropDuplicates(["CaseNo"])
 
 
 if __name__ == "__main__":

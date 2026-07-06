@@ -9,8 +9,11 @@ from pyspark.sql.functions import (
     date_format,
     abs,
     sum as sum_,
+    from_json,
+    concat,
+    length,
 )
-from pyspark.sql.types import IntegerType, StringType
+from pyspark.sql.types import ArrayType, IntegerType, StringType, StructField, StructType
 
 from . import paymentPending as PP
 
@@ -25,17 +28,14 @@ def paymentType(silver_m1, silver_m4):
 
     conditions_all = col("dv_CCDAppealType").isin(["EA", "EU", "HU", "PA"])
 
-    ref_txn_df = (
+    filtered_rows = silver_m4.alias("t").join(
         silver_m4.filter(~col("TransactionTypeId").isin(6, 19))
         .select("ReferringTransactionId")
         .where(col("ReferringTransactionId").isNotNull())
         .distinct()
-    )
-
-    filtered_rows = silver_m4.alias("t").join(
-        ref_txn_df.alias("r"),
+        .alias("r"),
         col("t.TransactionId") == col("r.ReferringTransactionId"),
-        "left_anti", #not in
+        "left_anti",
     )
 
     valid_cases = (
@@ -51,7 +51,7 @@ def paymentType(silver_m1, silver_m4):
 
     final_filtered_df = filtered_rows.join(valid_cases, "CaseNo", "inner")
 
-    ref_txn_df1 = (
+    ref_txn_df = (
         silver_m4.filter(col("TransactionTypeId").isin(6, 19))
         .select("ReferringTransactionId")
         .where(col("ReferringTransactionId").isNotNull())
@@ -60,7 +60,7 @@ def paymentType(silver_m1, silver_m4):
 
     payment_status = (
         silver_m4.alias("m4")
-        .join(ref_txn_df1.alias("r_txn"),
+        .join(ref_txn_df.alias("r_txn"),
             col("m4.TransactionId") == col("r_txn.ReferringTransactionId"),
             "left_anti")
         .filter(col("SumBalance") == True)
@@ -103,6 +103,7 @@ def paymentType(silver_m1, silver_m4):
         .join(silver_m1, ["CaseNo"], "left")
         .join(paid_amount, ["CaseNo"], "left")
         .join(payment_status.alias("payment_status"), ["CaseNo"], "left")
+        .join(valid_cases.withColumn("has_valid_txn", lit(True)), ["CaseNo"], "left")
         .select(
             "payment_content.*",
             when(
@@ -125,19 +126,15 @@ def paymentType(silver_m1, silver_m4):
             )
             .alias("rpDcAppealHearingOption"),
             when(
-                conditions_all, date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")
+                conditions_all & col("has_valid_txn"), date_format(col("DateCorrectFeeReceived"), "yyyy-MM-dd")
             ).alias("paidDate"),
             when(
-                conditions_all,
-                (
-                    when(col("paidAmount").isNotNull(), col("paidAmount"))
-                    .otherwise(lit(0))
-                    .cast(IntegerType())
-                    .cast(StringType())
-                ),
+                conditions_all & col("has_valid_txn"),
+                when(col("paidAmount").isNotNull(), col("paidAmount").cast(IntegerType()).cast(StringType()))
+                .otherwise(lit("0")),
             ).alias("paidAmount"),
             when(
-                conditions_all,
+                conditions_all & col("has_valid_txn"),
                 lit(
                     "This is an ARIA Migrated Case. The payment was made in ARIA and the payment history can be found in the case notes."
                 ),
@@ -282,28 +279,121 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         )
     )
 
+    has_type5_txn = (
+        silver_m4.filter(col("TransactionTypeId") == 5)
+        .select("CaseNo")
+        .distinct()
+        .withColumn("has_type5_txn", lit(True))
+    )
+
+    df_final = df_final.drop(
+        "remissionType", "remissionClaim", "feeRemissionType", "exceptionalCircumstances",
+        "legalAidAccountNumber", "asylumSupportReference", "helpWithFeesReferenceNumber"
+    )  # Dropped for re-compute.
+
     df_final = (
         df_final.alias("source")
-        .join(silver_m1, ["CaseNo"], "left")
+        .join(silver_m1.alias("m1"), ["CaseNo"], "left")
         .join(amount_remitted, ["CaseNo"], "left")
         .join(amount_left_to_pay, ["CaseNo"], "left")
+        .join(
+            bronze_remission_lookup_df.alias("r"),
+            on=(
+                (col("m1.PaymentRemissionReason") == col("r.PaymentRemissionReason"))
+                & (col("m1.PaymentRemissionRequested") == col("r.PaymentRemissionRequested"))
+            ) | (
+                (col("m1.PaymentRemissionReason") > 0)
+                & (col("m1.PaymentRemissionReason") == col("r.PaymentRemissionReason"))
+                & (col("m1.PaymentRemissionRequested").isNull() | (col("m1.PaymentRemissionRequested") == 0))
+            ),
+            how="left"
+        )
+        .join(has_type5_txn, ["CaseNo"], "left")
+        .withColumn(
+            "remissionType",
+            when(col("remissionType") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("remissionType"))
+        )
+        .withColumn(
+            "remissionClaim",
+            when(col("remissionClaim") == lit("OMIT"), None)
+            .when(col("remissionClaim") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("remissionClaim"))
+        )
+        .withColumn(
+            "feeRemissionType",
+            when(col("feeRemissionType") == lit("OMIT"), None)
+            .when(col("feeRemissionType") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("feeRemissionType"))
+        )
+        .withColumn(
+            "exceptionalCircumstances",
+            when(col("exceptionalCircumstances") == lit("OMIT"), None)
+            .when(col("exceptionalCircumstances") == lit("NO MAPPING REQUIRED"), None)
+            .otherwise(col("exceptionalCircumstances"))
+        )
+        .withColumn(
+            "legalAidAccountNumber",
+            when(col("legalAidAccountNumber") == lit("OMIT"), None)
+            .when(col("legalAidAccountNumber") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("legalAidAccountNumber") == lit("M1.LSCReference; ELSE IF NULL 'Unknown'"),
+                when(
+                    col("LSCReference").isNotNull(),
+                    when(length(col("LSCReference")) == 5, concat(lit("0"), col("LSCReference")))
+                    .when(length(col("LSCReference")) == 4, concat(lit("00"), col("LSCReference")))
+                    .when(length(col("LSCReference")) == 3, concat(lit("000"), col("LSCReference")))
+                    .otherwise(col("LSCReference"))
+                ).otherwise(lit("Unknown"))
+            ).otherwise(col("legalAidAccountNumber"))
+        )
+        .withColumn(
+            "asylumSupportReference",
+            when(col("asylumSupportReference") == lit("OMIT"), None)
+            .when(col("asylumSupportReference") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("asylumSupportReference") == lit("M1.ASFReferenceNo ELSE IF NULL 'Unknown'"),
+                when(col("ASFReferenceNo").isNotNull(), col("ASFReferenceNo")).otherwise(lit("Unknown"))
+            ).otherwise(col("asylumSupportReference"))
+        )
+        .withColumn(
+            "helpWithFeesReferenceNumber",
+            when(col("helpWithFeesReferenceNumber") == lit("OMIT"), None)
+            .when(col("helpWithFeesReferenceNumber") == lit("NO MAPPING REQUIRED"), None)
+            .when(
+                col("helpWithFeesReferenceNumber") == lit("M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'"),
+                when(col("PaymentRemissionReasonNote").isNotNull(), col("PaymentRemissionReasonNote")).otherwise(lit("Unknown"))
+            ).otherwise(col("helpWithFeesReferenceNumber"))
+        )
         .withColumn(
             "remissionDecision",
             when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 1)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn") == True))
+                ),
                 lit("approved"),
             ).when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 2),
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 2)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                ),
                 lit("rejected"),
             ),
         )
         .withColumn(
             "remissionDecisionReason",
             when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 1),
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 1)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn") == True))
+                ),
                 lit("This is a migrated case. The remission was granted."),
             ).when(
-                (conditions_all) & (col("PaymentRemissionGranted") == 2),
+                conditions_all & (
+                    (col("PaymentRemissionGranted") == 2)
+                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                ),
                 lit("This is a migrated case. The remission was rejected."),
             ),
         )
@@ -329,6 +419,13 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
         )
         .select(
             "source.*",
+            "remissionType",
+            "remissionClaim",
+            "feeRemissionType",
+            "exceptionalCircumstances",
+            "legalAidAccountNumber",
+            "asylumSupportReference",
+            "helpWithFeesReferenceNumber",
             "remissionDecision",
             "remissionDecisionReason",
             "amountRemitted",
@@ -386,6 +483,148 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             ).alias("amountLeftToPay_inputValues"),
             col("content.amountLeftToPay"),
             lit("yes").alias("amountLeftToPay_Transformed"),
+        )
+    )
+
+    return df_final, df_audit
+
+
+###############################################################
+#########          homeOffice extended              ###########
+###############################################################
+def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
+    df_final, df_audit = PP.homeOfficeDetails(
+        silver_m1, silver_m2, silver_c, bronze_HORef_cleansing
+    )
+
+    homeOfficeAppellantList_schema = (
+        StructType([
+            StructField("list_items", ArrayType(StructType([
+                StructField("code", StringType(), True),
+                StructField("label", StringType(), True)
+            ])), True),
+            StructField("value", StructType([
+                StructField("code", StringType(), True),
+                StructField("label", StringType(), True)
+            ]), True)
+        ])
+    )
+
+    homeOfficeCaseStatusData_schema = (
+        StructType([
+            StructField("applicationStatus", StructType([
+                StructField("ccdHomeOfficeMetadata", ArrayType(StringType()), True),
+                StructField("ccdRejectionReasons", ArrayType(StringType()), True),
+                StructField("roleSubType", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("roleType", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True)
+            ]), True),
+            StructField("displayAppellantDetailsTitle", StringType(), True),
+            StructField("displayApplicationDetailsTitle", StringType(), True),
+            StructField("displayDateOfBirth", StringType(), True),
+            StructField("person", StructType([
+                StructField("dayOfBirth", IntegerType(), True),
+                StructField("familyName", StringType(), True),
+                StructField("fullName", StringType(), True),
+                StructField("gender", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("givenName", StringType(), True),
+                StructField("monthOfBirth", IntegerType(), True),
+                StructField("nationality", StructType([
+                    StructField("code", StringType(), True),
+                    StructField("description", StringType(), True)
+                ]), True),
+                StructField("yearOfBirth", IntegerType(), True)
+            ]), True)
+        ])
+    )
+
+    condition = col("dv_CCDAppealType").isin(["PA", "RP"])
+
+    df_final = (
+        df_final.alias("source")
+        .join(silver_m1.select("CaseNo", "dv_CCDAppealType"), ["CaseNo"], "left")
+        .withColumn("homeOfficeSearchStatus", when(condition, lit("SUCCESS")).otherwise(lit(None)))
+        .withColumn("homeOfficeSearchNoMatch", when(condition, lit("NO_MATCH")).otherwise(lit(None)))
+        .withColumn("matchingAppellantDetailsFound", when(condition, lit("No")).otherwise(lit(None)))
+        .withColumn("homeOfficeAppellantsList", when(condition, from_json(lit("""
+            {
+                "list_items":[{"code":"NoMatch","label":"No Match"}],
+                "value":{"code":"NoMatch","label":"No Match"}
+            }
+        """), homeOfficeAppellantList_schema)).otherwise(lit(None)))
+        .withColumn("homeOfficeCaseStatusData", when(condition, from_json(lit("""
+            {
+                "applicationStatus": {
+                    "ccdHomeOfficeMetadata": [],
+                    "ccdRejectionReasons": [],
+                    "roleSubType": {"code": "No match", "description": "No match"},
+                    "roleType": {"code": "No match", "description": "No match"}
+                },
+                "displayAppellantDetailsTitle": "<h2>Appellant details</h2>",
+                "displayApplicationDetailsTitle": "<h2>Application details</h2>",
+                "displayDateOfBirth": "No match",
+                "person": {
+                    "dayOfBirth": 0,
+                    "familyName": "No match",
+                    "fullName": "No match",
+                    "gender": {"code": "No match", "description": "No match"},
+                    "givenName": "No match",
+                    "monthOfBirth": 0,
+                    "nationality": {"code": "No match", "description": "No match"},
+                    "yearOfBirth": 0
+                }
+            }
+        """), homeOfficeCaseStatusData_schema)).otherwise(lit(None)))
+        .select(
+            "source.*",
+            "homeOfficeSearchStatus",
+            "homeOfficeSearchNoMatch",
+            "matchingAppellantDetailsFound",
+            "homeOfficeAppellantsList",
+            "homeOfficeCaseStatusData",
+        )
+    )
+
+    common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
+    common_inputValues = [
+        col("m1_audit.dv_CCDAppealType"),
+        col("m1_audit.dv_representation"),
+    ]
+
+    df_audit = (
+        df_audit.alias("audit")
+        .join(df_final.alias("content"), ["CaseNo"], "left")
+        .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
+        .select(
+            "audit.*",
+            array(struct(*common_inputFields)).alias("homeOfficeSearchStatus_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeSearchStatus_inputValues"),
+            col("content.homeOfficeSearchStatus"),
+            lit("yes").alias("homeOfficeSearchStatus_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeSearchNoMatch_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeSearchNoMatch_inputValues"),
+            col("content.homeOfficeSearchNoMatch"),
+            lit("yes").alias("homeOfficeSearchNoMatch_Transformed"),
+            array(struct(*common_inputFields)).alias("matchingAppellantDetailsFound_inputFields"),
+            array(struct(*common_inputValues)).alias("matchingAppellantDetailsFound_inputValues"),
+            col("content.matchingAppellantDetailsFound"),
+            lit("yes").alias("matchingAppellantDetailsFound_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeAppellantsList_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeAppellantsList_inputValues"),
+            col("content.homeOfficeAppellantsList"),
+            lit("yes").alias("homeOfficeAppellantsList_Transformed"),
+            array(struct(*common_inputFields)).alias("homeOfficeCaseStatusData_inputFields"),
+            array(struct(*common_inputValues)).alias("homeOfficeCaseStatusData_inputValues"),
+            col("content.homeOfficeCaseStatusData"),
+            lit("yes").alias("homeOfficeCaseStatusData_Transformed")
         )
     )
 

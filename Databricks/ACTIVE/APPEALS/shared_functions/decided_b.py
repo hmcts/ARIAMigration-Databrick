@@ -16,7 +16,7 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays, nullif
 )
 
 
@@ -92,7 +92,7 @@ def setAside(silver_m1, silver_m3, silver_m6):
     silver_m6_conditional = silver_m6.withColumn("formatted_judge",when(col("Required") == False, formatted_judge).otherwise(None))
 
     # Step 3: Group by case and join using newline separator
-    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(concat_ws("\n", collect_list("formatted_judge")).alias("Judges")))
+    judges_per_case_single = (silver_m6_conditional.groupBy("CaseNo").agg(nullif(concat_ws("\n", collect_list("formatted_judge")), lit("")).alias("Judges")))
 
 
     # Window: highest StatusId per CaseNo
@@ -119,10 +119,6 @@ def setAside(silver_m1, silver_m3, silver_m6):
             .join(silver_m3_max_casestatus.alias("casemax"), on="CaseNo", how="left")
     )
 
-
-
-
-    
     # Build remittal content
     setaside_df = (
         silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m3"), on="CaseNo", how="left")
@@ -214,9 +210,9 @@ def setAside(silver_m1, silver_m3, silver_m6):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m1, silver_m3,silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m3,silver_c)
+    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
 
     ftpa_df = ftpa_df.drop("ftpaList")
     ftpa_audit = ftpa_audit.drop("ftpaList_value","ftpaList_inputFields","ftpaList_inputValues","ftpaList_Transformation")
@@ -357,16 +353,16 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     general_df,general_audit = FSA.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
 
-    general_df = general_df.drop("TTL")
+    # general_df = general_df.drop("TTL")
 
-    general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
-                  .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
-        .select(
-            "m1.CaseNo",
-            *[c for c in general_df.columns if c != "CaseNo"],
-            "TTL",
-        )
-    )
+    # general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+    #               .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
+    #     .select(
+    #         "m1.CaseNo",
+    #         *[c for c in general_df.columns if c != "CaseNo"],
+    #         "TTL",
+    #     )
+    # )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     # Add row_number to get the row with the highest StatusId per CaseNo
@@ -392,7 +388,7 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
             )
     )
 
-    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+    # general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
 
     general_audit = (
         general_audit.alias("audit")
@@ -418,10 +414,10 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
                 col("isFtpaRespondentDecided").alias("isFtpaRespondentDecided_value"),
                 lit("Yes").alias("isFtpaRespondentDecided_Transformation"),
 
-                array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
-                array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
-                col("gen.TTL").alias("TTL_value"),
-                lit("Yes").alias("TTL_Transformation"),
+                # array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+                # array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+                # col("gen.TTL").alias("TTL_value"),
+                # lit("Yes").alias("TTL_Transformation"),
 
             )
     )

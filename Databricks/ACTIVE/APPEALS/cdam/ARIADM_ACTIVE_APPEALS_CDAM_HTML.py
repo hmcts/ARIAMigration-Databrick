@@ -786,6 +786,14 @@ def bail_raw_appeal_cases():
 def raw_list_requirement_type():
     return read_latest_parquet("ListRequirementType","tv_listrequirementtype","ARIA_ARM_APPEALS")
 
+@dlt.table(
+    name="raw_UpperTribunalHearingDirection",
+    comment="Delta Live Table ARIA UpperTribunalHearingDirection.",
+    path=f"{raw_mnt}/Raw_UpperTribunalHearingDirection"
+)
+def raw_UpperTribunalHearingDirection():
+     return read_latest_parquet("UpperTribunalHearingDirection", "tv_UpperTribunalHearingDirection", "ARIA_ARM_APPEALS")
+
 # COMMAND ----------
 
 # MAGIC
@@ -1372,6 +1380,7 @@ def bronze_appealcase_status_sc_ra_cs():
                    col("s.ListRequirementTypeId") == col("lrt.ListRequirementTypeId"),
                 "left_outer"
             ).join(dlt.read("raw_hearingCentre").alias("hc"), col("s.DecidingCentre") == col("hc.CentreId"), "left_outer"
+            ).join(dlt.read("raw_UpperTribunalHearingDirection").alias("uthd"), col("s.UpperTribunalHearingDirectionId") == col("uthd.UpperTribunalHearingDirectionId"), "left_outer"
             ).select(
                 # Status fields
                 col("s.StatusId"),
@@ -1412,6 +1421,7 @@ def bronze_appealcase_status_sc_ra_cs():
                 col("s.ListRequirementTypeId"),
                 col("lrt.Description").alias("ListRequirementType"),
                 col("s.UpperTribunalHearingDirectionId"),
+                col("uthd.Description"),
                 col("s.ApplicationType"),
                 col("s.NoCertAwardDate"),
                 col("s.CertRevokedDate"),
@@ -2955,13 +2965,26 @@ def silver_link_detail():
     path=f"{silver_mnt}/silver_status_detail"
 )
 def silver_status_detail():
+    from pyspark.sql.window import Window
+    from pyspark.sql.functions import row_number
+    
     appeals_df = dlt.read("bronze_appealcase_status_sc_ra_cs").alias("st")
     flt_df = spark.read.table("hive_metastore.ariadm_active_appeals.stg_segmentation_states").alias('flt')
 
-    max_statusid = appeals_df.groupBy("CaseNo").agg(max("StatusId").alias("StatusId"))
+    window = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+    status_ranked = appeals_df.withColumn("rn", row_number().over(window))
 
-    df_currentstatus = appeals_df.alias("a").join(max_statusid.alias("b"), (col("a.CaseNo") == col("b.CaseNo")) & (col("a.StatusId") == col("b.StatusId"))) \
-    .select(col("a.CaseStatus"), col("CaseStatusDescription"), col("a.CaseNo"))
+    rn1 = status_ranked.filter(col("rn") == 1)
+    rn2 = status_ranked.filter(col("rn") == 2)
+
+    joined = rn1.alias("r1").join(rn2.alias("r2"), on="CaseNo", how="left")
+
+    df_currentstatus = joined.select(
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.CaseStatus"), col("r1.CaseStatus"))).otherwise(col("r1.CaseStatus")).alias("CaseStatus"),
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.CaseStatusDescription"), col("r1.CaseStatusDescription"))).otherwise(col("r1.CaseStatusDescription")).alias("CaseStatusDescription"),
+        col("r1.CaseNo").alias("CaseNo"),
+        when(col("r1.CaseStatus") == 17, coalesce(col("r2.rn"), col("r1.rn"))).otherwise(col("r1.rn")).alias("rn")
+    )
 
     joined_df = appeals_df.join(flt_df, col("st.CaseNo") == col("flt.CaseNo"), "inner") \
                           .join(df_currentstatus.alias("mx"), (col("st.CaseNo") == col("mx.CaseNo")), "left") \
@@ -3042,6 +3065,7 @@ def silver_status_detail():
                               "st.ListRequirementTypeId",
                               "st.ListRequirementType",
                               "st.UpperTribunalHearingDirectionId",
+                              "st.Description",
                               when((col("st.CaseStatus") == 17) & (col("st.ApplicationType") == 1), "Adjournment")
                                 .when((col("st.CaseStatus") == 17) & (col("st.ApplicationType") == 2), "Withdrawal")
                                 .when((col("st.CaseStatus") == 17) & (col("st.ApplicationType") == 0), "")
@@ -3984,17 +4008,17 @@ def generate_html(row, templates=templates):
             "DateApplicationLodged", "DateOfApplicationDecision", "DateLodged", "DateReceived", "DateOfIssue",
             "TransferOutDate", "RemovalDate", "DeportationDate", "ProvisionalDestructionDate", "NoticeSentDate",
             "CertifiedDate", "CertifiedRecordedDate", "ReferredToJudgeDate", "StatutoryClosureDate", "DateReinstated",
-            "AppellantBirthDate", "dateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
+            "AppellantBirthDate", "DateCorrectFeeReceived", "DateCorrectFeeDeemedReceived","DateServed","DateAppealReceived","BFDate"
         ]
 
-        date_correct_fee_received = row_dict.get("dateCorrectFeeReceived")
+        date_correct_fee_received = row_dict.get("DateCorrectFeeReceived")
         date_correct_fee_deemed_received = row_dict.get("DateCorrectFeeDeemedReceived")
 
-        if date_correct_fee_received is not None and date_correct_fee_deemed_received is None:
+        if date_correct_fee_received and not date_correct_fee_deemed_received:
             row_dict["DateCorrectFeeDeemedReceived"] = date_correct_fee_received
 
-        elif date_correct_fee_received is None and date_correct_fee_deemed_received is not None:
-            row_dict["dateCorrectFeeReceived"] = None
+        elif date_correct_fee_deemed_received and not date_correct_fee_received:
+            row_dict["DateCorrectFeeReceived"] = date_correct_fee_deemed_received
         
         detained = row_dict.get("Detained")
 
@@ -4011,7 +4035,6 @@ def generate_html(row, templates=templates):
                 format_date_iso(value)
                 if key in date_fields
                 and value is not None
-                and not (key == "DateOfApplicationDecision" and row_dict.get("CaseFeeSummaryId") is None)
                 else str(value) if value is not None else ""
             )
             for key, value in row_dict.items()
@@ -4165,7 +4188,7 @@ def generate_html(row, templates=templates):
                                              .replace("{{ExpectedDate}}", format_date_iso(payment.ExpectedDate)) \
                                              .replace("{{clearedDate}}", format_date_iso(payment.ClearedDate)) \
                                              .replace("{{Amount}}", str(payment.Amount or '')) \
-                                             .replace("{{Amount_new}}", str(payment.Amount_new or '')) \
+                                             .replace("{{Amount_new}}", "" if payment.Amount_new is None else str(payment.Amount_new)) \
                                              .replace("{{TransactionMethodDesc}}", str(payment.TransactionMethodDesc or '')) \
                                              .replace("{{Last4DigitsCard}}", str(payment.Last4DigitsCard or '')) \
                                              .replace("{{CreateUserId}}", str(payment.CreateUserId or '')) \
@@ -4218,7 +4241,6 @@ def generate_html(row, templates=templates):
         html_template = html_template.replace(f"{{{{content-height}}}}", str(content_height))
         html_template = html_template.replace(f"{{{{additional-tabs-size}}}}", str(additional_tabs_size))
 
-
         # StatusDetails tabs
         nested_table_number = 999
         nested_tab_group_number = 999
@@ -4243,7 +4265,7 @@ def generate_html(row, templates=templates):
                 if should_strikethrough(SDP.StatusId, row.ListDetails):
                     doh_style = "text-decoration: line-through;"
                 else:
-                    doh_style = "" 
+                    doh_style = ""
 
                 line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
                                         .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
@@ -4316,7 +4338,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{CourtActionAuthDate}}", format_date_iso(SDP.CourtActionAuthDate or '')) \
                                         .replace("{{BalancePaidDate}}", format_date_iso(SDP.BalancePaidDate or '')) \
                                         .replace("{{ReconsiderationHearing}}", str(SDP.ReconsiderationHearing or '')) \
-                                        .replace("{{UpperTribunalHearingDirectionId}}", str(SDP.UpperTribunalHearingDirectionId or '')) \
+                                        .replace("{{UpperTribunalHearingDirection}}", str(SDP.UpperTribunalHearingDirection or '')) \
                                         .replace("{{ListRequirementTypeId}}", str(SDP.ListRequirementTypeId or '')) \
                                         .replace("{{ListRequirementType}}", str(SDP.ListRequirementType or '')) \
                                         .replace("{{CourtSelection}}", str(SDP.CourtSelection or '')) \
@@ -4367,6 +4389,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{Label3_JudgeValue}}", str(SDP.Label3_JudgeValue or '')) \
                                         .replace("{{CourtClerkUsher}}", str(SDP.CourtClerkUsher or '')) \
                                         .replace("{{CMROrder}}", str(SDP.CMROrder or '')) \
+                                        .replace("{{AssignedjudicialofficersPlaceHolder}}", f"<tr><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 in ('Judge First Tier', 'Des Judge First Tier') else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 in ('Judge First Tier', 'Des Judge First Tier') else '')}</td><td id=\"midpadding\">{(SDP.CourtClerkUsher or '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Upper Trib Judge' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Upper Trib Judge' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Upper Trib Judge' else '')}</td><td id=\"midpadding\">{((SDP.Label1_JudgeValue or '') if SDP.JudgeLabel1 == 'Non-Legal Member' else (SDP.Label2_JudgeValue or '') if SDP.JudgeLabel2 == 'Non-Legal Member' else (SDP.Label3_JudgeValue or '') if SDP.JudgeLabel3 == 'Non-Legal Member' else '')}</td></tr>") \
                                         .replace("{{RequiredIncompatiblejudicialofficersPlaceHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{judge.JudgeSurname}, {judge.JudgeForenames} {judge.JudgeTitle}</td><td id=\"midpadding\" style=\"text-align:center\">{'✓' if judge.Required else ''}</td></tr>"
                                                 for i, judge in enumerate(SDP.CaseAdjudicatorsDetails or [])
@@ -4378,12 +4401,7 @@ def generate_html(row, templates=templates):
                                         .replace("{{StandarddirectionsPlacHolder}}", str("\n".join(
                                                 f"<tr><td id=\"midpadding\">{rstd.ReviewStandardDirectionId}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredIND)}</td><td id=\"midpadding\">{format_date(rstd.DateRequiredAppellantRep)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedIND)}</td><td id=\"midpadding\">{format_date(rstd.DateReceivedAppellantRep)}</td></tr>"
                                                 for i, rstd in enumerate(SDP.ReviewStandardDirectionDirectionDetails or [])
-                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>')) \
-                                        # .replace("{{AssignedjudicialofficersPlaceHolder}}", str("\n".join(
-                                        #         f"<tr><td id=\"midpadding\">{adjd.JudgeFT}</td><td id=\"midpadding\">{adjd.CourtClerkUsher}</td><td id=\"midpadding\"></td><td id=\"midpadding\"></td></tr>"
-                                        #         for i, adjd in enumerate(SDP.CaseStatusAdjudicatorDetails or [])
-                                        #     ) or '<tr><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td><td id="midpadding"></td></tr>'))     
- 
+                                            ) or '<tr><td id="midpadding"></td><td id="midpadding"></td></tr>'))
 
                 status_details_code += line + '\n'
         else:
@@ -4391,11 +4409,8 @@ def generate_html(row, templates=templates):
             line = casestatusTemplate.replace("{{nested_table_number}}", str(nested_table_number))  \
                                     .replace("{{nested_tab_group_number}}", str(nested_tab_group_number))  \
                                     .replace("{{nested_tabs_size}}", str(nested_tabs_size)) \
-                                        
-                                                                                
+                                                                                             
             status_details_code += line + '\n'
-
-            # displayHTML(status_details_code)
 
         html_template = html_template.replace(f"{{{{StatusDetailsPlaceHolder}}}}", status_details_code)
         
@@ -4471,8 +4486,8 @@ data = [
 
 columns = ["id", "description", "HTMLName", "path"]
 lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
-casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
-lookup_list = lookup_df.collect()
+# casestatus_array = lookup_df.select(col("id")).distinct().rdd.flatMap(lambda x: x).collect()
+# lookup_list = lookup_df.collect()
 # display(lookup_df)
 
 
@@ -4543,7 +4558,7 @@ def stg_statichtml_data():
     )
 
     # CTE for Fee Flags (Fixing count() issue)
-    df_transaction_filtered = df_transaction_details.filter(col("TransactionTypeId") == 1).groupby("CaseNo").agg(count("*").alias("txn_count"))
+    df_transaction_filtered = df_transaction_details.filter(col("TransactionTypeId") == 3).groupby("CaseNo").agg(count("*").alias("txn_count"))
 
     cte_feeflag = (df_transaction_details
         .join(df_transaction_filtered, "CaseNo", "left")
@@ -4794,13 +4809,13 @@ def stg_statusdetail_data():
             'status.HearingPointsChangeReasonId', 'status.DecisionByTCW', 'status.Allegation', 'status.status_DecidingCentre', 'status.DecidingCentre', 'status.Process', 'status.Tier', 'status.NoCertAwardDate', 
             'status.WrittenOffDate', 'status.WrittenOffFileDate', 'status.ReferredEnforceDate', 'status.Letter1Date', 'status.Letter2Date', 'status.Letter3Date', 
             'status.ReferredFinanceDate', 'status.CourtActionAuthDate', 'status.BalancePaidDate', 'status.ReconsiderationHearing', 
-            'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', 'status.ListRequirementType', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
+            'status.UpperTribunalHearingDirectionId', 'status.ListRequirementTypeId', col('status.Description').alias("UpperTribunalHearingDirection"), 'status.ListRequirementType', 'status.CourtSelection', 'status.COAReferenceNumber', 'status.Notes2', 
             'status.HighCourtReference', 'status.AdminCourtReference', 'status.HearingCourt', 'status.ApplicationType', 
             'status.IRISStatusOfCase','status.ListTypeDescription','status.HearingTypeDescription','status.Judiciary1Name','status.Judiciary2Name','status.Judiciary3Name','status.ReasonAdjourn', 
             'adjournDateReceived', 'adjournmiscdate2', 'adjournParty', 'adjournInTime', 'adjournLetter1Date', 'adjournLetter2Date', 
             'adjournAdjudicatorSurname', 'adjournAdjudicatorForenames', 'adjournAdjudicatorTitle',  'adjournNotes1', 
             'adjournDecisionDate', 'adjournPromulgated', 'HearingCentreDesc', 'CourtName', 'ListName', 'ListTypeDesc', 
-            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails',"status.StatusDetailAdjudicatorSurname","status.StatusDetailAdjudicatorForenames","status.StatusDetailAdjudicatorTitle","adjournApplicationType","adjournKeyDate","CMROrder").distinct()
+            'HearingTypeDesc', 'ListStartTime', 'StartTime', 'TimeEstimate',  'status.LanguageDescription','cadj.CaseAdjudicatorsDetails','rsd.ReviewSpecficDirectionDetails','rsdd.ReviewStandardDirectionDirectionDetails',"status.StatusDetailAdjudicatorSurname","status.StatusDetailAdjudicatorForenames","status.StatusDetailAdjudicatorTitle","adjournApplicationType","adjournKeyDate","CMROrder").distinct().dropDuplicates(["StatusId"])
 
     df_final = df_agg2.alias("casestatus").join(df_agg01.alias("adjj"), ((col("casestatus.StatusId") == col("adjj.StatusId"))
             & (col("casestatus.CaseNo") == col("adjj.CaseNo"))
@@ -4814,7 +4829,7 @@ def stg_statusdetail_data():
             'casestatus.TypistSentDate', 'casestatus.ExtemporeMethodOfTyping', 'casestatus.TypistReceivedDate', 'casestatus.WrittenReasonsSentDate', 'casestatus.DecisionSentToHODate', 
             'casestatus.DecisionTypeDescription', 'casestatus.DateReceived', 'casestatus.Party', 'casestatus.OutOfTime', 'casestatus.MiscDate1', 
             'casestatus.HearingPointsChangeReasonId', 'casestatus.DecisionByTCW', 'casestatus.Allegation', 'casestatus.status_DecidingCentre', 'casestatus.DecidingCentre', 'casestatus.Process', 'casestatus.Tier', 'casestatus.NoCertAwardDate', 
-            'casestatus.WrittenOffDate', 'casestatus.WrittenOffFileDate', 'casestatus.ReferredEnforceDate', 'casestatus.Letter1Date', 'casestatus.Letter2Date', 'casestatus.Letter3Date', 
+            'casestatus.WrittenOffDate', 'casestatus.WrittenOffFileDate', 'casestatus.ReferredEnforceDate', 'casestatus.Letter1Date', 'casestatus.Letter2Date', 'casestatus.Letter3Date', 'casestatus.UpperTribunalHearingDirection',
             'casestatus.ReferredFinanceDate', 'casestatus.CourtActionAuthDate', 'casestatus.BalancePaidDate', 'casestatus.ReconsiderationHearing', 
             'casestatus.UpperTribunalHearingDirectionId', 'casestatus.ListRequirementTypeId', 'casestatus.ListRequirementType', 'casestatus.CourtSelection', 'casestatus.COAReferenceNumber', 'casestatus.Notes2', 
             'casestatus.HighCourtReference', 'casestatus.AdminCourtReference', 'casestatus.HearingCourt', 'casestatus.ApplicationType',  
@@ -4964,7 +4979,7 @@ def stg_apl_combined():
     )
 
     df_status = dlt.read("silver_status_detail").groupBy("CaseNo").agg(
-        collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'status_DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'ListRequirementType','UpperTribunalHearingDirectionId', 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("StatusDetails")
+        collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'status_DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'ListRequirementType','UpperTribunalHearingDirectionId', col("Description").alias("UpperTribunalHearingDirection"), 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("StatusDetails")
     )
 
     df_statusdecisiontype = dlt.read("silver_statusdecisiontype_detail").groupBy("CaseNo").agg(

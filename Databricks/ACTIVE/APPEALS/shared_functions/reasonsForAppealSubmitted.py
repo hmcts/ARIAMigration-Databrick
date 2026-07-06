@@ -1,6 +1,6 @@
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    coalesce, concat_ws, concat, trim, nullif, desc
+    coalesce, concat_ws, concat, trim, nullif, desc, to_date, date_format
 )
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -47,7 +47,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("List Type",
                                 when(col("ListType").isNull(), "N/A").otherwise(col("ListType"))
                     ).withColumn("List Start Time",
-                                when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
+                                when(col("StartTime").isNull(), "N/A").otherwise(date_format(col("StartTime"), "HH:mm:ss"))
                     ).withColumn("Judge First Tier",
                                 when(coalesce(col("Judge1FT_Surname"), col("Judge2FT_Surname"), col("Judge3FT_Surname")).isNotNull(),
                                 trim(concat_ws(" ",
@@ -69,7 +69,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                 ).otherwise(lit(None))
                                 
                     ).withColumn("Start Time",
-                                when(col("StartTime").isNull(), "N/A").otherwise(col("StartTime"))
+                                when(col("StartTime").isNull(), "N/A").otherwise(date_format(col("StartTime"), "HH:mm:ss"))
                     ).withColumn("Estimated Duration",
                                 when(col("TimeEstimate").isNull(), "N/A").otherwise(col("TimeEstimate"))
                     ).withColumn("Required/Incompatible Judicial Officers",
@@ -81,7 +81,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                     concat(
                                         lit("Listed details from ARIA: "),
                                         lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
-                                        lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
+                                        lit("\nHearing Date: "), coalesce(to_date(col("Hearing Date")), lit("N/A")),
                                         lit("\nHearing Type: "), coalesce(col("Hearing Type"), lit("N/A")),
                                         lit("\nCourt: "), coalesce(col("Court"), lit("N/A")),
                                         lit("\nList Type: "), coalesce(col("ListType"), lit("N/A")),

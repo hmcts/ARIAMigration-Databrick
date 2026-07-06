@@ -173,6 +173,7 @@ def ended(silver_m1, silver_m3, bronze_ended_states):
             .otherwise(F.col("es.endAppealOutcome"))
             .alias("endAppealOutcome"),
             F.when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(105)),"This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time.")
+            .when((F.col("CaseStatus") == 10) & (F.col("Outcome").isin(13)),"This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal.")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(1)),"This is a migrated case. The final outcome was Review of Cost Order | Allowed.")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(2)),"This is a migrated case. The final outcome was Review of Cost Order | Dismissed.")
             .when((F.col("CaseStatus") == 36) & (F.col("Outcome").isin(25)),"This is a migrated case. The final outcome was Review of Cost Order | Withdrawn.")
@@ -1443,9 +1444,9 @@ def hearingActuals(silver_m1,silver_m3):
 ################################################################
 
 
-def ftpa(silver_m1, silver_m3, silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
 
-    ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSA.ftpa(silver_m1, silver_m2, silver_m3, silver_c)
 
     
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.

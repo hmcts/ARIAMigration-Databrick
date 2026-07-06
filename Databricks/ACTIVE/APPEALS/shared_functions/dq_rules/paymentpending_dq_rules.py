@@ -72,9 +72,39 @@ class paymentPendingDQRules(DQRulesBase):
             "(submissionOutOfTime IS NOT NULL AND submissionOutOfTime IN ('Yes', 'No'))"
         )
         checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
-            """ (recordedOutOfTimeDecision IS NULL OR 
-                (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND recordedOutOfTimeDecision = 'Yes'))"""
-        )
+        """
+            (
+                (
+                    recordedOutOfTimeDecision IS NULL
+                    AND (OutOfTimeIssue IS NULL OR OutOfTimeIssue = False)
+                )
+                OR
+                (
+                    recordedOutOfTimeDecision = 'Yes'
+                    AND OutOfTimeIssue = True
+                    AND (
+                        (
+                            ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                            AND Outcome IS NOT NULL
+                            AND Outcome != 0
+                        )
+                        OR
+                        (
+                            ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
+                        )
+                    )
+                )
+                OR
+                (
+                    recordedOutOfTimeDecision = 'No'
+                    AND OutOfTimeIssue = True
+                    AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                    AND (Outcome IS NULL OR Outcome = 0)
+                )
+            )
+        """)
+ 
+
         checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
         )
@@ -289,19 +319,19 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         checks["valid_appellantStateless_values"] = ("(appellantStateless IS NOT NULL AND appellantStateless IN ('isStateless', 'hasNationality'))")
 
-        checks["valid_appellantNationalitiesDescription_not_null"] = (
+        checks["valid_appellantNationalities_not_null"] = (
             """(
-                (lu_appellantNationalitiesDescription <=> 'NO MAPPING REQUIRED' AND appellantNationalitiesDescription IS NULL)
-                OR
-                (appellantNationalitiesDescription <=> lu_appellantNationalitiesDescription)
+                (appellantNationalities IS NOT NULL)
+                AND
+                EXISTS(appellantNationalities, x -> x.value.code IN ('AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR', 'BC', 'VG', 'IO', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'HK', 'MO', 'CX', 'CC', 'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM', 'VA', 'HN', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM', 'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KP', 'KR', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MK', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS', 'SS', 'ES', 'LK', 'ZZ', 'SD', 'SR', 'SJ', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VI', 'WF', 'EH', 'YE', 'ZM', 'ZW'))
             )"""
         )
 
-        checks["valid_appellantNationalities_not_null"] = (
+        checks["valid_appellantNationalitiesDescription_not_null"] = (
             """(
-                (lu_countryCode <=> 'NO MAPPING REQUIRED' AND appellantNationalities IS NULL)
-                OR
-                (ELEMENT_AT(appellantNationalities, 1).value.code <=> lu_countryCode)
+                (appellantNationalitiesDescription IS NOT NULL)
+                AND
+                (appellantNationalitiesDescription IN ('Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla', 'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bonaire, Sint Eustatius and Saba', 'Bosnia and Herzegovina', 'Botswana', 'Bouvet Island', 'Brazil', 'British Overseas Citizen', 'British Virgin Islands', 'British Indian Ocean Territory', 'Brunei Darussalam', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Hong Kong, Special Administrative Region of China', 'Macao, Special Administrative Region of China', 'Christmas Island', 'Cocos (Keeling) Islands', 'Colombia', 'Comoros', 'Congo (Brazzaville)', 'Congo, Democratic Republic of the', 'Cook Islands', 'Costa Rica', 'Côte d\\'Ivoire', 'Croatia', 'Cuba', 'Curaçao', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Ethiopia', 'Falkland Islands (Malvinas)', 'Faroe Islands', 'Fiji', 'Finland', 'France', 'French Guiana', 'French Polynesia', 'French Southern Territories', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe', 'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Heard Island and Mcdonald Islands', 'Holy See (Vatican City State)', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran, Islamic Republic of', 'Iraq', 'Ireland', 'Isle of Man', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Korea, Democratic People\\'s Republic of', 'Korea, Republic of', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Lao PDR', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macedonia, Republic of', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique', 'Mauritania', 'Mauritius', 'Mayotte', 'Mexico', 'Micronesia, Federated States of', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'Netherlands Antilles', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'Norfolk Island', 'Northern Mariana Islands', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestinian Territory, Occupied', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Pitcairn', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Réunion', 'Romania', 'Russian Federation', 'Rwanda', 'Saint-Barthélemy', 'Saint Helena', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint-Martin (French part)', 'Saint Pierre and Miquelon', 'Saint Vincent and Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten (Dutch part)', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Georgia and the South Sandwich Islands', 'South Sudan', 'Spain', 'Sri Lanka', 'Stateless', 'Sudan', 'Suriname *', 'Svalbard and Jan Mayen Islands', 'Swaziland', 'Sweden', 'Switzerland', 'Syrian Arab Republic (Syria)', 'Taiwan', 'Tajikistan', 'Tanzania *, United Republic of', 'Thailand', 'Timor-Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States of America', 'United States Minor Outlying Islands', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela (Bolivarian Republic of)', 'Viet Nam', 'Virgin Islands, US', 'Wallis and Futuna Islands', 'Western Sahara', 'Yemen', 'Zambia', 'Zimbabwe'))
             )"""
         )
 
@@ -356,21 +386,17 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_name_in_list"] = """(
             (
                 (
-                    (valid_categoryIdList IS NOT NULL)
-                    AND
-                    (EXISTS(valid_categoryIdList, x -> x IN (7, 25)))
+                    EXISTS(valid_categoryIdList, x -> x IN (7, 25))
                 )
                 AND
                 EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)
             )
             OR
-            (caseFlags.details IS NULL)
+            (caseFlags IS NULL OR caseFlags.details IS NULL)
             OR
             (
                 (
-                    (valid_categoryIdList IS NULL)
-                    OR
-                    (NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25)))
+                    NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25))
                 )
                 AND
                 ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name), caseFlags.details[0].value.name)
@@ -404,25 +430,28 @@ class paymentPendingDQRules(DQRulesBase):
             )
         )
         """
-        # IF CategoryId not in [7,8,24,25,31,32,41] or valid_categoryIdList is NULL or lu_HOANRef is NULL then caseFlags is NULL
+        # IF CategoryId not in [7,8,24,25,31,32,41] or lu_HOANRef is NULL then caseFlags is NULL
         # IF CategoryId in [7,8,24,25,31,32,41] and lu_HOANRef is not NULL then caseFlags is not NULL
         # IF CategoryId in [7,25] and lu_HOANRef is not NULL, then all flagComment are NULL
         # IF CategoryId in [8,24,31,32,41] and lu_HOANRef is not NULL, then all flagComment are NOT NULL
 
         checks["valid_caseFlags_flagComment_in_list"] = """
         (
-            valid_categoryIdList IS NULL
-            OR lu_HORef IS NULL
-            OR
             (
-                NOT (
-                    array_contains(valid_categoryIdList, 7) OR
-                    array_contains(valid_categoryIdList, 8) OR
-                    array_contains(valid_categoryIdList, 24) OR
-                    array_contains(valid_categoryIdList, 25) OR
-                    array_contains(valid_categoryIdList, 31) OR
-                    array_contains(valid_categoryIdList, 32) OR
-                    array_contains(valid_categoryIdList, 41)
+                (
+                    HOANRef IS NULL
+                    OR
+                    (
+                        NOT (
+                            array_contains(valid_categoryIdList, 7) OR
+                            array_contains(valid_categoryIdList, 8) OR
+                            array_contains(valid_categoryIdList, 24) OR
+                            array_contains(valid_categoryIdList, 25) OR
+                            array_contains(valid_categoryIdList, 31) OR
+                            array_contains(valid_categoryIdList, 32) OR
+                            array_contains(valid_categoryIdList, 41)
+                        )
+                    )
                 )
                 AND caseFlags IS NULL
             )
@@ -439,7 +468,7 @@ class paymentPendingDQRules(DQRulesBase):
                         array_contains(valid_categoryIdList, 41)
                     )
                     OR
-                    (lu_HORef IS NOT NULL)
+                    (HOANRef IS NOT NULL)
                 )
                 AND caseFlags IS NOT NULL
                 AND
@@ -461,7 +490,7 @@ class paymentPendingDQRules(DQRulesBase):
                     )
                     OR
                     (
-                        (lu_HORef IS NOT NULL)
+                        (HOANRef IS NOT NULL)
                         AND
                         EXISTS(
                             TRANSFORM(caseFlags.details, x -> x.value.flagComment), x -> x <=> 'Dropped Case'
@@ -548,7 +577,7 @@ class paymentPendingDQRules(DQRulesBase):
             "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
         checks["valid_sponsorPartyId_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND array_contains(valid_categoryIdList, 38) AND sponsorPartyId IS NOT NULL) OR (sponsorPartyID IS NULL))"
+            "((Sponsor_Name IS NOT NULL AND sponsorPartyId IS NOT NULL) OR (sponsorPartyID IS NULL))"
         )
 
         # ##############################
@@ -663,8 +692,8 @@ class paymentPendingDQRules(DQRulesBase):
                 (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
                 OR
                 (
-                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
-                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remPP)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_remPP)
                     AND remissionType IS NULL
                 )
             )"""
@@ -684,8 +713,8 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 OR
                 (
-                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_rem)
-                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_rem)
+                    NOT (PaymentRemissionReason <=> PaymentRemissionReason_remPP)
+                    AND NOT (PaymentRemissionRequested <=> PaymentRemissionRequested_remPP)
                     AND remissionClaim IS NULL
                 )
             )"""
@@ -825,7 +854,6 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_appellantHasFixedAddressAdminJ"] = (
             """(
                 (array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No'))
-                OR (valid_categoryIdList IS NULL AND appellantHasFixedAddressAdminJ IS NULL)
                 OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL)
             )"""
         )
@@ -840,7 +868,7 @@ class paymentPendingDQRules(DQRulesBase):
                     AND
                     addressLine1AdminJ IS NOT NULL
                 )
-                OR (addressLine1AdminJ IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
             )"""
         )
 
@@ -854,7 +882,7 @@ class paymentPendingDQRules(DQRulesBase):
                     AND
                     addressLine2AdminJ IS NOT NULL
                 )
-                OR (addressLine2AdminJ IS NULL)
+                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
             )"""
         )
 
@@ -883,7 +911,22 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
-        checks["valid_countryGovUkOocAdminJ"] = ("(((array_contains(valid_categoryIdList, 38)) AND (countryGovUkOocAdminJ IS NOT NULL) AND (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO'))) OR (countryGovUkOocAdminJ IS NULL))")
+        checks["valid_countryGovUkOocAdminJ"] = (
+            """(
+                (
+                    (array_contains(valid_categoryIdList, 38))
+                    AND
+                    (countryGovUkOocAdminJ IS NOT NULL)
+                    AND
+                    (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MH', 'MC', 'FM', 'BC', 'ZZ'))
+                )
+                OR
+                (
+                    (NOT(array_contains(valid_categoryIdList, 38)))
+                    AND
+                    (countryGovUkOocAdminJ IS NULL)
+                )
+            )""")
         ##############################
         # AARIADM-764 (appellantDetails)
         ##############################
@@ -924,19 +967,16 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-788 and ARIADM-792 (homeOffice)
         #########################################
         checks["valid_homeOfficeDecisionDate_format"] = (
-            "((array_contains(valid_categoryIdList, 37) AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
+            "((dv_appellantIsInUk AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
         )
 
         checks["valid_decisionLetterReceivedDate_format"] = (
             """(
                 (
-                    decisionLetterReceivedDate IS NOT NULL AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
-                    AND array_contains(valid_categoryIdList, 38)
-                    AND (
-                        (lu_HORef IS NULL OR lu_HORef not LIKE '%GWF%')
-                        AND (HORef IS NULL OR HORef not LIKE '%GWF%')
-                        AND (FCONumber IS NULL OR FCONumber not LIKE '%GWF%')
-                    )
+                    NOT dv_appellantIsInUk
+                    AND decisionLetterReceivedDate IS NOT NULL
+                    AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
                 )
                 OR (decisionLetterReceivedDate IS NULL)
             )"""
@@ -945,8 +985,8 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_dateEntryClearanceDecision_format"] = (
             """(
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    AND (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND dateEntryClearanceDecision IS NOT NULL
                     AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
                 )
@@ -954,20 +994,19 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
+        # homeOfficeReferenceNumber: populated for in-UK/non-GWF; '999999999' fallback for OOC+GWF.
         checks["valid_homeOfficeReferenceNumber_not_null"] = (
             """(
                 (
-                    NOT array_contains(valid_categoryIdList, 38)
-                    AND  (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
-                    AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
+                    (dv_appellantIsInUk
+                     OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
                     AND homeOfficeReferenceNumber IS NOT NULL
                 )
                 OR
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    OR (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
-                    OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
-                    OR homeOfficeReferenceNumber IS NULL
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
+                    AND homeOfficeReferenceNumber = '999999999'
                 )
             )"""
         )
@@ -975,17 +1014,16 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_gwfReferenceNumber_not_null"] = (
             """(
                 (
-                    array_contains(valid_categoryIdList, 38)
-                    AND  (lu_HORef LIKE '%GWF%' OR HORef LIKE '%GWF%' OR FCONumber LIKE '%GWF%')
+                    NOT dv_appellantIsInUk
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
                     AND gwfReferenceNumber IS NOT NULL
                 )
                 OR
                 (
-                    NOT array_contains(valid_categoryIdList, 38)
-                    OR (lu_HORef NOT LIKE '%GWF%' OR HORef NOT LIKE '%GWF%' OR FCONumber NOT LIKE '%GWF%')
+                    dv_appellantIsInUk
+                    OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
                     OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
-                    OR gwfReferenceNumber IS NULL
                 )
             )"""
         )

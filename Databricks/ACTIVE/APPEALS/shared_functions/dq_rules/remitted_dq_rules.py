@@ -18,6 +18,36 @@ class remittedDQRules(DQRulesBase):
         )
         """)
 
+        checks["valid_allocatedJudge"] = (
+            """
+            (
+                (
+                    CaseStatus_decb = 39 AND 
+                    (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                )
+                OR
+                (
+                    (CaseStatus_decb <> 39 OR CaseStatus_decb IS NULL) AND allocatedJudge IS NULL
+                )
+            )
+            """
+        )
+
+        checks["valid_allocatedJudgeEdit"] = (
+            """
+            (
+                (
+                    CaseStatus_decb = 39 AND 
+                    (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
+                )
+                OR
+                (
+                    (CaseStatus_decb <> 39 OR CaseStatus_decb IS NULL) AND allocatedJudgeEdit IS NULL
+                )
+            )
+                """
+        )
+
         checks["valid_sourceOfRemittal"] = ("""
         (
             sourceOfRemittal = "Upper Tribunal" AND sourceOfRemittal IS NOT NULL AND sourceOfRemittal != ""

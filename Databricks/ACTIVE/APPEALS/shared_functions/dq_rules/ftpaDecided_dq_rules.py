@@ -169,17 +169,17 @@ class ftpaDecidedDQRules(DQRulesBase):
                     )
                     AND
                     (
-                        (outcome_14_30_31_cs_39 = 30 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
+                        (outcome_14_30_31_cs_39 = 30 AND cs39_party_14_30_31 = 1 AND ftpaAppellantRjDecisionOutcomeType = 'granted')
                         OR
-                        (outcome_14_30_31_cs_39 = 31 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
+                        (outcome_14_30_31_cs_39 = 31 AND cs39_party_14_30_31 = 1 AND ftpaAppellantRjDecisionOutcomeType = 'refused')
                         OR
-                        (outcome_14_30_31_cs_39 = 14 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
+                        (outcome_14_30_31_cs_39 = 14 AND cs39_party_14_30_31 = 1 AND ftpaAppellantRjDecisionOutcomeType = 'notAdmitted')
                     )
                 )
                 OR
                 (
                     NOT (
-                        (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                        (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14) AND cs39_party_14_30_31 = 1)
                     )
                     AND ftpaAppellantRjDecisionOutcomeType IS NULL
                 )
@@ -200,17 +200,17 @@ class ftpaDecidedDQRules(DQRulesBase):
                     )
                     AND
                     (
-                        (outcome_14_30_31_cs_39 = 30 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
+                        (outcome_14_30_31_cs_39 = 30 AND cs39_party_14_30_31 = 2 AND ftpaRespondentRjDecisionOutcomeType = 'granted')
                         OR
-                        (outcome_14_30_31_cs_39 = 31 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
+                        (outcome_14_30_31_cs_39 = 31 AND cs39_party_14_30_31 = 2 AND ftpaRespondentRjDecisionOutcomeType = 'refused')
                         OR
-                        (outcome_14_30_31_cs_39 = 14 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
+                        (outcome_14_30_31_cs_39 = 14 AND cs39_party_14_30_31 = 2 AND ftpaRespondentRjDecisionOutcomeType = 'notAdmitted')
                     )
                 )
                 OR
                 (
                     NOT (
-                        (cs_39_outcome_14_30_31 = 39 OR outcome_14_30_31_cs_39 IN (30,31,14))
+                        (cs_39_outcome_14_30_31 = 39 AND outcome_14_30_31_cs_39 IN (30,31,14) AND cs39_party_14_30_31 = 2)
                     )
                     AND ftpaRespondentRjDecisionOutcomeType IS NULL
                 )

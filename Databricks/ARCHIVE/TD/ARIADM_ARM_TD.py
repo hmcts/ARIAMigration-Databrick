@@ -496,61 +496,6 @@ def bronze_ac_ca_ant_fl_dt_hc():
 
 # COMMAND ----------
 
-# df = spark.read.table("hive_metastore.ariadm_arm_td.raw_appealcase").alias("ac") \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_caseappellant").alias("ca"),
-#             col("ac.CaseNo") == col("ca.CaseNo"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_appellant").alias("a"),
-#             col("ca.AppellantId") == col("a.AppellantId"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_filelocation").alias("fl"),
-#             col("ac.CaseNo") == col("fl.CaseNo"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_department").alias("d"),
-#             col("fl.DeptId") == col("d.DeptId"),
-#             "left_outer"
-#         ) \
-#         .join(
-#             spark.read.table("hive_metastore.ariadm_arm_td.raw_hearingcentre").alias("hc"),
-#             col("d.CentreId") == col("hc.CentreId"),
-#             "left_outer"
-#         ).filter(col("ca.RelationShip").isNull()) \
-#         .select(
-#             col("ac.CaseNo"),
-#             col("a.Forenames"),
-#             col("a.Name"),
-#             col("a.BirthDate"),
-#             col("ac.DestructionDate"),
-#             col("ac.HORef"),
-#             col("a.PortReference"),
-#             col("hc.Description").alias("HearingCentreDescription"),
-#             col("d.Description").alias("DepartmentDescription"),
-#             col("fl.Note"),
-#             col("ca.RelationShip"),
-#             col("ac.AdtclmnFirstCreatedDatetime"),
-#             col("ac.AdtclmnModifiedDatetime"),
-#             col("ac.SourceFileName"),
-#             col("ac.InsertedByProcessName")
-#         )
-
-# # display(df.filter(col("CaseNo") == lit("VA/00003/2009")))
-# display(df.filter(col("Forenames").isNull()))
-
-# COMMAND ----------
-
-# %sql
-# select * from hive_metastore.ariadm_arm_td.bronze_ac_ca_ant_fl_dt_hc
-# where CaseNo = 'VA/00003/2009'
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Transformation bronze_iris_extract 
 
@@ -611,80 +556,131 @@ def bronze_iris_extract():
 # MAGIC Tribunal Decisions 
 # MAGIC 16/09/2024 
 # MAGIC */ 
-# MAGIC
 # MAGIC SELECT  
-# MAGIC     ac.CaseNo 
+# MAGIC ac.CaseNo 
 # MAGIC FROM dbo.AppealCase ac 
-# MAGIC LEFT OUTER JOIN ( 
-# MAGIC     SELECT MAX(StatusId) max_ID, Caseno 
-# MAGIC     FROM dbo.Status 
-# MAGIC     WHERE ISNULL(outcome, -1) NOT IN (38,111)  
-# MAGIC     AND ISNULL(casestatus, -1) != 17 
-# MAGIC     GROUP BY Caseno 
-# MAGIC ) AS s ON ac.caseno = s.caseno 
-# MAGIC LEFT OUTER JOIN dbo.Status t ON t.caseno = s.caseno AND t.statusID = s.max_ID 
-# MAGIC LEFT OUTER JOIN (
-# MAGIC     SELECT MAX(StatusID) as Prev_ID, CaseNo  
-# MAGIC     FROM dbo.Status WHERE ISNULL(casestatus, -1) NOT IN (52,36) 
-# MAGIC     GROUP BY CaseNo
-# MAGIC ) AS Prev ON ac.CaseNo = prev.caseNo 
-# MAGIC LEFT OUTER JOIN dbo.Status st ON st.caseno = prev.caseno AND st.StatusId = prev.Prev_ID  
+# MAGIC LEFT OUTER JOIN ( SELECT MAX(StatusId) max_ID, Caseno 
+# MAGIC                         FROM dbo.Status 
+# MAGIC                         WHERE ISNULL(outcome, -1) NOT IN (38,111)  
+# MAGIC                         and ISNULL(casestatus, -1) != 17 
+# MAGIC                         GROUP BY Caseno 
+# MAGIC                     ) AS s ON ac.caseno = s.caseno 
+# MAGIC LEFT OUTER JOIN dbo.Status t ON t.caseno = s.caseno and t.statusID = s.max_ID 
+# MAGIC LEFT OUTER JOIN (SELECT MAX(StatusID) as Prev_ID, CaseNo  
+# MAGIC 						FROM dbo.Status WHERE ISNULL(casestatus, -1) NOT IN ('50','52','36') -- FIX : ADDED 50 in here
+# MAGIC 						GROUP BY CaseNo) AS Prev ON ac.CaseNo = prev.caseNo 
+# MAGIC LEFT OUTER JOIN dbo.Status st ON st.caseno = prev.caseno and st.StatusId = prev.Prev_ID  
+# MAGIC LEFT OUTER JOIN (SELECT MAX(StatusID) as UT_ID, CaseNo 
+# MAGIC 					FROM dbo.Status WHERE CaseStatus IN ('40','41','42','43','44','45','53','27','28','29','34','32','33')
+# MAGIC 					GROUP BY CaseNo) AS UT ON ac.CaseNo = UT.caseNo
+# MAGIC LEFT OUTER JOIN dbo.Status us ON us.caseno = UT.caseno and us.StatusId = ut.UT_ID -- added extra joins for UT
 # MAGIC LEFT OUTER JOIN dbo.FileLocation fl ON ac.caseNo = fl.caseNo 
 # MAGIC WHERE	 
-# MAGIC     ac.CaseType = 1 
-# MAGIC     AND  
-# MAGIC     CASE  
-# MAGIC         WHEN ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NOT NULL THEN 'Skeleton Case' -- Excluding Skeleton cases 
-# MAGIC         WHEN (  t.CaseStatus IN ('40','41','42','43','44','45','53','27','28','29','34','32','33') 
-# MAGIC         AND t.Outcome IN ('0','86') ) THEN 'UT Active/Remitted Case' -- Excluding UT Active Cases & UT Remitted cases 
-# MAGIC         WHEN fl.DeptId = 519 THEN 'Tribunal Decision' -- All National Archive, File Destroyed Cases 
-# MAGIC         WHEN (	t.CaseStatus IS NULL 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 10 AND t.Outcome IN ('0','109','104','82','99','121','27','39') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 46 AND t.Outcome IN ('1','86') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 26 AND t.Outcome IN ('0','27','39','50','40','52','89') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus IN ('37','38') AND t.Outcome IN ('39','40','37','50','27','0','5') 
-# MAGIC         OR  
-# MAGIC         t.CaseStatus = 39 AND t.Outcome IN ('0','86') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 50 AND t.Outcome = 0 
-# MAGIC         OR  
-# MAGIC         t.CaseStatus IN ('52','36') AND t.Outcome = 0 AND st.DecisionDate IS NULL 
-# MAGIC         ) THEN 'Active - CCD' -- Excluding FT Active Appeals 
-# MAGIC         WHEN (	t.CaseStatus = 10 AND t.Outcome IN ('13','80','122','25','120','2','105','119') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 46 AND t.Outcome IN ('31','2','50') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 26 AND t.Outcome IN ('80','13','25','1','2') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus IN ('37','38') AND t.Outcome IN ('1','2','80','13','25','72','14') 
-# MAGIC         OR  
-# MAGIC         t.CaseStatus = 39 AND t.Outcome IN ('30','31','25','14') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 51 AND t.Outcome IN ('94','93') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 36 AND t.Outcome = 25 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 52 AND t.Outcome IN ('91','95') AND (st.CaseStatus NOT IN ('37','38','39','17') OR st.CaseStatus IS NULL) 
-# MAGIC         ) AND DATEADD(MONTH,6,t.decisiondate) > GETDATE() THEN 'Retain - CCD' 	-- Excluding FT Retained Appeals | Using decision date from final/substantive decision where most recent status is the final/substantive decision 
-# MAGIC         WHEN (	t.CaseStatus IN (52, 36) AND t.Outcome = 0 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 36 AND t.Outcome IN ('1','2','50','108') 
-# MAGIC         OR 
-# MAGIC         t.CaseStatus = 52 AND t.Outcome IN ('91','95') AND st.CaseStatus IN ('37','38','39','17') 
-# MAGIC         ) AND DATEADD(MONTH,6,st.decisiondate) > GETDATE() THEN 'Retain - CCD' 	-- Excluding FT Retained Appeals | Using decision date from the Substantive decision where most recent status isn't the final/substantive decision	 
-# MAGIC         ELSE 'Tribunal Decision' -- Every other appeal case needs a tribunal decision 
-# MAGIC     END = 'Tribunal Decision' -- Filtering for just cases requiring a tribunal decision 
-# MAGIC ORDER BY ac.CaseNo
+# MAGIC ac.CaseType = 1 
+# MAGIC AND  
+# MAGIC CASE  
+# MAGIC WHEN (  t.CaseStatus IN ('40','41','42','43','44','45','53','27','28','29','34','32','33') 
+# MAGIC 		AND t.Outcome IN (0,86) ) THEN 'UT Active/Remitted Case' -- Excluding UT Active Cases & UT Remitted cases 
+# MAGIC WHEN	fl.DeptId IN (519,520) THEN 'Tribunal Decision' -- All National Archive, File Destroyed Cases & FIX: File Preserved added
+# MAGIC WHEN	ac.CasePrefix IN ('VA','AA','AS','CC','HR','HX','IM','NS','OA','OC','RD','TH','XX') THEN 'Tribunal Decision' -- FIX: adding obsolete prefixes
+# MAGIC WHEN    us.CaseStatus IS NOT NULL 
+# MAGIC 			AND
+# MAGIC 		    (
+# MAGIC 		    (t.CaseStatus IS NULL)
+# MAGIC 			OR
+# MAGIC 			(t.CaseStatus = '10' AND t.Outcome IN (0,109,104,82,99,121,27,39)) --add brackets to each of these
+# MAGIC 			OR
+# MAGIC 			(t.CaseStatus = '46' AND t.Outcome IN (1,86))
+# MAGIC 			OR
+# MAGIC 			(t.CaseStatus = '26' AND t.Outcome IN (0,27,39,50,40,52,89))
+# MAGIC 			OR
+# MAGIC 			(t.CaseStatus IN ('37','38') AND t.Outcome IN (39,40,37,50,27,0,5,52))
+# MAGIC 			OR 
+# MAGIC 			(t.CaseStatus = '39' AND t.Outcome IN (0,86))
+# MAGIC 			OR
+# MAGIC 			(t.CaseStatus = '50' AND t.Outcome = 0)
+# MAGIC 			OR 
+# MAGIC 			(t.CaseStatus IN ('52','36') AND t.Outcome = 0 AND st.DecisionDate IS NULL)
+# MAGIC 			)  THEN 'CCD'		 -- FT Active
+# MAGIC WHEN	(
+# MAGIC 		ac.CasePrefix IN ('DA','DC','EA','HU','PA','RP')
+# MAGIC 		OR
+# MAGIC 		(ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NULL)
+# MAGIC 		)
+# MAGIC 		AND
+# MAGIC 		(
+# MAGIC 		t.CaseStatus IS NULL
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '10' AND t.Outcome IN (0,109,104,82,99,121,27,39)) -- brackets for each
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '46' AND t.Outcome IN (1,86))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '26' AND t.Outcome IN (0,27,39,50,40,52,89))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus IN ('37','38') AND t.Outcome IN (39,40,37,50,27,0,5,52))
+# MAGIC 		OR 
+# MAGIC 		(t.CaseStatus = '39' AND t.Outcome IN (0,86))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '50' AND t.Outcome = 0)
+# MAGIC 		OR 
+# MAGIC 		(t.CaseStatus IN ('52','36') AND t.Outcome = 0 AND st.DecisionDate IS NULL)
+# MAGIC 		) THEN 'CCD' -- FT Active
+# MAGIC WHEN	(	
+# MAGIC 		ac.CasePrefix IN ('DA','DC','EA','HU','PA','RP') 
+# MAGIC 		OR
+# MAGIC 		(ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NULL)
+# MAGIC 		OR
+# MAGIC 		(ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NOT NULL AND us.CaseStatus IS NOT NULL AND DATEADD(YEAR,5,us.decisiondate) < DATEADD(YEAR,2,t.decisiondate))
+# MAGIC 		)
+# MAGIC 		AND 
+# MAGIC 		(
+# MAGIC 		(t.CaseStatus = '10' AND t.Outcome IN (13,80,122,25,120,2,105,119)) 
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '46' AND t.Outcome IN (31,2,50))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '26' AND t.Outcome IN (80,13,25,1,2))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus IN ('37','38') AND t.Outcome IN (1,2,80,13,25,72,14,125))
+# MAGIC 		OR 
+# MAGIC 		(t.CaseStatus = '39' AND t.Outcome IN (30,31,25,14,80))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '51' AND t.Outcome IN (94,93))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '52' AND t.Outcome IN (91,95) AND (st.CaseStatus NOT IN ('37','38','39','17','40','41','42','43','44','45','53','27','28','29','34','32','33') OR st.CaseStatus IS NULL))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '36' AND t.Outcome = 25 AND (st.CaseStatus NOT IN ('40','41','42','43','44','45','53','27','28','29','34','32','33') OR st.CaseStatus IS NULL))
+# MAGIC 		)
+# MAGIC 		AND
+# MAGIC 		DATEADD(MONTH,6,t.decisiondate) >= '2026-06-05' THEN 'CCD'	-- FT Retained CCD
+# MAGIC WHEN 	(
+# MAGIC 		(ac.CasePrefix IN ('DA','DC','EA','HU','PA','RP') AND us.CaseStatus IS NULL)
+# MAGIC 		OR
+# MAGIC 		(ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NULL)
+# MAGIC 		OR
+# MAGIC 		(ac.CasePrefix IN ('LP','LR', 'LD', 'LH', 'LE' ,'IA') AND ac.HOANRef IS NOT NULL AND us.CaseStatus IS NOT NULL AND DATEADD(YEAR,5,us.decisiondate) < DATEADD(YEAR,2,t.decisiondate) )
+# MAGIC 		)
+# MAGIC 		AND 
+# MAGIC 		(
+# MAGIC 		(t.CaseStatus IN ('52', '36') AND t.Outcome = 0 AND st.DecisionDate IS NOT NULL) -- If previous decision date is NULL then the case is active
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '36' AND t.Outcome IN (1,2,50,108))
+# MAGIC 		OR
+# MAGIC 		(t.CaseStatus = '52' AND t.Outcome IN (91,95) AND st.CaseStatus IN ('37','38','39','17'))
+# MAGIC 		) 
+# MAGIC 		AND DATEADD(MONTH,6,t.decisiondate) >= '2026-06-05'  THEN 'CCD'	-- FT Retained CCD
+# MAGIC WHEN	ac.CasePrefix IN ('IA','LD','LE','LH','LP','LR') AND ac.HOANRef IS NULL 
+# MAGIC 		THEN 'Tribunal Decision' -- If there is no CCD number against these prefixes it is no longer considered a skeleton case so needs a TD
+# MAGIC WHEN	ac.CasePrefix IN ('IA','LD','LE','LH','LP','LR') AND us.CaseStatus IS NOT NULL 
+# MAGIC 		THEN 'Tribunal Decision' -- if a skele prefix case went to the UT & is still there then it's an active UT case, If it went to the UT & came back to FT it is not longer considered a skele case so needs a TD
+# MAGIC WHEN	ac.CasePrefix IN ('IA','LD','LE','LH','LP','LR') AND ac.HOANRef IS NOT NULL 
+# MAGIC 		THEN 'Skeleton Case' -- Skeleton cases don't need a tribunal decision record
+# MAGIC ELSE 'Tribunal Decision' -- Every other appeal case needs a tribunal decision 
+# MAGIC END = 'Tribunal Decision' -- Filtering for just cases requiring a tribunal decision 
+# MAGIC
+# MAGIC --ORDER BY ac.CaseNo 
 # MAGIC ```
 
 # COMMAND ----------
-
-# import dlt
-# from pyspark.sql.functions import col, when, coalesce
 
 @dlt.table(
     name="stg_td_filtered",
@@ -692,89 +688,146 @@ def bronze_iris_extract():
     path=f"{silver_mnt}/stg_td_filtered"
 )
 def bronze_appeal_case_tribunal_decision():
-    # Subquery for the max StatusId and Caseno filtering by outcome and casestatus
+
+    UT_STATUSES = ["40","41","42","43","44","45","53","27","28","29","34","32","33"]
+    OBSOLETE_PREFIXES = ["VA","AA","AS","CC","HR","HX","IM","NS","OA","OC","RD","TH","XX"]
+    LP_GROUP = ["LP","LR","LD","LH","LE","IA"]
+    DA_GROUP = ["DA","DC","EA","HU","PA","RP"]
+    SKELETON_GROUP = ["IA","LD","LE","LH","LP","LR"]
+
+    # ISNULL(outcome,-1) NOT IN (38,111) AND ISNULL(casestatus,-1) != 17
     status_subquery = (
-            dlt.read("raw_status")
-            .filter(
-                (col("outcome").isNotNull() & (~col("outcome").isin(38,111))) &
-                (col("casestatus").isNotNull() & (col("casestatus") != 17))
-            )
-            .groupBy("CaseNo")
-            .agg({"StatusId": "max"})
-            .withColumnRenamed("max(StatusId)", "max_ID")
+        dlt.read("raw_status")
+        .filter(
+            (col("outcome").isNull() | (~col("outcome").isin(38, 111)))
+            & (col("casestatus").isNull() | (col("casestatus") != 17))
         )
+        .groupBy("CaseNo")
+        .agg(F.max("StatusId").alias("max_ID"))
+    )
 
+    # ISNULL(casestatus,-1) NOT IN (50,52,36)
     prev_subquery = (
-            dlt.read("raw_status")
-            .filter(
-                col("casestatus").isNull() | (~col("casestatus").isin(52,36))
-            )
-            .groupBy("CaseNo")
-            .agg({"StatusId": "max"})
-            .withColumnRenamed("max(StatusId)", "Prev_ID")
+        dlt.read("raw_status")
+        .filter(
+            col("casestatus").isNull() | (~col("casestatus").isin(50, 52, 36))
         )
+        .groupBy("CaseNo")
+        .agg(F.max("StatusId").alias("Prev_ID"))
+    )
 
-        # Joining the tables
-    result_df = (
-            dlt.read("raw_appealcase").alias("ac")
-            .join(status_subquery.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left_outer")
-            .join(dlt.read("raw_status").alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left_outer")
-            .join(prev_subquery.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left_outer")
-            .join(dlt.read("raw_status").alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
-            .join(dlt.read("raw_filelocation").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
-            .filter(
-                (col("ac.CaseType") == 1) &
-                (when(
-                    (col("ac.CasePrefix").isin("LP", "LR", "LD", "LH", "LE", "IA")) & (col("ac.HOANRef").isNotNull()),
-                    "Skeleton Case"
-                )
-                .when(
-                    (col("t.CaseStatus").isin("40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33")) &
-                    (col("t.Outcome").isin("0", "86")),
-                    "UT Active/Remitted Case"
-                )
-                .when(
-                    col("fl.DeptId") == 519,
-                    "Tribunal Decision"
-                )
-                .when(
-                    (col("t.CaseStatus").isNull()) |
-                    ((col("t.CaseStatus") == 10) & (col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))) |
-                    ((col("t.CaseStatus") == 46) & (col("t.Outcome").isin("1", "86"))) |
-                    ((col("t.CaseStatus") == 26) & (col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))) |
-                    ((col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5"))) |
-                    ((col("t.CaseStatus") == 39) & (col("t.Outcome").isin("0", "86"))) | 
-                    ((col("t.CaseStatus") == 50) & (col("t.Outcome") == "0")) |
-                    ((col("t.CaseStatus").isin("52", "36")) & (col("t.Outcome") == "0") & col("st.DecisionDate").isNull()),
-                    "Active - CCD"
-                )
-                .when(
-                    (
-                        (col("t.CaseStatus") == 10) & (col("t.Outcome").isin("13", "80", "122", "25", "120", "2", "105", "119")) |
-                        (col("t.CaseStatus") == 46) & (col("t.Outcome").isin("31", "2", "50")) |
-                        (col("t.CaseStatus") == 26) & (col("t.Outcome").isin("80", "13", "25", "1", "2")) |
-                        (col("t.CaseStatus").isin("37", "38")) & (col("t.Outcome").isin("1", "2", "80", "13", "25", "72", "14")) |
-                        (col("t.CaseStatus") == 39) & (col("t.Outcome").isin("30", "31", "25", "14")) |
-                        (col("t.CaseStatus") == 51) & (col("t.Outcome").isin("94", "93")) |
-                        (col("t.CaseStatus") == 36) & (col("t.Outcome") == 25) |
-                        (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) &
-                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin("37", "38", "39", "17"))
-                    ) & (add_months(col("t.DecisionDate"), 6) > lit("2026-02-01")),
-                    "Retain - CCD"
-                )
-                .when(
-                    (
-                        (col("t.CaseStatus").isin(52, 36)) & (col("t.Outcome") == 0) |
-                        (col("t.CaseStatus") == 36) & (col("t.Outcome").isin("1", "2", "50", "108")) |
-                        (col("t.CaseStatus") == 52) & (col("t.Outcome").isin("91", "95")) & col("st.CaseStatus").isin("37", "38", "39", "17")
-                    ) & (add_months(col("st.DecisionDate"), 6) > lit("2026-02-01")),
-                    "Retain - CCD"
-                )
-                .otherwise("Tribunal Decision") == "Tribunal Decision")
-            )
-            .select("ac.CaseNo")
-            .orderBy("ac.CaseNo")
+    ut_subquery = (
+        dlt.read("raw_status")
+        .filter(col("CaseStatus").isin(*UT_STATUSES))
+        .groupBy("CaseNo")
+        .agg(F.max("StatusId").alias("UT_ID"))
+    )
+
+    ac = dlt.read("raw_appealcase").alias("ac")
+    t  = dlt.read("raw_status").alias("t")
+    st = dlt.read("raw_status").alias("st")
+    us = dlt.read("raw_status").alias("us")
+    fl = dlt.read("raw_filelocation").alias("fl")
+
+    df = (
+        ac
+        .join(status_subquery.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left_outer")
+        .join(t, (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left_outer")
+        .join(prev_subquery.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left_outer")
+        .join(st, (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
+        .join(ut_subquery.alias("ut"), col("ac.CaseNo") == col("ut.CaseNo"), "left_outer")
+        .join(us, (col("us.CaseNo") == col("ut.CaseNo")) & (col("us.StatusId") == col("ut.UT_ID")), "left_outer")
+        .join(fl, col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
+    )
+
+    # Shared "CCD - FT Active" condition
+    ccd_active_cond = (
+        col("t.CaseStatus").isNull()
+        | ((col("t.CaseStatus") == 10) & col("t.Outcome").isin(0,109,104,82,99,121,27,39))
+        | ((col("t.CaseStatus") == 46) & col("t.Outcome").isin(1,86))
+        | ((col("t.CaseStatus") == 26) & col("t.Outcome").isin(0,27,39,50,40,52,89))
+        | (col("t.CaseStatus").isin(37,38) & col("t.Outcome").isin(39,40,37,50,27,0,5,52))
+        | ((col("t.CaseStatus") == 39) & col("t.Outcome").isin(0,86))
+        | ((col("t.CaseStatus") == 50) & (col("t.Outcome") == 0))
+        | (col("t.CaseStatus").isin(52,36) & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
+    )
+
+    # Shared "FT Retained CCD" condition (set 1, from outcome list with 125)
+    retain_cond_1 = (
+        ((col("t.CaseStatus") == 10) & col("t.Outcome").isin(13,80,122,25,120,2,105,119))
+        | ((col("t.CaseStatus") == 46) & col("t.Outcome").isin(31,2,50))
+        | ((col("t.CaseStatus") == 26) & col("t.Outcome").isin(80,13,25,1,2))
+        | (col("t.CaseStatus").isin(37,38) & col("t.Outcome").isin(1,2,80,13,25,72,14,125))
+        | ((col("t.CaseStatus") == 39) & col("t.Outcome").isin(30,31,25,14,80))
+        | ((col("t.CaseStatus") == 51) & col("t.Outcome").isin(94,93))
+        | ((col("t.CaseStatus") == 52) & col("t.Outcome").isin(91,95)
+           & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin(*UT_STATUSES, 37,38,39,17)))
+        | ((col("t.CaseStatus") == 36) & (col("t.Outcome") == 25)
+           & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin(*UT_STATUSES)))
+    )
+
+    # Shared "FT Retained CCD" condition (set 2)
+    retain_cond_2 = (
+        (col("t.CaseStatus").isin(52,36) & (col("t.Outcome") == 0) & col("st.DecisionDate").isNotNull())
+        | ((col("t.CaseStatus") == 36) & col("t.Outcome").isin(1,2,50,108))
+        | ((col("t.CaseStatus") == 52) & col("t.Outcome").isin(91,95) & col("st.CaseStatus").isin(37,38,39,17))
+    )
+
+    # Helper: HOANRef-not-null LP-group condition with the 5/2-year window check
+    lp_hoanref_recent = (
+        col("ac.CasePrefix").isin(*LP_GROUP)
+        & col("ac.HOANRef").isNotNull()
+        & col("us.CaseStatus").isNotNull()
+        & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+    )
+
+    derived_status = (
+        when(
+            col("t.CaseStatus").isin(*UT_STATUSES) & col("t.Outcome").isin(0,86),
+            "UT Active/Remitted Case"
         )
+        .when(col("fl.DeptId").isin(519,520), "Tribunal Decision")
+        .when(col("ac.CasePrefix").isin(*OBSOLETE_PREFIXES), "Tribunal Decision")
+        .when(col("us.CaseStatus").isNotNull() & ccd_active_cond, "CCD")
+        .when(
+            (
+                col("ac.CasePrefix").isin(*DA_GROUP)
+                | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+            ) & ccd_active_cond,
+            "CCD"
+        )
+        .when(
+            (
+                col("ac.CasePrefix").isin(*DA_GROUP)
+                | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+                | lp_hoanref_recent
+            )
+            & retain_cond_1
+            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
+            "CCD"
+        )
+        .when(
+            (
+                (col("ac.CasePrefix").isin(*DA_GROUP) & col("us.CaseStatus").isNull())
+                | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+                | lp_hoanref_recent
+            )
+            & retain_cond_2
+            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
+            "CCD"
+        )
+        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNull(), "Tribunal Decision")
+        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("us.CaseStatus").isNotNull(), "Tribunal Decision")
+        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNotNull(), "Skeleton Case")
+        .otherwise("Tribunal Decision")
+    )
+
+    result_df = (
+        df
+        .filter((col("ac.CaseType") == 1) & (derived_status == "Tribunal Decision"))
+        .select("ac.CaseNo")
+        .orderBy("ac.CaseNo")
+    )
 
     return result_df
 
@@ -813,14 +866,15 @@ def silver_tribunaldecision_detail():
             coalesce(col("BirthDate"), lit("1900-01-01").cast("date")),
             "yyyy-MM-dd"
         )
-    ).withColumn(
-        "DestructionDate",
-            date_format(
-                coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
-            "yyyy-MM-dd"
-        )
-    )
-    
+    ).drop(col("DestructionDate"))
+    #.withColumn(
+    #     "DestructionDate",
+    #         date_format(
+    #             coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
+    #         "yyyy-MM-dd"
+    #     )
+    # )
+        
     return df
 
 # COMMAND ----------
@@ -931,12 +985,30 @@ def silver_archive_metadata():
         col("td.HORef").alias('bf_001'),
         col('td.Forenames').alias('bf_002'),
         col('td.Name').alias('bf_003'),
-        date_format(coalesce(col('td.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss:'Z'").alias('bf_004'),
+        date_format(coalesce(col('td.BirthDate'),lit("1900-01-01").cast("date")), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias('bf_004'),
         col('td.PortReference').alias('bf_005'),
         col('td.HearingCentreDescription').alias('bf_006'),
         col("td.DepartmentDescription").alias('bf_007'),
         col("td.Note").alias('bf_008'),
-         when((env_name == lit('sbox')), date_format(coalesce(col('td.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('td.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when(
+            env_name == lit('sbox'),
+            date_format(
+                coalesce(
+                    when((col('td.DestructionDate').isNull()) | (col('td.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('td.DestructionDate')),
+                    current_timestamp()
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).otherwise(
+            date_format(
+                coalesce(
+                    when((col('td.DestructionDate').isNull()) | (col('td.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('td.DestructionDate')),
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).alias('bf_010')
         
     )
     iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
@@ -956,7 +1028,25 @@ def silver_archive_metadata():
         col('iris.HearingCentreDescription').alias('bf_006'),
         col("iris.DepartmentDescription").alias('bf_007'),
         col("iris.Note").alias('bf_008'),
-        when((env_name == lit('sbox') ), date_format(coalesce(col('iris.DestructionDate'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.DestructionDate'), "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('bf_010')
+        when(
+            env_name == lit('sbox'),
+            date_format(
+                coalesce(
+                    when((col('iris.DestructionDate').isNull()) | (col('iris.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('iris.DestructionDate')),
+                    current_timestamp()
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).otherwise(
+            date_format(
+                coalesce(
+                    when((col('iris.DestructionDate').isNull()) | (col('iris.DestructionDate') == ''), lit("1900-01-01").cast("date"))
+                    .otherwise(col('iris.DestructionDate')),
+                ),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            )
+        ).alias('bf_010')
     )
     df = td_df.unionByName(iris_df)
 
@@ -1030,7 +1120,7 @@ def generate_html(row, html_template=html_template):
             "{{Forenames}}": str(row['Forenames'] or ''),
             "{{Name}}": str(row['Name'] or ''),
             "{{BirthDate}}": format_date_dd_mm_yyyy(row['BirthDate']),
-            "{{DestructionDate}}": format_date_dd_mm_yyyy(row['DestructionDate']),
+            # "{{DestructionDate}}": format_date_dd_mm_yyyy(row['DestructionDate']),
             "{{HORef}}": str(row['HORef'] or ''),
             "{{PortReference}}": str(row['PortReference'] or ''),
             "{{HearingCentreDescription}}": str(row['HearingCentreDescription'] or ''),

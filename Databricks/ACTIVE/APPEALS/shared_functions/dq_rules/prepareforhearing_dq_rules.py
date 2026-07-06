@@ -15,9 +15,22 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_isAppealSuitableToFloat"] = (
             """(
-                (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
-                OR
-                (listTypeId != 5 AND isAppealSuitableToFloat = 'No')
+                CaseStatus_dec IN (37,38)
+                AND
+                (
+                    (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
+                    OR
+                    ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+                )
+            )
+            OR
+            (
+                CaseStatus_dec NOT IN (37,38)
+                AND isAppealSuitableToFloat IS NULL
+            )
+            OR
+            (
+                CaseStatus_dec IS NULL AND isAppealSuitableToFloat IS NULL
             )"""
         )
 
@@ -118,15 +131,23 @@ class prepareForHearingDQRules(DQRulesBase):
 
     def get_checks_hearing_details(self, checks={}):
 
-        checks["valid_listinglength"] = ("""
+        checks["valid_listingLength"] = ("""
             (
                 TimeEstimate IS NULL AND
                 element_at(listingLength, 'hours') IS NULL AND
                 element_at(listingLength, 'minutes') IS NULL
             ) OR (
                 TimeEstimate IS NOT NULL AND
-                element_at(listingLength, 'hours') = floor(TimeEstimate / 60) AND
-                element_at(listingLength, 'minutes') = (TimeEstimate % 60)
+                element_at(listingLength, 'hours') = 
+                    floor(TimeEstimate / 60) + 
+                    CASE WHEN (TimeEstimate % 60) >= 45 THEN 1 ELSE 0 END AND
+                element_at(listingLength, 'minutes') = 
+                    CASE 
+                        WHEN (TimeEstimate % 60) < 15 THEN 0
+                        WHEN (TimeEstimate % 60) < 45 THEN 30
+                        ELSE 0
+                    END AND
+                element_at(listingLength, 'minutes') IN (0, 30)
             )""")
 
         checks["valid_hearingChannel"] = ("""
@@ -134,8 +155,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: VisitVisaType = 1
         (
             VisitVisaType = 1 AND
-            element_at(hearingChannel, 'code') = 'ONPPRS' AND
-            element_at(hearingChannel, 'label') = 'On The Papers'
+            hearingChannel.value.code = 'ONPPRS' AND
+            hearingChannel.value.label = 'On The Papers'
         )
         )
         OR
@@ -143,8 +164,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: VisitVisaType = 2
         (
             VisitVisaType = 2 AND
-            element_at(hearingChannel, 'code') = 'INTER' AND
-            element_at(hearingChannel, 'label') = 'In Person'
+            hearingChannel.value.code = 'INTER' AND
+            hearingChannel.value.label = 'In Person'
         )
         )
         OR
@@ -152,8 +173,8 @@ class prepareForHearingDQRules(DQRulesBase):
         -- Case: Other / NULL VisitVisaType → both code and label must be NULL
         (
             (VisitVisaType IS NULL OR (VisitVisaType <> 1 AND VisitVisaType <> 2)) AND
-            element_at(hearingChannel, 'code') IS NULL AND
-            element_at(hearingChannel, 'label') IS NULL
+            hearingChannel.value.code IS NULL AND
+            hearingChannel.value.label IS NULL
         )
         )
         """)
@@ -162,31 +183,29 @@ class prepareForHearingDQRules(DQRulesBase):
             "(size(witnessDetails) = 0)"
         )
 
-        checks["listing_location_struct_consistent_when_matched"] = ("""
+        checks["valid_listingLocation"] = ("""
         (
-        ListedCentre IS NULL
-        OR
-        (
-            listingLocation.code = locationCode AND
-            listingLocation.label = locationLabel
-        )
-        )
-        """)
-
-        # If no match, both fields in listingLocation must be NULL.
-        checks["valid_listinglocation_null_when_not_matched"] = ("""
-        (
-        ListedCentre IS NOT NULL
-        AND
-        (listingLocation.code IS NOT NULL AND listingLocation.label IS NOT NULL)
+            (
+                ListedCentre IS NULL
+                OR
+                (
+                    listingLocation.value.code = locationCode AND
+                    listingLocation.value.label = locationLabel
+                )
+            )
+            OR
+            (
+                ListedCentre IS NOT NULL
+                AND
+                (
+                    listingLocation.value.code IS NOT NULL AND listingLocation.value.label IS NOT NULL
+                )
+            )
         )
         """)
 
         checks["valid_witness1InterpreterSignLanguage"] = (
             "(size(witness1InterpreterSignLanguage) = 0)"
-        )
-        checks["valid_witness2InterpreterSignLanguage"] = (
-            "(size(witness2InterpreterSignLanguage) = 0)"
         )
         checks["valid_witness2InterpreterSignLanguage"] = (
             "(size(witness2InterpreterSignLanguage) = 0)"
@@ -248,32 +267,62 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_listCaseHearingLength"] = ("""
         (
-            CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
-            AND CaseStatus_dec IN (37,38)
-            AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
+            (
+                CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
+                AND CaseStatus_dec IN (37,38)
+                AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
+            )
+            OR
+            (
+                (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND roundedTimeEstimate IS NULL
+            )
         )
         """)
 
         checks["valid_listCaseHearingDate"] = (
             """
             (
-                listCaseHearingDate <=>
-                    CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
-                        CASE
-                        WHEN StartTime IS NULL THEN '00:00:00.000'
-                        ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
-                        END)
-                    AND CaseStatus_dec IN (37,38)
+                (
+                    listCaseHearingDate <=>
+                        CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
+                            CASE
+                            WHEN StartTime IS NULL THEN '00:00:00.000'
+                            ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
+                            END)
+                        AND CaseStatus_dec IN (37,38)
+                )
+                OR
+                (
+                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND roundedTimeEstimate IS NULL
+                )
             )
             """)
 
         checks["valid_listCaseHearingCentre"] = (
-            "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )" 
-        )
+            """
+            (
+                (
+                    listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) 
+                )
+                OR
+                (
+                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentre IS NULL
+                )
+            )
+        """)
 
         checks["valid_listCaseHearingCentreAddress"] = (
-            "(listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IN (37,38))"
-        )
+            """
+            (
+                (
+                    listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IN (37,38)
+                )
+                OR
+                (
+                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentreAddress IS NULL
+                )
+            )
+            """)
 
         return checks
 

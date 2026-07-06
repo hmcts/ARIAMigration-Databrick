@@ -27,9 +27,9 @@ from pyspark.sql.functions import (
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m1,silver_m3,silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
-    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1,silver_m3,silver_c)
+    ftpa_df,ftpa_audit = FSA.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 

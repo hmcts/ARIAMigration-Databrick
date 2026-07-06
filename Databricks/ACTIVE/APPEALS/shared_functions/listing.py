@@ -1,5 +1,6 @@
 from pyspark.sql.functions import (
-    array, array_compact, array_contains, array_distinct, array_size, col, collect_list, concat_ws, expr, lit, row_number, struct, when
+    array, array_compact, array_contains, array_distinct, array_size, col, collect_list, concat, concat_ws,
+    current_timestamp, date_format, expr, lit, row_number, struct, transform, when
 )
 from pyspark.sql.window import Window
 
@@ -8,7 +9,7 @@ from . import paymentPendingDetained as PPD
 from . import AwaitingEvidenceRespondant_b as AERb
 
 
-def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
+def _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     silver_m3_filtered = silver_m3.filter(
@@ -21,12 +22,9 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         )
     ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
 
-    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
-
     spokenLanguageCategory = "spokenLanguageInterpreter"
     signLanguageCategory = "signLanguageInterpreter"
 
-    # List items for all Spoken Languages
     spoken_languages_list = bronze_interpreter_languages.filter(
         (col("appellantInterpreterLanguageCategory") == lit(spokenLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
     ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
@@ -35,8 +33,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
         for row in spoken_languages_list
     ])
-    # Language Ref Data condition is:
-    # Only 1 of language or additional language must match the spoken category and neither language matching spoken category is a manualEntry one.
+
     spoken_language_ref_data_condition = (
         (
             (~(col("il.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)))
@@ -46,7 +43,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
             & ~((col("ail.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)) & (col("ail.manualEntry").eqNullSafe("Yes")))
         )
     )
-    # List items for all Sign Languages
+
     sign_languages_list = bronze_interpreter_languages.filter(
         (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
     ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
@@ -56,8 +53,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         for row in sign_languages_list
     ])
 
-    # Language Ref Data condition is:
-    # Only 1 of language or additional language must match the sign category and neither language matching sign category is a manualEntry one.
     sign_language_ref_data_condition = (
         (
             (~(col("il.appellantInterpreterLanguageCategory").eqNullSafe(signLanguageCategory)))
@@ -68,9 +63,7 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
         )
     )
 
-    # silver_m3_filtered returns at most 1 m3 record per CaseNo, so there can only be at most 1 LanguageId and 1 AdditionalLanguageId
-    # therefore no aggregation of AdditionalLanguageIds needed (as no duplicate CaseNo) unless the condition for the M3 is changed. To be clarified.
-    interpreter_languages_lookup = (
+    return (
         silver_m1.alias("m1")
             .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
             .join(bronze_interpreter_languages.alias("il"), on=(col("m1.LanguageId") == col("il.LanguageId")), how="left")
@@ -185,6 +178,185 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 "lu_appellantInterpreterSignLanguage"
             )
     )
+
+
+def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_languages):
+    df, df_audit = PP.flagsLabels(silver_m1, silver_m2, silver_c)
+
+    interpreter_languages_lookup = _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages)
+
+    def make_appellant_flag_struct(name, code, comment, sub_type_key, sub_type_value, hearing):
+        return struct(
+            lit(expr("uuid()")).alias("id"),
+            struct(
+                lit(name).alias("name"),
+                array(struct(expr("uuid()").alias("id"), lit("Party").alias("value"))).alias("path"),
+                lit("Active").alias("status"),
+                lit(code).alias("flagCode"),
+                lit(comment).cast("string").alias("flagComment"),
+                lit(sub_type_key).cast("string").alias("subTypeKey"),
+                lit(sub_type_value).cast("string").alias("subTypeValue"),
+                date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("dateTimeCreated"),
+                lit(hearing).alias("hearingRelevant")
+            ).alias("value")
+        )
+
+    flags_array = array(
+        make_appellant_flag_struct("Step free / wheelchair access", "RA0019", None, None, None, "Yes"),
+        make_appellant_flag_struct("Hearing loop (hearing enhancement system)", "RA0043", None, None, None, "Yes"),
+        make_appellant_flag_struct("Audio / Video Evidence", "PF0014", None, None, None, "Yes")
+    )
+
+    spoken_lang_flag = when(
+        col("lu_appellantInterpreterSpokenLanguage").isNotNull(),
+        make_appellant_flag_struct(
+            "Language Interpreter",
+            "PF0015",
+            None,
+            when(
+                array_size(col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")) == 0,
+                col("lu_appellantInterpreterSpokenLanguage.languageRefData.value.code")
+            ),
+            when(
+                array_size(col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")) == 0,
+                col("lu_appellantInterpreterSpokenLanguage.languageRefData.value.label")
+            ).otherwise(col("lu_appellantInterpreterSpokenLanguage.languageManualEntryDescription")),
+            "Yes"
+        )
+    )
+
+    sign_lang_flag = when(
+        col("lu_appellantInterpreterSignLanguage").isNotNull(),
+        make_appellant_flag_struct(
+            "Sign Language Interpreter",
+            "RA0042",
+            None,
+            when(
+                array_size(col("lu_appellantInterpreterSignLanguage.languageManualEntry")) == 0,
+                col("lu_appellantInterpreterSignLanguage.languageRefData.value.code")
+            ),
+            when(
+                array_size(col("lu_appellantInterpreterSignLanguage.languageManualEntry")) == 0,
+                col("lu_appellantInterpreterSignLanguage.languageRefData.value.label")
+            ).otherwise(col("lu_appellantInterpreterSignLanguage.languageManualEntryDescription")),
+            "Yes"
+        )
+    )
+
+    interpreter_flags_array = array_compact(array(spoken_lang_flag, sign_lang_flag))
+
+    df = (
+        df.join(
+            silver_m2.filter(col("Relationship").isNull())
+            .select(
+                "CaseNo",
+                col("Appellant_Forenames").alias("m1_AppellantForenames"),
+                col("Appellant_Name").alias("m1_AppellantName")
+            )
+            .dropDuplicates(["CaseNo"]),
+            on="CaseNo",
+            how="left"
+        )
+        .join(
+            interpreter_languages_lookup,
+            on="CaseNo",
+            how="left"
+        )
+        .withColumn(
+            "appellantLevelFlags",
+            when(
+                col("appellantLevelFlags").isNotNull(),
+                col("appellantLevelFlags").withField("details", concat(
+                    transform(  # Align existing flags struct with new struct.
+                        col("appellantLevelFlags.details"),
+                        lambda x: struct(
+                            x["id"].alias("id"),
+                            struct(
+                                x["value"]["name"].alias("name"),
+                                x["value"]["path"].alias("path"),
+                                x["value"]["status"].alias("status"),
+                                x["value"]["flagCode"].alias("flagCode"),
+                                x["value"]["flagComment"].alias("flagComment"),
+                                lit(None).cast("string").alias("subTypeKey"),
+                                lit(None).cast("string").alias("subTypeValue"),
+                                x["value"]["dateTimeCreated"].alias("dateTimeCreated"),
+                                x["value"]["hearingRelevant"].alias("hearingRelevant")
+                            ).alias("value")
+                        )
+                    ),
+                    flags_array,
+                    interpreter_flags_array
+                ))
+            ).otherwise(
+                struct(
+                    concat(flags_array, interpreter_flags_array).alias("details"),
+                    concat_ws(' ', col("m1_AppellantForenames"), col("m1_AppellantName")).alias("partyName"),
+                    lit("Appellant").alias("roleOnCase")
+                )
+            )
+        )
+        .select(*df.columns)
+    )
+
+    df_audit = (
+        df_audit.alias("audit")
+            .join(df.alias("content"), on="CaseNo", how="left")
+            .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
+            .join(
+                silver_m2.filter(col("Relationship").isNull())
+                .select(
+                    "CaseNo",
+                    col("Appellant_Forenames").alias("m2_AppellantForenames"),
+                    col("Appellant_Name").alias("m2_AppellantName")
+                )
+                .dropDuplicates(["CaseNo"])
+                .alias("m2_audit"),
+                on="CaseNo",
+                how="left"
+            )
+            .select(
+                "audit.*",
+                array(struct(
+                    lit("lu_appellantInterpreterSpokenLanguage"),
+                    lit("lu_appellantInterpreterSignLanguage"),
+                    lit("Appellant_Forenames"),
+                    lit("Appellant_Name")
+                )).alias("appellantLevelFlags_listing_inputFields"),
+                array(struct(
+                    col("ilu.lu_appellantInterpreterSpokenLanguage"),
+                    col("ilu.lu_appellantInterpreterSignLanguage"),
+                    col("m2_audit.m2_AppellantForenames"),
+                    col("m2_audit.m2_AppellantName")
+                )).alias("appellantLevelFlags_listing_inputValues"),
+                col("content.appellantLevelFlags").alias("appellantLevelFlags_listing_value"),
+                lit("Yes").alias("appellantLevelFlags_listing_Transformed")
+            )
+            .withColumn("appellantLevelFlags_inputFields", col("appellantLevelFlags_listing_inputFields"))
+            .withColumn("appellantLevelFlags_inputValues", col("appellantLevelFlags_listing_inputValues"))
+            .withColumn("appellantLevelFlags", col("appellantLevelFlags_listing_value"))
+            .withColumn("appellantLevelFlags_Transformation", col("appellantLevelFlags_listing_Transformed"))
+            .drop("appellantLevelFlags_listing_inputFields", "appellantLevelFlags_listing_inputValues", "appellantLevelFlags_listing_value", "appellantLevelFlags_listing_Transformed")
+    )
+
+    return df, df_audit
+
+
+def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    silver_m3_filtered = silver_m3.filter(
+        (
+            (
+                (col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
+            ) | (
+                (col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))
+            )
+        )
+    ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
+
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    interpreter_languages_lookup = _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages)
 
     df_hearingRequirements = (
         silver_m1.alias("m1")

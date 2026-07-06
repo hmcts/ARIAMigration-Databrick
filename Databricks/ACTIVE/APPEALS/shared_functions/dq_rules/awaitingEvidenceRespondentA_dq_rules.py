@@ -11,7 +11,7 @@ class awaitingEvidenceRespondentADQRules(DQRulesBase):
     def get_base_checks(self, checks={}):
         checks["valid_appellantFullName_not_null"] = "(appellantFullName IS NOT NULL)"
 
-        checks["valid_directions_not_null"] = "(directions IS NOT NULL)"
+        checks["valid_directions"] = "(directions IS NOT NULL)"
 
         checks["valid_uploadHomeOfficeBundleAvailable"] = "(uploadHomeOfficeBundleAvailable IN ('Yes','No'))"
 

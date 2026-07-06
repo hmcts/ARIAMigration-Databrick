@@ -29,7 +29,7 @@ from pyspark.sql.functions import (
 ##########              ftpa (Field Group)          ###########
 ################################################################
 
-def ftpa(silver_m1, silver_m3, silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
     """
     Mapping alignment
       - Decision/outcome fields (ftpaFirstDecision, DecisionDates, FinalDecisionForDisplay, RJ outcome types, ApplicantType)
@@ -47,7 +47,7 @@ def ftpa(silver_m1, silver_m3, silver_c):
     """
 
     # Base ftpa fields (judge allocation etc.)
-    ftpa_df, ftpa_audit = FSB.ftpa(silver_m1, silver_m3, silver_c)
+    ftpa_df, ftpa_audit = FSB.ftpa(silver_m1, silver_m2, silver_m3, silver_c)
 
     # NOTE: DecisionDate may not exist in some unit test schemas. This ordering expects it exists in decided runs.
     window_spec = (
@@ -126,14 +126,14 @@ def ftpa(silver_m1, silver_m3, silver_c):
                                             .when(col("ftpaFinalDescOutcome.Outcome") == 14, lit("notAdmitted"))
                                             .otherwise(lit(None)))
 
-            .withColumn("ftpaAppellantRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
-                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
-                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+            .withColumn("ftpaAppellantRjDecisionOutcomeType", when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 30), lit("granted"))
+                                                                .when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 31), lit("refused"))
+                                                                .when((col("outcome.Party") == 1) & (col("outcome.Outcome") == 14), lit("notAdmitted"))
                                                                 .otherwise(lit(None)))
             
-            .withColumn("ftpaRespondentRjDecisionOutcomeType", when(col("outcome.Outcome") == 30, lit("granted"))
-                                                                .when(col("outcome.Outcome") == 31, lit("refused"))
-                                                                .when(col("outcome.Outcome") == 14, lit("notAdmitted"))
+            .withColumn("ftpaRespondentRjDecisionOutcomeType", when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 30), lit("granted"))
+                                                                .when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 31), lit("refused"))
+                                                                .when((col("outcome.Party") == 2) & (col("outcome.Outcome") == 14), lit("notAdmitted"))
                                                                 .otherwise(lit(None)))
             
             .withColumn("isFtpaAppellantNoticeOfDecisionSetAside", when(col("no_outcome.Party") == 1, lit("No")).otherwise(lit(None)))
@@ -369,16 +369,16 @@ def general(
         bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres
     )
 
-    df = df.drop("TTL")
+    # df = df.drop("TTL")
 
-    df = (
-        silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
-        .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
-        .select("m1.CaseNo",
-                *[c for c in df.columns if c != "CaseNo"],
-                "TTL"
-                )
-        )
+    # df = (
+    #     silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
+    #     .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
+    #     .select("m1.CaseNo",
+    #             *[c for c in df.columns if c != "CaseNo"],
+    #             "TTL"
+    #             )
+    #     )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -444,7 +444,7 @@ def general(
         .drop("m3_party", "m3_caseStatus", "m3_Outcome_latest", "m3latest_CaseStatus", "m3latest_outcome")
     ).distinct()
 
-    df_audit = df_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+    # df_audit = df_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
     df_audit = (
         df_audit.alias("audit")
         .join(df.alias("content"), on=["CaseNo"], how="left")
@@ -453,10 +453,10 @@ def general(
         .select(
             col("audit.*"),
 
-            array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
-            array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
-            col("content.TTL").alias("TTL_value"),
-            lit("Derived").alias("TTL_Transformation"),
+            # array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+            # array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+            # col("content.TTL").alias("TTL_value"),
+            # lit("Derived").alias("TTL_Transformation"),
 
             array(struct(lit("Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputFields"),
             array(struct(col("m3.Party"))).alias("isAppellantFtpaDecisionVisibleToAll_inputValues"),

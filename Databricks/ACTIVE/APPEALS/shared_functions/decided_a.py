@@ -9,6 +9,7 @@ from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
+from uk_postcodes_parsing import fix, postcode_utils
 from . import AwaitingEvidenceRespondant_b as AERb
 from . import listing as L
 from . import prepareForHearing as PFH
@@ -18,7 +19,7 @@ from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
     max as spark_max, date_format, row_number, expr, regexp_replace,
     size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
+    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays, date_add, lower
 )
 
 
@@ -99,32 +100,6 @@ def substantiveDecision(silver_m1,silver_m3):
                 lit("No").alias("anonymityOrder")
             )
     )
-
-    
-    # substantiveDecision_df = (
-    #     substantiveDecision_df.alias("sd")
-    #         .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-    #         .select(
-    #             col("sd.*"),
-    #             # Format dates as dd/MM/yyyy
-    #             date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("sendDecisionsAndReasonsDate"),
-    #             date_format(col("m3.DecisionDate"), "dd/MM/yyyy").alias("appealDate"),
-
-    #             # Outcome mapping
-    #             when(col("m3.Outcome") == 1, "Allowed")
-    #                 .when(col("m3.Outcome") == 2, "Dismissed")
-    #                 .otherwise(None)
-    #                 .alias("appealDecision"),
-
-    #             when(col("m3.Outcome") == 1, "Allowed")
-    #                 .when(col("m3.Outcome") == 2, "Dismissed")
-    #                 .otherwise(None)
-    #                 .alias("isDecisionAllowed"),
-
-    #             lit("No").alias("anonymityOrder")
-    #         )
-    # )
-
 
     substantiveDecision_audit = (
         substantiveDecision_audit.alias("audit")
@@ -230,36 +205,170 @@ def hearingActuals(silver_m1, silver_m3):
 ##########              ftpa          ###########
 ################################################################
 
-def ftpa(silver_m1, silver_m3,silver_c):
+def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
+
+    def getUkPostcode(postcode):
+        try:
+            if postcode is None or str(postcode).strip() == "":
+                return "False"
+            
+            # Step 1: Check if postcode is valid
+            if postcode_utils.is_valid(postcode):
+                return "True"
+            
+            # Step 2: Try fixing the postcode if not valid
+            clean_postcode = fix(postcode)
+            if postcode_utils.is_valid(clean_postcode):
+                return "True"
+
+        except Exception as e:
+            print(f"Error processing {postcode}: {e}")
+            pass
+
+        return "False"
+
+    getUkPostcodeUDF = udf(getUkPostcode, StringType())
+
+    ftpaApplicationDate_flags = (
+        silver_m2
+        .join(silver_c, on="CaseNo", how="left")
+        .withColumn(
+            "stage_detained",
+            when(col("Detained") == 3, lit("OOC"))
+            .otherwise(lit(None))
+        )
+        .withColumn(
+            "stage_category",
+            when(
+                col("stage_detained").isNull(),
+                when(col("CategoryId") == 37, lit("IN"))
+                .when(col("CategoryId") == 38, lit("OOC"))
+            )
+        )
+        .withColumn(
+            "stage_country",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull(),
+                when(col("AppellantCountryId") == 188, lit("IN"))
+            )
+        )
+        .withColumn(
+            "stage_postcode",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull(),
+                when(
+                    getUkPostcodeUDF(col("Appellant_Postcode")) == "True",
+                    lit("IN")
+                )
+            )
+        )
+        .withColumn("appellantFullAddress", concat_ws(", ",
+                col("Appellant_Address1"), col("Appellant_Address2"),
+                col("Appellant_Address3"), col("Appellant_Address4"),
+                col("Appellant_Address5"), col("Appellant_Postcode")
+            ))
+        .withColumn(
+            "stage_address",
+            when(
+                col("stage_detained").isNull() &
+                col("stage_category").isNull() &
+                col("stage_country").isNull() &
+                col("stage_postcode").isNull(),
+                when(
+                    lower(col("appellantFullAddress")).rlike(
+                        r"\b(uk|gb|united kingdom)\b") == True, lit("IN")
+                )
+            )
+        )
+        .withColumn(
+            "IN or OUT",
+            coalesce(
+                col("stage_detained"),
+                col("stage_category"),
+                col("stage_country"),
+                col("stage_postcode"),
+                col("stage_address"),
+                lit("OOC")
+            )
+        )
+        .select(
+            "CaseNo",
+            "Detained",
+            "CategoryId",
+            "stage_detained",
+            "stage_category",
+            "stage_country",
+            "stage_postcode",
+            "stage_address",
+            "IN or OUT"
+        )
+    )
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered_casestatus = silver_m3.filter(col("CaseStatus").isin(37, 38,26) & col("Outcome").isin(1,2))
-    silver_m3_ranked = silver_m3_filtered_casestatus.withColumn("row_number", row_number().over(window_spec))
-    # silver_m3_filtered_casestatus = silver_m3_ranked.filter(col("CaseStatus").isin(37, 38))
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    silver_m3_filtered_casestatus = silver_m3.filter((col("CaseStatus").isin(37, 38, 26)) & (col("Outcome").isin(1, 2)))
+    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"), col("CategoryId")).distinct()
 
-    silver_c_filtered = silver_c.filter(col("CategoryId").isin(37, 38)).select(col("CaseNo"),col("CategoryId")).distinct()
-    
+    join_df = (
+        silver_m3_filtered_casestatus.alias("m3")
+        .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
+        .withColumn(
+            "rn",
+            row_number().over(window_spec)
+        )
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
+    ftpa_flags_filtered = (
+        silver_m1.alias("m1")
+        .join(ftpaApplicationDate_flags.alias("ftpa"), on="CaseNo", how="inner")
+        .join(join_df.alias("m3_c"), on="CaseNo", how="left")
+        .select(
+            col("CaseNo"),
+            col("m3_c.CategoryId"),
+            col("m3_c.CaseStatus"),
+            col("m3_c.Outcome"),
+            col("m3_c.DecisionDate"),
+            "stage_detained",
+            "stage_category",
+            "stage_country",
+            "stage_postcode",
+            "stage_address",
+            col("IN or OUT")
+        )
+        .distinct()
+    )
+
+    ftpa_flags_filtered_deduped = Window.partitionBy("CaseNo").orderBy(
+        when(col("IN or OUT") == "IN", 0).otherwise(1)
+    )
+
+    ftpaApplicationDate_flags_deduped = (
+        ftpa_flags_filtered
+        .withColumn("rn", row_number().over(ftpa_flags_filtered_deduped))
+        .filter(col("rn") == 1)
+        .drop("rn")
+    )
+
     ftpa_df = (
-        silver_m1.alias("m1").join(silver_m3_max_statusid.alias("m2"),on="CaseNo",how="left")
-            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
+        ftpaApplicationDate_flags_deduped
             .select(
                 col("CaseNo"),
                 date_format(
-                    when(col("CategoryId") == 37, F.date_add(col("DecisionDate"), 14))
-                    .when(col("CategoryId") == 38, F.date_add(col("DecisionDate"), 28)),
-                    # .otherwise(col("DecisionDate")),
+                    when(col("IN or OUT") == "IN", date_add(col("DecisionDate"), 14))
+                    .when(col("IN or OUT") == "OOC", date_add(col("DecisionDate"), 28)),
                     "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )
     )
 
-    # Build the audit DataFrame
     ftpa_audit = (
         ftpa_df.alias("ftpa")
-            .join(silver_m3_max_statusid.alias("m3"), on=["CaseNo"], how="left")
-            .join(silver_c_filtered.alias("c"), on=["CaseNo"], how="left")
+            .join(join_df.alias("m3"), on=["CaseNo"], how="left")
             .select(
                 col("CaseNo"),
                 array(
@@ -272,7 +381,7 @@ def ftpa(silver_m1, silver_m3,silver_c):
                 ).alias("ftpaApplicationDeadline_inputFields"),
                 array(
                     struct(
-                        col("c.CategoryId"),
+                        col("CategoryId"),
                         col("CaseStatus"),
                         col("DecisionDate"),
                         col("Outcome")
@@ -282,9 +391,8 @@ def ftpa(silver_m1, silver_m3,silver_c):
                 lit("Yes").alias("ftpaApplicationDeadline_Transformation"),
             )
     )
-
-
     return ftpa_df, ftpa_audit
+
 ################################################################
 
 ################################################################
@@ -297,32 +405,32 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     general_df,general_audit = D.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
 
-    general_df = general_df.drop("TTL")
+    # general_df = general_df.drop("TTL")
 
-    general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
-                  .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
-        .select(
-            "m1.CaseNo",
-            *[c for c in general_df.columns if c != "CaseNo"],
-            "TTL",
-        )
-    )
+    # general_df = (silver_m1.alias("m1").join(general_df.alias("content"),on="CaseNo",how="left")
+    #               .withColumn("TTL",struct(lit("No").alias("Suspended"),date_format(col("m1.DateLodged"),"yyyy-MM-dd").alias("SystemTTL")))
+    #     .select(
+    #         "m1.CaseNo",
+    #         *[c for c in general_df.columns if c != "CaseNo"],
+    #         "TTL",
+    #     )
+    # )
 
 
-    general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
+    # general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
 
-    general_audit = (
-        general_audit.alias("audit")
-            .join(general_df.alias("gen"), on=["CaseNo"], how="left")
-            .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
-            .select(
-                "audit.*",
-                array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
-                array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
-                col("gen.TTL").alias("TTL_value"),
-                lit("Yes").alias("TTL_Transformation"),
-            )
-    )
+    # general_audit = (
+    #     general_audit.alias("audit")
+    #         .join(general_df.alias("gen"), on=["CaseNo"], how="left")
+    #         .join(silver_m1.alias("m1"), on=["CaseNo"], how="left")
+    #         .select(
+    #             "audit.*",
+    #             array(struct(lit("Suspended"),lit("DateLodged"))).alias("TTL_inputFields"),
+    #             array(struct(lit("None"),col("m1.DateLodged"))).alias("TTL_inputValues"),
+    #             col("gen.TTL").alias("TTL_value"),
+    #             lit("Yes").alias("TTL_Transformation"),
+    #         )
+    # )
 
     return general_df, general_audit
 

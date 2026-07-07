@@ -482,34 +482,28 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             )
         """)
 
-        checks["valid_oocAppealAdminJ_values"] = (
-            """(
-                    (
-                        appellantInUk = "No" 
-                        AND oocAppealAdminJ IS NOT NULL
-                    )
-                    OR
-                    (
-                        appellantInUk = "Yes" 
-                        AND oocAppealAdminJ IS NULL   
-                    
-                    )
-            )"""
-        )
+        checks["valid_oocAppealAdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN oocAppealAdminJ IS NULL
 
-        # checks["valid_appellantHasFixedAddressAdminJ_values"] = """
-        # (
-        #     (
-        #         appellantInUk = "No"
-        #         AND appellantHasFixedAddressAdminJ = "Yes"
-        #     )
-        #     OR
-        #     (
-        #         appellantInUk = "Yes"
-        #         AND appellantHasFixedAddressAdminJ IS NULL
-        #     )
-        # )
-        # """
+                WHEN dv_appellantIsInUk = true
+                    THEN oocAppealAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        lu_HORef LIKE "%GWF%"
+                    )
+                    THEN oocAppealAdminJ = "entryClearanceDecision"
+
+                WHEN dv_appellantIsInUk = false
+                    THEN oocAppealAdminJ IS NULL
+
+                ELSE oocAppealAdminJ IS NULL
+            END
+        )
+        """
 
         checks["valid_appellantHasFixedAddressAdminJ_values"] = ("""
         (    CASE
@@ -527,70 +521,168 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         )
         """)
 
-        checks["valid_addressLine1AdminJ_values"] = (
-            """(
-                (
-                    CASE
-                        WHEN appellantInUk = "No"
-                        AND
-                        (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                        THEN addressLine1AdminJ IS NOT NULL
+        checks["valid_addressLine1AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine1AdminJ IS NULL
 
-                        ELSE addressLine1AdminJ IS NULL
-                    END 
-                )
-            )"""
-        )
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine1AdminJ IS NULL
 
-        checks["valid_addressLine2AdminJ_values"] = (
-            """(
-                (
-                    NOT dv_appellantIsInUk
-                    AND Detained NOT IN (1,2,4)
-                    AND
-                    (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND
-                    addressLine2AdminJ IS NOT NULL
-                )
-                OR (addressLine2AdminJ IS NULL)
-            )"""
-        )
-        checks["valid_addressLine3AdminJ_values"] = (
-            """(
-                (
-                    NOT dv_appellantIsInUk
-                    AND Detained NOT IN (1,2,4)
-                    AND
-                    (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
-                    AND addressLine3AdminJ IS NOT NULL
-                )
-                OR (addressLine3AdminJ IS NULL)
-            )"""
-        )
+                WHEN lu_appealType IS NULL
+                    THEN addressLine1AdminJ IS NULL
 
-        checks["valid_addressLine4AdminJ_values"] = (
-            """(
-                (
-                    NOT dv_appellantIsInUk
-                    AND Detained NOT IN (1,2,4)
-                    AND (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND addressLine4AdminJ IS NOT NULL
-                )
-                OR (addressLine4AdminJ IS NULL)
-            )"""
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine1AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND coalesce(
+                            Appellant_Address1,
+                            Appellant_Address2,
+                            Appellant_Address3,
+                            Appellant_Address4,
+                            Appellant_Address5,
+                            Appellant_Postcode
+                        ) IS NOT NULL
+                    THEN addressLine1AdminJ = coalesce(
+                            Appellant_Address1,
+                            Appellant_Address2,
+                            Appellant_Address3,
+                            Appellant_Address4,
+                            Appellant_Address5,
+                            Appellant_Postcode
+                        )
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine1AdminJ IS NULL
+
+                ELSE addressLine1AdminJ IS NULL
+            END
         )
+        """
+
+        checks["valid_addressLine2AdminJ_values"] = """
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false 
+                THEN
+                    (
+                        (
+                            (
+                                Appellant_Address2 IS NOT NULL
+                                OR Appellant_Address3 IS NOT NULL
+                                OR Appellant_Address4 IS NOT NULL
+                                OR Appellant_Address5 IS NOT NULL
+                                OR Appellant_Postcode IS NOT NULL
+                            )
+                            AND addressLine2AdminJ IS NOT NULL
+                        )
+                        OR
+                        (
+                            Appellant_Address2 IS NULL
+                            AND Appellant_Address3 IS NULL
+                            AND Appellant_Address4 IS NULL
+                            AND Appellant_Address5 IS NULL
+                            AND Appellant_Postcode IS NULL
+                            AND addressLine2AdminJ IS NULL
+                        )
+                    )
+            END
+        """
+
+        checks["valid_addressLine3AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        Appellant_Address3 IS NOT NULL
+                        OR Appellant_Address4 IS NOT NULL
+                    )
+                    THEN addressLine3AdminJ =
+                        concat_ws(', ', Appellant_Address3, Appellant_Address4)
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine3AdminJ IS NULL
+
+                ELSE addressLine3AdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_addressLine4AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        Appellant_Address5 IS NOT NULL
+                        OR Appellant_Postcode IS NOT NULL
+                    )
+                    THEN addressLine4AdminJ =
+                        concat_ws(', ', Appellant_Address5, Appellant_Postcode)
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine4AdminJ IS NULL
+
+                ELSE addressLine4AdminJ IS NULL
+            END
+        )
+        """
 
         checks["valid_countryGovUkOocAdminJ"] = (
             """(
-                (
-                    NOT dv_appellantIsInUk
-                    AND Detained NOT IN (1,2,4)
-                    AND
-                    (countryGovUkOocAdminJ IS NOT NULL)
-                    AND
-                    (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MH', 'MC', 'FM', 'BC', 'ZZ'))
-                )
-                OR (countryGovUkOocAdminJ IS NULL)
+                    CASE
+                        WHEN Detained IN (1,2,4)
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_appellantIsInUk = true
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_representation NOT IN ("LR","AIP")
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN lu_appealType IS NULL
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_appellantIsInUk = false
+                            THEN countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MH', 'MC', 'FM', 'BC', 'ZZ')
+                        ELSE countryGovUkOocAdminJ IS NULL
+                    END
             )"""
         )
 

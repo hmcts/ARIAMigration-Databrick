@@ -382,7 +382,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "oocAppealAdminJ",
-            when(
+            when(conditions &
                 (col("appellantInUk") == "No")
                 & (
                     col("lu_HORef").like("%GWF%")
@@ -399,7 +399,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "appellantHasFixedAddressAdminJ",
-            when(
+            when(conditions &
                 (col("appellantInUk") == "No"), 
                 lit("Yes")
             ).otherwise(lit(None))
@@ -411,8 +411,8 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "addressLine1AdminJ",
-            when(
-            conditions & (col("appellantInUk") == "No"),
+            when(conditions &
+            (col("appellantInUk") == "No"),
             coalesce(
             col("Appellant_Address1"),
             col("Appellant_Address2"),

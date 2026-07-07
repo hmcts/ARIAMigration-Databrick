@@ -482,6 +482,118 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             )
         """)
 
+        checks["valid_oocAppealAdminJ_values"] = (
+            """(
+                    (
+                        appellantInUk = "No" 
+                        AND oocAppealAdminJ IS NOT NULL
+                    )
+                    OR
+                    (
+                        appellantInUk = "Yes" 
+                        AND oocAppealAdminJ IS NULL   
+                    
+                    )
+            )"""
+        )
+
+        # checks["valid_appellantHasFixedAddressAdminJ_values"] = """
+        # (
+        #     (
+        #         appellantInUk = "No"
+        #         AND appellantHasFixedAddressAdminJ = "Yes"
+        #     )
+        #     OR
+        #     (
+        #         appellantInUk = "Yes"
+        #         AND appellantHasFixedAddressAdminJ IS NULL
+        #     )
+        # )
+        # """
+
+        checks["valid_appellantHasFixedAddressAdminJ_values"] = ("""
+        (    CASE
+                WHEN Detained IN (1,2,4)
+                    THEN appellantHasFixedAddressAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN appellantHasFixedAddressAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    THEN appellantHasFixedAddressAdminJ = 'Yes'
+
+                ELSE appellantHasFixedAddressAdminJ IS NULL
+            END
+        )
+        """)
+
+        checks["valid_addressLine1AdminJ_values"] = (
+            """(
+                (
+                    CASE
+                        WHEN appellantInUk = "No"
+                        AND
+                        (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+                        THEN addressLine1AdminJ IS NOT NULL
+
+                        ELSE addressLine1AdminJ IS NULL
+                    END 
+                )
+            )"""
+        )
+
+        checks["valid_addressLine2AdminJ_values"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND
+                    (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+                    AND
+                    addressLine2AdminJ IS NOT NULL
+                )
+                OR (addressLine2AdminJ IS NULL)
+            )"""
+        )
+        checks["valid_addressLine3AdminJ_values"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND
+                    (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
+                    AND addressLine3AdminJ IS NOT NULL
+                )
+                OR (addressLine3AdminJ IS NULL)
+            )"""
+        )
+
+        checks["valid_addressLine4AdminJ_values"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+                    AND addressLine4AdminJ IS NOT NULL
+                )
+                OR (addressLine4AdminJ IS NULL)
+            )"""
+        )
+
+        checks["valid_countryGovUkOocAdminJ"] = (
+            """(
+                (
+                    NOT dv_appellantIsInUk
+                    AND Detained NOT IN (1,2,4)
+                    AND
+                    (countryGovUkOocAdminJ IS NOT NULL)
+                    AND
+                    (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MH', 'MC', 'FM', 'BC', 'ZZ'))
+                )
+                OR (countryGovUkOocAdminJ IS NULL)
+            )"""
+        )
+
         #########################################
         # ARIADM-2023 (homeOfficeDetails - Detained)
         #########################################

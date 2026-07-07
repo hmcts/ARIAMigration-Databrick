@@ -781,61 +781,7 @@ class paymentPendingDQRules(DQRulesBase):
                 )
             """
         )
-
-        # ##############################
-        # # ARIADM-773 (SponsorDetails)
-        # ##############################
-        # checks["valid_hasSponsor_yes_no"] = (
-        #     """(
-        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-        #         OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
-        #         OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
-        #     )"""
-        # )
-        # checks["valid_sponsorGivenNames_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-        # )
-
-        # checks["valid_sponsorFamilyName_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
-        # )
-
-        # checks["valid_sponsorAuthorisation_yes_no"] = (
-        #     """(
-        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-        #         OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
-        #         OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
-        #     )"""
-        # )
-
-        # ############################################################
-        # # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-        # ############################################################
-        # checks["valid_sponsorAddress_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
-        # )
-
-        # checks["valid_sponsorAddressForDisplay"] = (
-        #     "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
-        # )
-
-        # checks["valid_sponsorNameForDisplay"] = (
-        #     "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
-        # )
-
-        # ##############################
-        # # ARIADM-778 (SponsorDetails)
-        # ##############################
-        # checks["valid_sponsorEmailAdminJ"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
-        # )
-
-        # checks["valid_sponsorMobileNumberAdminJ"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
-        # )
+        
         # ##############################
         # ARIADM-760 (appellantDetails)
         # ARIADM-762 (appellantDetails)
@@ -859,56 +805,56 @@ class paymentPendingDQRules(DQRulesBase):
         )
 
         # addressLine1AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine1AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38)
-                    AND
-                    (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND
-                    addressLine1AdminJ IS NOT NULL
-                )
-                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
-            )"""
-        )
+        # checks["valid_addressLine1AdminJ"] = (
+        #     """(
+        #         (
+        #             array_contains(valid_categoryIdList, 38)
+        #             AND
+        #             (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+        #             AND
+        #             addressLine1AdminJ IS NOT NULL
+        #         )
+        #         OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
+        #     )"""
+        # )
 
         # addressLine2AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine2AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38)
-                    AND
-                    (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND
-                    addressLine2AdminJ IS NOT NULL
-                )
-                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
-            )"""
-        )
+        # checks["valid_addressLine2AdminJ"] = (
+        #     """(
+        #         (
+        #             array_contains(valid_categoryIdList, 38)
+        #             AND
+        #             (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+        #             AND
+        #             addressLine2AdminJ IS NOT NULL
+        #         )
+        #         OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
+        #     )"""
+        # )
 
         # addressLine3AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine3AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38) AND
-                    (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
-                    AND addressLine3AdminJ IS NOT NULL
-                )
-                OR (addressLine3AdminJ IS NULL)
-            )"""
-        )
+        # checks["valid_addressLine3AdminJ"] = (
+        #     """(
+        #         (
+        #             array_contains(valid_categoryIdList, 38) AND
+        #             (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
+        #             AND addressLine3AdminJ IS NOT NULL
+        #         )
+        #         OR (addressLine3AdminJ IS NULL)
+        #     )"""
+        # )
 
         # addressLine4AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine4AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38) AND
-                    (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND addressLine4AdminJ IS NOT NULL
-                )
-                OR (addressLine4AdminJ IS NULL)
-            )"""
-        )
+        # checks["valid_addressLine4AdminJ"] = (
+        #     """(
+        #         (
+        #             array_contains(valid_categoryIdList, 38) AND
+        #             (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
+        #             AND addressLine4AdminJ IS NOT NULL
+        #         )
+        #         OR (addressLine4AdminJ IS NULL)
+        #     )"""
+        # )
 
         # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
         checks["valid_countryGovUkOocAdminJ"] = (
@@ -927,6 +873,7 @@ class paymentPendingDQRules(DQRulesBase):
                     (countryGovUkOocAdminJ IS NULL)
                 )
             )""")
+
         ##############################
         # AARIADM-764 (appellantDetails)
         ##############################

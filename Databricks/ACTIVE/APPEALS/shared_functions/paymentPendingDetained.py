@@ -296,17 +296,41 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 
     appellantDetails_df, appellantDetails_audit = PP.appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, bronze_HORef_cleansing, bronze_nationalities)
 
-    appellantDetails_df = appellantDetails_df.drop("appellantInUk", "appealOutOfCountry", "appellantHasFixedAddress")
-    # appellantDetails_audit = appellantDetails_audit.drop("appellantAddress")
+    appellantDetails_df = appellantDetails_df.drop("appellantInUk", "appealOutOfCountry", "appellantHasFixedAddress", "oocAppealAdminJ", "appellantHasFixedAddressAdminJ",
+                                                   "addressLine1AdminJ", "addressLine2AdminJ", "addressLine3AdminJ", "addressLine4AdminJ", "countryGovUkOocAdminJ")
 
     silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
 
-    silver_m2_dervied = PP.derive_country_silver_m2(silver_m2)
+    silver_m2_derived = PP.derive_country_silver_m2(silver_m2)
+
+    conditions = (col("dv_representation").isin("LR", "AIP")) & (col("lu_appealType").isNotNull())
+
+    silver_m1_derived = silver_m1.select(col("CaseNo"), col("dv_representation"), col("lu_appealType"), col("HORef"), col("DateOfApplicationDecision"))
+
+    bronze_cleansing = bronze_HORef_cleansing.select(
+        col("CaseNo"),
+        coalesce(col("HORef"), col("FCONumber")).alias("lu_HORef")
+    )
+
+    bronze_countries_countryFromAddress = (
+        bronze_countryFromAddress
+        .withColumn("lu_cfa_countryGovUkOocAdminJ", col("countryGovUkOocAdminJ"))
+        .withColumn("lu_cfa_countryFromAddress", col("countryFromAddress"))
+    )
+
+    silver_m2_derived = (silver_m2_derived.alias('main').join(
+        bronze_countries_countryFromAddress.alias('cfa'), col("main.dv_countryGovUkOocAdminJ") == col("cfa.lu_cfa_countryFromAddress"), "left")
+        .select("main.*",
+                when(col("lu_cfa_countryFromAddress").isNotNull(), col("lu_cfa_countryGovUkOocAdminJ"))
+                .otherwise(col("dv_countryGovUkOocAdminJ")).alias("countryGovUkOocAdminJ"))
+    )
 
     appellantDetails_df = (
         appellantDetails_df.alias("content")
-        .join(silver_m2_dervied.alias("m2"), on="CaseNo", how="left")
+        .join(silver_m2_derived.alias("m2"), on="CaseNo", how="left")
         .join(silver_c_grouped.alias("mc"), on="CaseNo", how="left")
+        .join(silver_m1_derived.alias("m1"), on="CaseNo", how="left")
+        .join(bronze_cleansing.alias("b1"), on="CaseNo", how="left")
 
         # -----------------------------
         # appellantInUk logic
@@ -354,16 +378,159 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         .drop("appellantAddress")
 
         # -----------------------------
+        # oocAppealAdminJ logic
+        # -----------------------------
+        .withColumn(
+            "oocAppealAdminJ",
+            when(
+                (col("appellantInUk") == "No")
+                & (
+                    col("lu_HORef").like("%GWF%")
+                    | col("m1.HORef").like("%GWF%")
+                    | col("m2.FCONumber").like("%GWF%")
+                ),
+                lit("entryClearanceDecision")
+            ).otherwise(lit(None))
+        )
+
+
+        # -----------------------------
+        # appellantHasFixedAddressAdminJ logic
+        # -----------------------------
+        .withColumn(
+            "appellantHasFixedAddressAdminJ",
+            when(
+                (col("appellantInUk") == "No"), 
+                lit("Yes")
+            ).otherwise(lit(None))
+        )
+
+
+        # -----------------------------
+        # addressLine1AdminJ logic
+        # -----------------------------
+        .withColumn(
+            "addressLine1AdminJ",
+            when(
+            conditions & (col("appellantInUk") == "No"),
+            coalesce(
+            col("Appellant_Address1"),
+            col("Appellant_Address2"),
+            col("Appellant_Address3"),
+            col("Appellant_Address4"),
+            col("Appellant_Address5"),
+            col("Appellant_Postcode")
+            )
+        ).otherwise(None)
+                    )
+
+
+        # -----------------------------
+        # addressLine2AdminJ logic
+        # -----------------------------
+        .withColumn(
+            "addressLine2AdminJ",
+                    when(
+                    conditions & (col("appellantInUk") == "No"),
+            coalesce(
+                when(col("Appellant_Address1").isNull(), None).otherwise(
+                    coalesce(
+                        when(col("Appellant_Address2") != col("Appellant_Address1"), col("Appellant_Address2")),
+                        when(col("Appellant_Address3") != col("Appellant_Address1"), col("Appellant_Address3")),
+                        when(col("Appellant_Address4") != col("Appellant_Address1"), col("Appellant_Address4")),
+                        when(col("Appellant_Address5") != col("Appellant_Address1"), col("Appellant_Address5")),
+                        when(col("Appellant_Postcode") != col("Appellant_Address1"), col("Appellant_Postcode"))
+                    )
+                ),
+                when(col("Appellant_Address2").isNull() & col("Appellant_Address1").isNull(), None).otherwise(
+                    coalesce(
+                        when(col("Appellant_Address3") != col("Appellant_Address2"), col("Appellant_Address3")),
+                        when(col("Appellant_Address4") != col("Appellant_Address2"), col("Appellant_Address4")),
+                        when(col("Appellant_Address5") != col("Appellant_Address2"), col("Appellant_Address5")),
+                        when(col("Appellant_Postcode") != col("Appellant_Address2"), col("Appellant_Postcode"))
+                    )
+                ),
+                when(col("Appellant_Address3").isNull() & col("Appellant_Address2").isNull() & col("Appellant_Address1").isNull(), None).otherwise(
+                    coalesce(
+                        when(col("Appellant_Address4") != col("Appellant_Address3"), col("Appellant_Address4")),
+                        when(col("Appellant_Address5") != col("Appellant_Address3"), col("Appellant_Address5")),
+                        when(col("Appellant_Postcode") != col("Appellant_Address3"), col("Appellant_Postcode"))
+                    )
+                ),
+                when(col("Appellant_Address4").isNull() & col("Appellant_Address3").isNull() & col("Appellant_Address2").isNull() & col("Appellant_Address1").isNull(), None).otherwise(
+                    coalesce(
+                        when(col("Appellant_Address5") != col("Appellant_Address4"), col("Appellant_Address5")),
+                        when(col("Appellant_Postcode") != col("Appellant_Address4"), col("Appellant_Postcode"))
+                    )
+                ),
+                when(col("Appellant_Address5").isNull() & col("Appellant_Address4").isNull() & col("Appellant_Address3").isNull() & col("Appellant_Address2").isNull() & col("Appellant_Address1").isNull(), None).otherwise(
+                    coalesce(
+                        when(col("Appellant_Postcode") != col("Appellant_Address5"), col("Appellant_Postcode"))
+                        )
+                    )
+                )
+            ).otherwise(None))
+
+
+        # -----------------------------
+        # addressLine3AdminJ logic
+        # -----------------------------
+        .withColumn(
+        "addressLine3AdminJ",
+                when(
+                conditions & (col("appellantInUk") == "No")
+                & (col("Appellant_Address3").isNotNull() | col("Appellant_Address4").isNotNull()),
+                concat_ws(", ", col("Appellant_Address3"), col("Appellant_Address4"))
+            ).otherwise(lit(None))
+        )
+
+
+        # -----------------------------
+        # addressLine4AdminJ logic
+        # -----------------------------
+        .withColumn("addressLine4AdminJ",
+                when(
+                conditions & (col("appellantInUk") == "No")
+                & (col("Appellant_Address5").isNotNull() | col("Appellant_Postcode").isNotNull()),
+                concat_ws(", ", col("Appellant_Address5"), col("Appellant_Postcode"))
+            ).otherwise(lit(None))
+        )
+
+
+        # -----------------------------
+        # countryGovUkOocAdminJ logic
+        # -----------------------------
+        .withColumn(
+            "countryGovUkOocAdminJ",
+            when(
+                conditions & (col("appellantInUk") == "No"),
+            when(col("countryGovUkOocAdminJ").isin(["NO MAPPING REQUIRED"]), lit(None)).otherwise(col("countryGovUkOocAdminJ"))
+        ).otherwise(None))
+
+
+        # -----------------------------
         # Final select
         # -----------------------------
         .select(
             "content.*",
+            # col("CaseNo"),
+            # col("dv_representation"),
+            # col("lu_appealType"),
             col("appellantInUk"),
             col("appealOutOfCountry"),
             col("appellantHasFixedAddress"),
             col("appellantAddress1").alias("appellantAddress"),
-        )
-    ).distinct()
+            col("oocAppealAdminJ"),
+            # col("Detained"),
+            # col("dv_addressInUk"),
+            # col('CategoryIdList'),
+            col("appellantHasFixedAddressAdminJ"),
+            col("addressLine1AdminJ"),
+            col("addressLine2AdminJ"),
+            col("addressLine3AdminJ"),
+            col("addressLine4AdminJ"),
+            col("countryGovUkOocAdminJ")
+    )).distinct()
 
     return appellantDetails_df, appellantDetails_audit
 

@@ -28,7 +28,14 @@ _kv_client = SecretClient(
     credential=_credential
 )
 
+idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
+account_url = "https://a360c2x2555dz.blob.core.windows.net"
+container_name = "dropzone"
+sub_dir = f"ARIA{ARM_SEGMENT}/submission"
+
 app = func.FunctionApp()
+producer_lock = asyncio.Lock()
+semaphore = asyncio.Semaphore(8)
 
 
 @app.function_name("eventhub_trigger")
@@ -39,7 +46,7 @@ app = func.FunctionApp()
     connection=eventhub_connection,
     starting_position="-1",
     cardinality='many',
-    max_batch_size=500,
+    max_batch_size=400,
     data_type='binary'
 )
 async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
@@ -57,11 +64,7 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
     source_container_secret = source_container_secret.value
     logging.info('Acquired all KV secrets')
 
-    account_url = "https://a360c2x2555dz.blob.core.windows.net"
-    container_name = "dropzone"
-
     container_url = f"{account_url}/{container_name}?{container_secret}"
-    sub_dir = f"ARIA{ARM_SEGMENT}/submission"
 
     try:
         container_service_client = ContainerClient.from_container_url(container_url)
@@ -70,8 +73,6 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
         logging.error(f"Failed to connect to ARM Container Client {e}")
         raise e
 
-    idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
-
     try:
         async with EventHubProducerClient.from_connection_string(ev_dl_key) as dl_producer_client, \
                    EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client, \
@@ -79,24 +80,34 @@ async def eventhub_trigger_bails(azeventhub: List[func.EventHubEvent]):
 
             idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
 
+            async def bounded_process(event):
+                async with semaphore:
+                    try:
+                        async with asyncio.timeout(300):
+                            await process_messages(
+                                event,
+                                container_service_client,
+                                sub_dir,
+                                dl_producer_client,
+                                ack_producer_client,
+                                source_container_secret,
+                                idempotency_container
+                            )
+                    except TimeoutError:
+                        key = event.partition_key
+                        msg = f"Task timed out after 5 minutes for key '{key}'."
+                        logging.error(msg)
+                        await send_to_dead_letter(dl_producer_client, msg, key)
+
             logging.info('Processing messages')
-            for event in azeventhub:
-                await process_messages(
-                    event,
-                    container_service_client,
-                    sub_dir,
-                    dl_producer_client,
-                    ack_producer_client,
-                    source_container_secret,
-                    idempotency_container
-                )
+            await asyncio.gather(*[bounded_process(event) for event in azeventhub])
             logging.info('Finished processing messages')
     finally:
         await container_service_client.close()
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
+    wait=wait_exponential(multiplier=1, min=5, max=10),
     stop=stop_after_attempt(5),
     retry=retry_if_exception_type(Exception),
     reraise=True,
@@ -228,10 +239,11 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 )
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None):
     logging.info(f"Creating ack batch for {partition_key}.")
-    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-    event_data_batch.add(EventData(message))
-    logging.info(f"Sending ack for {partition_key}.")
-    await producer_client.send_batch(event_data_batch, timeout=60)
+    async with producer_lock:
+        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+        event_data_batch.add(EventData(message))
+        logging.info(f"Sending ack for {partition_key}.")
+        await producer_client.send_batch(event_data_batch, timeout=60)
     logging.info(f"Message added to Event Hub with partition key: {partition_key}")
 
 

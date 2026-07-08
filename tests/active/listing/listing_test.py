@@ -97,7 +97,8 @@ class TestListingState():
         StructField("Appellant_Address2", StringType()),
         StructField("Appellant_Address3", StringType()),
         StructField("Appellant_Address4", StringType()),
-        StructField("Appellant_Address5", StringType())
+        StructField("Appellant_Address5", StringType()),
+        StructField("lu_countryGovUkOocAdminJ", StringType()) 
     ])
     M3_COLUMNS = StructType([
         StructField("CaseNo", StringType()),

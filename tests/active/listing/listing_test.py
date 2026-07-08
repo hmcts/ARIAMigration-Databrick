@@ -190,10 +190,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_audit_output.jsonl")
@@ -256,10 +257,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_audit_output.jsonl")
@@ -293,10 +295,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame(c_data, self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/category_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/category_audit_output.jsonl")
@@ -346,7 +349,7 @@ class TestListingState():
             ])
 
             silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-            silver_m2_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
+            silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
             silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
             silver_h_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
 

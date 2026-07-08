@@ -88,6 +88,17 @@ class TestListingState():
         StructField("InCamera", BooleanType()),
         StructField("LanguageId", IntegerType())
     ])
+    M2_COLUMNS = StructType([
+        StructField("CaseNo", StringType()),
+        StructField("Detained", IntegerType()),
+        StructField("AppellantCountryId", IntegerType()),
+        StructField("Appellant_Postcode", StringType()),
+        StructField("Appellant_Address1", StringType()),
+        StructField("Appellant_Address2", StringType()),
+        StructField("Appellant_Address3", StringType()),
+        StructField("Appellant_Address4", StringType()),
+        StructField("Appellant_Address5", StringType())
+    ])
     M3_COLUMNS = StructType([
         StructField("CaseNo", StringType()),
         StructField("StatusId", IntegerType()),
@@ -118,10 +129,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_audit_output.jsonl")

@@ -738,35 +738,36 @@ filterMobilePhoneNumberUDF = udf(filterMobilePhoneNumber, StringType())
 ##########        sponsorDetails Function            ###########
 ################################################################
 
-def sponsorDetails(silver_m1, silver_c):
+def sponsorDetails(silver_m1, silver_m2, silver_c):
     m1 = silver_m1.alias("m1")
     c = silver_c.alias("c")
 
     joined = m1.join(c, on='CaseNo', how="left")
 
-    grouped = joined.groupBy("CaseNo").agg(
-        collect_list("CategoryId").alias("CategoryIdList"),
-        first("Sponsor_Name", ignorenulls=True).alias("Sponsor_Name"),
-        first("Sponsor_Forenames", ignorenulls=True).alias("Sponsor_Forenames"),
-        first("Sponsor_Address1", ignorenulls=True).alias("Sponsor_Address1"),
-        first("Sponsor_Address2", ignorenulls=True).alias("Sponsor_Address2"),
-        first("Sponsor_Address3", ignorenulls=True).alias("Sponsor_Address3"),
-        first("Sponsor_Address4", ignorenulls=True).alias("Sponsor_Address4"),
-        first("Sponsor_Address5", ignorenulls=True).alias("Sponsor_Address5"),
-        first("Sponsor_Postcode", ignorenulls=True).alias("Sponsor_Postcode"),
-        first("Sponsor_Authorisation", ignorenulls=True).alias("Sponsor_Authorisation"),
-        first("Sponsor_Email", ignorenulls=True).alias("Sponsor_Email"),
-        first("Sponsor_Telephone", ignorenulls=True).alias("Sponsor_Telephone")
+    is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
+
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    silver_m2_derived_grouped = (
+        PP.derive_country_silver_m2(silver_m2)
+        .join(silver_c_grouped, on="CaseNo", how="left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("array_contains(CategoryIdList, 37)"), lit(True))
+            .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
+            .otherwise(col("dv_addressInUk"))
+        )
     )
 
-    category_condition = (array_contains(col("CategoryIdList"), 38))
-    name_condition = col("Sponsor_Name").isNotNull()
+    sponsorDetails_df = (silver_m2_derived_grouped.alias("m2").join(m1.alias("m1"), on="CaseNo", how="left"))
 
-    grouped = grouped.withColumn("hasSponsor", when(name_condition, lit("Yes")).otherwise("No")
-    ).withColumn("sponsorGivenNames", when(name_condition, col("Sponsor_Forenames")).otherwise(lit(None))
-    ).withColumn("sponsorFamilyName", when((name_condition), col("Sponsor_Name")).otherwise(lit(None))
-    ).withColumn("sponsorAuthorisation",when(name_condition,when(col("Sponsor_Authorisation") == True, lit("Yes")).otherwise(lit("No")))
-    ).withColumn("sponsorAddress",when(name_condition,
+    name_condition = col("Sponsor_Name").isNotNull()
+    is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
+
+    sponsorDetails_df = sponsorDetails_df.withColumn("hasSponsor", when(~is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No")
+    ).withColumn("sponsorGivenNames", when(~is_detained_or_in_uk & name_condition, col("Sponsor_Forenames")).otherwise(lit(None))
+    ).withColumn("sponsorFamilyName", when((~is_detained_or_in_uk & name_condition), col("Sponsor_Name")).otherwise(lit(None))
+    ).withColumn("sponsorAuthorisation",when(~is_detained_or_in_uk & name_condition,when(col("Sponsor_Authorisation") == True, lit("Yes")).otherwise(lit("No")))
+    ).withColumn("sponsorAddress",when(~is_detained_or_in_uk & name_condition,
             struct(
                 coalesce(
                     col("Sponsor_Address1"),
@@ -783,12 +784,13 @@ def sponsorDetails(silver_m1, silver_c):
                 coalesce(col("Sponsor_Postcode"), lit("")).alias("PostCode")
             )
         )
-    ).withColumn("sponsorEmailAdminJ",when((name_condition),cleanEmailUDF(col("Sponsor_Email")))
-    ).withColumn("sponsorMobileNumberAdminJ",when((name_condition),filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
-    ).withColumn("sponsorNameForDisplay",when(name_condition,concat_ws(" ",col("Sponsor_Forenames"), col("Sponsor_Name"))).otherwise(lit(None))
+    # ).withColumn("sponsorEmailAdminJ",when((col("hasSponsor") == "Yes"),cleanEmailUDF(col("Sponsor_Email")))
+    ).withColumn("sponsorEmailAdminJ",when((~is_detained_or_in_uk & name_condition),cleanEmailUDF(col("Sponsor_Email")))
+    ).withColumn("sponsorMobileNumberAdminJ",when((~is_detained_or_in_uk & name_condition),filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
+    ).withColumn("sponsorNameForDisplay",when(~is_detained_or_in_uk & name_condition,concat_ws(" ",col("Sponsor_Forenames"), col("Sponsor_Name"))).otherwise(lit(None))
     ).withColumn("sponsorAddressForDisplay",
         when(
-            name_condition,
+            ~is_detained_or_in_uk & name_condition,
             concat_ws(
                 "\r\n",
                 col("Sponsor_Address1"),
@@ -801,13 +803,22 @@ def sponsorDetails(silver_m1, silver_c):
         ).otherwise(lit(None))
     )
 
-    df = grouped.select(
+    df = sponsorDetails_df.select(
         "CaseNo",
+        # col("Detained"),
+        # col("CategoryIdList"),
+        # col("dv_appellantIsInUk"),
+        # col("Sponsor_Name"),
+        # col("AppellantCountryId"),
+        # col("lu_countryGovUkOocAdminJ"),
+        # col("ukPostcodeAppellant"),
+        # col("appellantFullAddress"),
         "hasSponsor",
         "sponsorGivenNames",
         "sponsorFamilyName",
         "sponsorAddress",
         "sponsorEmailAdminJ",
+        # col("Sponsor_Email"),
         "sponsorMobileNumberAdminJ",
         "sponsorAuthorisation",
         "sponsorNameForDisplay",
@@ -818,7 +829,7 @@ def sponsorDetails(silver_m1, silver_c):
     common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
 
     df_audit = silver_m1.alias("audit").join(df.alias("content"), ["CaseNo"], "left"
-            ).join(grouped.alias("grp"), ["CaseNo"], "left").select(
+            ).join(sponsorDetails_df.alias("grp"), ["CaseNo"], "left").select(
         col("CaseNo"),
         
         #audit hasSponsor
@@ -878,10 +889,56 @@ def sponsorDetails(silver_m1, silver_c):
 
     return df, df_audit
 
-
 ################################################################
-
+##### partyid ####
 ################################################################   
+
+def partyID(silver_m1, silver_m2, silver_m3, silver_c):
+
+    party_df, party_df_audit = PP.partyID(silver_m1, silver_m3, silver_c)
+
+    party_df = party_df.drop("sponsorPartyId")
+
+    m1 = silver_m1.alias("m1")
+    c = silver_c.alias("c")
+
+    is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
+
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+
+    silver_m2_derived_grouped = (
+        PP.derive_country_silver_m2(silver_m2)
+        .join(silver_c_grouped, on="CaseNo", how="left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("array_contains(CategoryIdList, 37)"), lit(True))
+            .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
+            .otherwise(col("dv_addressInUk"))
+        )
+    )
+
+    party_df_new = (silver_m2_derived_grouped.alias("m2")
+                .join(m1, on="CaseNo", how="left")
+                .join(party_df.alias("party"), on="CaseNo", how="left")
+                )
+
+    is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
+
+    df = (party_df_new.withColumn("sponsorPartyId", when(~is_detained_or_in_uk & col("m1.Sponsor_Name").isNotNull(), expr("uuid()")).otherwise(None)
+                    )).select("party.*", "sponsorPartyId")
+
+    common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
+    common_inputValues = [col("audit.dv_representation"), col("audit.lu_appealType")]
+
+    df_audit = silver_m1.join(silver_c, ["CaseNo"], "left").alias("audit").join(df.alias("content"), ["CaseNo"],"left").select(
+        col("CaseNo"),
+
+        array(struct(*common_inputFields, lit("content.sponsorPartyId"))).alias("sponsorPartyId_inputFields"),
+        array(struct(*common_inputValues, col("content.sponsorPartyId"))).alias("sponsorPartyId_inputValues"),
+        col("content.sponsorPartyId"),
+        lit("yes").alias("sponsorPartyId_Transformation")
+    ).distinct()
+
+    return df, df_audit
 
 if __name__ == "__main__":
     pass

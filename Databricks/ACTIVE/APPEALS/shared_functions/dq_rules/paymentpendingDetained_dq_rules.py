@@ -202,54 +202,232 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         ##############################
         # ARIADM-773 (SponsorDetails)
         ##############################
-        checks["valid_hasSponsor_yes_no"] = (
-            """(
-                (Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-                OR (Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-                OR (hasSponsor IS NULL)
-            )"""
-        )
-        checks["valid_sponsorGivenNames_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-        )
 
-        checks["valid_sponsorFamilyName_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
-        )
+        checks["valid_hasSponsor_yes_no"] = """
+            (
+                CASE
+                    WHEN Detained IN (1,2,4)
+                        THEN hasSponsor = 'No'
 
-        checks["valid_sponsorAuthorisation_yes_no"] = (
-            """(
-                (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-                OR (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-                OR (Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-            )"""
-        )
+                    WHEN dv_appellantIsInUk = true
+                        THEN hasSponsor = 'No'
 
-        ############################################################
-        # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-        ############################################################
-        checks["valid_sponsorAddress_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddress IS NULL))"
-        )
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NOT NULL
+                        THEN hasSponsor = 'Yes'
+                    
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NULL
+                        THEN hasSponsor = 'No'
 
-        checks["valid_sponsorAddressForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
-        )
+                    ELSE hasSponsor = 'No'
+                END
+            )
+            """
 
-        checks["valid_sponsorNameForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
-        )
+        checks["valid_sponsorGivenNames_not_null"] = """
+        (
+                CASE
+                    WHEN Detained IN (1,2,4)
+                        THEN sponsorGivenNames IS NULL
 
-        ##############################
-        # ARIADM-778 (SponsorDetails)
-        ##############################
-        checks["valid_sponsorEmailAdminJ"] = (
-            "(( sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
-        )
+                    WHEN dv_appellantIsInUk = true
+                        THEN sponsorGivenNames IS NULL
 
-        checks["valid_sponsorMobileNumberAdminJ"] = (
-            "(((sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NOT NULL
+                        THEN sponsorGivenNames IS NOT NULL
+                    
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NULL
+                        THEN sponsorGivenNames IS NULL
+
+                    ELSE sponsorGivenNames IS NULL
+                END
+            )
+            """
+
+        checks["valid_sponsorFamilyName_not_null"] = """
+        (
+                CASE
+                    WHEN Detained IN (1,2,4)
+                        THEN sponsorFamilyName IS NULL
+
+                    WHEN dv_appellantIsInUk = true
+                        THEN sponsorFamilyName IS NULL
+
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NOT NULL
+                        THEN sponsorFamilyName IS NOT NULL
+                    
+                    WHEN dv_appellantIsInUk = false
+                        AND Sponsor_Name IS NULL
+                        THEN sponsorFamilyName IS NULL
+
+                    ELSE sponsorFamilyName IS NULL
+                END
+            )
+            """
+
+        checks["valid_sponsorAuthorisation_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorAuthorisation IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorAuthorisation IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorAuthorisation IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    AND Sponsor_Authorisation = true
+                    THEN sponsorAuthorisation = 'Yes'
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorAuthorisation = 'No'
+
+                ELSE sponsorAuthorisation IS NULL
+            END
         )
+        """
+
+        checks["valid_sponsorAddress_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorAddress IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorAddress IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorAddress IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorAddress IS NOT NULL
+                
+                ELSE sponsorAddress IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorAddressForDisplay"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorAddressForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorAddressForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorAddressForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorAddressForDisplay IS NOT NULL
+                
+                ELSE sponsorAddressForDisplay IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorNameForDisplay"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorNameForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorNameForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorNameForDisplay IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorNameForDisplay IS NOT NULL
+                
+                ELSE sponsorNameForDisplay IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorEmailAdminJ"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorEmailAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorEmailAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorEmailAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorEmailAdminJ IS NOT NULL
+                
+                ELSE sponsorEmailAdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorMobileNumberAdminJ"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorMobileNumberAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorMobileNumberAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorMobileNumberAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    AND sponsorMobileNumberAdminJ RLIKE '^((\\\\+44(\\\\s\\\\(0\\\\)\\\\s|\\\\s0\\\\s|\\\\s)?)|0)7\\\\d{3}(\\\\s)?\\\\d{6}$'
+                    THEN sponsorMobileNumberAdminJ IS NOT NULL
+
+                ELSE sponsorMobileNumberAdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorPartyId_not_null"] = ("""
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN sponsorPartyId IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN sponsorPartyId IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN sponsorPartyId IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN sponsorPartyId IS NOT NULL
+
+                ELSE sponsorPartyId IS NULL
+            END
+        )                                                                                         
+        """)
 
         ##############################
         # ARIADM-778 (General)

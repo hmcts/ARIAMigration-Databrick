@@ -146,10 +146,10 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             Notes: Notes\
@@ -178,10 +178,10 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             JudgeLastName JudgeFirstName ( Judge ) : Required
@@ -194,10 +194,10 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             JudgeLastName JudgeFirstName ( Judge ) : Not Required

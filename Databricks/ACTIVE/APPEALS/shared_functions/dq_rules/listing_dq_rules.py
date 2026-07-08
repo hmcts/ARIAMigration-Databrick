@@ -42,6 +42,53 @@ class listingDQRules(DQRulesBase):
         return checks
 
     def get_checks_hearing_requirements(self, checks={}):
+
+        checks["valid_isEvidenceFromOutsideUkOoc"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN isEvidenceFromOutsideUkOoc = 'No'
+
+                WHEN dv_appellantIsInUk = true
+                    THEN isEvidenceFromOutsideUkOoc = 'No'
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NULL
+                    THEN isEvidenceFromOutsideUkOoc = 'No'
+
+                WHEN dv_appellantIsInUk = false
+                    AND Sponsor_Name IS NOT NULL
+                    THEN isEvidenceFromOutsideUkOoc = 'Yes'
+
+                ELSE isEvidenceFromOutsideUkOoc = 'No'
+            END
+        )
+        """
+
+        checks["valid_isEvidenceFromOutsideUkInCountry"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    AND Sponsor_Name IS NOT NULL
+                    THEN isEvidenceFromOutsideUkInCountry = 'Yes'
+
+                WHEN dv_appellantIsInUk = true
+                    AND Sponsor_Name IS NOT NULL
+                    THEN isEvidenceFromOutsideUkInCountry = 'Yes'
+
+                WHEN Detained NOT IN (1,2,4)
+                    AND dv_appellantIsInUk = false
+                    THEN isEvidenceFromOutsideUkInCountry = 'No'
+
+                WHEN Sponsor_Name IS NULL
+                    THEN isEvidenceFromOutsideUkInCountry = 'No'
+
+                ELSE isEvidenceFromOutsideUkInCountry = 'No'
+            END
+        )
+        """
+
+
         checks["valid_isAppellantAttendingTheHearing"] = (
             "(isAppellantAttendingTheHearing <=> 'Yes')"
         )
@@ -54,25 +101,25 @@ class listingDQRules(DQRulesBase):
             "(isWitnessesAttending <=> 'No')"
         )
 
-        checks["valid_isEvidenceFromOutsideUkOoc"] = (
-            """(
-                (NOT(ARRAY_CONTAINS(valid_categoryIdList, 38)) AND isEvidenceFromOutsideUkOoc IS NULL)
-                OR
-                (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkOoc <=> 'Yes')
-                OR
-                (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkOoc <=> 'No')
-            )"""
-        )
+        # checks["valid_isEvidenceFromOutsideUkOoc"] = (
+        #     """(
+        #         (NOT(ARRAY_CONTAINS(valid_categoryIdList, 38)) AND isEvidenceFromOutsideUkOoc IS NULL)
+        #         OR
+        #         (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkOoc <=> 'Yes')
+        #         OR
+        #         (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkOoc <=> 'No')
+        #     )"""
+        # )
 
-        checks["valid_isEvidenceFromOutsideUkInCountry"] = (
-            """(
-                (NOT(ARRAY_CONTAINS(valid_categoryIdList, 37)) AND isEvidenceFromOutsideUkInCountry IS NULL)
-                OR
-                (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkInCountry <=> 'Yes')
-                OR
-                (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkInCountry <=> 'No')
-            )"""
-        )
+        # checks["valid_isEvidenceFromOutsideUkInCountry"] = (
+        #     """(
+        #         (NOT(ARRAY_CONTAINS(valid_categoryIdList, 37)) AND isEvidenceFromOutsideUkInCountry IS NULL)
+        #         OR
+        #         (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkInCountry <=> 'Yes')
+        #         OR
+        #         (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkInCountry <=> 'No')
+        #     )"""
+        # )
 
         checks["valid_isInterpreterServicesNeeded"] = (
             """(

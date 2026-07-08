@@ -543,7 +543,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     df_ftpa, df_ftpa_audit = E.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
     df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
-    df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
+    df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages)
     df_hearingResponse, df_hearingResponse_audit = E.hearingResponse(silver_m1, silver_m3, silver_m6)
     df_hearingDetails, df_hearingDetails_audit = E.hearingDetails(silver_m1,silver_m3,bronze_listing_location)
     df_hearingActuals, df_hearingActuals_audit = E.hearingActuals(silver_m1,silver_m3)

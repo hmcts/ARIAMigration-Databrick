@@ -34,8 +34,6 @@ container_name = "dropzone"
 sub_dir = f"ARIA{ARM_SEGMENT}/submission"
 
 app = func.FunctionApp()
-producer_lock = asyncio.Lock()
-semaphore = asyncio.Semaphore(8)
 
 
 @app.function_name("eventhub_trigger")
@@ -80,27 +78,17 @@ async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
 
             idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
 
-            async def bounded_process(event):
-                async with semaphore:
-                    try:
-                        async with asyncio.timeout(300):
-                            await process_messages(
-                                event,
-                                container_service_client,
-                                sub_dir,
-                                dl_producer_client,
-                                ack_producer_client,
-                                source_container_secret,
-                                idempotency_container
-                            )
-                    except TimeoutError:
-                        key = event.partition_key
-                        msg = f"Task timed out after 5 minutes for key '{key}'."
-                        logging.error(msg)
-                        await send_to_dead_letter(dl_producer_client, msg, key)
-
             logging.info('Processing messages')
-            await asyncio.gather(*[bounded_process(event) for event in azeventhub])
+            for event in azeventhub:
+                await process_messages(
+                    event,
+                    container_service_client,
+                    sub_dir,
+                    dl_producer_client,
+                    ack_producer_client,
+                    source_container_secret,
+                    idempotency_container
+                )
             logging.info('Finished processing messages')
     finally:
         await container_service_client.close()
@@ -239,11 +227,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 )
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None):
     logging.info(f"Creating ack batch for {partition_key}.")
-    async with producer_lock:
-        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-        event_data_batch.add(EventData(message))
-        logging.info(f"Sending ack for {partition_key}.")
-        await producer_client.send_batch(event_data_batch, timeout=60)
+    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+    event_data_batch.add(EventData(message))
+    logging.info(f"Sending ack for {partition_key}.")
+    await producer_client.send_batch(event_data_batch, timeout=60)
     logging.info(f"Message added to Event Hub with partition key: {partition_key}")
 
 

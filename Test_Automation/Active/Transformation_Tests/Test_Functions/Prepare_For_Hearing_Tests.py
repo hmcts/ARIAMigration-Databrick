@@ -969,14 +969,29 @@ def test_listingLength_mapping(test_df):
         winning_records = ranked_df.filter(F.col("row_rank") == 1)
 
         # Extract JSON and test expected values from
-        final_comparison_df = winning_records.select(
+        base_df = winning_records.select(
             "appealReferenceNumber",
             col("listingLength"),
             col("listingLength.hours").alias("actual_hours"),
             col("listingLength.minutes").alias("actual_minutes"),
             col("TimeEstimate").alias("source_mins")
-        ).withColumn("expected_hours", F.floor(F.col("source_mins") / 60)) \
-            .withColumn("expected_minutes", F.col("source_mins") % 60)
+        )
+
+        raw_mins = F.col("source_mins").cast("int") % 60
+        base_hrs = F.floor(F.col("source_mins").cast("int") / 60)
+
+        final_comparison_df = base_df.withColumn(
+            "expected_hours", 
+            F.when(F.col("source_mins").isNull(), F.lit(0).cast("long"))
+             .when(raw_mins >= 45, base_hrs + 1)
+             .otherwise(base_hrs).cast("long")
+        ).withColumn(
+            "expected_minutes",
+            F.when(F.col("source_mins").isNull(), F.lit(0).cast("long"))
+             .when(raw_mins < 15, F.lit(0))
+             .when(raw_mins < 45, F.lit(30))
+             .otherwise(F.lit(0)).cast("long")
+        )
 
         acceptance_critera = final_comparison_df.filter(
             (F.col("actual_hours") != F.col("expected_hours")) | 

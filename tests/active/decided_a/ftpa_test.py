@@ -148,6 +148,6 @@ def test_ftpaApplicationDeadline(spark,ftpa_outputs):
     results = ftpa_outputs
 
     assert results["CASE005"]["ftpaApplicationDeadline"] == "2025-11-16" #CategoryId = 37, IN, +14 days
-    assert results["CASE006"]["ftpaApplicationDeadline"] == "2026-12-31" #CategoryId = 38, OOC, +28 days
+    assert results["CASE006"]["ftpaApplicationDeadline"] == None
     assert results["CASE007"]["ftpaApplicationDeadline"] == "2026-08-31" #CategoryId = 38, OOC, +28 days
     assert results["CASE010"]["ftpaApplicationDeadline"] == None

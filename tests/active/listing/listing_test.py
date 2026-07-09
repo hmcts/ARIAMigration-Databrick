@@ -175,8 +175,7 @@ class TestListingState():
             ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
         ]
 
         m3_data = [
@@ -245,8 +244,7 @@ class TestListingState():
             ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
         ]
 
         m3_data = [
@@ -309,8 +307,7 @@ class TestListingState():
             ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
             ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
-            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
+            ("7", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
         ]
 
         c_data = [

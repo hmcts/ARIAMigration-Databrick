@@ -129,8 +129,24 @@ class TestListingState():
             ("13", "LR", "FT", None, 0, 0, False, 0),             # In Camera is not 1
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("9", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("10", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("11", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("12", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("13", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
+        ]
+
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 

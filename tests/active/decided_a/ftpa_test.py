@@ -67,11 +67,11 @@ def ftpa_outputs(spark):
         # stage_category: CategoryId==37 → IN
         ("CASE006", None, None, None,      None,           None, None, None, None, None),
         # stage_category: CategoryId==38 → OUT
-        ("CASE007", None, None, None,      None,           None, None, None, None), None,
+        ("CASE007", None, None, None,      None,           None, None, None, None, None),
         # stage_country: AppellantCountryId==188 → IN
-        ("CASE008", None, 188,  None,      None,           None, None, None, None), None,
+        ("CASE008", None, 188,  None,      None,           None, None, None, None, None),
         # stage_postcode: valid UK postcode → IN
-        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None), None,
+        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None, None),
         # stage_address: address contains "united kingdom" → IN
         ("CASE010", None, None, None,      "123 Some Road","Birmingham","United Kingdom", None, None, "GB"),
         # falls through all stages → OOC

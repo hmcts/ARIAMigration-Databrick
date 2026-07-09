@@ -62,22 +62,32 @@ def ftpa_outputs(spark):
     ])
 
     m2_data = [
-        # stage_detained: Detained==3 → OOC (short-circuits everything)
-        ("CASE005", 3,    None, None,      None,           None, None, None, None, None),
-        # stage_category: CategoryId==37 → IN
-        ("CASE006", None, None, None,      None,           None, None, None, None, None),
-        # stage_category: CategoryId==38 → OUT
-        ("CASE007", None, None, None,      None,           None, None, None, None, None),
-        # stage_country: AppellantCountryId==188 → IN
-        ("CASE008", None, 188,  None,      None,           None, None, None, None, None),
-        # stage_postcode: valid UK postcode → IN
-        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None, None),
-        # stage_address: address contains "united kingdom" → IN
-        ("CASE010", None, None, None,      "123 Some Road","Birmingham","United Kingdom", None, None, "GB"),
-        # falls through all stages → OOC
-        ("CASE011", None, None, None,      "123 Rue de la Paix", "Paris", "France", None, None, None),
-        # falls through all stages → OOC
-        ("CASE012", None, None, None,      "123 Rue de la Paix", "Paris", "France", None, None, None),
+        # Detained = 3 -> OOC, should still produce deadline based on logic
+        ("CASE005", 3, None, None, None, None, None, None, None, None),
+
+        # CategoryId 38 -> OOC -> +28 days
+        ("CASE006", None, None, None, None, None, None, None, None, None),
+
+        # CategoryId 38 -> OOC -> +28 days
+        ("CASE007", None, None, None, None, None, None, None, None, None),
+
+        # Country 188 -> IN -> +14 days
+        ("CASE008", None, 188, None, None, None, None, None, None, None),
+
+        # UK postcode -> IN -> +14 days
+        ("CASE009", None, None, "B12 0HF", None, None, None, None, None, None),
+
+        # UK address -> IN -> +14 days
+        ("CASE010", None, None, None, "123 Some Road", "Birmingham",
+        "United Kingdom", None, None, "GB"),
+
+        # Falls through -> OOC
+        ("CASE011", None, None, None, "123 Rue de la Paix",
+        "Paris", "France", None, None, None),
+
+        # Falls through -> OOC
+        ("CASE012", None, None, None, "123 Rue de la Paix",
+        "Paris", "France", None, None, None),
     ]
 
     m3_schema = T.StructType([
@@ -114,13 +124,13 @@ def ftpa_outputs(spark):
     ])
     
     c_data = [
-        ("CASE005", 37),  
-        ("CASE006", 38),  
-        ("CASE007", None),  
-        ("CASE008", None),  
-        ("CASE009", None), 
-        ("CASE010", None),
-        ]
+        ("CASE005", 37),   # IN
+        ("CASE006", 38),   # OUT
+        ("CASE007", 38),   # OUT
+        ("CASE010", 38),   # OUT overrides UK address
+        ("CASE011", 38),
+        ("CASE012", 38),
+    ]
     
     df_m1 =  spark.createDataFrame(m1_data, m1_schema)
     df_m2 =  spark.createDataFrame(m2_data, m2_schema)
@@ -137,9 +147,7 @@ def test_ftpaApplicationDeadline(spark,ftpa_outputs):
 
     results = ftpa_outputs
 
-    assert results["CASE005"]["ftpaApplicationDeadline"] == "2025-11-30" #detained = 3, +28 days
+    assert results["CASE005"]["ftpaApplicationDeadline"] == "2025-11-16" #CategoryId = 37, IN, +14 days
     assert results["CASE006"]["ftpaApplicationDeadline"] == "2026-12-31" #CategoryId = 38, OOC, +28 days
-    assert results["CASE007"]["ftpaApplicationDeadline"] == None
+    assert results["CASE007"]["ftpaApplicationDeadline"] == "2026-08-31" #CategoryId = 38, OOC, +28 days
     assert results["CASE010"]["ftpaApplicationDeadline"] == None
-
-

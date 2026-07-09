@@ -168,6 +168,17 @@ class TestListingState():
             ("22", "AIP", "FT", None, 1, 0, False, None)   # For m3 conditional tests - Additional manual sign language only
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
+        ]
+
         m3_data = [
             ("5", 1, 37, 0, 2),    # StatusId 1 Unused Additional Spoken Language Only
             ("5", 2, 37, 0, 3),    # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
@@ -191,7 +202,7 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
@@ -225,7 +236,17 @@ class TestListingState():
             ("18", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
             ("19", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
             ("20", "AIP", "FT", None, 1, 0, False, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
+        ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
         ]
 
         m3_data = [
@@ -258,7 +279,7 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
@@ -281,6 +302,17 @@ class TestListingState():
             ("7", "AIP", "FT", "SPonsor", 0, 0, False, 0)   # Multiple categories including isEvidenceFromOutsideUkInCountry and has sponsor
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),  # Detained=1 forces is_detained_or_in_uk=True regardless of category
+        ]
+
         c_data = [
             ("1", 37),  # Category 37 for isEvidenceFromOutsideUkOoc
             ("2", 38),  # Category 38 for isEvidenceFromOutsideUkInCountry
@@ -296,7 +328,7 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-        silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame(c_data, self.C_COLUMNS)
 

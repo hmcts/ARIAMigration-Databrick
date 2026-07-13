@@ -32,8 +32,8 @@ _kv_client = SecretClient(
 idempotency_account_url = f"https://ingest{lz_key}xcutting{env}.blob.core.windows.net"
 idempotency_base = f"ARCHIVE/ARIA{ARM_SEGMENT}/processed"
 
-account_url = "https://a360c2x2555dz.blob.core.windows.net"
-container_name = "dropzone"
+account_url = "https://ingest01landingstg.blob.core.windows.net"
+container_name = "test-archive"
 sub_dir = f"ARIA{ARM_SEGMENT}/submission"
 
 app = func.FunctionApp()
@@ -62,18 +62,20 @@ async def eventhub_trigger_sbails(azeventhub: List[func.EventHubEvent]):
         f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
     )
 
-    ev_dl_secret, ev_ack_secret, container_secret, source_container_secret = await asyncio.gather(
+    ev_dl_secret, ev_ack_secret, container_secret, source_container_secret, test_container_secret = await asyncio.gather(
         _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-dl-{lz_key}-uks-dlrm-01-key"),
         _kv_client.get_secret(f"evh-{ARIA_SEGMENT}-ack-{lz_key}-uks-dlrm-01-key"),
         _kv_client.get_secret(f"ARIA{ARM_SEGMENT}-SAS-TOKEN"),
         _kv_client.get_secret(f"CURATED-AZUREFUNCTION-{env}-SAS-TOKEN"),
+        _kv_client.get_secret("TEST-ARCHIVE-SAS"),
     )
     ev_dl_key = ev_dl_secret.value
     ev_ack_key = ev_ack_secret.value
     container_secret = container_secret.value
     source_container_secret = source_container_secret.value
+    test_container_secret = test_container_secret.value
 
-    container_url = f"{account_url}/{container_name}?{container_secret}"
+    container_url = f"{account_url}/{container_name}?{test_container_secret}"
 
     try:
         container_service_client = ContainerClient.from_container_url(container_url)
@@ -87,7 +89,7 @@ async def eventhub_trigger_sbails(azeventhub: List[func.EventHubEvent]):
                    EventHubProducerClient.from_connection_string(ev_ack_key) as ack_producer_client, \
                    BlobServiceClient(idempotency_account_url, _credential) as idempotency_blob_service:
 
-            idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
+            idempotency_container = idempotency_blob_service.get_container_client("test-af-idempotency")
 
             async def bounded_process(event):
                 async with semaphore:

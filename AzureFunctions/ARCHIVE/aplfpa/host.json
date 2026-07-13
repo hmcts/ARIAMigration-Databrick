@@ -2,25 +2,25 @@
   "version": "2.0",
   "logging": {
     "logLevel": {
-      "default": "Information"
+      "default": "Information",
+      "azure": "Warning"
     },
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
         "maxTelemetryItemsPerSecond": 10000,
-        "excludedTypes": "Request"
+        "excludedTypes": "Request;Trace"
       }
     }
+  },
+  "retry": {
+    "strategy": "exponentialBackoff",
+    "maxRetryCount": 3,
+    "minimumInterval": "00:00:20",
+    "maximumInterval": "00:00:40"
   },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
-  },
-  "extensions": {
-    "eventHubs": {
-      "maxEventBatchSize": 400,
-      "prefetchCount": 800,
-      "batchCheckpointFrequency": 1
-    }
   }
 }

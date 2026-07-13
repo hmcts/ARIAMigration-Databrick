@@ -43,13 +43,20 @@ app = func.FunctionApp()
     event_hub_name=eventhub_name,
     consumer_group='$Default',
     connection=eventhub_connection,
-    starting_position="@latest",
     cardinality='many',
-    max_batch_size=1,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
-    logger.info(f"Processing a batch of {len(azeventhub)} events")
+    # Metadata is common to the whole batch under cardinality=many, so it can be read from any single event
+    metadata = azeventhub[0].metadata or {} if azeventhub else {}
+    partition_id = metadata.get("PartitionContext", {}).get("PartitionId")
+    sequence_numbers = metadata.get("SequenceNumberArray") or []
+    min_sequence = min(sequence_numbers) if sequence_numbers else None
+    max_sequence = max(sequence_numbers) if sequence_numbers else None
+    logger.info(
+        f"Processing a batch of {len(azeventhub)} events - "
+        f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
+    )
 
     try:
         # Retrieve credentials
@@ -66,10 +73,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
         idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
         idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
-        res_eh_producer = EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
-
-        async with res_eh_producer:
-            logger.info(f"Creating batch for {len(azeventhub)} events")
+        async with EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key) as res_eh_producer:
+            logger.info(
+                f"Creating batch for {len(azeventhub)} events - "
+                f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
+            )
             event_data_batch = await res_eh_producer.create_batch()
             try:
                 for event in azeventhub:
@@ -134,6 +142,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
             except Exception as e:
                 logger.error(f"Error in event hub processing batch: {e}")
+                raise e
             finally:
                 # Clean up all clients
                 await kv_client.close()

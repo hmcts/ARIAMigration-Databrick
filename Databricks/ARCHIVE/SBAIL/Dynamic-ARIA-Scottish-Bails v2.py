@@ -2230,7 +2230,7 @@ case_status_mappings = {
         "{{BailApplicationTotalAmountOfFinancialCondition}}": "TotalAmountOfFinancialCondition",
         "{{BailApplicationBailCondition}}": "BailConditionsDesc",
         "{{BailApplicationTotalSecurity}}": "TotalSecurity",
-        "{{BailApplicationDateDischarged}}": "MiscDate1",
+        "{{BailApplicationDateDischarge}}": "MiscDate1",
         "{{BailApplicationRemovalDate}}": "MiscDate3",
         "{{BailApplicationVideoLink}}": "VideoLink",
         "{{BailApplicationResidenceOrderMade}}": "ResidenceOrderDesc",

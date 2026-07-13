@@ -395,6 +395,10 @@ def _make_event(case_no, run_id, state, content):
     event.get_body.return_value = json.dumps(
         {"RunID": run_id, "State": state, "Content": content}
     ).encode("utf-8")
+    event.metadata = {
+        "PartitionContext": {"PartitionId": "0"},
+        "SequenceNumberArray": [1],
+    }
     return event
 
 

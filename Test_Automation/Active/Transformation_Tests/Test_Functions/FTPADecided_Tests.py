@@ -444,14 +444,14 @@ def test_ftpaAppellantRjDecisionOutcomeType_test1(test_df):
         winning_records = ranked_df.filter(col("row_rank") == 1)
 
         # 3. Define the expected mapping logic
-        expected_val = when(col("Outcome") == 30, "granted") \
-                      .when(col("Outcome") == 31, "refused") \
-                      .when(col("Outcome") == 14, "notAdmitted") \
-                      .otherwise("unknown")
+        expected_val = when((col("Party") == 1) & (col("Outcome") == 30), "granted") \
+                      .when((col("Party") == 1) & (col("Outcome") == 31), "refused") \
+                      .when((col("Party") == 1) & (col("Outcome") == 14), "notAdmitted") \
+                      .otherwise(None)
 
         # 4. Acceptance Criteria: Validate actual ftpaAppellantRjDecisionOutcomeType against the map
         # We check only the rows where Outcome is one of the three target values
-        acceptance_critera = winning_records.filter(
+        acceptance_critera = winning_records.filter(col("Party") == 1).filter(
             col("ftpaAppellantRjDecisionOutcomeType") != expected_val
         )
 
@@ -490,13 +490,13 @@ def test_ftpaRespondentRjDecisionOutcomeType_test1(test_df):
         winning_records = ranked_df.filter(col("row_rank") == 1)
 
         # 3. Define the expected mapping logic
-        expected_val = when(col("Outcome") == 30, "granted") \
-                      .when(col("Outcome") == 31, "refused") \
-                      .when(col("Outcome") == 14, "notAdmitted") \
-                      .otherwise("unknown")
+        expected_val = when((col("Party") == 2) & (col("Outcome") == 30), "granted") \
+                      .when((col("Party") == 2) & (col("Outcome") == 31), "refused") \
+                      .when((col("Party") == 2) & (col("Outcome") == 14), "notAdmitted") \
+                      .otherwise(None)
 
         # 4. Acceptance Criteria: Validate actual ftpaRespondentRjDecisionOutcomeType against the map
-        acceptance_critera = winning_records.filter(
+        acceptance_critera = winning_records.filter(col("Party") == 2).filter(
             col("ftpaRespondentRjDecisionOutcomeType") != expected_val
         )
 

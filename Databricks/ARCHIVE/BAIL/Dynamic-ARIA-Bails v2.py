@@ -723,9 +723,9 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_country").alias("cl"), col("ac.CountryId") == col("cl.CountryId"), "left_outer")
     .join(dlt.read("raw_country").alias("n"), col("ac.NationalityId") == col("n.CountryId"), "left_outer")
     .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
-    .join(dlt.read("raw_hearing_centre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
     .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
+    .join(dlt.read("raw_hearing_centre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer")
     .select(
         # AppealCase Fields
         col("ac.CaseNo"),
@@ -1905,7 +1905,7 @@ def silver_m1():
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
                         when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
                         #Adding File Location information per 1437
-                        concat_ws(", ", col("m1.FileLocationCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
+                        concat_ws(", ", col("m1.FileLocationHearingCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
                             
     )
 
@@ -2889,9 +2889,6 @@ def stg_m1_m2():
     # find all columns in m2 not in m1
     m2_new_columns = [col_name for col_name in m2.columns if col_name not in m1.columns]
 
-
-    # selected_columns = [col("m1.*")] + [col(f"m2.{c}") for c in m2_new_columns]
-
     selected_columns = [
     col("m1.CaseNo"),
     col("m2.AppellantForenames").alias("Forename"),
@@ -2905,7 +2902,6 @@ def stg_m1_m2():
     m1_m2_final = m1_m2.groupBy("m1.CaseNo").agg(collect_list(stg_m1_m2_struct).alias("Case_detail"))
                                                  
     return m1_m2_final
-
 
 
 # COMMAND ----------

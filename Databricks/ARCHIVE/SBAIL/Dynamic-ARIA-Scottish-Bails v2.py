@@ -718,9 +718,9 @@ def bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang():
     .join(dlt.read("raw_country").alias("cl"), col("ac.CountryId") == col("cl.CountryId"), "left_outer")
     .join(dlt.read("raw_country").alias("n"), col("ac.NationalityId") == col("n.CountryId"), "left_outer")
     .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
-    .join(dlt.read("raw_hearing_centre").alias("hc"), col("ac.CentreId") == col("hc.CentreId"), "left_outer")
     .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
     .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
+    .join(dlt.read("raw_hearing_centre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer")
     .select(
         # AppealCase Fields
         col("ac.CaseNo"),
@@ -1755,7 +1755,7 @@ def silver_m1():
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
                         when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
                         #Adding File Location information per 1437
-                        concat_ws(", ", col("m1.FileLocationCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
+                        concat_ws(", ", col("m1.FileLocationHearingCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
                             
     )
 

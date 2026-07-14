@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    active_republish_events_databricks_job:
+      name: active_republish_events_databricks_job
+      parameters:
+        - name: stage
+          default: CCD
+      job_clusters:
+        - job_cluster_key: active_republish_events_databricks_job
+          new_cluster:
+            spark_version: ${var.cluster_config.spark_version}
+            num_workers: 1
+            instance_pool_id: ${var.instance_pool_id}
+            driver_instance_pool_id: ${var.instance_pool_id}
+            runtime_engine: PHOTON
+      tasks:
+        - task_key: active_republish_events
+          job_cluster_key: active_republish_events_databricks_job
+          notebook_task:
+            notebook_path: "/Workspace/live/ACTIVE/MVP/Utility/RepublishEvents"
+            source: WORKSPACE
+            base_parameters:
+              stage: "{{job.parameters.stage}}"

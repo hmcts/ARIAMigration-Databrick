@@ -49,6 +49,9 @@ app = func.FunctionApp()
     data_type='binary'
 )
 async def eventhub_trigger_fpa(azeventhub: List[func.EventHubEvent]):
+    producer_lock = asyncio.Lock()
+    semaphore = asyncio.Semaphore(6)
+
     metadata = azeventhub[0].metadata or {} if azeventhub else {}
     partition_id = metadata.get("PartitionContext", {}).get("PartitionId")
     sequence_numbers = [event.sequence_number for event in azeventhub] if azeventhub else []
@@ -86,19 +89,30 @@ async def eventhub_trigger_fpa(azeventhub: List[func.EventHubEvent]):
 
             idempotency_container = idempotency_blob_service.get_container_client("af-idempotency")
 
+            async def bounded_process(event):
+                async with semaphore:
+                    try:
+                        async with asyncio.timeout(240):
+                            await process_messages(
+                                event,
+                                container_service_client,
+                                sub_dir,
+                                dl_producer_client,
+                                ack_producer_client,
+                                source_container_secret,
+                                idempotency_container,
+                                producer_lock
+                            )
+                    except TimeoutError:
+                        key = event.partition_key
+                        msg = f"Task timed out after 4 minutes for key '{key}'."
+                        logging.error(msg)
+                        await send_to_dead_letter(dl_producer_client, msg, key, producer_lock)
+
             logging.info(
                 f"Processing messages - Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
             )
-            for event in azeventhub:
-                await process_messages(
-                    event,
-                    container_service_client,
-                    sub_dir,
-                    dl_producer_client,
-                    ack_producer_client,
-                    source_container_secret,
-                    idempotency_container
-                )
+            await asyncio.gather(*[bounded_process(event) for event in azeventhub])
             logging.info(
                 f"Finished processing messages - Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
             )
@@ -122,7 +136,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container):
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container, producer_lock):
     results: dict = {
         "filename": None,
         "http_response": None,
@@ -146,7 +160,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         if not key:
             logging.error('Key was empty')
-            await send_to_dead_letter(dl_producer_client, message, key)
+            await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
             return
 
         # Attempt to parse JSON payload
@@ -166,7 +180,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 
         if not blob_url:
             logging.error("Missing blob_url in the event message")
-            await send_to_dead_letter(dl_producer_client, message, key)
+            await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
             return
 
         idempotency_blob = idempotency_container.get_blob_client(f"{idempotency_base}/{file_name}.flag")
@@ -224,7 +238,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             logging.info("Uploaded blob successfully: %s", key)
 
-            await send_to_eventhub(ack_producer_client, json.dumps(results), key)
+            await send_to_eventhub(ack_producer_client, json.dumps(results), key, producer_lock)
         except Exception:
             logging.warning(f"[IDEMPOTENCY] Deleting flag for file: {file_name} after processing failure")
             try:
@@ -245,7 +259,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         results["http_message"] = str(e)
         logging.error(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
-        await send_to_dead_letter(dl_producer_client, message, key)
+        await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
         # Raise exception, whole batch will be re-tried but successful runs will be skipped by idempotency.
         raise
 
@@ -259,19 +273,20 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         f"Retrying EventHub send attempt {r.attempt_number} due to: {r.outcome.exception()}"
     ),
 )
-async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None):
+async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None, producer_lock: asyncio.Lock):
     logging.info(f"Creating ack batch for {partition_key}.")
-    event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-    event_data_batch.add(EventData(message))
-    logging.info(f"Sending ack for {partition_key}.")
-    await producer_client.send_batch(event_data_batch, timeout=60)
+    async with producer_lock:
+        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+        event_data_batch.add(EventData(message))
+        logging.info(f"Sending ack for {partition_key}.")
+        await producer_client.send_batch(event_data_batch, timeout=60)
     logging.info(f"Message added to Event Hub with partition key: {partition_key}")
 
 
-async def send_to_dead_letter(dl_producer_client, message, key):
+async def send_to_dead_letter(dl_producer_client, message, key, producer_lock):
     if message is not None:
         try:
-            await send_to_eventhub(dl_producer_client, message, key)
+            await send_to_eventhub(dl_producer_client, message, key, producer_lock)
             logging.info(f"{key}: Sent to dead letter queue")
         except Exception as e:
             logging.error(f"Failed to send {key} to dead-letter EventHub: {e}")

@@ -1062,6 +1062,7 @@ def bronze_sbail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
             col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
             col("l.NumReqNonLegalMember").alias("NonLegalMember"),
+            col("l.ListId"),
             # ListType
             col("lt.Description").alias("ListTypeDesc"),
             col("lt.ListType"),
@@ -3376,6 +3377,16 @@ def resolve_address_line(cd_row, centre_col, appellant_col):
 
     return ""
 
+def should_strikethrough(status):
+    """
+    Strike through when there is no ListId
+    but there is a hearing date.
+    """
+    return (
+        status["ListId"] is None
+        and status["Keydate"] is not None
+    )
+
 def create_html_column(row, html_template=bails_html_dyn):
     """
     For a given a single row, this function returns the final HTML string.
@@ -3599,6 +3610,14 @@ def create_html_column(row, html_template=bails_html_dyn):
                     template = template_for_status[case_status]
                     template = template.replace("{{margin_placeholder}}",str(margin))
                     template = template.replace("{{index}}",str(counter))
+
+                    doh_style = ""
+
+                    if should_strikethrough(status):
+                        doh_style = "text-decoration: line-through;"
+
+                    template = template.replace("{{DOHstyle}}", doh_style)
+
                     status_mapping = case_status_mappings[case_status]
 
 

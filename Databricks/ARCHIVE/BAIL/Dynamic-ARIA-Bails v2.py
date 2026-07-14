@@ -1067,6 +1067,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
             col("l.NumReqDesignatedImmigrationJudge").alias("DesJudgeFirstTier"),
             col("l.NumReqImmigrationJudge").alias("JudgeFirstTier"),
             col("l.NumReqNonLegalMember").alias("NonLegalMember"),
+            col("l.ListId"),
             # ListType
             col("lt.Description").alias("ListTypeDesc"),
             col("lt.ListType"),
@@ -3533,21 +3534,15 @@ def resolve_address_line(cd_row, centre_col, appellant_col):
 
     return ""
 
-def should_strikethrough(status_id, all_status_objects):
+def should_strikethrough(status):
     """
-    Returns True if the StatusId is not present in all_status_objects,
-    or if present but ListId is None.
+    Strike through when there is no ListId
+    but there is a hearing date.
     """
-    for s in all_status_objects or []:
-        if s.get("StatusId") == status_id:
-            return s.get("ListId") is None
-    return True
-
-# def should_strikethrough(status):
-#     """
-#     Returns True if the status has no associated list.
-#     """
-#     return status.get("ListTypeId") is None
+    return (
+        status["ListId"] is None
+        and status["Keydate"] is not None
+    )
 
 def create_html_column(row, html_template=bails_html_dyn):
     """
@@ -3773,21 +3768,12 @@ def create_html_column(row, html_template=bails_html_dyn):
                     template = template.replace("{{margin_placeholder}}",str(margin))
                     template = template.replace("{{index}}",str(counter))
 
-                    # doh_style = ""
-
-                    # if case_status == 11:
-                    #     if should_strikethrough(status["StatusId"], row.all_status_objects):
-                    #         doh_style = "text-decoration: line-through;"
-
-                    # template = template.replace("{{DOHstyle}}", doh_style)
-
                     doh_style = ""
 
-                    if case_status == 11 and should_strikethrough(status):
+                    if should_strikethrough(status):
                         doh_style = "text-decoration: line-through;"
 
                     template = template.replace("{{DOHstyle}}", doh_style)
-
 
                     status_mapping = case_status_mappings[case_status]
 

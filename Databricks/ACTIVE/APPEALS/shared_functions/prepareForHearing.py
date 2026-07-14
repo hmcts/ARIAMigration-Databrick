@@ -457,7 +457,8 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
 
     rounded_minutes = (
-        F.when(raw_minutes.isNull() | (raw_minutes < 45), F.lit(30))
+        F.when(raw_minutes == 0, F.lit(0))
+        .when(raw_minutes < 45, F.lit(30))
         .otherwise(F.lit(0))
     )
 
@@ -470,11 +471,11 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         "listingLength",
         F.create_map(
             F.lit("hours"),
-            F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int"))
+            F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
             .otherwise(adjusted_hours).alias("hours"),
 
             F.lit("minutes"),
-            F.when(col("TimeEstimate").isNull(), F.lit(None).cast("int"))
+            F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
             .otherwise(rounded_minutes).alias("minutes"))
         ).select(
             col("CaseNo").alias("CaseNo"),
@@ -482,6 +483,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             col("listCaseHearingDate"),
             col("listCaseHearingCentre"),
             col("listCaseHearingCentreAddress"),
+            # col("TimeEstimate"),
             col("listingLength"),
             col("listingLocation"),
             col("TimeEstimate"),
@@ -490,20 +492,6 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             col("HearingDate"),
             col("StartTime")
         )
-            # F.when(
-        #     F.col("TimeEstimate").isNull(),
-        #     # Create a struct with null hours and minutes when TimeEstimate is null
-        #     F.struct(
-        #         F.lit(None).cast("int").alias("hours"),
-        #         F.lit(None).cast("int").alias("minutes")
-        #     )
-        # ).otherwise(
-        #     # Compute hours and minutes from TimeEstimate (assumed to be minutes)
-        #     F.struct(
-        #         F.floor(F.col("TimeEstimate").cast("int") / 60).alias("hours"),
-        #         (F.col("TimeEstimate").cast("int") % 60).alias("minutes")
-        #     )
-        # )
 
     hearingChannelListItems = array(
         struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label")),
@@ -530,6 +518,13 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 hearingChannelListItems.alias("list_items")
             )
         )
+        .withColumn(
+        "listingLength",
+                F.when(
+                    col("listingLength").isNull(),
+                    F.create_map(F.lit("hours"), F.lit(0), F.lit("minutes"), F.lit(30))
+                ).otherwise(col("listingLength"))
+            )
     .withColumn("witnessDetails",lit([]).cast("array<string>"))
     .withColumn("witness1InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
     .withColumn("witness2InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
@@ -558,6 +553,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     col("listCaseHearingCentre"),
     col("listCaseHearingCentreAddress"),
     col("listingLength"),
+    # col("TimeEstimate"),
     col("hearingChannel"),
     col("witnessDetails"),
     col("listingLocation"),

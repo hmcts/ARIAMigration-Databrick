@@ -1437,26 +1437,29 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_additionalInstructionsTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN
-                    additionalInstructionsTribunalResponse IS NULL OR
-            (
-                additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
-            )
+                ) THEN (
+                    (additionalInstructionsTribunalResponse IS NULL)
+                    OR
+                    (
+                        LENGTH(additionalInstructionsTribunalResponse) < 2000 AND
+                        additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+                    )
+                )
                 ELSE
                     additionalInstructionsTribunalResponse IS NULL
             END

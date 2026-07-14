@@ -19,6 +19,8 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
                         (dv_representation <=> 'AIP')
                         AND
                         (additionalInstructionsTribunalResponse IS NOT NULL)
+                        AND
+                        (LENGTH(additionalInstructionsTribunalResponse) < 2000)
                     )
                     OR
                     (

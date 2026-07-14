@@ -3750,8 +3750,8 @@ def silver_status_detail():
                               ).otherwise(col("st.ExtemporeMethodOfTyping")).alias("ExtemporeMethodOfTyping"),
                               when(col("st.Extempore") == True, "enabled").otherwise("disabled").alias("Extempore"),
                               when(col("st.DecisionByTCW") == True, "enabled").otherwise("disabled").alias("DecisionByTCW"),
-                              when(col("st.InitialHearingPoints").isNull(), lit("0.00")).alias("InitialHearingPoints"),
-                              when(col("st.FinalHearingPoints").isNull(), lit("0.00")).alias("FinalHearingPoints"),
+                            when(col("st.InitialHearingPoints").isNull(), lit("0.00")).otherwise(col("st.InitialHearingPoints")).cast(DecimalType(10, 2)).alias("InitialHearingPoints"),
+                            when(col("st.FinalHearingPoints").isNull(), lit("0.00")).otherwise(col("st.FinalHearingPoints")).cast(DecimalType(10, 2)).alias("FinalHearingPoints"),
                               "st.HearingPointsChangeReasonId",
                               "st.OtherCondition",
                               "st.OutcomeReasons",
@@ -5121,9 +5121,9 @@ def generate_html(row, templates=templates):
 
                 # Use MiscDate1 for Preliminary Issue, KeyDate otherwise
                 if getattr(SDP, "CaseStatusDescription", None) == "Preliminary Issue":
-                    date_val = format_date(SDP.MiscDate1)
+                    date_val = format_date_iso(SDP.MiscDate1)
                 else:
-                    date_val = format_date(SDP.KeyDate) #LatestKeyDate?
+                    date_val = format_date_iso(SDP.KeyDate)
 
                 if should_strikethrough(SDP.StatusId, row.ListDetails):
                     doh_style = "text-decoration: line-through;"

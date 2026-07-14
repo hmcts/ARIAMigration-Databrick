@@ -377,7 +377,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
                 WHEN dv_appellantIsInUk = false
                     AND Sponsor_Name IS NOT NULL
-                    THEN sponsorEmailAdminJ IS NOT NULL
+                    THEN true
                 
                 ELSE sponsorEmailAdminJ IS NULL
             END
@@ -399,9 +399,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
                 WHEN dv_appellantIsInUk = false
                     AND Sponsor_Name IS NOT NULL
-                    AND sponsorMobileNumberAdminJ RLIKE '^((\\\\+44(\\\\s\\\\(0\\\\)\\\\s|\\\\s0\\\\s|\\\\s)?)|0)7\\\\d{3}(\\\\s)?\\\\d{6}$'
-                    THEN sponsorMobileNumberAdminJ IS NOT NULL
-
+                    THEN (
+                        sponsorMobileNumberAdminJ IS NULL
+                        OR sponsorMobileNumberAdminJ RLIKE '^((\\\\+44(\\\\s\\\\(0\\\\)\\\\s|\\\\s0\\\\s|\\\\s)?)|0)7\\\\d{3}(\\\\s)?\\\\d{6}$'
+                        )
+                        
                 ELSE sponsorMobileNumberAdminJ IS NULL
             END
         )

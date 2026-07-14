@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract, format_string
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -1797,7 +1797,6 @@ def silver_m2():
 
 # COMMAND ----------
 
-
 m3_grouped_cols = [
 "CaseNo", 
 "StatusId", 
@@ -1814,8 +1813,6 @@ m3_grouped_cols = [
 "HearingCentreDesc"
 ]
 
-
-
 @dlt.table(name="silver_sbail_m3_hearing_details", 
            comment="ARIA Migration Archive Bails m3 silver table", 
            path=f"{silver_base_path}/silver_sbail_m3")
@@ -1828,14 +1825,19 @@ def silver_m3():
     segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
     segmentation_df = segmentation_df.withColumn("CaseNo", trim("CaseNo"))
 
-    joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
+    joined_df = (
+        m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
+        .withColumn("ListStartTime", date_format(col("CaseListStartTime"), "HH:mm"))
+        .withColumn("HearingDate", date_format(col("HearingDate"), "dd-MM-yyyy"))
+        .withColumn("StartTime", date_format(col("CaseListStartTime"), "HH:mm"))
+        .withColumn("CaseListTimeEstimate", format_string("%02d:%02d", floor(col("CaseListTimeEstimate") / 60), col("CaseListTimeEstimate") % 60))
+    )
 
     df = joined_df.drop("BaseBailType")
 
     df = df.orderBy(col("Outcome").desc())
 
     return df
-
 
 
 # COMMAND ----------
@@ -2204,21 +2206,20 @@ case_status_mappings = {
         "{{adjOutcome}}":"OutcomeDescription",
         "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription"
-
     },
     4: {  # Bail Application
         "{{BailApplicationStatusOfBail}}": "CaseStatusDescription",
@@ -2248,24 +2249,24 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2301,24 +2302,24 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2337,28 +2338,28 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
-        ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        ## adjournment - potentially remove values below dependent on Bella's reponse
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
     18: {  # Bail Renewal
         "{{BailRenewalStatusOfBail}}": "CaseStatusDescription",
@@ -2382,28 +2383,28 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
     19: {  # Bail Variation
         "{{BailVariationStatusOfBail}}": "CaseStatusDescription",
@@ -2427,28 +2428,28 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     },
 
     35: {
@@ -2470,32 +2471,32 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
         "{{outcome}}": "OutcomeDescription",
         ## adjournment
-        "{{adjDateOfApplication}}": "DateReceived",
-        "{{adjDateOfHearing}}": "MiscDate1",
-        "{{adjPartyMakingApp}}":"StatusPartyDesc",
-        "{{adjDirections}}":"StatusNotes1",
-        "{{adjDateOfDecision}}":"DecisionDate",
-        "{{adjOutcome}}":"OutcomeDescription",
-        "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
-
-
+        "{{adjDateOfApplication}}": "adjDateOfApplication",
+        "{{adjDateOfHearing}}":"adjDateOfHearing",
+        "{{adjPartyMakingApp}}": "adjPartyMakingApp",
+        "{{adjDirections}}":"adjDirections",
+        "{{adjDateOfDecision}}":"adjDateOfDecision",
+        "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
+        "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
     }
 }
+
+
 
 date_fields = {
     "DateReceived", "Keydate", "MiscDate1", "MiscDate2", "MiscDate3",

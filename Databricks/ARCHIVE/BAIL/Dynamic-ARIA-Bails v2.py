@@ -59,7 +59,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract
+from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract, format_string
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -1979,7 +1979,13 @@ def silver_m3():
     segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     segmentation_df = segmentation_df.withColumn("CaseNo", trim("CaseNo"))
 
-    joined_df = m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
+    joined_df = (
+        m3_df.join(segmentation_df.alias("bs"), on="CaseNo", how="inner")
+        .withColumn("ListStartTime", date_format(col("CaseListStartTime"), "HH:mm"))
+        .withColumn("HearingDate", date_format(col("HearingDate"), "dd-MM-yyyy"))
+        .withColumn("StartTime", date_format(col("CaseListStartTime"), "HH:mm"))
+        .withColumn("CaseListTimeEstimate", format_string("%02d:%02d", floor(col("CaseListTimeEstimate") / 60), col("CaseListTimeEstimate") % 60))
+    )
 
     df = joined_df.drop("BaseBailType")
 
@@ -2358,16 +2364,16 @@ case_status_mappings = {
         "{{adjOutcome}}":"OutcomeDescription",
         "{{adjdatePartiesNotified}}":"DecisionSentToHODate",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2409,16 +2415,16 @@ case_status_mappings = {
         "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
         "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2462,16 +2468,16 @@ case_status_mappings = {
         "{{adjOutcome}}":"OutcadjOutcomeomeDescription",
         "{{adjdatePartiesNotified}}":"adjdatePartiesNotified",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2490,16 +2496,16 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
                 ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2535,16 +2541,16 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2580,16 +2586,16 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -2623,16 +2629,16 @@ case_status_mappings = {
         "{{other}}": "OtherCondition",
         "{{outcomeReasons}}": "OutcomeReasons",
         ## hearing tab
-        "{{HearingCentre}}":"HearingTypeDesc",
+        "{{HearingCentre}}":"HearingCentreDesc",
         "{{Court}}":"CourtName",
         "{{HearingDate}}":"HearingDate",
         "{{ListName}}":"ListName",
-        "{{ListType}}":"ListType",
+        "{{ListType}}":"ListTypeDesc",
         "{{HearingType}}":"HearingTypeDesc",
         "{{ListStartTime}}":"ListStartTime",
         "{{JudgeFT}}":"JudgeFT",
         "{{CourtClerkUsher}}":"CourtClerkUsher",
-        "{{StartTime}}":"CaseListStartTime",
+        "{{StartTime}}":"ListStartTime",
         "{{EstDuration}}":"CaseListTimeEstimate",
         "{{Outcome}}": "Outcome",
         "{{PrimaryLanguage}}": "Language",
@@ -3527,6 +3533,22 @@ def resolve_address_line(cd_row, centre_col, appellant_col):
 
     return ""
 
+def should_strikethrough(status_id, all_status_objects):
+    """
+    Returns True if the StatusId is not present in all_status_objects,
+    or if present but ListId is None.
+    """
+    for s in all_status_objects or []:
+        if s.get("StatusId") == status_id:
+            return s.get("ListId") is None
+    return True
+
+# def should_strikethrough(status):
+#     """
+#     Returns True if the status has no associated list.
+#     """
+#     return status.get("ListTypeId") is None
+
 def create_html_column(row, html_template=bails_html_dyn):
     """
     For a given a single row, this function returns the final HTML string.
@@ -3750,6 +3772,23 @@ def create_html_column(row, html_template=bails_html_dyn):
                     template = template_for_status[case_status]
                     template = template.replace("{{margin_placeholder}}",str(margin))
                     template = template.replace("{{index}}",str(counter))
+
+                    # doh_style = ""
+
+                    # if case_status == 11:
+                    #     if should_strikethrough(status["StatusId"], row.all_status_objects):
+                    #         doh_style = "text-decoration: line-through;"
+
+                    # template = template.replace("{{DOHstyle}}", doh_style)
+
+                    doh_style = ""
+
+                    if case_status == 11 and should_strikethrough(status):
+                        doh_style = "text-decoration: line-through;"
+
+                    template = template.replace("{{DOHstyle}}", doh_style)
+
+
                     status_mapping = case_status_mappings[case_status]
 
 

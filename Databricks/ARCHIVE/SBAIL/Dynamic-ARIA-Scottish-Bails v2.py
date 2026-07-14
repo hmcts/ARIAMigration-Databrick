@@ -1717,18 +1717,20 @@ def silver_scottish_sbails_funds():
            path=f"{silver_base_path}/silver_sbail_m1")
 def silver_m1():
     m1_df = dlt.read("bronze_sbail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
-    
+    m4_df = dlt.read('bronze_sbail_ac_bfdiary_bftype').alias('m4')
+
     segmentation_df = dlt.read("silver_scottish_sbails_funds").alias("bs")
     
-    joined_df = m1_df.join(segmentation_df.alias("bs"), trim(col("m1.CaseNo")) == col("bs.CaseNo"), "inner")
+    joined_df = m1_df.join(segmentation_df.alias("bs"), trim(col("m1.CaseNo")) == col("bs.CaseNo"), "inner"
+                       ).join(m4_df, col("m1.CaseNo") == col("m4.CaseNo"), "left")
 
     selected_columns = [col(c) for c in m1_df.columns if c!= "CaseNo"]
-
+    
     df = joined_df.select(trim("m1.CaseNo").alias("CaseNo"), *selected_columns,
                         col("bs.BaseBailType"),
                         when(col("BaseBailType") == "Normal Bail","Bail").
                         when(col("BaseBailType") == "BailLegalHold","Bail").
-                        when(col("BaseBailType") == "ScottishBailsFunds" ,"Scottish Bail")
+                        when(col("BailType") == "ScottishBailsFunds" ,"Scottish Bail")
                         .otherwise("Other").alias("BailTypeDesc"),
                         when(col("CourtPreference") == 1,"All Male,")
                         .when(col("CourtPreference") == 2,"All Female,")
@@ -1756,8 +1758,9 @@ def silver_m1():
                         .otherwise("Unknown").alias("CostsAwardDecisionDesc"),
                         when(col("AppealCategories") == 1, "YES").otherwise("NO").alias("AppealCategoriesDesc"),
                         #Adding File Location information per 1437
-                        concat_ws(", ", col("m1.FileLocationHearingCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation")
-                            
+                        concat_ws(", ", col("m1.FileLocationHearingCentre"), col("FileLocationDepartment"), col("FileLocationNote")).alias("FileLocation"),
+                        when(col("m4.Entry").isNotNull() & col("m4.DateCompleted").isNull(), "B/F entries exist").otherwise(lit("")).alias("BFEntry")
+    
     )
 
     return df.dropDuplicates(["CaseNo"])
@@ -2722,9 +2725,9 @@ stg_m1_m2_struct = struct(
     col("DetentionCentreFax"),
     col("DoNotUseNationality"),
     col("AppellantDetainedDesc"),
-    col("AppealCategoriesDesc")
+    col("AppealCategoriesDesc"),
+    col("BFEntry")
 )
-
 
 # COMMAND ----------
 
@@ -3428,7 +3431,7 @@ def create_html_column(row, html_template=bails_html_dyn):
             "{{DateOfIssue}}": format_date_iso(cd_row.DateOfIssue),
             # "{{LastDocument}}": cd_row.last_document,
             "{{FileLocation}}": cd_row.FileLocation,
-            "{{BFEntry}}": "",
+            "{{BFEntry}}": cd_row.BFEntry,
             "{{ProvisionalDestructionDate}}": format_date_iso(cd_row.ProvisionalDestructionDate),
 
             # Parties Tab - Applicant Section

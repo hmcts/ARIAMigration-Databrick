@@ -9,7 +9,7 @@
       "samplingSettings": {
         "isEnabled": true,
         "maxTelemetryItemsPerSecond" : 10000,
-        "excludedTypes": "Request;Trace"
+        "excludedTypes": "Request"
       }
     }
   },

@@ -194,13 +194,22 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                 except ResourceExistsError:
                     props = await idempotency_blob.get_blob_properties()
 
-                    # If idempotency is marked as complete, or if it hasn't expired yet, assuming a happy path upload takes less than 40s.
-                    if ((props.metadata or {}).get("is_complete") == "True") or ((datetime.datetime.now(datetime.timezone.utc) - props.last_modified) < datetime.timedelta(seconds=40)):
-                        logging.warning(f"[IDEMPOTENCY] File already processed or is being processed, skipping: {file_name}")
+                    if (props.metadata or {}).get("is_complete") == "True":
+                        logging.warning(f"[IDEMPOTENCY] File already processed, skipping: {file_name}")
                         return
-                    else:
-                        logging.info(f"[IDEMPOTENCY] Flag is not complete and is past expiry for: {file_name}. Refreshing idempotency lock")
-                        await idempotency_blob.upload_blob(b"processed", overwrite=True)
+
+                    # Giving 90s grace for checking if an original run has been lost, for the duplicate message to be reprocessed.
+                    remaining = 90 - (datetime.datetime.now(datetime.timezone.utc) - props.last_modified).total_seconds()
+                    if remaining > 0:
+                        logging.warning(f"[IDEMPOTENCY] File in-progress for {file_name}")
+                        await asyncio.sleep(remaining)
+                        props = await idempotency_blob.get_blob_properties()
+                        if (props.metadata or {}).get("is_complete") == "True":
+                            logging.info(f"[IDEMPOTENCY] In-progress file has now completed processing, skipping: {file_name}")
+                            return
+
+                    logging.info(f"[IDEMPOTENCY] Flag is not complete and is past expiry for: {file_name}. Refreshing idempotency lock")
+                    await idempotency_blob.upload_blob(b"processed", overwrite=True)
 
             except Exception as e:
                 logging.warning(f"[IDEMPOTENCY] Check failed, proceeding anyway: {e}", exc_info=True)
@@ -239,7 +248,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.info("Uploaded blob successfully: %s", key)
 
             await send_to_eventhub(ack_producer_client, json.dumps(results), key, producer_lock)
-        except Exception:
+        except BaseException:
             logging.warning(f"[IDEMPOTENCY] Deleting flag for file: {file_name} after processing failure")
             try:
                 await idempotency_blob.delete_blob()

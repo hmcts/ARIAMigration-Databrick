@@ -763,11 +763,11 @@ def sponsorDetails(silver_m1, silver_m2, silver_c):
     name_condition = col("Sponsor_Name").isNotNull()
     is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
 
-    sponsorDetails_df = sponsorDetails_df.withColumn("hasSponsor", when(~is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No")
-    ).withColumn("sponsorGivenNames", when(~is_detained_or_in_uk & name_condition, col("Sponsor_Forenames")).otherwise(lit(None))
-    ).withColumn("sponsorFamilyName", when((~is_detained_or_in_uk & name_condition), col("Sponsor_Name")).otherwise(lit(None))
-    ).withColumn("sponsorAuthorisation",when(~is_detained_or_in_uk & name_condition,when(col("Sponsor_Authorisation") == True, lit("Yes")).otherwise(lit("No")))
-    ).withColumn("sponsorAddress",when(~is_detained_or_in_uk & name_condition,
+    sponsorDetails_df = sponsorDetails_df.withColumn("hasSponsor", when(name_condition, lit("Yes")).otherwise("No")
+    ).withColumn("sponsorGivenNames", when(name_condition, col("Sponsor_Forenames")).otherwise(lit(None))
+    ).withColumn("sponsorFamilyName", when((name_condition), col("Sponsor_Name")).otherwise(lit(None))
+    ).withColumn("sponsorAuthorisation", when(name_condition, when(col("Sponsor_Authorisation") == True, lit("Yes")).otherwise(lit("No")))
+    ).withColumn("sponsorAddress", when(name_condition,
             struct(
                 coalesce(
                     col("Sponsor_Address1"),
@@ -784,13 +784,12 @@ def sponsorDetails(silver_m1, silver_m2, silver_c):
                 coalesce(col("Sponsor_Postcode"), lit("")).alias("PostCode")
             )
         )
-    # ).withColumn("sponsorEmailAdminJ",when((col("hasSponsor") == "Yes"),cleanEmailUDF(col("Sponsor_Email")))
-    ).withColumn("sponsorEmailAdminJ",when((~is_detained_or_in_uk & name_condition),cleanEmailUDF(col("Sponsor_Email")))
-    ).withColumn("sponsorMobileNumberAdminJ",when((~is_detained_or_in_uk & name_condition),filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
-    ).withColumn("sponsorNameForDisplay",when(~is_detained_or_in_uk & name_condition,concat_ws(" ",col("Sponsor_Forenames"), col("Sponsor_Name"))).otherwise(lit(None))
+    ).withColumn("sponsorEmailAdminJ", when((name_condition), cleanEmailUDF(col("Sponsor_Email")))
+    ).withColumn("sponsorMobileNumberAdminJ", when((name_condition), filterMobilePhoneNumberUDF(col("Sponsor_Telephone")))
+    ).withColumn("sponsorNameForDisplay", when(name_condition,concat_ws(" ",col("Sponsor_Forenames"), col("Sponsor_Name"))).otherwise(lit(None))
     ).withColumn("sponsorAddressForDisplay",
         when(
-            ~is_detained_or_in_uk & name_condition,
+            name_condition,
             concat_ws(
                 "\r\n",
                 col("Sponsor_Address1"),
@@ -923,7 +922,7 @@ def partyID(silver_m1, silver_m2, silver_m3, silver_c):
 
     is_detained_or_in_uk = col("m2.Detained").isin(1, 2, 4) | col("m2.dv_appellantIsInUk")
 
-    df = (party_df_new.withColumn("sponsorPartyId", when(~is_detained_or_in_uk & col("m1.Sponsor_Name").isNotNull(), expr("uuid()")).otherwise(None)
+    df = (party_df_new.withColumn("sponsorPartyId", when(col("m1.Sponsor_Name").isNotNull(), expr("uuid()")).otherwise(None)
                     )).select("party.*", "sponsorPartyId")
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]

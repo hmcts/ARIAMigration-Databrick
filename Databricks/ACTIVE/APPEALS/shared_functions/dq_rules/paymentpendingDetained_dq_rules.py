@@ -206,21 +206,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_hasSponsor_yes_no"] = """
             (
                 CASE
-                    WHEN Detained IN (1,2,4)
-                        THEN hasSponsor = 'No'
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN hasSponsor = 'Yes'
 
-                    WHEN dv_appellantIsInUk = true
-                        THEN hasSponsor = 'No'
-
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NOT NULL
-                        THEN hasSponsor = 'Yes'
-                    
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NULL
-                        THEN hasSponsor = 'No'
-
-                    ELSE hasSponsor = 'No'
+                    WHEN Sponsor_Name IS NULL
+                    THEN hasSponsor = 'No'
                 END
             )
             """
@@ -228,21 +218,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorGivenNames_not_null"] = """
         (
                 CASE
-                    WHEN Detained IN (1,2,4)
-                        THEN sponsorGivenNames IS NULL
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorGivenNames IS NOT NULL
 
-                    WHEN dv_appellantIsInUk = true
-                        THEN sponsorGivenNames IS NULL
-
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NOT NULL
-                        THEN sponsorGivenNames IS NOT NULL
-                    
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NULL
-                        THEN sponsorGivenNames IS NULL
-
-                    ELSE sponsorGivenNames IS NULL
+                    WHEN Sponsor_Name IS  NULL
+                    THEN sponsorGivenNames IS NULL
                 END
             )
             """
@@ -250,70 +230,35 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorFamilyName_not_null"] = """
         (
                 CASE
-                    WHEN Detained IN (1,2,4)
-                        THEN sponsorFamilyName IS NULL
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorFamilyName IS NOT NULL
 
-                    WHEN dv_appellantIsInUk = true
-                        THEN sponsorFamilyName IS NULL
-
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NOT NULL
-                        THEN sponsorFamilyName IS NOT NULL
-                    
-                    WHEN dv_appellantIsInUk = false
-                        AND Sponsor_Name IS NULL
-                        THEN sponsorFamilyName IS NULL
-
-                    ELSE sponsorFamilyName IS NULL
+                    WHEN Sponsor_Name IS  NULL
+                    THEN sponsorFamilyName IS NULL
                 END
             )
             """
 
         checks["valid_sponsorAuthorisation_values"] = """
-        (
-            CASE
-                WHEN Detained IN (1,2,4)
+            (
+                CASE
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorAuthorisation IN ('Yes', 'No')
+
+                    WHEN Sponsor_Name IS NULL
                     THEN sponsorAuthorisation IS NULL
-
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorAuthorisation IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorAuthorisation IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    AND Sponsor_Authorisation = true
-                    THEN sponsorAuthorisation = 'Yes'
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN sponsorAuthorisation = 'No'
-
-                ELSE sponsorAuthorisation IS NULL
-            END
-        )
-        """
+                END
+            )
+            """
 
         checks["valid_sponsorAddress_values"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorAddress IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorAddress IS NOT NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorAddress IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorAddress IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN sponsorAddress IS NOT NULL
-                
-                ELSE sponsorAddress IS NULL
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorAddress IS NULL
             END
         )
         """
@@ -321,21 +266,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorAddressForDisplay"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorAddressForDisplay IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorAddressForDisplay IS NOT NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorAddressForDisplay IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorAddressForDisplay IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN sponsorAddressForDisplay IS NOT NULL
-                
-                ELSE sponsorAddressForDisplay IS NULL
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorAddressForDisplay IS NULL
             END
         )
         """
@@ -343,21 +278,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorNameForDisplay"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorNameForDisplay IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorNameForDisplay IS NOT NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorNameForDisplay IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorNameForDisplay IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN sponsorNameForDisplay IS NOT NULL
-                
-                ELSE sponsorNameForDisplay IS NULL
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorNameForDisplay IS NULL
             END
         )
         """
@@ -365,21 +290,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorEmailAdminJ"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorEmailAdminJ IS NULL
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorEmailAdminJ IS NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorEmailAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorEmailAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN true
-                
-                ELSE sponsorEmailAdminJ IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN TRUE
             END
         )
         """
@@ -387,49 +302,26 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         checks["valid_sponsorMobileNumberAdminJ"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorMobileNumberAdminJ IS NULL
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorMobileNumberAdminJ IS NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorMobileNumberAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorMobileNumberAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN (
-                        sponsorMobileNumberAdminJ IS NULL
-                        OR sponsorMobileNumberAdminJ RLIKE '^((\\\\+44(\\\\s\\\\(0\\\\)\\\\s|\\\\s0\\\\s|\\\\s)?)|0)7\\\\d{3}(\\\\s)?\\\\d{6}$'
-                        )
-                        
-                ELSE sponsorMobileNumberAdminJ IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN TRUE
             END
         )
         """
 
-        checks["valid_sponsorPartyId_not_null"] = ("""
+        checks["valid_sponsorPartyId"] = """
         (
             CASE
-                WHEN Detained IN (1,2,4)
-                    THEN sponsorPartyId IS NULL
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorPartyId IS NULL
 
-                WHEN dv_appellantIsInUk = true
-                    THEN sponsorPartyId IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NULL
-                    THEN sponsorPartyId IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND Sponsor_Name IS NOT NULL
-                    THEN sponsorPartyId IS NOT NULL
-
-                ELSE sponsorPartyId IS NULL
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorPartyId IS NOT NULL
             END
-        )                                                                                         
-        """)
+        )
+        """
 
         ##############################
         # ARIADM-778 (General)

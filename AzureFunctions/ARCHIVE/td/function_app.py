@@ -92,7 +92,7 @@ async def eventhub_trigger_td(azeventhub: List[func.EventHubEvent]):
             async def bounded_process(event):
                 async with semaphore:
                     try:
-                        async with asyncio.timeout(240):
+                        async with asyncio.timeout(360):
                             await process_messages(
                                 event,
                                 container_service_client,
@@ -105,7 +105,7 @@ async def eventhub_trigger_td(azeventhub: List[func.EventHubEvent]):
                             )
                     except TimeoutError:
                         key = event.partition_key
-                        msg = f"Task timed out after 4 minutes for key '{key}'."
+                        msg = f"Task timed out after 6 minutes for key '{key}'."
                         logging.error(msg)
                         await send_to_dead_letter(dl_producer_client, msg, key, producer_lock)
 

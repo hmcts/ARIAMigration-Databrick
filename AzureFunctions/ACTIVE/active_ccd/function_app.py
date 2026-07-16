@@ -4,6 +4,8 @@ import logging
 import json
 import os
 
+from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
+
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
@@ -11,10 +13,8 @@ from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
 from datetime import datetime, timezone
-from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
-
 from typing import List
-# from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
 try:
     # When running as a function app the module will be a package. Use a
     # relative import where possible.

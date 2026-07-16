@@ -134,22 +134,24 @@ class prepareForHearingDQRules(DQRulesBase):
 
         checks["valid_listingLength"] = ("""
             (
-                TimeEstimate IS NULL AND
-                element_at(listingLength, 'hours') IS NULL AND
-                element_at(listingLength, 'minutes') IS NULL
-            ) OR (
-                TimeEstimate IS NOT NULL AND
-                element_at(listingLength, 'hours') = 
-                    floor(TimeEstimate / 60) + 
-                    CASE WHEN (TimeEstimate % 60) >= 45 THEN 1 ELSE 0 END AND
-                element_at(listingLength, 'minutes') = 
-                    CASE 
-                        WHEN (TimeEstimate % 60) < 15 THEN 0
-                        WHEN (TimeEstimate % 60) < 45 THEN 30
-                        ELSE 0
-                    END AND
-                element_at(listingLength, 'minutes') IN (0, 30)
-            )""")
+                (TimeEstimate IS NULL AND element_at(listingLength, 'hours') = 0 AND element_at(listingLength, 'minutes') = 30)
+                OR
+                (TimeEstimate IS NOT NULL
+                    AND element_at(listingLength, 'hours') =
+                        floor(TimeEstimate / 60) +
+                        CASE WHEN (TimeEstimate % 60) >= 45 THEN 1 ELSE 0 END
+                    AND element_at(listingLength, 'minutes') =
+                        CASE
+                            WHEN (TimeEstimate % 60) = 0 THEN 0
+                            WHEN (TimeEstimate % 60) < 45 THEN 30
+                            ELSE 0
+                        END
+                )
+                OR
+                (listingLength IS NULL)
+            )
+            AND element_at(listingLength, 'minutes') IN (0, 30, NULL)
+        """)
 
         checks["valid_hearingChannel"] = ("""
         (

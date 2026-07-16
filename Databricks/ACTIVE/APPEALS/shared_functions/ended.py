@@ -414,8 +414,8 @@ def documents(silver_m1,silver_m3):
 ##########              hearingRequirements          ###########
 ################################################################
 
-def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
-    hearingRequirements_df, hearingRequirements_audit = L.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
+def hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages):
+    hearingRequirements_df, hearingRequirements_audit = L.hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages)
 
     df = (
         silver_m3

@@ -58,23 +58,36 @@ def ftpa_outputs(spark):
         T.StructField("Appellant_Address3", T.StringType(), True),
         T.StructField("Appellant_Address4", T.StringType(), True),
         T.StructField("Appellant_Address5", T.StringType(), True),
+        T.StructField("lu_countryGovUkOocAdminJ", T.StringType(), True),
     ])
 
     m2_data = [
-        # stage_detained: Detained==3 → OOC (short-circuits everything)
-        ("CASE005", 3,    None, None,      None,           None, None, None, None),
-        # stage_category: CategoryId==37 → IN
-        ("CASE006", None, None, None,      None,           None, None, None, None),
-        # stage_category: CategoryId==38 → OUT
-        ("CASE007", None, None, None,      None,           None, None, None, None),
-        # stage_country: AppellantCountryId==188 → IN
-        ("CASE008", None, 188,  None,      None,           None, None, None, None),
-        # stage_postcode: valid UK postcode → IN
-        ("CASE009", None, None, "B12 0HF", None,           None, None, None, None),
-        # stage_address: address contains "united kingdom" → IN
-        ("CASE010", None, None, None,      "123 Some Road","Birmingham","United Kingdom", None, None),
-        # falls through all stages → OOC
-        ("CASE011", None, None, None,      "123 Rue de la Paix", "Paris", "France", None, None),
+        # Detained = 3 -> OOC, should still produce deadline based on logic
+        ("CASE005", 3, None, None, None, None, None, None, None, None),
+
+        # CategoryId 38 -> OOC -> +28 days
+        ("CASE006", None, None, None, None, None, None, None, None, None),
+
+        # CategoryId 38 -> OOC -> +28 days
+        ("CASE007", None, None, None, None, None, None, None, None, None),
+
+        # Country 188 -> IN -> +14 days
+        ("CASE008", None, 188, None, None, None, None, None, None, None),
+
+        # UK postcode -> IN -> +14 days
+        ("CASE009", None, None, "B12 0HF", None, None, None, None, None, None),
+
+        # UK address -> IN -> +14 days
+        ("CASE010", None, None, None, "123 Some Road", "Birmingham",
+        "United Kingdom", None, None, "GB"),
+
+        # Falls through -> OOC
+        ("CASE011", None, None, None, "123 Rue de la Paix",
+        "Paris", "France", None, None, None),
+
+        # Falls through -> OOC
+        ("CASE012", None, None, None, "123 Rue de la Paix",
+        "Paris", "France", None, None, None),
     ]
 
     m3_schema = T.StructType([

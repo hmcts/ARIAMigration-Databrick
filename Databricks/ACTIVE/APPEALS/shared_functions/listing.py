@@ -341,7 +341,7 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
     return df, df_audit
 
 
-def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages):
+def hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
     silver_m3_filtered = silver_m3.filter(
@@ -358,41 +358,48 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
 
     interpreter_languages_lookup = _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages)
 
+    silver_m2_derived_grouped = (
+        PP.derive_country_silver_m2(silver_m2)
+        .join(silver_c_grouped, on="CaseNo", how="left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("array_contains(CategoryIdList, 37)"), lit(True))
+            .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
+            .otherwise(col("dv_addressInUk"))
+        )
+    )
+
+    hearingReqs = (silver_m2_derived_grouped.alias("m2").join(silver_m1.alias("m1"), on="CaseNo", how="left"))
+
+    is_detained_or_in_uk = col("m1_m2_c.Detained").isin(1, 2, 4) | col("m1_m2_c.dv_appellantIsInUk")
+    name_condition = col("Sponsor_Name").isNotNull()
+
+
     df_hearingRequirements = (
-        silver_m1.alias("m1")
+        hearingReqs.alias("m1_m2_c")
             .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
-            .join(silver_c_grouped.alias("c"), on="CaseNo", how="left")
             .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
             .withColumn("isAppellantAttendingTheHearing", lit("Yes"))
             .withColumn("isAppellantGivingOralEvidence", lit("Yes"))
             .withColumn("isWitnessesAttending", lit("No"))
-            .withColumn("isEvidenceFromOutsideUkOoc", (
-                when(expr("array_contains(c.CategoryIdList, 38)"),
-                    when(col("m1.Sponsor_Name").isNotNull(), lit("Yes"))
-                    .otherwise(lit("No")))
-            ))
-            .withColumn("isEvidenceFromOutsideUkInCountry", (
-                when(expr("array_contains(c.CategoryIdList, 37)"),
-                    when(col("m1.Sponsor_Name").isNotNull(), lit("Yes"))
-                    .otherwise(lit("No")))
-            ))
+            .withColumn("isEvidenceFromOutsideUkOoc", when(~is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"))
+            .withColumn("isEvidenceFromOutsideUkInCountry", when(is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"))
             .withColumn("isInterpreterServicesNeeded", (
-                when((col("m1.Interpreter") == 1), lit("Yes"))
-                .when((col("m1.Interpreter") == 2), lit("No"))
+                when((col("m1_m2_c.Interpreter") == 1), lit("Yes"))
+                .when((col("m1_m2_c.Interpreter") == 2), lit("No"))
                 .otherwise(lit("No"))
             ))
             .withColumn("appellantInterpreterLanguageCategory", (
-                when((col("m1.Interpreter") == 1),
+                when((col("m1_m2_c.Interpreter") == 1),
                     col("ilu.lu_appellantInterpreterLanguageCategory")
                 )
             ))
             .withColumn("appellantInterpreterSpokenLanguage", (
-                when((col("m1.Interpreter") == 1),
+                when((col("m1_m2_c.Interpreter") == 1),
                     col("ilu.lu_appellantInterpreterSpokenLanguage")
                 )
             ))
             .withColumn("appellantInterpreterSignLanguage", (
-                when((col("m1.Interpreter") == 1),
+                when((col("m1_m2_c.Interpreter") == 1),
                     col("ilu.lu_appellantInterpreterSignLanguage")
                 )
             ))
@@ -407,26 +414,26 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
             .withColumn("multimediaEvidence", lit("Yes"))
             .withColumn("multimediaEvidenceDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
             .withColumn("singleSexCourt", (
-                when((col("m1.CourtPreference") == 0), lit("No"))
-                .when(((col("m1.courtPreference") == 1) | (col("m1.courtPreference") == 2)), lit("Yes"))
+                when((col("m1_m2_c.CourtPreference") == 0), lit("No"))
+                .when(((col("m1_m2_c.courtPreference") == 1) | (col("m1_m2_c.courtPreference") == 2)), lit("Yes"))
                 .otherwise(lit("No"))
             ))
             .withColumn("singleSexCourtType", (
-                when((col("m1.CourtPreference") == 1), lit("All male"))
-                .when((col("m1.courtPreference") == 2), lit("All female"))
+                when((col("m1_m2_c.CourtPreference") == 1), lit("All male"))
+                .when((col("m1_m2_c.courtPreference") == 2), lit("All female"))
                 .otherwise(lit(None))
             ))
             .withColumn("singleSexCourtTypeDescription", (
-                when(((col("m1.courtPreference") == 1) | (col("m1.courtPreference") == 2)), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."))
+                when(((col("m1_m2_c.courtPreference") == 1) | (col("m1_m2_c.courtPreference") == 2)), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."))
                 .otherwise(lit(None))
             ))
             .withColumn("inCameraCourt", (
-                when((col("m1.InCamera") == True), lit("Yes"))
-                .when((col("m1.InCamera") == False), lit("No"))
+                when((col("m1_m2_c.InCamera") == True), lit("Yes"))
+                .when((col("m1_m2_c.InCamera") == False), lit("No"))
                 .otherwise(lit("No"))
             ))
             .withColumn("inCameraCourtDescription", (
-                when((col("m1.InCamera") == True), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
+                when((col("m1_m2_c.InCamera") == True), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
                 .otherwise(lit(None))
             ))
             .withColumn("additionalRequests", lit("Yes"))
@@ -437,6 +444,14 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
                 "isAppellantAttendingTheHearing",
                 "isAppellantGivingOralEvidence",
                 "isWitnessesAttending",
+                # col("m1_m2_c.Detained"),
+                # col("m1_m2_c.CategoryIdList"),
+                # col("m1_m2_c.dv_appellantIsInUk"),
+                # col("m1_m2_c.Sponsor_Name"),
+                # col("AppellantCountryId"),
+                # col("lu_countryGovUkOocAdminJ"),
+                # col("ukPostcodeAppellant"),
+                # col("appellantFullAddress"),
                 "isEvidenceFromOutsideUkOoc",
                 "isEvidenceFromOutsideUkInCountry",
                 "isInterpreterServicesNeeded",
@@ -615,7 +630,6 @@ def hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_langu
     )
 
     return df_hearingRequirements, df_audit_hearingRequirements
-
 
 def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
     df, df_audit = PPD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)

@@ -88,6 +88,18 @@ class TestListingState():
         StructField("InCamera", BooleanType()),
         StructField("LanguageId", IntegerType())
     ])
+    M2_COLUMNS = StructType([
+        StructField("CaseNo", StringType()),
+        StructField("Detained", IntegerType()),
+        StructField("AppellantCountryId", IntegerType()),
+        StructField("Appellant_Postcode", StringType()),
+        StructField("Appellant_Address1", StringType()),
+        StructField("Appellant_Address2", StringType()),
+        StructField("Appellant_Address3", StringType()),
+        StructField("Appellant_Address4", StringType()),
+        StructField("Appellant_Address5", StringType()),
+        StructField("lu_countryGovUkOocAdminJ", StringType()) 
+    ])
     M3_COLUMNS = StructType([
         StructField("CaseNo", StringType()),
         StructField("StatusId", IntegerType()),
@@ -117,11 +129,28 @@ class TestListingState():
             ("13", "LR", "FT", None, 0, 0, False, 0),             # In Camera is not 1
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("9", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("10", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("11", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("12", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("13", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
+        ]
+
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/yes_no_audit_output.jsonl")
@@ -155,6 +184,31 @@ class TestListingState():
             ("22", "AIP", "FT", None, 1, 0, False, None)   # For m3 conditional tests - Additional manual sign language only
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("9", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("10", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("11", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("12", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("13", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("14", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("15", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("16", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("17", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("18", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("19", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("20", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("21", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("22", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+        ]
+
         m3_data = [
             ("5", 1, 37, 0, 2),    # StatusId 1 Unused Additional Spoken Language Only
             ("5", 2, 37, 0, 3),    # StatusId 2 First Additional Spoken Language Only (to Spoken + Spoken)
@@ -178,10 +232,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/interpreter_languages_audit_output.jsonl")
@@ -211,7 +266,29 @@ class TestListingState():
             ("18", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - Not Matching Outcome: CaseStatus = 0 AND Outcome = 1
             ("19", "AIP", "FT", None, 1, 0, False, 0),  # For m3 conditional tests - StatusId Check (Many Statuses)
             ("20", "AIP", "FT", None, 1, 0, False, 0)   # For m3 conditional tests - StatusId Check (CaseStatus and Outcome)
+        ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("8", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("9", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("10", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("11", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("12", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("13", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("14", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("15", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("16", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("17", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("18", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("19", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("20", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
         ]
 
         m3_data = [
@@ -244,10 +321,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame(m3_data, self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame([], self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/m3_conditional_audit_output.jsonl")
@@ -266,6 +344,16 @@ class TestListingState():
             ("7", "AIP", "FT", "SPonsor", 0, 0, False, 0)   # Multiple categories including isEvidenceFromOutsideUkInCountry and has sponsor
         ]
 
+        m2_data = [
+            ("1", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("2", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("3", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("4", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("5", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("6", 3, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None),
+            ("7", 1, 1, "SW1A 1AA", "1 Test St", None, None, None, None, None)
+        ]
+
         c_data = [
             ("1", 37),  # Category 37 for isEvidenceFromOutsideUkOoc
             ("2", 38),  # Category 38 for isEvidenceFromOutsideUkInCountry
@@ -281,10 +369,11 @@ class TestListingState():
         ]
 
         silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
+        silver_m2_test_data = spark.createDataFrame(m2_data, self.M2_COLUMNS)
         silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
         silver_c_test_data = spark.createDataFrame(c_data, self.C_COLUMNS)
 
-        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
+        df, df_audit = listing.hearingRequirements(silver_m1_test_data, silver_m2_test_data, silver_m3_test_data, silver_c_test_data, bronze_interpreter_languages_test_data)
 
         expected_output_df = spark.read.schema(df.schema).json("tests/active/listing/resources/hearing_requirements/category_output.jsonl")
         # expected_audit_output_df = spark.read.schema(df_audit.schema).json("tests/active/listing/resources/hearing_requirements/category_audit_output.jsonl")
@@ -334,7 +423,7 @@ class TestListingState():
             ])
 
             silver_m1_test_data = spark.createDataFrame(m1_data, self.M1_COLUMNS)
-            silver_m2_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
+            silver_m2_test_data = spark.createDataFrame([], self.M2_COLUMNS)
             silver_m3_test_data = spark.createDataFrame([], self.M3_COLUMNS)
             silver_h_test_data = spark.createDataFrame([], self.CASE_NO_COLUMNS)
 

@@ -119,10 +119,10 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
         col("CaseNo"), col("Appellant_Address1"), col("Appellant_Address2"), col("Appellant_Address3"), col("Appellant_Address4"),
         col("Appellant_Address5"), col("Appellant_Postcode"), col("Appellant_Email"), col("Appellant_Telephone"), col("FCONumber"), col("Appellant_Name")
     ).filter(col("Relationship").isNull())
-    valid_isInUk = (
-        derive_country_silver_m2(silver_m2.filter(col("Relationship").isNull()))
-        .select(col("CaseNo"), col("dv_addressInUk"))
-    )
+    # valid_isInUk = (
+    #     derive_country_silver_m2(silver_m2.filter(col("Relationship").isNull()))
+    #     .select(col("CaseNo"), col("dv_addressInUk"))
+    # )
     valid_catagoryid_list = silver_c.groupBy("CaseNo").agg(collect_list("CategoryId").alias("valid_categoryIdList"))
     valid_country_list = bronze_countries_postal_lookup_df.select(
         col("countryGovUkOocAdminJ").alias("valid_countryGovUkOocAdminJ")
@@ -269,6 +269,53 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .drop("HearingCentre")
     )
 
+    # decided(a) - ftpaApplicationDeadline
+    window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
+
+    silver_m3_filtered_casestatus = (
+        silver_m3
+            .filter(
+                col("CaseStatus").isin(37, 38, 26) &
+                col("Outcome").isin(1, 2)
+            )
+    )
+
+    silver_c_filtered = (
+        silver_c
+            .filter(col("CategoryId").isin(37, 38))
+            .select("CaseNo", "CategoryId")
+            .distinct()
+    )
+
+    valid_isInUk = (
+        derive_country_silver_m2(silver_m2.filter(col("Relationship").isNull()))
+            .select(
+                col("CaseNo"),
+                col("dv_addressInUk")
+            )
+    )
+
+    decision_date_ftpa = (
+        silver_m3_filtered_casestatus.alias("m3")
+            .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
+            .join(valid_isInUk.alias("uk"), on="CaseNo", how="left")
+            .withColumn(
+                "rn",
+                row_number().over(window_spec)
+            )
+            .filter(col("rn") == 1)
+            .withColumn(
+                "dv_appellantIsInUk_ftpa",
+                when(col("CategoryId") == 37, lit(True))
+                .when(col("CategoryId") == 38, lit(False))
+                .otherwise(col("dv_addressInUk"))
+            )
+            .select(
+                col("CaseNo"),
+                col("DecisionDate").alias("DecisionDate_ftpa_decideda"),
+                col("dv_appellantIsInUk_ftpa")
+            )
+    )
     
     # decided(a) - hearing actuals
     silver_m3_filtered = (
@@ -543,7 +590,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
     df_ftpa, df_ftpa_audit = E.ftpa(silver_m1, silver_m2, silver_m3,silver_c)
     df_general, df_general_audit = E.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
     df_generalDefault = E.generalDefault(silver_m1,silver_m3)
-    df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m3, silver_c, bronze_interpreter_languages)
+    df_hearingRequirements, df_hearingRequirements_audit = E.hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages)
     df_hearingResponse, df_hearingResponse_audit = E.hearingResponse(silver_m1, silver_m3, silver_m6)
     df_hearingDetails, df_hearingDetails_audit = E.hearingDetails(silver_m1,silver_m3,bronze_listing_location)
     df_hearingActuals, df_hearingActuals_audit = E.hearingActuals(silver_m1,silver_m3)
@@ -675,6 +722,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
             .join(cs46_out31, on="CaseNo", how="left")
             .join(silver_m3_max_casestatus_no_filter, on="CaseNo", how="left")
             .join(silver_m1_with_in_or_out, on="CaseNo", how="left")
+            .join(decision_date_ftpa, on="CaseNo", how="left")
             .withColumn("valid_categoryIdList", coalesce(col("valid_categoryIdList"), array()))  # No need to add extra categoryIdList IS NULL rules in the DQ.
             .withColumn("lu_HORef", coalesce(col("lu_HORef"), col("HORef"), col("FCONumber")))  # HORef in conditionals can also come from silver_m1, not just the bronze cleansing. The bronze cleansing will be used as priority.
             .withColumn("dv_appellantIsInUk",

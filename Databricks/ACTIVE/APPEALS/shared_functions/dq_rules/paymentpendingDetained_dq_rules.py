@@ -202,54 +202,126 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         ##############################
         # ARIADM-773 (SponsorDetails)
         ##############################
-        checks["valid_hasSponsor_yes_no"] = (
-            """(
-                (Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-                OR (Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-                OR (hasSponsor IS NULL)
-            )"""
-        )
-        checks["valid_sponsorGivenNames_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-        )
 
-        checks["valid_sponsorFamilyName_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
-        )
+        checks["valid_hasSponsor_yes_no"] = """
+            (
+                CASE
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN hasSponsor = 'Yes'
 
-        checks["valid_sponsorAuthorisation_yes_no"] = (
-            """(
-                (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-                OR (Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-                OR (Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-            )"""
-        )
+                    WHEN Sponsor_Name IS NULL
+                    THEN hasSponsor = 'No'
+                END
+            )
+            """
 
-        ############################################################
-        # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-        ############################################################
-        checks["valid_sponsorAddress_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddress IS NULL))"
-        )
+        checks["valid_sponsorGivenNames_not_null"] = """
+        (
+                CASE
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorGivenNames IS NOT NULL
 
-        checks["valid_sponsorAddressForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
-        )
+                    WHEN Sponsor_Name IS  NULL
+                    THEN sponsorGivenNames IS NULL
+                END
+            )
+            """
 
-        checks["valid_sponsorNameForDisplay"] = (
-            "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
-        )
+        checks["valid_sponsorFamilyName_not_null"] = """
+        (
+                CASE
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorFamilyName IS NOT NULL
 
-        ##############################
-        # ARIADM-778 (SponsorDetails)
-        ##############################
-        checks["valid_sponsorEmailAdminJ"] = (
-            "(( sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
-        )
+                    WHEN Sponsor_Name IS  NULL
+                    THEN sponsorFamilyName IS NULL
+                END
+            )
+            """
 
-        checks["valid_sponsorMobileNumberAdminJ"] = (
-            "(((sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
+        checks["valid_sponsorAuthorisation_values"] = """
+            (
+                CASE
+                    WHEN Sponsor_Name IS NOT NULL
+                    THEN sponsorAuthorisation IN ('Yes', 'No')
+
+                    WHEN Sponsor_Name IS NULL
+                    THEN sponsorAuthorisation IS NULL
+                END
+            )
+            """
+
+        checks["valid_sponsorAddress_values"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorAddress IS NOT NULL
+
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorAddress IS NULL
+            END
         )
+        """
+
+        checks["valid_sponsorAddressForDisplay"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorAddressForDisplay IS NOT NULL
+
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorAddressForDisplay IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorNameForDisplay"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorNameForDisplay IS NOT NULL
+
+                WHEN Sponsor_Name IS  NULL
+                THEN sponsorNameForDisplay IS NULL
+            END
+        )
+        """
+
+        checks["valid_sponsorEmailAdminJ"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorEmailAdminJ IS NULL
+
+                WHEN Sponsor_Name IS NOT NULL
+                THEN TRUE
+            END
+        )
+        """
+
+        checks["valid_sponsorMobileNumberAdminJ"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorMobileNumberAdminJ IS NULL
+
+                WHEN Sponsor_Name IS NOT NULL
+                THEN TRUE
+            END
+        )
+        """
+
+        checks["valid_sponsorPartyId"] = """
+        (
+            CASE
+                WHEN Sponsor_Name IS NULL
+                THEN sponsorPartyId IS NULL
+
+                WHEN Sponsor_Name IS NOT NULL
+                THEN sponsorPartyId IS NOT NULL
+            END
+        )
+        """
 
         ##############################
         # ARIADM-778 (General)
@@ -481,6 +553,210 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 TTL.SystemTTL = date_format(date_add(DateLodged, 36524),'yyyy-MM-dd')
             )
         """)
+
+        checks["valid_oocAppealAdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN oocAppealAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN oocAppealAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        lu_HORef LIKE "%GWF%"
+                    )
+                    THEN oocAppealAdminJ = "entryClearanceDecision"
+
+                WHEN dv_appellantIsInUk = false
+                    THEN oocAppealAdminJ IS NULL
+
+                ELSE oocAppealAdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_appellantHasFixedAddressAdminJ_values"] = ("""
+        (    CASE
+                WHEN Detained IN (1,2,4)
+                    THEN appellantHasFixedAddressAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN appellantHasFixedAddressAdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    THEN appellantHasFixedAddressAdminJ = 'Yes'
+
+                ELSE appellantHasFixedAddressAdminJ IS NULL
+            END
+        )
+        """)
+
+        checks["valid_addressLine1AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine1AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine1AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine1AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine1AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND coalesce(
+                            Appellant_Address1,
+                            Appellant_Address2,
+                            Appellant_Address3,
+                            Appellant_Address4,
+                            Appellant_Address5,
+                            Appellant_Postcode
+                        ) IS NOT NULL
+                    THEN addressLine1AdminJ = coalesce(
+                            Appellant_Address1,
+                            Appellant_Address2,
+                            Appellant_Address3,
+                            Appellant_Address4,
+                            Appellant_Address5,
+                            Appellant_Postcode
+                        )
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine1AdminJ IS NULL
+
+                ELSE addressLine1AdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_addressLine2AdminJ_values"] = """
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine2AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false 
+                THEN
+                    (
+                        (
+                            (
+                                Appellant_Address2 IS NOT NULL
+                                OR Appellant_Address3 IS NOT NULL
+                                OR Appellant_Address4 IS NOT NULL
+                                OR Appellant_Address5 IS NOT NULL
+                                OR Appellant_Postcode IS NOT NULL
+                            )
+                            AND addressLine2AdminJ IS NOT NULL
+                        )
+                        OR
+                        (
+                            Appellant_Address2 IS NULL
+                            AND Appellant_Address3 IS NULL
+                            AND Appellant_Address4 IS NULL
+                            AND Appellant_Address5 IS NULL
+                            AND Appellant_Postcode IS NULL
+                            AND addressLine2AdminJ IS NULL
+                        )
+                    )
+            END
+        """
+
+        checks["valid_addressLine3AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine3AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        Appellant_Address3 IS NOT NULL
+                        OR Appellant_Address4 IS NOT NULL
+                    )
+                    THEN addressLine3AdminJ =
+                        concat_ws(', ', Appellant_Address3, Appellant_Address4)
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine3AdminJ IS NULL
+
+                ELSE addressLine3AdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_addressLine4AdminJ_values"] = """
+        (
+            CASE
+                WHEN Detained IN (1,2,4)
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = true
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_representation NOT IN ('LR','AIP')
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN lu_appealType IS NULL
+                    THEN addressLine4AdminJ IS NULL
+
+                WHEN dv_appellantIsInUk = false
+                    AND (
+                        Appellant_Address5 IS NOT NULL
+                        OR Appellant_Postcode IS NOT NULL
+                    )
+                    THEN addressLine4AdminJ =
+                        concat_ws(', ', Appellant_Address5, Appellant_Postcode)
+
+                WHEN dv_appellantIsInUk = false
+                    THEN addressLine4AdminJ IS NULL
+
+                ELSE addressLine4AdminJ IS NULL
+            END
+        )
+        """
+
+        checks["valid_countryGovUkOocAdminJ"] = (
+            """(
+                    CASE
+                        WHEN Detained IN (1,2,4)
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_appellantIsInUk = true
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_representation NOT IN ("LR","AIP")
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN lu_appealType IS NULL
+                            THEN countryGovUkOocAdminJ IS NULL
+
+                        WHEN dv_appellantIsInUk = false
+                            THEN countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MH', 'MC', 'FM', 'BC', 'ZZ')
+                        ELSE countryGovUkOocAdminJ IS NULL
+                    END
+            )"""
+        )
 
         #########################################
         # ARIADM-2023 (homeOfficeDetails - Detained)

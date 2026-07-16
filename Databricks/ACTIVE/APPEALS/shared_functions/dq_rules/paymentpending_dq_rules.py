@@ -45,13 +45,6 @@ class paymentPendingDQRules(DQRulesBase):
             )
         """
 
-        # ##############################
-        # # ARIADM-673 (caseData)
-
-        # \d is a regular expression (regex) metacharacter that matches any single digit from 0 to 9.
-        # "yyyy-mm-ddTHH:mm:ssZ" r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'" for ISO 8601 datetime format
-        # "yyyy-MM-dd" r'^\d{4}-\d{2}-\d{2}$' for ISO 8601 date format
-        ##############################
         checks["valid_appealSubmissionDate_format"] = (
             "(appealSubmissionDate IS NOT NULL AND appealSubmissionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
@@ -120,74 +113,6 @@ class paymentPendingDQRules(DQRulesBase):
                 OR (outOfTimeDecisionMaker IS NULL)
             """
         )
-
-
-        # checks["valid_applicationOutOfTimeExplanation_yes_no_or_null"] = (
-        #     "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation IN ('Yes', 'No'))"
-        # )
-
-        # # ##############################
-        # # # ARIADM-708 (CaseData)
-        # # ##############################
-        # checks["valid_hearingCentre_in_allowed_values"] = """
-        # (
-        #     (hearingCentre IS NOT NULL)
-        #     AND
-        #     (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
-        #     'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
-        #     'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
-        # )
-        # """
-        # checks["valid_staffLocation_not_null"] = "(staffLocation IS NOT NULL)"
-        # checks["valid_caseManagementLocation_region_and_baseLocation"] = """
-        # (
-        #     caseManagementLocation.region <=> '1' AND
-        #     caseManagementLocation.baseLocation IS NOT NULL AND
-        #     caseManagementLocation.baseLocation IN (
-        #         '231596', '698118', '366559', '386417', '512401',
-        #         '227101', '765324', '366796', '324339', '649000',
-        #         '999971', '420587', '28837'
-        #     )
-        # )
-        # """
-        # checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
-        # (
-        #     hearingCentreDynamicList.value.code IS NOT NULL AND
-        #     ARRAY_CONTAINS(
-        #         TRANSFORM(hearingCentreDynamicList.list_items, x -> x.code),
-        #         hearingCentreDynamicList.value.code
-        #     )
-        # )
-        # """
-        # checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
-        # (
-        #     hearingCentreDynamicList.value.label IS NOT NULL AND
-        #     ARRAY_CONTAINS(
-        #         TRANSFORM(hearingCentreDynamicList.list_items, x -> x.label),
-        #         hearingCentreDynamicList.value.label
-        #     )
-        # )
-        # """
-        # checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
-        # (
-        #     caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND
-        #     ARRAY_CONTAINS(
-        #         TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.code),
-        #         caseManagementLocationRefData.baseLocation.value.code
-        #     )
-        # )
-        # """
-        # checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
-        # (
-        #     caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
-        #     ARRAY_CONTAINS(
-        #         TRANSFORM(caseManagementLocationRefData.baseLocation.list_items, x -> x.label),
-        #         caseManagementLocationRefData.baseLocation.value.label
-        #     )
-        # )
-        # """
-        # checks["valid_selectedHearingCentreRefData_not_null"] = "(selectedHearingCentreRefData IS NOT NULL)"
-
 
         # ##############################
         # # ARIADM-768 (legalRepDetails)
@@ -334,49 +259,6 @@ class paymentPendingDQRules(DQRulesBase):
                 (appellantNationalitiesDescription IN ('Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla', 'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bonaire, Sint Eustatius and Saba', 'Bosnia and Herzegovina', 'Botswana', 'Bouvet Island', 'Brazil', 'British Overseas Citizen', 'British Virgin Islands', 'British Indian Ocean Territory', 'Brunei Darussalam', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Hong Kong, Special Administrative Region of China', 'Macao, Special Administrative Region of China', 'Christmas Island', 'Cocos (Keeling) Islands', 'Colombia', 'Comoros', 'Congo (Brazzaville)', 'Congo, Democratic Republic of the', 'Cook Islands', 'Costa Rica', 'Côte d\\'Ivoire', 'Croatia', 'Cuba', 'Curaçao', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Ethiopia', 'Falkland Islands (Malvinas)', 'Faroe Islands', 'Fiji', 'Finland', 'France', 'French Guiana', 'French Polynesia', 'French Southern Territories', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe', 'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Heard Island and Mcdonald Islands', 'Holy See (Vatican City State)', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran, Islamic Republic of', 'Iraq', 'Ireland', 'Isle of Man', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Korea, Democratic People\\'s Republic of', 'Korea, Republic of', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Lao PDR', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macedonia, Republic of', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique', 'Mauritania', 'Mauritius', 'Mayotte', 'Mexico', 'Micronesia, Federated States of', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'Netherlands Antilles', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'Norfolk Island', 'Northern Mariana Islands', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestinian Territory, Occupied', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Pitcairn', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Réunion', 'Romania', 'Russian Federation', 'Rwanda', 'Saint-Barthélemy', 'Saint Helena', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint-Martin (French part)', 'Saint Pierre and Miquelon', 'Saint Vincent and Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten (Dutch part)', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Georgia and the South Sandwich Islands', 'South Sudan', 'Spain', 'Sri Lanka', 'Stateless', 'Sudan', 'Suriname *', 'Svalbard and Jan Mayen Islands', 'Swaziland', 'Sweden', 'Switzerland', 'Syrian Arab Republic (Syria)', 'Taiwan', 'Tajikistan', 'Tanzania *, United Republic of', 'Thailand', 'Timor-Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States of America', 'United States Minor Outlying Islands', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela (Bolivarian Republic of)', 'Viet Nam', 'Virgin Islands, US', 'Wallis and Futuna Islands', 'Western Sahara', 'Yemen', 'Zambia', 'Zimbabwe'))
             )"""
         )
-
-        ##############################
-        # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
-        ##############################
-
-        # # Only include if CategoryIdList contains 37; check for 'Yes'
-        # checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND appellantHasFixedAddress IS NOT NULL AND appellantHasFixedAddress IN ('Yes')) OR (appellantHasFixedAddress IS NULL) )"
-        # )
-
-        # # Only include if array_contains(valid_categoryIdList, 37)
-        # checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) )"
-        # )
-        # checks["valid_appellantAddress_AddressLine2_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL))"
-        # )
-        # checks["valid_appellantAddress_AddressLine3_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL) )"
-        # )
-        # checks["valid_appellantAddress_PostTown_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL) )"
-        # )
-        # checks["valid_appellantAddress_County_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL) )"
-        # )
-        # checks["valid_appellantAddress_PostCode_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL) )"
-        # )
-        # checks["valid_appellantAddress_Country_length"] = (
-        #     "( (array_contains(valid_categoryIdList, 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL) )"
-        # )
-
-
-        # #############################
-        # # ARIADM-709 (flagsLabels)
-        # #############################
-
-        # checks["valid_journeyType_aip_orNull"] = "((dv_representation = 'AIP' AND journeyType = 'aip') OR (dv_representation != 'AIP' AND journeyType IS NULL))"
-
-        # #############################
-        # # ARIADM-710 (flagsLabels)
-        # #############################
 
         checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((CasePrefix = 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (CasePrefix != 'DA' AND isAriaMigratedFeeExemption <=> 'No'))"
 
@@ -575,9 +457,6 @@ class paymentPendingDQRules(DQRulesBase):
         )
         checks["validlegalRepOrganisationPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
             "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
-        )
-        checks["valid_sponsorPartyId_not_null"] = (
-            "((Sponsor_Name IS NOT NULL AND sponsorPartyId IS NOT NULL) OR (sponsorPartyId IS NULL))"
         )
 
         # ##############################
@@ -781,152 +660,7 @@ class paymentPendingDQRules(DQRulesBase):
                 )
             """
         )
-
-        # ##############################
-        # # ARIADM-773 (SponsorDetails)
-        # ##############################
-        # checks["valid_hasSponsor_yes_no"] = (
-        #     """(
-        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND hasSponsor <=> 'Yes')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND hasSponsor <=> 'No')
-        #         OR (NOT array_contains(valid_categoryIdList, 38) AND hasSponsor IS NULL)
-        #         OR (valid_categoryIdList IS NULL AND hasSponsor IS NULL)
-        #     )"""
-        # )
-        # checks["valid_sponsorGivenNames_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorGivenNames IS NOT NULL) OR (sponsorGivenNames IS NULL))"
-        # )
-
-        # checks["valid_sponsorFamilyName_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorFamilyName IS NOT NULL) OR (sponsorFamilyName IS NULL))"
-        # )
-
-        # checks["valid_sponsorAuthorisation_yes_no"] = (
-        #     """(
-        #         (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> True AND sponsorAuthorisation <=> 'Yes')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND Sponsor_Authorisation <=> False AND sponsorAuthorisation <=> 'No')
-        #         OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAuthorisation IS NULL)
-        #         OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAuthorisation IS NULL)
-        #         OR (valid_categoryIdList IS NULL AND sponsorAuthorisation IS NULL)
-        #     )"""
-        # )
-
-        # ############################################################
-        # # ARIADM-776 (SponsorDetails) New Logic with ARIADM-1028
-        # ############################################################
-        # checks["valid_sponsorAddress_not_null"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND sponsorAddress IS NOT NULL) OR (array_contains(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND sponsorAddress IS NULL) OR (NOT array_contains(valid_categoryIdList, 38) AND sponsorAddress IS NULL) OR (valid_categoryIdList IS NULL AND sponsorAddress IS NULL))"
-        # )
-
-        # checks["valid_sponsorAddressForDisplay"] = (
-        #     "(Sponsor_Name IS NOT NULL AND sponsorAddressForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorAddressForDisplay IS NULL)"
-        # )
-
-        # checks["valid_sponsorNameForDisplay"] = (
-        #     "(Sponsor_Name IS NOT NULL AND sponsorNameForDisplay IS NOT NULL) OR (Sponsor_Name IS NULL AND sponsorNameForDisplay IS NULL)"
-        # )
-
-        # ##############################
-        # # ARIADM-778 (SponsorDetails)
-        # ##############################
-        # checks["valid_sponsorEmailAdminJ"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND sponsorEmailAdminJ IS NOT NULL) OR (sponsorEmailAdminJ IS NULL))"
-        # )
-
-        # checks["valid_sponsorMobileNumberAdminJ"] = (
-        #     "((array_contains(valid_categoryIdList, 38) AND (sponsorMobileNumberAdminJ IS NOT NULL AND sponsorMobileNumberAdminJ RLIKE r'^((\\+44(\\s\\(0\\)\\s|\\s0\\s|\\s)?)|0)7\\d{3}(\\s)?\\d{6}$')) OR (sponsorMobileNumberAdminJ IS NULL))"
-        # )
-        # ##############################
-        # ARIADM-760 (appellantDetails)
-        # ARIADM-762 (appellantDetails)
-        # ##############################
-        checks["valid_oocAppealAdminJ_values"] = (
-            """(
-                (
-                    (array_contains(valid_categoryIdList, 38) OR MainRespondentId <=> 4)
-                    AND oocAppealAdminJ IS NOT NULL AND oocAppealAdminJ IN ('entryClearanceDecision', 'leaveUk', 'none')
-                )
-                OR (oocAppealAdminJ IS NULL)
-            )"""
-        )
-
-        # Only IF CategoryId IN [38] = Include; ELSE null
-        checks["valid_appellantHasFixedAddressAdminJ"] = (
-            """(
-                (array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NOT NULL AND appellantHasFixedAddressAdminJ IN ('Yes', 'No'))
-                OR (NOT array_contains(valid_categoryIdList, 38) AND appellantHasFixedAddressAdminJ IS NULL)
-            )"""
-        )
-
-        # addressLine1AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine1AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38)
-                    AND
-                    (Appellant_Address1 IS NOT NULL OR Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND
-                    addressLine1AdminJ IS NOT NULL
-                )
-                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine1AdminJ IS NULL)
-            )"""
-        )
-
-        # addressLine2AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND dv_representation = 'LR' AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine2AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38)
-                    AND
-                    (Appellant_Address2 IS NOT NULL OR Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL OR Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND
-                    addressLine2AdminJ IS NOT NULL
-                )
-                OR (NOT array_contains(valid_categoryIdList, 38) AND addressLine2AdminJ IS NULL)
-            )"""
-        )
-
-        # addressLine3AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine3AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38) AND
-                    (Appellant_Address3 IS NOT NULL OR Appellant_Address4 IS NOT NULL)
-                    AND addressLine3AdminJ IS NOT NULL
-                )
-                OR (addressLine3AdminJ IS NULL)
-            )"""
-        )
-
-        # addressLine4AdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38) AND at least one of the coalesce fields is not null; ELSE can be NULL
-        checks["valid_addressLine4AdminJ"] = (
-            """(
-                (
-                    array_contains(valid_categoryIdList, 38) AND
-                    (Appellant_Address5 IS NOT NULL OR Appellant_Postcode IS NOT NULL)
-                    AND addressLine4AdminJ IS NOT NULL
-                )
-                OR (addressLine4AdminJ IS NULL)
-            )"""
-        )
-
-        # countryGovUkOocAdminJ: IS NOT NULL when array_contains(valid_categoryIdList, 38); ELSE can be NULL
-        checks["valid_countryGovUkOocAdminJ"] = (
-            """(
-                (
-                    (array_contains(valid_categoryIdList, 38))
-                    AND
-                    (countryGovUkOocAdminJ IS NOT NULL)
-                    AND
-                    (countryGovUkOocAdminJ IN ('AF', 'AX', 'AL', 'DZ', 'AD', 'AO', 'AI', 'AG', 'AR', 'AM', 'AW', 'AC', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BR', 'IO', 'VG', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'IC', 'CV', 'KY', 'CF', 'EA', 'TD', 'CL', 'CN', 'CX', 'CO', 'KM', 'CD', 'CG', 'CK', 'CR', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GT', 'GN', 'GW', 'GY', 'HT', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'CI', 'JM', 'JP', 'JO', 'KZ', 'KE', 'KI', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'YT', 'MW', 'MY', 'MV', 'ML', 'MT', 'MQ', 'MR', 'MU', 'MX', 'MD', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NF', 'NP', 'NL', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'KP', 'NO', 'OM', 'PK', 'PW', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SK', 'SI', 'SB', 'ZA', 'KR', 'SS', 'ES', 'LK', 'BQ', 'SH', 'KN', 'LC', 'MF', 'VC', 'SD', 'SR', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'UY', 'US', 'UZ', 'VU', 'VA', 'VE', 'VN', 'WF', 'EH', 'WS', 'YE', 'ZM', 'ZW', 'PS', 'SO', 'MC'))
-                )
-                OR
-                (
-                    (NOT(array_contains(valid_categoryIdList, 38)))
-                    AND
-                    (countryGovUkOocAdminJ IS NULL)
-                )
-            )""")
+        
         ##############################
         # AARIADM-764 (appellantDetails)
         ##############################
@@ -954,15 +688,6 @@ class paymentPendingDQRules(DQRulesBase):
             "(isServiceRequestTabVisibleConsideringRemissions IS NOT NULL AND isServiceRequestTabVisibleConsideringRemissions IN ('Yes', 'No'))"
         )
 
-        # checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-        #     """(
-        #         ((applicationChangeDesignatedHearingCentre IS NOT NULL)
-        #         AND 
-        #         (applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing'))
-        #         )
-        #         OR (applicationChangeDesignatedHearingCentre IS NULL)
-        #     )"""
-        # )
         #########################################
         # ARIADM-788 and ARIADM-792 (homeOffice)
         #########################################

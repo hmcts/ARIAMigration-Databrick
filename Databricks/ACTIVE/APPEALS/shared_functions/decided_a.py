@@ -14,6 +14,7 @@ from . import AwaitingEvidenceRespondant_b as AERb
 from . import listing as L
 from . import prepareForHearing as PFH
 from . import decision as D
+from . import paymentPending as PP
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list, 
@@ -207,105 +208,7 @@ def hearingActuals(silver_m1, silver_m3):
 
 def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
-    def getUkPostcode(postcode):
-        try:
-            if postcode is None or str(postcode).strip() == "":
-                return "False"
-            
-            # Step 1: Check if postcode is valid
-            if postcode_utils.is_valid(postcode):
-                return "True"
-            
-            # Step 2: Try fixing the postcode if not valid
-            clean_postcode = fix(postcode)
-            if postcode_utils.is_valid(clean_postcode):
-                return "True"
-
-        except Exception as e:
-            print(f"Error processing {postcode}: {e}")
-            pass
-
-        return "False"
-
-    getUkPostcodeUDF = udf(getUkPostcode, StringType())
-
-    ftpaApplicationDate_flags = (
-        silver_m2
-        .join(silver_c, on="CaseNo", how="left")
-        .withColumn(
-            "stage_detained",
-            when(col("Detained") == 3, lit("OOC"))
-            .otherwise(lit(None))
-        )
-        .withColumn(
-            "stage_category",
-            when(
-                col("stage_detained").isNull(),
-                when(col("CategoryId") == 37, lit("IN"))
-                .when(col("CategoryId") == 38, lit("OOC"))
-            )
-        )
-        .withColumn(
-            "stage_country",
-            when(
-                col("stage_detained").isNull() &
-                col("stage_category").isNull(),
-                when(col("AppellantCountryId") == 188, lit("IN"))
-            )
-        )
-        .withColumn(
-            "stage_postcode",
-            when(
-                col("stage_detained").isNull() &
-                col("stage_category").isNull() &
-                col("stage_country").isNull(),
-                when(
-                    getUkPostcodeUDF(col("Appellant_Postcode")) == "True",
-                    lit("IN")
-                )
-            )
-        )
-        .withColumn("appellantFullAddress", concat_ws(", ",
-                col("Appellant_Address1"), col("Appellant_Address2"),
-                col("Appellant_Address3"), col("Appellant_Address4"),
-                col("Appellant_Address5"), col("Appellant_Postcode")
-            ))
-        .withColumn(
-            "stage_address",
-            when(
-                col("stage_detained").isNull() &
-                col("stage_category").isNull() &
-                col("stage_country").isNull() &
-                col("stage_postcode").isNull(),
-                when(
-                    lower(col("appellantFullAddress")).rlike(
-                        r"\b(uk|gb|united kingdom)\b") == True, lit("IN")
-                )
-            )
-        )
-        .withColumn(
-            "IN or OUT",
-            coalesce(
-                col("stage_detained"),
-                col("stage_category"),
-                col("stage_country"),
-                col("stage_postcode"),
-                col("stage_address"),
-                lit("OOC")
-            )
-        )
-        .select(
-            "CaseNo",
-            "Detained",
-            "CategoryId",
-            "stage_detained",
-            "stage_category",
-            "stage_country",
-            "stage_postcode",
-            "stage_address",
-            "IN or OUT"
-        )
-    )
+    is_detained_or_in_uk = col("Detained").isin(1, 2, 4) | col("dv_appellantIsInUk")
 
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -323,44 +226,28 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
         .drop("rn")
     )
 
-    ftpa_flags_filtered = (
-        silver_m1.alias("m1")
-        .join(ftpaApplicationDate_flags.alias("ftpa"), on="CaseNo", how="inner")
-        .join(join_df.alias("m3_c"), on="CaseNo", how="left")
-        .select(
-            col("CaseNo"),
-            col("m3_c.CategoryId"),
-            col("m3_c.CaseStatus"),
-            col("m3_c.Outcome"),
-            col("m3_c.DecisionDate"),
-            "stage_detained",
-            "stage_category",
-            "stage_country",
-            "stage_postcode",
-            "stage_address",
-            col("IN or OUT")
+    ftpa_df = (
+        PP.derive_country_silver_m2(silver_m2)
+        .join(join_df, on="CaseNo", how="left")
+        .withColumn("dv_appellantIsInUk",
+            when(expr("c.CategoryId = 37"), lit(True))
+            .when(expr("c.CategoryId = 38"), lit(False))
+            .otherwise(col("dv_addressInUk"))
         )
-        .distinct()
-    )
-
-    ftpa_flags_filtered_deduped = Window.partitionBy("CaseNo").orderBy(
-        when(col("IN or OUT") == "IN", 0).otherwise(1)
-    )
-
-    ftpaApplicationDate_flags_deduped = (
-        ftpa_flags_filtered
-        .withColumn("rn", row_number().over(ftpa_flags_filtered_deduped))
-        .filter(col("rn") == 1)
-        .drop("rn")
     )
 
     ftpa_df = (
-        ftpaApplicationDate_flags_deduped
+        ftpa_df
             .select(
                 col("CaseNo"),
+                # col("c.CategoryId"),
+                # col("DecisionDate"),
+                # col("Outcome"),
+                # col("dv_appellantIsInUk"),
+                # col("dv_addressInUk"),
                 date_format(
-                    when(col("IN or OUT") == "IN", date_add(col("DecisionDate"), 14))
-                    .when(col("IN or OUT") == "OOC", date_add(col("DecisionDate"), 28)),
+                    when(is_detained_or_in_uk, date_add(col("DecisionDate"), 14))
+                    .when(~is_detained_or_in_uk, date_add(col("DecisionDate"), 28)),
                     "yyyy-MM-dd"
                 ).alias("ftpaApplicationDeadline")
             )

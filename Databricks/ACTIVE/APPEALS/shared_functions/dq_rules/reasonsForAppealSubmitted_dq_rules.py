@@ -20,7 +20,7 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
                         AND
                         (additionalInstructionsTribunalResponse IS NOT NULL)
                         AND
-                        (LENGTH(additionalInstructionsTribunalResponse) < 2000)
+                        (LENGTH(additionalInstructionsTribunalResponse) <= 2000)
                     )
                     OR
                     (

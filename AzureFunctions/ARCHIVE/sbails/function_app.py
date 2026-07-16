@@ -101,13 +101,14 @@ async def eventhub_trigger_sbails(azeventhub: List[func.EventHubEvent]):
                                 ack_producer_client,
                                 source_container_secret,
                                 idempotency_container,
-                                producer_lock
+                                producer_lock,
+                                semaphore
                             )
                     except TimeoutError:
                         key = event.partition_key
                         msg = f"Task timed out after 6 minutes for key '{key}'."
                         logging.error(msg)
-                        await send_to_dead_letter(dl_producer_client, msg, key, producer_lock)
+                        raise
 
             logging.info(
                 f"Processing messages - Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
@@ -125,7 +126,7 @@ async def eventhub_trigger_sbails(azeventhub: List[func.EventHubEvent]):
 
 @retry(
     wait=wait_exponential(multiplier=1, min=5, max=10),
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(3),
     retry=retry_if_exception_type(Exception),
     reraise=True,
     before_sleep=lambda r: logging.warning(
@@ -133,10 +134,27 @@ async def eventhub_trigger_sbails(azeventhub: List[func.EventHubEvent]):
     ),
 )
 async def upload_blob_with_retry(blob_client, message, capture_response):
-    await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
+    async with asyncio.timeout(90):
+        await blob_client.upload_blob(message, overwrite=True, raw_response_hook=capture_response)
 
 
-async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container, producer_lock):
+@retry(
+    wait=wait_exponential(multiplier=1, min=5, max=10),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(Exception),
+    reraise=True,
+    before_sleep=lambda r: logging.warning(
+        f"Retrying download attempt {r.attempt_number} due to: {r.outcome.exception()}"
+    ),
+)
+async def download_blob_with_retry(blob_url):
+    async with BlobClient.from_blob_url(blob_url) as source_blob_client:
+        async with asyncio.timeout(90):
+            stream = await source_blob_client.download_blob()
+            return await stream.readall()
+
+
+async def process_messages(event, container_service_client, subdirectory, dl_producer_client, ack_producer_client, source_container_secret, idempotency_container, producer_lock, semaphore):
     results: dict = {
         "filename": None,
         "http_response": None,
@@ -198,11 +216,15 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                         logging.warning(f"[IDEMPOTENCY] File already processed, skipping: {file_name}")
                         return
 
-                    # Giving 90s grace for checking if an original run has been lost, for the duplicate message to be reprocessed.
-                    remaining = 90 - (datetime.datetime.now(datetime.timezone.utc) - props.last_modified).total_seconds()
+                    # Giving 120s grace for checking if an original run has been lost, for the duplicate message to be reprocessed.
+                    remaining = 120 - (datetime.datetime.now(datetime.timezone.utc) - props.last_modified).total_seconds()
                     if remaining > 0:
                         logging.warning(f"[IDEMPOTENCY] File in-progress for {file_name}")
-                        await asyncio.sleep(remaining)
+                        semaphore.release()
+                        try:
+                            await asyncio.sleep(remaining)
+                        finally:
+                            await semaphore.acquire()
                         props = await idempotency_blob.get_blob_properties()
                         if (props.metadata or {}).get("is_complete") == "True":
                             logging.info(f"[IDEMPOTENCY] In-progress file has now completed processing, skipping: {file_name}")
@@ -223,9 +245,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 
             # Download file from source
-            async with BlobClient.from_blob_url(source_blob_url_with_sas) as source_blob_client:
-                stream = await source_blob_client.download_blob()
-                file_content = await stream.readall()
+            file_content = await download_blob_with_retry(source_blob_url_with_sas)
 
             # Upload to target
             full_blob_name = f"{subdirectory}/{file_name}"
@@ -263,7 +283,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         except Exception as e:
             logging.error(f"[IDEMPOTENCY] Ack sent but failed to mark flag complete for {file_name}: {e}.")
 
-    except Exception as e:
+    except BaseException as e:
         logging.error(f"Failed to process event with key '{key}': {e}", exc_info=True)
         results["http_message"] = str(e)
         logging.error(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
@@ -285,10 +305,11 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None, producer_lock: asyncio.Lock):
     logging.info(f"Creating ack batch for {partition_key}.")
     async with producer_lock:
-        event_data_batch = await producer_client.create_batch(partition_key=partition_key)
-        event_data_batch.add(EventData(message))
-        logging.info(f"Sending ack for {partition_key}.")
-        await producer_client.send_batch(event_data_batch, timeout=60)
+        async with asyncio.timeout(60):
+            event_data_batch = await producer_client.create_batch(partition_key=partition_key)
+            event_data_batch.add(EventData(message))
+            logging.info(f"Sending ack for {partition_key}.")
+            await producer_client.send_batch(event_data_batch, timeout=60)
     logging.info(f"Message added to Event Hub with partition key: {partition_key}")
 
 

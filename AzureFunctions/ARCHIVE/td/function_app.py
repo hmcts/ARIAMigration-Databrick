@@ -220,7 +220,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                     remaining = 180 - (datetime.datetime.now(datetime.timezone.utc) - props.last_modified).total_seconds()
                     if remaining > 0:
                         logging.warning(f"[IDEMPOTENCY] File in-progress for {file_name}")
-                        semaphore.release()
+                        semaphore.release()  # don't block waiting for in-progress event
                         try:
                             await asyncio.sleep(remaining)
                         finally:

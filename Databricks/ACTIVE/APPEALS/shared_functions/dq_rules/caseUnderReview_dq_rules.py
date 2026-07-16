@@ -18,6 +18,8 @@ class caseUnderReviewDQRules(DQRulesBase):
                     (dv_representation <=> 'LR')
                     AND
                     (additionalInstructionsTribunalResponse IS NOT NULL)
+                    AND
+                    (LENGTH(additionalInstructionsTribunalResponse) < 2000)
                 )
                 OR
                 (

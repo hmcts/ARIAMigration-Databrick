@@ -24,6 +24,10 @@ def make_mock_event(body_data, partition_key="1234567890123456"):
     event = MagicMock()
     event.partition_key = partition_key
     event.get_body.return_value = json.dumps(body_data).encode("utf-8")
+    event.metadata = {
+        "PartitionContext": {"PartitionId": "0"},
+        "SequenceNumberArray": [1],
+    }
     return event
 
 

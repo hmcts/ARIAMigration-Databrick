@@ -4,6 +4,7 @@ import logging
 import json
 import os
 
+from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
@@ -46,13 +47,20 @@ app = func.FunctionApp()
     event_hub_name=eventhub_name,
     consumer_group='$Default',
     connection=eventhub_connection,
-    starting_position="@latest",
     cardinality='many',
-    max_batch_size=1,
     data_type='binary'
 )
 async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
-    logger.info(f"Processing a batch of {len(azeventhub)} events")
+    # Metadata is common to the whole batch under cardinality=many, so it can be read from any single event
+    metadata = azeventhub[0].metadata or {} if azeventhub else {}
+    partition_id = metadata.get("PartitionContext", {}).get("PartitionId")
+    sequence_numbers = metadata.get("SequenceNumberArray") or []
+    min_sequence = min(sequence_numbers) if sequence_numbers else None
+    max_sequence = max(sequence_numbers) if sequence_numbers else None
+    logger.info(
+        f"Processing a batch of {len(azeventhub)} events - "
+        f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
+    )
 
     try:
         # Retrieve credentials
@@ -70,10 +78,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
         idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
         idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
-        res_eh_producer = EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
-
-        async with res_eh_producer:
-            logger.info(f"Creating batch for {len(azeventhub)} events")
+        async with EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key) as res_eh_producer:
+            logger.info(
+                f"Creating batch for {len(azeventhub)} events - "
+                f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
+            )
             event_data_batch = await res_eh_producer.create_batch()
             try:
                 for event in azeventhub:
@@ -96,8 +105,8 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         try:
                             await idempotency_blob.upload_blob(b"", overwrite=False)
                             logger.info(f"[IDEMPOTENCY] Marked for processing: {caseNo}")
-                        except Exception as upload_error:
-                            logger.warning(f"[IDEMPOTENCY] Failed to process {caseNo}: {upload_error}")
+                        except ResourceExistsError:
+                            logger.warning(f"[IDEMPOTENCY] Skipping in progress case {caseNo}.")
                             continue
 
                         # Process the file
@@ -133,6 +142,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
 
             except Exception as e:
                 logger.error(f'Error in event hub processing batch: {e}')
+                raise e
             finally:
                 # Clean up all clients
                 await idempotency_blob_service.close()
@@ -141,106 +151,3 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     except Exception as e:
         logger.error(f"An error has occurred before processing the batch. {e}")
         raise e
-
-
-# async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
-#     logging.info(f"Processing a batch of {len(azeventhub)} events")
-
-#     # Retrieve credentials
-#     credential = DefaultAzureCredential()
-#     logging.info('Connected to Azure Credentials')
-
-#     kv_url = f"https://ingest{LZ_KEY}-meta002-{ENV}.vault.azure.net"
-#     kv_client = SecretClient(vault_url=kv_url, credential=credential)
-#     logging.info(f'Connected to KeyVault: {kv_url}')
-
-#     results_eh_name = f"evh-active-res-{ENV}-{LZ_KEY}-uks-dlrm-01"
-#     results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
-#     result_eh_secret_key = results_eh_key.value
-#     logging.info('Acquired KV secret for Results Event Hub')
-
-#     # Initialise the idempotent client outside of the loop / context manager
-#     idempotency_account_url = f"https://ingest{LZ_KEY}xcutting{ENV}.blob.core.windows.net"
-#     idempotency_container_name = "af-idempotency"
-#     idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
-#     idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
-
-#     res_eh_producer = EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
-
-#     async with res_eh_producer:
-#         event_data_batch = await res_eh_producer.create_batch()
-#         try:
-#             for event in azeventhub:
-#                 try:
-#                     logging.info(f'Event received with partition key: {event.partition_key}')
-
-#                     # Parse the payload
-#                     start_datetime = datetime.now(timezone.utc).isoformat()
-#                     caseNo = event.partition_key
-#                     payload_str = event.get_body().decode('utf-8')
-#                     payload = json.loads(payload_str)
-#                     run_id = payload.get("RunID", None)
-#                     state = payload.get("State", None)
-#                     data = payload.get("Content", None)
-
-#                     ## Build idempotency blob reference
-#                     idempotency_blob_path = f"active/{state}/processed/{caseNo}.flag"
-#                     idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
-
-#                     if await idempotency_blob.exists():
-#                         logging.warning(f"[IDEMPOTENCY] Skipping duplicate message for {state}/{caseNo}")
-#                         continue
-
-#                     ##Retrieve tokens for validation
-#                     idam_manager = IDAMTokenManager(ENV, 18000)
-#                     idam_token, uid = idam_manager.get_token()
-#                     s2s_manager = S2S_Manager(ENV, 18000)
-#                     s2s_token = s2s_manager.get_token()
-
-#                     validate_response = await asyncio.to_thread(
-#                     validate_case,
-#                     ccd_base_url = f"https://ccd-service-{ENV}.platform.hmcts.net",
-#                     event_token = run_id,
-#                     payloadData = data,
-#                     jid = "IA",
-#                     ctid = "Asylum",
-#                     idam_token = idam_token,
-#                     uid = uid,
-#                     s2s_token = s2s_token
-#                     )
-
-#                     # If validation is a pass or fail return the idempotent value
-#                     await idempotency_blob.upload_blob(b"", overwrite=True)
-
-#                     if validate_response is not None and validate_response.status_code == 200:
-#                         result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_NUMBER)
-#                         result["StartDateTime"] = start_datetime
-#                     else:
-#                         logging.warning(f"Validation failed for {caseNo}, skipping processing")
-
-#                     result_json = json.dumps(result)
-
-#                     try:
-#                         event_data_batch.add(EventData(result_json))
-#                     except ValueError:
-#                         # If the batch is full, send it and create a new one
-#                         await res_eh_producer.send_batch(event_data_batch)
-#                         logging.info(f'Sent a batch of events to Results Event Hub')
-#                         event_data_batch = await res_eh_producer.create_batch()
-#                         event_data_batch.add(EventData(result_json))
-
-#                 except Exception as e:
-#                     logging.error(f'Error processing event for caseNo {caseNo}: {e}')
-
-#             # Send any remaining events in the batch
-#             if len(event_data_batch) > 0:
-#                 await res_eh_producer.send_batch(event_data_batch)
-#                 logging.info(f'Sent the final batch of events to Results Event Hub')
-
-#         except Exception as e:
-#             logging.error(f'Error in event hub processing batch: {e}')
-#         finally:
-#             # Clean up all clients
-#             await idempotency_blob_service.close()
-#             await kv_client.close()
-#             await credential.close()

@@ -111,6 +111,7 @@ class prepareForHearingDQRules(DQRulesBase):
         checks["valid_additionalInstructionsTribunalResponse"] = ("""
             additionalInstructionsTribunalResponse IS NULL OR
             (
+                LENGTH(additionalInstructionsTribunalResponse) < 2000 AND
                 additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
                 additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
                 additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND

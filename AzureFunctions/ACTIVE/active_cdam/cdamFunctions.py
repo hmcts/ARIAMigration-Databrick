@@ -195,6 +195,11 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
         return result
 
     else:
+        try:
+            cdam_response = upload_document_response.json()
+        except Exception as parse_error:
+            cdam_response = f"Unable to parse CDAM response: {parse_error}"
+
         result = {
             "RunID": runId,
             "CaseNo": caseNo,
@@ -203,7 +208,7 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "Status": "SUCCESS",
             "StatusCode": upload_document_response.status_code,
             "Error": None,
-            "CDAMResponse": upload_document_response.json()
+            "CDAMResponse": cdam_response
         }
 
         print(f"✅ Case {caseNo} document uploaded successfully with document response: {result['CDAMResponse']}")

@@ -105,6 +105,41 @@ class TestProcessCaseSuccess:
         assert result["Error"] is None
 
 
+class TestProcessCaseSuccessMalformedJson:
+    """process_case degrades gracefully when a 2xx submit response has an unparsable body."""
+
+    def test_success_with_unparsable_json_body(self):
+        bad_submit_response = _make_response(201, text="not json")
+        bad_submit_response.json.side_effect = ValueError("Expecting value")
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
+            patch(PATCH_SUBMIT, return_value=bad_submit_response),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-001",
+                payloadData={"appealReferenceNumber": "HU/001/2024"},
+                runId="run-1",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "SUCCESS"
+        assert result["StatusCode"] == 201
+        assert "Unable to parse CCDCaseID" in result["CCDCaseID"]
+        assert result["SuccessResponse"] == "not json"
+
+
 class TestProcessCaseValidationFailure:
     """process_case returns an error result when validation fails."""
 

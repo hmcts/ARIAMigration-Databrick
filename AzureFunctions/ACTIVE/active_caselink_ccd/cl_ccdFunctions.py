@@ -333,10 +333,18 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
         return result
 
     else:
+        try:
+            submit_json = submit_case_response.json()
+            case_link_count = len((submit_json.get("case_data") or {}).get("caseLinks", []))
+            ccd_case_id = submit_json.get("id")
+        except Exception as parse_error:
+            case_link_count = 0
+            ccd_case_id = f"Unable to parse CCDCaseID: {parse_error}"
+
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
-            "CaseLinkCount": len((submit_case_response.json().get("case_data") or {}).get("caseLinks", [])),
+            "CaseLinkCount": case_link_count,
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "SUCCESS",
@@ -344,5 +352,5 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "Error": None
         }
 
-        print(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
+        print(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {ccd_case_id}")
         return result

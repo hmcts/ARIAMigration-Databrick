@@ -313,6 +313,25 @@ def test_process_event_success(mock_start, mock_validate, mock_submit):
 
 
 @pytest.mark.usefixtures("mock_token_managers_cl")
+@patch(f"{MODULE}.submit_case_event")
+@patch(f"{MODULE}.validate_case")
+@patch(f"{MODULE}.start_case_event")
+def test_process_event_success_with_unparsable_json_body(mock_start, mock_validate, mock_submit):
+    """A 2xx submit response with a body that isn't valid JSON should not crash process_event."""
+    mock_start.return_value = mock_response(200, {"token": "tok123"})
+    mock_validate.return_value = mock_response(200)
+    bad_submit_response = mock_response(201, text="not json")
+    bad_submit_response.json.side_effect = ValueError("Expecting value")
+    mock_submit.return_value = bad_submit_response
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "SUCCESS"
+    assert result["StatusCode"] == 201
+    assert result["CaseLinkCount"] == 0
+
+
+@pytest.mark.usefixtures("mock_token_managers_cl")
 @patch(f"{MODULE}.start_case_event")
 def test_process_event_start_fails_non_200(mock_start):
     mock_start.return_value = mock_response(401, text="Unauthorized")

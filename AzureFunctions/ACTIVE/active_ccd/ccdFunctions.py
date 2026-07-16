@@ -308,6 +308,14 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         return result
 
     else:
+        try:
+            submit_json = submit_case_response.json()
+            ccd_case_id = submit_json.get("id")
+            success_response = json.dumps(submit_json or {})
+        except Exception as parse_error:
+            ccd_case_id = f"Unable to parse CCDCaseID: {parse_error}"
+            success_response = _get_res_body_as_text(submit_case_response)
+
         result = {
             "RunID": runId,
             "CaseNo": caseNo,
@@ -316,10 +324,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "StatusCode": submit_case_response.status_code,
             "Error": None,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
-            "CCDCaseID": submit_case_response.json()["id"],
-            "SuccessResponse": json.dumps(
-                submit_case_response.json() or {}
-            ),
+            "CCDCaseID": ccd_case_id,
+            "SuccessResponse": success_response,
             "StartResponse": start_response_data
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {result.get('CCDCaseID', 'N/A')}")

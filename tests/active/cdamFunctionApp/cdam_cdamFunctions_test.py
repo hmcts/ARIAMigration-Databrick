@@ -315,6 +315,21 @@ def test_process_event_result_contains_cdam_response(mock_upload, mock_blob_clie
 
 @pytest.mark.usefixtures("mock_token_managers")
 @patch(f"{MODULE}.upload_document")
+def test_process_event_success_with_unparsable_json_body(mock_upload, mock_blob_client):
+    """A 2xx response with a body that isn't valid JSON should not crash process_event."""
+    bad_upload_response = mock_response(201, text="not json")
+    bad_upload_response.json.side_effect = ValueError("Expecting value")
+    mock_upload.return_value = bad_upload_response
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "SUCCESS"
+    assert result["StatusCode"] == 201
+    assert "Unable to parse CDAM response" in result["CDAMResponse"]
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+@patch(f"{MODULE}.upload_document")
 def test_process_event_passes_idam_token_string_not_tuple(mock_upload, mock_blob_client):
     """idam_token passed to upload_document must be a plain string, not a tuple."""
     mock_upload.return_value = mock_response(

@@ -37,6 +37,8 @@ def setup_mocks(batch_len=1):
     mock_secret.value = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=key;SharedAccessKey=abc="
 
     mock_kv_client = AsyncMock()
+    mock_kv_client.__aenter__ = AsyncMock(return_value=mock_kv_client)
+    mock_kv_client.__aexit__ = AsyncMock(return_value=False)
     mock_kv_client.get_secret.return_value = mock_secret
 
     mock_batch = MagicMock()
@@ -48,6 +50,8 @@ def setup_mocks(batch_len=1):
     mock_producer.__aexit__ = AsyncMock(return_value=False)
 
     mock_credential = AsyncMock()
+    mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
+    mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     mock_idempotency_blob = AsyncMock()
 
@@ -55,6 +59,9 @@ def setup_mocks(batch_len=1):
     mock_idempotency_container.get_blob_client.return_value = mock_idempotency_blob
 
     mock_blob_svc = MagicMock()
+    mock_blob_svc.close = AsyncMock()
+    mock_blob_svc.__aenter__ = AsyncMock(return_value=mock_blob_svc)
+    mock_blob_svc.__aexit__ = AsyncMock(return_value=False)
     mock_blob_svc.get_container_client.return_value = mock_idempotency_container
 
     return {
@@ -166,7 +173,7 @@ def test_single_event_success_sends_final_batch():
 
 
 def test_cleanup_always_called_on_success():
-    """kv_client.close and credential.close are awaited after successful processing."""
+    """kv_client and credential are exited (closed) via the AsyncExitStack."""
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event({"RunID": "r1", "CaseLinkPayload": []})]
 
@@ -175,8 +182,8 @@ def test_cleanup_always_called_on_success():
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    mocks["kv_client"].close.assert_awaited_once()
-    mocks["credential"].close.assert_awaited_once()
+    mocks["kv_client"].__aexit__.assert_awaited_once()
+    mocks["credential"].__aexit__.assert_awaited_once()
 
 
 def test_cleanup_called_even_when_individual_event_errors():
@@ -189,8 +196,8 @@ def test_cleanup_called_even_when_individual_event_errors():
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    mocks["kv_client"].close.assert_awaited_once()
-    mocks["credential"].close.assert_awaited_once()
+    mocks["kv_client"].__aexit__.assert_awaited_once()
+    mocks["credential"].__aexit__.assert_awaited_once()
 
 
 def test_keyvault_secret_fetched_with_correct_name():

@@ -323,9 +323,9 @@ class TestProcessCaseTokenFailures:
 
 
 class TestProcessCaseInvalidEnv:
-    """process_case raises ValueError for unknown environments."""
+    """process_case returns an ERROR result for unknown environments."""
 
-    def test_invalid_env_raises_value_error(self):
+    def test_invalid_env_returns_error_result(self):
         with (
             patch(PATCH_IDAM),
             patch(PATCH_S2S),
@@ -337,15 +337,18 @@ class TestProcessCaseInvalidEnv:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            with pytest.raises(ValueError, match="Invalid environment"):
-                process_case(
-                    env="unknown",
-                    caseNo="CASE-009",
-                    payloadData={},
-                    runId="run-9",
-                    state="appealSubmitted",
-                    PR_REFERENCE="pr-123",
-                )
+            result = process_case(
+                env="unknown",
+                caseNo="CASE-009",
+                payloadData={},
+                runId="run-9",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert "Invalid environment" in result["Error"]
 
 
 class TestProcessCaseSubmitNone:

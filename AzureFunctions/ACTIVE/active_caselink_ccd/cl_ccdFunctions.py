@@ -200,7 +200,17 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
         print(f"URL for {urls}")
 
     except KeyError:
-        raise ValueError("Invalid environment")
+        result = {
+            "RunID": runId,
+            "CCDCaseReferenceNumber": ccdReference,
+            "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "Status": "ERROR",
+            "StatusCode": None,
+            "Error": f"Invalid environment: {env}"
+        }
+        return result
 
     # # Not yet required. No issue with duplicate linking events at the moment.
     # # compare existing case link details if not overwriting

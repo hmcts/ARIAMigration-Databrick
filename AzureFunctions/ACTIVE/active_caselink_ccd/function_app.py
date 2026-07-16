@@ -4,6 +4,8 @@ import logging
 import json
 import os
 
+from contextlib import AsyncExitStack
+
 from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
 
 from azure.core.exceptions import ResourceExistsError
@@ -77,21 +79,26 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     )
 
     try:
-        # Retrieve credentials
-        credential = DefaultAzureCredential()
-        logger.info("Connected to Azure Credentials")
+        async with AsyncExitStack() as stack:
+            # Retrieve credentials
+            credential = await stack.enter_async_context(DefaultAzureCredential())
+            logger.info("Connected to Azure Credentials")
 
-        kv_client = SecretClient(vault_url=kv_url, credential=credential)
-        logger.info(f"Connected to KeyVault: {kv_url}")
+            kv_client = await stack.enter_async_context(SecretClient(vault_url=kv_url, credential=credential))
+            logger.info(f"Connected to KeyVault: {kv_url}")
 
-        results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
-        result_eh_secret_key = results_eh_key.value
-        logger.info("Acquired KV secret for Results Event Hub")
+            results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
+            result_eh_secret_key = results_eh_key.value
+            logger.info("Acquired KV secret for Results Event Hub")
 
-        idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
-        idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+            idempotency_blob_service = await stack.enter_async_context(
+                BlobServiceClient(account_url=idempotency_account_url, credential=credential)
+            )
+            idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
-        async with EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key) as res_eh_producer:
+            res_eh_producer = await stack.enter_async_context(
+                EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
+            )
             logger.info(
                 f"Creating batch for {len(azeventhub)} events - "
                 f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
@@ -127,7 +134,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         result = await AsyncRetrying(
                             retry=retry_if_result(_is_retryable),
                             stop=stop_after_attempt(3),
-                            wait=wait_exponential(min=30, max=60),
+                            wait=wait_exponential(multiplier=30, min=30, max=60),
                             before_sleep=_log_retry,
                             retry_error_callback=lambda retry_state: retry_state.outcome.result(),
                         )(_process)
@@ -171,10 +178,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             except Exception as e:
                 logger.error(f"Error in event hub processing batch: {e}")
                 raise e
-            finally:
-                # Clean up all clients
-                await kv_client.close()
-                await credential.close()
     except Exception as e:
         logger.error(f"An error has occurred before processing the batch. {e}")
         raise e

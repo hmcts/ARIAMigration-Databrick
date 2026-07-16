@@ -198,17 +198,20 @@ def test_process_event_s2s_token_failure_returns_error():
 # process_event — invalid environment
 # ---------------------------------------------------------------------------
 
-def test_process_event_invalid_env_raises_value_error(mock_token_managers, mock_blob_client):
-    with pytest.raises(ValueError, match="Invalid environment"):
-        process_event(
-            env="invalid_env",
-            caseNo="1234567890123456",
-            runId="run-001",
-            file_name="doc.html",
-            file_url="https://storage.blob.core.windows.net/container/blob",
-            file_content_type="text/html",
-            storage_credential=MagicMock(),
-        )
+def test_process_event_invalid_env_returns_error_result(mock_token_managers, mock_blob_client):
+    result = process_event(
+        env="invalid_env",
+        caseNo="1234567890123456",
+        runId="run-001",
+        file_name="doc.html",
+        file_url="https://storage.blob.core.windows.net/container/blob",
+        file_content_type="text/html",
+        storage_credential=MagicMock(),
+    )
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert "Invalid environment" in result["Error"]
 
 
 # ---------------------------------------------------------------------------

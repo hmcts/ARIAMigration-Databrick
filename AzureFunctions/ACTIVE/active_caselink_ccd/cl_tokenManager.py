@@ -111,7 +111,7 @@ class IDAMTokenManager:
         try:
             idam_response = requests.get(self.uid_url, headers=uid_headers)
         except Exception as e:
-            print(f"UID request failed: {e}")
+            raise TokenError(f"UID request failed: {e}", status_code=503)
         # safely convert to json
         try:
             payload = idam_response.json()

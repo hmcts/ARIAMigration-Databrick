@@ -393,6 +393,15 @@ def _make_event(case_no, run_id, state, content):
     return event
 
 
+def _async_context_mock():
+    """AsyncMock configured so `async with m as x` yields `m` itself, matching
+    the AsyncExitStack usage in the real eventhub_trigger_active code."""
+    m = AsyncMock()
+    m.__aenter__ = AsyncMock(return_value=m)
+    m.__aexit__ = AsyncMock(return_value=None)
+    return m
+
+
 def _build_trigger_mocks():
     """Shared async infrastructure mocks for eventhub_trigger_active tests."""
     mock_idempotency_blob = AsyncMock()
@@ -402,6 +411,8 @@ def _build_trigger_mocks():
 
     mock_blob_svc = MagicMock()
     mock_blob_svc.close = AsyncMock()
+    mock_blob_svc.__aenter__ = AsyncMock(return_value=mock_blob_svc)
+    mock_blob_svc.__aexit__ = AsyncMock(return_value=None)
     mock_blob_svc.get_container_client.return_value = mock_idempotency_container
 
     mock_batch = MagicMock()
@@ -415,7 +426,7 @@ def _build_trigger_mocks():
     mock_secret = MagicMock()
     mock_secret.value = "mock_eh_connection_string"
 
-    mock_kv = AsyncMock()
+    mock_kv = _async_context_mock()
     mock_kv.get_secret.return_value = mock_secret
 
     return {
@@ -444,7 +455,7 @@ def test_eventhub_trigger_uploads_idempotency_blob_on_success(
         "CCDCaseID": "9876543210",
         "Error": None,
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -472,7 +483,7 @@ def test_eventhub_trigger_deletes_idempotency_blob_on_error(
         "CCDCaseID": None,
         "Error": "Something went wrong",
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -496,7 +507,7 @@ def test_eventhub_trigger_skips_event_when_blob_upload_fails(
     """When idempotency blob upload raises an exception, the event is skipped."""
     mocks = _build_trigger_mocks()
     mocks["idempotency_blob"].upload_blob.side_effect = Exception("Storage unavailable")
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -517,7 +528,7 @@ def test_idempotency_blob_not_deleted_when_process_case_raises(
     """When process_case raises, the exception is caught; delete_blob is not reached."""
     mocks = _build_trigger_mocks()
     mock_process_case.side_effect = Exception("unexpected error")
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -546,7 +557,7 @@ def test_process_case_called_with_correct_args(
         "CCDCaseID": "1111",
         "Error": None,
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -570,7 +581,7 @@ def test_idempotency_blob_path_includes_state_and_case_number(
     """get_blob_client is called with a path containing the state and case number."""
     mocks = _build_trigger_mocks()
     mock_process_case.return_value = {"Status": "SUCCESS", "CaseNo": "CASE111", "CCDCaseID": "1", "Error": None}
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -600,7 +611,7 @@ def test_error_result_sent_even_when_delete_blob_raises(
         "CCDCaseID": None,
         "Error": "Processing failed",
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -660,7 +671,7 @@ def test_status_code_stripped_from_event_hub_payload(
         "CCDCaseID": "777",
         "Error": None,
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -689,7 +700,7 @@ def test_non_retryable_error_not_retried(
     mock_process_case.return_value = {
         "Status": "ERROR", "StatusCode": 422, "CaseNo": "CASE_NO_RETRY", "Error": "Unprocessable"
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -716,7 +727,7 @@ def test_retryable_error_is_retried_3_times(
     mock_process_case.return_value = {
         "Status": "ERROR", "StatusCode": 500, "CaseNo": "CASE_R3", "Error": "Server Error"
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -743,7 +754,7 @@ def test_retryable_error_result_published_and_blob_deleted_after_all_retries_exh
     mock_process_case.return_value = {
         "Status": "ERROR", "StatusCode": 503, "CaseNo": "CASE_EX", "Error": "Service Unavailable"
     }
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]
@@ -775,7 +786,7 @@ def test_retryable_error_stops_retrying_on_success(
         {"Status": "ERROR", "StatusCode": 502, "CaseNo": "CASE_OK2", "Error": "Bad Gateway"},
         {"Status": "SUCCESS", "StatusCode": 201, "CaseNo": "CASE_OK2", "CCDCaseID": "999", "Error": None},
     ]
-    mock_credential.return_value = AsyncMock()
+    mock_credential.return_value = _async_context_mock()
     mock_secret_client.return_value = mocks["kv"]
     mock_blob_service.return_value = mocks["blob_svc"]
     mock_eh_producer.from_connection_string.return_value = mocks["producer"]

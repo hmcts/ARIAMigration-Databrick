@@ -120,7 +120,17 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
         print(f"URL for {urls}")
 
     except KeyError:
-        raise ValueError("Invalid environment")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "StartDateTime": startDateTime,
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "Status": "ERROR",
+            "StatusCode": None,
+            "Error": f"Invalid environment: {env}",
+            "CDAMResponse": ""
+        }
+        return result
 
     print(f"Getting binary for document at path: {file_url}")
     try:

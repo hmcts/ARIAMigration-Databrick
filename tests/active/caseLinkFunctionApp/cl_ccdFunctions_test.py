@@ -403,14 +403,17 @@ def test_process_event_invalid_env():
         mock_idam.get_token.return_value = ("tok", "uid")
         mock_s2s.get_token.return_value = "s2s"
 
-        with pytest.raises(ValueError, match="Invalid environment"):
-            process_event(
-                env="invalid_env",
-                ccdReference="1234567890123456",
-                caseLinkPayload=[],
-                runId="run-001",
-                PR_REFERENCE="1234",
-            )
+        result = process_event(
+            env="invalid_env",
+            ccdReference="1234567890123456",
+            caseLinkPayload=[],
+            runId="run-001",
+            PR_REFERENCE="1234",
+        )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert "Invalid environment" in result["Error"]
 
 
 def test_process_event_idam_token_failure():

@@ -192,7 +192,16 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         print(f"URL for {urls}")
 
     except KeyError:
-        raise ValueError("Invalid environment")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "State": state,
+            "Status": "ERROR",
+            "StatusCode": None,
+            "Error": f"Invalid environment: {env}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+        }
+        return result
 
     # start case creation
 

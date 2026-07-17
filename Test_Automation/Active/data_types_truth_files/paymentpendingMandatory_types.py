@@ -26,7 +26,7 @@ PaymentPendingMandatoryTypes = {
     'appellantStateless': 'string',
     'appellantsRepresentation': 'string',
     'applicationChangeDesignatedHearingCentre': 'string',
-    'applicationOutOfTimeExplanation': 'string',
+    # 'applicationOutOfTimeExplanation': 'string',
     'ariaDesiredState': 'string',
     'ariaMigrationTaskDueDays': 'string',
     'autoHearingRequestEnabled': 'string',
@@ -109,7 +109,7 @@ PaymentPendingMandatoryTypes = {
     #DetainedFields
     'appealWasNotSubmittedReason': 'string',
     'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
-    'exceptionalCircumstances': 'string',
+    # 'exceptionalCircumstances': 'string',
     'homeOfficeReferenceNumber': 'string',
     'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>',
     'legalRepCompanyPaperJ': 'string',

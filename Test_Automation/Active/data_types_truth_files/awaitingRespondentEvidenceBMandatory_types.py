@@ -123,7 +123,7 @@ AwaitingRespondentEvidenceBMandatoryTypes = {
     # 'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     # 'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory

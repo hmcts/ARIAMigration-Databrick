@@ -50,7 +50,7 @@ AwaitingRespondentEvidenceAMandatoryTypes = {
     'feePaymentAppealType': 'string',
     'feeVersion': 'string',
     'feeWithHearing': 'string',
-    'feeWithoutHearing': 'string',
+    # 'feeWithoutHearing': 'string',
     # 'gwfReferenceNumber': 'string',
     'hasAddedLegalRepDetails': 'string',
     'hasOtherAppeals': 'string',
@@ -106,7 +106,7 @@ AwaitingRespondentEvidenceAMandatoryTypes = {
     'uploadAdditionalEvidenceHomeOfficeActionAvailable': 'string',
     'uploadTheAppealFormDocs': 'array<string>',
     'paymentStatus': 'string',
-    'paAppealTypePaymentOption': 'string',
+    # 'paAppealTypePaymentOption': 'string',
     'paAppealTypeAipPaymentOption': 'string',
     # 'rpDcAppealHearingOption': 'string',
     'paidAmount': 'string',
@@ -123,7 +123,7 @@ AwaitingRespondentEvidenceAMandatoryTypes = {
     # 'feeRemissionType': 'string', #not mandatory
     # 'homeOfficeReferenceNumber': 'string', #not mandatory
     # 'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory

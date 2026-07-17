@@ -18,7 +18,7 @@ ListingMandatoryTypes = {
     'appellantHasFixedAddressAdminJ': 'string',
     # 'appellantInDetention': 'string',
     'appellantInUk': 'string',
-    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
+    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string,subTypeKey:string,subTypeValue:string>>>,partyName:string,roleOnCase:string>',
     'appellantNameForDisplay': 'string',
     'appellantNationalities': 'array<struct<id:string,value:struct<code:string>>>',
     'appellantNationalitiesDescription': 'string',

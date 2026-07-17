@@ -18,7 +18,7 @@ FtpaDecidedMandatoryTypes = {
     'appellantHasFixedAddressAdminJ': 'string',
     # 'appellantInDetention': 'string',
     'appellantInUk': 'string',
-    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
+    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string,subTypeKey:string,subTypeValue:string>>>,partyName:string,roleOnCase:string>',
     'appellantNameForDisplay': 'string',
     'appellantNationalities': 'array<struct<id:string,value:struct<code:string>>>',
     'appellantNationalitiesDescription': 'string',
@@ -119,7 +119,7 @@ FtpaDecidedMandatoryTypes = {
     'feeRemissionType': 'string', #not mandatory
     'homeOfficeReferenceNumber': 'string', #not mandatory
     'legalAidAccountNumber': 'string', #not mandatory
-    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
+    'legalRepAddressUK': 'struct<AddressLine1:string,AddressLine2:string,AddressLine3:string,Country:string,County:string,PostCode:string,PostTown:string>', #not mandatory
     'legalRepCompanyPaperJ': 'string', #not mandatory
     'legalRepEmail': 'string', #not mandatory
     'legalRepFamilyNamePaperJ': 'string', #not mandatory
@@ -148,7 +148,7 @@ FtpaDecidedMandatoryTypes = {
     # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'amendResponseActionAvailable': 'string',
     'appealResponseAvailable': 'string',
@@ -156,7 +156,7 @@ FtpaDecidedMandatoryTypes = {
     'appellantInterpreterLanguageCategory': 'array<string>',
     'currentHearingDetailsVisible': 'string',
     'datesToAvoidYesNo': 'string',
-    'hearingChannel': 'struct<code:string,label:string>',
+    'hearingChannel': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
     'hearingDocuments': 'array<string>',
     'hearingRequirements': 'array<string>',
     'inCameraCourt': 'string',
@@ -181,7 +181,7 @@ FtpaDecidedMandatoryTypes = {
     'isVulnerabilitiesAllowed': 'string',
     'isWitnessesAttending': 'string',
     'letterBundleDocuments': 'array<string>',
-    'listingLocation': 'struct<code:string,label:string>',
+    'listingLocation': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
     'multimediaDecisionForDisplay': 'string',
     'multimediaEvidence': 'string',
     'multimediaEvidenceDescription': 'string',
@@ -219,7 +219,7 @@ FtpaDecidedMandatoryTypes = {
     'listCaseHearingCentreAddress': 'string',
     'listCaseHearingDate': 'string',
     'listCaseHearingLength': 'string',
-    'oocAddressLine1': 'string',
+    # 'oocAddressLine1': 'string',
     'scheduleOfIssuesAgreement': 'string',
     'scheduleOfIssuesDisagreementDescription': 'string',
     'stitchingStatus': 'string',
@@ -232,8 +232,8 @@ FtpaDecidedMandatoryTypes = {
     'finalDecisionAndReasonsDocuments': 'array<string>',
     'ftpaApplicationDeadline': 'string',
     'isDecisionAllowed': 'string',
-    'oocAddressLine2': 'string',
-    'oocAddressLine3': 'string',
+    # 'oocAddressLine2': 'string',
+    # 'oocAddressLine3': 'string',
     # 'oocAddressLine4': 'string',
     # 'oocLrCountryGovUkAdminJ': 'string',
     'sendDecisionsAndReasonsDate': 'string',

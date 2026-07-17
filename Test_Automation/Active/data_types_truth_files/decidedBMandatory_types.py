@@ -18,7 +18,7 @@ DecidedBMandatoryTypes = {
     'appellantHasFixedAddressAdminJ': 'string',
     'appellantInDetention': 'string',
     'appellantInUk': 'string',
-    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string>>>,partyName:string,roleOnCase:string>',
+    'appellantLevelFlags': 'struct<details:array<struct<id:string,value:struct<dateTimeCreated:string,flagCode:string,hearingRelevant:string,name:string,path:array<struct<id:string,value:string>>,status:string,subTypeKey:string,subTypeValue:string>>>,partyName:string,roleOnCase:string>',
     'appellantNameForDisplay': 'string',
     'appellantNationalities': 'array<struct<id:string,value:struct<code:string>>>',
     'appellantNationalitiesDescription': 'string',
@@ -51,7 +51,7 @@ DecidedBMandatoryTypes = {
     'feeVersion': 'string',
     'feeWithHearing': 'string',
     'feeWithoutHearing': 'string',
-    'gwfReferenceNumber': 'string',
+    # 'gwfReferenceNumber': 'string',
     'hasAddedLegalRepDetails': 'string',
     'hasOtherAppeals': 'string',
     'hasServiceRequestAlready': 'string',
@@ -129,7 +129,7 @@ DecidedBMandatoryTypes = {
     'legalRepOrganisationPartyId': 'string', #not mandatory
     'appellantFullName': 'string',
     'caseManagementCategory': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>', #not mandatory
-    'exceptionalCircumstances': 'string', #not mandatory
+    # 'exceptionalCircumstances': 'string', #not mandatory
     # 'helpWithFeesReferenceNumber': 'string', #not mandatory
     'localAuthorityPolicy': 'struct<OrgPolicyCaseAssignedRole:string>', #not mandatory
     'recordedOutOfTimeDecision': 'string', #not mandatory
@@ -148,7 +148,7 @@ DecidedBMandatoryTypes = {
     # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'listingLength': 'struct<hours:bigint,minutes:bigint>',
-    'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
+    # 'appellantInterpreterSignLanguage': 'struct<languageManualEntry:array<string>,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'appellantInterpreterSpokenLanguage': 'struct<languageManualEntry:array<string>,languageManualEntryDescription:string,languageRefData:struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>>',
     'amendResponseActionAvailable': 'string',
     'appealResponseAvailable': 'string',
@@ -156,7 +156,7 @@ DecidedBMandatoryTypes = {
     'appellantInterpreterLanguageCategory': 'array<string>',
     'currentHearingDetailsVisible': 'string',
     'datesToAvoidYesNo': 'string',
-    'hearingChannel': 'struct<code:string,label:string>',
+    'hearingChannel': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
     'hearingDocuments': 'array<string>',
     'hearingRequirements': 'array<string>',
     'inCameraCourt': 'string',
@@ -181,7 +181,7 @@ DecidedBMandatoryTypes = {
     'isVulnerabilitiesAllowed': 'string',
     'isWitnessesAttending': 'string',
     'letterBundleDocuments': 'array<string>',
-    'listingLocation': 'struct<code:string,label:string>',
+    'listingLocation': 'struct<list_items:array<struct<code:string,label:string>>,value:struct<code:string,label:string>>',
     'multimediaDecisionForDisplay': 'string',
     'multimediaEvidence': 'string',
     'multimediaEvidenceDescription': 'string',

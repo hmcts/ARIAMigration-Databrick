@@ -52,9 +52,19 @@ def _log_retry(retry_state):
 
 def _is_retryable(result):
     RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+    TRANSIENT_ERROR_TYPES = {
+        # requests (IDAM/S2S/CDAM HTTP calls)
+        "ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+        "ChunkedEncodingError", "SSLError", "ProxyError", "EOFError",
+        # azure-storage-blob (document binary download)
+        "ServiceRequestError", "ServiceRequestTimeoutError",
+        "ServiceResponseError", "ServiceResponseTimeoutError",
+    }
     if not (isinstance(result, dict) and result.get("Status") == "ERROR"):
         return False
-    return result.get("StatusCode") in RETRYABLE_STATUS_CODES
+    if result.get("StatusCode") in RETRYABLE_STATUS_CODES:
+        return True
+    return result.get("StatusCode") is None and result.get("ErrorType") in TRANSIENT_ERROR_TYPES
 
 
 @app.function_name("eventhub_trigger")
@@ -161,6 +171,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                                 logger.warning(f"[IDEMPOTENCY][CDAM] Failed to delete blob for {caseNo}: {delete_error}")
 
                         result.pop("StatusCode", None)
+                        result.pop("ErrorType", None)
                         result_json = json.dumps(result)
 
                         try:

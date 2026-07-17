@@ -60,7 +60,7 @@ def start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_toke
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_case_creation_url}: {e}")
-        return None
+        return e
 
 
 def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
@@ -100,7 +100,7 @@ def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token,
 
     except Exception as e:
         print(f"❌ Network error while calling {validate_case_url}: {e}")
-        return None
+        return e
 
 
 def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
@@ -142,7 +142,7 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
 
     except Exception as e:
         print(f"❌ Network error while calling {submit_case_url}: {e}")
-        return None
+        return e
 
 
 def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
@@ -158,6 +158,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "State": state,
             "Status": "ERROR",
             "StatusCode": getattr(e, "status_code", None),
+            "ErrorType": type(e).__name__,
             "Error": f"failed to gather IDAM token: {e}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
         }
@@ -172,6 +173,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "State": state,
             "Status": "ERROR",
             "StatusCode": getattr(e, "status_code", None),
+            "ErrorType": type(e).__name__,
             "Error": f"failed to gather s2s token: {e}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
         }
@@ -209,8 +211,13 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     start_response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
     print(f"Started case creation = {_compact(start_response)}")
 
-    if start_response is None or start_response.status_code != 200:
-        if start_response is not None:
+    if start_response is None or isinstance(start_response, Exception) or start_response.status_code != 200:
+        error_type = None
+        if isinstance(start_response, Exception):
+            status_code = "N/A"
+            error_type = type(start_response).__name__
+            text = str(start_response)
+        elif start_response is not None:
             status_code = start_response.status_code
             text = _get_res_body_as_text(start_response)
         else:
@@ -224,7 +231,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": start_response.status_code if start_response is not None else None,
+            "StatusCode": start_response.status_code if start_response is not None and not isinstance(start_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case creation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
@@ -247,8 +255,13 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         except Exception:
             print(f"Unable to parse validate_case_response for case {caseNo}")
 
-    if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
-        if validate_case_response is not None:
+    if validate_case_response is None or isinstance(validate_case_response, Exception) or validate_case_response.status_code not in {201, 200}:
+        error_type = None
+        if isinstance(validate_case_response, Exception):
+            status_code = "N/A"
+            error_type = type(validate_case_response).__name__
+            text = str(validate_case_response)
+        elif validate_case_response is not None:
             status_code = validate_case_response.status_code
             text = _get_res_body_as_text(validate_case_response)
         else:
@@ -262,7 +275,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": validate_case_response.status_code if validate_case_response is not None else None,
+            "StatusCode": validate_case_response.status_code if validate_case_response is not None and not isinstance(validate_case_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case validation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "StartResponse": start_response_data
@@ -284,8 +298,13 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         except Exception:
             print(f"Unable to parse submit_case_response for case {caseNo}")
 
-    if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
-        if submit_case_response is not None:
+    if submit_case_response is None or isinstance(submit_case_response, Exception) or submit_case_response.status_code not in {201, 200}:
+        error_type = None
+        if isinstance(submit_case_response, Exception):
+            status_code = "N/A"
+            error_type = type(submit_case_response).__name__
+            text = str(submit_case_response)
+        elif submit_case_response is not None:
             status_code = submit_case_response.status_code
             text = _get_res_body_as_text(submit_case_response)
         else:
@@ -299,7 +318,8 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": submit_case_response.status_code if submit_case_response is not None else None,
+            "StatusCode": submit_case_response.status_code if submit_case_response is not None and not isinstance(submit_case_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case submission failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "StartResponse": start_response_data

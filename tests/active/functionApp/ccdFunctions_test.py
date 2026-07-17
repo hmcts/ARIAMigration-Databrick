@@ -330,6 +330,33 @@ class TestProcessCaseTokenFailures:
         assert result["Status"] == "ERROR"
         assert result["StatusCode"] is None
         assert "IDAM" in result["Error"]
+        assert result["ErrorType"] == "Exception"
+
+    def test_idam_token_connection_error_records_transient_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.side_effect = requests.exceptions.ConnectionError("refused")
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-007B",
+                payloadData={},
+                runId="run-7b",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ConnectionError"
 
     def test_s2s_token_failure_returns_error(self):
         with (
@@ -355,6 +382,141 @@ class TestProcessCaseTokenFailures:
         assert result["Status"] == "ERROR"
         assert result["StatusCode"] is None
         assert "s2s" in result["Error"]
+        assert result["ErrorType"] == "Exception"
+
+
+class TestProcessCaseTransientNetworkErrors:
+    """process_case records the exception's class name as ErrorType when a
+    downstream call (start/validate/submit) fails with a network-level exception
+    rather than returning an HTTP response."""
+
+    def test_start_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=requests.exceptions.ConnectTimeout("timed out")),
+            patch(PATCH_VALIDATE) as mock_validate,
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-011",
+                payloadData={},
+                runId="run-11",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ConnectTimeout"
+        assert "Case creation failed" in result["Error"]
+        mock_validate.assert_not_called()
+        mock_submit.assert_not_called()
+
+    def test_validate_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=requests.exceptions.ReadTimeout("read timed out")),
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-012",
+                payloadData={"appealReferenceNumber": "HU/012/2024"},
+                runId="run-12",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ReadTimeout"
+        assert "Case validation failed" in result["Error"]
+        mock_submit.assert_not_called()
+
+    def test_submit_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
+            patch(PATCH_SUBMIT, return_value=requests.exceptions.ChunkedEncodingError("truncated")),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-013",
+                payloadData={"appealReferenceNumber": "HU/013/2024"},
+                runId="run-13",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ChunkedEncodingError"
+        assert "Case submission failed" in result["Error"]
+
+    def test_start_case_non_transient_exception_has_no_status_code_but_records_type(self):
+        """A non-network exception (e.g. a bug) still records ErrorType; the retry
+        decision in function_app._is_retryable is what filters it out, not process_case."""
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=ValueError("unexpected shape")),
+            patch(PATCH_VALIDATE) as mock_validate,
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-014",
+                payloadData={},
+                runId="run-14",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ValueError"
+        mock_validate.assert_not_called()
+        mock_submit.assert_not_called()
 
 
 class TestProcessCaseInvalidEnv:

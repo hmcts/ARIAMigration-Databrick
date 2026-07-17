@@ -123,10 +123,10 @@ def test_upload_document_uses_provided_content_type(mock_post):
 
 
 @patch("requests.post", side_effect=Exception("Connection refused"))
-def test_upload_document_returns_none_on_network_error(mock_post):
+def test_upload_document_returns_exception_on_network_error(mock_post):
     response = upload_document(**UPLOAD_COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 @patch("requests.post")
@@ -179,6 +179,7 @@ def test_process_event_idam_token_failure_returns_error():
     assert "IDAM" in result["Error"] or "s2s" in result["Error"]
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
     assert result["RunID"] == PROCESS_DEFAULTS["runId"]
+    assert result["ErrorType"] == "Exception"
 
 
 def test_process_event_s2s_token_failure_returns_error():
@@ -192,6 +193,7 @@ def test_process_event_s2s_token_failure_returns_error():
 
     assert result["Status"] == "ERROR"
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
+    assert result["ErrorType"] == "Exception"
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +230,21 @@ def test_process_event_blob_read_failure_returns_error():
     assert result["Status"] == "ERROR"
     assert "blob" in result["Error"].lower() or "Failed" in result["Error"]
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
+    assert result["ErrorType"] == "Exception"
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+def test_process_event_blob_read_transient_error_records_error_type():
+    from azure.core.exceptions import ServiceRequestError
+
+    with patch(f"{MODULE}.BlobServiceClient") as mock_blob_cls:
+        mock_blob_cls.side_effect = ServiceRequestError("connection reset")
+
+        result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert result["ErrorType"] == "ServiceRequestError"
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +260,20 @@ def test_process_event_upload_returns_none_returns_error(mock_upload, mock_blob_
 
     assert result["Status"] == "ERROR"
     assert "No response" in result["Error"]
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+@patch(f"{MODULE}.upload_document")
+def test_process_event_upload_network_exception_records_error_type(mock_upload, mock_blob_client):
+    import requests
+
+    mock_upload.return_value = requests.exceptions.ConnectionError("refused")
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert result["ErrorType"] == "ConnectionError"
 
 
 @pytest.mark.usefixtures("mock_token_managers")

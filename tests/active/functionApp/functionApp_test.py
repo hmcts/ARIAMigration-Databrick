@@ -82,8 +82,9 @@ def test_start_case_network_failure(mock_get):
         }
     )
 
-    # The function should return None on network failure
-    assert response is None
+    # The function should return the exception on network failure so the
+    # caller can inspect its type for transient-retry decisions.
+    assert isinstance(response, Exception)
 
 
 @patch("requests.post")
@@ -151,7 +152,7 @@ def test_validate_case_failure(mock_post):
         },
         json=ANY
     )
-    validate_case_response is None
+    assert isinstance(validate_case_response, Exception)
 
 
 @patch("requests.post")
@@ -225,7 +226,7 @@ def test_submit_case_failure(mock_post):
         json=ANY
     )
 
-    assert submit_response is None
+    assert isinstance(submit_response, Exception)
 
 
 def mock_response(status_code, json_data=None, text=""):
@@ -650,6 +651,24 @@ def test_is_retryable_false_for_non_dict_result():
     assert _is_retryable(None) is False
 
 
+def test_is_retryable_true_for_transient_error_types_with_missing_status_code():
+    for error_type in ("ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+                        "ChunkedEncodingError", "SSLError", "ProxyError", "EOFError"):
+        result = {"Status": "ERROR", "StatusCode": None, "ErrorType": error_type}
+        assert _is_retryable(result) is True, f"Expected retryable for ErrorType {error_type}"
+
+
+def test_is_retryable_false_for_non_transient_error_type_with_missing_status_code():
+    result = {"Status": "ERROR", "StatusCode": None, "ErrorType": "InvalidSchema"}
+    assert _is_retryable(result) is False
+
+
+def test_is_retryable_false_when_error_type_present_but_status_code_is_set():
+    """A real (non-retryable) StatusCode wins even if ErrorType happens to be set."""
+    result = {"Status": "ERROR", "StatusCode": 422, "ErrorType": "ConnectionError"}
+    assert _is_retryable(result) is False
+
+
 # ---------------------------------------------------------------------------
 # StatusCode stripping before event hub publish
 # ---------------------------------------------------------------------------
@@ -681,6 +700,63 @@ def test_status_code_stripped_from_event_hub_payload(
     mocks["batch"].add.assert_called_once()
     published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
     assert "StatusCode" not in published_payload
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_error_type_stripped_from_event_hub_payload(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer):
+    """ErrorType is an internal routing field and must not appear in the published event."""
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "ERROR",
+        "StatusCode": 400,
+        "ErrorType": "InvalidSchema",
+        "CaseNo": "CASE_ET",
+        "Error": "bad request",
+    }
+    mock_credential.return_value = _async_context_mock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_ET", "run_et", "paymentPending", {"key": "val"})]))
+
+    mocks["batch"].add.assert_called_once()
+    published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert "ErrorType" not in published_payload
+
+
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.EventHubProducerClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.BlobServiceClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.SecretClient")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.DefaultAzureCredential")
+@patch("AzureFunctions.ACTIVE.active_ccd.function_app.process_case")
+def test_transient_network_error_is_retried_3_times(
+        mock_process_case, mock_credential, mock_secret_client,
+        mock_blob_service, mock_eh_producer, mock_wait_exp):
+    """A transient ErrorType with no StatusCode is retried the same as a retryable status code."""
+    from tenacity import wait_none
+    mock_wait_exp.return_value = wait_none()
+
+    mocks = _build_trigger_mocks()
+    mock_process_case.return_value = {
+        "Status": "ERROR", "StatusCode": None, "ErrorType": "ConnectionError",
+        "CaseNo": "CASE_CONN", "Error": "network unreachable",
+    }
+    mock_credential.return_value = _async_context_mock()
+    mock_secret_client.return_value = mocks["kv"]
+    mock_blob_service.return_value = mocks["blob_svc"]
+    mock_eh_producer.from_connection_string.return_value = mocks["producer"]
+
+    asyncio.run(eventhub_trigger_active([_make_event("CASE_CONN", "run_conn", "paymentPending", {"key": "val"})]))
+
+    assert mock_process_case.call_count == 3
 
 
 @patch("AzureFunctions.ACTIVE.active_ccd.function_app.wait_exponential")

@@ -509,6 +509,23 @@ def test_cl_is_retryable_false_for_non_dict_result():
     assert _is_retryable(None) is False
 
 
+def test_cl_is_retryable_true_for_transient_error_types_with_missing_status_code():
+    for error_type in ("ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+                        "ChunkedEncodingError", "SSLError", "ProxyError", "EOFError"):
+        result = {"Status": "ERROR", "StatusCode": None, "ErrorType": error_type}
+        assert _is_retryable(result) is True, f"Expected retryable for ErrorType {error_type}"
+
+
+def test_cl_is_retryable_false_for_non_transient_error_type_with_missing_status_code():
+    result = {"Status": "ERROR", "StatusCode": None, "ErrorType": "InvalidSchema"}
+    assert _is_retryable(result) is False
+
+
+def test_cl_is_retryable_false_when_error_type_present_but_status_code_is_set():
+    result = {"Status": "ERROR", "StatusCode": 422, "ErrorType": "ConnectionError"}
+    assert _is_retryable(result) is False
+
+
 # ---------------------------------------------------------------------------
 # Retry integration tests
 # ---------------------------------------------------------------------------
@@ -557,3 +574,37 @@ def test_cl_retryable_error_stops_retrying_on_success():
 
     assert to_thread.call_count == 2
     mocks["idempotency_blob"].delete_blob.assert_not_called()
+
+
+def test_cl_transient_network_error_is_retried_3_times():
+    """A transient ErrorType with no StatusCode is retried the same as a retryable status code."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={
+        "Status": "ERROR", "StatusCode": None, "ErrorType": "ConnectionError",
+        "Error": "network unreachable",
+    })
+    events = [make_mock_event({"RunID": "run-conn", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert to_thread.call_count == 3
+
+
+def test_cl_error_type_stripped_from_event_hub_payload():
+    """ErrorType is an internal routing field and must not appear in the published event."""
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={
+        "Status": "ERROR", "StatusCode": 400, "ErrorType": "InvalidSchema",
+        "CCDCaseReferenceNumber": "1234567890123456", "Error": "bad request",
+    })
+    events = [make_mock_event({"RunID": "run-et", "CaseLinkPayload": []})]
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    mocks["batch"].add.assert_called_once()
+    published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert "ErrorType" not in published_payload

@@ -190,7 +190,7 @@ class S2S_Manager():
                 }
             )
         except Exception as e:
-            raise EOFError(f"Error reuesting service to service token: {e}")
+            raise TokenError(f"Error requesting service to service token: {e}", status_code=503)
         # Ensure you get a 200 response else raise an error
         if s2s_response.status_code != 200:
             raise TokenError(f"Error requesting service to service token: {s2s_response.status_code} {s2s_response.text}", status_code=s2s_response.status_code)

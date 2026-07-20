@@ -453,80 +453,63 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))
     )
 
-    raw_minutes = F.col("TimeEstimate").cast("int") % 60
-    base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
+    # raw_minutes = F.col("TimeEstimate").cast("int") % 60
+    # base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
+
+    # rounded_minutes = (
+    #     F.when(raw_minutes == 0, F.lit(0))
+    #     .when(raw_minutes < 45, F.lit(30))
+    #     .otherwise(F.lit(0))
+    # )
+
+    # adjusted_hours = (
+    #     F.when(raw_minutes >= 45, base_hours + 1)
+    #     .otherwise(base_hours)
+    # )
+
+    time_estimate = F.col("TimeEstimate").cast("int")
+
+    raw_minutes = time_estimate % 60
+    base_hours = F.floor(time_estimate / 60)
 
     rounded_minutes = (
-        F.when(raw_minutes == 0, F.lit(0))
+        F.when(time_estimate == 0, F.lit(30))
+        .when(raw_minutes == 0, F.lit(0))    
         .when(raw_minutes < 45, F.lit(30))
         .otherwise(F.lit(0))
     )
 
     adjusted_hours = (
-        F.when(raw_minutes >= 45, base_hours + 1)
+        F.when(time_estimate == 0, F.lit(0))
+        .when(raw_minutes >= 45, base_hours + 1)
         .otherwise(base_hours)
     )
-
-    final_hours = (
-    F.when(adjusted_hours.isNull(), F.lit(0).cast("int"))
-    .otherwise(adjusted_hours)
-        )
-
-    final_minutes = (
-        F.when(rounded_minutes.isNull(), F.lit(30).cast("int"))
-        .otherwise(rounded_minutes)
-    )
-
-    final_minutes_corrected = (
-    F.when((final_hours == 0) & (final_minutes == 0), F.lit(30).cast("int"))
-    .otherwise(final_minutes)
-    )
-
+    
     content_df = silver_m3_filtered_casestatus.withColumn(
         "listingLength",
         F.create_map(
-            F.lit("hours"), final_hours,
-            F.lit("minutes"), final_minutes_corrected
-        )
-    ).select(
-        col("CaseNo").alias("CaseNo"),
-        col("listCaseHearingLength"),
-        col("listCaseHearingDate"),
-        col("listCaseHearingCentre"),
-        col("listCaseHearingCentreAddress"),
-        col("TimeEstimate"),
-        col("listingLength"),
-        col("listingLocation"),
-        col("HearingCentre"),
-        col("HearingDate"),
-        col("StartTime")
-    )
-    
-    # content_df = silver_m3_filtered_casestatus.withColumn(
-    #     "listingLength",
-    #     F.create_map(
-    #         F.lit("hours"),
-    #         F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
-    #         .otherwise(adjusted_hours).alias("hours"),
+            F.lit("hours"),
+            F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
+            .otherwise(adjusted_hours).alias("hours"),
 
-    #         F.lit("minutes"),
-    #         F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
-    #         .otherwise(rounded_minutes).alias("minutes"))
-    #     ).select(
-    #         col("CaseNo").alias("CaseNo"),
-    #         col("listCaseHearingLength"),
-    #         col("listCaseHearingDate"),
-    #         col("listCaseHearingCentre"),
-    #         col("listCaseHearingCentreAddress"),
-    #         col("TimeEstimate"),
-    #         col("listingLength"),
-    #         col("listingLocation"),
-    #         col("TimeEstimate"),
-    #         col("HearingCentre"),
-    #         col("TimeEstimate"),
-    #         col("HearingDate"),
-    #         col("StartTime")
-    #     )
+            F.lit("minutes"),
+            F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
+            .otherwise(rounded_minutes).alias("minutes"))
+        ).select(
+            col("CaseNo").alias("CaseNo"),
+            col("listCaseHearingLength"),
+            col("listCaseHearingDate"),
+            col("listCaseHearingCentre"),
+            col("listCaseHearingCentreAddress"),
+            col("TimeEstimate"),
+            col("listingLength"),
+            col("listingLocation"),
+            col("TimeEstimate"),
+            col("HearingCentre"),
+            col("TimeEstimate"),
+            col("HearingDate"),
+            col("StartTime")
+        )
 
     hearingChannelListItems = array(
         struct(lit("INTER").cast("string").alias("code"), lit("In Person").cast("string").alias("label")),

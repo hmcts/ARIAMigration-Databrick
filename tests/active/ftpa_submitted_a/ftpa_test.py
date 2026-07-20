@@ -183,7 +183,7 @@ def test_ftpaList(spark, ftpa_outputs):
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
             )
         )
     ]
@@ -213,7 +213,7 @@ def test_ftpaList(spark, ftpa_outputs):
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
             )
         )
     ]

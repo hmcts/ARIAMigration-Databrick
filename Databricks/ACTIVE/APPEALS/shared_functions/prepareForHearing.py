@@ -453,17 +453,21 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))
     )
 
-    raw_minutes = F.col("TimeEstimate").cast("int") % 60
-    base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
+    time_estimate = F.col("TimeEstimate").cast("int")
+
+    raw_minutes = time_estimate % 60
+    base_hours = F.floor(time_estimate / 60)
 
     rounded_minutes = (
-        F.when(raw_minutes == 0, F.lit(0))
+        F.when(time_estimate == 0, F.lit(30))
+        .when(raw_minutes == 0, F.lit(0))    
         .when(raw_minutes < 45, F.lit(30))
         .otherwise(F.lit(0))
     )
 
     adjusted_hours = (
-        F.when(raw_minutes >= 45, base_hours + 1)
+        F.when(time_estimate == 0, F.lit(0))
+        .when(raw_minutes >= 45, base_hours + 1)
         .otherwise(base_hours)
     )
     
@@ -483,7 +487,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             col("listCaseHearingDate"),
             col("listCaseHearingCentre"),
             col("listCaseHearingCentreAddress"),
-            # col("TimeEstimate"),
+            col("TimeEstimate"),
             col("listingLength"),
             col("listingLocation"),
             col("TimeEstimate"),
@@ -518,13 +522,6 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 hearingChannelListItems.alias("list_items")
             )
         )
-        .withColumn(
-        "listingLength",
-                F.when(
-                    col("listingLength").isNull(),
-                    F.create_map(F.lit("hours"), F.lit(0), F.lit("minutes"), F.lit(30))
-                ).otherwise(col("listingLength"))
-            )
     .withColumn("witnessDetails",lit([]).cast("array<string>"))
     .withColumn("witness1InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
     .withColumn("witness2InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
@@ -622,15 +619,8 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
                 col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
                 lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
-
-                # listingLocation
-                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
-                # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
-                # col("hd.listingLocation"),
-                # lit("Yes").alias("listingLocation_Transformed")
         )
     )
-
 
     return df_hearingDetails, df_audit_hearingDetails
 

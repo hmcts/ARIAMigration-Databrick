@@ -453,20 +453,6 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         .withColumn("listCaseHearingCentreAddress", F.col("location.listCaseHearingCentreAddress"))
     )
 
-    # raw_minutes = F.col("TimeEstimate").cast("int") % 60
-    # base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
-
-    # rounded_minutes = (
-    #     F.when(raw_minutes == 0, F.lit(0))
-    #     .when(raw_minutes < 45, F.lit(30))
-    #     .otherwise(F.lit(0))
-    # )
-
-    # adjusted_hours = (
-    #     F.when(raw_minutes >= 45, base_hours + 1)
-    #     .otherwise(base_hours)
-    # )
-
     time_estimate = F.col("TimeEstimate").cast("int")
 
     raw_minutes = time_estimate % 60

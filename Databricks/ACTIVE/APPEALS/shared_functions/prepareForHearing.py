@@ -494,7 +494,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         col("listCaseHearingDate"),
         col("listCaseHearingCentre"),
         col("listCaseHearingCentreAddress"),
-        col("TimeEstimate"),
+        # col("TimeEstimate"),
         col("listingLength"),
         col("listingLocation"),
         col("HearingCentre"),
@@ -588,7 +588,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     col("listCaseHearingCentre"),
     col("listCaseHearingCentreAddress"),
     col("listingLength"),
-    col("TimeEstimate"),
+    # col("TimeEstimate"),
     col("hearingChannel"),
     col("witnessDetails"),
     col("listingLocation"),
@@ -615,60 +615,58 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     )
     )
 
-    # df_audit_hearingDetails = (
-    #     df_hearingDetails.alias("hd")
-    #     .join(silver_m1.alias("m1"), ["CaseNo"], "left")
-    #     .join(content_df.alias("m3"), ["CaseNo"], "left")
-    #     .join(bronze_listing_location.alias("location"),on=col("m3.HearingCentre") == col("location.ListedCentre"), how="left")
-    #     .select(
-    #             "hd.CaseNo",
-    #             # listingLength
-    #             array(struct(lit("TimeEstimate"))).alias("listingLength_inputFields"),
-    #             array(struct(col("TimeEstimate"))).alias("listingLength_inputValues"),
-    #             col("hd.listingLength"),
-    #             lit("Yes").alias("listingLength_Transformed"),
+    df_audit_hearingDetails = (
+        df_hearingDetails.alias("hd")
+        .join(silver_m1.alias("m1"), ["CaseNo"], "left")
+        .join(content_df.alias("m3"), ["CaseNo"], "left")
+        .join(bronze_listing_location.alias("location"),on=col("m3.HearingCentre") == col("location.ListedCentre"), how="left")
+        .select(
+                "hd.CaseNo",
+                # listingLength
+                array(struct(lit("TimeEstimate"))).alias("listingLength_inputFields"),
+                array(struct(col("TimeEstimate"))).alias("listingLength_inputValues"),
+                col("hd.listingLength"),
+                lit("Yes").alias("listingLength_Transformed"),
 
-    #             # hearingChannel
-    #             array(struct(lit("VisitVisaType"))).alias("hearingChannel_inputFields"),
-    #             array(struct(col("m1.VisitVisaType"))).alias("hearingChannel_inputValues"),
-    #             col("hd.hearingChannel"),
-    #             lit("Yes").alias("hearingChannel_Transformed"),
+                # hearingChannel
+                array(struct(lit("VisitVisaType"))).alias("hearingChannel_inputFields"),
+                array(struct(col("m1.VisitVisaType"))).alias("hearingChannel_inputValues"),
+                col("hd.hearingChannel"),
+                lit("Yes").alias("hearingChannel_Transformed"),
 
-    #             # listCaseHearingLength
-    #             array(struct(lit("CaseNo"),lit("TimeEstimate"))).alias("listCaseHearingLength_inputFields"),
-    #             array(struct(col("CaseNo"),col("TimeEstimate"))).alias("listCaseHearingLength_inputValues"),
-    #             col("hd.listCaseHearingLength").alias("listCaseHearingLength_value"),
-    #             lit("Yes").alias("listCaseHearingLength_Transformed"),
+                # listCaseHearingLength
+                array(struct(lit("CaseNo"),lit("TimeEstimate"))).alias("listCaseHearingLength_inputFields"),
+                array(struct(col("CaseNo"),col("TimeEstimate"))).alias("listCaseHearingLength_inputValues"),
+                col("hd.listCaseHearingLength").alias("listCaseHearingLength_value"),
+                lit("Yes").alias("listCaseHearingLength_Transformed"),
 
-    #             # listCaseHearingDate
-    #             array(struct(lit("CaseNo"),lit("HearingDate"),lit("StartTime"))).alias("listCaseHearingDate_inputFields"),
-    #             array(struct(col("CaseNo"),col("HearingDate"),col("StartTime"))).alias("listCaseHearingDate_inputValues"),
-    #             col("hd.listCaseHearingDate").alias("listCaseHearingDate_value"),
-    #             lit("Yes").alias("listCaseHearingDate_Transformed"),
+                # listCaseHearingDate
+                array(struct(lit("CaseNo"),lit("HearingDate"),lit("StartTime"))).alias("listCaseHearingDate_inputFields"),
+                array(struct(col("CaseNo"),col("HearingDate"),col("StartTime"))).alias("listCaseHearingDate_inputValues"),
+                col("hd.listCaseHearingDate").alias("listCaseHearingDate_value"),
+                lit("Yes").alias("listCaseHearingDate_Transformed"),
 
-    #             # listCaseHearingCentre
-    #             array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentre"))).alias("listCaseHearingCentre_inputFields"),
-    #             array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentre"))).alias("listCaseHearingCentre_inputValues"),
-    #             col("hd.listCaseHearingCentre").alias("listCaseHearingCentre_value"),
-    #             lit("Yes").alias("listCaseHearingCentre_Transformed"),
+                # listCaseHearingCentre
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentre"))).alias("listCaseHearingCentre_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentre"))).alias("listCaseHearingCentre_inputValues"),
+                col("hd.listCaseHearingCentre").alias("listCaseHearingCentre_value"),
+                lit("Yes").alias("listCaseHearingCentre_Transformed"),
 
-    #             # listCaseHearingCentreAddress
-    #             array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputFields"),
-    #             array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
-    #             col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
-    #             lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
+                # listCaseHearingCentreAddress
+                array(struct(lit("CaseNo"),lit("ListedCentre"),lit("HearingCentre"),lit("listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputFields"),
+                array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
+                col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
+                lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
 
-    #             # listingLocation
-    #             # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
-    #             # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
-    #             # col("hd.listingLocation"),
-    #             # lit("Yes").alias("listingLocation_Transformed")
-    #     )
-    # )
+                # listingLocation
+                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
+                # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
+                # col("hd.listingLocation"),
+                # lit("Yes").alias("listingLocation_Transformed")
+        )
+    )
 
-
-    # return df_hearingDetails, df_audit_hearingDetails
-    return df_hearingDetails
+    return df_hearingDetails, df_audit_hearingDetails
 
 ################################################################
 ##########              documents          ###########

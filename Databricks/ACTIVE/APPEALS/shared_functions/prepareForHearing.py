@@ -468,12 +468,12 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     )
 
     final_hours = (
-    F.when(col("TimeEstimate").isNull(), F.lit(0).cast("int"))
+    F.when(adjusted_hours.isNull(), F.lit(0).cast("int"))
     .otherwise(adjusted_hours)
         )
 
     final_minutes = (
-        F.when(col("TimeEstimate").isNull(), F.lit(30).cast("int"))
+        F.when(rounded_minutes.isNull(), F.lit(30).cast("int"))
         .otherwise(rounded_minutes)
     )
 
@@ -494,7 +494,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
         col("listCaseHearingDate"),
         col("listCaseHearingCentre"),
         col("listCaseHearingCentreAddress"),
-        # col("TimeEstimate"),
+        col("TimeEstimate"),
         col("listingLength"),
         col("listingLocation"),
         col("HearingCentre"),

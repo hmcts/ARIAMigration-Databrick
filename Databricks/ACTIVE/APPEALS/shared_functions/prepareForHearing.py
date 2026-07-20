@@ -536,13 +536,6 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 hearingChannelListItems.alias("list_items")
             )
         )
-        # .withColumn(
-        # "listingLength",
-        #         F.when(
-        #             col("listingLength").isNull(),
-        #             F.create_map(F.lit("hours"), F.lit(0), F.lit("minutes"), F.lit(30))
-        #         ).otherwise(col("listingLength"))
-        #     )
     .withColumn("witnessDetails",lit([]).cast("array<string>"))
     .withColumn("witness1InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
     .withColumn("witness2InterpreterSignLanguage", map_from_arrays(lit([]).cast("array<string>"), lit([]).cast("array<string>")).cast("map<string,string>"))
@@ -640,12 +633,6 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
                 array(struct(col("CaseNo"),col("location.ListedCentre"),col("HearingCentre"),col("location.listCaseHearingCentreAddress"))).alias("listCaseHearingCentreAddress_inputValues"),
                 col("hd.listCaseHearingCentreAddress").alias("listCaseHearingCentreAddress_value"),
                 lit("Yes").alias("listCaseHearingCentreAddress_Transformed"),
-
-                # listingLocation
-                # array(struct(lit("locationCode").alias("code"), lit("locationLabel").alias("label")).alias("listingLocation_inputFields")),
-                # array(struct(col("location.locationCode"), col("location.locationLabel"))).alias("listingLocation_inputValues"),
-                # col("hd.listingLocation"),
-                # lit("Yes").alias("listingLocation_Transformed")
         )
     )
 

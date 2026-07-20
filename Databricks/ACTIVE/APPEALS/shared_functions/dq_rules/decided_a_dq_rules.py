@@ -165,7 +165,7 @@ class decidedADQRules(DQRulesBase):
 
     def get_checks_ftpa(self, checks={}):
 
-        checks["valid_ftpaApplicationDeadline_values"] = ("""
+        checks["valid_ftpaApplicationDeadline"] = ("""
         (
             CASE
                 WHEN DecisionDate_ftpa_decideda IS NULL

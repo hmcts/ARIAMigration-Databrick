@@ -150,7 +150,7 @@ def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
             .withColumn(
                 "ftpaAppellantOutOfTimeExplanation",
                 when((col("Party") == 1) & (col("OutOfTime") == 1),
-                    lit("This is a migrated ARIA case. Please refer to the documents.")
+                    lit("This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.")
                 ).otherwise(None)
             )
 
@@ -168,7 +168,7 @@ def ftpa(silver_m1, silver_m2, silver_m3, silver_c):
             .withColumn(
                 "ftpaRespondentOutOfTimeExplanation",
                 when((col("Party") == 2) & (col("OutOfTime") == 1),
-                    lit("This is a migrated ARIA case. Please refer to the documents.")
+                    lit("This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.")
                 ).otherwise(None)
             )
 

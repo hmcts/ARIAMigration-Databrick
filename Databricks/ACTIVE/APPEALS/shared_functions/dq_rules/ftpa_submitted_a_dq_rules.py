@@ -285,7 +285,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantOutOfTimeExplanation"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaAppellantOutOfTimeExplanation IS NULL
             END
         )"""
@@ -308,7 +308,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentOutOfTimeExplanation"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaRespondentOutOfTimeExplanation IS NULL
             END
         )"""

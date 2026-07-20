@@ -183,7 +183,7 @@ def test_ftpaList(spark, ftpa_outputs):
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
             )
         )
     ]
@@ -213,7 +213,7 @@ def test_ftpaList(spark, ftpa_outputs):
                 ftpaGroundsDocuments=[],
                 ftpaEvidenceDocuments=[],
                 ftpaOutOfTimeDocuments=[],
-                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please refer to the documents.'
+                ftpaOutOfTimeExplanation='This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
             )
         )
     ]
@@ -241,7 +241,7 @@ def test_ftpaAppellantOutOfTimeExplanation(spark,ftpa_outputs):
     results = ftpa_outputs
 
     assert results["CASE005"]["ftpaAppellantOutOfTimeExplanation"] == None
-    assert results["CASE006"]["ftpaAppellantOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+    assert results["CASE006"]["ftpaAppellantOutOfTimeExplanation"] == "This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness."
     assert results["CASE007"]["ftpaAppellantOutOfTimeExplanation"] == None
     assert results["CASE010"]["ftpaAppellantOutOfTimeExplanation"] == None
 
@@ -272,5 +272,5 @@ def test_ftpaRespondentOutOfTimeExplanation(spark,ftpa_outputs):
     assert results["CASE005"]["ftpaRespondentOutOfTimeExplanation"] == None
     assert results["CASE006"]["ftpaRespondentOutOfTimeExplanation"] == None
     assert results["CASE007"]["ftpaRespondentOutOfTimeExplanation"] == None
-    assert results["CASE011"]["ftpaRespondentOutOfTimeExplanation"] == "This is a migrated ARIA case. Please refer to the documents."
+    assert results["CASE011"]["ftpaRespondentOutOfTimeExplanation"] == "This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness."
 

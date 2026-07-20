@@ -457,8 +457,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
     base_hours = F.floor(F.col("TimeEstimate").cast("int") / 60)
 
     rounded_minutes = (
-        F.when(raw_minutes == 0, F.lit(0))
-        .when(raw_minutes < 45, F.lit(30))
+        F.when(raw_minutes < 45, F.lit(30))
         .otherwise(F.lit(0))
     )
 

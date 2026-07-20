@@ -490,9 +490,7 @@ def hearingDetails(silver_m1,silver_m3, bronze_listing_location):
             col("TimeEstimate"),
             col("listingLength"),
             col("listingLocation"),
-            col("TimeEstimate"),
             col("HearingCentre"),
-            col("TimeEstimate"),
             col("HearingDate"),
             col("StartTime")
         )

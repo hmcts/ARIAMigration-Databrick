@@ -195,8 +195,6 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         result.pop("ErrorType", None)
                         result_json = json.dumps(result)
 
-                        # Send immediately so a computed result is never lost
-                        # sitting in an in-memory batch that fails to flush.
                         await AsyncRetrying(
                             stop=stop_after_attempt(3),
                             wait=wait_exponential(multiplier=10, min=10, max=20),

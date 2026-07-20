@@ -1,10 +1,6 @@
 import json
 import requests
 from datetime import datetime, timezone
-try:
-    from .retry_decorator import retry_on_result
-except ImportError:
-    from retry_decorator import retry_on_result
 
 
 def _compact(value) -> str:
@@ -56,7 +52,7 @@ def get_case_details(ccd_base_url, uid, jid, ctid, cid, idam_token, s2s_token):
         return response
     except Exception as e:
         print(f"❌ Network error while calling {get_case_url}: {e}")
-        return None
+        return e
 
 
 def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_token):
@@ -75,7 +71,7 @@ def start_case_event(ccd_base_url, uid, jid, ctid, cid, etid, idam_token, s2s_to
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_event_url}: {e}")
-        return None
+        return e
 
 
 def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadData, idam_token, s2s_token):
@@ -112,7 +108,7 @@ def validate_case(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadD
 
     except Exception as e:
         print(f"❌ Network error while calling {validate_case_url}: {e}")
-        return None
+        return e
 
 
 def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payloadData, idam_token, s2s_token):
@@ -151,15 +147,9 @@ def submit_case_event(ccd_base_url, uid, jid, ctid, cid, etid, event_token, payl
 
     except Exception as e:
         print(f"❌ Network error while calling {submit_event_url}: {e}")
-        return None
+        return e
 
 
-@retry_on_result(
-    max_retries=2,
-    base_delay=30,
-    max_delay=60,
-    retry_on=lambda r: isinstance(r, dict) and r.get("Status") == "ERROR",
-)
 def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overwrite=False):
     print(f"Starting processing case for {ccdReference}")
 
@@ -175,6 +165,8 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
+            "ErrorType": type(e).__name__,
             "Error": f"failed to gather IDAM token: {e}"
         }
         return result
@@ -189,6 +181,8 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": getattr(e, "status_code", None),
+            "ErrorType": type(e).__name__,
             "Error": f"failed to gather s2s token: {e}"
         }
         return result
@@ -208,7 +202,17 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
         print(f"URL for {urls}")
 
     except KeyError:
-        raise ValueError("Invalid environment")
+        result = {
+            "RunID": runId,
+            "CCDCaseReferenceNumber": ccdReference,
+            "CaseLinkCount": 0,
+            "StartDateTime": startDateTime,
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "Status": "ERROR",
+            "StatusCode": None,
+            "Error": f"Invalid environment: {env}"
+        }
+        return result
 
     # # Not yet required. No issue with duplicate linking events at the moment.
     # # compare existing case link details if not overwriting
@@ -230,10 +234,15 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
     # start case creation
     print("Starting case event")
     start_response = start_case_event(ccd_base_url, uid, jid, ctid, ccdReference, etid, idam_token, s2s_token)
-    print(f"Start response for case {ccdReference}: {start_response.status_code if start_response is not None else 'None'}")
+    print(f"Start response for case {ccdReference}: {start_response.status_code if start_response is not None and not isinstance(start_response, Exception) else start_response}")
 
-    if start_response is None or start_response.status_code != 200:
-        if start_response is not None:
+    if start_response is None or isinstance(start_response, Exception) or start_response.status_code != 200:
+        error_type = None
+        if isinstance(start_response, Exception):
+            status_code = "N/A"
+            error_type = type(start_response).__name__
+            text = str(start_response)
+        elif start_response is not None:
             status_code = start_response.status_code
             text = _get_res_body_as_text(start_response)
         else:
@@ -249,6 +258,8 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": start_response.status_code if start_response is not None and not isinstance(start_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case link event failed: {status_code} - {text}"
         }
         return result
@@ -269,8 +280,13 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
         except Exception:
             print(f"Unable to parse validate_case_response for case {ccdReference}")
 
-    if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
-        if validate_case_response is not None:
+    if validate_case_response is None or isinstance(validate_case_response, Exception) or validate_case_response.status_code not in {201, 200}:
+        error_type = None
+        if isinstance(validate_case_response, Exception):
+            status_code = "N/A"
+            error_type = type(validate_case_response).__name__
+            text = str(validate_case_response)
+        elif validate_case_response is not None:
             status_code = validate_case_response.status_code
             text = _get_res_body_as_text(validate_case_response)
         else:
@@ -286,6 +302,8 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": validate_case_response.status_code if validate_case_response is not None and not isinstance(validate_case_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case link validation failed: {status_code} - {text}",
         }
         return result
@@ -305,8 +323,13 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
         except Exception:
             print(f"Unable to parse submit_case_response for case {ccdReference}")
 
-    if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
-        if submit_case_response is not None:
+    if submit_case_response is None or isinstance(submit_case_response, Exception) or submit_case_response.status_code not in {201, 200}:
+        error_type = None
+        if isinstance(submit_case_response, Exception):
+            status_code = "N/A"
+            error_type = type(submit_case_response).__name__
+            text = str(submit_case_response)
+        elif submit_case_response is not None:
             status_code = submit_case_response.status_code
             text = _get_res_body_as_text(submit_case_response)
         else:
@@ -322,21 +345,31 @@ def process_event(env, ccdReference, runId, caseLinkPayload, PR_REFERENCE, overw
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
+            "StatusCode": submit_case_response.status_code if submit_case_response is not None and not isinstance(submit_case_response, Exception) else None,
+            "ErrorType": error_type,
             "Error": f"Case link submission failed: {status_code} - {text}",
         }
 
         return result
 
     else:
+        try:
+            submit_json = submit_case_response.json()
+            case_link_count = len((submit_json.get("case_data") or {}).get("caseLinks", []))
+        except Exception as parse_error:
+            case_link_count = 0
+            print(f"Unable to parse case link submission response due to: {parse_error}")
+
         result = {
             "RunID": runId,
             "CCDCaseReferenceNumber": ccdReference,
-            "CaseLinkCount": len((submit_case_response.json().get("case_data") or {}).get("caseLinks", [])),
+            "CaseLinkCount": case_link_count,
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "SUCCESS",
+            "StatusCode": submit_case_response.status_code,
             "Error": None
         }
 
-        print(f"✅ Case {ccdReference} submitted successfully with CCD Case ID: {submit_case_response.json()['id']}")
+        print(f"✅ Case {ccdReference} submitted successfully wuth case link count of: {case_link_count}")
         return result

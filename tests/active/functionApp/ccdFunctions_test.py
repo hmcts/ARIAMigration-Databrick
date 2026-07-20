@@ -2,14 +2,6 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_ccd.retry_decorator.time.sleep"
-
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    with patch(SLEEP_PATH):
-        yield
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -80,6 +72,7 @@ class TestProcessCaseSuccess:
 
         assert result["Status"] == "SUCCESS"
         assert result["CCDCaseID"] == SUBMIT_CASE_ID
+        assert result["StatusCode"] == 201
         assert json.loads(result["SuccessResponse"]) == {"id": SUBMIT_CASE_ID, "case_data": SUBMIT_CASE_DATA}
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
 
@@ -107,9 +100,44 @@ class TestProcessCaseSuccess:
                 PR_REFERENCE="pr-123",
             )
 
-        for key in ("RunID", "CaseNo", "State", "Status", "Error", "EndDateTime", "CCDCaseID", "SuccessResponse", "StartResponse"):
+        for key in ("RunID", "CaseNo", "State", "Status", "StatusCode", "Error", "EndDateTime", "CCDCaseID", "SuccessResponse", "StartResponse"):
             assert key in result, f"Missing key: {key}"
         assert result["Error"] is None
+
+
+class TestProcessCaseSuccessMalformedJson:
+    """process_case degrades gracefully when a 2xx submit response has an unparsable body."""
+
+    def test_success_with_unparsable_json_body(self):
+        bad_submit_response = _make_response(201, text="not json")
+        bad_submit_response.json.side_effect = ValueError("Expecting value")
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S_MGR) as mock_s2s_mgr,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
+            patch(PATCH_SUBMIT, return_value=bad_submit_response),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s_mgr.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-001",
+                payloadData={"appealReferenceNumber": "HU/001/2024"},
+                runId="run-1",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "SUCCESS"
+        assert result["StatusCode"] == 201
+        assert "Unable to parse CCDCaseID" in result["CCDCaseID"]
+        assert result["SuccessResponse"] == "not json"
 
 
 class TestProcessCaseValidationFailure:
@@ -141,6 +169,7 @@ class TestProcessCaseValidationFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 422
         assert "Case validation failed" in result["Error"]
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
         mock_submit.assert_not_called()
@@ -169,6 +198,7 @@ class TestProcessCaseValidationFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "Case validation failed" in result["Error"]
 
 
@@ -201,6 +231,7 @@ class TestProcessCaseSubmitFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 500
         assert "Case submission failed" in result["Error"]
         assert json.loads(result["StartResponse"]) == START_TOKEN_DATA
         assert "SuccessResponse" not in result
@@ -236,6 +267,7 @@ class TestProcessCaseStartFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] == 503
         assert "Case creation failed" in result["Error"]
         assert "StartResponse" not in result
         mock_validate.assert_not_called()
@@ -266,6 +298,7 @@ class TestProcessCaseStartFailure:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "No response from API" in result["Error"]
         mock_validate.assert_not_called()
         mock_submit.assert_not_called()
@@ -295,7 +328,35 @@ class TestProcessCaseTokenFailures:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "IDAM" in result["Error"]
+        assert result["ErrorType"] == "Exception"
+
+    def test_idam_token_connection_error_records_transient_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.side_effect = requests.exceptions.ConnectionError("refused")
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-007B",
+                payloadData={},
+                runId="run-7b",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ConnectionError"
 
     def test_s2s_token_failure_returns_error(self):
         with (
@@ -319,13 +380,149 @@ class TestProcessCaseTokenFailures:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "s2s" in result["Error"]
+        assert result["ErrorType"] == "Exception"
+
+
+class TestProcessCaseTransientNetworkErrors:
+    """process_case records the exception's class name as ErrorType when a
+    downstream call (start/validate/submit) fails with a network-level exception
+    rather than returning an HTTP response."""
+
+    def test_start_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=requests.exceptions.ConnectTimeout("timed out")),
+            patch(PATCH_VALIDATE) as mock_validate,
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-011",
+                payloadData={},
+                runId="run-11",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ConnectTimeout"
+        assert "Case creation failed" in result["Error"]
+        mock_validate.assert_not_called()
+        mock_submit.assert_not_called()
+
+    def test_validate_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=requests.exceptions.ReadTimeout("read timed out")),
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-012",
+                payloadData={"appealReferenceNumber": "HU/012/2024"},
+                runId="run-12",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ReadTimeout"
+        assert "Case validation failed" in result["Error"]
+        mock_submit.assert_not_called()
+
+    def test_submit_case_network_exception_records_error_type(self):
+        import requests
+
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=START_RESPONSE),
+            patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
+            patch(PATCH_SUBMIT, return_value=requests.exceptions.ChunkedEncodingError("truncated")),
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-013",
+                payloadData={"appealReferenceNumber": "HU/013/2024"},
+                runId="run-13",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ChunkedEncodingError"
+        assert "Case submission failed" in result["Error"]
+
+    def test_start_case_non_transient_exception_has_no_status_code_but_records_type(self):
+        """A non-network exception (e.g. a bug) still records ErrorType; the retry
+        decision in function_app._is_retryable is what filters it out, not process_case."""
+        with (
+            patch(PATCH_IDAM),
+            patch(PATCH_S2S),
+            patch(PATCH_S2S_MGR) as mock_s2s,
+            patch(PATCH_START, return_value=ValueError("unexpected shape")),
+            patch(PATCH_VALIDATE) as mock_validate,
+            patch(PATCH_SUBMIT) as mock_submit,
+            patch(PATCH_IDAM_MGR) as mock_idam_mgr,
+        ):
+            mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
+            mock_s2s.get_token.return_value = "s2s-token"
+
+            from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
+
+            result = process_case(
+                env="sbox",
+                caseNo="CASE-014",
+                payloadData={},
+                runId="run-14",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ValueError"
+        mock_validate.assert_not_called()
+        mock_submit.assert_not_called()
 
 
 class TestProcessCaseInvalidEnv:
-    """process_case raises ValueError for unknown environments."""
+    """process_case returns an ERROR result for unknown environments."""
 
-    def test_invalid_env_raises_value_error(self):
+    def test_invalid_env_returns_error_result(self):
         with (
             patch(PATCH_IDAM),
             patch(PATCH_S2S),
@@ -337,15 +534,18 @@ class TestProcessCaseInvalidEnv:
 
             from AzureFunctions.ACTIVE.active_ccd.ccdFunctions import process_case
 
-            with pytest.raises(ValueError, match="Invalid environment"):
-                process_case(
-                    env="unknown",
-                    caseNo="CASE-009",
-                    payloadData={},
-                    runId="run-9",
-                    state="appealSubmitted",
-                    PR_REFERENCE="pr-123",
-                )
+            result = process_case(
+                env="unknown",
+                caseNo="CASE-009",
+                payloadData={},
+                runId="run-9",
+                state="appealSubmitted",
+                PR_REFERENCE="pr-123",
+            )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert "Invalid environment" in result["Error"]
 
 
 class TestProcessCaseSubmitNone:
@@ -376,4 +576,5 @@ class TestProcessCaseSubmitNone:
             )
 
         assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
         assert "No response from API" in result["Error"]

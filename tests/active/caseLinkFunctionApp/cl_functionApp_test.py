@@ -11,7 +11,7 @@ _mock_app.event_hub_message_trigger.return_value = lambda f: f
 
 with patch.dict(os.environ, {"ENVIRONMENT": "sbox", "LZ_KEY": "testlz", "PR_NUMBER": "9999"}), \
         patch("azure.functions.FunctionApp", MagicMock(return_value=_mock_app)):
-    from AzureFunctions.ACTIVE.active_caselink_ccd.function_app import eventhub_trigger_active
+    from AzureFunctions.ACTIVE.active_caselink_ccd.function_app import eventhub_trigger_active, _is_retryable
     import AzureFunctions.ACTIVE.active_caselink_ccd.function_app as app_module
 
 
@@ -37,6 +37,8 @@ def setup_mocks(batch_len=1):
     mock_secret.value = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=key;SharedAccessKey=abc="
 
     mock_kv_client = AsyncMock()
+    mock_kv_client.__aenter__ = AsyncMock(return_value=mock_kv_client)
+    mock_kv_client.__aexit__ = AsyncMock(return_value=False)
     mock_kv_client.get_secret.return_value = mock_secret
 
     mock_batch = MagicMock()
@@ -48,6 +50,8 @@ def setup_mocks(batch_len=1):
     mock_producer.__aexit__ = AsyncMock(return_value=False)
 
     mock_credential = AsyncMock()
+    mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
+    mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     mock_idempotency_blob = AsyncMock()
 
@@ -55,6 +59,9 @@ def setup_mocks(batch_len=1):
     mock_idempotency_container.get_blob_client.return_value = mock_idempotency_blob
 
     mock_blob_svc = MagicMock()
+    mock_blob_svc.close = AsyncMock()
+    mock_blob_svc.__aenter__ = AsyncMock(return_value=mock_blob_svc)
+    mock_blob_svc.__aexit__ = AsyncMock(return_value=False)
     mock_blob_svc.get_container_client.return_value = mock_idempotency_container
 
     return {
@@ -120,7 +127,7 @@ def patched(mocks, to_thread_mock=None, extra_patches=None):
         ),
     ]
     if to_thread_mock is not None:
-        patches.append(patch("asyncio.to_thread", new=to_thread_mock))
+        patches.append(patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.process_event", new=to_thread_mock))
     if extra_patches:
         patches.extend(extra_patches)
     return patches
@@ -153,7 +160,7 @@ def test_single_event_success_sends_final_batch():
     payload = {"RunID": "run-001", "CaseLinkPayload": []}
     events = [make_mock_event(payload)]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -166,17 +173,17 @@ def test_single_event_success_sends_final_batch():
 
 
 def test_cleanup_always_called_on_success():
-    """kv_client.close and credential.close are awaited after successful processing."""
+    """kv_client and credential are exited (closed) via the AsyncExitStack."""
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event({"RunID": "r1", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    mocks["kv_client"].close.assert_awaited_once()
-    mocks["credential"].close.assert_awaited_once()
+    mocks["kv_client"].__aexit__.assert_awaited_once()
+    mocks["credential"].__aexit__.assert_awaited_once()
 
 
 def test_cleanup_called_even_when_individual_event_errors():
@@ -184,13 +191,13 @@ def test_cleanup_called_even_when_individual_event_errors():
     mocks = setup_mocks(batch_len=0)
     events = [make_mock_event({"RunID": "r1", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(side_effect=Exception("processing failed"))
+    to_thread = MagicMock(side_effect=Exception("processing failed"))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    mocks["kv_client"].close.assert_awaited_once()
-    mocks["credential"].close.assert_awaited_once()
+    mocks["kv_client"].__aexit__.assert_awaited_once()
+    mocks["credential"].__aexit__.assert_awaited_once()
 
 
 def test_keyvault_secret_fetched_with_correct_name():
@@ -227,13 +234,12 @@ def test_process_event_called_with_correct_args():
     partition_key = "9876543210987654"
     events = [make_mock_event(payload, partition_key=partition_key)]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    to_thread.assert_awaited_once_with(
-        app_module.process_event,
+    to_thread.assert_called_once_with(
         app_module.ENV,
         partition_key,
         payload["RunID"],
@@ -248,7 +254,7 @@ def test_skip_result_is_not_added_to_batch():
     mocks = setup_mocks(batch_len=0)
     events = [make_mock_event({"RunID": "run-skip", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SKIP_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SKIP_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -266,13 +272,12 @@ def test_overwrite_flag_passed_from_payload():
     partition_key = "1234567890123456"
     events = [make_mock_event(payload, partition_key=partition_key)]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    to_thread.assert_awaited_once_with(
-        app_module.process_event,
+    to_thread.assert_called_once_with(
         app_module.ENV,
         partition_key,
         payload["RunID"],
@@ -293,57 +298,33 @@ def test_empty_event_list_does_not_send_batch():
 
 
 def test_multiple_events_each_result_added_to_batch():
-    """Three events → three add() calls and one final send_batch."""
+    """Three events → three add() calls and three immediate send_batch calls
+    (each result is sent as soon as it's computed, not accumulated)."""
     mocks = setup_mocks(batch_len=3)
     events = [
         make_mock_event({"RunID": f"run-{i}", "CaseLinkPayload": []}, partition_key=f"REF-{i}")
         for i in range(3)
     ]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
     assert mocks["batch"].add.call_count == 3
-    mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+    assert mocks["producer"].send_batch.await_count == 3
     # SUCCESS: idempotency blobs are kept (not deleted)
     mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
-def test_batch_overflow_flushes_old_batch_and_creates_new_one():
-    """When add() raises ValueError the current batch is sent and a new batch opened."""
-    second_batch = MagicMock()
-    second_batch.__len__.return_value = 1
-
-    mocks = setup_mocks(batch_len=1)
-    # First add raises ValueError (batch full); second add (on new batch) succeeds.
-    mocks["batch"].add.side_effect = ValueError("Batch is full")
-    mocks["producer"].create_batch = AsyncMock(
-        side_effect=[mocks["batch"], second_batch]
-    )
-
-    payload = {"RunID": "run-overflow", "CaseLinkPayload": []}
-    events = [make_mock_event(payload)]
-
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
-
-    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
-        run(eventhub_trigger_active(events))
-
-    # First: old batch flushed on overflow. Second: new batch flushed at end.
-    assert mocks["producer"].send_batch.await_count == 2
-    mocks["producer"].send_batch.assert_any_await(mocks["batch"])
-    mocks["producer"].send_batch.assert_any_await(second_batch)
-
-
 def test_individual_event_error_does_not_stop_other_events():
-    """An exception for one event is caught; remaining events are still processed."""
+    """An exception for one event is caught, turned into a fallback ERROR result and
+    sent; remaining events are still processed independently."""
     mocks = setup_mocks(batch_len=1)
 
     call_count = 0
 
-    async def side_effect(*_):
+    def side_effect(*_):
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -358,9 +339,9 @@ def test_individual_event_error_does_not_stop_other_events():
     with apply_patches(patched(mocks, to_thread_mock=side_effect), mocks):
         run(eventhub_trigger_active(events))
 
-    # Only the second event's result should have been added.
-    assert mocks["batch"].add.call_count == 1
-    mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+    # Both events produce a result now: the failed one as a fallback ERROR result.
+    assert mocks["batch"].add.call_count == 2
+    assert mocks["producer"].send_batch.await_count == 2
 
 
 def test_error_result_deletes_idempotency_blob_and_sends_to_batch():
@@ -368,7 +349,7 @@ def test_error_result_deletes_idempotency_blob_and_sends_to_batch():
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event({"RunID": "run-err", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_ERROR_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -404,7 +385,7 @@ def test_idempotency_blob_uploaded_atomically_on_success_and_kept():
     mocks = setup_mocks(batch_len=1)
     events = [make_mock_event({"RunID": "run-chk", "CaseLinkPayload": []}, partition_key="REF-CHK")]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -414,19 +395,25 @@ def test_idempotency_blob_uploaded_atomically_on_success_and_kept():
     mocks["idempotency_blob"].delete_blob.assert_not_called()
 
 
-def test_idempotency_blob_not_deleted_when_process_event_raises():
-    """When process_event raises, the exception is caught; idempotency blob stays."""
+def test_idempotency_blob_deleted_and_error_result_sent_when_process_event_raises():
+    """When process_event raises, a fallback ERROR result is built and sent, and the
+    idempotency blob is deleted (same as any other ERROR result) so the case isn't
+    permanently blocked from being retried."""
     mocks = setup_mocks(batch_len=0)
-    events = [make_mock_event({"RunID": "run-exc", "CaseLinkPayload": []})]
+    events = [make_mock_event({"RunID": "run-exc", "CaseLinkPayload": []}, partition_key="REF-EXC")]
 
-    to_thread = AsyncMock(side_effect=Exception("processing crashed"))
+    to_thread = MagicMock(side_effect=Exception("processing crashed"))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
 
-    # Exception caught by inner except — delete_blob is never reached
-    mocks["idempotency_blob"].delete_blob.assert_not_called()
-    mocks["producer"].send_batch.assert_not_called()
+    mocks["idempotency_blob"].delete_blob.assert_awaited_once()
+    mocks["batch"].add.assert_called_once()
+    mocks["producer"].send_batch.assert_awaited_once_with(mocks["batch"])
+    sent_result = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert sent_result["Status"] == "ERROR"
+    assert sent_result["CCDCaseReferenceNumber"] == "REF-EXC"
+    assert "processing crashed" in sent_result["Error"]
 
 
 def test_idempotency_blob_path_includes_ccd_reference():
@@ -435,7 +422,7 @@ def test_idempotency_blob_path_includes_ccd_reference():
     partition_key = "9999000011112222"
     events = [make_mock_event({"RunID": "run-path", "CaseLinkPayload": []}, partition_key=partition_key)]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -467,7 +454,7 @@ def test_error_result_sent_even_when_delete_blob_raises():
     mocks["idempotency_blob"].delete_blob.side_effect = Exception("Storage error")
     events = [make_mock_event({"RunID": "run-del-fail", "CaseLinkPayload": []})]
 
-    to_thread = AsyncMock(return_value=dict(PROCESS_ERROR_RESULT))
+    to_thread = MagicMock(return_value=dict(PROCESS_ERROR_RESULT))
 
     with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
         run(eventhub_trigger_active(events))
@@ -475,3 +462,171 @@ def test_error_result_sent_even_when_delete_blob_raises():
     mocks["idempotency_blob"].delete_blob.assert_awaited_once()
     mocks["batch"].add.assert_called_once()
     mocks["producer"].send_batch.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# _is_retryable unit tests
+# ---------------------------------------------------------------------------
+
+def test_cl_is_retryable_true_for_retryable_status_codes():
+    for code in [408, 409, 429, 500, 502, 503, 504]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is True, f"Expected retryable for {code}"
+
+
+def test_cl_is_retryable_false_for_non_retryable_status_codes():
+    for code in [200, 201, 400, 401, 403, 404, 422]:
+        assert _is_retryable({"Status": "ERROR", "StatusCode": code}) is False, f"Expected non-retryable for {code}"
+
+
+def test_cl_is_retryable_false_when_status_is_success():
+    assert _is_retryable({"Status": "SUCCESS", "StatusCode": 500}) is False
+
+
+def test_cl_is_retryable_false_when_status_code_is_none():
+    assert _is_retryable({"Status": "ERROR", "StatusCode": None}) is False
+
+
+def test_cl_is_retryable_false_for_non_dict_result():
+    assert _is_retryable("error string") is False
+    assert _is_retryable(None) is False
+
+
+def test_cl_is_retryable_true_for_transient_error_types_with_missing_status_code():
+    for error_type in ("ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+                        "ChunkedEncodingError", "SSLError", "ProxyError"):
+        result = {"Status": "ERROR", "StatusCode": None, "ErrorType": error_type}
+        assert _is_retryable(result) is True, f"Expected retryable for ErrorType {error_type}"
+
+
+def test_cl_is_retryable_false_for_non_transient_error_type_with_missing_status_code():
+    result = {"Status": "ERROR", "StatusCode": None, "ErrorType": "InvalidSchema"}
+    assert _is_retryable(result) is False
+
+
+def test_cl_is_retryable_false_when_error_type_present_but_status_code_is_set():
+    result = {"Status": "ERROR", "StatusCode": 422, "ErrorType": "ConnectionError"}
+    assert _is_retryable(result) is False
+
+
+# ---------------------------------------------------------------------------
+# Retry integration tests
+# ---------------------------------------------------------------------------
+
+def test_cl_non_retryable_error_not_retried():
+    """process_event is NOT retried for a non-retryable status code (422)."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={"Status": "ERROR", "StatusCode": 422, "Error": "Unprocessable"})
+    events = [make_mock_event({"RunID": "run-nr", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert to_thread.call_count == 1
+
+
+def test_cl_retryable_error_is_retried_3_times():
+    """process_event is retried up to 3 times for a retryable status code (500)."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={"Status": "ERROR", "StatusCode": 500, "Error": "Server Error"})
+    events = [make_mock_event({"RunID": "run-r3", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert to_thread.call_count == 3
+
+
+def test_cl_retryable_error_stops_retrying_on_success():
+    """After a retryable error, success on the second attempt stops further retries."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(side_effect=[
+        {"Status": "ERROR", "StatusCode": 502, "Error": "Bad Gateway"},
+        dict(PROCESS_SUCCESS_RESULT),
+    ])
+    events = [make_mock_event({"RunID": "run-ok2", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert to_thread.call_count == 2
+    mocks["idempotency_blob"].delete_blob.assert_not_called()
+
+
+def test_cl_transient_network_error_is_retried_3_times():
+    """A transient ErrorType with no StatusCode is retried the same as a retryable status code."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={
+        "Status": "ERROR", "StatusCode": None, "ErrorType": "ConnectionError",
+        "Error": "network unreachable",
+    })
+    events = [make_mock_event({"RunID": "run-conn", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert to_thread.call_count == 3
+
+
+def test_cl_error_type_stripped_from_event_hub_payload():
+    """ErrorType is an internal routing field and must not appear in the published event."""
+    mocks = setup_mocks(batch_len=1)
+    to_thread = MagicMock(return_value={
+        "Status": "ERROR", "StatusCode": 400, "ErrorType": "InvalidSchema",
+        "CCDCaseReferenceNumber": "1234567890123456", "Error": "bad request",
+    })
+    events = [make_mock_event({"RunID": "run-et", "CaseLinkPayload": []})]
+
+    with apply_patches(patched(mocks, to_thread_mock=to_thread), mocks):
+        run(eventhub_trigger_active(events))
+
+    mocks["batch"].add.assert_called_once()
+    published_payload = mocks["batch"].add.call_args[0][0].body_as_json()
+    assert "ErrorType" not in published_payload
+
+
+# ---------------------------------------------------------------------------
+# Results Event Hub publish retry
+# ---------------------------------------------------------------------------
+
+def test_cl_publish_transient_failure_is_retried_and_eventually_succeeds():
+    """A transient send_batch failure is retried; the third attempt succeeds."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    mocks["producer"].send_batch.side_effect = [
+        Exception("Event Hub unavailable"),
+        Exception("Event Hub unavailable"),
+        None,
+    ]
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    events = [make_mock_event({"RunID": "run-pub-retry", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert mocks["producer"].send_batch.await_count == 3
+
+
+def test_cl_publish_failure_exhausted_retries_does_not_crash_batch():
+    """When send_batch keeps failing, the publish retry gives up after 3 attempts and
+    the failure is contained locally — it must not propagate and trigger a
+    function-host-level retry of the whole batch."""
+    from tenacity import wait_none
+    mocks = setup_mocks(batch_len=1)
+    mocks["producer"].send_batch.side_effect = Exception("Event Hub permanently down")
+    to_thread = MagicMock(return_value=dict(PROCESS_SUCCESS_RESULT))
+    events = [make_mock_event({"RunID": "run-pub-fail", "CaseLinkPayload": []})]
+
+    extra = [patch("AzureFunctions.ACTIVE.active_caselink_ccd.function_app.wait_exponential", return_value=wait_none())]
+    with apply_patches(patched(mocks, to_thread_mock=to_thread, extra_patches=extra), mocks):
+        run(eventhub_trigger_active(events))
+
+    assert mocks["producer"].send_batch.await_count == 3

@@ -4,6 +4,10 @@ import logging
 import json
 import os
 
+from contextlib import AsyncExitStack
+
+from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
+
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob.aio import BlobServiceClient
 from azure.eventhub.aio import EventHubProducerClient
@@ -11,9 +15,8 @@ from azure.eventhub import EventData
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
 from datetime import datetime, timezone
-
 from typing import List
-# from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
 try:
     # When running as a function app the module will be a package. Use a
     # relative import where possible.
@@ -41,6 +44,41 @@ idempotency_container_name = "af-idempotency"
 app = func.FunctionApp()
 
 
+def _log_retry(retry_state):
+    if retry_state.outcome.failed:
+        error = retry_state.outcome.exception()
+    else:
+        result = retry_state.outcome.result()
+        error = result.get("Error", "") if isinstance(result, dict) else result
+    logger.warning(
+        f"Attempt {retry_state.attempt_number} failed due to: {error}."
+        f"(sleeping {retry_state.next_action.sleep}s)"
+    )
+
+
+async def _process_case(env, case_no, data, run_id, state, pr_reference):
+    return await asyncio.to_thread(process_case, env, case_no, data, run_id, state, pr_reference)
+
+
+async def _publish_result(producer, payload_json):
+    batch = await producer.create_batch()
+    batch.add(EventData(payload_json))
+    await producer.send_batch(batch)
+
+
+def _is_retryable(result):
+    RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+    TRANSIENT_ERROR_TYPES = {
+        "ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+        "ChunkedEncodingError", "SSLError", "ProxyError",
+    }
+    if not (isinstance(result, dict) and result.get("Status") == "ERROR"):
+        return False
+    if result.get("StatusCode") in RETRYABLE_STATUS_CODES:
+        return True
+    return result.get("StatusCode") is None and result.get("ErrorType") in TRANSIENT_ERROR_TYPES
+
+
 @app.function_name("eventhub_trigger")
 @app.event_hub_message_trigger(
     arg_name="azeventhub",
@@ -63,27 +101,27 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
     )
 
     try:
-        # Retrieve credentials
-        credential = DefaultAzureCredential()
-        logger.info('Connected to Azure Credentials')
+        async with AsyncExitStack() as stack:
+            # Retrieve credentials
+            credential = await stack.enter_async_context(DefaultAzureCredential())
+            logger.info('Connected to Azure Credentials')
 
-        kv_client = SecretClient(vault_url=kv_url, credential=credential)
-        logger.info(f'Connected to KeyVault: {kv_url}')
+            kv_client = await stack.enter_async_context(SecretClient(vault_url=kv_url, credential=credential))
+            logger.info(f'Connected to KeyVault: {kv_url}')
 
-        results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
-        result_eh_secret_key = results_eh_key.value
-        logger.info('Acquired KV secret for Results Event Hub')
+            results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
+            result_eh_secret_key = results_eh_key.value
+            logger.info('Acquired KV secret for Results Event Hub')
 
-        # Initialise the idempotent client outside of the loop / context manager
-        idempotency_blob_service = BlobServiceClient(account_url=idempotency_account_url, credential=credential)
-        idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
-
-        async with EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key) as res_eh_producer:
-            logger.info(
-                f"Creating batch for {len(azeventhub)} events - "
-                f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
+            # Initialise the idempotent client outside of the loop / context manager
+            idempotency_blob_service = await stack.enter_async_context(
+                BlobServiceClient(account_url=idempotency_account_url, credential=credential)
             )
-            event_data_batch = await res_eh_producer.create_batch()
+            idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
+
+            res_eh_producer = await stack.enter_async_context(
+                EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
+            )
             try:
                 for event in azeventhub:
                     try:
@@ -109,11 +147,29 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                             logger.warning(f"[IDEMPOTENCY] Skipping in progress case {caseNo}.")
                             continue
 
-                        # Process the file
-                        result = await asyncio.to_thread(process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
+                        try:
+                            result = await AsyncRetrying(
+                                retry=retry_if_result(_is_retryable),
+                                stop=stop_after_attempt(3),
+                                wait=wait_exponential(multiplier=30, min=30, max=60),
+                                before_sleep=_log_retry,
+                                retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+                            )(_process_case, ENV, caseNo, data, run_id, state, PR_REFERENCE)
+                        except Exception as processing_error:
+                            logger.error(f"Unhandled exception while processing case {caseNo}: {processing_error}")
+                            result = {
+                                "RunID": run_id,
+                                "CaseNo": caseNo,
+                                "State": state,
+                                "Status": "ERROR",
+                                "StatusCode": getattr(processing_error, "status_code", None),
+                                "ErrorType": type(processing_error).__name__,
+                                "Error": f"Unhandled exception while processing case: {processing_error}",
+                                "EndDateTime": datetime.now(timezone.utc).isoformat(),
+                            }
                         result["StartDateTime"] = start_datetime
 
-                        # Mark processed if success
+                        # Clear idempotency if not a successful run.
                         if result.get("Status") != "SUCCESS":
                             try:
                                 await idempotency_blob.delete_blob()
@@ -121,33 +177,24 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                             except Exception as delete_error:
                                 logger.warning(f"[IDEMPOTENCY] Failed to delete blob for {caseNo}: {delete_error}")
 
+                        result.pop("StatusCode", None)
+                        result.pop("ErrorType", None)
                         result_json = json.dumps(result)
-                        try:
-                            event_data_batch.add(EventData(result_json))
-                        except ValueError:
-                            # If the batch is full, send it and create a new one
-                            await res_eh_producer.send_batch(event_data_batch)
-                            logger.info('Sent a batch of events to Results Event Hub')
-                            event_data_batch = None  # Force cleardown on successful send to prevent sending duplicate events
-                            event_data_batch = await res_eh_producer.create_batch()
-                            event_data_batch.add(EventData(result_json))
+
+                        await AsyncRetrying(
+                            stop=stop_after_attempt(3),
+                            wait=wait_exponential(multiplier=10, min=10, max=20),
+                            before_sleep=_log_retry,
+                            reraise=True,
+                        )(_publish_result, res_eh_producer, result_json)
+                        logger.info(f'Sent result for case {caseNo} to Results Event Hub')
 
                     except Exception as e:
                         logger.error(f'Error processing event for caseNo {caseNo}: {e}')
 
-                # Send any remaining events in the batch
-                if event_data_batch and len(event_data_batch) > 0:
-                    await res_eh_producer.send_batch(event_data_batch)
-                    logger.info('Sent the final batch of events to Results Event Hub')
-
             except Exception as e:
                 logger.error(f'Error in event hub processing batch: {e}')
                 raise e
-            finally:
-                # Clean up all clients
-                await idempotency_blob_service.close()
-                await kv_client.close()
-                await credential.close()
     except Exception as e:
         logger.error(f"An error has occurred before processing the batch. {e}")
         raise e

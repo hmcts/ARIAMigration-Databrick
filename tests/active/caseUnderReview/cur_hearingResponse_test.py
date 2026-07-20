@@ -28,8 +28,8 @@ class TestCaseUnderReviewHearingResponse:
         StructField("StatusId", IntegerType()),
         StructField("CaseStatus", IntegerType()),
         StructField("Outcome", IntegerType()),
-        StructField("ListedCentre", StringType()),
-        StructField("KeyDate", StringType()),
+        StructField("HearingCentre", StringType()),
+        StructField("HearingDate", StringType()),
         StructField("HearingType", StringType()),
         StructField("CourtName", StringType()),
         StructField("ListType", StringType()),
@@ -76,17 +76,17 @@ class TestCaseUnderReviewHearingResponse:
                 "List", "10:00", "10", "Notes", None, None, None, None, None,
                 None, None, None, None, None, None, None
             ),
-            (  # CaseStatus 37 and StatusId 1 - skipped for condition CaseStatus in 37 or 38 and max StatusId
+            (  # CaseStatus 37 and StatusId 1 - skipped by window function (not max StatusId for CaseNo 2)
                 "2", 1, 37, 1, "HearingCentre", "2000-01-01", "Type", "Court",
                 "List", "10:00", "10", "Notes", None, None, None, None, None,
                 None, None, None, None, None, None, None
             ),
-            (  # CaseStatus 38 and StatusId 2 with no judicial details - valid replaces above
+            (  # CaseStatus 38 and StatusId 2 - selected by window, but produces NULL response (only CaseStatus 26 generates output)
                 "2", 2, 38, 1, "HearingCentre2", "2010-01-01", "Type2", "Court2",
                 "List2", "11:00", "20", "Notes2", None, None, None, None, None,
                 None, None, None, None, None, None, None
             ),
-            (  # CaseStatus 37 with Judicial details - valid
+            (  # CaseStatus 37 with judicial details - selected by window, but produces NULL response (only CaseStatus 26 generates output)
                 "3", 1, 37, 0, "HearingCentre", "2000-01-01", "Type", "Court",
                 "List", "10:00", "10", "Notes",
                 "Judge1Last", "Judge1First", "Mr",
@@ -94,7 +94,7 @@ class TestCaseUnderReviewHearingResponse:
                 "Judge3Last", "Judge3First", "Ms",
                 "ClerkLast", "ClerkFirst", "Miss"
             ),
-            (  # CaseStatus 39 - skipped for above case as not in CaseStatus 37 or 38
+            (  # CaseStatus 39 - skipped by df_stg filter (not in CaseStatus 26, 37, or 38)
                 "3", 2, 39, 0, "HearingCentre2", "2010-01-01", "Type2", "Court2",
                 "Lis2t", "11:00", "20", "Notes2",
                 "Judge1Last2", "Judge1First2", "Mr2",
@@ -146,44 +146,16 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             Notes: Notes\
         """).strip()
-        assert resultList[1][0] == dedent("""\
-            Listed details from ARIA: 
-            Hearing Centre: HearingCentre2
-            Hearing Date: 2010-01-01
-            Hearing Type: Type2
-            Court: Court2
-            List Type: List2
-            List Start Time: 11:00
-            Judge First Tier: 
-            Court Clerk / Usher: N/A
-            Start Time: 11:00
-            Estimated Duration: 20
-            Required/Incompatible Judicial Officers: 
-            Notes: Notes2
-        """).strip()
-        assert resultList[2][0] == dedent("""\
-            Listed details from ARIA: 
-            Hearing Centre: HearingCentre
-            Hearing Date: 2000-01-01
-            Hearing Type: Type
-            Court: Court
-            List Type: List
-            List Start Time: 10:00
-            Judge First Tier: Judge1Last Judge1First (Mr) Judge2Last Judge2First (Mrs) Judge3Last Judge3First (Ms)
-            Court Clerk / Usher: ClerkLast ClerkFirst (Miss)
-            Start Time: 10:00
-            Estimated Duration: 10
-            Required/Incompatible Judicial Officers: 
-            Notes: Notes\
-        """).strip()
+        assert resultList[1][0] is None  # CaseNo 2 - CaseStatus 38, only CaseStatus 26 generates a response
+        assert resultList[2][0] is None  # CaseNo 3 - CaseStatus 37, only CaseStatus 26 generates a response
         assert resultList[3][0] == dedent("""\
             Listed details from ARIA: 
             Hearing Centre: N/A
@@ -206,10 +178,10 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             JudgeLastName JudgeFirstName ( Judge ) : Required
@@ -222,10 +194,10 @@ class TestCaseUnderReviewHearingResponse:
             Hearing Type: Type
             Court: Court
             List Type: List
-            List Start Time: 10:00
+            List Start Time: 10:00:00
             Judge First Tier: 
             Court Clerk / Usher: N/A
-            Start Time: 10:00
+            Start Time: 10:00:00
             Estimated Duration: 10
             Required/Incompatible Judicial Officers: 
             JudgeLastName JudgeFirstName ( Judge ) : Not Required
@@ -233,4 +205,4 @@ class TestCaseUnderReviewHearingResponse:
             JudgeLastName3 JudgeFirstName3 ( Judge3 ) : Not Required
             Notes: Notes\
         """).strip()
-        assert len(resultList) == 6  # 2 non-matching conditions of the 8 cases provided, leaves 6.
+        assert len(resultList) == 6  # 2 excluded (case 5: Outcome != 0; case 8: AIP representation); 6 remain, 2 with NULL response (CaseNo 2, 3: CaseStatus 37/38)

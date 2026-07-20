@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 
-from AzureFunctions.ACTIVE.active_cdam.cdam_tokenManager import IDAMTokenManager, S2S_Manager
+from AzureFunctions.ACTIVE.active_cdam.cdam_tokenManager import IDAMTokenManager, S2S_Manager, TokenError
 
 MODULE = "AzureFunctions.ACTIVE.active_cdam.cdam_tokenManager"
 
@@ -444,13 +444,14 @@ def test_fetch_s2s_token_uses_s2s_secret_for_otp():
     mock_totp.assert_called_once_with("TESTSECRET123456")
 
 
-def test_fetch_s2s_token_raises_eoferror_on_network_error():
+def test_fetch_s2s_token_raises_token_error_on_network_error():
     mgr = make_s2s_manager()
     with patch("requests.post", side_effect=Exception("Connection timeout")), \
          patch(f"{MODULE}.pyotp.TOTP") as mock_totp:
         mock_totp.return_value.now.return_value = "123456"
-        with pytest.raises(EOFError, match="Error reuesting service to service token"):
+        with pytest.raises(TokenError, match="Error requesting service to service token") as exc_info:
             mgr._fetch_s2s_token()
+        assert exc_info.value.status_code == 503
 
 
 def test_fetch_s2s_token_raises_runtime_error_on_non_200():

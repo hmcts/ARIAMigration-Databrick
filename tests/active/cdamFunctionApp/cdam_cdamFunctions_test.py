@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cdamFunctions does not hit Key Vault.
@@ -25,7 +25,6 @@ def mock_response(status_code, json_data=None, text=""):
 
 
 MODULE = "AzureFunctions.ACTIVE.active_cdam.cdamFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_cdam.retry_decorator.time.sleep"
 
 UPLOAD_COMMON = dict(
     cdam_base_url="http://ccd-case-document-am-api-aat.service.core-compute-aat.internal",
@@ -124,10 +123,10 @@ def test_upload_document_uses_provided_content_type(mock_post):
 
 
 @patch("requests.post", side_effect=Exception("Connection refused"))
-def test_upload_document_returns_none_on_network_error(mock_post):
+def test_upload_document_returns_exception_on_network_error(mock_post):
     response = upload_document(**UPLOAD_COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 @patch("requests.post")
@@ -142,12 +141,6 @@ def test_upload_document_returns_non_201_response(mock_post):
 # ---------------------------------------------------------------------------
 # process_event fixtures
 # ---------------------------------------------------------------------------
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
-        yield
 
 
 @pytest.fixture
@@ -186,6 +179,7 @@ def test_process_event_idam_token_failure_returns_error():
     assert "IDAM" in result["Error"] or "s2s" in result["Error"]
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
     assert result["RunID"] == PROCESS_DEFAULTS["runId"]
+    assert result["ErrorType"] == "Exception"
 
 
 def test_process_event_s2s_token_failure_returns_error():
@@ -199,23 +193,27 @@ def test_process_event_s2s_token_failure_returns_error():
 
     assert result["Status"] == "ERROR"
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
+    assert result["ErrorType"] == "Exception"
 
 
 # ---------------------------------------------------------------------------
 # process_event — invalid environment
 # ---------------------------------------------------------------------------
 
-def test_process_event_invalid_env_raises_value_error(mock_token_managers, mock_blob_client):
-    with pytest.raises(ValueError, match="Invalid environment"):
-        process_event(
-            env="invalid_env",
-            caseNo="1234567890123456",
-            runId="run-001",
-            file_name="doc.html",
-            file_url="https://storage.blob.core.windows.net/container/blob",
-            file_content_type="text/html",
-            storage_credential=MagicMock(),
-        )
+def test_process_event_invalid_env_returns_error_result(mock_token_managers, mock_blob_client):
+    result = process_event(
+        env="invalid_env",
+        caseNo="1234567890123456",
+        runId="run-001",
+        file_name="doc.html",
+        file_url="https://storage.blob.core.windows.net/container/blob",
+        file_content_type="text/html",
+        storage_credential=MagicMock(),
+    )
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert "Invalid environment" in result["Error"]
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +230,21 @@ def test_process_event_blob_read_failure_returns_error():
     assert result["Status"] == "ERROR"
     assert "blob" in result["Error"].lower() or "Failed" in result["Error"]
     assert result["CaseNo"] == PROCESS_DEFAULTS["caseNo"]
+    assert result["ErrorType"] == "Exception"
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+def test_process_event_blob_read_transient_error_records_error_type():
+    from azure.core.exceptions import ServiceRequestError
+
+    with patch(f"{MODULE}.BlobServiceClient") as mock_blob_cls:
+        mock_blob_cls.side_effect = ServiceRequestError("connection reset")
+
+        result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert result["ErrorType"] == "ServiceRequestError"
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +260,20 @@ def test_process_event_upload_returns_none_returns_error(mock_upload, mock_blob_
 
     assert result["Status"] == "ERROR"
     assert "No response" in result["Error"]
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+@patch(f"{MODULE}.upload_document")
+def test_process_event_upload_network_exception_records_error_type(mock_upload, mock_blob_client):
+    import requests
+
+    mock_upload.return_value = requests.exceptions.ConnectionError("refused")
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "ERROR"
+    assert result["StatusCode"] is None
+    assert result["ErrorType"] == "ConnectionError"
 
 
 @pytest.mark.usefixtures("mock_token_managers")
@@ -315,6 +342,21 @@ def test_process_event_result_contains_cdam_response(mock_upload, mock_blob_clie
     result = process_event(**PROCESS_DEFAULTS)
 
     assert result["CDAMResponse"] == cdam_resp
+
+
+@pytest.mark.usefixtures("mock_token_managers")
+@patch(f"{MODULE}.upload_document")
+def test_process_event_success_with_unparsable_json_body(mock_upload, mock_blob_client):
+    """A 2xx response with a body that isn't valid JSON should not crash process_event."""
+    bad_upload_response = mock_response(201, text="not json")
+    bad_upload_response.json.side_effect = ValueError("Expecting value")
+    mock_upload.return_value = bad_upload_response
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "SUCCESS"
+    assert result["StatusCode"] == 201
+    assert "Unable to parse CDAM response" in result["CDAMResponse"]
 
 
 @pytest.mark.usefixtures("mock_token_managers")

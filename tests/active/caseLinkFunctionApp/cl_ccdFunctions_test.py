@@ -1,6 +1,6 @@
 import json
 import pytest
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import AsyncMock, patch, MagicMock, ANY
 
 # Patch Azure SDK clients before the module-level IDAMTokenManager(env="sbox")
 # instantiation runs, so that importing cl_ccdFunctions does not hit Key Vault.
@@ -75,7 +75,7 @@ def test_get_case_details_network_error(mock_get):
 
     response = get_case_details(**CASE_DETAILS_COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ def test_start_case_event_network_error(mock_get):
 
     response = start_case_event(**COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ def test_validate_case_network_error(mock_post):
 
     response = validate_case(**VALIDATE_COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +256,7 @@ def test_submit_case_event_network_error(mock_post):
 
     response = submit_case_event(**SUBMIT_COMMON)
 
-    assert response is None
+    assert isinstance(response, Exception)
 
 
 # ---------------------------------------------------------------------------
@@ -276,14 +276,7 @@ PROCESS_DEFAULTS = dict(
 )
 
 MODULE = "AzureFunctions.ACTIVE.active_caselink_ccd.cl_ccdFunctions"
-SLEEP_PATH = "AzureFunctions.ACTIVE.active_caselink_ccd.retry_decorator.time.sleep"
 
-
-@pytest.fixture(autouse=True)
-def no_retry_sleep():
-    """Suppress retry backoff sleeps in all process_event tests."""
-    with patch(SLEEP_PATH):
-        yield
 
 
 @pytest.fixture
@@ -317,6 +310,25 @@ def test_process_event_success(mock_start, mock_validate, mock_submit):
     assert result["Error"] is None
     assert result["CCDCaseReferenceNumber"] == PROCESS_DEFAULTS["ccdReference"]
     assert result["RunID"] == PROCESS_DEFAULTS["runId"]
+
+
+@pytest.mark.usefixtures("mock_token_managers_cl")
+@patch(f"{MODULE}.submit_case_event")
+@patch(f"{MODULE}.validate_case")
+@patch(f"{MODULE}.start_case_event")
+def test_process_event_success_with_unparsable_json_body(mock_start, mock_validate, mock_submit):
+    """A 2xx submit response with a body that isn't valid JSON should not crash process_event."""
+    mock_start.return_value = mock_response(200, {"token": "tok123"})
+    mock_validate.return_value = mock_response(200)
+    bad_submit_response = mock_response(201, text="not json")
+    bad_submit_response.json.side_effect = ValueError("Expecting value")
+    mock_submit.return_value = bad_submit_response
+
+    result = process_event(**PROCESS_DEFAULTS)
+
+    assert result["Status"] == "SUCCESS"
+    assert result["StatusCode"] == 201
+    assert result["CaseLinkCount"] == 0
 
 
 @pytest.mark.usefixtures("mock_token_managers_cl")
@@ -410,14 +422,17 @@ def test_process_event_invalid_env():
         mock_idam.get_token.return_value = ("tok", "uid")
         mock_s2s.get_token.return_value = "s2s"
 
-        with pytest.raises(ValueError, match="Invalid environment"):
-            process_event(
-                env="invalid_env",
-                ccdReference="1234567890123456",
-                caseLinkPayload=[],
-                runId="run-001",
-                PR_REFERENCE="1234",
-            )
+        result = process_event(
+            env="invalid_env",
+            ccdReference="1234567890123456",
+            caseLinkPayload=[],
+            runId="run-001",
+            PR_REFERENCE="1234",
+        )
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert "Invalid environment" in result["Error"]
 
 
 def test_process_event_idam_token_failure():
@@ -428,6 +443,7 @@ def test_process_event_idam_token_failure():
 
         assert result["Status"] == "ERROR"
         assert result["CaseLinkCount"] == 0
+        assert result["ErrorType"] == "Exception"
 
 
 def test_process_event_s2s_token_failure():
@@ -441,6 +457,59 @@ def test_process_event_s2s_token_failure():
 
         assert result["Status"] == "ERROR"
         assert result["CaseLinkCount"] == 0
+        assert result["ErrorType"] == "Exception"
+
+
+class TestProcessEventTransientNetworkErrors:
+    """process_event records the exception's class name as ErrorType when
+    start/validate/submit fails with a network-level exception rather than
+    returning an HTTP response."""
+
+    @pytest.mark.usefixtures("mock_token_managers_cl")
+    @patch(f"{MODULE}.start_case_event")
+    def test_start_case_event_network_exception_records_error_type(self, mock_start):
+        import requests
+
+        mock_start.return_value = requests.exceptions.ConnectTimeout("timed out")
+
+        result = process_event(**PROCESS_DEFAULTS)
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ConnectTimeout"
+        assert result["CaseLinkCount"] == 0
+
+    @pytest.mark.usefixtures("mock_token_managers_cl")
+    @patch(f"{MODULE}.validate_case")
+    @patch(f"{MODULE}.start_case_event")
+    def test_validate_case_network_exception_records_error_type(self, mock_start, mock_validate):
+        import requests
+
+        mock_start.return_value = mock_response(200, {"token": "tok123"})
+        mock_validate.return_value = requests.exceptions.ReadTimeout("read timed out")
+
+        result = process_event(**PROCESS_DEFAULTS)
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ReadTimeout"
+
+    @pytest.mark.usefixtures("mock_token_managers_cl")
+    @patch(f"{MODULE}.submit_case_event")
+    @patch(f"{MODULE}.validate_case")
+    @patch(f"{MODULE}.start_case_event")
+    def test_submit_case_event_network_exception_records_error_type(self, mock_start, mock_validate, mock_submit):
+        import requests
+
+        mock_start.return_value = mock_response(200, {"token": "tok123"})
+        mock_validate.return_value = mock_response(200)
+        mock_submit.return_value = requests.exceptions.ChunkedEncodingError("truncated")
+
+        result = process_event(**PROCESS_DEFAULTS)
+
+        assert result["Status"] == "ERROR"
+        assert result["StatusCode"] is None
+        assert result["ErrorType"] == "ChunkedEncodingError"
 
 
 @pytest.mark.usefixtures("mock_token_managers_cl")

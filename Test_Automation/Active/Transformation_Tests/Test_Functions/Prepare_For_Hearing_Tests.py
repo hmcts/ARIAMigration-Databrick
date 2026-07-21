@@ -982,17 +982,17 @@ def test_listingLength_mapping(test_df):
 
         final_comparison_df = base_df.withColumn(
             "expected_hours", 
-            F.when(F.col("source_mins").isNull(), F.lit(0).cast("long"))
+            F.when(F.col("source_mins").isNull() | (F.col("source_mins") == 0), F.lit(0).cast("long"))
              .when(raw_mins >= 45, base_hrs + 1)
              .otherwise(base_hrs).cast("long")
         ).withColumn(
             "expected_minutes",
-            F.when(F.col("source_mins").isNull(), F.lit(0).cast("long"))
-             .when(raw_mins < 15, F.lit(0))
+            F.when(F.col("source_mins").isNull() | (F.col("source_mins") == 0), F.lit(30).cast("long"))
+             .when(raw_mins == 0, F.lit(0))
              .when(raw_mins < 45, F.lit(30))
              .otherwise(F.lit(0)).cast("long")
         )
-
+        
         acceptance_critera = final_comparison_df.filter(
             (F.col("actual_hours") != F.col("expected_hours")) | 
             (F.col("actual_minutes") != F.col("expected_minutes"))

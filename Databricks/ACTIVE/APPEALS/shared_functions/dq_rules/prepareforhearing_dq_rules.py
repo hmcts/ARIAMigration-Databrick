@@ -132,26 +132,39 @@ class prepareForHearingDQRules(DQRulesBase):
 
     def get_checks_hearing_details(self, checks={}):
 
-        checks["valid_listingLength"] = ("""
+        checks["valid_listingLength"] = """
+        (
+            listingLength IS NULL
+            OR
             (
-                (TimeEstimate IS NULL AND element_at(listingLength, 'hours') = 0 AND element_at(listingLength, 'minutes') = 30)
-                OR
-                (TimeEstimate IS NOT NULL
-                    AND element_at(listingLength, 'hours') =
-                        floor(TimeEstimate / 60) +
-                        CASE WHEN (TimeEstimate % 60) >= 45 THEN 1 ELSE 0 END
-                    AND element_at(listingLength, 'minutes') =
-                        CASE
-                            WHEN (TimeEstimate % 60) = 0 THEN 0
-                            WHEN (TimeEstimate % 60) < 45 THEN 30
-                            ELSE 0
-                        END
+                element_at(listingLength, 'hours') =
+                    CASE
+                        WHEN TimeEstimate IS NULL THEN 0
+                        WHEN CAST(TimeEstimate AS INT) = 0 THEN 0
+                        WHEN (CAST(TimeEstimate AS INT) % 60) >= 45
+                            THEN FLOOR(CAST(TimeEstimate AS INT) / 60) + 1
+                        ELSE FLOOR(CAST(TimeEstimate AS INT) / 60)
+                    END
+
+                AND
+
+                element_at(listingLength, 'minutes') =
+                    CASE
+                        WHEN TimeEstimate IS NULL THEN 30
+                        WHEN CAST(TimeEstimate AS INT) = 0 THEN 30
+                        WHEN (CAST(TimeEstimate AS INT) % 60) = 0 THEN 0
+                        WHEN (CAST(TimeEstimate AS INT) % 60) < 45 THEN 30
+                        ELSE 0
+                    END
+
+                AND
+                (
+                    element_at(listingLength, 'minutes') IN (0,30)
+                    OR element_at(listingLength, 'minutes') IS NULL
                 )
-                OR
-                (listingLength IS NULL)
             )
-            AND element_at(listingLength, 'minutes') IN (0, 30, NULL)
-        """)
+        )
+        """
 
         checks["valid_hearingChannel"] = ("""
         (

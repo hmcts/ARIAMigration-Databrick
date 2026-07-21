@@ -96,9 +96,7 @@
 # run custom functions
 import sys
 import os
-# Append the parent directory to sys.path
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..','..')))
-# from pyspark.sql.functions import col, max
+from pyspark import pipelines as dp
 
 import dlt
 import json
@@ -327,546 +325,404 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_appealcase",
-    comment="Delta Live Table ARIA AppealCase.",
-    path=f"{raw_mnt}/Raw_AppealCase"
-)
+    comment="Delta Live Table ARIA AppealCase.")
 def Raw_AppealCase():
     return read_latest_parquet("AppealCase", "tv_AppealCase", "ARIA_ARM_APPEALS")
 
-@dlt.table(
+@dp.table(
     name="raw_caserespondent",
-    comment="Delta Live Table ARIA CaseRespondent.",
-    path=f"{raw_mnt}/Raw_CaseRespondent"
-)
+    comment="Delta Live Table ARIA CaseRespondent.")
 def CaseRespondent():
     return read_latest_parquet("CaseRespondent", "tv_CaseRespondent", "ARIA_ARM_APPEALS")
 
-@dlt.table(
+@dp.table(
     name="raw_mainrespondent",
-    comment="Delta Live Table ARIA MainRespondent.",
-    path=f"{raw_mnt}/Raw_MainRespondent"
-)
+    comment="Delta Live Table ARIA MainRespondent.")
 def raw_MainRespondent():
      return read_latest_parquet("MainRespondent", "tv_MainRespondent", "ARIA_ARM_APPEALS")
-@dlt.table(
+ 
+@dp.table(
     name="raw_respondent",
-    comment="Delta Live Table ARIA Respondent.",
-    path=f"{raw_mnt}/Raw_Respondent"
-)
+    comment="Delta Live Table ARIA Respondent.")
 def raw_Respondent():
      return read_latest_parquet("Respondent", "tv_Respondent", "ARIA_ARM_APPEALS")
 
-@dlt.table(
+@dp.table(
     name="raw_filelocation",
-    comment="Delta Live Table ARIA FileLocation.",
-    path=f"{raw_mnt}/Raw_FileLocation"
-)
+    comment="Delta Live Table ARIA FileLocation.")
 def raw_FileLocation():
      return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_caserep",
-    comment="Delta Live Table ARIA CaseRep.",
-    path=f"{raw_mnt}/Raw_CaseRep"
-)
+    comment="Delta Live Table ARIA CaseRep.")
 def raw_CaseRep():
      return read_latest_parquet("CaseRep", "tv_CaseRep", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_representative",
-    comment="Delta Live Table ARIA Representative.",
-    path=f"{raw_mnt}/Raw_Representative"
-)
+    comment="Delta Live Table ARIA Representative.")
 def raw_Representative():
      return read_latest_parquet("Representative", "tv_Representative", "ARIA_ARM_APPEALS") 
  
 
-@dlt.table(
+@dp.table(
     name="raw_language",
-    comment="Delta Live Table ARIA Language.",
-    path=f"{raw_mnt}/Raw_Language"
-)
+    comment="Delta Live Table ARIA Language.")
 def raw_Language():
      return read_latest_parquet("Language", "tv_Language", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_caseappellant",
-    comment="Delta Live Table ARIA CaseAppellant.",
-    path=f"{raw_mnt}/Raw_CaseAppellant"
-)
+    comment="Delta Live Table ARIA CaseAppellant.")
 def raw_CaseAppellant():
      return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_appellant",
-    comment="Delta Live Table ARIA Appellant.",
-    path=f"{raw_mnt}/Raw_Appellant"
-)
+    comment="Delta Live Table ARIA Appellant.")
 def raw_Appellant():
      return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_APPEALS") 
 
 
-@dlt.table(
+@dp.table(
     name="raw_detentioncentre",
-    comment="Delta Live Table ARIA DetentionCentre.",
-    path=f"{raw_mnt}/Raw_DetentionCentre"
-)
+    comment="Delta Live Table ARIA DetentionCentre.")
 def raw_DetentionCentre():
      return read_latest_parquet("DetentionCentre", "tv_DetentionCentre", "ARIA_ARM_APPEALS") 
 
 
-@dlt.table(
+@dp.table(
     name="raw_country",
-    comment="Delta Live Table ARIA Country.",
-    path=f"{raw_mnt}/Raw_Country"
-)
+    comment="Delta Live Table ARIA Country.")
 def raw_Country():
      return read_latest_parquet("Country", "tv_Country", "ARIA_ARM_APPEALS") 
  
-
-
-@dlt.table(
+@dp.table(
     name="raw_caselist",
-    comment="Delta Live Table ARIA CaseList.",
-    path=f"{raw_mnt}/Raw_CaseList"
-)
+    comment="Delta Live Table ARIA CaseList.")
 def raw_CaseList():
      return read_latest_parquet("CaseList", "tv_CaseList", "ARIA_ARM_APPEALS") 
- 
 
-@dlt.table(
+
+@dp.table(
     name="raw_status",
-    comment="Delta Live Table ARIA Status.",
-    path=f"{raw_mnt}/Raw_Status"
-)
+    comment="Delta Live Table ARIA Status.")
 def raw_Status():
      return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_hearingtype",
-    comment="Delta Live Table ARIA HearingType.",
-    path=f"{raw_mnt}/Raw_HearingType"
-)
+    comment="Delta Live Table ARIA HearingType.")
 def raw_HearingType():
      return read_latest_parquet("HearingType", "tv_HearingType", "ARIA_ARM_APPEALS") 
  
-
-@dlt.table(
+@dp.table(
     name="raw_list",
-    comment="Delta Live Table ARIA List.",
-    path=f"{raw_mnt}/Raw_List"
-)
+    comment="Delta Live Table ARIA List.")
 def raw_List():
      return read_latest_parquet("List", "tv_List", "ARIA_ARM_APPEALS") 
  
-
-@dlt.table(
+@dp.table(
     name="raw_listtype",
-    comment="Delta Live Table ARIA ListType.",
-    path=f"{raw_mnt}/Raw_ListType"
-)
+    comment="Delta Live Table ARIA ListType.")
 def raw_ListType():
      return read_latest_parquet("ListType", "tv_ListType", "ARIA_ARM_APPEALS")
  
-
-@dlt.table(
+@dp.table(
     name="raw_court",
-    comment="Delta Live Table ARIA Court.",
-    path=f"{raw_mnt}/Raw_Court"
-)
+    comment="Delta Live Table ARIA Court.")
 def raw_Court():
      return read_latest_parquet("Court", "tv_Court", "ARIA_ARM_APPEALS")
  
-@dlt.table(
+@dp.table(
     name="raw_hearingcentre",
-    comment="Delta Live Table ARIA HearingCentre.",
-    path=f"{raw_mnt}/Raw_HearingCentre"
-)
+    comment="Delta Live Table ARIA HearingCentre.")
 def raw_HearingCentre():
      return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_APPEALS")
  
-@dlt.table(
+@dp.table(
     name="raw_listsitting",
-    comment="Delta Live Table ARIA ListSitting.",
-    path=f"{raw_mnt}/Raw_ListSitting"
-)
+    comment="Delta Live Table ARIA ListSitting.")
 def raw_ListSitting():
      return read_latest_parquet("ListSitting", "tv_ListSitting", "ARIA_ARM_APPEALS")
  
-@dlt.table(
+@dp.table(
     name="raw_adjudicator",
-    comment="Delta Live Table ARIA Adjudicator.",
-    path=f"{raw_mnt}/Raw_Adjudicator"
-)
+    comment="Delta Live Table ARIA Adjudicator.")
 def raw_Adjudicator():
      return read_latest_parquet("Adjudicator", "tv_Adjudicator", "ARIA_ARM_APPEALS")
  
-@dlt.table(
+@dp.table(
     name="raw_bfdiary",
-    comment="Delta Live Table ARIA BFDiary.",
-    path=f"{raw_mnt}/Raw_BFDiary"
-)
+    comment="Delta Live Table ARIA BFDiary.")
 def raw_BFDiary():
      return read_latest_parquet("BFDiary", "tv_BFDiary", "ARIA_ARM_APPEALS")
  
 
-@dlt.table(
+@dp.table(
     name="raw_bfType",
-    comment="Delta Live Table ARIA BFType.",
-    path=f"{raw_mnt}/Raw_BFType"
-)
+    comment="Delta Live Table ARIA BFType.")
 def raw_BFType():
      return read_latest_parquet("BFType", "tv_BFType", "ARIA_ARM_APPEALS") 
  
 
-@dlt.table(
+@dp.table(
     name="raw_history",
-    comment="Delta Live Table ARIA History.",
-    path=f"{raw_mnt}/Raw_History"
-)
+    comment="Delta Live Table ARIA History.")
 def raw_History():
      return read_latest_parquet("History", "tv_History", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_users",
-    comment="Delta Live Table ARIA Users.",
-    path=f"{raw_mnt}/Raw_Users"
-)
+    comment="Delta Live Table ARIA Users.")
 def raw_Users():
      return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_APPEALS") 
  
-
-@dlt.table(
+@dp.table(
     name="raw_link",
-    comment="Delta Live Table ARIA Link.",
-    path=f"{raw_mnt}/Raw_Link"
-)
+    comment="Delta Live Table ARIA Link.")
 def raw_Link():
      return read_latest_parquet("Link", "tv_Link", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_linkdetail",
-    comment="Delta Live Table ARIA LinkDetail.",
-    path=f"{raw_mnt}/Raw_LinkDetail"
-)
+    comment="Delta Live Table ARIA LinkDetail.")
 def raw_LinkDetail():
      return read_latest_parquet("LinkDetail", "tv_LinkDetail", "ARIA_ARM_APPEALS")  
   
-
-@dlt.table(
+@dp.table(
     name="raw_casestatus",
-    comment="Delta Live Table ARIA CaseStatus.",
-    path=f"{raw_mnt}/Raw_CaseStatus"
-)
+    comment="Delta Live Table ARIA CaseStatus.")
 def raw_CaseStatus():
      return read_latest_parquet("CaseStatus", "tv_CaseStatus", "ARIA_ARM_APPEALS")  
  
 
-@dlt.table(
+@dp.table(
     name="raw_statuscontact",
-    comment="Delta Live Table ARIA StatusContact.",
-    path=f"{raw_mnt}/Raw_StatusContact"
-)
+    comment="Delta Live Table ARIA StatusContact.")
 def raw_StatusContact():
      return read_latest_parquet("StatusContact", "tv_StatusContact", "ARIA_ARM_APPEALS")   
  
-@dlt.table(
+@dp.table(
     name="raw_reasonadjourn",
-    comment="Delta Live Table ARIA ReasonAdjourn.",
-    path=f"{raw_mnt}/Raw_ReasonAdjourn"
-)
+    comment="Delta Live Table ARIA ReasonAdjourn.")
 def raw_ReasonAdjourn():
-     return read_latest_parquet("ReasonAdjourn", "tv_ReasonAdjourn", "ARIA_ARM_APPEALS")  
-  
+     return read_latest_parquet("ReasonAdjourn", "tv_ReasonAdjourn", "ARIA_ARM_APPEALS")   
 
-# @dlt.table(
-#     name="raw_Language",
-#     comment="Delta Live Table ARIA Language.",
-#     path=f"{raw_mnt}/Raw_Language"
-# )
-# def raw_Language():
-#      return read_latest_parquet("Language", "tv_Language", "ARIA_ARM_APPEALS")  
- 
-
-@dlt.table(
+@dp.table(
     name="raw_decisiontype",
-    comment="Delta Live Table ARIA DecisionType.",
-    path=f"{raw_mnt}/Raw_DecisionType"
-)
+    comment="Delta Live Table ARIA DecisionType.")
 def raw_DecisionType():
      return read_latest_parquet("DecisionType", "tv_DecisionType", "ARIA_ARM_APPEALS") 
  
 
-@dlt.table(
+@dp.table(
     name="raw_appealcategory",
-    comment="Delta Live Table ARIA AppealCategory.",
-    path=f"{raw_mnt}/Raw_AppealCategory"
-)
+    comment="Delta Live Table ARIA AppealCategory.")
 def raw_AppealCategory():
      return read_latest_parquet("AppealCategory", "tv_AppealCategory", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_category",
-    comment="Delta Live Table ARIA Category.",
-    path=f"{raw_mnt}/Raw_Category"
-)
+    comment="Delta Live Table ARIA Category.")
 def raw_Category():
      return read_latest_parquet("Category", "tv_Category", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_casefeesummary",
-    comment="Delta Live Table ARIA CaseFeeSummary.",
-    path=f"{raw_mnt}/Raw_CaseFeeSummary"
-)
+    comment="Delta Live Table ARIA CaseFeeSummary.")
 def raw_CaseFeeSummary():
      return read_latest_parquet("CaseFeeSummary", "tv_CaseFeeSummary", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_feesatisfaction",
-    comment="Delta Live Table ARIA FeeSatisfaction.",
-    path=f"{raw_mnt}/Raw_FeeSatisfaction"
-)
+    comment="Delta Live Table ARIA FeeSatisfaction.")
 def raw_FeeSatisfaction():
      return read_latest_parquet("FeeSatisfaction", "tv_FeeSatisfaction", "ARIA_ARM_APPEALS")  
 
  
-@dlt.table(
+@dp.table(
     name="raw_paymentremissionreason",
-    comment="Delta Live Table ARIA PaymentRemissionReason.",
-    path=f"{raw_mnt}/Raw_PaymentRemissionReason"
-)
+    comment="Delta Live Table ARIA PaymentRemissionReason.")
 def raw_PaymentRemissionReason():
      return read_latest_parquet("PaymentRemissionReason", "tv_PaymentRemissionReason", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_port",
-    comment="Delta Live Table ARIA Port.",
-    path=f"{raw_mnt}/Raw_Port"
-)
+    comment="Delta Live Table ARIA Port.")
 def raw_Port():
      return read_latest_parquet("Port", "tv_Port", "ARIA_ARM_APPEALS")   
  
-@dlt.table(
+@dp.table(
     name="raw_embassy",
-    comment="Delta Live Table ARIA Embassy.",
-    path=f"{raw_mnt}/Raw_Embassy"
-)
+    comment="Delta Live Table ARIA Embassy.")
 def raw_Embassy():
      return read_latest_parquet("Embassy", "tv_Embassy", "ARIA_ARM_APPEALS")    
  
-@dlt.table(
+@dp.table(
     name="raw_casesponsor",
-    comment="Delta Live Table ARIA CaseSponsor.",
-    path=f"{raw_mnt}/Raw_CaseSponsor"
-)
+    comment="Delta Live Table ARIA CaseSponsor.")
 def raw_CaseSponsor():
      return read_latest_parquet("CaseSponsor", "tv_CaseSponsor", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_appealgrounds",
-    comment="Delta Live Table ARIA AppealGrounds.",
-    path=f"{raw_mnt}/Raw_AppealGrounds"
-)
+    comment="Delta Live Table ARIA AppealGrounds.")
 def raw_AppealGrounds():
      return read_latest_parquet("AppealGrounds", "tv_AppealGrounds", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_appealtype",
-    comment="Delta Live Table ARIA AppealType.",
-    path=f"{raw_mnt}/Raw_AppealType"
-)
+    comment="Delta Live Table ARIA AppealType.")
 def raw_AppealType():
      return read_latest_parquet("AppealType", "tv_AppealType", "ARIA_ARM_APPEALS") 
 
-@dlt.table(
+@dp.table(
     name="raw_transaction",
-    comment="Delta Live Table ARIA Transaction.",
-    path=f"{raw_mnt}/Raw_Transaction"
-)
+    comment="Delta Live Table ARIA Transaction.")
 def raw_Transaction():
      return read_latest_parquet("Transaction", "tv_Transaction", "ARIA_ARM_APPEALS")   
 
 
-@dlt.table(
+@dp.table(
     name="raw_transactiontype",
-    comment="Delta Live Table ARIA TransactionType.",
-    path=f"{raw_mnt}/Raw_TransactionType"
-)
+    comment="Delta Live Table ARIA TransactionType.")
 def raw_TransactionType():
      return read_latest_parquet("TransactionType", "tv_TransactionType", "ARIA_ARM_APPEALS")    
  
-@dlt.table(
+@dp.table(
     name="raw_transactionstatus",
-    comment="Delta Live Table ARIA TransactionStatus.",
-    path=f"{raw_mnt}/Raw_TransactionStatus"
-)
+    comment="Delta Live Table ARIA TransactionStatus.")
 def raw_TransactionStatus():
      return read_latest_parquet("TransactionStatus", "tv_TransactionStatus", "ARIA_ARM_APPEALS")   
 
-@dlt.table(
+@dp.table(
     name="raw_transactionmethod",
-    comment="Delta Live Table ARIA TransactionMethod.",
-    path=f"{raw_mnt}/Raw_TransactionMethod"
-)
+    comment="Delta Live Table ARIA TransactionMethod.")
 def raw_TransactionMethod():
      return read_latest_parquet("TransactionMethod", "tv_TransactionMethod", "ARIA_ARM_APPEALS")   
  
-@dlt.table(
+@dp.table(
     name="raw_appealhumanright",
-    comment="Delta Live Table ARIA AppealHumanRight.",
-    path=f"{raw_mnt}/Raw_AppealHumanRight"
-)
+    comment="Delta Live Table ARIA AppealHumanRight.")
 def raw_AppealHumanRight():
      return read_latest_parquet("AppealHumanRight", "tv_AppealHumanRight", "ARIA_ARM_APPEALS")   
  
-@dlt.table(
+@dp.table(
     name="raw_humanright",
-    comment="Delta Live Table ARIA HumanRight.",
-    path=f"{raw_mnt}/Raw_HumanRight"
-)
+    comment="Delta Live Table ARIA HumanRight.")
 def raw_HumanRight():
      return read_latest_parquet("HumanRight", "tv_HumanRight", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_appealnewmatter",
-    comment="Delta Live Table ARIA AppealNewMatter.",
-    path=f"{raw_mnt}/Raw_AppealNewMatter"
-)
+    comment="Delta Live Table ARIA AppealNewMatter.")
 def raw_AppealNewMatter():
      return read_latest_parquet("AppealNewMatter", "tv_AppealNewMatter", "ARIA_ARM_APPEALS")  
 
-@dlt.table(
+@dp.table(
     name="raw_newmatter",
-    comment="Delta Live Table ARIA NewMatter.",
-    path=f"{raw_mnt}/Raw_NewMatter"
-)
+    comment="Delta Live Table ARIA NewMatter.")
 def raw_NewMatter():
      return read_latest_parquet("NewMatter", "tv_NewMatter", "ARIA_ARM_APPEALS")  
  
 
-@dlt.table(
+@dp.table(
     name="raw_documentsreceived",
-    comment="Delta Live Table ARIA DocumentsReceived.",
-    path=f"{raw_mnt}/Raw_DocumentsReceived"
-)
+    comment="Delta Live Table ARIA DocumentsReceived.")
 def raw_DocumentsReceived():
      return read_latest_parquet("DocumentsReceived", "tv_DocumentsReceived", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_receiveddocument",
-    comment="Delta Live Table ARIA ReceivedDocument.",
-    path=f"{raw_mnt}/Raw_ReceivedDocument"
-)
+    comment="Delta Live Table ARIA ReceivedDocument.")
 def raw_ReceivedDocument():
      return read_latest_parquet("ReceivedDocument", "tv_ReceivedDocument", "ARIA_ARM_APPEALS")  
 
-@dlt.table(
+@dp.table(
     name="raw_reviewstandarddirection",
-    comment="Delta Live Table ARIA ReviewStandardDirection.",
-    path=f"{raw_mnt}/Raw_ReviewStandardDirection"
-)
+    comment="Delta Live Table ARIA ReviewStandardDirection.")
 def raw_ReviewStandardDirection():
      return read_latest_parquet("ReviewStandardDirection", "tv_ReviewStandardDirection", "ARIA_ARM_APPEALS")  
  
 
-@dlt.table(
+@dp.table(
     name="raw_StandardDirection",
-    comment="Delta Live Table ARIA StandardDirection.",
-    path=f"{raw_mnt}/Raw_StandardDirection"
-)
+    comment="Delta Live Table ARIA StandardDirection.")
 def raw_StandardDirection():
      return read_latest_parquet("StandardDirection", "tv_StandardDirection", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_reviewspecificdirection",
-    comment="Delta Live Table ARIA ReviewSpecificDirection.",
-    path=f"{raw_mnt}/Raw_ReviewSpecificDirection"
-)
+    comment="Delta Live Table ARIA ReviewSpecificDirection.")
 def raw_ReviewSpecificDirection():
      return read_latest_parquet("ReviewSpecificDirection", "tv_ReviewSpecificDirection", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_costaward",
-    comment="Delta Live Table ARIA CostAward.",
-    path=f"{raw_mnt}/Raw_CostAward"
-)
+    comment="Delta Live Table ARIA CostAward.")
 def raw_CostAward():
      return read_latest_parquet("CostAward", "tv_CostAward", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_costorder",
-    comment="Delta Live Table ARIA CostOrder.",
-    path=f"{raw_mnt}/Raw_CostOrder"
-)
+    comment="Delta Live Table ARIA CostOrder.")
 def raw_CostOrder():
      return read_latest_parquet("CostOrder", "tv_CostOrder", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_hearingpointschangereason",
-    comment="Delta Live Table ARIA HearingPointsChangeReason.",
-    path=f"{raw_mnt}/Raw_HearingPointsChangeReason"
-)
+    comment="Delta Live Table ARIA HearingPointsChangeReason.")
 def raw_HearingPointsChangeReason():
      return read_latest_parquet("HearingPointsChangeReason", "tv_HearingPointsChangeReason", "ARIA_ARM_APPEALS")  
  
-@dlt.table(
+@dp.table(
     name="raw_hearingpointshistory",
-    comment="Delta Live Table ARIA HearingPointsHistory.",
-    path=f"{raw_mnt}/Raw_HearingPointsHistory"
-)
+    comment="Delta Live Table ARIA HearingPointsHistory.")
 def raw_HearingPointsHistory():
      return read_latest_parquet("HearingPointsHistory", "tv_HearingPointsHistory", "ARIA_ARM_APPEALS")  
   
-@dlt.table(
+@dp.table(
     name="raw_appealtypecategory",
-    comment="Delta Live Table ARIA AppealTypeCategory.",
-    path=f"{raw_mnt}/Raw_AppealTypeCategory"
-)
+    comment="Delta Live Table ARIA AppealTypeCategory.")
 def raw_AppealTypeCategory():
      return read_latest_parquet("AppealTypeCategory", "tv_AppealTypeCategory", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_pou",
-    comment="Delta Live Table ARIA AppealTypeCategory.",
-    path=f"{raw_mnt}/raw_pou"
-)
+    comment="Delta Live Table ARIA AppealTypeCategory.")
 def raw_pou():
     if env_name == "sbox":
      return read_latest_parquet("ARIAPou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
     else:
       return read_latest_parquet("Pou", "tv_ARIAPou", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
     name="raw_caseadjudicator",
-    comment="Delta Live Table ARIA AppealTypeCategory.",
-    path=f"{raw_mnt}/raw_caseadjudicator"
-)
+    comment="Delta Live Table ARIA AppealTypeCategory.")
 def raw_caseadjudicator():
      return read_latest_parquet("CaseAdjudicator", "tv_caseadjudicator", "ARIA_ARM_APPEALS") 
  
-@dlt.table(
+@dp.table(
 name="raw_stmcases",
-comment="Delta Live Table ARIA AppealTypeCategory.",
-path=f"{raw_mnt}/raw_stmcases"
-)
+comment="Delta Live Table ARIA AppealTypeCategory.")
 def raw_stmcases():
     return read_latest_parquet("STMCases", "tv_stmcases", "ARIA_ARM_APPEALS")
 
-@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_mnt}/raw_department")
+@dp.table(name="raw_department", comment="Raw Department")
 def bail_raw_appeal_cases():
     return read_latest_parquet("Department","tv_department","ARIA_ARM_APPEALS")
 
-@dlt.table(name="raw_listrequirementtype", comment="Raw List Requirement Type",path=f"{raw_mnt}/raw_listrequirementtype")
+@dp.table(name="raw_listrequirementtype", comment="Raw List Requirement Type")
 def raw_list_requirement_type():
     return read_latest_parquet("ListRequirementType","tv_listrequirementtype","ARIA_ARM_APPEALS")
 
-@dlt.table(
+@dp.table(
     name="raw_UpperTribunalHearingDirection",
-    comment="Delta Live Table ARIA UpperTribunalHearingDirection.",
-    path=f"{raw_mnt}/Raw_UpperTribunalHearingDirection"
-)
+    comment="Delta Live Table ARIA UpperTribunalHearingDirection.")
 def raw_UpperTribunalHearingDirection():
      return read_latest_parquet("UpperTribunalHearingDirection", "tv_UpperTribunalHearingDirection", "ARIA_ARM_APPEALS")
 
@@ -883,75 +739,73 @@ def raw_UpperTribunalHearingDirection():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang",
-    comment="Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.",
-    path=f"{bronze_mnt}/bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang"
-)
+    comment="Delta Live Table combining Appeal Case data with Case Respondent, Main Respondent, Respondent, File Location, Case Representative, Representative, and Language.")
 def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
     
-    df = dlt.read("raw_appealcase").alias("ac") \
+    df = dp.read("raw_appealcase").alias("ac") \
         .join(
-            dlt.read("raw_caserespondent").alias("cr"),
+            dp.read("raw_caserespondent").alias("cr"),
             col("ac.CaseNo") == col("cr.CaseNo"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_mainrespondent").alias("mr"),
+            dp.read("raw_mainrespondent").alias("mr"),
             col("cr.MainRespondentId") == col("mr.MainRespondentId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_respondent").alias("r"),
+            dp.read("raw_respondent").alias("r"),
             col("cr.RespondentId") == col("r.RespondentId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_filelocation").alias("fl"),
+            dp.read("raw_filelocation").alias("fl"),
             col("ac.CaseNo") == col("fl.CaseNo"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_caserep").alias("crep"),
+            dp.read("raw_caserep").alias("crep"),
             col("ac.CaseNo") == col("crep.CaseNo"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_representative").alias("rep"),
+            dp.read("raw_representative").alias("rep"),
             col("crep.RepresentativeId") == col("rep.RepresentativeId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_language").alias("l"),
+            dp.read("raw_language").alias("l"),
             col("ac.LanguageId") == col("l.LanguageId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_country").alias("c1"),
+            dp.read("raw_country").alias("c1"),
             col("ac.CountryId") == col("c1.CountryId"),
             "left_outer"
         ).join(
-            dlt.read("raw_country").alias("c2"),
+            dp.read("raw_country").alias("c2"),
             col("ac.ThirdCountryId") == col("c2.CountryId"),
             "left_outer"
         ).join(
-            dlt.read("raw_country").alias("n"),
+            dp.read("raw_country").alias("n"),
             col("ac.NationalityId") == col("n.CountryId"),
             "left_outer"
         ).join(
-            dlt.read("raw_feesatisfaction").alias("fs"),
+            dp.read("raw_feesatisfaction").alias("fs"),
             col("ac.FeeSatisfactionId") == col("fs.FeeSatisfactionId"),
             "left_outer"
         ).join(
-            dlt.read("raw_pou").alias("p"),
+            dp.read("raw_pou").alias("p"),
             col("cr.RespondentId") == col("p.PouId"),
             "left_outer"
         ).join(
-            dlt.read("raw_embassy").alias("e"),
+            dp.read("raw_embassy").alias("e"),
             col("cr.RespondentId") == col("e.EmbassyId"),
             "left_outer"
-        ).join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer"
-        ).join(dlt.read("raw_hearingcentre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer"
+        ).join(dp.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer"
+        ).join(dp.read("raw_hearingcentre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer"
         ).select(
             # Appeal Case columns
             trim(col("ac.CaseNo")).alias('CaseNo'), col("ac.CasePrefix"), col("ac.CaseYear"), col("ac.CaseType"),
@@ -1094,25 +948,23 @@ def bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_ca_apt_country_detc",
-    comment="Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.",
-    path=f"{bronze_mnt}/bronze_appealcase_ca_apt_country_detc"
-)
+    comment="Delta Live Table combining Case Appellant data with Appellant, Detention Centre, and Country information.")
 def bronze_appealcase_ca_apt_country_detc():
 
     window = Window.partitionBy("ca.AppellantId")
-    df = dlt.read("raw_caseappellant").alias("ca") \
+    df = dp.read("raw_caseappellant").alias("ca") \
         .join(
-            dlt.read("raw_appellant").alias("a"),
+            dp.read("raw_appellant").alias("a"),
             col("ca.AppellantId") == col("a.AppellantId"),
             "left_outer"
         ).join(
-            dlt.read("raw_detentioncentre").alias("dc"),
+            dp.read("raw_detentioncentre").alias("dc"),
             col("a.DetentionCentreId") == col("dc.DetentionCentreId"),
             "left_outer"
         ).join(
-            dlt.read("raw_country").alias("c"),
+            dp.read("raw_country").alias("c"),
             col("a.AppellantCountryId") == col("c.CountryId"),
             "left_outer"
         ).withColumn("connectedFiles", when(count("ca.AppellantId").over(window) > 1, lit("Connected Files Exist")).otherwise(lit(None))).select(
@@ -1173,43 +1025,41 @@ def bronze_appealcase_ca_apt_country_detc():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj",
-    comment="Delta Live Table combining Status, Case List, Hearing Type, Adjudicator, Court, and other related details.",
-    path=f"{bronze_mnt}/bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj"
-)
+    comment="Delta Live Table combining Status, Case List, Hearing Type, Adjudicator, Court, and other related details.")
 def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
-    df =   dlt.read("raw_status").alias("s") \
+    df =   dp.read("raw_status").alias("s") \
         .join(
-            dlt.read("raw_caselist").alias("cl"),
+            dp.read("raw_caselist").alias("cl"),
             col("s.StatusId") == col("cl.StatusId"),
             "left_outer"
         ).join(
-            dlt.read("raw_hearingtype").alias("ht"),
+            dp.read("raw_hearingtype").alias("ht"),
             col("cl.HearingTypeId") == col("ht.HearingTypeId"),
             "left_outer"
         ).join(
-            dlt.read("raw_list").alias("l"),
+            dp.read("raw_list").alias("l"),
             col("cl.ListId") == col("l.ListId"),
             "left_outer"
         ).join(
-            dlt.read("raw_listtype").alias("lt"),
+            dp.read("raw_listtype").alias("lt"),
             col("l.ListTypeId") == col("lt.ListTypeId"),
             "left_outer"
         ).join(
-            dlt.read("raw_court").alias("c"),
+            dp.read("raw_court").alias("c"),
             col("l.CourtId") == col("c.CourtId"),
             "left_outer"
         ).join(
-            dlt.read("raw_hearingcentre").alias("hc"),
+            dp.read("raw_hearingcentre").alias("hc"),
             col("l.CentreId") == col("hc.CentreId"),
             "left_outer"
         ).join(
-            dlt.read("raw_listsitting").alias("ls"),
+            dp.read("raw_listsitting").alias("ls"),
             col("l.ListId") == col("ls.ListId"),
             "left_outer"
         ).join(
-            dlt.read("raw_adjudicator").alias("a"),
+            dp.read("raw_adjudicator").alias("a"),
             col("ls.AdjudicatorId") == col("a.AdjudicatorId"),
             "left_outer"
         ).select(
@@ -1271,15 +1121,13 @@ def bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_bfdiary_bftype",
-    comment="Delta Live Table combining BFDiary and BFType details.",
-    path=f"{bronze_mnt}/bronze_appealcase_bfdiary_bftype"
-)
+    comment="Delta Live Table combining BFDiary and BFType details.")
 def bronze_appealcase_bfdiary_bftype():
-    df =  dlt.read("raw_bfdiary").alias("bfd") \
+    df =  dp.read("raw_bfdiary").alias("bfd") \
             .join(
-                dlt.read("raw_bfType").alias("bft"),
+                dp.read("raw_bfType").alias("bft"),
                 col("bfd.BFTypeId") == col("bft.BFTypeId"),
                 "left_outer"
             ).select(
@@ -1307,19 +1155,17 @@ def bronze_appealcase_bfdiary_bftype():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_history_users",
-    comment="Delta Live Table combining History and Users details.",
-    path=f"{bronze_mnt}/bronze_appealcase_history_users"
-)
+    comment="Delta Live Table combining History and Users details.")
 def bronze_appealcase_history_users():
-    df = dlt.read("raw_history").alias("h") \
+    df = dp.read("raw_history").alias("h") \
         .join(
-            dlt.read("raw_users").alias("u"),
+            dp.read("raw_users").alias("u"),
             col("h.UserId") == col("u.UserId"),
             "left_outer"
         ).join(
-            dlt.read("raw_users").alias("udb"),
+            dp.read("raw_users").alias("udb"),
             col("h.DeletedBy") == col("udb.UserId"),
             "left_outer"
         ).select(
@@ -1347,23 +1193,21 @@ def bronze_appealcase_history_users():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_link_linkdetail",
-    comment="Delta Live Table combining Link and LinkDetail details.",
-    path=f"{bronze_mnt}/bronze_appealcase_link_linkdetail"
-)
+    comment="Delta Live Table combining Link and LinkDetail details.")
 def bronze_appealcase_link_linkdetail():
-    df =  dlt.read("raw_link").alias("l")\
+    df =  dp.read("raw_link").alias("l")\
             .join(
-                dlt.read("raw_linkdetail").alias("ld"),
+                dp.read("raw_linkdetail").alias("ld"),
                 col("l.LinkNo") == col("ld.LinkNo"),
                 "left_outer"
             ).join(
-                dlt.read("raw_caseappellant").alias("ca"),
+                dp.read("raw_caseappellant").alias("ca"),
                 col("l.LinkNo") == col("ca.CaseNo"),
                 "left_outer"
             ).join(
-                dlt.read("raw_appellant").alias("a"),
+                dp.read("raw_appellant").alias("a"),
                 col("ca.AppellantId") == col("a.AppellantId"),
                 "left_outer"
             ).filter(col("ca.AppellantId").isNull()).select(
@@ -1393,70 +1237,68 @@ def bronze_appealcase_link_linkdetail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_status_sc_ra_cs",
-    comment="Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details.",
-    path=f"{bronze_mnt}/bronze_appealcase_status_sc_ra_cs"
-)
+    comment="Delta Live Table joining Status, CaseStatus, StatusContact, ReasonAdjourn, Language, and DecisionType details.")
 def bronze_appealcase_status_sc_ra_cs():
-    df =   dlt.read("raw_status").alias("s")\
+    df =   dp.read("raw_status").alias("s")\
             .join(
-                dlt.read("raw_casestatus").alias("cs"),
+                dp.read("raw_casestatus").alias("cs"),
                 col("s.CaseStatus") == col("cs.CaseStatusId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_statuscontact").alias("sc"),
+                dp.read("raw_statuscontact").alias("sc"),
                 col("s.StatusId") == col("sc.StatusId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_reasonadjourn").alias("ra"),
+                dp.read("raw_reasonadjourn").alias("ra"),
                 col("s.ReasonAdjournId") == col("ra.ReasonAdjournId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_language").alias("l"),
+                dp.read("raw_language").alias("l"),
                 col("s.AdditionalLanguageId") == col("l.LanguageId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_decisiontype").alias("dt"),
+                dp.read("raw_decisiontype").alias("dt"),
                 col("s.Outcome") == col("dt.DecisionTypeId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_adjudicator").alias("a"),
+                dp.read("raw_adjudicator").alias("a"),
                 col("s.AdjudicatorId") == col("a.AdjudicatorId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_adjudicator").alias("dAdj"),
+                dp.read("raw_adjudicator").alias("dAdj"),
                 col("s.DeterminationBy") == col("dAdj.AdjudicatorId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_stmcases").alias("stm"),
+                dp.read("raw_stmcases").alias("stm"),
                 col("s.StatusId") == col("stm.NewStatusId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_listtype").alias("lt"),
+                dp.read("raw_listtype").alias("lt"),
                 col("s.ListTypeId") == col("lt.ListTypeId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_hearingtype").alias("ht"),
+                dp.read("raw_hearingtype").alias("ht"),
                 col("s.HearingTypeId") == col("ht.HearingTypeId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_adjudicator").alias("a1"),
+                dp.read("raw_adjudicator").alias("a1"),
                 col("stm.Judiciary1Id") == col("a1.AdjudicatorId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_adjudicator").alias("a2"),
+                dp.read("raw_adjudicator").alias("a2"),
                 col("stm.Judiciary2Id") == col("a2.AdjudicatorId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_adjudicator").alias("a3"),
+                dp.read("raw_adjudicator").alias("a3"),
                 col("stm.Judiciary3Id") == col("a3.AdjudicatorId"),
                 "left_outer"
-            ).join(dlt.read("raw_listrequirementtype").alias("lrt"),
+            ).join(dp.read("raw_listrequirementtype").alias("lrt"),
                    col("s.ListRequirementTypeId") == col("lrt.ListRequirementTypeId"),
                 "left_outer"
-            ).join(dlt.read("raw_hearingcentre").alias("hc"), col("s.DecidingCentre") == col("hc.CentreId"), "left_outer"
-            ).join(dlt.read("raw_UpperTribunalHearingDirection").alias("uthd"), col("s.UpperTribunalHearingDirectionId") == col("uthd.UpperTribunalHearingDirectionId"), "left_outer"
+            ).join(dp.read("raw_hearingcentre").alias("hc"), col("s.DecidingCentre") == col("hc.CentreId"), "left_outer"
+            ).join(dp.read("raw_UpperTribunalHearingDirection").alias("uthd"), col("s.UpperTribunalHearingDirectionId") == col("uthd.UpperTribunalHearingDirectionId"), "left_outer"
             ).select(
                 # Status fields
                 col("s.StatusId"),
@@ -1605,15 +1447,13 @@ def bronze_appealcase_status_sc_ra_cs():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_appealcatagory_catagory",
-    comment="Delta Live Table for joining AppealCategory and Category tables to retrieve case and category details.",
-    path=f"{bronze_mnt}/bronze_appealcase_appealcatagory_catagory"
-)
+    comment="Delta Live Table for joining AppealCategory and Category tables to retrieve case and category details.")
 def bronze_appealcase_appealcatagory_catagory():
-    df =  dlt.read("raw_appealcategory").alias("ap")\
+    df =  dp.read("raw_appealcategory").alias("ap")\
             .join(
-                dlt.read("raw_category").alias("c"),
+                dp.read("raw_category").alias("c"),
                 col("ap.CategoryId") == col("c.CategoryId"),
                 "left_outer"
             ).select(
@@ -1633,22 +1473,20 @@ def bronze_appealcase_appealcatagory_catagory():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at",
-    comment="Delta Live Table for joining AppealCase, CaseFeeSummary, and other related tables to retrieve comprehensive case details.",
-    path=f"{bronze_mnt}/bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at"
-)
+    comment="Delta Live Table for joining AppealCase, CaseFeeSummary, and other related tables to retrieve comprehensive case details.")
 def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
-    appeal_case = dlt.read("raw_appealcase").alias("ac")
-    case_fee_summary = dlt.read("raw_casefeesummary").alias("cfs")
-    fee_satisfaction = dlt.read("raw_feesatisfaction").alias("fs")
-    payment_remission_reason = dlt.read("raw_paymentremissionreason").alias("prr")
-    port = dlt.read("raw_port").alias("p")
-    embassy = dlt.read("raw_embassy").alias("e")
-    hearing_centre = dlt.read("raw_hearingcentre").alias("hc")
-    case_sponsor = dlt.read("raw_casesponsor").alias("cs")
-    # appeal_grounds = dlt.read("raw_appealgrounds").alias("ag")
-    appeal_type = dlt.read("raw_appealtype").alias("at")
+    appeal_case = dp.read("raw_appealcase").alias("ac")
+    case_fee_summary = dp.read("raw_casefeesummary").alias("cfs")
+    fee_satisfaction = dp.read("raw_feesatisfaction").alias("fs")
+    payment_remission_reason = dp.read("raw_paymentremissionreason").alias("prr")
+    port = dp.read("raw_port").alias("p")
+    embassy = dp.read("raw_embassy").alias("e")
+    hearing_centre = dp.read("raw_hearingcentre").alias("hc")
+    case_sponsor = dp.read("raw_casesponsor").alias("cs")
+    # appeal_grounds = dp.read("raw_appealgrounds").alias("ag")
+    appeal_type = dp.read("raw_appealtype").alias("at")
 
     ## .join(appeal_grounds, col("ac.CaseNo") == col("ag.CaseNo"), "left_outer") 
 
@@ -1775,15 +1613,13 @@ def bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_status_decisiontype",
-    comment="Delta Live Table for joining Status and DecisionType tables to retrieve case and decision type details.",
-    path=f"{bronze_mnt}/bronze_status_decisiontype"
-)
+    comment="Delta Live Table for joining Status and DecisionType tables to retrieve case and decision type details.")
 def bronze_status_decisiontype():
-    df =  dlt.read("raw_status").alias("s")\
+    df =  dp.read("raw_status").alias("s")\
             .join(
-                dlt.read("raw_decisiontype").alias("dt"),
+                dp.read("raw_decisiontype").alias("dt"),
                 col("s.Outcome") == col("dt.DecisionTypeId"),
                 "left_outer"
             ).select(
@@ -1806,31 +1642,29 @@ def bronze_status_decisiontype():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_t_tt_ts_tm",
-    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, TransactionMethod, and Users tables to retrieve transaction details.",
-    path=f"{bronze_mnt}/bronze_appealcase_t_tt_ts_tm"
-)
+    comment="Delta Live Table for joining Transaction, TransactionType, TransactionStatus, TransactionMethod, and Users tables to retrieve transaction details.")
 def bronze_appealcase_t_tt_ts_tm():
-    df =  dlt.read("raw_transaction").alias("t")\
+    df =  dp.read("raw_transaction").alias("t")\
             .join(
-                dlt.read("raw_transactiontype").alias("tt"),
+                dp.read("raw_transactiontype").alias("tt"),
                 col("t.TransactionTypeId") == col("tt.TransactionTypeID"),
                 "left_outer"
             ).join(
-                dlt.read("raw_transactionstatus").alias("ts"),
+                dp.read("raw_transactionstatus").alias("ts"),
                 col("t.Status") == col("ts.TransactionStatusID"),
                 "left_outer"
             ).join(
-                dlt.read("raw_transactionmethod").alias("tm"),
+                dp.read("raw_transactionmethod").alias("tm"),
                 col("t.TransactionMethodId") == col("tm.TransactionMethodID"),
                 "left_outer"
             ).join(
-                dlt.read("raw_users").alias("u1"),
+                dp.read("raw_users").alias("u1"),
                 col("u1.UserId") == col("t.CreateUserId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_users").alias("u2"),
+                dp.read("raw_users").alias("u2"),
                 col("u2.UserId") == col("t.LastEditUserId"),
                 "left_outer"
             ).select(
@@ -1895,15 +1729,13 @@ def bronze_appealcase_t_tt_ts_tm():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_ahr_hr",
-    comment="Delta Live Table for joining AppealHumanRight and HumanRight tables to retrieve case and human rights details.",
-    path=f"{bronze_mnt}/bronze_appealcase_ahr_hr"
-)
+    comment="Delta Live Table for joining AppealHumanRight and HumanRight tables to retrieve case and human rights details.")
 def bronze_appealcase_ahr_hr():
-    df =  dlt.read("raw_appealhumanright").alias("ahr")\
+    df =  dp.read("raw_appealhumanright").alias("ahr")\
             .join(
-                dlt.read("raw_humanright").alias("hr"),
+                dp.read("raw_humanright").alias("hr"),
                 col("ahr.HumanRightId") == col("hr.HumanRightId"),
                 "left_outer"
             ).select(
@@ -1924,15 +1756,13 @@ def bronze_appealcase_ahr_hr():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_anm_nm",
-    comment="Delta Live Table for joining AppealNewMatter and NewMatter tables to retrieve appeal and new matter details.",
-    path=f"{bronze_mnt}/bronze_appealcase_anm_nm"
-)
+    comment="Delta Live Table for joining AppealNewMatter and NewMatter tables to retrieve appeal and new matter details.")
 def bronze_appealcase_anm_nm():
-    df =  dlt.read("raw_appealnewmatter").alias("anm")\
+    df =  dp.read("raw_appealnewmatter").alias("anm")\
             .join(
-                dlt.read("raw_newmatter").alias("nm"),
+                dp.read("raw_newmatter").alias("nm"),
                 col("anm.NewMatterId") == col("nm.NewMatterId"),
                 "left_outer"
             ).select(
@@ -1959,15 +1789,13 @@ def bronze_appealcase_anm_nm():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_dr_rd",
-    comment="Delta Live Table for joining DocumentsReceived and ReceivedDocument tables to retrieve document details.",
-    path=f"{bronze_mnt}/bronze_appealcase_dr_rd"
-)
+    comment="Delta Live Table for joining DocumentsReceived and ReceivedDocument tables to retrieve document details.")
 def bronze_appealcase_dr_rd():
-    df =  dlt.read("raw_documentsreceived").alias("dr")\
+    df =  dp.read("raw_documentsreceived").alias("dr")\
             .join(
-                dlt.read("raw_receiveddocument").alias("rd"),
+                dp.read("raw_receiveddocument").alias("rd"),
                 col("dr.ReceivedDocumentId") == col("rd.ReceivedDocumentId"),
                 "left_outer"
             ).select(
@@ -1994,15 +1822,13 @@ def bronze_appealcase_dr_rd():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appealcase_rsd_sd",
-    comment="Delta Live Table for joining ReviewStandardDirection and StandardDirection tables to retrieve review standard direction details.",
-    path=f"{bronze_mnt}/bronze_appealcase_rsd_sd"
-)
+    comment="Delta Live Table for joining ReviewStandardDirection and StandardDirection tables to retrieve review standard direction details.")
 def bronze_appealcase_rsd_sd():
-    df =  dlt.read("raw_reviewstandarddirection").alias("rsd")\
+    df =  dp.read("raw_reviewstandarddirection").alias("rsd")\
             .join(
-                dlt.read("raw_StandardDirection").alias("sd"),
+                dp.read("raw_StandardDirection").alias("sd"),
                 col("rsd.StandardDirectionId") == col("sd.StandardDirectionId"),
                 "left_outer"
             ).select(
@@ -2029,13 +1855,11 @@ def bronze_appealcase_rsd_sd():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_review_specific_direction",
-    comment="Delta Live Table for retrieving details from the ReviewSpecificDirection table.",
-    path=f"{bronze_mnt}/bronze_review_specific_direction"
-)
+    comment="Delta Live Table for retrieving details from the ReviewSpecificDirection table.")
 def bronze_review_specific_direction():
-    df =  dlt.read("raw_reviewspecificdirection")\
+    df =  dp.read("raw_reviewspecificdirection")\
             .select(
                 col("ReviewSpecificDirectionId"),
                 col("CaseNo"),
@@ -2058,29 +1882,22 @@ def bronze_review_specific_direction():
 # COMMAND ----------
 
 # DBTITLE 1,Costward
-@dlt.table(
+@dp.table(
     name="bronze_cost_award",
-    comment="Delta Live Table for retrieving details from the CostAward table.",
-    path=f"{bronze_mnt}/bronze_cost_award"
-)
+    comment="Delta Live Table for retrieving details from the CostAward table.")
 def bronze_cost_award():
     return (
-        dlt.read("raw_costaward").alias("ca")\
-            # .join(
-            #     dlt.read("raw_link").alias("1"),
-            #     col("ca.CaseNo") == col("1.CaseNo"),
-            #     "left_outer" 
-            # )
+        dp.read("raw_costaward").alias("ca")\
             .join(
-                dlt.read("raw_caseappellant").alias("cap"),
+                dp.read("raw_caseappellant").alias("cap"),
                 col("ca.CaseNo") == col("cap.CaseNo"),
                 "left_outer"  
             ).join(
-                dlt.read("raw_appellant").alias("a"),
+                dp.read("raw_appellant").alias("a"),
                 col("cap.AppellantId") == col("a.AppellantId"),
                 "left_outer"  
             ).join(
-                dlt.read("raw_casestatus").alias("cs"),
+                dp.read("raw_casestatus").alias("cs"),
                 col("ca.AppealStage") == col("cs.CaseStatusId"),
                 "left_outer"
             ).select(
@@ -2119,27 +1936,25 @@ def bronze_cost_award():
 # COMMAND ----------
 
 # DBTITLE 1,Cost award linked
-@dlt.table(
+@dp.table(
     name="bronze_cost_award_linked",
-    comment="Delta Live Table for retrieving details from the CostAward_linked table.",
-    path=f"{bronze_mnt}/bronze_cost_award_linked"
-)
+    comment="Delta Live Table for retrieving details from the CostAward_linked table.")
 def bronze_cost_award_linked():
-    df =  dlt.read("raw_costaward").alias("ca")\
+    df =  dp.read("raw_costaward").alias("ca")\
             .join(
-                dlt.read("raw_link").alias("l"),
+                dp.read("raw_link").alias("l"),
                 col("ca.CaseNo") == col("l.CaseNo"),
                 "left_outer" 
             ).join(
-                dlt.read("raw_caseappellant").alias("cap"),
+                dp.read("raw_caseappellant").alias("cap"),
                 col("ca.CaseNo") == col("cap.CaseNo"),
                 "left_outer"  
             ).join(
-                dlt.read("raw_appellant").alias("a"),
+                dp.read("raw_appellant").alias("a"),
                 col("cap.AppellantId") == col("a.AppellantId"),
                 "left_outer"  
             ).join(
-                dlt.read("raw_casestatus").alias("cs"),
+                dp.read("raw_casestatus").alias("cs"),
                 col("ca.AppealStage") == col("cs.CaseStatusId"),
                 "left_outer"
             ).filter(col("l.LinkNo").isNotNull()).select(
@@ -2173,23 +1988,21 @@ def bronze_cost_award_linked():
 # COMMAND ----------
 
 # DBTITLE 1,Cost Order
-@dlt.table(
+@dp.table(
     name="bronze_costorder",
-    comment="Delta Live Table for retrieving details from the CostOrder table.",
-    path=f"{bronze_mnt}/bronze_cost_order"
-)
+    comment="Delta Live Table for retrieving details from the CostOrder table.")
 def bronze_costorder():
-    df =  dlt.read("raw_costorder").alias("co")\
+    df =  dp.read("raw_costorder").alias("co")\
             .join(
-                dlt.read("raw_caserep").alias("cr"),
+                dp.read("raw_caserep").alias("cr"),
                 col("co.CaseNo") == col("cr.CaseNo"),
                 "left_outer"
             ).join(
-                dlt.read("raw_representative").alias("r"),
+                dp.read("raw_representative").alias("r"),
                 col("cr.RepresentativeId") == col("r.RepresentativeId"),
                 "left_outer"
             ).join(
-                dlt.read("raw_decisiontype").alias("dt"),
+                dp.read("raw_decisiontype").alias("dt"),
                 col("co.OutcomeOfAppealWhereDecisionMade") == col("dt.DecisionTypeId"),
                 "left_outer"
             ).select(
@@ -2217,15 +2030,13 @@ def bronze_costorder():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_hearing_points_change_reason",
-    comment="Delta Live Table for retrieving details from the HearingPointsChangeReason table.",
-    path=f"{bronze_mnt}/bronze_hearing_points_change_reason"
-)
+    comment="Delta Live Table for retrieving details from the HearingPointsChangeReason table.")
 def bronze_hearing_points_change_reason():
-    df =  dlt.read("raw_hearingpointschangereason").alias("hpcr")\
+    df =  dp.read("raw_hearingpointschangereason").alias("hpcr")\
             .join(
-                dlt.read("raw_status").alias("s"),
+                dp.read("raw_status").alias("s"),
                 col("s.HearingPointsChangeReasonId") == col("hpcr.HearingPointsChangeReasonId"),
                 "left_outer"
             ) .select(
@@ -2245,15 +2056,13 @@ def bronze_hearing_points_change_reason():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_hearing_points_history",
-    comment="Delta Live Table for retrieving details from the HearingPointsHistory table.",
-    path=f"{bronze_mnt}/bronze_hearing_points_history"
-)
+    comment="Delta Live Table for retrieving details from the HearingPointsHistory table.")
 def bronze_hearing_points_history():
-    df =  dlt.read("raw_hearingpointshistory").alias("hph")\
+    df =  dp.read("raw_hearingpointshistory").alias("hph")\
             .join(
-                dlt.read("raw_status").alias("s"),
+                dp.read("raw_status").alias("s"),
                 col("hph.StatusId") == col("s.StatusId"),
                 "left_outer"
             ).select(
@@ -2277,15 +2086,13 @@ def bronze_hearing_points_history():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appeal_type_category",
-    comment="Delta Live Table for retrieving details from the AppealTypeCategory table.",
-    path=f"{bronze_mnt}/bronze_appeal_type_category"
-)
+    comment="Delta Live Table for retrieving details from the AppealTypeCategory table.")
 def bronze_appeal_type_category():
-    appeal_case = dlt.read("raw_appealcase")
-    appeal_type = dlt.read("raw_appealtype")
-    appeal_type_category = dlt.read("raw_appealtypecategory")
+    appeal_case = dp.read("raw_appealcase")
+    appeal_type = dp.read("raw_appealtype")
+    appeal_type_category = dp.read("raw_appealtypecategory")
     
     df =  appeal_case.alias("ac")\
         .join(appeal_type.alias("at"), col("ac.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
@@ -2308,14 +2115,12 @@ def bronze_appeal_type_category():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_appeal_grounds",
-    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.",
-    path=f"{bronze_mnt}/bronze_appeal_grounds"
-)
+    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.")
 def bronze_appeal_grounds():
-    appeal_grounds = dlt.read("raw_appealgrounds")
-    appeal_type = dlt.read("raw_appealtype")
+    appeal_grounds = dp.read("raw_appealgrounds")
+    appeal_type = dp.read("raw_appealtype")
     
     df =  appeal_grounds.alias("ag")\
         .join(appeal_type.alias("at"), col("ag.AppealTypeId") == col("at.AppealTypeId"), "left_outer")\
@@ -2334,14 +2139,12 @@ def bronze_appeal_grounds():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_required_incompatible_adjudicator",
-    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.",
-    path=f"{bronze_mnt}/bronze_required_incompatible_adjudicator"
-)
+    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.")
 def bronze_required_incompatible_adjudicator():
-    case_adjudicator = dlt.read("raw_caseadjudicator")
-    adjudicator = dlt.read("raw_adjudicator")
+    case_adjudicator = dp.read("raw_caseadjudicator")
+    adjudicator = dp.read("raw_adjudicator")
     
     df = case_adjudicator.alias("ca")\
         .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")\
@@ -2362,14 +2165,12 @@ def bronze_required_incompatible_adjudicator():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_case_adjudicator",
-    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.",
-    path=f"{bronze_mnt}/bronze_case_adjudicator"
-)
+    comment="Delta Live Table for retrieving Appeal Grounds with Appeal Type descriptions.")
 def bronze_case_adjudicator():
-    case_adjudicator = dlt.read("raw_caseadjudicator")
-    adjudicator = dlt.read("raw_adjudicator")
+    case_adjudicator = dp.read("raw_caseadjudicator")
+    adjudicator = dp.read("raw_adjudicator")
 
     df = case_adjudicator.alias("ca")\
         .join(adjudicator.alias("adj"), (col("ca.AdjudicatorId") == col("adj.Adjudicatorid")) & (col("adj.DoNotList") == 0), "inner")\
@@ -2392,18 +2193,16 @@ def bronze_case_adjudicator():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: CaseStatusCategory
-@dlt.table(
+@dp.table(
     name="stg_appealcasestatus_filtered",
-    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.",
-    path=f"{bronze_mnt}/stg_appealcasestatus_filtered"
-)
+    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
 def stg_appealcasestatus_filtered():
     # Reading base tables
-    appeal_case = dlt.read("raw_appealcase")
-    status = dlt.read("raw_status")
-    case_status = dlt.read("raw_casestatus")
-    decision_type = dlt.read("raw_decisiontype")
-    file_location = dlt.read("raw_filelocation")
+    appeal_case = dp.read("raw_appealcase")
+    status = dp.read("raw_status")
+    case_status = dp.read("raw_casestatus")
+    decision_type = dp.read("raw_decisiontype")
+    file_location = dp.read("raw_filelocation")
 
     # Subqueries to handle aggregations
     max_status = (
@@ -2766,14 +2565,12 @@ def stg_appealcasestatus_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_firsttier_filtered",
-    comment="Delta Live Table for filtering AppealCase records to archive or delete based on complex conditions.",
-    path=f"{bronze_mnt}/stg_firsttier_filtered"
-)
+    comment="Delta Live Table for filtering AppealCase records to archive or delete based on complex conditions.")
 def stg_firsttier_filtered():
     # Reading base tables
-    appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
+    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
 
     return FTRetained_cases.orderBy("ac.CaseNo")
@@ -2788,16 +2585,14 @@ def stg_firsttier_filtered():
 # COMMAND ----------
 
 
-@dlt.table(
+@dp.table(
     name="stg_skeleton_filtered",
-    comment="Delta Live Table for filtering AppealCase records based on specified conditions.",
-    path=f"{bronze_mnt}/stg_skeleton_filtered"
-)
+    comment="Delta Live Table for filtering AppealCase records based on specified conditions.")
 def stg_skeleton_filtered():
     # Reading base tables
-    appeal_case =  dlt.read("raw_appealcase")
-    status =  dlt.read("raw_status")
-    file_location =  dlt.read("raw_filelocation")
+    appeal_case =  dp.read("raw_appealcase")
+    status =  dp.read("raw_status")
+    file_location =  dp.read("raw_filelocation")
 
     max_status = (
         status
@@ -2880,13 +2675,11 @@ def stg_skeleton_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_uppertribunalretained_filtered",
-    comment="Delta Live Table for filtering second tier AppealCase records for archive or delete based on complex conditions.",
-    path=f"{bronze_mnt}/stg_uppertribunalretained_filtered"
-)
+    comment="Delta Live Table for filtering second tier AppealCase records for archive or delete based on complex conditions.")
 def stg_uppertribunalretained_filtered():
-    appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
+    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
     
     UTRetained_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Retained').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
 
@@ -2901,14 +2694,12 @@ def stg_uppertribunalretained_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_firsttieroverdue_filtered",
-    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.",
-    path=f"{bronze_mnt}/stg_firsttieroverdue_filtered"
-)
+    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
 def stg_firsttieroverdue_filtered():
     # Reading base tables
-    appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
+    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
 
     FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'FT Overdue').select("ac.CaseNo", lit('ARIAFTA').alias('Segment'))
 
@@ -2924,14 +2715,12 @@ def stg_firsttieroverdue_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_uppertribunaloverdue_filtered",
-    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.",
-    path=f"{bronze_mnt}/stg_uppertribunaloverdue_filtered"
-)
+    comment="Delta Live Table for filtering First Tier Overdue records based on specified conditions.")
 def stg_uppertribunaloverdue_filtered():
     # Reading base tables
-    appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
+    appeal_cases =  dp.read("stg_appealcasestatus_filtered")
 
     FTOverdue_cases = appeal_cases.alias('ac').filter(col("CaseStatusCategory") == 'UT Overdue').select("ac.CaseNo", lit('ARIAUTA').alias('Segment'))
 
@@ -2946,15 +2735,13 @@ def stg_uppertribunaloverdue_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_filepreservedcases_filtered",
-    comment="Delta Live Table for filtering AppealCase records where CaseType is '1' and DeptId is 520.",
-    path=f"{bronze_mnt}/stg_filepreservedcases_filtered"
-)
+    comment="Delta Live Table for filtering AppealCase records where CaseType is '1' and DeptId is 520.")
 def stg_filepreservedcases_filtered():
     # Reading the base tables
-    appeal_case =  dlt.read("raw_appealcase")
-    file_location =  dlt.read("raw_filelocation")
+    appeal_case =  dp.read("raw_appealcase")
+    file_location =  dp.read("raw_filelocation")
 
     # Joining AppealCase with FileLocation and applying filters
     filtered_cases = (
@@ -2978,19 +2765,17 @@ def stg_filepreservedcases_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_appeals_filtered",
-    comment="Delta Live Table that combines filtered cases from First Tier, Skeleton, Upper Tribunal, and Preserved Cases tables.",
-    path=f"{bronze_mnt}/stg_appeals_filtered"
-)
+    comment="Delta Live Table that combines filtered cases from First Tier, Skeleton, Upper Tribunal, and Preserved Cases tables.")
 def stg_appeals_filtered():
     # Reading individual filtered tables
-    stg_firsttier_filtered =  dlt.read("stg_firsttier_filtered")
-    stg_skeleton_filtered =  dlt.read("stg_skeleton_filtered")
-    stg_uppertribunalretained_filtered =  dlt.read("stg_uppertribunalretained_filtered")
-    stg_filepreservedcases_filtered =  dlt.read("stg_filepreservedcases_filtered")
-    stg_firsttieroverdue_filtered = dlt.read("stg_firsttieroverdue_filtered")
-    stg_uppertribunaloverdue_filtered = dlt.read("stg_uppertribunaloverdue_filtered")
+    stg_firsttier_filtered =  dp.read("stg_firsttier_filtered")
+    stg_skeleton_filtered =  dp.read("stg_skeleton_filtered")
+    stg_uppertribunalretained_filtered =  dp.read("stg_uppertribunalretained_filtered")
+    stg_filepreservedcases_filtered =  dp.read("stg_filepreservedcases_filtered")
+    stg_firsttieroverdue_filtered = dp.read("stg_firsttieroverdue_filtered")
+    stg_uppertribunaloverdue_filtered = dp.read("stg_uppertribunaloverdue_filtered")
 
 
 
@@ -3021,14 +2806,12 @@ def stg_appeals_filtered():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_appealcase_detail",
-    comment="Delta Live silver Table for Appeals case details.",
-    path=f"{silver_mnt}/silver_appealcase_detail"
-)
+    comment="Delta Live silver Table for Appeals case details.")
 def silver_appealcase_detail():
-    appeals_df = dlt.read("bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang").alias("ap")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_cr_cs_ca_fl_cres_mr_res_lang").alias("ap")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ap.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ap.CaseNo",
@@ -3148,14 +2931,12 @@ def silver_appealcase_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_applicant_detail
-@dlt.table(
+@dp.table(
     name="silver_applicant_detail",
-    comment="Delta Live silver Table for casenapplicant detail.",
-    path=f"{silver_mnt}/silver_applicant_detail" 
-)
+    comment="Delta Live silver Table for casenapplicant detail.")
 def silver_applicant_detail():
-    appeals_df = dlt.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").filter(col("ca.CaseAppellantRelationship").isNull()).select(
         "ca.AppellantId",
@@ -3214,14 +2995,12 @@ def silver_applicant_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_dependent_detail
-@dlt.table(
+@dp.table(
     name="silver_dependent_detail",
-    comment="Delta Live silver Table for casenapplicant detail.",
-    path=f"{silver_mnt}/silver_dependent_detail" 
-)
+    comment="Delta Live silver Table for casenapplicant detail.")
 def silver_dependent_detail():
-    appeals_df = dlt.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_ca_apt_country_detc").alias("ca")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").filter(col("ca.CaseAppellantRelationship").isNotNull()).select(
         "ca.AppellantId",
@@ -3276,14 +3055,12 @@ def silver_dependent_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_list_detail",
-    comment="Delta Live silver Table for list detail.",
-    path=f"{silver_mnt}/silver_list_detail"
-)
+    comment="Delta Live silver Table for list detail.")
 def silver_list_detail():
-    appeals_df = dlt.read("bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj").alias("ca")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_cl_ht_list_lt_hc_c_ls_adj").alias("ca")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     adjudicator_details = (
         appeals_df
@@ -3448,14 +3225,12 @@ def silver_list_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_dfdairy_detail",
-    comment="Delta Live silver Table for dfdairy detail.",
-    path=f"{silver_mnt}/silver_dfdairy_detail"
-)
+    comment="Delta Live silver Table for dfdairy detail.")
 def silver_dfdairy_detail():
-    appeals_df = dlt.read("bronze_appealcase_bfdiary_bftype").alias("df")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_bfdiary_bftype").alias("df")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("df.CaseNo") == col("flt.CaseNo"), "inner").select("df.*")
 
@@ -3472,14 +3247,12 @@ def silver_dfdairy_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_history_detail",
-    comment="Delta Live silver Table for history detail.",
-    path=f"{silver_mnt}/silver_history_detail"
-)
+    comment="Delta Live silver Table for history detail.")
 def silver_history_detail():
-    appeals_df = dlt.read("bronze_appealcase_history_users").alias("hu")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_history_users").alias("hu")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     # Select only one row for fileLocation (latest for HistType = 6)
     file_location_df = appeals_df.filter((col("HistType") == 6))\
@@ -3581,15 +3354,13 @@ def silver_history_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_link_detail",
-    comment="Delta Live silver Table for list detail.",
-    path=f"{silver_mnt}/silver_link_detail"
-)
+    comment="Delta Live silver Table for list detail.")
 def silver_link_detail():
-    appeals_df = dlt.read("bronze_appealcase_link_linkdetail").alias("ld")
-    # flt_df = dlt.read("stg_appeals_filtered").alias('flt')
-    m2 = dlt.read("bronze_appealcase_ca_apt_country_detc").alias('m2')
+    appeals_df = dp.read("bronze_appealcase_link_linkdetail").alias("ld")
+    # flt_df = dp.read("stg_appeals_filtered").alias('flt')
+    m2 = dp.read("bronze_appealcase_ca_apt_country_detc").alias('m2')
 
     joined_df = appeals_df.join(m2, col("ld.CaseNo") == col("m2.CaseNo"), "inner").select(
     "ld.CaseNo",
@@ -3609,17 +3380,15 @@ def silver_link_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_status_detail",
-    comment="Delta Live silver Table for status detail.",
-    path=f"{silver_mnt}/silver_status_detail"
-)
+    comment="Delta Live silver Table for status detail.")
 def silver_status_detail():
     from pyspark.sql.window import Window
     from pyspark.sql.functions import row_number
     
-    appeals_df = dlt.read("bronze_appealcase_status_sc_ra_cs").alias("st")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_status_sc_ra_cs").alias("st")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     window = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
     status_ranked = appeals_df.withColumn("rn", row_number().over(window))
@@ -3827,14 +3596,12 @@ def silver_status_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_appealcategory_detail",
-    comment="Delta Live silver Table for status detail.",
-    path=f"{silver_mnt}/silver_appealcategory_detail"
-)
+    comment="Delta Live silver Table for status detail.")
 def silver_appealcategory_detail():
-    appeals_df = dlt.read("bronze_appealcase_appealcatagory_catagory").alias("ac")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    appeals_df = dp.read("bronze_appealcase_appealcatagory_catagory").alias("ac")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     joined_df = appeals_df.join(flt_df, col("ac.CaseNo") == col("flt.CaseNo"), "inner").select("ac.*")
 
@@ -3848,14 +3615,12 @@ def silver_appealcategory_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_case_detail",
-    comment="Delta Live silver Table for case detail.", 
-    path=f"{silver_mnt}/silver_case_detail"
-)
+    comment="Delta Live silver Table for case detail.")
 def silver_case_detail():
-    case_df = dlt.read("bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at").alias("case")
-    flt_df = dlt.read("stg_appeals_filtered").alias('flt')
+    case_df = dp.read("bronze_appealcase_p_e_cfs_prr_fs_cs_hc_ag_at").alias("case")
+    flt_df = dp.read("stg_appeals_filtered").alias('flt')
 
     group_cols = [
     col("case.CaseNo"),
@@ -3992,14 +3757,12 @@ def silver_case_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_statusdecisiontype_detail",
-    comment="Delta Live silver Table for transaction detail.",
-    path=f"{silver_mnt}/silver_statusdecisiontype_detail"
-)
+    comment="Delta Live silver Table for transaction detail.")
 def silver_statusdecisiontype_detail():
-    status_decision_df = dlt.read("bronze_status_decisiontype").alias("status")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    status_decision_df = dp.read("bronze_status_decisiontype").alias("status")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = status_decision_df.join(flt_df, col("status.CaseNo") == col("flt.CaseNo"), "inner").select("status.*")
    
@@ -4013,14 +3776,12 @@ def silver_statusdecisiontype_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_transaction_detail",
-    comment="Delta Live silver Table for transaction detail.",
-    path=f"{silver_mnt}/silver_transaction_detail"
-)
+    comment="Delta Live silver Table for transaction detail.")
 def silver_transaction_detail():
-    status_decision_df = dlt.read("bronze_appealcase_t_tt_ts_tm").alias("tran")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    status_decision_df = dp.read("bronze_appealcase_t_tt_ts_tm").alias("tran")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
                                                                                
     referring_ids_df = broadcast(
     status_decision_df.filter(col("TransactionTypeId").isin(6, 19))
@@ -4129,14 +3890,12 @@ def silver_transaction_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_humanright_detail",
-    comment="Delta Live silver Table for human rights detail.",
-    path=f"{silver_mnt}/silver_humanright_detail"
-)
+    comment="Delta Live silver Table for human rights detail.")
 def silver_humanright_detail():
-    humanright_df = dlt.read("bronze_appealcase_ahr_hr").alias("hr")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    humanright_df = dp.read("bronze_appealcase_ahr_hr").alias("hr")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = humanright_df.join(flt_df, col("hr.CaseNo") == col("flt.CaseNo"), "inner").select("hr.*")
 
@@ -4150,14 +3909,12 @@ def silver_humanright_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_newmatter_detail",
-    comment="Delta Live silver Table for new matter detail.",
-    path=f"{silver_mnt}/silver_newmatter_detail"
-)
+    comment="Delta Live silver Table for new matter detail.")
 def silver_newmatter_detail():
-    newmatter_df = dlt.read("bronze_appealcase_anm_nm").alias("nm")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    newmatter_df = dp.read("bronze_appealcase_anm_nm").alias("nm")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = newmatter_df.join(flt_df, col("nm.CaseNo") == col("flt.CaseNo"), "inner").select(
         "nm.AppealNewMatterId",
@@ -4182,14 +3939,12 @@ def silver_newmatter_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_documents_detail",
-    comment="Delta Live silver Table for documents detail.",
-    path=f"{silver_mnt}/silver_documents_detail"
-)
+    comment="Delta Live silver Table for documents detail.")
 def silver_documents_detail():
-    documents_df = dlt.read("bronze_appealcase_dr_rd").alias("doc")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    documents_df = dp.read("bronze_appealcase_dr_rd").alias("doc")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     cols = [c for c in documents_df.columns if c != "DoNotUse" and c != "DateReceived"]
     joined_df = documents_df.join(flt_df, col("doc.CaseNo") == col("flt.CaseNo"), "inner") \
@@ -4218,14 +3973,12 @@ def silver_documents_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="sliver_direction_detail",
-    comment="Delta Live silver Table for direction details.",
-    path=f"{silver_mnt}/sliver_direction_detail"
-)
+    comment="Delta Live silver Table for direction details.")
 def sliver_direction_detail():
-    direction_df = dlt.read("bronze_appealcase_rsd_sd").alias("dir")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    direction_df = dp.read("bronze_appealcase_rsd_sd").alias("dir")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = direction_df.join(flt_df, col("dir.CaseNo") == col("flt.CaseNo"), "inner").select("dir.*")
        
@@ -4239,14 +3992,12 @@ def sliver_direction_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_reviewspecificdirection_detail",
-    comment="Delta Live silver Table for review-specific direction details.",
-    path=f"{silver_mnt}/Silver_reviewspecificdirection_detail"
-)
+    comment="Delta Live silver Table for review-specific direction details.")
 def Silver_reviewspecificdirection_detail():
-    review_specific_direction_df = dlt.read("bronze_review_specific_direction").alias("rsd")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    review_specific_direction_df = dp.read("bronze_review_specific_direction").alias("rsd")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = review_specific_direction_df.join(flt_df, col("rsd.CaseNo") == col("flt.CaseNo"), "inner").select("rsd.*")
   
@@ -4261,14 +4012,12 @@ def Silver_reviewspecificdirection_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_linkedcostaward_detail
-@dlt.table(
+@dp.table(
     name="silver_linkedcostaward_detail",
-    comment="Delta Live silver Table for cost award detail.",
-    path=f"{silver_mnt}/silver_linkedcostaward_detail"
-)
+    comment="Delta Live silver Table for cost award detail.")
 def silver_linkedcostaward_detail():
-    costaward_df = dlt.read("bronze_cost_award_linked").alias("ca")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    costaward_df = dp.read("bronze_cost_award_linked").alias("ca")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = costaward_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ca.CostAwardId", 
@@ -4314,14 +4063,12 @@ def silver_linkedcostaward_detail():
 # COMMAND ----------
 
 # DBTITLE 1,silver_costaward_detail
-@dlt.table(
+@dp.table(
     name="silver_costaward_detail",
-    comment="Delta Live silver Table for cost award detail.",
-    path=f"{silver_mnt}/silver_costaward_detail"
-)
+    comment="Delta Live silver Table for cost award detail.")
 def silver_costaward_detail():
-    costaward_df = dlt.read("bronze_cost_award").alias("ca")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    costaward_df = dp.read("bronze_cost_award").alias("ca")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = costaward_df.join(flt_df, col("ca.CaseNo") == col("flt.CaseNo"), "inner").select(
         "ca.CostAwardId", 
@@ -4370,14 +4117,12 @@ def silver_costaward_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_costorder_detail",
-    comment="Delta Live silver Table for cost order detail.",
-    path=f"{silver_mnt}/silver_costorder_detail"
-)
+    comment="Delta Live silver Table for cost order detail.")
 def silver_costorder_detail():
-    costorder_df = dlt.read("bronze_costorder").alias("co")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    costorder_df = dp.read("bronze_costorder").alias("co")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
 
 
@@ -4429,14 +4174,12 @@ def silver_costorder_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_hearingpointschange_detail",
-    comment="Delta Live silver Table for hearing points change reason detail.",
-    path=f"{silver_mnt}/silver_hearingpointschange_detail"
-)
+    comment="Delta Live silver Table for hearing points change reason detail.")
 def silver_hearingpointschange_detail():
-    hearingpointschange_df = dlt.read("bronze_hearing_points_change_reason").alias("hpc")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    hearingpointschange_df = dp.read("bronze_hearing_points_change_reason").alias("hpc")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = hearingpointschange_df.join(flt_df, col("hpc.CaseNo") == col("flt.CaseNo"), "inner").select(
         "hpc.CaseNo",
@@ -4455,14 +4198,12 @@ def silver_hearingpointschange_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_hearingpointshistory_detail",
-    comment="Delta Live silver Table for hearing points history detail.",
-    path=f"{silver_mnt}/silver_hearingpointshistory_detail"
-)
+    comment="Delta Live silver Table for hearing points history detail.")
 def silver_hearingpointshistory_detail():
-    hearingpointshistory_df = dlt.read("bronze_hearing_points_history").alias("hph")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    hearingpointshistory_df = dp.read("bronze_hearing_points_history").alias("hph")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = hearingpointshistory_df.join(flt_df, col("hph.CaseNo") == col("flt.CaseNo"), "inner").select("hph.*")
        
@@ -4476,14 +4217,12 @@ def silver_hearingpointshistory_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_appealtypecategory_detail",
-    comment="Delta Live silver Table for appeal type category detail.",
-    path=f"{silver_mnt}/silver_appealtypecategory_detail"
-)
+    comment="Delta Live silver Table for appeal type category detail.")
 def silver_appealtypecategory_detail():
-    appealtypecategory_df = dlt.read("bronze_appeal_type_category").alias("atc")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    appealtypecategory_df = dp.read("bronze_appeal_type_category").alias("atc")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("atc.CaseNo") == col("flt.CaseNo"), "inner").select("atc.*")
 
@@ -4497,14 +4236,12 @@ def silver_appealtypecategory_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_appealgrounds_detail",
-    comment="Delta Live silver Table for appeal ground  detail.",
-    path=f"{silver_mnt}/silver_appealgrounds_detail"
-)
+    comment="Delta Live silver Table for appeal ground  detail.")
 def silver_appealgrounds_detail():
-    appealtypecategory_df = dlt.read("bronze_appeal_grounds").alias("agt")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    appealtypecategory_df = dp.read("bronze_appeal_grounds").alias("agt")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("agt.CaseNo") == col("flt.CaseNo"), "inner").select("agt.*")
   
@@ -4518,14 +4255,12 @@ def silver_appealgrounds_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_required_incompatible_adjudicator",
-    comment="Delta Live silver Table for appeal ground  detail.",
-    path=f"{silver_mnt}/silver_required_incompatible_adjudicator"
-)
+    comment="Delta Live silver Table for appeal ground  detail.")
 def silver_required_incompatible_adjudicator():
-    appealtypecategory_df = dlt.read("bronze_required_incompatible_adjudicator").alias("adj")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    appealtypecategory_df = dp.read("bronze_required_incompatible_adjudicator").alias("adj")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
 
@@ -4538,14 +4273,12 @@ def silver_required_incompatible_adjudicator():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_case_adjudicator",
-    comment="Delta Live silver Table for appeal ground  detail.",
-    path=f"{silver_mnt}/silver_case_adjudicator"
-)
+    comment="Delta Live silver Table for appeal ground  detail.")
 def silver_case_adjudicator():
-    appealtypecategory_df = dlt.read("bronze_case_adjudicator").alias("adj")
-    flt_df = dlt.read("stg_appeals_filtered").alias("flt")
+    appealtypecategory_df = dp.read("bronze_case_adjudicator").alias("adj")
+    flt_df = dp.read("stg_appeals_filtered").alias("flt")
 
     joined_df = appealtypecategory_df.join(flt_df, col("adj.CaseNo") == col("flt.CaseNo"), "inner").select("adj.*")
   
@@ -4560,11 +4293,9 @@ def silver_case_adjudicator():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_archive_metadata",
-    comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{silver_mnt}/silver_archive_metadata"
-)
+    comment="Delta Live Silver Table for Archive Metadata data.")
 def silver_archive_metadata():
     from pyspark.sql import functions as F
     df_StatusOutcomeCombinations = spark.read.option("header", True).csv(
@@ -5362,19 +5093,17 @@ lookup_df = spark.createDataFrame(data, columns).filter(col("path").isNotNull())
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_statichtml_data
-@dlt.table(
+@dp.table(
     name="stg_statichtml_data",
-    comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{silver_mnt}/stg_statichtml_data"
-)
+    comment="Delta Live Silver Table for Archive Metadata data.")
 def stg_statichtml_data():
-    df_transaction_details = dlt.read("silver_transaction_detail")
-    df_category = dlt.read("silver_appealcategory_detail")
-    df_history_details =  dlt.read("silver_history_detail")
-    df_status_details =  dlt.read("silver_status_detail")
-    df_link_details =  dlt.read("silver_link_detail")
-    df_case =  dlt.read("silver_appealcase_detail")
-    df_applicant =  dlt.read("silver_applicant_detail")
+    df_transaction_details = dp.read("silver_transaction_detail")
+    df_category = dp.read("silver_appealcategory_detail")
+    df_history_details =  dp.read("silver_history_detail")
+    df_status_details =  dp.read("silver_status_detail")
+    df_link_details =  dp.read("silver_link_detail")
+    df_case =  dp.read("silver_appealcase_detail")
+    df_applicant =  dp.read("silver_applicant_detail")
 
     # Get the latest transaction details
     window_spec = Window.partitionBy("CaseNo").orderBy("transactionid")
@@ -5486,37 +5215,35 @@ def stg_statichtml_data():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_statusdetail_data
-@dlt.table(
+@dp.table(
     name="stg_statusdetail_data",
-    comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{silver_mnt}/stg_statusdetail_data"
-)
+    comment="Delta Live Silver Table for Archive Metadata data.")
 def stg_statusdetail_data():
     from pyspark.sql import functions as F
     from pyspark.sql.window import Window
 
-    df_list_details = dlt.read("silver_list_detail")
-    # df_list_details = dlt.read("ariadm_arm_fta.silver_list_detail")
+    df_list_details = dp.read("silver_list_detail")
+    # df_list_details = dp.read("ariadm_arm_fta.silver_list_detail")
     window_spec = Window.partitionBy("CaseNo", "CaseStatus", "StatusId").orderBy("ListStartTime")
     df_list_details = df_list_details.withColumn("row_num", row_number().over(window_spec))
     df_list_details = df_list_details.filter(col("row_num") == 1).drop("row_num")
 
-    df_status_details = dlt.read("silver_status_detail")
-    df_hearingpointschange_details = dlt.read("silver_hearingpointschange_detail")
-    df_reviewspecificdirection_details = dlt.read("silver_reviewspecificdirection_detail")
+    df_status_details = dp.read("silver_status_detail")
+    df_hearingpointschange_details = dp.read("silver_hearingpointschange_detail")
+    df_reviewspecificdirection_details = dp.read("silver_reviewspecificdirection_detail")
 
-    df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
+    df_case_adjudicator = dp.read("silver_case_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorsDetails")
     )
 
-    df_reviewspecificdirection = dlt.read("silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
+    df_reviewspecificdirection = dp.read("silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
         collect_list(struct(
             'ReviewSpecificDirectionId', 'CaseNo', 'StatusId', 'SpecificDirection', 
             'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
         )).alias("ReviewSpecficDirectionDetails")
     )
 
-    df_reviewstandarddirection = dlt.read("sliver_direction_detail").groupBy("CaseNo").agg(
+    df_reviewstandarddirection = dp.read("sliver_direction_detail").groupBy("CaseNo").agg(
         collect_list(struct(
             'ReviewStandardDirectionId', 'CaseNo', 'StatusId', 'StandardDirectionId', 
             'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
@@ -5707,26 +5434,24 @@ def stg_statusdetail_data():
 # COMMAND ----------
 
 # DBTITLE 0,Transformation: stg_fta_combined
-@dlt.table(
+@dp.table(
     name="stg_apl_combined",
-    comment="Delta Live unified stage created all consolidated data.",
-    path=f"{silver_mnt}/stg_apl_combined"
-)
+    comment="Delta Live unified stage created all consolidated data.")
 def stg_apl_combined():
 
     # Read unique CaseNo tables
     # M1
-    df_appealcase = dlt.read("silver_appealcase_detail")
+    df_appealcase = dp.read("silver_appealcase_detail")
     # M2
-    df_applicant = dlt.read("silver_applicant_detail")
+    df_applicant = dp.read("silver_applicant_detail")
     # M10
-    df_case_detail = dlt.read("silver_case_detail")
+    df_case_detail = dp.read("silver_case_detail")
     #M22
-    df_currentstatus = dlt.read("silver_status_detail").select(col("CaseNo"), col("currentstatus"))
-    # df_hearingpointschange = dlt.read("silver_hearingpointschange_detail")
-    df_m15 = dlt.read("silver_documents_detail").select(col("CaseNo"), col("DocumentsReceived"))
+    df_currentstatus = dp.read("silver_status_detail").select(col("CaseNo"), col("currentstatus"))
+    # df_hearingpointschange = dp.read("silver_hearingpointschange_detail")
+    df_m15 = dp.read("silver_documents_detail").select(col("CaseNo"), col("DocumentsReceived"))
 
-    df_hearingpointschange = dlt.read("silver_hearingpointschange_detail").groupBy("CaseNo").agg(
+    df_hearingpointschange = dp.read("silver_hearingpointschange_detail").groupBy("CaseNo").agg(
     collect_list(
         struct(
             'StatusId',
@@ -5740,47 +5465,47 @@ def stg_apl_combined():
 
 
     # Read duplicate CaseNo tables and aggregate them
-    df_appealcategory = dlt.read("silver_appealcategory_detail").groupBy("CaseNo").agg(
+    df_appealcategory = dp.read("silver_appealcategory_detail").groupBy("CaseNo").agg(
         collect_list(
             struct( 'CategoryDescription', 'Flag',"Priority")
         ).alias("AppealCategoryDetails")
     )
 
-    df_appealgrounds = dlt.read("silver_appealgrounds_detail").groupBy("CaseNo").agg(
+    df_appealgrounds = dp.read("silver_appealgrounds_detail").groupBy("CaseNo").agg(
         collect_list(struct( 'AppealTypeId', 'AppealTypeDescription')).alias("AppealGroundsDetails")
     )
 
-    df_appealtypecategory = dlt.read("silver_appealtypecategory_detail").groupBy("CaseNo").agg(
+    df_appealtypecategory = dp.read("silver_appealtypecategory_detail").groupBy("CaseNo").agg(
         collect_list(struct('AppealTypeCategoryId', 'AppealTypeId', 'CategoryId', 'FeeExempt')).alias("AppealTypeCategorieDetails")
     )
 
-    df_case_adjudicator = dlt.read("silver_case_adjudicator").groupBy("CaseNo").agg(
+    df_case_adjudicator = dp.read("silver_case_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct( 'Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("CaseAdjudicatorDetails")
     )
 
-    df_costaward = dlt.read("silver_costaward_detail").groupBy("CaseNo").agg(
+    df_costaward = dp.read("silver_costaward_detail").groupBy("CaseNo").agg(
         collect_list(struct('CostAwardId', 'Name', 'Forenames', 'Title', 'DateOfApplication', 'TypeOfCostAward', 'ApplyingParty', 'PayingParty', 'MindedToAward', 'ObjectionToMindedToAward', 'CostsAwardDecision', 'DateOfDecision', 'CostsAmount', 'OutcomeOfAppeal', 'AppealStage', 'AppealStageDescription')).alias("CostAwardDetails")
     )
 
-    df_dependent = dlt.read("silver_dependent_detail").groupBy("CaseNo").agg(
+    df_dependent = dp.read("silver_dependent_detail").groupBy("CaseNo").agg(
         collect_list(struct('AppellantId', 'CaseAppellantRelationship', 'PortReference', 'AppellantName', 'AppellantForenames', 'AppellantTitle', 'AppellantBirthDate', 'AppellantAddress1', 'AppellantAddress2', 'AppellantAddress3', 'AppellantAddress4', 'AppellantAddress5', 'AppellantPostcode', 'AppellantTelephone', 'AppellantFax', 'Detained', 'AppellantEmail', 'FCONumber', 'PrisonRef', 'DetentionCentre', 'CentreTitle', 'DetentionCentreType', 'DCAddress1', 'DCAddress2', 'DCAddress3', 'DCAddress4', 'DCAddress5', 'DCPostcode', 'DCFax', 'DCSdx', 'Country', 'DependentNationality', 'Code', 'DoNotUseCountry', 'CountrySdx', 'DoNotUseNationality')).alias("DependentDetails")
     )
 
-    df_documents = dlt.read("silver_documents_detail").select(col("CaseNo"), col("DocumentDetails"))
+    df_documents = dp.read("silver_documents_detail").select(col("CaseNo"), col("DocumentDetails"))
 
-    df_hearingpointshistory = dlt.read("silver_hearingpointshistory_detail").groupBy("CaseNo").agg(
+    df_hearingpointshistory = dp.read("silver_hearingpointshistory_detail").groupBy("CaseNo").agg(
         collect_list(struct('CaseNo', 'StatusId', 'HearingPointsHistoryId', 'HistDate', 'HistType', 'UserId', 'DefaultPoints', 'InitialPoints', 'FinalPoints')).alias("HearingPointHistoryDetails")
     )
 
-    df_history = dlt.read("silver_history_detail").groupBy("CaseNo").agg(
+    df_history = dp.read("silver_history_detail").groupBy("CaseNo").agg(
         collect_list(struct('HistoryId', 'CaseNo', 'HistDate', 'fileLocation1', 'lastDocument', 'HistType', 'HistoryComment','DeletedByUser', 'StatusId', 'UserName', 'UserType', 'Fullname', 'Extension', 'DoNotUse', 'HistTypeDescription')).alias("HistoryDetails")
     )
 
-    df_humanright = dlt.read("silver_humanright_detail").groupBy("CaseNo").agg(
+    df_humanright = dp.read("silver_humanright_detail").groupBy("CaseNo").agg(
         collect_list(struct('HumanRightId', 'HumanRightDescription', 'DoNotShow', 'Priority')).alias("HumanRightDetails")
     )
 
-    df_newmatter = dlt.read("silver_newmatter_detail").groupBy("CaseNo").agg(
+    df_newmatter = dp.read("silver_newmatter_detail").groupBy("CaseNo").agg(
         collect_list(struct(
             'AppealNewMatterId', 'NewMatterId', 'AppealNewMatterNotes', 'DateReceived', 
             'DateReferredToHO', 'HODecision', 'DateHODecision', 'NewMatterDescription', 
@@ -5788,7 +5513,7 @@ def stg_apl_combined():
         )).alias("NewMatterDetails")
     )
 
-    df_link_input = dlt.read("silver_link_detail")
+    df_link_input = dp.read("silver_link_detail")
 
     link_details = (
         df_link_input
@@ -5813,11 +5538,11 @@ def stg_apl_combined():
         )
     )
 
-    df_linkedcostaward = dlt.read("silver_linkedcostaward_detail").groupBy("CaseNo").agg(
+    df_linkedcostaward = dp.read("silver_linkedcostaward_detail").groupBy("CaseNo").agg(
         collect_list(struct('CostAwardId', 'CaseNo', 'LinkNo', 'Name', 'Forenames', 'Title', 'DateOfApplication', 'TypeOfCostAward', 'ApplyingParty', 'PayingParty', 'MindedToAward', 'ObjectionToMindedToAward', 'CostsAwardDecision', 'DateOfDecision', 'CostsAmount', 'OutcomeOfAppeal', 'AppealStage', 'AppealStageDescription')).alias("LinkedCostAwardDetails")
     )
 
-    df_costorder = dlt.read("silver_costorder_detail").groupBy("CaseNo").agg(
+    df_costorder = dp.read("silver_costorder_detail").groupBy("CaseNo").agg(
         collect_list(
             struct('CostOrderID', 'DateOfApplication', 'OutcomeOfAppealWhereDecisionMade', 
                 'DateOfDecision', 'ApplyingRepresentativeId', 'ApplyingRepresentativeName', 
@@ -5827,33 +5552,33 @@ def stg_apl_combined():
     )
 
 
-    df_list_detail = dlt.read("silver_list_detail").groupBy("CaseNo").agg(
+    df_list_detail = dp.read("silver_list_detail").groupBy("CaseNo").agg(
         collect_list(struct('Outcome', 'CaseStatus', 'StatusId', 'TimeEstimate', 'ListNumber', 'HearingDuration', 'ListId', 'StartTime', 'HearingTypeDesc', 'HearingTypeEst', 'DoNotUse', 'ListAdjudicatorId', 'ListAdjudicatorSurname', 'ListAdjudicatorForenames', 'ListAdjudicatorNote', 'ListAdjudicatorTitle', 'ListName', 'ListStartTime', 'ListTypeDesc', 'ListType', 'DoNotUseListType', 'CourtName', 'DoNotUseCourt', 'HearingCentreDesc','UpperTribJudge','DesJudgeFirstTier','JudgeFirstTier','NonLegalMember')).alias("ListDetails")
     )
 
 
-    df_dfdairy = dlt.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
+    df_dfdairy = dp.read("silver_dfdairy_detail").groupBy("CaseNo").agg(
         collect_list(struct('CaseNo', 'Entry', 'EntryDate','BFDate', 'DateCompleted', 'Reason', 'BFTypeDescription', 'DoNotUse')).alias("BFDairyDetails")
     )
     
 
-    df_required_incompatible_adjudicator = dlt.read("silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(
+    df_required_incompatible_adjudicator = dp.read("silver_required_incompatible_adjudicator").groupBy("CaseNo").agg(
         collect_list(struct('Required', 'JudgeSurname', 'JudgeForenames', 'JudgeTitle')).alias("RequiredIncompatibleAdjudicatorDetails")
     )
 
-    df_status = dlt.read("silver_status_detail").groupBy("CaseNo").agg(
+    df_status = dp.read("silver_status_detail").groupBy("CaseNo").agg(
         collect_list(struct('StatusId', 'CaseNo', 'CaseStatus', 'DateReceived', 'StatusDetailAdjudicatorId', 'Allegation', 'KeyDate', 'MiscDate1', 'Notes1', 'Party', 'InTime', 'MiscDate2', 'MiscDate3', 'Notes2', 'DecisionDate', 'Outcome', 'Promulgated', 'InterpreterRequired', 'AdminCourtReference', 'UKAITNo', 'FC', 'VideoLink', 'Process', 'COAReferenceNumber', 'HighCourtReference', 'OutOfTime', 'ReconsiderationHearing', 'DecisionSentToHO', 'DecisionSentToHODate', 'MethodOfTyping', 'CourtSelection', 'DecidingCentre', 'status_DecidingCentre', 'Tier', 'RemittalOutcome', 'UpperTribunalAppellant', 'ListRequirementTypeId', 'ListRequirementType','UpperTribunalHearingDirectionId', col("Description").alias("UpperTribunalHearingDirection"), 'ApplicationType', 'NoCertAwardDate', 'CertRevokedDate', 'WrittenOffFileDate', 'ReferredEnforceDate', 'Letter1Date', 'Letter2Date', 'Letter3Date', 'ReferredFinanceDate', 'WrittenOffDate', 'CourtActionAuthDate', 'BalancePaidDate', 'WrittenReasonsRequestedDate', 'TypistSentDate', 'TypistReceivedDate', 'WrittenReasonsSentDate', 'ExtemporeMethodOfTyping', 'Extempore', 'DecisionByTCW', 'InitialHearingPoints', 'FinalHearingPoints', 'HearingPointsChangeReasonId', 'OtherCondition', 'OutcomeReasons', 'AdditionalLanguageId', 'CostOrderAppliedFor', 'HearingCourt', 'CaseStatusDescription', 'DoNotUseCaseStatus', 'CaseStatusHearingPoints', 'ContactStatus', 'SCCourtName', 'SCAddress1', 'SCAddress2', 'SCAddress3', 'SCAddress4', 'SCAddress5', 'SCPostcode', 'SCTelephone', 'SCForenames', 'SCTitle', 'ReasonAdjourn', 'DoNotUseReason', 'LanguageDescription', 'DoNotUseLanguage', 'DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent', 'StatusDetailAdjudicatorSurname', 'StatusDetailAdjudicatorForenames', 'StatusDetailAdjudicatorTitle', 'StatusDetailAdjudicatorNote', 'DeterminationByJudgeSurname', 'DeterminationByJudgeForenames', 'DeterminationByJudgeTitle', 'CurrentStatus', 'AdjournmentParentStatusId')).alias("StatusDetails")
     )
 
-    df_statusdecisiontype = dlt.read("silver_statusdecisiontype_detail").groupBy("CaseNo").agg(
+    df_statusdecisiontype = dp.read("silver_statusdecisiontype_detail").groupBy("CaseNo").agg(
         collect_list(struct('DecisionTypeDescription', 'DeterminationRequired', 'DoNotUse', 'State', 'BailRefusal', 'BailHOConsent')).alias("StatusDecisionTypeDetails")
     )
 
-    df_transaction = dlt.read("silver_transaction_detail").groupBy("CaseNo").agg(
+    df_transaction = dp.read("silver_transaction_detail").groupBy("CaseNo").agg(
         collect_list(struct('TransactionId', 'TransactionTypeId', 'TransactionMethodId', 'TransactionDate', 'Amount', 'ClearedDate', 'TransactionStatusId', 'OriginalPaymentReference', 'PaymentReference', 'AggregatedPaymentURN', 'PayerForename', 'PayerSurname', 'LiberataNotifiedDate', 'LiberataNotifiedAggregatedPaymentDate', 'BarclaycardTransactionId', 'Last4DigitsCard', 'TransactionNotes', 'ExpectedDate', 'ReferringTransactionId', 'CreateUserId', 'LastEditUserId', 'TransactionDescription', 'InterfaceDescription', 'AllowIfNew', 'DoNotUse', 'SumFeeAdjustment', 'SumPayAdjustment', 'SumTotalFee', 'SumTotalPay', 'SumBalance', 'GridFeeColumn', 'GridPayColumn', 'IsReversal', 'TransactionStatusDesc', 'TransactionStatusIntDesc', 'DoNotUseTransactionStatus', 'TransactionMethodDesc', 'TransactionMethodIntDesc', 'DoNotUseTransactionMethod', 'Amount_new', 'AmountDue', 'AmountPaid', 'FirstTierFee', 'TotalFeeAdjustments', 'TotalFeeDue', 'TotalPaymentsReceived', 'TotalPaymentAdjustments', 'BalanceDue')).alias("TransactionDetails")
     )
 
-    df_standarddirection = dlt.read("sliver_direction_detail").groupBy("CaseNo").agg(
+    df_standarddirection = dp.read("sliver_direction_detail").groupBy("CaseNo").agg(
         collect_list(struct(
             'ReviewStandardDirectionId', 'CaseNo', 'StatusId', 'StandardDirectionId', 
             'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 
@@ -5861,7 +5586,7 @@ def stg_apl_combined():
         )).alias("StandardDirectionDetails")
     )
 
-    df_reviewspecificdirection = dlt.read("silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
+    df_reviewspecificdirection = dp.read("silver_reviewspecificdirection_detail").groupBy("CaseNo").agg(
         collect_list(struct(
             'ReviewSpecificDirectionId', 'CaseNo', 'StatusId', 'SpecificDirection', 
             'DateRequiredIND', 'DateRequiredAppellantRep', 'DateReceivedIND', 'DateReceivedAppellantRep'
@@ -5907,16 +5632,14 @@ def stg_apl_combined():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_json_content
-@dlt.table(
+@dp.table(
     name="stg_apl_create_json_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_apl_create_json_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_apl_create_json_content():
 
     # Read unique CaseNo tables
     # M1
-    df_combined = dlt.read("stg_apl_combined")
+    df_combined = dp.read("stg_apl_combined")
    
     df_with_json_content = df_combined.withColumn("JSON_Content", to_json(struct(*df_combined.columns))).withColumn(
         "File_Name", concat(lit(f"{gold_outputs}/JSON/appeals_"), regexp_replace(col("CaseNo"), "/", "_"), lit(".json"))
@@ -5928,19 +5651,17 @@ def stg_apl_create_json_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_html_content
-@dlt.table(
+@dp.table(
     name="stg_apl_create_html_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_apl_create_html_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_apl_create_html_content():
 
     # Read unique CaseNo tables
     # M1
-    df_combined = dlt.read("stg_apl_combined")
+    df_combined = dp.read("stg_apl_combined")
 
      #HTML extra requirement- status details data
-    df_with_statusdetail_data = df_combined.join(dlt.read("stg_statusdetail_data"), "CaseNo", "left").join(dlt.read("stg_statichtml_data"), "CaseNo", "left")
+    df_with_statusdetail_data = df_combined.join(dp.read("stg_statusdetail_data"), "CaseNo", "left").join(dp.read("stg_statichtml_data"), "CaseNo", "left")
 
 
     df_with_html_content = df_with_statusdetail_data.withColumn("HTML_Content", generate_html_udf(struct(*df_with_statusdetail_data.columns))).withColumn(
@@ -5952,15 +5673,13 @@ def stg_apl_create_html_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_fta_create_a360_content
-@dlt.table(
+@dp.table(
     name="stg_apl_create_a360_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_apl_create_a360_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_apl_create_a360_content():
 
-    df_combined = dlt.read("stg_apl_combined")
-    df_apl_metadata = dlt.read("silver_archive_metadata")
+    df_combined = dp.read("stg_apl_combined")
+    df_apl_metadata = dp.read("silver_archive_metadata")
     
 
     # Select distinct client identifiers with HTML and JOSN content and order them
@@ -5990,22 +5709,20 @@ def stg_apl_create_a360_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_appeals_unified
-@dlt.table(
+@dp.table(
     name="stg_appeals_unified",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_appeals_unified"
-)
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
+    comment="Delta Live unified stage Gold Table for gold outputs.")
+@dp.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_appeals_unified():
 
-    df_combined = dlt.read("stg_apl_combined")
+    df_combined = dp.read("stg_apl_combined")
 
-    # Read DLT sources
-    a360_df = dlt.read("stg_apl_create_a360_content").alias("a360")
-    html_df = dlt.read("stg_apl_create_html_content").alias("html")
-    json_df = dlt.read("stg_apl_create_json_content").withColumn("JSON_File_Name",col("File_Name")).withColumn("JSON_Status",col("Status")).drop("File_Name","Status").alias("json")
+    # Read dp sources
+    a360_df = dp.read("stg_apl_create_a360_content").alias("a360")
+    html_df = dp.read("stg_apl_create_html_content").alias("html")
+    json_df = dp.read("stg_apl_create_json_content").withColumn("JSON_File_Name",col("File_Name")).withColumn("JSON_Status",col("Status")).drop("File_Name","Status").alias("json")
 
      # Perform joins
     df_unified = (
@@ -6044,17 +5761,15 @@ def stg_appeals_unified():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation gold_appeals_with_json
-@dlt.table(
+@dp.table(
     name="gold_appeals_with_json",
-    comment="Delta Live Gold Table with JSON content.",
-    path=f"{gold_mnt}/gold_appeals_with_json"
-)
+    comment="Delta Live Gold Table with JSON content.")
 def gold_appeals_with_json():
     """
     Delta Live Table for creating and uploading JSON content for Appeals.
     """
     # Load source data
-    df_unified = dlt.read("stg_appeals_unified")
+    df_unified = dp.read("stg_appeals_unified")
     
 
     # Optionally load data from Hive if needed
@@ -6069,7 +5784,7 @@ def gold_appeals_with_json():
         )
 
 
-    # Return the DataFrame for DLT table creation
+    # Return the DataFrame for dp table creation
     return df_with_upload_status.select("CaseNo","A360_BatchId", "JSON_content",col("JSON_File_Name").alias("File_Name"),"Status")
 
 
@@ -6079,15 +5794,13 @@ def gold_appeals_with_json():
 checks = {}
 checks["html_content_no_error"] = "(HTML_Content NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_appeals_with_html",
-    comment="Delta Live Gold Table with HTML content and uploads.",
-    path=f"{gold_mnt}/gold_appeals_with_html"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Gold Table with HTML content and uploads.")
+@dp.expect_all_or_fail(checks)
 def gold_appeals_with_html():
     # Load source data
-    df_combined = dlt.read("stg_appeals_unified")
+    df_combined = dp.read("stg_appeals_unified")
 
     # # Optional: Load from Hive if not an initial load
     # if read_hive:
@@ -6102,7 +5815,7 @@ def gold_appeals_with_html():
     )
 
 
-    # Return the DataFrame for DLT table creation, including the upload status
+    # Return the DataFrame for dp table creation, including the upload status
     return df_with_upload_status.select("CaseNo","A360_BatchId", "HTML_Content", col("HTML_File_Name").alias("File_Name"), "Status")
 
 # COMMAND ----------
@@ -6111,14 +5824,12 @@ def gold_appeals_with_html():
 checks = {}
 checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_appeals_with_a360",
-    comment="Delta Live Gold Table with A360 content.",
-    path=f"{gold_mnt}/gold_appeals_with_a360"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Gold Table with A360 content.")
+@dp.expect_all_or_fail(checks)
 def gold_appeals_with_a360():
-    df_a360 = dlt.read("stg_appeals_unified")
+    df_a360 = dp.read("stg_appeals_unified")
 
     # # Optionally load data from Hive
     # if read_hive:

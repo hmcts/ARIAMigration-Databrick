@@ -217,7 +217,7 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
     join_df = (
         silver_m3_filtered_casestatus.alias("m3")
-        .join(silver_c_filtered.alias("c"), on="CaseNo", how="left")
+        .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
         .withColumn(
             "rn",
             row_number().over(window_spec)
@@ -240,6 +240,7 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
         ftpa_df
             .select(
                 col("CaseNo"),
+                # col("Detained"),
                 # col("c.CategoryId"),
                 # col("DecisionDate"),
                 # col("Outcome"),

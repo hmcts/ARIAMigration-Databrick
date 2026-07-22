@@ -217,7 +217,7 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
 
     join_df = (
         silver_m3_filtered_casestatus.alias("m3")
-        .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
+        .join(silver_c_filtered.alias("c"), on="CaseNo", how="left")
         .withColumn(
             "rn",
             row_number().over(window_spec)

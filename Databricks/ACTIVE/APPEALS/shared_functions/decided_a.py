@@ -240,6 +240,7 @@ def ftpa(silver_m1, silver_m2, silver_m3,silver_c):
         ftpa_df
             .select(
                 col("CaseNo"),
+                # col("Detained"),
                 # col("c.CategoryId"),
                 # col("DecisionDate"),
                 # col("Outcome"),

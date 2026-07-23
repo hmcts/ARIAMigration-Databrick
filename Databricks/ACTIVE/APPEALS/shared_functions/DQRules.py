@@ -297,7 +297,7 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
 
     decision_date_ftpa = (
         silver_m3_filtered_casestatus.alias("m3")
-            .join(silver_c_filtered.alias("c"), on="CaseNo", how="inner")
+            .join(silver_c_filtered.alias("c"), on="CaseNo", how="left")
             .join(valid_isInUk.alias("uk"), on="CaseNo", how="left")
             .withColumn(
                 "rn",

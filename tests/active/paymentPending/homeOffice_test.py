@@ -132,7 +132,7 @@ def test_category_38_with_gwf_reference(homeOfficeDetails_outputs):
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2022-06-30",
-        homeOfficeReferenceNumber="999999999",
+        homeOfficeReferenceNumber=None,
         gwfReferenceNumber="061121374",
     )
 
@@ -143,7 +143,7 @@ def test_category_38_with_gwf_reference_second_case(homeOfficeDetails_outputs):
         row,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2020-02-15",
-        homeOfficeReferenceNumber="999999999",
+        homeOfficeReferenceNumber=None,
         gwfReferenceNumber="063622668",
     )
 

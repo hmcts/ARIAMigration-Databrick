@@ -1706,6 +1706,8 @@ def silver_normal_bail():
     file_location = dlt.read("raw_file_location").alias("fl")
     history = dlt.read("raw_history").alias("h")
 
+    segmentation_date = current_date() if env_name == 'prod' else lit("2026-06-05")  
+
     # Create a subquery to get the max StatusId for each CaseNo
     max_status_subquery = (
         status
@@ -1741,7 +1743,7 @@ def silver_normal_bail():
         F.when(F.col("h.Comment").like("%indefinite retention%"), 'Legal Hold')
         .when(F.col("h.Comment").like("%indefinate retention%"), 'Legal Hold')
         .when(
-            add_months(F.col("t.DecisionDate"), 24) < to_date(lit("2026-06-05")),
+            add_months(F.col("t.DecisionDate"), 24) < segmentation_date),
             'Destroy'
         )
         .otherwise('Archive'))

@@ -635,7 +635,7 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
         .withColumn("decisionLetterReceivedDate", decision_letter_received_date_expr)
         .withColumn("dateEntryClearanceDecision", date_entry_clearance_decision_expr)
         .withColumn("homeOfficeReferenceNumber",
-            when(home_office_reference_number_expr.isNull(), "999999999").otherwise(home_office_reference_number_expr))
+            when(home_office_reference_number_expr.isNull() & gwf_reference_number_expr.isNull(), "999999999").otherwise(home_office_reference_number_expr))  # if both HO and GWF Ref are NULL, set default for HO Ref Number.
         .withColumn("gwfReferenceNumber", gwf_reference_number_expr)
         .select("content.*", "homeOfficeDecisionDate", "decisionLetterReceivedDate",
                 "dateEntryClearanceDecision", "homeOfficeReferenceNumber", "gwfReferenceNumber")

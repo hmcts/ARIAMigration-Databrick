@@ -797,7 +797,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             )"""
         )
 
-        # homeOfficeReferenceNumber: populated for detained/in-UK/non-GWF; '999999999' fallback for OOC+GWF.
+        # homeOfficeReferenceNumber: populated for detained/in-UK/non-GWF; for OOC+GWF it is
+        # null when a GWF reference was extracted, else '999999999' fallback (both refs null).
         checks["valid_homeOfficeReferenceNumber_not_null"] = (
             """(
                 (
@@ -810,7 +811,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                     NOT dv_appellantIsInUk
                     AND Detained NOT IN (1,2,4)
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
-                    AND homeOfficeReferenceNumber = '999999999'
+                    AND (
+                        (gwfReferenceNumber IS NOT NULL AND homeOfficeReferenceNumber IS NULL)
+                        OR
+                        (gwfReferenceNumber IS NULL AND homeOfficeReferenceNumber = '999999999')
+                    )
                 )
             )"""
         )

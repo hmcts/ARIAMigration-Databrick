@@ -695,6 +695,8 @@ def bronze_appeal_case_tribunal_decision():
     DA_GROUP = ["DA","DC","EA","HU","PA","RP"]
     SKELETON_GROUP = ["IA","LD","LE","LH","LP","LR"]
 
+    segmentation_date = current_date() if env_name == 'prod' else lit("2026-06-05") 
+
     # ISNULL(outcome,-1) NOT IN (38,111) AND ISNULL(casestatus,-1) != 17
     status_subquery = (
         dlt.read("raw_status")
@@ -803,7 +805,7 @@ def bronze_appeal_case_tribunal_decision():
                 | lp_hoanref_recent
             )
             & retain_cond_1
-            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
+            & (F.add_months(col("t.DecisionDate"), 6) >= segmentation_date),
             "CCD"
         )
         .when(
@@ -813,7 +815,7 @@ def bronze_appeal_case_tribunal_decision():
                 | lp_hoanref_recent
             )
             & retain_cond_2
-            & (F.add_months(col("t.DecisionDate"), 6) >= lit("2026-06-05")),
+            & (F.add_months(col("t.DecisionDate"), 6) >= segmentation_date),
             "CCD"
         )
         .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNull(), "Tribunal Decision")

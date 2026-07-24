@@ -382,14 +382,14 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
         # -----------------------------
         .withColumn(
             "oocAppealAdminJ",
-            when(conditions &
-                (col("appellantInUk") == "No")
-                & (
+            when(
+                conditions & (col("appellantInUk") == "No"),
+                when(
                     col("lu_HORef").like("%GWF%")
                     | col("m1.HORef").like("%GWF%")
-                    | col("m2.FCONumber").like("%GWF%")
-                ),
-                lit("entryClearanceDecision")
+                    | col("m2.FCONumber").like("%GWF%"),
+                    lit("entryClearanceDecision")
+                ).otherwise(lit("none"))
             ).otherwise(lit(None))
         )
 

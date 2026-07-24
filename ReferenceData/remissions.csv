@@ -11,3 +11,11 @@
 1,8,Home Office Waiver,hoWaiverRemission,homeOfficeWaiver,Home Office fee waiver,OMIT,OMIT,OMIT,OMIT
 1,9,Help with Fees,helpWithFees,OMIT,Help with Fees,OMIT,OMIT,OMIT,M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'
 1,10,Paid on CCD,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED,NO MAPPING REQUIRED
+2,1,Asylum Support,hoWaiverRemission,asylumSupport,Asylum Support,OMIT,OMIT,M1.ASFReferenceNo ELSE IF NULL 'Unknown',OMIT
+2,2,Oral Hearing Direction,exceptionalCircumstancesRemission,OMIT,Exceptional circumstances,"""This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.""",OMIT,OMIT,OMIT
+2,3,LAA Funded,hoWaiverRemission,legalAid,Legal Aid,OMIT,M1.LSCReference; ELSE IF NULL 'Unknown',OMIT,OMIT
+2,4,S17 Childrens Act,hoWaiverRemission,section17,Section 17,OMIT,OMIT,OMIT,OMIT
+2,6,Other,exceptionalCircumstancesRemission,OMIT,Exceptional circumstances,"""This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.""",OMIT,OMIT,OMIT
+2,7,S20 Childrens Act,hoWaiverRemission,section20,Section 20,OMIT,OMIT,OMIT,OMIT
+2,8,Home Office Waiver,hoWaiverRemission,homeOfficeWaiver,Home Office fee waiver,OMIT,OMIT,OMIT,OMIT
+2,9,Help with Fees,helpWithFees,OMIT,Help with Fees,OMIT,OMIT,OMIT,M1.PaymentRemissionReasonNote; ELSE IF NULL 'Unknown'

@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from pyspark.sql import SparkSession, types as T
 from Databricks.ACTIVE.APPEALS.shared_functions.paymentPendingDetained import appellantDetails
@@ -29,6 +31,7 @@ def appellantDetails_outputs(spark):
         T.StructField("RemovalDate", T.StringType(), True),
         T.StructField("HORef", T.StringType(), True),
         T.StructField("CasePrefix", T.StringType(), True),
+        T.StructField("DateOfApplicationDecision", T.DateType(), True),
     ])
 
     # Six cases covering every branch of appellantInUk in paymentPendingDetained:
@@ -41,17 +44,22 @@ def appellantDetails_outputs(spark):
     #   DET/0008:      valid UK postcode, no Address5     → dv_addressInUk=True → appellantInUk="Yes"
     #   DET/0009:      address text 'Poland', no postcode → bronze lookup → dv_addressInUk=False → appellantInUk="No"
     #   DET/0010:      AppellantCountryId=188 (UK)        → dv_addressInUk=True immediately → appellantInUk="Yes"
+    # Two cases for oocAppealAdminJ (not detained, category 38 → appellantInUk="No"):
+    #   DET/0011:      no GWF reference anywhere          → oocAppealAdminJ="none"
+    #   DET/0012:      HORef contains 'GWF'               → oocAppealAdminJ="entryClearanceDecision"
     m1_data = [
-        ("HU/DET/0001", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0002", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0003", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0004", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0005", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0006", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0007", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0008", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0009", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
-        ("HU/DET/0010", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU"),
+        ("HU/DET/0001", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0002", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0003", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0004", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0005", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0006", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0007", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0008", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0009", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0010", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0011", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, None, "HU", date(2024, 3, 15)),
+        ("HU/DET/0012", "HU", "2025-03-07", "LR", "1980-01-01", "1", "AF", "Afghanistan", "refusalOfHumanRights", None, None, "GWF0611234", "HU", date(2024, 3, 15)),
     ]
 
     m2_schema = T.StructType([
@@ -86,6 +94,9 @@ def appellantDetails_outputs(spark):
         ("HU/DET/0009", "SmithX", "JohnX", None, None, "123 StreetX", None, "Poland", None, None, None, 0, None, None, None, 0),
         # getIsInUk: AppellantCountryId=188 (UK) → True immediately, no address/postcode needed
         ("HU/DET/0010", "SmithX", "JohnX", None, None, None, None, None, None, None, None, 188, None, None, None, 0),
+        # oocAppealAdminJ path tests (not detained, category 38 → appellantInUk="No")
+        ("HU/DET/0011", "SmithX", "JohnX", None, None, None, None, None, None, None, None, None, None, None, None, 0),
+        ("HU/DET/0012", "SmithX", "JohnX", None, None, None, None, None, None, None, None, None, None, None, None, 0),
     ]
 
     silver_c_schema = T.StructType([
@@ -101,6 +112,9 @@ def appellantDetails_outputs(spark):
         ("HU/DET/0005", 37),
         # DET/0006: OOC category
         ("HU/DET/0006", 38),
+        # DET/0011, DET/0012: OOC category for oocAppealAdminJ tests
+        ("HU/DET/0011", 38),
+        ("HU/DET/0012", 38),
     ]
 
     bronze_countryFromAddress_schema = T.StructType([
@@ -204,3 +218,23 @@ def test_appellant_in_uk_from_country_id_188(appellantDetails_outputs):
     """AppellantCountryId=188 (UK) → getIsInUk returns True immediately → appellantInUk='Yes'."""
     assert appellantDetails_outputs["HU/DET/0010"]["appellantInUk"] == "Yes"
     assert appellantDetails_outputs["HU/DET/0010"]["appealOutOfCountry"] == "No"
+
+
+def test_ooc_admin_j_null_when_appellant_in_uk(appellantDetails_outputs):
+    """oocAppealAdminJ is only ever populated when appellantInUk='No'."""
+    assert appellantDetails_outputs["HU/DET/0001"]["oocAppealAdminJ"] is None
+    assert appellantDetails_outputs["HU/DET/0005"]["oocAppealAdminJ"] is None
+    assert appellantDetails_outputs["HU/DET/0007"]["oocAppealAdminJ"] is None
+    assert appellantDetails_outputs["HU/DET/0010"]["oocAppealAdminJ"] is None
+
+
+def test_ooc_admin_j_none_without_gwf_reference(appellantDetails_outputs):
+    """appellantInUk='No' with no GWF reference anywhere → oocAppealAdminJ='none' (not null)."""
+    assert appellantDetails_outputs["HU/DET/0006"]["oocAppealAdminJ"] == "none"
+    assert appellantDetails_outputs["HU/DET/0009"]["oocAppealAdminJ"] == "none"
+    assert appellantDetails_outputs["HU/DET/0011"]["oocAppealAdminJ"] == "none"
+
+
+def test_ooc_admin_j_entry_clearance_decision_with_gwf_reference(appellantDetails_outputs):
+    """appellantInUk='No' with a GWF reference on HORef → oocAppealAdminJ='entryClearanceDecision'."""
+    assert appellantDetails_outputs["HU/DET/0012"]["oocAppealAdminJ"] == "entryClearanceDecision"

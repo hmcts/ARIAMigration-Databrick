@@ -471,7 +471,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             CASE    WHEN Detained IN (1,2,4) THEN appellantInUk = 'Yes'
                     WHEN array_contains(valid_categoryIdList, 37) THEN appellantInUk = 'Yes'
                     WHEN array_contains(valid_categoryIdList, 38) THEN appellantInUk = 'No'
-                    ELSE appellantInUk IN ('Yes', 'No')
+                    WHEN dv_addressInUk THEN appellantInUk = 'Yes'
+                    ELSE appellantInUk = 'No'
             END
         """)
 
@@ -559,19 +560,13 @@ class paymentPendingDetainedDQRules(DQRulesBase):
             CASE
                 WHEN Detained IN (1,2,4)
                     THEN oocAppealAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = true
+                WHEN dv_appellantIsInUk = TRUE
                     THEN oocAppealAdminJ IS NULL
-
-                WHEN dv_appellantIsInUk = false
-                    AND (
-                        lu_HORef LIKE "%GWF%"
-                    )
+                WHEN dv_appellantIsInUk = FALSE
+                    AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE "%GWF%"
                     THEN oocAppealAdminJ = "entryClearanceDecision"
-
-                WHEN dv_appellantIsInUk = false
-                    THEN oocAppealAdminJ IS NULL
-
+                WHEN dv_appellantIsInUk = FALSE
+                    THEN oocAppealAdminJ = "none"
                 ELSE oocAppealAdminJ IS NULL
             END
         )

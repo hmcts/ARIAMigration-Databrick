@@ -36,7 +36,9 @@ def base_DQRules(state: str = "paymentPending"):
 
     checks = {}
 
-    state_flow = build_state_flow(state, [state])
+    # If paymentPending, add the detained state on top, otherwise assume it'll be added as part of the state flow.
+    base_flow = [state, "paymentPendingDetained"] if state == "paymentPending" else [state]
+    state_flow = build_state_flow(state, base_flow)
 
     # Add all checks in state, errors if state not in mapping.
     for state_to_process in state_flow:
@@ -71,8 +73,8 @@ def add_state_dq_rules(state: str) -> dict:
 
 def previous_state_map(state: str):
     previous_state = {
-        "paymentPending":                "paymentPendingDetained",
-        "appealSubmitted":               "paymentPending",
+        "paymentPendingDetained":        "paymentPending",
+        "appealSubmitted":               "paymentPendingDetained",
         "awaitingRespondentEvidence(a)": "appealSubmitted",
         "awaitingRespondentEvidence(b)": "awaitingRespondentEvidence(a)",
         "caseUnderReview":               "awaitingRespondentEvidence(b)",

@@ -42,8 +42,8 @@ class TestAppealSubmittedHomeOfficeDetails:
         return case_no_df, case_no_df
 
     def test_homeOfficeSearchStatus_pa(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
@@ -56,8 +56,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert resultList[1][0] == "SUCCESS"
 
     def test_homeOfficeSearchStatus_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="RP")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="RP")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="RP"),
@@ -67,8 +67,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert df.select("homeOfficeSearchStatus").collect()[0][0] == "SUCCESS"
 
     def test_homeOfficeSearchStatus_non_pa_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="EA"),
@@ -78,8 +78,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert df.select("homeOfficeSearchStatus").collect()[0][0] is None
 
     def test_homeOfficeSearchNoMatch_pa(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
@@ -92,8 +92,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert resultList[1][0] == "NO_MATCH"
 
     def test_homeOfficeSearchNoMatch_non_pa_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="HU")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="HU")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="HU"),
@@ -103,8 +103,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert df.select("homeOfficeSearchNoMatch").collect()[0][0] is None
 
     def test_matchingAppellantDetailsFound_pa(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 2, appeal_type="PA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1", "2"], appeal_type="PA"),
@@ -117,8 +117,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert resultList[1][0] == "No"
 
     def test_matchingAppellantDetailsFound_non_pa_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="DC")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="DC")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="DC"),
@@ -128,8 +128,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert df.select("matchingAppellantDetailsFound").collect()[0][0] is None
 
     def test_homeOfficeAppellantsList_pa(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="PA"),
@@ -149,8 +149,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert result[0]["list_item_label"] == "No Match"
 
     def test_homeOfficeAppellantsList_non_pa_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EU")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EU")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="EU"),
@@ -160,8 +160,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert df.select("homeOfficeAppellantsList").collect()[0][0] is None
 
     def test_homeOfficeCaseStatusData_pa(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="PA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="PA"),
@@ -199,8 +199,8 @@ class TestAppealSubmittedHomeOfficeDetails:
             assert result[0]["roleSubType_code"] == "No match"
 
     def test_homeOfficeCaseStatusData_non_pa_rp(self, spark):
-        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
+        with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PPD') as PPD:
+            PPD.homeOfficeDetails.return_value = self.pp_df(spark, 1, appeal_type="EA")
 
             df, df_audit = homeOfficeDetails(
                 self.silver_m1(spark, ["1"], appeal_type="EA"),

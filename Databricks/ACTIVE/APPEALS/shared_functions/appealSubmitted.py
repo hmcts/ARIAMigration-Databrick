@@ -16,6 +16,7 @@ from pyspark.sql.functions import (
 from pyspark.sql.types import ArrayType, IntegerType, StringType, StructField, StructType
 
 from . import paymentPending as PP
+from . import paymentPendingDetained as PPD
 
 
 ###############################################################
@@ -493,7 +494,7 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
 #########          homeOffice extended              ###########
 ###############################################################
 def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
-    df_final, df_audit = PP.homeOfficeDetails(
+    df_final, df_audit = PPD.homeOfficeDetails(
         silver_m1, silver_m2, silver_c, bronze_HORef_cleansing
     )
 

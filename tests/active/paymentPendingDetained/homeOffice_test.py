@@ -221,14 +221,15 @@ def test_ooc_non_gwf_decision_letter_received_date(homeOfficeDetails_outputs):
 
 
 def test_ooc_gwf_date_entry_clearance_and_gwf_number(homeOfficeDetails_outputs):
-    """OOC, not detained, GWF ref → dateEntryClearanceDecision + gwfReferenceNumber populated."""
+    """OOC, not detained, GWF ref → dateEntryClearanceDecision + gwfReferenceNumber populated;
+    homeOfficeReferenceNumber is null since a GWF reference was successfully extracted."""
     row = homeOfficeDetails_outputs["HU/OOC/0002"]
     assert_equals(
         row,
         homeOfficeDecisionDate=None,
         decisionLetterReceivedDate=None,
         dateEntryClearanceDecision="2022-06-30",
-        homeOfficeReferenceNumber="999999999",
+        homeOfficeReferenceNumber=None,
     )
     assert row["gwfReferenceNumber"] is not None
     assert "GWF" not in row["gwfReferenceNumber"]  # cleaned — digits only

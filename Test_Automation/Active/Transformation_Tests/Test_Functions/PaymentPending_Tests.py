@@ -2430,116 +2430,113 @@ def test_oocAppealAdminJ_ac5(test_df):
 #         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine1AdminJ - If CategoryId not in 38 and addressLine1AdminJ not omitted
+#addressLine1AdminJ - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_addressLine1AdminJ_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("addressLine1AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine1AdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("addressLine1AdminJ").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("addressLine1AdminJ").isNotNull())
         )
 
         if ac_addressLine1AdminJ.count() != 0:
-            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is not 38 and addressLine1AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where appealOutOfCountry is 'No' and addressLine1AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where CategoryId is not 38 have addressLine1AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'No' have addressLine1AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine1AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine1AdminJ - If CategoryId in 38 and addressLine1AdminJ != AppellantAddress1
+#addressLine1AdminJ - If Out-of-Country (appealOutOfCountry = 'Yes'), field must match Appellant_Address1
 #######################
 def test_addressLine1AdminJ_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
+        if test_df.filter((col("appealOutOfCountry") == "Yes") &
             (col("addressLine1AdminJ").isNotNull())
             ).count() == 0:
             return TestResult("addressLine1AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine1AdminJ = test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) & 
+            (col("appealOutOfCountry") == "Yes") & 
         (
             col("addressLine1AdminJ") != col("Appellant_Address1")
         )
         )
 
         if ac_addressLine1AdminJ.count() != 0:
-            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is 38 and addressLine1AdminJ does not match Appellant_Address1" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' and addressLine1AdminJ does not match Appellant_Address1" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where CategoryId is 38 have addressLine1AdminJ matching Appellant_Address1", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' have addressLine1AdminJ matching Appellant_Address1", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine1AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#addressLine1AdminJ - If CategoryId is null and addressLine1AdminJ not omitted
+#addressLine1AdminJ - If appealOutOfCountry is null and addressLine1AdminJ not omitted
 #######################
 def test_addressLine1AdminJ_ac3(test_df):
     try:
-        is_category_null = (col("CategoryIds").isNull()) | (F.size(col("CategoryIds")) <= 0)
+        is_location_null = col("appealOutOfCountry").isNull()
 
         #Check we have Records To test
         if test_df.filter(
-            is_category_null
+            is_location_null
             ).count() == 0:
             return TestResult("addressLine1AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine1AdminJ = test_df.filter(
-            is_category_null & (col("addressLine1AdminJ").isNotNull())        
+            is_location_null & (col("addressLine1AdminJ").isNotNull())        
         )
 
         if ac_addressLine1AdminJ.count() != 0:
-            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is null and addressLine1AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "FAIL", f"addressLine1AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where appealOutOfCountry is null and addressLine1AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where CategoryId is null have addressLine1AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine1AdminJ", "PASS", f"addressLine1AdminJ acceptance criteria passed, all cases where appealOutOfCountry is null have addressLine1AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine1AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine2AdminJ - If CategoryId not in 38 and addressLine2AdminJ not omitted
+#addressLine2AdminJ - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_addressLine2AdminJ_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
+            col("appealOutOfCountry") == "No"
             ).count() == 0:
             return TestResult("addressLine2AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine2AdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("addressLine2AdminJ").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("addressLine2AdminJ").isNotNull())
         )
 
         if ac_addressLine2AdminJ.count() != 0:
-            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases have been found where CategoryId is not 38 and addressLine2AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases have been found where appealOutOfCountry is 'No' and addressLine2AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where CategoryId is not 38 have addressLine2AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'No' have addressLine2AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine2AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#addressLine2AdminJ - correct mapping and should not be null
+#addressLine2AdminJ - If Out-of-Country (appealOutOfCountry = 'Yes'), correct mapping and non-null check
 #######################
 def test_addressLine2AdminJ_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) 
+            col("appealOutOfCountry") == "Yes"
             ).count() == 0:
             return TestResult("addressLine2AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine2AdminJ = test_df.filter(
-        (array_contains(col("CategoryIds"), 38)) & 
+        (col("appealOutOfCountry") == "Yes") & 
         (
             (~col("addressLine2AdminJ").eqNullSafe(
                 coalesce(
@@ -2555,155 +2552,153 @@ def test_addressLine2AdminJ_ac2(test_df):
         )
 
         if ac_addressLine2AdminJ.count() != 0:
-            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases have been found where addressLine2AdminJ is not mapped correctly." , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases found where appealOutOfCountry is 'Yes' and addressLine2AdminJ is not mapped correctly.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where addressLine2AdminJ is not mapped correctly.", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine2AdminJ", "PASS", "addressLine2AdminJ acceptance criteria passed: all cases where appealOutOfCountry is 'Yes' have addressLine2AdminJ mapped correctly.", test_from_state, inspect.stack()[0].function)    
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine2AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#addressLine2AdminJ - If CategoryId is null and addressLine2AdminJ not omitted
+#addressLine2AdminJ - If appealOutOfCountry is null, field must be omitted
 #######################
 def test_addressLine2AdminJ_ac3(test_df):
     try:
-        is_category_null = (col("CategoryIds").isNull()) | (F.size(col("CategoryIds")) <= 0)
+        is_location_null = col("appealOutOfCountry").isNull()
 
         #Check we have Records To test
         if test_df.filter(
-            is_category_null
+            is_location_null
             ).count() == 0:
             return TestResult("addressLine2AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
-        ac_addressLine1AdminJ = test_df.filter(
-            is_category_null & (col("addressLine2AdminJ").isNotNull())        
+        ac_addressLine2AdminJ = test_df.filter(
+            is_location_null & (col("addressLine2AdminJ").isNotNull())        
         )
 
-        if ac_addressLine1AdminJ.count() != 0:
-            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine1AdminJ.count())} cases have been found where CategoryId is null and addressLine2AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+        if ac_addressLine2AdminJ.count() != 0:
+            return TestResult("addressLine2AdminJ", "FAIL", f"addressLine2AdminJ acceptance criteria failed: {str(ac_addressLine2AdminJ.count())} cases have been found where appealOutOfCountry is null and addressLine2AdminJ is not omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where CategoryId is null have addressLine2AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine2AdminJ", "PASS", f"addressLine2AdminJ acceptance criteria passed, all cases where appealOutOfCountry is null have addressLine2AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine2AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine3AdminJ - If CategoryId not in 38 and addressLine3AdminJ not omitted
+#addressLine3AdminJ - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_addressLine3AdminJ_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("addressLine3AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine3AdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("addressLine3AdminJ").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("addressLine3AdminJ").isNotNull())
         )
 
         if ac_addressLine3AdminJ.count() != 0:
-            return TestResult("addressLine3AdminJ", "FAIL", f"addressLine3AdminJ acceptance criteria failed: {str(ac_addressLine3AdminJ.count())} cases have been found where CategoryId is not 38 and addressLine3AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine3AdminJ", "FAIL", f"addressLine3AdminJ acceptance criteria failed: {str(ac_addressLine3AdminJ.count())} cases have been found where appealOutOfCountry is 'No' and addressLine3AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine3AdminJ", "PASS", f"addressLine3AdminJ acceptance criteria passed, all cases where CategoryId is not 38 have addressLine3AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine3AdminJ", "PASS", f"addressLine3AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'No' have addressLine3AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine3AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine3AdminJ - If CategoryId in 38 and addressLine3AdminJ != AppellantAddress3 + ', ' + AppellantAddress4
+#addressLine3AdminJ - If Out-of-Country (appealOutOfCountry = 'Yes'), check value matching
 #######################
 def test_addressLine3AdminJ_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38))
+            col("appealOutOfCountry") == "Yes"
             ).count() == 0:
             return TestResult("addressLine3AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine3AdminJ = test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) & 
+            (col("appealOutOfCountry") == "Yes") & 
         (
             col("addressLine3AdminJ") != (col("Appellant_Address3") + col("Appellant_Address4"))
         )
         )
 
         if ac_addressLine3AdminJ.count() != 0:
-            return TestResult("addressLine3AdminJ", "FAIL", f"addressLine3AdminJ acceptance criteria failed: {str(ac_addressLine3AdminJ.count())} cases have been found where CategoryId is 38 and addressLine3AdminJ is not equal to AppellantAddress3 + ', ' + AppellantAddress4" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine3AdminJ", "FAIL", f"addressLine3AdminJ acceptance criteria failed: {str(ac_addressLine3AdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' and addressLine3AdminJ is not equal to AppellantAddress3 + ', ' + AppellantAddress4" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine3AdminJ", "PASS", f"addressLine3AdminJ acceptance criteria passed, all cases where CategoryId is 38 have addressLine3AdminJ equal to AppellantAddress3 + ', ' + AppellantAddress4", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine3AdminJ", "PASS", f"addressLine3AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' have addressLine3AdminJ equal to AppellantAddress3 + ', ' + AppellantAddress4", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine3AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine4AdminJ - If CategoryId not in 38 and addressLine3AdminJ not omitted
+#addressLine4AdminJ - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_addressLine4AdminJ_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
+            col("appealOutOfCountry") == "No"
             ).count() == 0:
             return TestResult("addressLine4AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine4AdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("addressLine4AdminJ").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("addressLine4AdminJ").isNotNull())
         )
 
         if ac_addressLine4AdminJ.count() != 0:
-            return TestResult("addressLine4AdminJ", "FAIL", f"addressLine4AdminJ acceptance criteria failed: {str(ac_addressLine4AdminJ.count())} cases have been found where CategoryId is not 38 and addressLine4AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine4AdminJ", "FAIL", f"addressLine4AdminJ acceptance criteria failed: {str(ac_addressLine4AdminJ.count())} cases have been found where appealOutOfCountry is 'No' and addressLine4AdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine4AdminJ", "PASS", f"addressLine4AdminJ acceptance criteria passed, all cases where CategoryId is not 38 have addressLine4AdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine4AdminJ", "PASS", f"addressLine4AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'No' have addressLine4AdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine4AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#addressLine4AdminJ - If CategoryId in 38 and addressLine4AdminJ != AppellantAddress4 + ', ' + AppellantPostcode
+#addressLine4AdminJ - If Out-of-Country (appealOutOfCountry = 'Yes'), check value matching
 #######################
 def test_addressLine4AdminJ_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38))
+            col("appealOutOfCountry") == "Yes"
             ).count() == 0:
             return TestResult("addressLine4AdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_addressLine4AdminJ = test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) & 
+            (col("appealOutOfCountry") == "Yes") & 
         (
             col("addressLine4AdminJ") != (col("Appellant_Address4") + col("Appellant_Postcode"))
         )
         )
 
         if ac_addressLine4AdminJ.count() != 0:
-            return TestResult("addressLine4AdminJ", "FAIL", f"addressLine4AdminJ acceptance criteria failed: {str(ac_addressLine4AdminJ.count())} cases have been found where CategoryId is 38 and addressLine4AdminJ is not equal to AppellantAddress3 + ', ' + AppellantPostcode" , test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine4AdminJ", "FAIL", f"addressLine4AdminJ acceptance criteria failed: {str(ac_addressLine4AdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' and addressLine4AdminJ is not equal to AppellantAddress4 + ', ' + AppellantPostcode" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("addressLine4AdminJ", "PASS", f"addressLine4AdminJ acceptance criteria passed, all cases where CategoryId is 38 have addressLine4AdminJ equal to AppellantAddress4 + ', ' + AppellantPostcode", test_from_state, inspect.stack()[0].function)
+            return TestResult("addressLine4AdminJ", "PASS", f"addressLine4AdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' have addressLine4AdminJ equal to AppellantAddress4 + ', ' + AppellantPostcode", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("addressLine4AdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#countryGovUkOocAdminJ - If CategoryId not in 38 and addressLine3AdminJ not omitted
+#countryGovUkOocAdminJ - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_countryGovUkOocAdminJ_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
+            col("appealOutOfCountry") == "No"
             ).count() == 0:
             return TestResult("countryGovUkOocAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_countryGovUkOocAdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("countryGovUkOocAdminJ").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("countryGovUkOocAdminJ").isNotNull())
         )
 
         if ac_countryGovUkOocAdminJ.count() != 0:
-            return TestResult("countryGovUkOocAdminJ", "FAIL", f"countryGovUkOocAdminJ acceptance criteria failed: {str(ac_countryGovUkOocAdminJ.count())} cases have been found where CategoryId is not 38 and countryGovUkOocAdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("countryGovUkOocAdminJ", "FAIL", f"countryGovUkOocAdminJ acceptance criteria failed: {str(ac_countryGovUkOocAdminJ.count())} cases have been found where appealOutOfCountry is 'No' and countryGovUkOocAdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("countryGovUkOocAdminJ", "PASS", f"countryGovUkOocAdminJ acceptance criteria passed, all cases where CategoryId is not 38 have countryGovUkOocAdminJ omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("countryGovUkOocAdminJ", "PASS", f"countryGovUkOocAdminJ acceptance criteria passed, all cases where appealOutOfCountry is 'No' have countryGovUkOocAdminJ omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("countryGovUkOocAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

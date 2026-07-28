@@ -1732,48 +1732,46 @@ def test_appellantGivenNames(test_df):
         return TestResult("appellantGivenNames", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)        
 
 
-# IF CategoryId IN [37] = Include; ELSE OMIT
 #######################
-#appellantHasFixedAddress - If CategoryId not in 37 
+#appellantHasFixedAddress - OOC appeals (appealOutOfCountry = 'Yes') must omit appellantHasFixedAddress (NULL).
 #######################
 def test_appellantHasFixedAddress(test_df):
     try:        
         #Check we have Records To test
-        if test_df.filter(~array_contains(col("CategoryIds"), 38)).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "Yes").count() == 0:
             return TestResult("appellantHasFixedAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_appellantHasFixedAddress = test_df.filter(
-        (~(array_contains(col("CategoryIds"), 37))) &
+        (col("appealOutOfCountry") == "Yes") &
         (col("appellantHasFixedAddress").isNotNull())
         )
 
         if ac1_appellantHasFixedAddress.count() != 0:
-            return TestResult("appellantHasFixedAddress", "FAIL", f"appellantHasFixedAddress acceptance criteria - failed: {str(ac1_appellantHasFixedAddress.count())} cases have been found where the CategoryIds do not contain 37", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddress", "FAIL", f"appellantHasFixedAddress acceptance criteria - failed: {str(ac1_appellantHasFixedAddress.count())} cases have been found where appealOutOfCountry is 'Yes' and appellantHasFixedAddress is not omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantHasFixedAddress", "PASS", f"appellantHasFixedAddress acceptance criteria 1 passed, all cases where the CategoryIds do not contain 37 have been included.", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddress", "PASS", f"appellantHasFixedAddress acceptance criteria 1 passed, where appealOutOfCountry is 'Yes', appellantHasFixedAddress is always omitted.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantHasFixedAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
     
-# IF CategoryId IN [38] = Include; ELSE OMIT
 #######################
-#appellantHasFixedAddressAdminJ - If CategoryId not in 38
+#appellantHasFixedAddressAdminJ - In-UK appeals (appealOutOfCountry = 'No') must omit appellantHasFixedAddressAdminJ (NULL).
 #######################
 def test_appellantHasFixedAddressAdminJ(test_df):
     try:        
         #Check we have Records To test
-        if test_df.filter(~array_contains(col("CategoryIds"), 37)).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("appellantHasFixedAddressAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_appellantHasFixedAddressAdminJ = test_df.filter(
-        (~(array_contains(col("CategoryIds"), 38))) &
+        (col("appealOutOfCountry") == "No") &
         (col("appellantHasFixedAddressAdminJ").isNotNull())
         )
 
         if ac1_appellantHasFixedAddressAdminJ.count() != 0:
-            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", f"appellantHasFixedAddressAdminJ acceptance criteria - failed: {str(ac1_appellantHasFixedAddressAdminJ.count())} cases have been found where the CategoryIds do not contain 38", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddressAdminJ", "FAIL", f"appellantHasFixedAddressAdminJ acceptance criteria failed: {str(ac1_appellantHasFixedAddressAdminJ.count())} cases have been found where appealOutOfCountry is 'No' and appellantHasFixedAddressAdminJ is not omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantHasFixedAddressAdminJ", "PASS", f"appellantHasFixedAddressAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have been included.", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantHasFixedAddressAdminJ", "PASS", "appellantHasFixedAddressAdminJ acceptance criteria passed: where appealOutOfCountry is 'No', appellantHasFixedAddressAdminJ is always omitted.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantHasFixedAddressAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function) 
@@ -2247,19 +2245,18 @@ def test_mobileNumber_ac2(json, M2_bronze):
 def test_oocAppealAdminJ_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            ~(array_contains(col("CategoryIds"), 38))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
-        ac_oocAppealAdminJ = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("oocAppealAdminJ").isNotNull())
+        acceptance_criteria = test_df.filter(
+            (col("appealOutOfCountry") == "No") & (col("oocAppealAdminJ").isNotNull())
         )
 
-        if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is not 38 and oocAppealAdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
+        if acceptance_criteria.count() != 0:
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(acceptance_criteria.count())} cases have been found where appealOutOfCountry is 'No' and oocAppealAdminJ is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where CategoryId is not 38, oocAppealAdminJ is always omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed: where appealOutOfCountry is 'No', oocAppealAdminJ is always omitted.", test_from_state, inspect.stack()[0].function)
+        
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -2271,23 +2268,23 @@ def test_oocAppealAdminJ_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            ((col("HORef_Cleansed").contains("GWF")))
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef_Cleansed").isNotNull()) & (trim(col("HORef_Cleansed")) != "")
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_oocAppealAdminJ = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
-            ((col("HORef_Cleansed").contains("GWF")))
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef_Cleansed").isNotNull()) & (trim(col("HORef_Cleansed")) != "")
         ) & 
             (col("oocAppealAdminJ") != "entryClearanceDecision")
         )
 
         if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is 38 + CleansedHORef contains GWF and oocAppealAdminJ is not 'entryClearanceDecision'." , test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' + HORef_Cleansed present and oocAppealAdminJ is not 'entryClearanceDecision'." , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where CategoryId is 38 + CleansedHORef contains GWF, oocAppealAdminJ is always 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed: where appealOutOfCountry is 'Yes' + HORef_Cleansed present, oocAppealAdminJ is always 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -2299,23 +2296,23 @@ def test_oocAppealAdminJ_ac3(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            ((col("HORef").contains("GWF")))
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef").isNotNull()) & (trim(col("HORef")) != "")
             ).count() == 0:
             return TestResult("oocAppealAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_oocAppealAdminJ = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
-            ((col("HORef").contains("GWF")))
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef").isNotNull()) & (trim(col("HORef")) != "")
         ) & 
             (col("oocAppealAdminJ") != "entryClearanceDecision")
         )
 
         if ac_oocAppealAdminJ.count() != 0:
-            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where CategoryId is 38 + M1.HORef contains GWF and oocAppealAdminJ is not 'entryClearanceDecision'" , test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "FAIL", f"oocAppealAdminJ acceptance criteria failed: {str(ac_oocAppealAdminJ.count())} cases have been found where appealOutOfCountry is 'Yes' + M1.HORef present and oocAppealAdminJ is not 'entryClearanceDecision'" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed, where CategoryId is 38 + M1.HORef contains GWF, oocAppealAdminJ is always 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
+            return TestResult("oocAppealAdminJ", "PASS", f"oocAppealAdminJ acceptance criteria passed: where appealOutOfCountry is 'Yes' + M1.HORef present, oocAppealAdminJ is always 'entryClearanceDecision'.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("oocAppealAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -3577,23 +3574,22 @@ def test_sponsorPartyId_ac2(test_df):
 #######################
 def test_sponsorPartyId_ac3(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            ~(array_contains(col("CategoryIds"), 38))
-            ).count() == 0:
+        # Check if we have records where a sponsor is missing to validate against
+        if test_df.filter(col("sponsorGivenNames").isNull()).count() == 0:
             return TestResult("sponsorPartyId", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_sponsorPartyId = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("sponsorPartyId").isNotNull())
+            (col("sponsorGivenNames").isNull()) & (col("sponsorPartyId").isNotNull())
         )
 
         if ac_sponsorPartyId.count() != 0:
-            return TestResult("sponsorPartyId", "FAIL", f"sponsorPartyId acceptance criteria failed: {str(ac_sponsorPartyId.count())} cases have been found where CategoryId is not 38 and 'sponsorPartyId' is not omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorPartyId", "FAIL", f"sponsorPartyId acceptance criteria failed: cases found where sponsor is missing but 'sponsorPartyId' is not omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("sponsorPartyId", "PASS", f"sponsorPartyId acceptance criteria passed, where 'CategoryId' is not 38 all 'sponsorPartyId' are omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorPartyId", "PASS", f"sponsorPartyId acceptance criteria passed: where sponsor is missing, all 'sponsorPartyId' fields are omitted", test_from_state, inspect.stack()[0].function)
+            
     except Exception as e:
         error_message = str(e)        
-        return TestResult("sponsorPartyId", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("sponsorPartyId", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 ############################################################################################
 
@@ -8002,47 +7998,47 @@ def test_appellantInUk_ac1(test_df):
         return TestResult("appellantInUk", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantInUk - If M2.Detained not in 1,2,4 and CategoryId IN [37], field = Yes
+#appellantInUk - AC2: If M2.Detained not in 1,2,4 and appealOutOfCountry = 'No', field = Yes
 #######################
 def test_appellantInUk_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2,4)) & ((array_contains(col("CategoryIds"), 37)))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2,4)) & (col("appealOutOfCountry") == "No")).count() == 0:    
             return TestResult("appellantInUk", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1,2,4)) & 
-            (array_contains(col("CategoryIds"), 37)) &
+            (col("appealOutOfCountry") == "No") &
             (col("appellantInUk") != "Yes")
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appellantInUk", "FAIL", f"appellantInUk acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and CategoryId IN [37] appellantInUk is not yes", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantInUk", "FAIL", f"appellantInUk acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and appealOutOfCountry is 'No'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantInUk", "PASS", f"appellantInUk acceptance criteria passed: all cases where Detained != 1,2,4 and CategoryId IN [37] have appellantInUk equal to yes", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantInUk", "PASS", f"appellantInUk acceptance criteria passed: all cases where Detained != 1,2,4 and CappealOutOfCountry is 'No'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantInUk", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantInUk - If M2.Detained not in 1,2,4 and CategoryId IN [38], field = No
+#appellantInUk - If M2.Detained not in 1,2,4 and appealOutOfCountry = 'Yes', field = No
 #######################
 def test_appellantInUk_ac3(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2,4)) & ((array_contains(col("CategoryIds"), 38)))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2,4)) & (col("appealOutOfCountry") == "Yes")).count() == 0:    
             return TestResult("appellantInUk", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1,2,4)) & 
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (col("appellantInUk") != "No")
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appellantInUk", "FAIL", f"appellantInUk acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and CategoryId IN [38] appellantInUk is not no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantInUk", "FAIL", f"appellantInUk acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and appealOutOfCountry is 'Yes'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantInUk", "PASS", f"appellantInUk acceptance criteria passed: all cases where Detained != 1,2,4 and CategoryId IN [38] have appellantInUk equal to no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantInUk", "PASS", f"appellantInUk acceptance criteria passed: all cases where Detained != 1,2,4 and appealOutOfCountry is 'Yes'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantInUk", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -8070,47 +8066,47 @@ def test_appealOutOfCountry_ac1(test_df):
         return TestResult("appealOutOfCountry", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appealOutOfCountry - If M2.Detained not in 1,2,4 and CategoryId IN [37], field = No
+#appealOutOfCountry - If M2.Detained not in 1,2,4 and appellantInUk = 'Yes', field = No
 #######################
 def test_appealOutOfCountry_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2,4)) & ((array_contains(col("CategoryIds"), 37)))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2,4)) & (col("appellantInUk") == "Yes")).count() ==0:    
             return TestResult("appealOutOfCountry", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1,2,4)) & 
-            (array_contains(col("CategoryIds"), 37)) &
+            (col("appellantInUk") == "Yes") &
             (col("appealOutOfCountry") != "No")
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and CategoryId IN [37] appealOutOfCountry is not no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and appellantInUk is 'Yes'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed: all cases where Detained != 1,2,4 and CategoryId IN [37] have appealOutOfCountry equal to no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed: all cases where Detained != 1,2,4 and appellantInUk is 'Yes'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appealOutOfCountry", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appealOutOfCountry - If M2.Detained not in 1,2,4 and CategoryId IN [38], field = Yes
+#appealOutOfCountry - If M2.Detained not in 1,2,4 and appellantInUk = 'No', field = Yes
 #######################
 def test_appealOutOfCountry_ac3(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2,4)) & ((array_contains(col("CategoryIds"), 38)))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2,4)) & (col("appellantInUk") == "No")).count() == 0:    
             return TestResult("appealOutOfCountry", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1,2,4)) & 
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appellantInUk") == "No") &
             (col("appealOutOfCountry") != "Yes")
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and CategoryId IN [38] appealOutOfCountry is not no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "FAIL", f"appealOutOfCountry acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2,4 and appellantInUk is 'No'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed: all cases where Detained != 1,2,4 and CategoryId IN [38] have appealOutOfCountry equal to no", test_from_state, inspect.stack()[0].function)
+            return TestResult("appealOutOfCountry", "PASS", f"appealOutOfCountry acceptance criteria passed: all cases where Detained != 1,2,4 and appellantInUk is 'No'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appealOutOfCountry", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -8138,35 +8134,35 @@ def test_appellantAddress_ac1(test_df):
         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantAddress - If M2.Detained not in 1,2 and CategoryId NOT IN [37], field omitted
+#appellantAddress - If M2.Detained not in 1,2 and Out-of-Country (appealOutOfCountry = 'Yes'), field omitted
 #######################
 def test_appellantAddress_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2)) & (~(array_contains(col("CategoryIds"), 37)))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2)) & (col("appealOutOfCountry") == "Yes")).count() ==0:    
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1, 2)) & 
-            (~array_contains(col("CategoryIds"), 37)) &
+            (col("appealOutOfCountry") == "Yes") &
             (col("appellantAddress").isNotNull())
         )
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and CategoryId not IN [37] appellantAddress is not omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and appealOutOfCountry is 'Yes' and appellantAddress is not omitted", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantAddress", "PASS", f"appellantAddress acceptance criteria passed: all cases where Detained != 1,2 and CategoryId not IN [37] have appellantAddress omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantAddress", "PASS", f"appellantAddress acceptance criteria passed: all cases where Detained != 1,2 and appealOutOfCountry is 'Yes' have appellantAddress omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#appellantAddress - If M2.Detained not in 1,2 and CategoryId in 37, field is included
+#appellantAddress - If M2.Detained not in 1,2 and In-UK (appealOutOfCountry = 'No'), field is included
 #######################
 def test_appellantAddress_ac3(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((~col("Detained").isin(1,2)) & (array_contains(col("CategoryIds"), 37))).count() ==0:    
+        if test_df.filter((~col("Detained").isin(1,2)) & (col("appealOutOfCountry") == "No")).count() ==0:    
             return TestResult("appellantAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         def clean_val(col_ref):
@@ -8180,7 +8176,7 @@ def test_appellantAddress_ac3(test_df):
 
         acceptance_criteria = test_df.filter(
             (~col("Detained").isin(1, 2)) & 
-            (array_contains(col("CategoryIds"), 37)) &
+            (col("appealOutOfCountry") == "No") &
             
             (
                 (~clean_val("appellantAddress.AddressLine1").eqNullSafe(clean_val("Appellant_Address1"))) |
@@ -8193,9 +8189,9 @@ def test_appellantAddress_ac3(test_df):
         )
         
         if acceptance_criteria.count() != 0:
-            return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and CategoryId IN [37] appellantAddress is omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantAddress", "FAIL", f"appellantAddress acceptance criteria failed: found {acceptance_criteria.count()} cases where Detained != 1,2 and appealOutOfCountry is 'No' and appellantAddress mapping mismatched", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("appellantAddress", "PASS", f"appellantAddress acceptance criteria passed: all cases where Detained != 1,2 and CategoryId IN [37] have appellantAddress included", test_from_state, inspect.stack()[0].function)
+            return TestResult("appellantAddress", "PASS", f"appellantAddress acceptance criteria passed: all cases where Detained != 1,2 and appealOutOfCountry is 'No' have appellantAddress correctly included", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("appellantAddress", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

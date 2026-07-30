@@ -24,6 +24,7 @@ def test_default_mapping_init(json, M1_silver, bac, b):
     try:
         test_df = json.select(
             "appealReferenceNumber",
+            "appealOutOfCountry",
             "caseArgumentAvailable",
             "reasonsForAppealDecision",
             "isAppellantAttendingTheHearing",
@@ -145,13 +146,13 @@ def test_Listing_defaultValues(test_df):
         results_list.append(TestResult("reasonsForAppealDecision_LR", "PASS" if lr_reason_fail == 0 else "FAIL", f"LR Reason Error: {lr_reason_fail} records (should be Null)", test_from_state, inspect.stack()[0].function))
 
 
-        # OOC: IF Category 38 + Sponsor exists = 'Yes'
-        ooc_fail = test_df.filter((col("CategoryId") == 38) & (col("Sponsor_Name").isNotNull()) & (col("isEvidenceFromOutsideUkOoc") != "Yes")).count()
-        results_list.append(TestResult("isEvidenceFromOutsideUkOoc", "PASS" if ooc_fail == 0 else "FAIL", "Conditional OOC Check failed", test_from_state, inspect.stack()[0].function))
+        # OOC: IF appealOutOfCountry is 'Yes' + Sponsor exists = 'Yes'
+        ooc_fail = test_df.filter((col("appealOutOfCountry") == "Yes") & (col("Sponsor_Name").isNotNull()) & (col("Sponsor_Name") != "") & (col("isEvidenceFromOutsideUkOoc") != "Yes")).count()
+        results_list.append(TestResult("isEvidenceFromOutsideUkOoc", "PASS" if ooc_fail == 0 else "FAIL", "Check Passed" if ooc_fail == 0 else f"Conditional OOC Check failed ({ooc_fail} records)", test_from_state, inspect.stack()[0].function))
 
-        # InCountry: IF Category 37 + Sponsor exists = 'Yes'
-        ic_fail = test_df.filter((col("CategoryId") == 37) & (col("Sponsor_Name").isNotNull()) & (col("isEvidenceFromOutsideUkInCountry") != "Yes")).count()
-        results_list.append(TestResult("isEvidenceFromOutsideUkInCountry", "PASS" if ic_fail == 0 else "FAIL", "Conditional InCountry Check failed", test_from_state, inspect.stack()[0].function))
+        # InCountry: IF appealOutOfCountry is 'No' + Sponsor exists = 'Yes'
+        ic_fail = test_df.filter((col("appealOutOfCountry") == "No") & (col("Sponsor_Name").isNotNull()) & (col("Sponsor_Name") != "") & (col("isEvidenceFromOutsideUkInCountry") != "Yes")).count()
+        results_list.append(TestResult("isEvidenceFromOutsideUkInCountry", "PASS" if ic_fail == 0 else "FAIL", "Check Passed" if ic_fail == 0 else f"Conditional InCountry Check failed ({ic_fail} records)", test_from_state, inspect.stack()[0].function))
 
         # Outcome & Empty Array Checks
         outcome_fail = test_df.filter(col("appealReviewOutcome") != "decisionMaintained").count()

@@ -499,7 +499,8 @@ def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
     try:
         test_df = json.select(
             "appealReferenceNumber",
-            "ftpaApplicationDeadline"
+            "ftpaApplicationDeadline",
+            "appealOutOfCountry"
         )
 
         M3_bronze = M3_bronze.select(
@@ -530,12 +531,12 @@ def test_ftpaApplicationDeadline_init(json, M3_bronze, C):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("hearingDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None,TestResult("ftpa", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
 #ftpaApplicationDeadline 
-# Where CategoryId in 37, ftpaApplicationDeadline = M3.DecisionDate + 14 days
-# Where CategoryId in 38, ftpaApplicationDeadline = M3.DecisionDate + 28 days
+# Where appealOutOfCountry = 'No', ftpaApplicationDeadline = M3.DecisionDate + 14 days
+# Where appealOutOfCountry = 'Yes', ftpaApplicationDeadline = M3.DecisionDate + 28 days
 # MAX(StatusId) WHERE CaseStatus IN (37,38,26) AND Outcome IN (1,2)
 #######################
 def test_ftpaApplicationDeadline_combined(test_df):
@@ -543,7 +544,7 @@ def test_ftpaApplicationDeadline_combined(test_df):
         test_df = test_df.filter(
             (col("CaseStatus").isin(37, 38, 26)) & 
             (col("Outcome").isin(1,2)) &
-            (col("CategoryId").isin(37, 38))
+            (col("appealOutOfCountry").isin("Yes", "No"))
         )
 
         #Check we have Records To test
@@ -561,13 +562,13 @@ def test_ftpaApplicationDeadline_combined(test_df):
         )
 
         acceptance_criteria = winning_df.filter(
-            (F.when(col("CategoryId") == 37, F.to_date("ftpaApplicationDeadline") != col("expected_14")).when(col("CategoryId") == 38, 
-            (F.to_date("ftpaApplicationDeadline") != col("expected_14")) & 
-            (F.to_date("ftpaApplicationDeadline") != col("expected_28"))).otherwise(lit(False)))
+            (F.when(col("appealOutOfCountry") == "No", F.to_date("ftpaApplicationDeadline") != col("expected_14"))
+             .when(col("appealOutOfCountry") == "Yes", F.to_date("ftpaApplicationDeadline") != col("expected_28"))
+             .otherwise(lit(False)))
         )
 
         if acceptance_criteria.count() > 0:
-            return TestResult("ftpaApplicationDeadline", "FAIL", f"actualCaseHearingLength acceptance criteria failed: found {acceptance_criteria.count()} cases where ftpaApplicationDeadline does not match with M3.DecisionDate + required days", test_from_state, inspect.stack()[0].function)
+            return TestResult("ftpaApplicationDeadline", "FAIL", f"ftpaApplicationDeadline acceptance criteria failed: found {acceptance_criteria.count()} cases where ftpaApplicationDeadline does not match with M3.DecisionDate + required days", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("ftpaApplicationDeadline", "PASS", "ftpaApplicationDeadline acceptance criteria passed: all ftpaApplicationDeadline match with M3.DecisionDate + required days", test_from_state, inspect.stack()[0].function)
 

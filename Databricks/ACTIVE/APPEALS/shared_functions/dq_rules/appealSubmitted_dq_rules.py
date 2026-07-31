@@ -254,7 +254,7 @@ class appealSubmittedDQRules(DQRulesBase):
                     (
                         (
                             (
-                                PaymentRemissionGranted = 1
+                                PaymentRemissionGranted <=> 1
                                 OR (
                                     (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) > 0
@@ -265,7 +265,7 @@ class appealSubmittedDQRules(DQRulesBase):
                         OR
                         (
                             (
-                                PaymentRemissionGranted = 2
+                                PaymentRemissionGranted <=> 2
                                 OR (
                                     (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
@@ -291,7 +291,7 @@ class appealSubmittedDQRules(DQRulesBase):
                     (
                         (
                             (
-                                PaymentRemissionGranted = 1
+                                PaymentRemissionGranted <=> 1
                                 OR (
                                     (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) > 0
@@ -302,7 +302,7 @@ class appealSubmittedDQRules(DQRulesBase):
                         OR
                         (
                             (
-                                PaymentRemissionGranted = 2
+                                PaymentRemissionGranted <=> 2
                                 OR (
                                     (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0

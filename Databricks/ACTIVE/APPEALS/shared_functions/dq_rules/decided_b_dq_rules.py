@@ -15,20 +15,22 @@ class decidedBDQRules(DQRulesBase):
     def get_checks_document(self, checks={}):
 
         checks["valid_allSetAsideDocs"] = """(
-            size(allSetAsideDocs) = 0
+            COALESCE(size(allSetAsideDocs), 0) = 0
         )"""
 
         checks["valid_allFtpaAppellantDecisionDocs"] = """(
             CASE
-                WHEN Party = 1 AND CaseStatus_decb = 39 THEN size(allFtpaAppellantDecisionDocs) = 0
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN COALESCE(size(allFtpaAppellantDecisionDocs), 0) = 0
                 WHEN Party = 2 AND CaseStatus_decb = 39 THEN allFtpaAppellantDecisionDocs IS NULL
+                ELSE FALSE
             END
         )"""
 
         checks["valid_allFtpaRespondentDecisionDocs"] = """(
             CASE
-                WHEN Party = 2 AND CaseStatus_decb = 39 THEN size(allFtpaRespondentDecisionDocs) = 0
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN COALESCE(size(allFtpaRespondentDecisionDocs), 0) = 0
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN allFtpaRespondentDecisionDocs IS NULL
+                ELSE FALSE
             END
         )"""
 
@@ -37,10 +39,10 @@ class decidedBDQRules(DQRulesBase):
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_isDlrmSetAsideEnabled"] = ("(isDlrmSetAsideEnabled = 'Yes')")
-        checks["valid_isReheardAppealEnabled"] = ("(isReheardAppealEnabled = 'Yes')")
-        checks["valid_secondFtpaDecisionExists"] = ("(secondFtpaDecisionExists = 'No')")
-        checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists = 'Yes')")
+        checks["valid_isDlrmSetAsideEnabled"] = ("(isDlrmSetAsideEnabled <=> 'Yes')")
+        checks["valid_isReheardAppealEnabled"] = ("(isReheardAppealEnabled <=> 'Yes')")
+        checks["valid_secondFtpaDecisionExists"] = ("(secondFtpaDecisionExists <=> 'No')")
+        checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists <=> 'Yes')")
 
         return checks
 
@@ -49,15 +51,17 @@ class decidedBDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantDecided"] = """(
             CASE
-                WHEN Party = 1 AND CaseStatus_decb = 39 THEN isFtpaAppellantDecided = 'Yes'
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN isFtpaAppellantDecided <=> 'Yes'
                 WHEN Party = 2 AND CaseStatus_decb = 39  THEN isFtpaAppellantDecided IS NULL
+                ELSE FALSE
             END
         )"""
 
         checks["valid_isFtpaRespondentDecided"] = """(
             CASE
-                WHEN Party = 2 AND CaseStatus_decb = 39 THEN isFtpaRespondentDecided = 'Yes'
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN isFtpaRespondentDecided <=> 'Yes'
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN isFtpaRespondentDecided IS NULL
+                ELSE FALSE
             END
         )"""
 
@@ -71,55 +75,58 @@ class decidedBDQRules(DQRulesBase):
         WHEN Party = 1 AND CaseStatus_decb = 39 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'appellant'
+        AND element_at(ftpaList, 1).id <=> '1'
+        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) <=> 'appellant'
         AND element_at(ftpaList, 1).value.ftpaDecisionDate <=> ftpaAppellantDecisionDate
         AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantDecisionDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType = "remadeRule32"
-        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText = ""
-        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text = "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
-        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaGroundsDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments), 0) = 0
+        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType <=> "remadeRule32"
+        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText <=> ""
+        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text <=> "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
+        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside <=> "No"
 
         WHEN Party = 2 AND CaseStatus_decb = 39 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'respondent'
+        AND element_at(ftpaList, 1).id <=> '1'
+        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) <=> 'respondent'
         AND element_at(ftpaList, 1).value.ftpaDecisionDate <=> ftpaRespondentDecisionDate
         AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentDecisionDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType = "remadeRule32"
-        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText = ""
-        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text = "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
-        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside = "No"
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaGroundsDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments), 0) = 0
+        AND element_at(ftpaList, 1).value.ftpaDecisionOutcomeType <=> "remadeRule32"
+        AND element_at(ftpaList, 1).value.ftpaAppellantGroundsText <=> ""
+        AND element_at(ftpaList, 1).value.ftpaDecisionRemadeRule32Text <=> "This is an ARIA Migrated case. Please refer to the documents for the notice to set aside."
+        AND element_at(ftpaList, 1).value.isFtpaNoticeOfDecisionSetAside <=> "No"
+        ELSE FALSE
         END
         )
         """
 
         checks["valid_ftpaApplicantType"] = """(
-            
-            CaseStatus_decb = 39 
-            AND 
+
+            CaseStatus_decb <=> 39
+            AND
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'appellant'
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaApplicantType = 'respondent'
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaApplicantType <=> 'appellant'
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaApplicantType <=> 'respondent'
+                ELSE FALSE
             END
         )"""
 
         checks["valid_ftpaFirstDecision"] = """(
-            
-            ftpaFirstDecision = 'remadeRule32'
+
+            ftpaFirstDecision <=> 'remadeRule32'
 
         )"""
 
         checks["valid_ftpaAppellantDecisionDate"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate = date_format(DecisionDate_ftpa,'yyyy-MM-dd')
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate IS NULL
+                ELSE FALSE
             END
         )"""
 
@@ -128,28 +135,31 @@ class decidedBDQRules(DQRulesBase):
             CASE
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
                 WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaRespondentDecisionDate IS NULL
+                ELSE FALSE
             END
         )"""
 
         checks["valid_ftpaFinalDecisionForDisplay"] = """(
-            
-            ftpaFinalDecisionForDisplay = 'undecided'
+
+            ftpaFinalDecisionForDisplay <=> 'undecided'
 
         )"""
 
         checks["valid_ftpaAppellantRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType <=> 'remadeRule32'
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaAppellantRjDecisionOutcomeType IS NULL
+                ELSE FALSE
             END
         )"""
 
         checks["valid_ftpaRespondentRjDecisionOutcomeType"] = """(
 
             CASE
-                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType = 'remadeRule32'
+                WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType <=> 'remadeRule32'
                 WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaRespondentRjDecisionOutcomeType IS NULL
+                ELSE FALSE
             END
         )"""
 
@@ -159,33 +169,33 @@ class decidedBDQRules(DQRulesBase):
     def get_checks_set_aside(self, checks={}):
 
         checks["valid_reasonRehearingRule32"] = """(
-            
-            reasonRehearingRule32 = 'Set aside and to be reheard under rule 32'
-            
+
+            reasonRehearingRule32 <=> 'Set aside and to be reheard under rule 32'
+
         )"""
 
         checks["valid_rule32ListingAdditionalIns"] = """(
-            
-            rule32ListingAdditionalIns = 'This is an ARIA Migrated case. Please refer to the documents for any additional listing instructions.'
-            
+
+            rule32ListingAdditionalIns <=> 'This is an ARIA Migrated case. Please refer to the documents for any additional listing instructions.'
+
         )"""
 
         checks["valid_updateTribunalDecisionList"] = """(
-            
-            updateTribunalDecisionList = 'underRule32'
-            
+
+            updateTribunalDecisionList <=> 'underRule32'
+
         )"""
 
         checks["valid_ftpaFinalDecisionRemadeRule32"] = """(
-            
-            ftpaFinalDecisionRemadeRule32 = ''
-            
+
+            ftpaFinalDecisionRemadeRule32 <=> ''
+
         )"""
 
         checks["valid_updateTribunalDecisionDateRule32"] = """(
-            
-            updateTribunalDecisionDateRule32 = date_format(DecisionDate_decb,'yyyy-MM-dd') 
-            
+
+            updateTribunalDecisionDateRule32 <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
+
         )"""
 
 
@@ -200,15 +210,17 @@ class decidedBDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantDecisionRemadeRule32Text"] = """(
             CASE
-                WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
+                WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text <=> 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
                 WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaAppellantDecisionRemadeRule32Text IS NULL
+                ELSE FALSE
             END
         )"""
 
         checks["valid_ftpaRespondentDecisionRemadeRule32Text"] = """(
             CASE
-                WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text = 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
+                WHEN Party = 2 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text <=> 'This is an ARIA Migrated case. Please refer to the documents for the notice to set aside.'
                 WHEN Party = 1 AND CaseStatus_decb = 39 THEN ftpaRespondentDecisionRemadeRule32Text IS NULL
+                ELSE FALSE
             END
         )"""
 

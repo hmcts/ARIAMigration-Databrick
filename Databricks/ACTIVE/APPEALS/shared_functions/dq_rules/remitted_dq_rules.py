@@ -22,7 +22,7 @@ class remittedDQRules(DQRulesBase):
             """
             (
                 (
-                    CaseStatus_decb = 39 AND 
+                    CaseStatus_decb <=> 39 AND
                     (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
                 )
                 OR
@@ -37,7 +37,7 @@ class remittedDQRules(DQRulesBase):
             """
             (
                 (
-                    CaseStatus_decb = 39 AND 
+                    CaseStatus_decb <=> 39 AND
                     (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
                 )
                 OR
@@ -56,16 +56,22 @@ class remittedDQRules(DQRulesBase):
 
         checks["valid_courtReferenceNumber"] = ("""
         (
-            courtReferenceNumber = "This is a migrated ARIA case. Please refer to the documents."
+            courtReferenceNumber <=> "This is a migrated ARIA case. Please refer to the documents."
         )
         """)
 
         checks["valid_appealRemittedDate"] = (
             """
             (
-                (CaseStatus_rem IN (42, 43, 44) AND Outcome_rem = 86)
-                AND
-                appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd')
+                (
+                    CaseStatus_rem IS NOT NULL AND CaseStatus_rem IN (42, 43, 44) AND Outcome_rem <=> 86
+                    AND appealRemittedDate <=> date_format(CAST(DecisionDate_rem AS timestamp), 'yyyy-MM-dd')
+                )
+                OR
+                (
+                    (CaseStatus_rem IS NULL OR CaseStatus_rem NOT IN (42, 43, 44) OR NOT (Outcome_rem <=> 86))
+                    AND appealRemittedDate IS NULL
+                )
             )
             """)
 
@@ -74,8 +80,8 @@ class remittedDQRules(DQRulesBase):
 
     def get_checks_document(self, checks={}):
         
-        checks["valid_remittalDocuments"] = ("(size(remittalDocuments) = 0) ")
-        checks["valid_uploadOtherRemittalDocs"] = ("(size(uploadOtherRemittalDocs) = 0) ")
+        checks["valid_remittalDocuments"] = ("(COALESCE(size(remittalDocuments), 0) = 0) ")
+        checks["valid_uploadOtherRemittalDocs"] = ("(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) ")
         return checks
 
 

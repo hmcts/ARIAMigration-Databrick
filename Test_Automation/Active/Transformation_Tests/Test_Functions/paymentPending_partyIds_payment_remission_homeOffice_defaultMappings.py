@@ -91,9 +91,13 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
               all_test_results.append(pp_tests.test_homeOfficeDecisionDate_ac2(test_df))
 
          if "decisionLetterReceivedDate" not in fields_to_exclude:
-              all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac1(test_df))
-              all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac2(test_df))
-              all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac3(test_df))
+              dl_test_df, dl_init_success = pp_tests.test_decisionLetterReceivedDate_init(json_data, C, M1_bronze, M2_bronze)
+              if dl_init_success != True:
+                   all_test_results.append(dl_test_df)
+              else:
+                   all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac1(dl_test_df))
+                   all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac2(dl_test_df))
+                   all_test_results.append(pp_tests.test_decisionLetterReceivedDate_ac3(dl_test_df))
 
          if "dateEntryClearanceDecision" not in fields_to_exclude:
               all_test_results.append(pp_tests.test_dateEntryClearanceDecision_ac1(test_df))

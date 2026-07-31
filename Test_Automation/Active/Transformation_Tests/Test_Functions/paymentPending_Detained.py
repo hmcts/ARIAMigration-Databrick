@@ -78,6 +78,10 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
             all_test_results.append(ppd_tests.test_appellantAddress_ac3(test_df3))
 
     # -- Detained sponsorDetails tests --
+    for col_name in ["sponsorEmailAdminJ", "sponsorMobileNumberAdminJ"]:
+        if col_name not in json_data.columns:
+            json_data = json_data.selectExpr("*", f"CAST(NULL AS STRING) as {col_name}")
+            
     test_df4, test_data_setup4 = ppd_tests.test_sponsorDetails_init_detained(json_data, M1_bronze)
     if test_data_setup4 is not True:
         all_test_results.append(test_data_setup4)
@@ -101,7 +105,8 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
 
         if "sponsorEmailAdminJ" not in fields_to_exclude:
             all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac1(test_df4))
-            all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac2(test_df4))  
+            all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac2(test_df4)) 
+            all_test_results.append(ppd_tests.test_sponsorEmailAdminJ_ac4(test_df4)) 
 
         if "sponsorAuthorisation" not in fields_to_exclude:
             all_test_results.append(ppd_tests.test_sponsorAuthorisation_ac1(test_df4))
@@ -111,5 +116,11 @@ def run(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc, bat, bhor
         if "sponsorNameForDisplay" not in fields_to_exclude:
             all_test_results.append(ppd_tests.test_sponsorNameForDisplay_ac1(test_df4))
             all_test_results.append(ppd_tests.test_sponsorNameForDisplay_ac2(test_df4))
+
+        if "sponsorMobileNumberAdminJ" not in fields_to_exclude:
+            all_test_results.append(ppd_tests.test_sponsorMobileNumberAdminJ_ac1(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorMobileNumberAdminJ_ac2(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorMobileNumberAdminJ_ac3(test_df4))
+            all_test_results.append(ppd_tests.test_sponsorMobileNumberAdminJ_ac4(test_df4))
 
     return all_test_results

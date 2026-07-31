@@ -39,6 +39,10 @@ test_from_state = "paymentPending"
 #######################
 def test_sponsorDetails_init(json, M1_bronze, C):
     try:
+        for col_name in ["sponsorEmailAdminJ", "sponsorMobileNumberAdminJ"]:
+            if col_name not in json.columns:
+                json = json.withColumn(col_name, lit(None).cast("string"))
+
         json_sd = json.select(
             "appealReferenceNumber",
             "hasSponsor",
@@ -74,13 +78,13 @@ def test_sponsorDetails_init(json, M1_bronze, C):
         test_df_sd = json_sd.join(
             C,
             C.CaseNo == json_sd.appealReferenceNumber,
-            "inner"
+            "left"
         )
 
         test_df_sd = test_df_sd.join(
             M1_sd,
             M1_sd.CaseNo == test_df_sd.appealReferenceNumber,
-            "inner"
+            "left"
         )
 
         test_df_sd = test_df_sd.select(
@@ -676,87 +680,83 @@ def cleanEmail(email):
 #         return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#sponsorMobileNumberAdminJ - If CategoryId not 38 and sponsorMobileNumberAdminJ not omitted
-#######################
+#sponsorMobileNumberAdminJ - If Sponsor_Name is null, field omitted
+# #######################
 def test_sponsorMobileNumberAdminJ_ac1(test_df_sd):
     try:
         #Check we have Records To test
-        if test_df_sd.filter(
-            (~array_contains(col("CategoryIds"), 38))
-            ).count() == 0:
+        if test_df_sd.filter(col("Sponsor_Name").isNull()).count() == 0:
             return TestResult("sponsorMobileNumberAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac1_sponsorMobileNumberAdminJ = test_df_sd.filter(
-        (~array_contains(col("CategoryIds"), 38)) & 
-        (col("sponsorMobileNumberAdminJ").isNotNull())
+            (col("Sponsor_Name").isNull()) & 
+            (col("sponsorMobileNumberAdminJ").isNotNull())
         )
 
         if ac1_sponsorMobileNumberAdminJ.count() != 0:
-            return TestResult("ac1_sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 1 failed: {str(ac1_sponsorMobileNumberAdminJ.count())} cases have been found where the CategoryIds do not contain 38, but sponsorMobileNumberAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 1 failed: {str(ac1_sponsorMobileNumberAdminJ.count())} cases have been found where Sponsor_Name is null but sponsorMobileNumberAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("ac1_sponsorMobileNumberAdminJ", "PASS", f"sponsorMobileNumberAdminJ acceptance criteria 1 passed, all cases where the CategoryIds do not contain 38 have sponsorMobileNumberAdminJ omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorMobileNumberAdminJ", "PASS", f"sponsorMobileNumberAdminJ acceptance criteria 1 passed, all cases where Sponsor_Name is null have sponsorMobileNumberAdminJ correctly omitted.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
-        return TestResult("ac1_sponsorMobileNumberAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("sponsorMobileNumberAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#sponsorMobileNumberAdminJ - If CategoryId is 38 + Sponsor_Name is null and sponsorMobileNumberAdminJ not omitted
+#sponsorMobileNumberAdminJ - If Sponsor_Name is null and sponsorMobileNumberAdminJ not omitted
 #######################
 def test_sponsorMobileNumberAdminJ_ac2(test_df_sd):
     try:
         #Check we have Records To test
         if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNull())
+            col("Sponsor_Name").isNotNull() &
+            col("sponsorMobileNumberAdminJ").isNotNull()
             ).count() == 0:
             return TestResult("sponsorMobileNumberAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac2_sponsorMobileNumberAdminJ = test_df_sd.filter(
-        (
-        (array_contains(col("CategoryIds"), 38)) &
-        (col("Sponsor_Name").isNull())
-        ) &
-        col("sponsorMobileNumberAdminJ").isNotNull()
+            col("Sponsor_Name").isNotNull() &
+            col("sponsorMobileNumberAdminJ").isNotNull() &
+            (col("sponsorMobileNumberAdminJ") != col("SponsorTelephone"))
         )
 
         if ac2_sponsorMobileNumberAdminJ.count() != 0:
-            return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 2 failed: {str(ac2_sponsorMobileNumberAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is null, but sponsorMobileNumberAdminJ has not been omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 2 failed: {str(ac2_sponsorMobileNumberAdminJ.count())} cases have been found where Sponsor_Name is not null, but sponsorMobileNumberAdminJ is omitted or does not match SponsorTelephone.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("sponsorMobileNumberAdminJ", "PASS", f"sponsorMobileNumberAdminJ acceptance criteria 2 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is null have sponsorMobileNumberAdminJ omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorMobileNumberAdminJ", "PASS", "sponsorMobileNumberAdminJ acceptance criteria 2 passed: all cases where Sponsor_Name is not null have sponsorMobileNumberAdminJ matching SponsorTelephone.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("sponsorMobileNumberAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
         
 
 #######################
-#sponsorMobileNumberAdminJ - If CategoryId is 38 + Sponsor_Name is not null and sponsorMobileNumberAdminJ omitted
+#sponsorMobileNumberAdminJ - If Sponsor_Name is not null and field matches cleaned SponsorTelephone
 #######################
 def test_sponsorMobileNumberAdminJ_ac3(test_df_sd):
     try:
         #Check we have Records To test
         if test_df_sd.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("Sponsor_Name").isNotNull())
+            col("Sponsor_Name").isNotNull() & 
+            col("sponsorMobileNumberAdminJ").isNotNull()
             ).count() == 0:
             return TestResult("sponsorMobileNumberAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-        
+
         clean_phone_udf = udf(cleanPhoneNumber, StringType())
 
         test_df_sd = test_df_sd.withColumn(
             "sponsor_phone_cleaned", 
             clean_phone_udf(col("SponsorTelephone"))
         )
-        
+
         ac3_sponsorMobileNumberAdminJ = test_df_sd.filter(
-        (array_contains(col("CategoryIds"), 38)) &
-        (col("Sponsor_Name").isNotNull()) &
-        (~col("sponsorMobileNumberAdminJ").eqNullSafe(col("sponsor_phone_cleaned")))
+            col("Sponsor_Name").isNotNull() &
+            col("sponsorMobileNumberAdminJ").isNotNull() &
+            (~col("sponsorMobileNumberAdminJ").eqNullSafe(col("sponsor_phone_cleaned")))
         )
 
         if ac3_sponsorMobileNumberAdminJ.count() != 0:
-            return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 3 failed: {str(ac3_sponsorMobileNumberAdminJ.count())} cases have been found where the CategoryIds contain 38 and Sponsor_Name is not null, but sponsorMobileNumberAdminJ does not match the ARIA value.", test_from_state, inspect.stack()[0].function), ac3_sponsorMobileNumberAdminJ
+            return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 3 failed: {str(ac3_sponsorMobileNumberAdminJ.count())} cases have been found where populated sponsorMobileNumberAdminJ does not match the ARIA value.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("sponsorMobileNumberAdminJ", "PASS", f"sponsorMobileNumberAdminJ acceptance criteria 3 passed, all cases where the CategoryIds contain 38 and Sponsor_Name is not null have sponsorMobileNumberAdminJ matching.", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorMobileNumberAdminJ", "PASS", f"sponsorMobileNumberAdminJ acceptance criteria 3 passed, all cases where Sponsor_Name is not null have sponsorMobileNumberAdminJ matching.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("sponsorMobileNumberAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -767,6 +767,9 @@ def test_sponsorMobileNumberAdminJ_ac3(test_df_sd):
 #######################
 def test_sponsorEmailAdminJ_ac4(test_df_sd):
     try:
+        if test_df_sd.filter(col("sponsorEmailAdminJ").isNotNull()).count() == 0:
+            return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
         clean_email_udf = udf(cleanEmail, StringType())
 
         test_df_sd = test_df_sd.withColumn(
@@ -775,9 +778,9 @@ def test_sponsorEmailAdminJ_ac4(test_df_sd):
         )
 
         ac4_sponsorEmailAdminJ = test_df_sd.filter(
-        (
-            (col("sponsorEmailAdminJ") != col("sponsor_email_cleaned"))
-        ))
+            (col("sponsorEmailAdminJ").isNotNull()) &
+            (~col("sponsorEmailAdminJ").eqNullSafe(col("sponsor_email_cleaned")))
+    )
 
         if ac4_sponsorEmailAdminJ.count() != 0:
             return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria 4 failed: {str(ac4_sponsorEmailAdminJ.count())} cases have been found where the sponsorEmailAdminJ has not been cleansed properly.", test_from_state, inspect.stack()[0].function)
@@ -793,6 +796,9 @@ def test_sponsorEmailAdminJ_ac4(test_df_sd):
 #######################
 def test_sponsorMobileNumberAdminJ_ac4(test_df_sd):
     try:
+        if test_df_sd.filter(col("sponsorMobileNumberAdminJ").isNotNull()).count() == 0:
+            return TestResult("sponsorMobileNumberAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        
         clean_phone_udf = udf(cleanPhoneNumber, StringType())
 
         test_df_sd = test_df_sd.withColumn(
@@ -801,9 +807,9 @@ def test_sponsorMobileNumberAdminJ_ac4(test_df_sd):
         )
 
         ac4_sponsorMobileNumberAdminJ = test_df_sd.filter(
-        (
-            (col("sponsorMobileNumberAdminJ") != col("sponsor_telephone_cleaned"))
-        ))
+            (col("sponsorMobileNumberAdminJ").isNotNull()) &
+            (~col("sponsorMobileNumberAdminJ").eqNullSafe(col("sponsor_telephone_cleaned")))
+        )
 
         if ac4_sponsorMobileNumberAdminJ.count() != 0:
             return TestResult("sponsorMobileNumberAdminJ", "FAIL", f"sponsorMobileNumberAdminJ acceptance criteria 4 failed: {str(ac4_sponsorMobileNumberAdminJ.count())} cases have been found where the sponsorMobileNumberAdminJ has not been cleansed properly.", test_from_state, inspect.stack()[0].function)
@@ -3908,7 +3914,8 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
             # "homeOfficeReferenceNumber",
             "gwfReferenceNumber",
             "homeOfficeDecisionDate",
-            "oocAppealAdminJ"
+            "oocAppealAdminJ",
+            "appealOutOfCountry"
         )
 
         C = C.select(
@@ -3936,13 +3943,13 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
-            "inner"
+            "left"
         )
 
         test_df = test_df.join(
             M2_bronze,
             test_df["appealReferenceNumber"] == M2_bronze["CaseNo"],
-            "inner"
+            "left"
         )
 
         test_df = test_df.join(
@@ -3960,6 +3967,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
         test_df = test_df.select(
             "appealReferenceNumber",
             "oocAppealAdminJ",
+            "appealOutOfCountry",
             # "decisionLetterReceivedDate",
             "dateEntryClearanceDecision",
             # "homeOfficeReferenceNumber",
@@ -3978,6 +3986,7 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
             .agg(
                 collect_list("CategoryId").alias("CategoryIds"),
                 first("oocAppealAdminJ").alias("oocAppealAdminJ"),
+                first("appealOutOfCountry").alias("appealOutOfCountry"),
                 # first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate"),
                 first("dateEntryClearanceDecision").alias("dateEntryClearanceDecision"),
                 # first("homeOfficeReferenceNumber").alias("homeOfficeReferenceNumber"),
@@ -3996,47 +4005,43 @@ def test_homeOffice_init(json, C, M1_bronze, M2_bronze, bhoref):
         return None,TestResult("homeOffice", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#homeOfficeDecisionDate - If CategoryId not in 37 and homeOfficeDecisionDate not omitted
+#homeOfficeDecisionDate - If appealOutOfCountry is 'Yes' and homeOfficeDecisionDate not omitted
 #######################
 def test_homeOfficeDecisionDate_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 37)))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "Yes").count() == 0:
             return TestResult("homeOfficeDecisionDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_homeOfficeDecisionDate = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 37))) & col("homeOfficeDecisionDate").isNotNull()
+            (col("appealOutOfCountry") == "Yes") & col("homeOfficeDecisionDate").isNotNull()
         )
 
         if ac_homeOfficeDecisionDate.count() != 0:
-            return TestResult("homeOfficeDecisionDate", "FAIL", f"homeOfficeDecisionDate acceptance criteria failed: {str(ac_homeOfficeDecisionDate.count())} cases have been found where CategoryId not in 37 and homeOfficeDecisionDate not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("homeOfficeDecisionDate", "FAIL", f"homeOfficeDecisionDate acceptance criteria failed: {str(ac_homeOfficeDecisionDate.count())} cases have been found where appealOutOfCountry is 'Yes' and homeOfficeDecisionDate not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("homeOfficeDecisionDate", "PASS", f"homeOfficeDecisionDate acceptance criteria passed, all cases where CategoryId not in 37, homeOfficeDecisionDate is always omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("homeOfficeDecisionDate", "PASS", f"homeOfficeDecisionDate acceptance criteria passed, for all cases where appealOutOfCountry is 'Yes', homeOfficeDecisionDate is always omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeDecisionDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#homeOfficeDecisionDate - If CategoryId in 37 and homeOfficeDecisionDate != M1.DateOfApplicationDecision
+#homeOfficeDecisionDate - If appealOutOfCountry is 'No' and homeOfficeDecisionDate != M1.DateOfApplicationDecision
 #######################
 def test_homeOfficeDecisionDate_ac2(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (array_contains(col("CategoryIds"), 37))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("homeOfficeDecisionDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_homeOfficeDecisionDate = test_df.filter(
-            (array_contains(col("CategoryIds"), 37)) & (col("homeOfficeDecisionDate") != col("DateOfApplicationDecision"))
+            (col("appealOutOfCountry") == "No") & (col("homeOfficeDecisionDate") != col("DateOfApplicationDecision"))
         )
 
         if ac_homeOfficeDecisionDate.count() != 0:
-            return TestResult("homeOfficeDecisionDate", "FAIL", f"homeOfficeDecisionDate acceptance criteria failed: {str(ac_homeOfficeDecisionDate.count())} cases have been found where CategoryId in 37 and homeOfficeDecisionDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
+            return TestResult("homeOfficeDecisionDate", "FAIL", f"homeOfficeDecisionDate acceptance criteria failed: {str(ac_homeOfficeDecisionDate.count())} cases have been found where appealOutOfCountry is 'No' and homeOfficeDecisionDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("homeOfficeDecisionDate", "PASS", f"homeOfficeDecisionDate acceptance criteria passed, all cases where CategoryId in 37, homeOfficeDecisionDate is always equal to M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
+            return TestResult("homeOfficeDecisionDate", "PASS", f"homeOfficeDecisionDate acceptance criteria passed, all cases where appealOutOfCountry is 'No', homeOfficeDecisionDate is always equal to M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeDecisionDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -4049,6 +4054,7 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
         json = json.select(
             "appealReferenceNumber",
             "decisionLetterReceivedDate",
+            "appealOutOfCountry"
         )
 
         C = C.select(
@@ -4070,7 +4076,7 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
-            "inner"
+            "left"
         )
 
         test_df = test_df.join(
@@ -4082,13 +4088,15 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
         test_df = test_df.join(
             M2_bronze,
             test_df["appealReferenceNumber"] == M2_bronze["CaseNo"],
-            "inner"
+            "left"
         )
 
         test_df = test_df.select(
             "appealReferenceNumber",
             "decisionLetterReceivedDate",
+            "DateOfApplicationDecision",
             "CategoryId",
+            "appealOutOfCountry",
             "HORef_M1",
             "FCONumber"
         )
@@ -4099,6 +4107,8 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
             .agg(
                 collect_list("CategoryId").alias("CategoryIds"),
                 first("decisionLetterReceivedDate").alias("decisionLetterReceivedDate"),
+                first("appealOutOfCountry").alias("appealOutOfCountry"),
+                first("DateOfApplicationDecision").alias("DateOfApplicationDecision"),
                 first("HORef_M1").alias("HORef_M1"),
                 first("FCONumber").alias("FCONumber")
             )
@@ -4111,25 +4121,23 @@ def test_decisionLetterReceivedDate_init(json, C, M1_bronze, M2_bronze):
         return None,TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#decisionLetterReceivedDate - If CategoryId not in 38 and decisionLetterReceivedDate not omitted
+#decisionLetterReceivedDate - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_decisionLetterReceivedDate_ac1(test_df):
     try:
         if test_df != None:
             #Check we have Records To test
-            if test_df.filter(
-                (~(array_contains(col("CategoryIds"), 38)))
-                ).count() == 0:
+            if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
                 return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
             ac_decisionLetterReceivedDate = test_df.filter(
-                (array_contains(col("CategoryIds"), 37)) & (col("decisionLetterReceivedDate").isNotNull())
+                (col("appealOutOfCountry") == "No") & (col("decisionLetterReceivedDate").isNotNull())
             )
 
             if ac_decisionLetterReceivedDate.count() != 0:
-                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in 38 and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where appealOutOfCountry is 'No' and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in 38, decisionLetterReceivedDate is always omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where appealOutOfCountry is 'No', decisionLetterReceivedDate is always omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -4137,33 +4145,32 @@ def test_decisionLetterReceivedDate_ac1(test_df):
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision
+#decisionLetterReceivedDate - If Out-of-Country and NOT GWF, check value matching
 #######################
 def test_decisionLetterReceivedDate_ac2(test_df):
     try:
         if test_df != None:
             #Check we have Records To test
             if test_df.filter(
-                (array_contains(col("CategoryIds"), 38)) &
-                (col("HORef_M1").isNotNull()) & 
-                (col("FCONumber").isNotNull())
+                (col("appealOutOfCountry") == "Yes") &
+                (col("HORef_M1").isNotNull() | col("FCONumber").isNotNull())
                 ).count() == 0:
                 return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
             ac_decisionLetterReceivedDate = test_df.filter(
             (
-                (array_contains(col("CategoryIds"), 38)) &
+                (col("appealOutOfCountry") == "Yes") &
                 (
-                    ~col("HORef_M1").rlike("GWF") | ~col("FCONumber").rlike("GWF")
+                    ~col("HORef_M1").rlike("GWF") & ~col("FCONumber").rlike("GWF")
                 )
                 
             ) & (col("decisionLetterReceivedDate") != col("DateOfApplicationDecision"))
             )
 
             if ac_decisionLetterReceivedDate.count() != 0:
-                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and decisionLetterReceivedDate != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -4171,22 +4178,21 @@ def test_decisionLetterReceivedDate_ac2(test_df):
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#decisionLetterReceivedDate - IF CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted
+#decisionLetterReceivedDate - IF appealOutOfCountry = 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted
 #######################
 def test_decisionLetterReceivedDate_ac3(test_df):
     try:
         if test_df != None:
             #Check we have Records To test
             if test_df.filter(
-                (array_contains(col("CategoryIds"), 38)) &
-                (col("HORef_M1").isNotNull()) & 
-                (col("FCONumber").isNotNull())
+                (col("appealOutOfCountry") == "Yes") &
+                (col("HORef_M1").isNotNull() | col("FCONumber").isNotNull())
                 ).count() == 0:
                 return TestResult("decisionLetterReceivedDate", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
             ac_decisionLetterReceivedDate = test_df.filter(
             (
-                (array_contains(col("CategoryIds"), 38)) &
+                (col("appealOutOfCountry") == "Yes") &
                 (
                     col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
                 )
@@ -4195,9 +4201,9 @@ def test_decisionLetterReceivedDate_ac3(test_df):
             )
 
             if ac_decisionLetterReceivedDate.count() != 0:
-                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "FAIL", f"decisionLetterReceivedDate acceptance criteria failed: {str(ac_decisionLetterReceivedDate.count())} cases have been found where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%' and decisionLetterReceivedDate not omitted" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', decisionLetterReceivedDate always omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("decisionLetterReceivedDate", "PASS", f"decisionLetterReceivedDate acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%', decisionLetterReceivedDate always omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("decisionLetterReceivedDate", "FAIL",f"Failed to Setup Data for Test - decisionLetterReceivedDate does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -4205,44 +4211,41 @@ def test_decisionLetterReceivedDate_ac3(test_df):
         return TestResult("decisionLetterReceivedDate", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#dateEntryClearanceDecision - If CategoryId not in 38 and dateEntryClearanceDecision not omitted
+#dateEntryClearanceDecision - If In-UK (appealOutOfCountry = 'No'), field must be omitted
 #######################
 def test_dateEntryClearanceDecision_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38)))
-            ).count() == 0:
+        if test_df.filter(col("appealOutOfCountry") == "No").count() == 0:
             return TestResult("dateEntryClearanceDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_dateEntryClearanceDecision = test_df.filter(
-            (~(array_contains(col("CategoryIds"), 38))) & (col("dateEntryClearanceDecision").isNotNull())
+            (col("appealOutOfCountry") == "No") & (col("dateEntryClearanceDecision").isNotNull())
         )
 
         if ac_dateEntryClearanceDecision.count() != 0:
-            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where CategoryId in 38 and dateEntryClearanceDecision not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where appealOutOfCountry is 'No' and dateEntryClearanceDecision not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where CategoryId in 38, dateEntryClearanceDecision is always omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where appealOutOfCountry is 'No', dateEntryClearanceDecision is always omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("dateEntryClearanceDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#dateEntryClearanceDecision - IF CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and dateEntryClearanceDecision != M1.DateOfApplicationDecision
+#dateEntryClearanceDecision - IF appealOutOfCountry = 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%' and dateEntryClearanceDecision != M1.DateOfApplicationDecision
 #######################
 def test_dateEntryClearanceDecision_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("HORef_M1").isNotNull()) & 
-            (col("FCONumber").isNotNull())
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef_M1").isNotNull() | col("FCONumber").isNotNull())
             ).count() == 0:
             return TestResult("dateEntryClearanceDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_dateEntryClearanceDecision = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (
                 col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
             )
@@ -4251,30 +4254,29 @@ def test_dateEntryClearanceDecision_ac2(test_df):
         )
 
         if ac_dateEntryClearanceDecision.count() != 0:
-            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%' and dateEntryClearanceDecision != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%' and dateEntryClearanceDecision != M1.DateOfApplicationDecision" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber LIKE '%GWF%', dateEntryClearanceDecision always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber LIKE '%GWF%', dateEntryClearanceDecision always equals M1.DateOfApplicationDecision", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("dateEntryClearanceDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 
 #######################
-#dateEntryClearanceDecision - IF CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and dateEntryClearanceDecision not omitted
+#dateEntryClearanceDecision - IF appealOutOfCountry = 'Yes' + CleansedHORef OR M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and dateEntryClearanceDecision not omitted
 #######################
 def test_dateEntryClearanceDecision_ac3(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
-            (col("HORef_M1").isNotNull()) & 
-            (col("FCONumber").isNotNull())
+            (col("appealOutOfCountry") == "Yes") &
+            (col("HORef_M1").isNotNull() | col("FCONumber").isNotNull())
             ).count() == 0:
             return TestResult("dateEntryClearanceDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_dateEntryClearanceDecision = test_df.filter(
         (
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (
                 ~col("HORef_M1").rlike("GWF") & ~col("FCONumber").rlike("GWF") & ~col("CleansedHORef").rlike("GWF")
             )
@@ -4283,9 +4285,9 @@ def test_dateEntryClearanceDecision_ac3(test_df):
         )
 
         if ac_dateEntryClearanceDecision.count() != 0:
-            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and dateEntryClearanceDecision is not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "FAIL", f"dateEntryClearanceDecision acceptance criteria failed: {str(ac_dateEntryClearanceDecision.count())} cases have been found where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and dateEntryClearanceDecision is not omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where CategoryId in [38] + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', dateEntryClearanceDecision always omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("dateEntryClearanceDecision", "PASS", f"dateEntryClearanceDecision acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%', dateEntryClearanceDecision always omitted", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("dateEntryClearanceDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -4299,6 +4301,7 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
         json = json.select(
             "appealReferenceNumber",
             "homeOfficeReferenceNumber",
+            "appealOutOfCountry"
         )
 
         C = C.select(
@@ -4349,6 +4352,7 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
         test_df = test_df.select(
             "appealReferenceNumber",
             "homeOfficeReferenceNumber",
+            "appealOutOfCountry",
             "CategoryId",
             M1_bronze["HORef"],
             M2_bronze["FCONumber"],
@@ -4361,6 +4365,7 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
             .agg(
                 collect_list("CategoryId").alias("CategoryIds"),
                 first("homeOfficeReferenceNumber").alias("homeOfficeReferenceNumber"),
+                first("appealOutOfCountry").alias("appealOutOfCountry"),
                 first(M1_bronze["HORef"]).alias("HORef_M1"),
                 first(M2_bronze["FCONumber"]).alias("FCONumber"),
                 first(bhoref["bhoref_HORef"]).alias("CleansedHORef")
@@ -4373,7 +4378,9 @@ def test_homeOfficeReferenceNumber_init(json, C, M1_bronze, M2_bronze, bhoref):
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function), ho_test_df
 
-# IF CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted
+#######################
+# IF appealOutOfCountry = 'Yes' + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted
+########################
 def test_homeOfficeReferenceNumber_ac1(ho_test_df):
     try:
         if ho_test_df != None:
@@ -4381,7 +4388,7 @@ def test_homeOfficeReferenceNumber_ac1(ho_test_df):
             test_df = ho_test_df
             
             if test_df.filter(
-                (array_contains(col("CategoryIds"), 38)) &
+                (col("appealOutOfCountry") == "Yes") &
                 (
                 (col("CleansedHORef").isNotNull()) |
                 (col("HORef_M1").isNotNull()) |
@@ -4391,79 +4398,90 @@ def test_homeOfficeReferenceNumber_ac1(ho_test_df):
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
             
             ac_ref = test_df.filter(
-                (array_contains(col("CategoryIds"), 38)) &
+                (col("appealOutOfCountry") == "Yes") &
                     (
-                        col("CleansedHORef").rlike("GWF") | col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
+                        col("CleansedHORef").rlike("(?i)GWF") | col("HORef_M1").rlike("(?i)GWF") | col("FCONumber").rlike("(?i)GWF")
                     )    
                 & (col("homeOfficeReferenceNumber").isNotNull())
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where appealOutOfCountry is 'Yes' + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' and homeOfficeReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' have homeOfficeReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + CleansedHORef OR M1.HORef OR M2.FCONumber LIKE '%GWF%' have homeOfficeReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
-# If CategoryId in 38, CleansedHORef IS not null and homeOfficeReferenceNumber != M1.CleansedHORef 
+########################
+# If appealOutOfCountry = 'Yes', CleansedHORef IS not null and homeOfficeReferenceNumber != CleansedHORef 
+########################
 def test_homeOfficeReferenceNumber_ac2(ho_test_df):
     try:
         if ho_test_df != None:
             test_df = ho_test_df
 
             if test_df.filter(
+                (col("appealOutOfCountry") == "Yes") &
                 col("CleansedHORef").isNotNull()
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
             test_df = test_df.filter(
-            (array_contains(col("CategoryIds"), 38))
+            (col("appealOutOfCountry") == "Yes") &
+            (col("CleansedHORef").isNotNull())
             )
 
             ac_ref = test_df.filter(
-                col("CleansedHORef").eqNullSafe(col("homeOfficeReferenceNumber"))
+                (col("homeOfficeReferenceNumber") != col("CleansedHORef"))
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CategoryId is 38, CleansedHORef IS not null and homeOfficeReferenceNumber != CleansedHORef." , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where appealOutOfCountry is 'Yes', CleansedHORef IS not null and homeOfficeReferenceNumber != CleansedHORef." , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CategoryId is 38 have CleansedHORef matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' have CleansedHORef matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
-# If CleansedHORef & M1.HORef IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber
+
+########################
+# If appealOutOfCountry = 'Yes', CleansedHORef & M1.HORef IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber
+#########################
 def test_homeOfficeReferenceNumber_ac3(ho_test_df):
     try:
         if ho_test_df != None:
             test_df = ho_test_df
 
             if test_df.filter(
+                (col("appealOutOfCountry") == "Yes") &
                 (col("CleansedHORef").isNull()) &
                 (col("HORef_M1").isNull()) & 
-                (col("FCONumber").isNotNull()) 
+                (col("FCONumber").isNotNull()) &
+                (~col("FCONumber").rlike("(?i)GWF"))
                 ).count() == 0:
                 return TestResult("homeOfficeReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
             test_df = test_df.filter(
+                (col("appealOutOfCountry") == "Yes") &
                 (col("CleansedHORef").isNull()) &
                 (col("HORef_M1").isNull()) & 
-                (col("FCONumber").isNotNull())
+                (col("FCONumber").isNotNull()) &
+                (~col("FCONumber").rlike("(?i)GWF"))
             )
 
             ac_ref = test_df.filter(
-                col("FCONumber") != (col("homeOfficeReferenceNumber"))
+                (col("FCONumber") != col("homeOfficeReferenceNumber")) &
+                (col("homeOfficeReferenceNumber") != lit("999999999"))
             )
 
             if ac_ref.count() != 0:
-                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "FAIL", f"homeOfficeReferenceNumber acceptance criteria failed: {str(ac_ref.count())} cases have been found where appealOutOfCountry is 'Yes', CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null and homeOfficeReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
+                return TestResult("homeOfficeReferenceNumber", "PASS", f"homeOfficeReferenceNumber acceptance criteria passed, all cases where appealOutOfCountry is 'Yes', CleansedHORef & M1.HOref IS null + M2.FCONumber is not Null have a matching homeOfficeReferenceNumber", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("homeOfficeReferenceNumber", "FAIL",f"Failed to Setup Data for Test - homeOfficeReferenceNumber does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -4471,13 +4489,13 @@ def test_homeOfficeReferenceNumber_ac3(ho_test_df):
         return TestResult("homeOfficeReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#gwfReferenceNumber - IF CategoryId in [38] + CleansedHORef + M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted
+#gwfReferenceNumber - IF appealOutOfCountry = 'Yes' + CleansedHORef, M1.HORef OR M2.FCONumber LIKE '%GWF%' and gwfReferenceNumber omitted
 #######################
 def test_gwfReferenceNumber_ac1(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
             (
             (col("CleansedHORef").isNotNull()) |
             (col("HORef_M1").isNotNull()) |
@@ -4487,70 +4505,88 @@ def test_gwfReferenceNumber_ac1(test_df):
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         ac_gwfReferenceNumber = test_df.filter(
-            (array_contains(col("CategoryIds"), 38)) &
+            (col("appealOutOfCountry") == "Yes") &
                 (
-                    col("CleansedHORef").rlike("GWF") | col("HORef_M1").rlike("GWF") | col("FCONumber").rlike("GWF")
+                    col("CleansedHORef").rlike("(?i)GWF") | col("HORef_M1").rlike("(?i)GWF") | col("FCONumber").rlike("(?i)GWF")
                 )    
             & (col("gwfReferenceNumber").isNull())
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId in [38] + CleansedHORef, M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber not omitted" , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where appealOutOfCountry is 'Yes' + CleansedHORef, M1.HORef OR M2.FCONumber LIKE '%GWF%' and gwfReferenceNumber is omitted" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where CategoryId in [38] + CleansedHORef, M1.HORef OR M2.FCONumber NOT LIKE '%GWF%' and gwfReferenceNumber omitted", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where appealOutOfCountry is 'Yes' + CleansedHORef, M1.HORef OR M2.FCONumber LIKE '%GWF%' have gwfReferenceNumber populated", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#gwfReferenceNumber - Where CategoryId = 38, If CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef 
-#######################
+#gwfReferenceNumber - Where appealOutOfCountry = 'Yes', If CleansedHORef IS not null and gwfReferenceNumber != CleansedHORef
+########################
 def test_gwfReferenceNumber_ac2(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            col("CleansedHORef").isNotNull()
+            (col("appealOutOfCountry") == "Yes") &
+            (
+                (col("CleansedHORef").isNotNull() & col("CleansedHORef").rlike("(?i)GWF")) |
+                (col("HORef_M1").isNotNull() & col("HORef_M1").rlike("(?i)GWF")) |
+                (col("FCONumber").isNotNull() & col("FCONumber").rlike("(?i)GWF"))
+            )
             ).count() == 0:
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         test_df = test_df.filter(
-            (array_contains(col("CategoryIds"), 38))
+            (col("appealOutOfCountry") == "Yes") &
+            (
+                (col("CleansedHORef").isNotNull() & col("CleansedHORef").rlike("(?i)GWF")) |
+                (col("HORef_M1").isNotNull() & col("HORef_M1").rlike("(?i)GWF")) |
+                (col("FCONumber").isNotNull() & col("FCONumber").rlike("(?i)GWF"))
+            )
         )
         
+        expected_ref = coalesce(
+            when(col("CleansedHORef").rlike("(?i)GWF"), col("CleansedHORef")),
+            when(col("HORef_M1").rlike("(?i)GWF"), col("HORef_M1")),
+            when(col("FCONumber").rlike("(?i)GWF"), col("FCONumber"))
+        )
+
+        test_df = test_df.withColumn("expected_ref", expected_ref)
+        
         ac_gwfReferenceNumber = test_df.filter(
-            (col("CleansedHORef").isNotNull()) &
-            (col("CleansedHORef").eqNullSafe(col("gwfReferenceNumber")))
+            col("gwfReferenceNumber").isNull() |
+            (col("gwfReferenceNumber") != col("expected_ref"))        
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId = 38, CleansedHORef IS not null and gwfReferenceNumber != M1.CleansedHORef." , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where appealOutOfCountry is 'Yes', CleansedHORef IS not null and gwfReferenceNumber != CleansedHORef." , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases have M1.CleansedHORef matching gwfReferenceNumber where CategoryId = 38", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases have M1.CleansedHORef matching gwfReferenceNumber where appealOutOfCountry is 'Yes'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#gwfReferenceNumber - Where CategoryId = 38, If CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber
+#gwfReferenceNumber - Where appealOutOfCountry = 'Yes', If CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber
 #######################
 def test_gwfReferenceNumber_ac3(test_df):
     try:
         #Check we have Records To test
         if test_df.filter(
-            (col("CleansedHORef").isNull()) &
-            (col("HORef_M1").isNull()) & 
-            (col("FCONumber").isNotNull()) 
+            (col("appealOutOfCountry") == "Yes") &
+            col("CleansedHORef").isNull() &
+            col("HORef_M1").isNull() & 
+            col("FCONumber").isNotNull() &
+            col("FCONumber").rlike("(?i)GWF")
             ).count() == 0:
             return TestResult("gwfReferenceNumber", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         test_df = test_df.filter(
-            (array_contains(col("CategoryIds"), 38))
-        )
-        
-        test_df = test_df.filter(
-            (col("CleansedHORef").isNull()) &
-            (col("HORef_M1").isNull()) & 
-            (col("FCONumber").isNotNull()) 
+            (col("appealOutOfCountry") == "Yes") &
+            col("CleansedHORef").isNull() &
+            col("HORef_M1").isNull() & 
+            col("FCONumber").isNotNull() &
+            col("FCONumber").rlike("(?i)GWF")
         )
 
         ac_gwfReferenceNumber = test_df.filter(
@@ -4558,9 +4594,9 @@ def test_gwfReferenceNumber_ac3(test_df):
         )
 
         if ac_gwfReferenceNumber.count() != 0:
-            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where CategoryId = 38, CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "FAIL", f"gwfReferenceNumber acceptance criteria failed: {str(ac_gwfReferenceNumber.count())} cases have been found where appealOutOfCountry is 'Yes', CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null and gwfReferenceNumber != M2.FCONumber" , test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where CategoryId = 38, CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null, and all rows have a matching gwfReferenceNumber", test_from_state, inspect.stack()[0].function)
+            return TestResult("gwfReferenceNumber", "PASS", f"gwfReferenceNumber acceptance criteria passed, all cases where appealOutOfCountry is 'Yes', CleansedHORef AND M1.HORef IS null + M2.FCONumber is not Null, and all rows have a matching gwfReferenceNumber", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("gwfReferenceNumber", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -8197,6 +8233,10 @@ def test_appellantAddress_ac3(test_df):
 #######################
 def test_sponsorDetails_init_detained(json, M1_bronze):
     try:
+        for col_name in ["sponsorEmailAdminJ", "sponsorMobileNumberAdminJ"]:
+            if col_name not in json.columns:
+                json = json.withColumn(col_name, lit(None).cast("string"))
+
         json = json.select(
             "appealReferenceNumber",
             "hasSponsor",
@@ -8204,7 +8244,7 @@ def test_sponsorDetails_init_detained(json, M1_bronze):
             "sponsorFamilyName",
             "sponsorAddress",
             "sponsorEmailAdminJ",
-            # "sponsorMobileNumberAdminJ",
+            "sponsorMobileNumberAdminJ",
             "sponsorAuthorisation",
             "sponsorNameForDisplay",
             "sponsorAddressForDisplay"
@@ -8220,15 +8260,17 @@ def test_sponsorDetails_init_detained(json, M1_bronze):
             "Sponsor_Address4",
             "Sponsor_Address5",
             "Sponsor_Postcode",
-            "Sponsor_Email",
+            # "Sponsor_Email",
             # "Sponsor_Mobile",
+            col("Sponsor_Email").alias("SponsorEmail"),
+            col("Sponsor_Telephone").alias("SponsorTelephone"),
             "Sponsor_Authorisation"
         )
 
         test_df = json.join(
             M1_bronze,
             json["appealReferenceNumber"] == M1_bronze["CaseNo"],
-            "inner"
+            "left"
         )
 
         return test_df, True
@@ -8237,7 +8279,7 @@ def test_sponsorDetails_init_detained(json, M1_bronze):
         return None,TestResult("sponsorDetails", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-#hasSponsor - If Sponsor_Name is not null, field = Yes
+#hasSponsor - If Sponsor_Name is not NULL, field = Yes
 #######################
 def test_hasSponsor_ac1(test_df):
     try:
@@ -8259,7 +8301,7 @@ def test_hasSponsor_ac1(test_df):
         return TestResult("hasSponsor", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#hasSponsor - If Sponsor_Name is null, field = Yes
+#hasSponsor - If Sponsor_Name is NULL, field = No
 #######################
 def test_hasSponsor_ac2(test_df):
     try:
@@ -8292,7 +8334,7 @@ def test_sponsorGivenNames_ac1(test_df):
         acceptance_criteria = test_df.filter(
             (col("Sponsor_Name").isNotNull()) &
         (
-            (col("sponsorGivenNames").isNull()) &
+            (col("sponsorGivenNames").isNull()) |
             (col("sponsorGivenNames") != (col("Sponsor_Forenames")))
         )
         )    
@@ -8339,7 +8381,7 @@ def test_sponsorFamilyName_ac1(test_df):
         acceptance_criteria = test_df.filter(
             (col("Sponsor_Name").isNotNull()) &
         (
-            (col("sponsorFamilyName").isNull()) &
+            (col("sponsorFamilyName").isNull()) |
             (col("sponsorFamilyName") != (col("Sponsor_Name")))
         )
         )    
@@ -8387,12 +8429,15 @@ def test_sponsorAddress_ac1(test_df):
             return F.when(F.trim(F.col(c)) == "", None).otherwise(F.trim(F.col(c)))
                                                 
         acceptance_criteria = test_df.filter(
-            (~clean_col("sponsorAddress.AddressLine1").eqNullSafe(clean_col("Sponsor_Address1"))) |
-            (~clean_col("sponsorAddress.AddressLine2").eqNullSafe(clean_col("Sponsor_Address2"))) |
-            (~clean_col("sponsorAddress.PostTown").eqNullSafe(clean_col("Sponsor_Address3"))) |
-            (~clean_col("sponsorAddress.County").eqNullSafe(clean_col("Sponsor_Address4"))) |
-            (~clean_col("sponsorAddress.Country").eqNullSafe(clean_col("Sponsor_Address5"))) |
-            (~clean_col("sponsorAddress.PostCode").eqNullSafe(clean_col("Sponsor_Postcode")))
+            (col("Sponsor_Name").isNotNull()) &
+            (
+                (~clean_col("sponsorAddress.AddressLine1").eqNullSafe(clean_col("Sponsor_Address1"))) |
+                (~clean_col("sponsorAddress.AddressLine2").eqNullSafe(clean_col("Sponsor_Address2"))) |
+                (~clean_col("sponsorAddress.PostTown").eqNullSafe(clean_col("Sponsor_Address3"))) |
+                (~clean_col("sponsorAddress.County").eqNullSafe(clean_col("Sponsor_Address4"))) |
+                (~clean_col("sponsorAddress.Country").eqNullSafe(clean_col("Sponsor_Address5"))) |
+                (~clean_col("sponsorAddress.PostCode").eqNullSafe(clean_col("Sponsor_Postcode")))
+            )    
         )
         
         if acceptance_criteria.count() != 0:
@@ -8431,21 +8476,26 @@ def test_sponsorAddress_ac2(test_df):
 def test_sponsorEmailAdminJ_ac1(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter(col("Sponsor_Name").isNotNull()).count() ==0:    
+        if test_df.filter(
+            col("Sponsor_Name").isNotNull() &
+            col("SponsorEmail").isNotNull()
+            ).count() ==0:    
             return TestResult("sponsorEmailAdminJ", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
-                                                
-        acceptance_criteria = test_df.filter(
-            (col("Sponsor_Name").isNotNull()) &
-        (
-            (col("sponsorEmailAdminJ").isNull()) &
-            (col("sponsorEmailAdminJ") != (col("Sponsor_Email")))
+
+        target_df = test_df.filter(
+            col("Sponsor_Name").isNotNull() &
+            col("SponsorEmail").isNotNull()
         )
+
+        acceptance_criteria = target_df.filter(
+            col("sponsorEmailAdminJ").isNull() |
+            (col("sponsorEmailAdminJ") != col("SponsorEmail"))
         )    
         
         if acceptance_criteria.count() != 0:
-            return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name is not null and sponsorEmailAdminJ is omitted or not equal to Sponsor_Email", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorEmailAdminJ", "FAIL", f"sponsorEmailAdminJ acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name is not null and sponsorEmailAdminJ is omitted or not equal to SponsorEmail", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria passed: all cases where Sponsor_Name is not null have sponsorEmailAdminJ equal to Sponsor_Email", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorEmailAdminJ", "PASS", f"sponsorEmailAdminJ acceptance criteria passed: all cases where Sponsor_Name is not null have sponsorEmailAdminJ equal to SponsorEmail", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("sponsorEmailAdminJ", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -8504,40 +8554,38 @@ def test_sponsorAuthorisation_ac2(test_df):
             return TestResult("sponsorAuthorisation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
+            (col("Sponsor_Name").isNotNull()) & 
+            (col("Sponsor_Authorisation") == 1) &
             (
-                (col("Sponsor_Name").isNotNull()) & 
-                (col("Sponsor_Authorisation") == 1)
-            ) &
-            (
-                (col("sponsorAuthorisation").isNotNull()) &
+                (col("sponsorAuthorisation").isNull()) |
                 (col("sponsorAuthorisation") != "Yes")
             )
-        )    
+        ) 
         
         if acceptance_criteria.count() != 0:
             return TestResult("sponsorAuthorisation", "FAIL", f"sponsorAuthorisation acceptance criteria failed: found {acceptance_criteria.count()} cases where Sponsor_Name not null and Authorised = 1 and sponsorAuthorisation != Yes", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("sponsorAuthorisation", "PASS", f"sponsorAuthorisation acceptance criteria passed: all cases where Sponsor_Name is not null and Authorised = 1 have sponsorAuthorisation != Yes", test_from_state, inspect.stack()[0].function)
+            return TestResult("sponsorAuthorisation", "PASS", f"sponsorAuthorisation acceptance criteria passed: all cases where Sponsor_Name is not null and Authorised = 1 have sponsorAuthorisation == Yes", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("sponsorAuthorisation", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-#sponsorAuthorisation - If SponsorName is not null and Authorised = 2 field = No
+#sponsorAuthorisation - If SponsorName is not null and Authorised != 1 field = No
 #######################
 def test_sponsorAuthorisation_ac3(test_df):
     try:
         #Check we have Records To test
-        if test_df.filter((col("Sponsor_Name").isNotNull()) & (col("Sponsor_Authorisation") == 2)).count() ==0:    
+        if test_df.filter((col("Sponsor_Name").isNotNull()) & (col("Sponsor_Authorisation") != 1)).count() ==0:    
             return TestResult("sponsorAuthorisation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
                                                 
         acceptance_criteria = test_df.filter(
             (
                 (col("Sponsor_Name").isNotNull()) & 
-                (col("Sponsor_Authorisation") == 2)
+                (col("Sponsor_Authorisation") != 1)
             ) &
             (
-                (col("sponsorAuthorisation").isNotNull()) &
+                (col("sponsorAuthorisation").isNull()) |
                 (col("sponsorAuthorisation") != "No")
             )
         )    

@@ -1948,6 +1948,12 @@ def cleanReferenceNumber(ref):
     if ref is None or ref == '' or ref.strip().upper() == 'NULL':
         return None
 
+    stripped_ref = ref.strip()
+    if stripped_ref.upper().startswith("GWF"):
+        remainder = stripped_ref[3:]
+        cleaned_remainder = re.sub(r"\D", "", remainder)
+        return "GWF" + cleaned_remainder
+
     if len(ref) > 9 and len(ref) < 16:
         no_letters = re.sub(r"[a-zA-Z]", "", ref)
         parts = no_letters.rsplit("/", 1)
@@ -1964,7 +1970,7 @@ def cleanReferenceNumber(ref):
         digits_only = re.sub(r"\D", "", combined)
         return digits_only.rjust(9, '0')
 
-    if len(ref) < 9 and not ('GWF' in ref or 'HO' in ref):
+    if len(ref) < 9:
         digits_only = re.sub(r"\D", "", ref)
         return digits_only.rjust(9, '0')
     

@@ -231,8 +231,8 @@ def test_ooc_gwf_date_entry_clearance_and_gwf_number(homeOfficeDetails_outputs):
         dateEntryClearanceDecision="2022-06-30",
         homeOfficeReferenceNumber=None,
     )
-    assert row["gwfReferenceNumber"] is not None
-    assert "GWF" not in row["gwfReferenceNumber"]  # cleaned — digits only
+    # GWF prefix is preserved by cleanReferenceNumber; only non-digit noise is stripped
+    assert row["gwfReferenceNumber"] == "GWF063622999"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

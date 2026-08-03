@@ -833,6 +833,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
                     AND gwfReferenceNumber IS NOT NULL
+                    AND gwfReferenceNumber LIKE 'GWF%'
                 )
                 OR
                 (

@@ -23,13 +23,14 @@ def homeOfficeDetails_outputs(spark):
         T.StructField("dv_CCDAppealType", T.StringType(), True),
     ])
 
-    m1_data = [    
+    m1_data = [
         ("EA/06826/2022", "LR",  "A", date(2022, 6, 30), None,"RP"),
         ("EA/09676/2022", "LR",  "A", date(2020, 2, 15), None,"RP"),
         ("EA/00591/2025", "LR",  "A", date(2022, 9, 5),  None,"RP"),
         ("EA/00441/2025", "AIP", "B", date(2025, 2, 12), None,"PA"),
         ("HU/00512/2025", "LR",  "A", date(2024, 7, 11), "R1277473","PA"),
         ("HU/02151/2024", "LR",  "A", None, None,"PA"),
+        ("EA/00777/2025", "LR",  "A", date(2023, 4, 1),  None,"RP"),
     ]
 
     m2_schema = T.StructType([
@@ -56,6 +57,8 @@ def homeOfficeDetails_outputs(spark):
         ("HU/00512/2025", None,           None, None, None, None, None, None, None, None, "SW1A 1AA"),
         # no DateOfApplicationDecision → all date fields null regardless
         ("HU/02151/2024", "XXXXXXXXXXXX", None, None, None, None, None, None, None, None, None),
+        # OOC case with a short (6-digit) GWF reference
+        ("EA/00777/2025", "XXXXXX",       None, None, None, None, None, None, None, None, None),
     ]
 
     silver_c_schema = T.StructType([
@@ -86,6 +89,10 @@ def homeOfficeDetails_outputs(spark):
     ("HU/00512/2025", 31, "paymentPending"),
     ("HU/00512/2025", 37, "paymentPending"),
     ("HU/00512/2025", 39, "paymentPending"),
+
+    ("EA/00777/2025", 11, "paymentPending"),
+    ("EA/00777/2025", 38, "paymentPending"),
+    ("EA/00777/2025", 47, "paymentPending"),
     ]
 
     bronze_HORef_schema = T.StructType([
@@ -94,7 +101,12 @@ def homeOfficeDetails_outputs(spark):
         T.StructField("FCONumber", T.StringType(), True),
     ])
 
-    bronze_HORef_data = [("EA/09676/2022", "GWF063622668", "338224"), ("EA/06826/2022", "GWF061121374", "253601"),]
+    bronze_HORef_data = [
+        ("EA/09676/2022", "GWF063622668", "338224"),
+        ("EA/06826/2022", "GWF061121374", "253601"),
+        # Short (6-digit) GWF reference → should be zero-padded to 9 digits, prefix kept
+        ("EA/00777/2025", "GWF123456", None),
+    ]
 
     silver_m1 = spark.createDataFrame(m1_data, m1_schema)
     silver_m2 = spark.createDataFrame(m2_data, m2_schema)
@@ -156,6 +168,15 @@ def test_category_38_without_gwf_reference(homeOfficeDetails_outputs):
         dateEntryClearanceDecision=None,
         homeOfficeReferenceNumber='999999999',
         gwfReferenceNumber=None,
+    )
+
+def test_category_38_with_short_gwf_reference(homeOfficeDetails_outputs):
+    row = homeOfficeDetails_outputs["EA/00777/2025"]
+
+    assert_equals(
+        row,
+        homeOfficeReferenceNumber=None,
+        gwfReferenceNumber="GWF000123456",
     )
 
 def test_no_relevant_category_ids(homeOfficeDetails_outputs):

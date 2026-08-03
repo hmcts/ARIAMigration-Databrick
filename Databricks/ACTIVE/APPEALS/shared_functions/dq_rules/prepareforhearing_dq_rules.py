@@ -295,17 +295,14 @@ class prepareForHearingDQRules(DQRulesBase):
             """
             (
                 (
-                    listCaseHearingDate <=>
+                    listCaseHearingDate IS NOT NULL
+                    AND listCaseHearingDate <=>
                         CONCAT(date_format(CAST(HearingDate AS timestamp), 'yyyy-MM-dd'),'T',
                             CASE
                             WHEN StartTime IS NULL THEN '00:00:00.000'
                             ELSE date_format(CAST(StartTime AS timestamp), 'HH:mm:ss.SSS')
                             END)
                         AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
-                )
-                OR
-                (
-                    (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingDate IS NULL
                 )
             )
             """)

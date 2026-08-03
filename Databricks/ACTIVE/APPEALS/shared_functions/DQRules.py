@@ -651,9 +651,8 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                                                 col("Party").alias("cs39_party_14_30_31"))
 
 
-    #ftpaDecided - status in 46. outcome in 31
-    cs46_out31_rank = silver_m3.filter((col("CaseStatus") == 46) & (col("Outcome") == 31))
-    cs46_out31_ranked = cs46_out31_rank.withColumn("row_number", row_number().over(window_spec)) 
+    #ftpaDecided - latest m3 StatusId, status in 46 and outcome in 31
+    cs46_out31_ranked = silver_m3.withColumn("row_number", row_number().over(window_spec))
     cs46_out31 = cs46_out31_ranked.filter(col("row_number") == 1).select(
             col("CaseNo"),
             col("CaseStatus").alias("cs46_o31"),

@@ -124,7 +124,7 @@ class decidedBDQRules(DQRulesBase):
         checks["valid_ftpaAppellantDecisionDate"] = """(
 
             CASE
-                WHEN Party = 1 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
+                WHEN Party = 1 and CaseStatus_decb = 39 THEN date_format(DecisionDate_ftpa,'yyyy-MM-dd') IS NOT NULL AND ftpaAppellantDecisionDate <=> date_format(DecisionDate_ftpa,'yyyy-MM-dd')
                 WHEN Party = 2 and CaseStatus_decb = 39 THEN ftpaAppellantDecisionDate IS NULL
                 ELSE FALSE
             END
@@ -194,7 +194,8 @@ class decidedBDQRules(DQRulesBase):
 
         checks["valid_updateTribunalDecisionDateRule32"] = """(
 
-            updateTribunalDecisionDateRule32 <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
+            date_format(DecisionDate_decb,'yyyy-MM-dd') IS NOT NULL
+            AND updateTribunalDecisionDateRule32 <=> date_format(DecisionDate_decb,'yyyy-MM-dd')
 
         )"""
 

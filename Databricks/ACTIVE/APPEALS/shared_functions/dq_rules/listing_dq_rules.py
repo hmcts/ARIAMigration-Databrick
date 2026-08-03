@@ -15,7 +15,7 @@ class listingDQRules(DQRulesBase):
     def get_checks_flags(self, checks={}):
         checks["valid_appellantLevelFlags"] = """
         (
-            (appellantLevelFlags IS NOT NULL)
+            (appellantLevelFlags IS NOT NULL AND appellantLevelFlags.details IS NOT NULL)
             AND
             (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
             AND
@@ -47,20 +47,20 @@ class listingDQRules(DQRulesBase):
         (
             CASE
                 WHEN Detained IN (1,2,4)
-                    THEN isEvidenceFromOutsideUkOoc = 'No'
+                    THEN isEvidenceFromOutsideUkOoc <=> 'No'
 
                 WHEN dv_appellantIsInUk = true
-                    THEN isEvidenceFromOutsideUkOoc = 'No'
+                    THEN isEvidenceFromOutsideUkOoc <=> 'No'
 
                 WHEN dv_appellantIsInUk = false
                     AND Sponsor_Name IS NULL
-                    THEN isEvidenceFromOutsideUkOoc = 'No'
+                    THEN isEvidenceFromOutsideUkOoc <=> 'No'
 
                 WHEN dv_appellantIsInUk = false
                     AND Sponsor_Name IS NOT NULL
-                    THEN isEvidenceFromOutsideUkOoc = 'Yes'
+                    THEN isEvidenceFromOutsideUkOoc <=> 'Yes'
 
-                ELSE isEvidenceFromOutsideUkOoc = 'No'
+                ELSE isEvidenceFromOutsideUkOoc <=> 'No'
             END
         )
         """
@@ -70,20 +70,20 @@ class listingDQRules(DQRulesBase):
             CASE
                 WHEN Detained IN (1,2,4)
                     AND Sponsor_Name IS NOT NULL
-                    THEN isEvidenceFromOutsideUkInCountry = 'Yes'
+                    THEN isEvidenceFromOutsideUkInCountry <=> 'Yes'
 
                 WHEN dv_appellantIsInUk = true
                     AND Sponsor_Name IS NOT NULL
-                    THEN isEvidenceFromOutsideUkInCountry = 'Yes'
+                    THEN isEvidenceFromOutsideUkInCountry <=> 'Yes'
 
                 WHEN Detained NOT IN (1,2,4)
                     AND dv_appellantIsInUk = false
-                    THEN isEvidenceFromOutsideUkInCountry = 'No'
+                    THEN isEvidenceFromOutsideUkInCountry <=> 'No'
 
                 WHEN Sponsor_Name IS NULL
-                    THEN isEvidenceFromOutsideUkInCountry = 'No'
+                    THEN isEvidenceFromOutsideUkInCountry <=> 'No'
 
-                ELSE isEvidenceFromOutsideUkInCountry = 'No'
+                ELSE isEvidenceFromOutsideUkInCountry <=> 'No'
             END
         )
         """
@@ -127,7 +127,7 @@ class listingDQRules(DQRulesBase):
                 OR
                 (Interpreter <=> 2 AND isInterpreterServicesNeeded <=> 'No')
                 OR
-                (Interpreter NOT IN (1, 2) AND isInterpreterServicesNeeded <=> 'No')
+                ((Interpreter IS NULL OR Interpreter NOT IN (1, 2)) AND isInterpreterServicesNeeded <=> 'No')
             )"""
         )
 
@@ -148,13 +148,13 @@ class listingDQRules(DQRulesBase):
                         (
                             (LanguageId IS NULL OR LanguageId <=> 0)
                             OR
-                            (LanguageId IS NOT NULL AND NOT(LanguageId <=> 0) AND ARRAY_CONTAINS(appellantInterpreterLanguageCategory, valid_languageCategory))
+                            (LanguageId IS NOT NULL AND NOT(LanguageId <=> 0) AND ARRAY_CONTAINS(COALESCE(appellantInterpreterLanguageCategory, ARRAY()), valid_languageCategory))
                         )
                         AND
                         (
                             (AdditionalLanguageId IS NULL OR AdditionalLanguageId <=> 0)
                             OR
-                            (AdditionalLanguageId IS NOT NULL AND NOT(AdditionalLanguageId <=> 0) AND ARRAY_CONTAINS(appellantInterpreterLanguageCategory, valid_additionalLanguageCategory))
+                            (AdditionalLanguageId IS NOT NULL AND NOT(AdditionalLanguageId <=> 0) AND ARRAY_CONTAINS(COALESCE(appellantInterpreterLanguageCategory, ARRAY()), valid_additionalLanguageCategory))
                         )
                     )
                 END
@@ -183,17 +183,17 @@ class listingDQRules(DQRulesBase):
                                     WHEN (
                                         (valid_manualEntry <=> 'Yes')
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntry, valid_manualEntry))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY()), valid_manualEntry))
                                         AND
-                                        (CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntryDescription, valid_manualEntryDescription))
+                                        (CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntryDescription, ''), valid_manualEntryDescription))
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData IS NULL)
                                     ) WHEN (
                                         ((NOT(valid_manualEntry <=> 'Yes')) AND (valid_additionalLanguageCategory <=> 'spokenLanguageInterpreter'))
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntry, 'Yes'))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY()), 'Yes'))
                                         AND
-                                        (CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntryDescription, valid_languageLabel))
+                                        (CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntryDescription, ''), valid_languageLabel))
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData IS NULL)
                                     ) ELSE (
@@ -201,7 +201,7 @@ class listingDQRules(DQRulesBase):
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData.value.label <=> valid_languageLabel)
                                         AND
-                                        (ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items) > 0)
+                                        (COALESCE(ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items), 0) > 0)
                                         AND
                                         (ARRAY_SIZE(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY())) <=> 0)
                                         AND
@@ -219,17 +219,17 @@ class listingDQRules(DQRulesBase):
                                     WHEN (
                                         (valid_additionalManualEntry <=> 'Yes')
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntry, valid_additionalManualEntry))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY()), valid_additionalManualEntry))
                                         AND
-                                        (CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntryDescription, valid_additionalManualEntryDescription))
+                                        (CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntryDescription, ''), valid_additionalManualEntryDescription))
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData IS NULL)
                                     ) WHEN (
                                         ((NOT(valid_additionalManualEntry <=> 'Yes')) AND (valid_languageCategory <=> 'spokenLanguageInterpreter'))
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntry, 'Yes'))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY()), 'Yes'))
                                         AND
-                                        (CONTAINS(appellantInterpreterSpokenLanguage.languageManualEntryDescription, valid_additionalLanguageLabel))
+                                        (CONTAINS(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntryDescription, ''), valid_additionalLanguageLabel))
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData IS NULL)
                                     ) ELSE (
@@ -237,7 +237,7 @@ class listingDQRules(DQRulesBase):
                                         AND
                                         (appellantInterpreterSpokenLanguage.languageRefData.value.label <=> valid_additionalLanguageLabel)
                                         AND
-                                        (ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items) > 0)
+                                        (COALESCE(ARRAY_SIZE(appellantInterpreterSpokenLanguage.languageRefData.list_items), 0) > 0)
                                         AND
                                         (ARRAY_SIZE(COALESCE(appellantInterpreterSpokenLanguage.languageManualEntry, ARRAY())) <=> 0)
                                         AND
@@ -272,17 +272,17 @@ class listingDQRules(DQRulesBase):
                                     WHEN (
                                         (valid_manualEntry <=> 'Yes')
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSignLanguage.languageManualEntry, valid_manualEntry))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY()), valid_manualEntry))
                                         AND
-                                        (CONTAINS(appellantInterpreterSignLanguage.languageManualEntryDescription, valid_manualEntryDescription))
+                                        (CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntryDescription, ''), valid_manualEntryDescription))
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData IS NULL)
                                     ) WHEN (
                                         ((NOT(valid_manualEntry <=> 'Yes')) AND (valid_additionalLanguageCategory <=> 'signLanguageInterpreter'))
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSignLanguage.languageManualEntry, 'Yes'))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY()), 'Yes'))
                                         AND
-                                        (CONTAINS(appellantInterpreterSignLanguage.languageManualEntryDescription, valid_languageLabel))
+                                        (CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntryDescription, ''), valid_languageLabel))
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData IS NULL)
                                     ) ELSE (
@@ -290,7 +290,7 @@ class listingDQRules(DQRulesBase):
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData.value.label <=> valid_languageLabel)
                                         AND
-                                        (ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items) > 0)
+                                        (COALESCE(ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items), 0) > 0)
                                         AND
                                         (ARRAY_SIZE(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY())) <=> 0)
                                         AND
@@ -308,17 +308,17 @@ class listingDQRules(DQRulesBase):
                                     WHEN (
                                         (valid_additionalManualEntry <=> 'Yes')
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSignLanguage.languageManualEntry, valid_additionalManualEntry))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY()), valid_additionalManualEntry))
                                         AND
-                                        (CONTAINS(appellantInterpreterSignLanguage.languageManualEntryDescription, valid_additionalManualEntryDescription))
+                                        (CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntryDescription, ''), valid_additionalManualEntryDescription))
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData IS NULL)
                                     ) WHEN (
                                         ((NOT(valid_additionalManualEntry <=> 'Yes')) AND (valid_languageCategory <=> 'signLanguageInterpreter'))
                                     ) THEN (
-                                        (ARRAY_CONTAINS(appellantInterpreterSignLanguage.languageManualEntry, 'Yes'))
+                                        (ARRAY_CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY()), 'Yes'))
                                         AND
-                                        (CONTAINS(appellantInterpreterSignLanguage.languageManualEntryDescription, valid_additionalLanguageLabel))
+                                        (CONTAINS(COALESCE(appellantInterpreterSignLanguage.languageManualEntryDescription, ''), valid_additionalLanguageLabel))
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData IS NULL)
                                     ) ELSE (
@@ -326,7 +326,7 @@ class listingDQRules(DQRulesBase):
                                         AND
                                         (appellantInterpreterSignLanguage.languageRefData.value.label <=> valid_additionalLanguageLabel)
                                         AND
-                                        (ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items) > 0)
+                                        (COALESCE(ARRAY_SIZE(appellantInterpreterSignLanguage.languageRefData.list_items), 0) > 0)
                                         AND
                                         (ARRAY_SIZE(COALESCE(appellantInterpreterSignLanguage.languageManualEntry, ARRAY())) <=> 0)
                                         AND
@@ -386,7 +386,7 @@ class listingDQRules(DQRulesBase):
                 OR
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourt <=> 'Yes')
                 OR
-                (CourtPreference NOT IN (0, 1, 2) AND singleSexCourt <=> 'No')
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (0, 1, 2)) AND singleSexCourt <=> 'No')
             )"""
         )
 
@@ -396,7 +396,7 @@ class listingDQRules(DQRulesBase):
                 OR
                 (CourtPreference <=> 2 AND singleSexCourtType <=> 'All female')
                 OR
-                (CourtPreference NOT IN (1, 2) AND singleSexCourtType IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtType IS NULL)
             )"""
         )
 
@@ -404,7 +404,7 @@ class listingDQRules(DQRulesBase):
             """(
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourtTypeDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court.')
                 OR
-                (CourtPreference NOT IN (1, 2) AND singleSexCourtTypeDescription IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtTypeDescription IS NULL)
             )"""
         )
 
@@ -473,7 +473,7 @@ class listingDQRules(DQRulesBase):
         )
 
         checks["valid_reviewedHearingRequirements"] = ("""
-            (reviewedHearingRequirements IN ('Yes','No'))
+            (reviewedHearingRequirements IS NOT NULL AND reviewedHearingRequirements IN ('Yes','No'))
         """)
 
         checks["valid_amendResponseActionAvailable"] = (

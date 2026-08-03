@@ -24,173 +24,179 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_endAppealOutcome"] = """(
             (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                (CaseStatus_end <=> 10 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
+                (CaseStatus_end <=> 46 AND Outcome_end <=> 31)
                 OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                (CaseStatus_end <=> 26 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25))
                 OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                (CaseStatus_end IS NOT NULL AND CaseStatus_end IN (37,38) AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25,72,125))
                 OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
+                (CaseStatus_end <=> 39 AND Outcome_end <=> 25)
                 OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                (CaseStatus_end <=> 51 AND Outcome_end IS NOT NULL AND Outcome_end IN (0,94,93))
                 OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                (CaseStatus_end <=> 52 AND Outcome_end IS NOT NULL AND Outcome_end IN (91,95))
                 OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                (CaseStatus_end <=> 36 AND Outcome_end IS NOT NULL AND Outcome_end IN (1,2,25))
             )
 
             AND
 
             CASE
-                WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome = "Abandoned"
-                WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(37,38,10,26) AND Outcome_end = 80 THEN endAppealOutcome <=> "Abandoned"
+                WHEN CaseStatus_end in(10) AND Outcome_end = 122 THEN endAppealOutcome <=> "Abandoned"
+                WHEN CaseStatus_end in(38) AND Outcome_end = 72 THEN endAppealOutcome <=> "Abandoned"
+                WHEN CaseStatus_end in(37,38) AND Outcome_end in (125) THEN endAppealOutcome <=> "Struck out"
 
-                WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome = "No valid appeal"
+                WHEN CaseStatus_end in(10,37,38,26) AND Outcome_end = 13 THEN endAppealOutcome <=> "No valid appeal"
 
-                WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome = "Withdrawn"
+                WHEN CaseStatus_end in(37,38,39,10,26) AND Outcome_end = 25 THEN endAppealOutcome <=> "Withdrawn"
 
-                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome = "Withdrawn"
-                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome = "Struck out"
-                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome = "Struck out"
+                WHEN CaseStatus_end in(52) AND Outcome_end in (91,95) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (93,94) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (2,120) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(46) AND Outcome_end in (31) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (105) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(36) AND Outcome_end in (1,2) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(36) AND Outcome_end in (25) THEN endAppealOutcome <=> "Withdrawn"
+                WHEN CaseStatus_end in(51) AND Outcome_end in (0) THEN endAppealOutcome <=> "Struck out"
+                WHEN CaseStatus_end in(10) AND Outcome_end in (125) THEN endAppealOutcome <=> "Struck out"
+                ELSE FALSE
             END
         )"""
 
         checks["valid_endAppealOutcomeReason"] = """(
             (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                (CaseStatus_end <=> 10 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
+                (CaseStatus_end <=> 46 AND Outcome_end <=> 31)
                 OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                (CaseStatus_end <=> 26 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25))
                 OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                (CaseStatus_end IS NOT NULL AND CaseStatus_end IN (37,38) AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25,72,125))
                 OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
+                (CaseStatus_end <=> 39 AND Outcome_end <=> 25)
                 OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                (CaseStatus_end <=> 51 AND Outcome_end IS NOT NULL AND Outcome_end IN (0,94,93))
                 OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                (CaseStatus_end <=> 52 AND Outcome_end IS NOT NULL AND Outcome_end IN (91,95))
                 OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                (CaseStatus_end <=> 36 AND Outcome_end IS NOT NULL AND Outcome_end IN (1,2,25))
             )
 
             AND
 
             (CASE
-                WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Abandoned."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 13 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | No Valid Appeal."
-                WHEN CaseStatus_end = 37 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Withdrawn."
-                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Withdrawn."
-                WHEN CaseStatus_end = 26 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case Management Review | Withdrawn."
-                WHEN CaseStatus_end = 52 AND Outcome_end = 91 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt."
-                WHEN CaseStatus_end = 52 AND Outcome_end = 95 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Case closed fee outstanding | Write Off."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 93 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure."
-                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
-                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Set Aside Application | Refused."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
-                WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
-                WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
-                WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason = "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 125 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Hearing | LA - Case Listed in CCD."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 80 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Hearing | Abandoned."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 80 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Paper | Abandoned."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 125 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Paper | LA - Case Listed in CCD."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 80 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Abandoned."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 122 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Abandoned (non-CCD)."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 13 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | No Valid Appeal."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 80 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Case Management Review | Abandoned."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 94 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck Out."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 13 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Hearing | No Valid Appeal."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 13 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Paper | No Valid Appeal."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 13 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Case Management Review | No Valid Appeal."
+                WHEN CaseStatus_end = 37 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Hearing | Withdrawn."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Paper | Withdrawn."
+                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier Permission Application | Withdrawn."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Withdrawn."
+                WHEN CaseStatus_end = 26 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Case Management Review | Withdrawn."
+                WHEN CaseStatus_end = 52 AND Outcome_end = 91 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Case closed fee outstanding | Fee Paid/Exempt."
+                WHEN CaseStatus_end = 52 AND Outcome_end = 95 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Case closed fee outstanding | Write Off."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 93 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Closed - Fee Not Paid | Admin Closure."
+                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was First Tier - Paper | Certified under Rule 16."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 120 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Admin Rejected (Non-CCD)."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 2 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Dismissed."
+                WHEN CaseStatus_end <=> 46 AND Outcome_end <=> 31 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Set Aside Application | Refused."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 1 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Review of Cost Order | Allowed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 2 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Review of Cost Order | Dismissed."
+                WHEN CaseStatus_end = 36 AND Outcome_end = 25 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Review of Cost Order | Withdrawn."
+                WHEN CaseStatus_end = 51 AND Outcome_end = 0 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Closed - Fee Not Paid | Struck out."
+                WHEN CaseStatus_end = 10 AND Outcome_end = 105 THEN endAppealOutcomeReason <=> "This is a migrated case. The final outcome was Preliminary Issue | Reinstatement Out of Time."
+                ELSE FALSE
             END
             )
         )"""
 
         checks["valid_endAppealApproverType"] = """(
             CASE
-                WHEN CaseStatus_end = 46 THEN endAppealApproverType = 'Judge'
-                ELSE endAppealApproverType = 'Case Worker'
+                WHEN CaseStatus_end = 46 THEN endAppealApproverType <=> 'Judge'
+                ELSE endAppealApproverType <=> 'Case Worker'
             END
         )"""
 
         checks["valid_endAppealApproverName"] = """(
             CASE
-                WHEN CaseStatus_end = 46 THEN endAppealApproverName = concat(Adj_Determination_Surname_end, ', ', Adj_Determination_Forenames_end, ' (', Adj_Determination_Title_end, ')')
-                ELSE endAppealApproverName = 'This is a migrated ARIA case'
+                WHEN CaseStatus_end = 46 THEN concat(Adj_Determination_Surname_end, ', ', Adj_Determination_Forenames_end, ' (', Adj_Determination_Title_end, ')') IS NOT NULL AND endAppealApproverName <=> concat(Adj_Determination_Surname_end, ', ', Adj_Determination_Forenames_end, ' (', Adj_Determination_Title_end, ')')
+                ELSE endAppealApproverName <=> 'This is a migrated ARIA case'
             END
         )"""
 
         checks["valid_endAppealDate"] = """(
             (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                (CaseStatus_end <=> 10 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
+                (CaseStatus_end <=> 46 AND Outcome_end <=> 31)
                 OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                (CaseStatus_end <=> 26 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25))
                 OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                (CaseStatus_end IS NOT NULL AND CaseStatus_end IN (37,38) AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25,72,125))
                 OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
+                (CaseStatus_end <=> 39 AND Outcome_end <=> 25)
                 OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                (CaseStatus_end <=> 51 AND Outcome_end IS NOT NULL AND Outcome_end IN (0,94,93))
                 OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                (CaseStatus_end <=> 52 AND Outcome_end IS NOT NULL AND Outcome_end IN (91,95))
                 OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                (CaseStatus_end <=> 36 AND Outcome_end IS NOT NULL AND Outcome_end IN (1,2,25))
             )
 
             AND
 
-            (endAppealDate = date_format(to_date(DecisionDate_end), 'yyyy-MM-dd'))
+            (
+                date_format(to_date(DecisionDate_end), 'yyyy-MM-dd') IS NOT NULL
+                AND endAppealDate <=> date_format(to_date(DecisionDate_end), 'yyyy-MM-dd')
+            )
         )"""
 
         checks["valid_stateBeforeEndAppeal"] = """(
             (
-                (CaseStatus_end = 10 AND Outcome_end IN (80,122,25,120,2,105,13))
+                (CaseStatus_end <=> 10 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,122,25,120,2,105,13))
                 OR
-                (CaseStatus_end = 46 AND Outcome_end = 31)
+                (CaseStatus_end <=> 46 AND Outcome_end <=> 31)
                 OR
-                (CaseStatus_end = 26 AND Outcome_end IN (80,13,25))
+                (CaseStatus_end <=> 26 AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25))
                 OR
-                (CaseStatus_end IN (37,38) AND Outcome_end IN (80,13,25,72,125))
+                (CaseStatus_end IS NOT NULL AND CaseStatus_end IN (37,38) AND Outcome_end IS NOT NULL AND Outcome_end IN (80,13,25,72,125))
                 OR
-                (CaseStatus_end = 39 AND Outcome_end = 25)
+                (CaseStatus_end <=> 39 AND Outcome_end <=> 25)
                 OR
-                (CaseStatus_end = 51 AND Outcome_end IN (0,94,93))
+                (CaseStatus_end <=> 51 AND Outcome_end IS NOT NULL AND Outcome_end IN (0,94,93))
                 OR
-                (CaseStatus_end = 52 AND Outcome_end IN (91,95))
+                (CaseStatus_end <=> 52 AND Outcome_end IS NOT NULL AND Outcome_end IN (91,95))
                 OR
-                (CaseStatus_end = 36 AND Outcome_end IN (1,2,25))
+                (CaseStatus_end <=> 36 AND Outcome_end IS NOT NULL AND Outcome_end IN (1,2,25))
             )
 
             AND
 
             (CASE
-                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal = "listing"
-                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal = "listing"
-                WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 46 AND Outcome_end = 31 THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 51 AND Outcome_end in (0,94,93) THEN stateBeforeEndAppeal = "pendingPayment"
-                WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal = "pendingPayment"
-                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal = "ftpaSubmitted"
-                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal = "caseUnderReview"
-                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal = "reasonsForAppealSubmitted"
-                WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal = "appealSubmitted"
-                WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal = "appealSubmitted"
+                WHEN CaseStatus_end in(37,38) AND Outcome_end in (80,13,25,125) THEN stateBeforeEndAppeal <=> "listing"
+                WHEN CaseStatus_end = 38 AND Outcome_end = 72 THEN stateBeforeEndAppeal <=> "listing"
+                WHEN CaseStatus_end = 10 AND Outcome_end in (80,122,25,2,120) THEN stateBeforeEndAppeal <=> "appealSubmitted"
+                WHEN CaseStatus_end <=> 46 AND Outcome_end <=> 31 THEN stateBeforeEndAppeal <=> "appealSubmitted"
+                WHEN CaseStatus_end = 51 AND Outcome_end in (0,94,93) THEN stateBeforeEndAppeal <=> "pendingPayment"
+                WHEN CaseStatus_end = 52 AND Outcome_end in (95,91) THEN stateBeforeEndAppeal <=> "pendingPayment"
+                WHEN CaseStatus_end = 39 AND Outcome_end = 25 THEN stateBeforeEndAppeal <=> "ftpaSubmitted"
+                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "LR" THEN stateBeforeEndAppeal <=> "caseUnderReview"
+                WHEN CaseStatus_end = 26 AND Outcome_end in (13,25,80) AND dv_representation = "AIP" THEN stateBeforeEndAppeal <=> "reasonsForAppealSubmitted"
+                WHEN CaseStatus_end = 36 AND Outcome_end in (1,2,25) THEN stateBeforeEndAppeal <=> "appealSubmitted"
+                WHEN CaseStatus_end = 10 AND Outcome_end in (13,105) THEN stateBeforeEndAppeal <=> "appealSubmitted"
+                ELSE FALSE
             END)
         )"""
 
@@ -208,7 +214,7 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(respondentDocuments, ARRAY()) = COALESCE(respondentDocuments_ended, ARRAY())
+                    to_json(COALESCE(respondentDocuments, ARRAY())) <=> to_json(COALESCE(respondentDocuments_ended, ARRAY()))
                 ELSE
                     respondentDocuments IS NULL
             END
@@ -223,7 +229,7 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(hearingRequirements, ARRAY()) = COALESCE(hearingRequirements_ended, ARRAY())
+                    to_json(COALESCE(hearingRequirements, ARRAY())) <=> to_json(COALESCE(hearingRequirements_ended, ARRAY()))
                 ELSE
                     hearingRequirements IS NULL
             END
@@ -236,7 +242,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(hearingDocuments, ARRAY()) = COALESCE(hearingDocuments_ended, ARRAY())
+                    to_json(COALESCE(hearingDocuments, ARRAY())) <=> to_json(COALESCE(hearingDocuments_ended, ARRAY()))
                 ELSE
                     hearingDocuments IS NULL
             END
@@ -249,7 +255,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(letterBundleDocuments, ARRAY()) = COALESCE(letterBundleDocuments_ended, ARRAY())
+                    to_json(COALESCE(letterBundleDocuments, ARRAY())) <=> to_json(COALESCE(letterBundleDocuments_ended, ARRAY()))
                 ELSE
                     letterBundleDocuments IS NULL
             END
@@ -262,7 +268,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(caseBundles, ARRAY()) = COALESCE(caseBundles_ended, ARRAY())
+                    to_json(COALESCE(caseBundles, ARRAY())) <=> to_json(COALESCE(caseBundles_ended, ARRAY()))
                 ELSE
                     caseBundles IS NULL
             END
@@ -275,7 +281,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(finalDecisionAndReasonsDocuments, ARRAY()) = COALESCE(finalDecisionAndReasonsDocuments_ended, ARRAY())
+                    to_json(COALESCE(finalDecisionAndReasonsDocuments, ARRAY())) <=> to_json(COALESCE(finalDecisionAndReasonsDocuments_ended, ARRAY()))
                 ELSE
                     finalDecisionAndReasonsDocuments IS NULL
             END
@@ -290,7 +296,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantDocuments), 0) = 0
                 ELSE ftpaAppellantDocuments IS NULL
             END
         )
@@ -308,7 +314,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentDocuments), 0) = 0
                 ELSE ftpaRespondentDocuments IS NULL
             END
         )
@@ -326,7 +332,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantGroundsDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantGroundsDocuments), 0) = 0
                 ELSE ftpaAppellantGroundsDocuments IS NULL
             END
         )
@@ -344,7 +350,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentGroundsDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentGroundsDocuments), 0) = 0
                 ELSE ftpaRespondentGroundsDocuments IS NULL
             END
         )
@@ -362,7 +368,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantEvidenceDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantEvidenceDocuments), 0) = 0
                 ELSE ftpaAppellantEvidenceDocuments IS NULL
             END
         )
@@ -380,7 +386,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentEvidenceDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentEvidenceDocuments), 0) = 0
                 ELSE ftpaRespondentEvidenceDocuments IS NULL
             END
         )
@@ -398,7 +404,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantOutOfTimeDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantOutOfTimeDocuments), 0) = 0
                 ELSE ftpaAppellantOutOfTimeDocuments IS NULL
             END
         )
@@ -416,7 +422,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentOutOfTimeDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentOutOfTimeDocuments), 0) = 0
                 ELSE ftpaRespondentOutOfTimeDocuments IS NULL
             END
         )
@@ -452,18 +458,18 @@ class endedDQRules(DQRulesBase):
                     (
         -- Case: VisitVisaType = 1
         (
-            VisitVisaType = 1 AND
-            hearingChannel.value.code = 'ONPPRS' AND
-            hearingChannel.value.label = 'On The Papers'
+            VisitVisaType <=> 1 AND
+            hearingChannel.value.code <=> 'ONPPRS' AND
+            hearingChannel.value.label <=> 'On The Papers'
         )
         )
         OR
         (
         -- Case: VisitVisaType = 2
         (
-            VisitVisaType = 2 AND
-            hearingChannel.value.code = 'INTER' AND
-            hearingChannel.value.label = 'In Person'
+            VisitVisaType <=> 2 AND
+            hearingChannel.value.code <=> 'INTER' AND
+            hearingChannel.value.label <=> 'In Person'
         )
         )
         OR
@@ -486,7 +492,7 @@ class endedDQRules(DQRulesBase):
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(witnessDetails, ARRAY()) = COALESCE(witnessDetails_ended, ARRAY())
+                    to_json(COALESCE(witnessDetails, ARRAY())) <=> to_json(COALESCE(witnessDetails_ended, ARRAY()))
                 ELSE
                     witnessDetails IS NULL
             END
@@ -860,7 +866,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaAppellantApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaAppellantApplicationDate IS NULL
             END
         )
@@ -878,8 +884,8 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime = 'Yes'
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime <=> 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime <=> 'No'
                 ELSE ftpaAppellantSubmissionOutOfTime IS NULL
             END
         )
@@ -897,7 +903,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation <=> 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaAppellantOutOfTimeExplanation IS NULL
             END
         )
@@ -915,7 +921,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaRespondentApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaRespondentApplicationDate IS NULL
             END
         )
@@ -933,8 +939,8 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentSubmissionOutOfTime = 'Yes'
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime != 1 THEN ftpaRespondentSubmissionOutOfTime = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentSubmissionOutOfTime <=> 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime != 1 THEN ftpaRespondentSubmissionOutOfTime <=> 'No'
                 ELSE ftpaRespondentSubmissionOutOfTime IS NULL
             END
         )
@@ -952,7 +958,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation <=> 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaRespondentOutOfTimeExplanation IS NULL
             END
         )
@@ -1081,11 +1087,11 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
-            AND 
+            CaseStatus_SD IS NOT NULL AND CaseStatus_SD IN (37,38,26) AND Outcome_SD IS NOT NULL AND Outcome_SD IN (1,2)
+            AND
             CASE
-                WHEN Outcome_SD = 1 THEN (appealDecision = 'Allowed')
-                WHEN Outcome_SD = 2 THEN (appealDecision = 'Dismissed')
+                WHEN Outcome_SD = 1 THEN (appealDecision <=> 'Allowed')
+                WHEN Outcome_SD = 2 THEN (appealDecision <=> 'Dismissed')
             END
         )
                 ELSE
@@ -1101,11 +1107,11 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-            CaseStatus_SD IN (37,38,26) AND Outcome_SD IN (1,2)
-            AND 
+            CaseStatus_SD IS NOT NULL AND CaseStatus_SD IN (37,38,26) AND Outcome_SD IS NOT NULL AND Outcome_SD IN (1,2)
+            AND
             CASE
-                WHEN Outcome_SD = 1 THEN (isDecisionAllowed = 'allowed')
-                WHEN Outcome_SD = 2 THEN (isDecisionAllowed = 'dismissed')
+                WHEN Outcome_SD = 1 THEN (isDecisionAllowed <=> 'allowed')
+                WHEN Outcome_SD = 2 THEN (isDecisionAllowed <=> 'dismissed')
                 ELSE (isDecisionAllowed IS NULL)
             END
         )
@@ -1154,9 +1160,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (listTypeId = 5 AND isAppealSuitableToFloat = 'Yes')
+                (listTypeId <=> 5 AND isAppealSuitableToFloat <=> 'Yes')
                 OR
-                ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat = 'No')
+                ((listTypeId != 5 OR listTypeId IS NULL) AND isAppealSuitableToFloat <=> 'No')
             )
                 ELSE
                     isAppealSuitableToFloat IS NULL
@@ -1210,9 +1216,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (InCamera = 1 AND isInCameraCourtAllowed = 'Granted')
+                (InCamera <=> 1 AND isInCameraCourtAllowed <=> 'Granted')
                 OR
-                (InCamera != 1 AND isInCameraCourtAllowed IS NULL)
+                (NOT(InCamera <=> 1) AND isInCameraCourtAllowed IS NULL)
             )
                 ELSE
                     isInCameraCourtAllowed IS NULL
@@ -1227,9 +1233,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (InCamera = 1 AND inCameraCourtTribunalResponse = 'This is a migrated ARIA case. Please refer to the documents.')
+                (InCamera <=> 1 AND inCameraCourtTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')
                 OR
-                (InCamera != 1 AND inCameraCourtTribunalResponse IS NULL)
+                (NOT(InCamera <=> 1) AND inCameraCourtTribunalResponse IS NULL)
             )
                 ELSE
                     inCameraCourtTribunalResponse IS NULL
@@ -1244,9 +1250,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (InCamera = 1 AND inCameraCourtDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')
+                (InCamera <=> 1 AND inCameraCourtDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')
                 OR
-                (InCamera != 1 AND inCameraCourtDecisionForDisplay IS NULL)
+                (NOT(InCamera <=> 1) AND inCameraCourtDecisionForDisplay IS NULL)
             )
                 ELSE
                     inCameraCourtDecisionForDisplay IS NULL
@@ -1261,9 +1267,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (CourtPreference IN (1, 2) AND isSingleSexCourtAllowed = 'Granted')
+                (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND isSingleSexCourtAllowed <=> 'Granted')
                 OR
-                (CourtPreference NOT IN (1, 2) AND isSingleSexCourtAllowed IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND isSingleSexCourtAllowed IS NULL)
             )
                 ELSE
                     isSingleSexCourtAllowed IS NULL
@@ -1278,9 +1284,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (CourtPreference IN (1, 2) AND singleSexCourtTribunalResponse = 'This is a migrated ARIA case. Please refer to the documents.')
+                (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND singleSexCourtTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')
                 OR
-                (CourtPreference NOT IN (1, 2)  AND singleSexCourtTribunalResponse IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtTribunalResponse IS NULL)
             )
                 ELSE
                     singleSexCourtTribunalResponse IS NULL
@@ -1295,9 +1301,9 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                (CourtPreference IN (1, 2)  AND singleSexCourtDecisionForDisplay = 'Granted - This is a migrated ARIA case. Please refer to the documents.')
+                (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND singleSexCourtDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')
                 OR
-                (CourtPreference NOT IN (1, 2)  AND singleSexCourtDecisionForDisplay IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtDecisionForDisplay IS NULL)
             )
                 ELSE
                     singleSexCourtDecisionForDisplay IS NULL
@@ -1563,7 +1569,7 @@ class endedDQRules(DQRulesBase):
                 OR
                 (Interpreter <=> 2 AND isInterpreterServicesNeeded <=> 'No')
                 OR
-                (Interpreter NOT IN (1, 2) AND isInterpreterServicesNeeded <=> 'No')
+                ((Interpreter IS NULL OR Interpreter NOT IN (1, 2)) AND isInterpreterServicesNeeded <=> 'No')
             )
                 ELSE
                     isInterpreterServicesNeeded IS NULL
@@ -1579,7 +1585,7 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(appellantInterpreterLanguageCategory, ARRAY()) = COALESCE(appellantInterpreterLanguageCategory_ended, ARRAY())
+                    to_json(COALESCE(appellantInterpreterLanguageCategory, ARRAY())) <=> to_json(COALESCE(appellantInterpreterLanguageCategory_ended, ARRAY()))
                 ELSE
                     appellantInterpreterLanguageCategory IS NULL
             END
@@ -1779,7 +1785,7 @@ class endedDQRules(DQRulesBase):
                 OR
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourt <=> 'Yes')
                 OR
-                (CourtPreference NOT IN (0, 1, 2) AND singleSexCourt <=> 'No')
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (0, 1, 2)) AND singleSexCourt <=> 'No')
             )
                 ELSE
                     singleSexCourt IS NULL
@@ -1800,7 +1806,7 @@ class endedDQRules(DQRulesBase):
                 OR
                 (CourtPreference <=> 2 AND singleSexCourtType <=> 'All female')
                 OR
-                (CourtPreference NOT IN (1, 2) AND singleSexCourtType IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtType IS NULL)
             )
                 ELSE
                     singleSexCourtType IS NULL
@@ -1819,7 +1825,7 @@ class endedDQRules(DQRulesBase):
                     (
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourtTypeDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court.')
                 OR
-                (CourtPreference NOT IN (1, 2) AND singleSexCourtTypeDescription IS NULL)
+                ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtTypeDescription IS NULL)
             )
                 ELSE
                     singleSexCourtTypeDescription IS NULL
@@ -1925,7 +1931,7 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
                     (
-                        (appellantLevelFlags IS NOT NULL)
+                        (appellantLevelFlags IS NOT NULL AND appellantLevelFlags.details IS NOT NULL)
                         AND
                         (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
                         AND
@@ -1949,7 +1955,7 @@ class endedDQRules(DQRulesBase):
                     )
                 ELSE
                     (
-                        (appellantLevelFlags IS NOT NULL)
+                        (appellantLevelFlags IS NOT NULL AND appellantLevelFlags.details IS NOT NULL)
                         AND
                         (ARRAY_SIZE(appellantLevelFlags.details) >= 3)
                         AND
@@ -1979,7 +1985,7 @@ class endedDQRules(DQRulesBase):
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
-                    COALESCE(directions, ARRAY()) = COALESCE(directions_ended, ARRAY())
+                    to_json(COALESCE(directions, ARRAY())) <=> to_json(COALESCE(directions_ended, ARRAY()))
                 ELSE
                     directions IS NULL
             END
@@ -2271,7 +2277,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                    (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantSubmitted <=> 'Yes'
                 ELSE ftpaAppellantSubmitted IS NULL
             END
         )
@@ -2289,7 +2295,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantDocsVisibleInDecided IS NULL
             END
         )
@@ -2307,7 +2313,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2325,7 +2331,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantOotDocsVisibleInDecided IS NULL
             END
         )
@@ -2343,7 +2349,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantOotDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2361,7 +2367,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantGroundsDocsVisibleInDecided IS NULL
             END
         )
@@ -2379,7 +2385,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantEvidenceDocsVisibleInDecided IS NULL
             END
         )
@@ -2397,7 +2403,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantGroundsDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2415,7 +2421,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantEvidenceDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2433,7 +2439,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantOotExplanationVisibleInDecided IS NULL
             END
         )
@@ -2451,7 +2457,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantOotExplanationVisibleInSubmitted IS NULL
             END
         )
@@ -2469,7 +2475,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentSubmitted <=> 'Yes'
                 ELSE ftpaRespondentSubmitted IS NULL
             END
         )
@@ -2487,7 +2493,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentDocsVisibleInDecided IS NULL
             END
         )
@@ -2505,7 +2511,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2523,7 +2529,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentOotDocsVisibleInDecided IS NULL
             END
         )
@@ -2541,7 +2547,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentOotDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2559,7 +2565,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentGroundsDocsVisibleInDecided IS NULL
             END
         )
@@ -2577,7 +2583,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentEvidenceDocsVisibleInDecided IS NULL
             END
         )
@@ -2595,7 +2601,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentGroundsDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2613,7 +2619,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentEvidenceDocsVisibleInSubmitted IS NULL
             END
         )
@@ -2631,7 +2637,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentOotExplanationVisibleInDecided IS NULL
             END
         )
@@ -2649,7 +2655,7 @@ class endedDQRules(DQRulesBase):
                 ) THEN
                     (
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
             END
         )
@@ -2665,9 +2671,10 @@ class endedDQRules(DQRulesBase):
     def get_checks_TTL(self, checks={}):
 
         checks["valid_TTL"] = """(
-            TTL.Suspended = 'No'
+            TTL.Suspended <=> 'No'
             AND
-            TTL.SystemTTL = date_format(date_add(to_date(DecisionDate_no_filter), 730), 'yyyy-MM-dd')
+            date_format(date_add(to_date(DecisionDate_no_filter), 730), 'yyyy-MM-dd') IS NOT NULL
+            AND TTL.SystemTTL <=> date_format(date_add(to_date(DecisionDate_no_filter), 730), 'yyyy-MM-dd')
         )"""
 
         return checks
@@ -2677,13 +2684,13 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_outOfTimeDecisionType"] = """
         (
-            CASE 
+            CASE
                 WHEN (
-                    (CaseStatus_max_no_filter = 10 AND Outcome_no_filter IN (120, 2, 105)) 
+                    (CaseStatus_max_no_filter IS NOT NULL AND CaseStatus_max_no_filter = 10 AND Outcome_no_filter IS NOT NULL AND Outcome_no_filter IN (120, 2, 105))
                 ) THEN
-                    outOfTimeDecisionType = 'rejected'
+                    outOfTimeDecisionType <=> 'rejected'
                 ELSE
-                    outOfTimeDecisionType = 'approved'
+                    outOfTimeDecisionType <=> 'approved'
             END
         )
         """

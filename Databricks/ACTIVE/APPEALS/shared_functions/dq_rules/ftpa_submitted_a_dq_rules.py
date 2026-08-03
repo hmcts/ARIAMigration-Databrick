@@ -271,7 +271,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ####### Appellant #######
         checks["valid_ftpaAppellantApplicationDate"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaAppellantApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaAppellantApplicationDate IS NULL
             END
         )"""
@@ -294,7 +294,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ####### Respondent #######
         checks["valid_ftpaRespondentApplicationDate"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaRespondentApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaRespondentApplicationDate IS NULL
             END
         )"""

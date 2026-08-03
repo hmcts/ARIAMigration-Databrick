@@ -54,6 +54,9 @@ class decidedADQRules(DQRulesBase):
                 AND
                 to_date(
                     to_timestamp(DecisionDate_decided, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
+                ) IS NOT NULL
+                AND to_date(
+                    to_timestamp(DecisionDate_decided, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX')
                 ) <=> to_date(trim(sendDecisionsAndReasonsDate), 'yyyy-MM-dd')
             )
             OR
@@ -70,7 +73,8 @@ class decidedADQRules(DQRulesBase):
                 CaseStatus_SD IS NOT NULL AND CaseStatus_SD IN (37,38,26)
                 AND Outcome_SD IS NOT NULL AND Outcome_SD IN (1,2)
                 AND
-                to_date(DecisionDate_decided, 'yyyy-MM-dd') <=> to_date(appealDate, 'yyyy-MM-dd')
+                to_date(DecisionDate_decided, 'yyyy-MM-dd') IS NOT NULL
+                AND to_date(DecisionDate_decided, 'yyyy-MM-dd') <=> to_date(appealDate, 'yyyy-MM-dd')
             )
             OR
             (

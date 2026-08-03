@@ -106,6 +106,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
+from pyspark import pipelines as dp
 
 # COMMAND ----------
 
@@ -328,62 +329,48 @@ def read_latest_parquet(folder_name: str, view_name: str, process_name: str, bas
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_appealcase",
-    comment="Delta Live Table ARIA AppealCase.",
-    path=f"{raw_mnt}/Raw_AppealCase"
-)
+    comment="Delta Live Table ARIA AppealCase.")
 def Raw_AppealCase():
     return read_latest_parquet("AppealCase", "tv_AppealCase", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_caseappellant",
-    comment="Delta Live Table ARIA CaseAppellant.",
-    path=f"{raw_mnt}/Raw_CaseAppellant"
-)
+    comment="Delta Live Table ARIA CaseAppellant.")
 def Raw_CaseAppellant():
     return read_latest_parquet("CaseAppellant", "tv_CaseAppellant", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_appellant",
-    comment="Delta Live Table ARIA Appellant.",
-    path=f"{raw_mnt}/Raw_Appellant"
-)
+    comment="Delta Live Table ARIA Appellant.")
 def raw_Appellant():
      return read_latest_parquet("Appellant", "tv_Appellant", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_filelocation",
-    comment="Delta Live Table ARIA FileLocation.",
-    path=f"{raw_mnt}/Raw_FileLocation"
-)
+    comment="Delta Live Table ARIA FileLocation.")
 def Raw_FileLocation():
     return read_latest_parquet("FileLocation", "tv_FileLocation", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_department",
-    comment="Delta Live Table ARIA Department.",
-    path=f"{raw_mnt}/Raw_Department"
-)
+    comment="Delta Live Table ARIA Department.")
 def Raw_Department():
     return read_latest_parquet("Department", "tv_Department", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_hearingcentre",
-    comment="Delta Live Table ARIA HearingCentre.",
-    path=f"{raw_mnt}/Raw_HearingCentre"
-)
+    comment="Delta Live Table ARIA HearingCentre.")
 def Raw_HearingCentre():
     if env_name == "sbox":
      return read_latest_parquet("ARIAHearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
     else:
      return read_latest_parquet("HearingCentre", "tv_HearingCentre", "ARIA_ARM_TD")
 
-@dlt.table(
+@dp.table(
     name="raw_status",
-    comment="Delta Live Table ARIA Status.",
-    path=f"{raw_mnt}/Raw_Status"
-)
+    comment="Delta Live Table ARIA Status.")
 def Raw_Status():
     return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_TD")
 
@@ -440,36 +427,34 @@ from delta.tables import DeltaTable
 checks = {}
 checks["PrimaryKeyCheckforNULLS"] = "(CaseNo IS NOT NULL)"
 
-@dlt.table(
+@dp.table(
     name="bronze_ac_ca_ant_fl_dt_hc",
-    comment="Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre.",
-    path=f"{bronze_mnt}/bronze_ac_ca_ant_fl_dt_hc"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Table combining Appeal Case data with Case Appellant, Appellant, File Location, Department, and Hearing Centre.")
+@dp.expect_all_or_fail(checks)
 def bronze_ac_ca_ant_fl_dt_hc():
-    df = dlt.read("raw_appealcase").alias("ac") \
+    df = dp.read("raw_appealcase").alias("ac") \
         .join(
-            dlt.read("raw_caseappellant").alias("ca"),
+            dp.read("raw_caseappellant").alias("ca"),
             col("ac.CaseNo") == col("ca.CaseNo"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_appellant").alias("a"),
+            dp.read("raw_appellant").alias("a"),
             col("ca.AppellantId") == col("a.AppellantId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_filelocation").alias("fl"),
+            dp.read("raw_filelocation").alias("fl"),
             col("ac.CaseNo") == col("fl.CaseNo"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_department").alias("d"),
+            dp.read("raw_department").alias("d"),
             col("fl.DeptId") == col("d.DeptId"),
             "left_outer"
         ) \
         .join(
-            dlt.read("raw_hearingcentre").alias("hc"),
+            dp.read("raw_hearingcentre").alias("hc"),
             col("d.CentreId") == col("hc.CentreId"),
             "left_outer"
         ).filter(col("ca.RelationShip").isNull()) \
@@ -501,11 +486,9 @@ def bronze_ac_ca_ant_fl_dt_hc():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_iris_extract",
-    comment="Delta Live Table extracted from the IRIS Tribunal decision file extract.",
-    path=f"{bronze_mnt}/bronze_iris_extract"
-)
+    comment="Delta Live Table extracted from the IRIS Tribunal decision file extract.")
 def bronze_iris_extract():
     window_spec = Window.partitionBy("CaseNo").orderBy(col("Forenames").asc())
 
@@ -538,7 +521,7 @@ def bronze_iris_extract():
         .drop("row_num")
 
     # ARIADM-1071 Deduplicate IRIS synthetic data and also avoiding dup in raw data using row_num    
-    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
+    td_df = dp.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
 
     df_iris_filtered = df_iris.alias("iris").join(td_df.alias("aria"), col("iris.CaseNo") == col("aria.CaseNo"),"left").filter(col("aria.CaseNo").isNull()).select("iris.*")
 
@@ -682,11 +665,9 @@ def bronze_iris_extract():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="stg_td_filtered",
-    comment="Delta Live Table for appeal cases requiring tribunal decisions.",
-    path=f"{silver_mnt}/stg_td_filtered"
-)
+    comment="Delta Live Table for appeal cases requiring tribunal decisions.")
 def bronze_appeal_case_tribunal_decision():
 
     UT_STATUSES = ["40","41","42","43","44","45","53","27","28","29","34","32","33"]
@@ -697,7 +678,7 @@ def bronze_appeal_case_tribunal_decision():
 
     # ISNULL(outcome,-1) NOT IN (38,111) AND ISNULL(casestatus,-1) != 17
     status_subquery = (
-        dlt.read("raw_status")
+        dp.read("raw_status")
         .filter(
             (col("outcome").isNull() | (~col("outcome").isin(38, 111)))
             & (col("casestatus").isNull() | (col("casestatus") != 17))
@@ -708,7 +689,7 @@ def bronze_appeal_case_tribunal_decision():
 
     # ISNULL(casestatus,-1) NOT IN (50,52,36)
     prev_subquery = (
-        dlt.read("raw_status")
+        dp.read("raw_status")
         .filter(
             col("casestatus").isNull() | (~col("casestatus").isin(50, 52, 36))
         )
@@ -717,17 +698,17 @@ def bronze_appeal_case_tribunal_decision():
     )
 
     ut_subquery = (
-        dlt.read("raw_status")
+        dp.read("raw_status")
         .filter(col("CaseStatus").isin(*UT_STATUSES))
         .groupBy("CaseNo")
         .agg(F.max("StatusId").alias("UT_ID"))
     )
 
-    ac = dlt.read("raw_appealcase").alias("ac")
-    t  = dlt.read("raw_status").alias("t")
-    st = dlt.read("raw_status").alias("st")
-    us = dlt.read("raw_status").alias("us")
-    fl = dlt.read("raw_filelocation").alias("fl")
+    ac = dp.read("raw_appealcase").alias("ac")
+    t  = dp.read("raw_status").alias("t")
+    st = dp.read("raw_status").alias("st")
+    us = dp.read("raw_status").alias("us")
+    fl = dp.read("raw_filelocation").alias("fl")
 
     df = (
         ac
@@ -846,15 +827,13 @@ def bronze_appeal_case_tribunal_decision():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_tribunaldecision_detail",
-    comment="Delta Live silver Table for Tribunal Decision information.",
-    path=f"{silver_mnt}/silver_tribunaldecision_detail"
-)
+    comment="Delta Live silver Table for Tribunal Decision information.")
 def silver_tribunaldecision_detail():
-    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
-    flt_df = dlt.read("stg_td_filtered").alias('flt')
-    iris_df = dlt.read("bronze_iris_extract").alias('iris')
+    td_df = dp.read("bronze_ac_ca_ant_fl_dt_hc").alias("td")
+    flt_df = dp.read("stg_td_filtered").alias('flt')
+    iris_df = dp.read("bronze_iris_extract").alias('iris')
     
     joined_df = td_df.join(flt_df, col("td.CaseNo") == col("flt.CaseNo"), "inner").select("td.*")
 
@@ -867,13 +846,6 @@ def silver_tribunaldecision_detail():
             "yyyy-MM-dd"
         )
     ).drop(col("DestructionDate"))
-    #.withColumn(
-    #     "DestructionDate",
-    #         date_format(
-    #             coalesce(col("DestructionDate"), lit("2000-01-01").cast("date")),
-    #         "yyyy-MM-dd"
-    #     )
-    # )
         
     return df
 
@@ -969,13 +941,11 @@ def silver_tribunaldecision_detail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="silver_archive_metadata",
-    comment="Delta Live Silver Table for Archive Metadata data.",
-    path=f"{silver_mnt}/silver_archive_metadata"
-)
+    comment="Delta Live Silver Table for Archive Metadata data.")
 def silver_archive_metadata():
-    td_df = dlt.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dlt.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
+    td_df = dp.read("bronze_ac_ca_ant_fl_dt_hc").alias("td").join(dp.read("stg_td_filtered").alias('flt'), col("td.CaseNo") == col("flt.CaseNo"), "inner").select(
         col('td.CaseNo').alias('client_identifier'),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
         date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
@@ -1011,7 +981,7 @@ def silver_archive_metadata():
         ).alias('bf_010')
         
     )
-    iris_df = dlt.read("bronze_iris_extract").alias("iris").select(
+    iris_df = dp.read("bronze_iris_extract").alias("iris").select(
         col('iris.CaseNo').alias('client_identifier'),
         when(env_name == lit('sbox'), date_format(coalesce(col('iris.AdtclmnFirstCreatedDatetime'), current_timestamp()), "yyyy-MM-dd'T'HH:mm:ss'Z'")).otherwise(date_format(col('iris.AdtclmnFirstCreatedDatetime'), 
         "yyyy-MM-dd'T'HH:mm:ss'Z'")).alias('event_date'),
@@ -1219,15 +1189,13 @@ generate_a360_udf = udf(generate_a360, StringType())
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_create_td_iris_json_content
-@dlt.table(
+@dp.table(
     name="stg_create_td_iris_json_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_td_iris_json_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_td_iris_json_content():
 
-    df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-    # df_td_metadata = dlt.read("silver_archive_metadata")
+    df_tribunaldecision_detail = dp.read("silver_tribunaldecision_detail")
+    # df_td_metadata = dp.read("silver_archive_metadata")
 
      # Optional: Load from Hive if not an initial load
     if read_hive:
@@ -1250,15 +1218,13 @@ def stg_create_td_iris_json_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_create_td_iris_html_content
-@dlt.table(
+@dp.table(
     name="stg_create_td_iris_html_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_td_iris_html_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_td_iris_html_content():
 
-    df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-    # df_with_json_content = dlt.read("stg_create_td_iris_json_content")
+    df_tribunaldecision_detail = dp.read("silver_tribunaldecision_detail")
+    # df_with_json_content = dp.read("stg_create_td_iris_json_content")
 
     
 
@@ -1284,16 +1250,14 @@ def stg_create_td_iris_html_content():
 # COMMAND ----------
 
 # DBTITLE 1,Transformation: stg_create_td_iris_a360_content
-@dlt.table(
+@dp.table(
     name="stg_create_td_iris_a360_content",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_create_td_iris_a360_content"
-)
+    comment="Delta Live unified stage Gold Table for gold outputs.")
 def stg_create_td_iris_a360_content():
 
-    # df_tribunaldecision_detail = dlt.read("silver_tribunaldecision_detail")
-    df_td_metadata = dlt.read("silver_archive_metadata")
-    # df_with_json_html = dlt.read("stg_create_td_iris_html_content")
+    # df_tribunaldecision_detail = dp.read("silver_tribunaldecision_detail")
+    df_td_metadata = dp.read("silver_archive_metadata")
+    # df_with_json_html = dp.read("stg_create_td_iris_html_content")
    
     # Optional: Load from Hive if not an initial load
     if read_hive:
@@ -1321,20 +1285,18 @@ from pyspark.sql.window import Window
 import dlt
 
 # Define the Delta Live Table
-@dlt.table(
+@dp.table(
     name="stg_td_iris_unified",
-    comment="Delta Live unified stage Gold Table for gold outputs.",
-    path=f"{silver_mnt}/stg_td_iris_unified"
-)
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
+    comment="Delta Live unified stage Gold Table for gold outputs.")
+@dp.expect_or_drop("No errors in HTML content", "NOT (lower(HTML_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in JSON content", "NOT (lower(JSON_Content) LIKE 'failure%')")
+@dp.expect_or_drop("No errors in A360 content", "NOT (lower(A360_Content) LIKE 'failure%')")
 def stg_td_iris_unified():
     
-    # Read DLT sources
-    a360_df = dlt.read("stg_create_td_iris_a360_content").alias("a360")
-    html_df = dlt.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
-    json_df = dlt.read("stg_create_td_iris_json_content").alias("json")
+    # Read dp sources
+    a360_df = dp.read("stg_create_td_iris_a360_content").alias("a360")
+    html_df = dp.read("stg_create_td_iris_html_content").withColumn("HTML_File_Name",col("File_Name")).withColumn("HTML_Status",col("Status")).drop("File_Name","Status").alias("html")
+    json_df = dp.read("stg_create_td_iris_json_content").alias("json")
 
     # Perform joins
     df_unified = (
@@ -1398,15 +1360,13 @@ checks["html_content_not_error"] = "(HTML_Content NOT LIKE 'Error%')"
 checks["html_content_not_null"] = "(HTML_Content IS NOT NULL)"
 checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_td_iris_with_html",
-    comment="Delta Live Gold Table with HTML content.",
-    path=f"{gold_mnt}/Data/gold_td_iris_with_html"
-)
-@dlt.expect_all(checks)
+    comment="Delta Live Gold Table with HTML content.")
+@dp.expect_all(checks)
 def gold_td_iris_with_html():
     # Load source data
-    df_combined = dlt.read("stg_td_iris_unified")
+    df_combined = dp.read("stg_td_iris_unified")
 
     # Optional: Load from Hive if not an initial load
     if read_hive:
@@ -1422,7 +1382,7 @@ def gold_td_iris_with_html():
         "Status", upload_udf(col("HTML_File_Name"), col("HTML_Content"))
     )
 
-    # Return the DataFrame for DLT table creation
+    # Return the DataFrame for dp table creation
     return df_with_upload_status.select(
         "CaseNo",
         "Forenames",
@@ -1443,19 +1403,17 @@ checks = {}
 checks["json_content_not_null"] = "(JSON_Content IS NOT NULL)"
 checks["uploadstatus_not_error"] = "(Status NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_td_iris_with_json",
-    comment="Delta Live Gold Table with JSON content.",
-    path=f"{gold_mnt}/Data/gold_td_iris_with_json"
-)
-@dlt.expect_all(checks)
+    comment="Delta Live Gold Table with JSON content.")
+@dp.expect_all(checks)
 def gold_td_iris_with_json():
     """
     Delta Live Table for creating and uploading JSON content for judicial officers.
     Minimal safe changes: guard nulls, wrap upload UDF call, more partitions.
     """
     # Load source data
-    df_combined = dlt.read("stg_td_iris_unified")
+    df_combined = dp.read("stg_td_iris_unified")
 
     if read_hive:
         df_combined = spark.read.table(f"hive_metastore.{hive_schema}.stg_td_iris_unified")
@@ -1489,18 +1447,16 @@ checks["A360Content_no_error"] = "(consolidate_A360Content NOT LIKE 'Error%')"
 checks["A360_content_no_error"] = "(consolidate_A360Content IS NOT NULL)"
 checks["UploadStatus_no_error"] = "(Status NOT LIKE 'Error%')"
 
-@dlt.table(
+@dp.table(
     name="gold_td_iris_with_a360",
-    comment="Delta Live Gold Table with A360 content.",
-    path=f"{gold_mnt}/Data/gold_td_iris_with_a360"
-)
-@dlt.expect_all_or_fail(checks)
+    comment="Delta Live Gold Table with A360 content.")
+@dp.expect_all_or_fail(checks)
 def gold_td_iris_with_a360():
     
-    # df_joh_metadata = dlt.read("stg_td_iris_unified")
-    # df_a360 = dlt.read("stg_td_iris_unified")
+    # df_joh_metadata = dp.read("stg_td_iris_unified")
+    # df_a360 = dp.read("stg_td_iris_unified")
 
-    df_a360 = dlt.read("stg_td_iris_unified")
+    df_a360 = dp.read("stg_td_iris_unified")
 
     # Optionally load data from Hive
     if read_hive:

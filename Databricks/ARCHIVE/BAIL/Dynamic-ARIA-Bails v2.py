@@ -58,6 +58,7 @@ spark.conf.set("pipelines.tableManagedByMultiplePipelinesCheck.enabled", "false"
 
 
 import dlt
+from pyspark import pipelines as dp
 import json
 from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format,desc, first,concat_ws,count,collect_list,struct,expr,concat,regexp_replace,trim,udf,row_number,floor,date_format,count,explode,round, add_months, collect_set, collect_list, date_add, to_date, flatten, regexp_extract, format_string
 from pyspark.sql.types import *
@@ -366,180 +367,174 @@ container_client = blob_service_client.get_container_client(container_name)
 
 # load in all the raw tables
 
-@dlt.table(name="raw_appeal_cases", comment="Raw Appeal Cases",path=f"{raw_base_path}/raw_appeal_cases")
+@dp.table(name="raw_appeal_cases", comment="Raw Appeal Cases")
 def bail_raw_appeal_cases():
     return read_latest_parquet("AppealCase","tv_AppealCase","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_respondents", comment="Raw Case Respondents",path=f"{raw_base_path}/raw_case_respondents")
+@dp.table(name="raw_case_respondents", comment="Raw Case Respondents")
 def bail_raw_case_respondents():
     return read_latest_parquet("CaseRespondent","tv_CaseRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_respondent", comment="Raw Respondents",path=f"{raw_base_path}/raw_respondents")
+@dp.table(name="raw_respondent", comment="Raw Respondents")
 def bail_raw_respondent():
     return read_latest_parquet("Respondent","tv_Respondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_main_respondent", comment="Raw Main Respondent",path=f"{raw_base_path}/raw_main_respondent")
+@dp.table(name="raw_main_respondent", comment="Raw Main Respondent")
 def bail_raw_main_respondent():
     return read_latest_parquet("MainRespondent","tv_MainRespondent","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_pou", comment="Raw Pou",path=f"{raw_base_path}/raw_pou")
+@dp.table(name="raw_pou", comment="Raw Pou")
 def bail_raw_pou():
     return read_latest_parquet("Pou","tv_Pou","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_file_location", comment="Raw File Location",path=f"{raw_base_path}/raw_file_location")
+@dp.table(name="raw_file_location", comment="Raw File Location")
 def bail_raw_file_location():
     return read_latest_parquet("FileLocation","tv_FileLocation","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_rep", comment="Raw Case Rep",path=f"{raw_base_path}/raw_case_rep")
+@dp.table(name="raw_case_rep", comment="Raw Case Rep")
 def bail_raw_case_rep():
     return read_latest_parquet("CaseRep","tv_CaseRep","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_representative", comment="Raw Representative",path=f"{raw_base_path}/raw_Representative")
+@dp.table(name="raw_representative", comment="Raw Representative")
 def bail_raw_Representative():
     return read_latest_parquet("Representative","tv_Representative","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_language", comment="Raw Language",path=f"{raw_base_path}/raw_language")
+@dp.table(name="raw_language", comment="Raw Language")
 def bail_raw_language():
     return read_latest_parquet("Language","tv_Language","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_cost_award", comment="Raw Cost Award",path=f"{raw_base_path}/raw_cost_award")
+@dp.table(name="raw_cost_award", comment="Raw Cost Award")
 def bail_raw_cost_award():
     return read_latest_parquet("CostAward","tv_CostAward","ARIA_ARM_BAIL",landing_base_path) 
 
-@dlt.table(name='raw_case_list', comment='Raw Case List',path=f"{raw_base_path}/raw_case_list")
+@dp.table(name='raw_case_list', comment='Raw Case List')
 def bail_case_list():
     return read_latest_parquet("CaseList","tv_CaseList","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_type', comment='Raw Hearing Type',path=f"{raw_base_path}/raw_hearing_type")
+@dp.table(name='raw_hearing_type', comment='Raw Hearing Type')
 def bail_hearing_type():
     return read_latest_parquet("HearingType","tv_HearingType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list',comment='Raw List',path=f"{raw_base_path}/raw_list")
+@dp.table(name='raw_list',comment='Raw List')
 def bail_list():
     return read_latest_parquet("List","tv_List","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_type',comment='Raw List Type',path=f"{raw_base_path}/raw_list_type")
+@dp.table(name='raw_list_type',comment='Raw List Type')
 def bail_list_type():
     return read_latest_parquet("ListType","tv_ListType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_court',comment='Raw Bail Court',path=f"{raw_base_path}/raw_court")
+@dp.table(name='raw_court',comment='Raw Bail Court')
 def bail_court():
     return read_latest_parquet("Court","tv_Court","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_hearing_centre',comment='Raw  Hearing Centre',path=f"{raw_base_path}/raw_hearing_centre")
+@dp.table(name='raw_hearing_centre',comment='Raw  Hearing Centre')
 def bail_hearing_centre():
     return read_latest_parquet("HearingCentre","tv_HearingCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_list_sitting',comment='Raw List Sitting',path=f"{raw_base_path}/raw_list_sitting")
+@dp.table(name='raw_list_sitting',comment='Raw List Sitting')
 def bail_list_sitting():
     return read_latest_parquet("ListSitting","tv_ListSitting","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_adjudicator',comment='Raw Adjudicator',path=f"{raw_base_path}/raw_adjudicator")
+@dp.table(name='raw_adjudicator',comment='Raw Adjudicator')
 def bail_adjudicator():
     return read_latest_parquet("Adjudicator","tv_Adjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appellant',comment='Raw Bail Appellant',path=f"{raw_base_path}/raw_appellant")
+@dp.table(name='raw_appellant',comment='Raw Bail Appellant')
 def bail_appellant():
     return read_latest_parquet("Appellant","tv_Appellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_appellant',comment='Raw Bail Case Appellant',path=f"{raw_base_path}/raw_case_appellant")
+@dp.table(name='raw_case_appellant',comment='Raw Bail Case Appellant')
 def bail_case_appellant():
     return read_latest_parquet("CaseAppellant","tv_CaseAppellant","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_detention_centre',comment='Raw Nail Detention Centre',path=f"{raw_base_path}/raw_detention_centre")
+@dp.table(name='raw_detention_centre',comment='Raw Nail Detention Centre')
 def bail_detention_centre():
     return read_latest_parquet("DetentionCentre","tv_DetentionCentre","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_country',comment='Raw Bail Country',path=f"{raw_base_path}/raw_country")
+@dp.table(name='raw_country',comment='Raw Bail Country')
 def bail_country():
     return read_latest_parquet("Country","tv_Country","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_diary',comment='Raw Bail BF Diary',path=f"{raw_base_path}/raw_bf_diary")
+@dp.table(name='raw_bf_diary',comment='Raw Bail BF Diary')
 def bail_bf_diary():
     return read_latest_parquet("BFDiary","tv_BFDiary","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_bf_type',comment='Raw Bail BF Type',path=f"{raw_base_path}/raw_bf_type")
+@dp.table(name='raw_bf_type',comment='Raw Bail BF Type')
 def bail_bf_type():
     return read_latest_parquet("BFType","tv_BFType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_history',comment='Raw Bail History',path=f"{raw_base_path}/raw_history")
+@dp.table(name='raw_history',comment='Raw Bail History')
 def bail_history():
     return read_latest_parquet("History","tv_History","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_users',comment='Raw Bail Users',path=f"{raw_base_path}/raw_users")
+@dp.table(name='raw_users',comment='Raw Bail Users')
 def bail_users():
     return read_latest_parquet("Users","tv_Users","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link',comment='Raw Bail Link',path=f"{raw_base_path}/raw_link")
+@dp.table(name='raw_link',comment='Raw Bail Link')
 def bail_link():
     return read_latest_parquet("Link","tv_Link","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_link_detail',comment='Raw Bail Link Detail',path=f"{raw_base_path}/raw_link_detail")
+@dp.table(name='raw_link_detail',comment='Raw Bail Link Detail')
 def bail_link_detail():
     return read_latest_parquet("LinkDetail","tv_LinkDetail","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status',comment='Raw Bail Status',path=f"{raw_base_path}/raw_status")
+@dp.table(name='raw_status',comment='Raw Bail Status')
 def bail_status():
     return read_latest_parquet("Status","tv_Status","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_case_status',comment='Raw Bail Case Status',path=f"{raw_base_path}/raw_case_status")
+@dp.table(name='raw_case_status',comment='Raw Bail Case Status')
 def bail_case_status():
     return read_latest_parquet("CaseStatus","tv_CaseStatus","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_status_contact',comment='Raw Bail Status Contact',path=f"{raw_base_path}/raw_status_contact")
+@dp.table(name='raw_status_contact',comment='Raw Bail Status Contact')
 def bail_status_contact():
     return read_latest_parquet("StatusContact","tv_StatusContact","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn',path=f"{raw_base_path}/raw_reason_adjourn")
+@dp.table(name='raw_reason_adjourn',comment='Raw Bail Reason Adjourn')
 def bail_reason_adjourn():
     return read_latest_parquet("ReasonAdjourn","tv_ReasonAdjourn","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_appeal_category',comment='Raw Bail Appeal Category',path=f"{raw_base_path}/raw_appeal_category")
+@dp.table(name='raw_appeal_category',comment='Raw Bail Appeal Category')
 def bail_appeal_category():
     return read_latest_parquet("AppealCategory","tv_AppealCategory","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name='raw_category',comment='Raw Bail Category',path=f"{raw_base_path}/raw_category")
+@dp.table(name='raw_category',comment='Raw Bail Category')
 def bail_category():
     return read_latest_parquet("Category","tv_Category","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_surety",comment="Raw Bail Surety",path=f"{raw_base_path}/raw_case_surety")
+@dp.table(name="raw_case_surety",comment="Raw Bail Surety")
 def bail_case_surety():
     return read_latest_parquet("CaseSurety","tv_CaseSurety","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_port",comment="Raw Bail Port",path=f"{raw_base_path}/raw_port")
+@dp.table(name="raw_port",comment="Raw Bail Port")
 def bail_port():
     return read_latest_parquet("Port","tv_Port","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decisiontype",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decisiontype")
+@dp.table(name="raw_decisiontype",comment="Raw Bail Decision Type")
 def bail_decisiontype():
     return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator",path=f"{raw_base_path}/raw_case_adjudicator")
+@dp.table(name="raw_case_adjudicator",comment="Raw Bail Case Adjudicator")
 def bail_case_adjudictor():
     return read_latest_parquet("CaseAdjudicator","tv_CaseAdjudicator","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_embassy",comment="Raw Bail Embassy",path=f"{raw_base_path}/raw_embassy")
+@dp.table(name="raw_embassy",comment="Raw Bail Embassy")
 def bail_embassy():
     return read_latest_parquet("Embassy","tv_Embassy","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_decision_type",comment="Raw Bail Decision Type",path=f"{raw_base_path}/raw_decision_type")
+@dp.table(name="raw_decision_type",comment="Raw Bail Decision Type")
 def bail_decision_type():
     return read_latest_parquet("DecisionType","tv_DecisionType","ARIA_ARM_BAIL",landing_base_path)
 
-
-
-
-
-
-# COMMAND ----------
-
-@dlt.table(name="raw_stm_cases", comment="Raw Bail STM Cases",path=f"{raw_base_path}/raw_stm_cases")
+@dp.table(name="raw_stm_cases", comment="Raw Bail STM Cases")
 def raw_stm_cases():
     return read_latest_parquet("STMCases","tv_stm_cases","ARIA_ARM_BAIL",landing_base_path)
 
-@dlt.table(name="raw_department", comment="Raw Department",path=f"{raw_base_path}/raw_department")
+@dp.table(name="raw_department", comment="Raw Department")
 def bail_raw_appeal_cases():
     return read_latest_parquet("Department","tv_department","ARIA_ARM_BAIL",landing_base_path)
+
 
 # COMMAND ----------
 
@@ -703,29 +698,27 @@ def bail_raw_appeal_cases():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name='bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang',
-    comment='ARIA Migration Archive Bails cases bronze table',
-    path=f"{bronze_base_path}/bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang"
-)
+    comment='ARIA Migration Archive Bails cases bronze table')
 def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
-    df = (dlt.read("raw_appeal_cases").alias("ac")
-    .join(dlt.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
-    .join(dlt.read("raw_respondent").alias("r"), col("cr.RespondentId") == col("r.RespondentId"), 'left_outer')
-    .join(dlt.read("raw_pou").alias("p"), col("cr.RespondentId") == col("p.PouId"), 'left_outer')
-    .join(dlt.read("raw_main_respondent").alias("mr"), col("cr.MainRespondentId") == col("mr.MainRespondentId"), 'left_outer')
-    .join(dlt.read("raw_file_location").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
-    .join(dlt.read("raw_case_rep").alias("crep"), col("ac.CaseNo") == col("crep.CaseNo"), "left_outer")
-    .join(dlt.read("raw_representative").alias("rep"), col("crep.RepresentativeId") == col("rep.RepresentativeId"), "left_outer")
-    .join(dlt.read("raw_language").alias("l"), col("ac.LanguageId") == col("l.LanguageId"), "left_outer")
-    .join(dlt.read("raw_cost_award").alias("ca"), col("ac.CaseNo") == col("ca.CaseNo"), "left_outer")
-    .join(dlt.read("raw_country").alias("cl"), col("ac.CountryId") == col("cl.CountryId"), "left_outer")
-    .join(dlt.read("raw_country").alias("n"), col("ac.NationalityId") == col("n.CountryId"), "left_outer")
-    .join(dlt.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
-    .join(dlt.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
-    .join(dlt.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
-    .join(dlt.read("raw_hearing_centre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer")
+    df = (dp.read("raw_appeal_cases").alias("ac")
+    .join(dp.read("raw_case_respondents").alias("cr"), col("ac.CaseNo") == col("cr.CaseNo"), 'left_outer')
+    .join(dp.read("raw_respondent").alias("r"), col("cr.RespondentId") == col("r.RespondentId"), 'left_outer')
+    .join(dp.read("raw_pou").alias("p"), col("cr.RespondentId") == col("p.PouId"), 'left_outer')
+    .join(dp.read("raw_main_respondent").alias("mr"), col("cr.MainRespondentId") == col("mr.MainRespondentId"), 'left_outer')
+    .join(dp.read("raw_file_location").alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
+    .join(dp.read("raw_case_rep").alias("crep"), col("ac.CaseNo") == col("crep.CaseNo"), "left_outer")
+    .join(dp.read("raw_representative").alias("rep"), col("crep.RepresentativeId") == col("rep.RepresentativeId"), "left_outer")
+    .join(dp.read("raw_language").alias("l"), col("ac.LanguageId") == col("l.LanguageId"), "left_outer")
+    .join(dp.read("raw_cost_award").alias("ca"), col("ac.CaseNo") == col("ca.CaseNo"), "left_outer")
+    .join(dp.read("raw_country").alias("cl"), col("ac.CountryId") == col("cl.CountryId"), "left_outer")
+    .join(dp.read("raw_country").alias("n"), col("ac.NationalityId") == col("n.CountryId"), "left_outer")
+    .join(dp.read("raw_port").alias("po"),col("ac.PortId") == col("po.PortId"), "left_outer")
+    .join(dp.read("raw_embassy").alias("e"), col("cr.RespondentId") == col("e.EmbassyId"), "left_outer")
+    .join(dp.read("raw_department").alias("dp"), col("dp.DeptId") == col("fl.DeptID"), "left_outer")
+    .join(dp.read("raw_hearing_centre").alias("hc"), col("dp.CentreId") == col("hc.CentreId"), "left_outer")
     .select(
         # AppealCase Fields
         col("ac.CaseNo"),
@@ -905,16 +898,15 @@ def bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name='bronze_bail_ac_ca_apt_country_detc',
-    comment='ARIA Migration Archive Bails cases bronze table',
-    path=f"{bronze_base_path}/bronze_bail_ac_ca_apt_country_detc")
+    comment='ARIA Migration Archive Bails cases bronze table')
 def bronze_bail_ac_ca_apt_country_detc():
     df =  (
-        dlt.read("raw_case_appellant").alias("ca")
-        .join(dlt.read("raw_appellant").alias("a"), col("ca.AppellantId") == col("a.AppellantId"), "left_outer")
-        .join(dlt.read("raw_detention_centre").alias("dc"), col("a.DetentionCentreId") == col("dc.DetentionCentreId"), "left_outer")
-        .join(dlt.read("raw_country").alias("c"), col("a.AppellantCountryId") == col("c.CountryId"), "left_outer")
+        dp.read("raw_case_appellant").alias("ca")
+        .join(dp.read("raw_appellant").alias("a"), col("ca.AppellantId") == col("a.AppellantId"), "left_outer")
+        .join(dp.read("raw_detention_centre").alias("dc"), col("a.DetentionCentreId") == col("dc.DetentionCentreId"), "left_outer")
+        .join(dp.read("raw_country").alias("c"), col("a.AppellantCountryId") == col("c.CountryId"), "left_outer")
         .select(
             # CaseAppellant Fields
             col("ca.AppellantId"),
@@ -1031,24 +1023,22 @@ def bronze_bail_ac_ca_apt_country_detc():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj",
-    comment="ARIA Migration Archive Bails cases bronze table",
-    path=f"{bronze_base_path}/bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj"
-)
+    comment="ARIA Migration Archive Bails cases bronze table")
 def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
     df =  (
-        dlt.read("raw_status").alias("s")
-        .join(dlt.read("raw_case_list").alias("cl"), col("s.StatusId") == col("cl.StatusId"))
-        .join(dlt.read("raw_hearing_type").alias("ht"), col("cl.HearingTypeId") == col("ht.HearingTypeId"), "left_outer")
-        .join(dlt.read("raw_list").alias("l"), col("cl.ListId") == col("l.ListId"), "left_outer")
-        .join(dlt.read("raw_list_type").alias("lt"), col("l.ListTypeId") == col("lt.ListTypeId"), "left_outer")
-        .join(dlt.read("raw_court").alias("c"), col("l.CourtId") == col("c.CourtId"), "left_outer")
-        .join(dlt.read("raw_hearing_centre").alias("hc"), col("l.CentreId") == col("hc.CentreId"), "left_outer")
-        .join(dlt.read("raw_list_sitting").alias("ls"), col("l.ListId") == col("ls.ListId"), "left_outer")
-        .join(dlt.read("raw_adjudicator").alias("adj"), col("ls.AdjudicatorId") == col("adj.AdjudicatorId"), "left_outer")
-        .join(dlt.read("raw_decision_type").alias("dt"), col("s.outcome") == col("dt.DecisionTypeId"), "left_outer")
-        .join(dlt.read("raw_appeal_cases").alias("ac"), col("s.CaseNo") == col("ac.CaseNo"))
+        dp.read("raw_status").alias("s")
+        .join(dp.read("raw_case_list").alias("cl"), col("s.StatusId") == col("cl.StatusId"))
+        .join(dp.read("raw_hearing_type").alias("ht"), col("cl.HearingTypeId") == col("ht.HearingTypeId"), "left_outer")
+        .join(dp.read("raw_list").alias("l"), col("cl.ListId") == col("l.ListId"), "left_outer")
+        .join(dp.read("raw_list_type").alias("lt"), col("l.ListTypeId") == col("lt.ListTypeId"), "left_outer")
+        .join(dp.read("raw_court").alias("c"), col("l.CourtId") == col("c.CourtId"), "left_outer")
+        .join(dp.read("raw_hearing_centre").alias("hc"), col("l.CentreId") == col("hc.CentreId"), "left_outer")
+        .join(dp.read("raw_list_sitting").alias("ls"), col("l.ListId") == col("ls.ListId"), "left_outer")
+        .join(dp.read("raw_adjudicator").alias("adj"), col("ls.AdjudicatorId") == col("adj.AdjudicatorId"), "left_outer")
+        .join(dp.read("raw_decision_type").alias("dt"), col("s.outcome") == col("dt.DecisionTypeId"), "left_outer")
+        .join(dp.read("raw_appeal_cases").alias("ac"), col("s.CaseNo") == col("ac.CaseNo"))
         .select(
             # Status
             col("s.CaseNo"),
@@ -1090,12 +1080,7 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
         )
         )
     
-
     return df
-
-
-
-
 
 # COMMAND ----------
 
@@ -1119,14 +1104,13 @@ def bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_bail_ac_bfdiary_bftype", 
-    comment="ARIA Migration Archive Bails cases bronze table", 
-    path=f"{bronze_base_path}/bronze_bail_ac_bfdiary_bftype")
+    comment="ARIA Migration Archive Bails cases bronze table")
 def bronze_bail_ac_bfdiary_bftype():
     df = (
-        dlt.read("raw_bf_diary").alias("bfd")
-        .join(dlt.read("raw_bf_type").alias("bft"), col("bfd.BFTypeId") == col("bft.BFTypeId"), "left_outer")
+        dp.read("raw_bf_diary").alias("bfd")
+        .join(dp.read("raw_bf_type").alias("bft"), col("bfd.BFTypeId") == col("bft.BFTypeId"), "left_outer")
         .select(
             col("bfd.CaseNo"),
             col("bfd.BFDate"),
@@ -1163,14 +1147,13 @@ def bronze_bail_ac_bfdiary_bftype():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_bail_ac_history_users", 
-    comment="ARIA Migration Archive Bails cases bronze table", 
-    path=f"{bronze_base_path}/bronze_bail_ac_history_users")
+    comment="ARIA Migration Archive Bails cases bronze table")
 def bronze_bail_ac_history_users():
     df = (
-        dlt.read("raw_history").alias("h")
-        .join(dlt.read("raw_users").alias("u"), col("h.UserId") == col("u.UserId"), "left_outer")
+        dp.read("raw_history").alias("h")
+        .join(dp.read("raw_users").alias("u"), col("h.UserId") == col("u.UserId"), "left_outer")
         .select(
             # History table fields
             col("h.CaseNo"),
@@ -1222,16 +1205,15 @@ def bronze_bail_ac_history_users():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
   name="bronze_bail_ac_link_linkdetail", 
-  comment="ARIA Migration Archive Bails cases bronze table", 
-  path=f"{bronze_base_path}/bronze_bail_ac_link_linkdetail")
+  comment="ARIA Migration Archive Bails cases bronze table")
 def bronze_bail_ac_link_linkdetail():
     df = (
-        dlt.read("raw_link").alias("l")
-        .join(dlt.read("raw_link_detail").alias("ld"), col("l.LinkNo") == col("ld.LinkNo"), "left_outer")
-        .join(dlt.read("raw_case_appellant").alias("ca"), col("l.CaseNo") == col("ca.CaseNo"), "left_outer")
-        .join(dlt.read("raw_appellant").alias("a"), col("ca.AppellantId") == col("a.AppellantId"), "left_outer")
+        dp.read("raw_link").alias("l")
+        .join(dp.read("raw_link_detail").alias("ld"), col("l.LinkNo") == col("ld.LinkNo"), "left_outer")
+        .join(dp.read("raw_case_appellant").alias("ca"), col("l.CaseNo") == col("ca.CaseNo"), "left_outer")
+        .join(dp.read("raw_appellant").alias("a"), col("ca.AppellantId") == col("a.AppellantId"), "left_outer")
         .select(
           col("l.LinkNo"),
           col("a.Name"),
@@ -1243,7 +1225,6 @@ def bronze_bail_ac_link_linkdetail():
         )
 
     return df
-    
 
 # COMMAND ----------
 
@@ -1322,66 +1303,64 @@ def bronze_bail_ac_link_linkdetail():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_bail_status_sc_ra_cs",
-    comment="ARIA Migration Archive Bails Status cases bronze table",
-    path=f"{bronze_base_path}/bronze_bail_status_sc_ra_cs"
-)
+    comment="ARIA Migration Archive Bails Status cases bronze table")
 def bronze_bail_status_sc_ra_cs():
     df = (
-        dlt.read("raw_status").alias("s")
+        dp.read("raw_status").alias("s")
         .join(
-            dlt.read("raw_case_status").alias("cs"),
+            dp.read("raw_case_status").alias("cs"),
             col("s.CaseStatus") == col("cs.CaseStatusId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_status_contact").alias("sc"),
+            dp.read("raw_status_contact").alias("sc"),
             col("s.StatusId") == col("sc.StatusId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_reason_adjourn").alias("ra"),
+            dp.read("raw_reason_adjourn").alias("ra"),
             col("s.ReasonAdjournId") == col("ra.ReasonAdjournId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_language").alias("l"),
+            dp.read("raw_language").alias("l"),
             col("s.AdditionalLanguageId") == col("l.LanguageId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_decisiontype").alias("dt"),
+            dp.read("raw_decisiontype").alias("dt"),
             col("s.Outcome") == col("dt.DecisionTypeId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_stm_cases").alias("stm"),
+            dp.read("raw_stm_cases").alias("stm"),
             col("s.StatusId") == col("stm.NewStatusId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_list_type").alias("lt"),
+            dp.read("raw_list_type").alias("lt"),
             col("s.ListTypeId") == col("lt.ListTypeId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_hearing_type").alias("ht"),
+            dp.read("raw_hearing_type").alias("ht"),
             col("s.HearingTypeId") == col("ht.HearingTypeId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_adjudicator").alias("a1"),
+            dp.read("raw_adjudicator").alias("a1"),
             col("stm.Judiciary1Id") == col("a1.AdjudicatorId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_adjudicator").alias("a2"),
+            dp.read("raw_adjudicator").alias("a2"),
             col("stm.Judiciary2Id") == col("a2.AdjudicatorId"),
             "left_outer"
         )
         .join(
-            dlt.read("raw_adjudicator").alias("a3"),
+            dp.read("raw_adjudicator").alias("a3"),
             col("stm.Judiciary3Id") == col("a3.AdjudicatorId"),
             "left_outer"
         )
@@ -1472,9 +1451,6 @@ def bronze_bail_status_sc_ra_cs():
 
     return df
 
-
-
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -1495,15 +1471,13 @@ def bronze_bail_status_sc_ra_cs():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_bail_ac_appealcategory_category",
-    comment="ARIA Migration Archive Bails Appeal Category cases bronze table",
-    path=f"{bronze_base_path}/bronze_bail_ac_appealcategory_category"
-)
+    comment="ARIA Migration Archive Bails Appeal Category cases bronze table")
 def bronze_bail_ac_appealcategory_category():
     df = (
-        dlt.read("raw_appeal_category").alias("ap")
-        .join(dlt.read("raw_category").alias("c"), col("ap.CategoryId") == col("c.CategoryId"), "left_outer")
+        dp.read("raw_appeal_category").alias("ap")
+        .join(dp.read("raw_category").alias("c"), col("ap.CategoryId") == col("c.CategoryId"), "left_outer")
         .select(
             # AppealCategory fields
             col("ap.CaseNo"),
@@ -1524,14 +1498,12 @@ def bronze_bail_ac_appealcategory_category():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="bronze_case_surety_query",
-    comment="ARIA Migration Archive Case Surety cases bronze table",
-    path=f"{bronze_base_path}/bronze_case_surety_query"
-)
+    comment="ARIA Migration Archive Case Surety cases bronze table")
 def bronze_case_surety_query():
     df = (
-        dlt.read("raw_case_surety").alias("cs")
+        dp.read("raw_case_surety").alias("cs")
         .select(
             # CaseSurety fields
             col("SuretyId"),
@@ -1557,9 +1529,6 @@ def bronze_case_surety_query():
 
     return df
 
-
-
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -1582,16 +1551,14 @@ def bronze_case_surety_query():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="judicial_requirement",
-    comment="ARIA Migration Archive Judicial Requirements cases table",
-    path=f"{bronze_base_path}/judicial_requirement"
-)
+    comment="ARIA Migration Archive Judicial Requirements cases table")
 
 def judicial_requirement():
     df = (
-        dlt.read("raw_case_adjudicator").alias("ca")
-        .join(dlt.read("raw_adjudicator").alias("adj"), col("ca.AdjudicatorId") == col("adj.AdjudicatorId"), "inner")
+        dp.read("raw_case_adjudicator").alias("ca")
+        .join(dp.read("raw_adjudicator").alias("adj"), col("ca.AdjudicatorId") == col("adj.AdjudicatorId"), "inner")
         .select(
                 col("ca.CaseNo"),
                 col("ca.required"),
@@ -1644,18 +1611,16 @@ def judicial_requirement():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="linked_cases_cost_award",
-    comment="Linked Cases Cost Award cases table",
-    path=f"{bronze_base_path}/linked_cases_cost_award"
-)
+    comment="Linked Cases Cost Award cases table")
 def linked_cases_cost_award():
     df =  (
-        dlt.read("raw_cost_award").alias("ca")
-        .join(dlt.read("raw_link").alias("l"), col("ca.CaseNo") == col("l.CaseNo"), "left_outer")
-        .join(dlt.read("raw_case_appellant").alias("cap"), col("ca.CaseNo") == col("cap.CaseNo"), "left_outer")
-        .join(dlt.read("raw_appellant").alias("a"), col("cap.AppellantId") == col("a.AppellantId"), "left_outer")
-        .join(dlt.read("raw_case_status").alias("cs"), col("ca.AppealStage") == col("cs.CaseStatusId"), "left_outer")
+        dp.read("raw_cost_award").alias("ca")
+        .join(dp.read("raw_link").alias("l"), col("ca.CaseNo") == col("l.CaseNo"), "left_outer")
+        .join(dp.read("raw_case_appellant").alias("cap"), col("ca.CaseNo") == col("cap.CaseNo"), "left_outer")
+        .join(dp.read("raw_appellant").alias("a"), col("cap.AppellantId") == col("a.AppellantId"), "left_outer")
+        .join(dp.read("raw_case_status").alias("cs"), col("ca.AppealStage") == col("cs.CaseStatusId"), "left_outer")
         .select(
             col("ca.CostAwardId").alias("CostAwardId"),
             col("l.LinkNo").alias("LinkNo"),
@@ -1694,17 +1659,15 @@ def linked_cases_cost_award():
 
 from pyspark.sql import functions as F
 
-@dlt.table(
+@dp.table(
     name="silver_normal_bail",
-    comment="Silver Normal Bail cases table",
-    path=f"{silver_base_path}/silver_normal_bail"
-)
+    comment="Silver Normal Bail cases table")
 def silver_normal_bail():
     # Read the necessary raw data
-    appeal_case = dlt.read("raw_appeal_cases").alias("ac")
-    status = dlt.read("raw_status").alias("t")
-    file_location = dlt.read("raw_file_location").alias("fl")
-    history = dlt.read("raw_history").alias("h")
+    appeal_case = dp.read("raw_appeal_cases").alias("ac")
+    status = dp.read("raw_status").alias("t")
+    file_location = dp.read("raw_file_location").alias("fl")
+    history = dp.read("raw_history").alias("h")
 
     # Create a subquery to get the max StatusId for each CaseNo
     max_status_subquery = (
@@ -1769,17 +1732,14 @@ def silver_normal_bail():
 
 # COMMAND ----------
 
-
-@dlt.table(
+@dp.table(
     name="silver_legal_hold_normal_bail",
-    comment="Silver table for legal hold normal bail cases",
-    path=f"{silver_base_path}/silver_legal_hold_normal_bail"
-)
+    comment="Silver table for legal hold normal bail cases")
 def silver_legal_hold_normal_bail():
     # Read the necessary raw data
-    appeal_case = dlt.read("raw_appeal_cases").alias("ac")
-    file_location = dlt.read("raw_file_location").alias("fl")
-    history = dlt.read("raw_history").alias("h")
+    appeal_case = dp.read("raw_appeal_cases").alias("ac")
+    file_location = dp.read("raw_file_location").alias("fl")
+    history = dp.read("raw_history").alias("h")
 
     # Filter and join the data according to the provided SQL logic
     result = (
@@ -1815,38 +1775,16 @@ def silver_legal_hold_normal_bail():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Scottish Bails holding funds
-
-# COMMAND ----------
-
-# @dlt.table(name="silver_scottish_bails_funds",
-#            comment="Silver table for Scottish Bails Funds cases",
-#            path=f"{silver_base_path}/silver_scottish_bails_funds")
-# def silver_scottish_bails_funds():
-#     df = spark.read.format("csv").option("header", "true").load(f"{external_base_path}/Scottish__Bailsfile.csv").select(
-#         col("Caseno/ Bail Ref no").alias("CaseNo"),
-#         lit("ScottishBailsFunds").alias("BaseBailType")
-#         )
-
-
-#     return df
-    
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ## Combined Segmentaiton query
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_combined_segmentation_nb_lhnb",
-           comment="Silver table for combined segmentation Normal bails, legal hold normal bail cases and Scottish Bails Holding Funds",
-           path=f"{silver_base_path}/silver_bail_combined_segmentation_nb_lhnb")
+@dp.table(name="silver_bail_combined_segmentation_nb_lhnb",
+           comment="Silver table for combined segmentation Normal bails, legal hold normal bail cases and Scottish Bails Holding Funds")
 def silver_bail_combined_segmentation_nb_lhnb():
-    nb = dlt.read("silver_normal_bail").select("CaseNo", "BaseBailType")
-    lhnb = dlt.read("silver_legal_hold_normal_bail").select("CaseNo", "BaseBailType")
+    nb = dp.read("silver_normal_bail").select("CaseNo", "BaseBailType")
+    lhnb = dp.read("silver_legal_hold_normal_bail").select("CaseNo", "BaseBailType")
     df =  nb.union(lhnb).select("CaseNo","BaseBailType")
-
 
     return df
 
@@ -1862,15 +1800,13 @@ def silver_bail_combined_segmentation_nb_lhnb():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m1_case_details",
-           comment="ARIA Migration Archive Bails m1 silver table",
-           path=f"{silver_base_path}/silver_bail_m1")
+@dp.table(name="silver_bail_m1_case_details",
+           comment="ARIA Migration Archive Bails m1 silver table")
 def silver_m1():
-    m1_df = dlt.read("bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
-    m4_df = dlt.read('bronze_bail_ac_bfdiary_bftype').alias('m4')
+    m1_df = dp.read("bronze_bail_ac_cr_cs_ca_fl_cres_mr_res_lang").alias("m1")
+    m4_df = dp.read('bronze_bail_ac_bfdiary_bftype').alias('m4')
 
-    
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     
     joined_df = m1_df.join(segmentation_df.alias("bs"), col("m1.CaseNo") == col("bs.CaseNo"), "inner"
                        ).join(m4_df, col("m1.CaseNo") == col("m4.CaseNo"), "left")
@@ -1923,12 +1859,11 @@ def silver_m1():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m2_case_appellant",
-           comment="ARIA Migration Archive Bails m2 silver table",
-           path=f"{silver_base_path}/silver_bail_m2_case_appellant")
+@dp.table(name="silver_bail_m2_case_appellant",
+           comment="ARIA Migration Archive Bails m2 silver table")
 def silver_m2():
-    m2_df = dlt.read("bronze_bail_ac_ca_apt_country_detc").alias("m2")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    m2_df = dp.read("bronze_bail_ac_ca_apt_country_detc").alias("m2")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
 
     joined_df = m2_df.join(segmentation_df.alias("bs"), col("m2.CaseNo") == col("bs.CaseNo"), "inner")
 
@@ -1972,16 +1907,15 @@ m3_grouped_cols = [
 
 
 
-@dlt.table(name="silver_bail_m3_hearing_details", 
-           comment="ARIA Migration Archive Bails m3 silver table", 
-           path=f"{silver_base_path}/silver_bail_m3")
+@dp.table(name="silver_bail_m3_hearing_details", 
+           comment="ARIA Migration Archive Bails m3 silver table")
 
 def silver_m3():
     # 1. Read from the existing Hive table
-    m3_df = dlt.read("bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
+    m3_df = dp.read("bronze_bail_ac_cl_ht_list_lt_hc_c_ls_adj").alias("m3")
     m3_df = m3_df.withColumn("CaseNo", trim("CaseNo"))
     
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     segmentation_df = segmentation_df.withColumn("CaseNo", trim("CaseNo"))
 
     joined_df = (
@@ -2004,12 +1938,11 @@ def silver_m3():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m4_bf_diary",
-           comment="ARIA Migration Archive Bails m4 silver table",
-           path=f"{silver_base_path}/silver_bail_m4_bf_diary")
+@dp.table(name="silver_bail_m4_bf_diary",
+           comment="ARIA Migration Archive Bails m4 silver table")
 def silver_m4():
-    m4_df = dlt.read("bronze_bail_ac_bfdiary_bftype").alias("m4")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    m4_df = dp.read("bronze_bail_ac_bfdiary_bftype").alias("m4")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     joined_df = m4_df.join(segmentation_df.alias("bs"), col("m4.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m4_df.columns if c != "CaseNo"]
     df = joined_df.select("m4.CaseNo", *selected_columns)
@@ -2025,12 +1958,11 @@ def silver_m4():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m5_history",
-           comment="ARIA Migration Archive Bails m5 silver table",
-           path=f"{silver_base_path}/silver_bail_m5_history")
+@dp.table(name="silver_bail_m5_history",
+           comment="ARIA Migration Archive Bails m5 silver table")
 def silver_m5():
-    m5_df = dlt.read("bronze_bail_ac_history_users").alias("m5")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    m5_df = dp.read("bronze_bail_ac_history_users").alias("m5")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     joined_df = m5_df.join(segmentation_df.alias("bs"), col("m5.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m5_df.columns if c != "CaseNo"]
     df = joined_df.select(trim("m5.CaseNo").alias("CaseNo"), *selected_columns,
@@ -2096,12 +2028,11 @@ def silver_m5():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m6_link",
-           comment="ARIA Migration Archive Bails m6 silver table",
-           path=f"{silver_base_path}/silver_bail_m6_link")
+@dp.table(name="silver_bail_m6_link",
+           comment="ARIA Migration Archive Bails m6 silver table")
 def silver_m6():
-    m6_df = dlt.read("bronze_bail_ac_link_linkdetail").alias("m6")
-    # segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    m6_df = dp.read("bronze_bail_ac_link_linkdetail").alias("m6")
+    # segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     # joined_df = m6_df.join(segmentation_df.alias("bs"), col("m6.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
 
@@ -2120,11 +2051,10 @@ def silver_m6():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m7_status",
-           comment="ARIA Migration Archive Bails m7 silver table",
-           path=f"{silver_base_path}/silver_bail_m7_status")
+@dp.table(name="silver_bail_m7_status",
+           comment="ARIA Migration Archive Bails m7 silver table")
 def silver_m7():
-    m7_df = dlt.read("bronze_bail_status_sc_ra_cs").alias("m7")
+    m7_df = dp.read("bronze_bail_status_sc_ra_cs").alias("m7")
 
     m7_cleaned = [c for c in m7_df.columns if c not in ["TotalAmountOfFinancialCondition","TotalSecurity"]]
 
@@ -2173,12 +2103,11 @@ def silver_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_bail_m8",
-           comment="ARIA Migration Archive Bails m8 silver table",
-           path=f"{silver_base_path}/silver_bail_m8")
+@dp.table(name="silver_bail_m8",
+           comment="ARIA Migration Archive Bails m8 silver table")
 def silver_m8():
-    m8_df = dlt.read("bronze_bail_ac_appealcategory_category").alias("m8")
-    segmentation_df = dlt.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
+    m8_df = dp.read("bronze_bail_ac_appealcategory_category").alias("m8")
+    segmentation_df = dp.read("silver_bail_combined_segmentation_nb_lhnb").alias("bs")
     joined_df = m8_df.join(segmentation_df.alias("bs"), col("m8.CaseNo") == col("bs.CaseNo"), "inner")
     selected_columns = [col(c) for c in m8_df.columns if c != "CaseNo"]
     df = joined_df.select("m8.CaseNo", *selected_columns)
@@ -2201,11 +2130,9 @@ def silver_m8():
 
 # from pyspark.sql.functions import max
 
-@dlt.table(
+@dp.table(
   name="silver_bail_meta_data",
-  comment="ARIA Migration Archive Bails meta data table",
-  path=f"{silver_base_path}/silver_bail_meta_data"
-)
+  comment="ARIA Migration Archive Bails meta data table")
 def silver_meta_data():
     ## Read in Status, Outcome combinations
     df_StatusOutcomeCombinations = spark.read.option("header", True).csv(
@@ -2223,12 +2150,9 @@ def silver_meta_data():
         .dropDuplicates()
     )
 
-    m1_df = dlt.read("silver_bail_m1_case_details").alias("m1")
-    m2_df = dlt.read("silver_bail_m2_case_appellant").alias("m2")
-    m7_df = dlt.read("silver_bail_m7_status").alias("m7")
-    # max_statusid = m7_df.groupby(col("CaseNo")).agg(F.max(col("StatusId")))
-
-    # m7_max_decision_date = max_statusid.join(m7_df, (max_statusid['CaseNo'] == m7_df['CaseNo']) & (max_statusid['max(StatusId)'] == m7_df['StatusId']), "inner").drop(max_statusid.CaseNo).select(col("m7.CaseNo"), col("m7.DecisionDate"), col("m7.CaseStatus"), col("m7.Outcome")).alias("m7_max")
+    m1_df = dp.read("silver_bail_m1_case_details").alias("m1")
+    m2_df = dp.read("silver_bail_m2_case_appellant").alias("m2")
+    m7_df = dp.read("silver_bail_m7_status").alias("m7")
 
     w = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -2891,12 +2815,12 @@ stg_m1_m2_struct = struct(
 # COMMAND ----------
 
 
-@dlt.table(name="stg_m1_m2")
+@dp.table(name="stg_m1_m2")
 def stg_m1_m2():
     # Read tables
-    m1 = dlt.read("silver_bail_m1_case_details").alias("m1")
+    m1 = dp.read("silver_bail_m1_case_details").alias("m1")
 
-    m2 = dlt.read("silver_bail_m2_case_appellant").filter(col("Relationship").isNull()).alias("m2")
+    m2 = dp.read("silver_bail_m2_case_appellant").filter(col("Relationship").isNull()).alias("m2")
 
     # find all columns in m2 not in m1
     m2_new_columns = [col_name for col_name in m2.columns if col_name not in m1.columns]
@@ -2923,10 +2847,10 @@ def stg_m1_m2():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m3_m7")
+@dp.table(name="stg_m3_m7")
 def stg_m3_m7():                    
 
-    m3 = dlt.read("silver_bail_m3_hearing_details")
+    m3 = dp.read("silver_bail_m3_hearing_details")
 
     columns_to_group_by = [col(c) for c in m3.columns if c not in ["FullName", "AdjudicatorTitle", "AdjudicatorForenames", "AdjudicatorSurname", "Chairman", "Position"]]
 
@@ -2950,7 +2874,7 @@ def stg_m3_m7():
             new_col = c
         pivoted_df = pivoted_df.withColumnRenamed(c, new_col)
 
-    m7 = dlt.read("silver_bail_m7_status")
+    m7 = dp.read("silver_bail_m7_status")
     m7 = m7.withColumn(
     "StatusParty",
     when(col("StatusParty") == 0, lit(None)) 
@@ -3023,10 +2947,11 @@ def stg_m3_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m7_m3_statuses", comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
+@dp.table(name="stg_m7_m3_statuses", 
+           comment="This table will be joined to the m3_m7 table to add information like the max statusid and secondary language")
 def final_m7_m3_statuses():
 
-    m7_m3_statuses = dlt.read("stg_m3_m7")
+    m7_m3_statuses = dp.read("stg_m3_m7")
 
     exploded = m7_m3_statuses.select(col("CaseNo"), explode("all_status_objects").alias("status"))
 
@@ -3046,11 +2971,11 @@ def final_m7_m3_statuses():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m7")
+@dp.table(name="stg_m1_m2_m3_m7")
 def m1_m2_m3_m7():
 
-    m1_m2 = dlt.read("stg_m1_m2")
-    final_m7_m3_statuses = dlt.read("stg_m7_m3_statuses")
+    m1_m2 = dp.read("stg_m1_m2")
+    final_m7_m3_statuses = dp.read("stg_m7_m3_statuses")
 
     # Join status stab to main table m1_m2 table
     m1_m2_m3_m7_df = m1_m2.join(final_m7_m3_statuses, "CaseNo", "left_outer")
@@ -3085,16 +3010,17 @@ template_for_status = { 4: bail_Application,
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m5_m7", comment="Silver Bail M1 M2 Table")
+@dp.table(name="stg_m1_m2_m3_m5_m7", 
+           comment="Silver Bail M1 M2 Table")
 def stg_m1_m2_m3_m5_m7():
 
 
     # History table
     # read in all tables
 
-    m5 = dlt.read("silver_bail_m5_history")
+    m5 = dp.read("silver_bail_m5_history")
 
-    m1_m2_m3_m7_df = dlt.read("stg_m1_m2_m3_m7")
+    m1_m2_m3_m7_df = dp.read("stg_m1_m2_m3_m7")
 
     # History 
 
@@ -3181,16 +3107,17 @@ def stg_m1_m2_m3_m5_m7():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m4_m5_m7", comment="Silver Bail M4 Table")
+@dp.table(name="stg_m1_m2_m3_m4_m5_m7", 
+           comment="Silver Bail M4 Table")
 def stg_m1_m2_m3_m4_m5_m7_df():
 
-    m1_m2_m3_m5_m7_df = dlt.read("stg_m1_m2_m3_m5_m7")
+    m1_m2_m3_m5_m7_df = dp.read("stg_m1_m2_m3_m5_m7")
 
     # BF diary M4 Tables
 
     # read in all tables
 
-    m4 = dlt.read("silver_bail_m4_bf_diary")
+    m4 = dp.read("silver_bail_m4_bf_diary")
 
 
     m4_bfdiary_df = m4.groupBy(col("CaseNo")).agg(
@@ -3214,16 +3141,16 @@ def stg_m1_m2_m3_m4_m5_m7_df():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m4_m5_m7_m8")
+@dp.table(name="stg_m1_m2_m3_m4_m5_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 
-    m1_m2_m3_m4_m5_m7_df = dlt.read("stg_m1_m2_m3_m4_m5_m7")
+    m1_m2_m3_m4_m5_m7_df = dp.read("stg_m1_m2_m3_m4_m5_m7")
 
     # Appeal Category
 
     # read in all tables
 
-    m8 = dlt.read("silver_bail_m8")
+    m8 = dp.read("silver_bail_m8")
 
 
     m8_appeal_category_df = m8.groupBy(col("CaseNo")).agg(
@@ -3238,9 +3165,6 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     return m1_m2_m3_m4_m5_m7_m8_df
 
 
-
-
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -3248,11 +3172,11 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 
 # COMMAND ----------
 
-@dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
+@dp.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
     
-    m1_m2_m3_m4_m5_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m7_m8")
-    m6 = dlt.read("silver_bail_m6_link")
+    m1_m2_m3_m4_m5_m7_m8_df = dp.read("stg_m1_m2_m3_m4_m5_m7_m8")
+    m6 = dp.read("silver_bail_m6_link")
 
     link_details = (
     m6
@@ -3288,19 +3212,6 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_df():
 
 # COMMAND ----------
 
-# m6_df = spark.read.table("hive_metastore.aria_bails.bronze_bail_ac_link_linkdetail").alias("m6")
-# m6_apls_df = spark.read.table("hive_metastore.ariadm_arm_fta.bronze_appealcase_link_linkdetail").alias("ld")
-# selected_columns = [col(c) for c in m6_df.columns if c != "CaseNo"]
-
-# df = m6_df.select("CaseNo", "LinkNo", "LinkDetailComment", concat_ws(" ",
-#     col("Title"),col("Forenames"),col("Name")).alias("FullName")
-# )
-# df = df.withColumn("CaseNo", trim("CaseNo"))
-
-# df.display()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Join Casesurety to master table
 
@@ -3326,13 +3237,13 @@ case_surety_replacement = {
 }
 
 
-@dlt.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8_cs")
+@dp.table(name="stg_m1_m2_m3_m4_m5_m6_m7_m8_cs")
 def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
 
-    m1_m2_m3_m4_m5_m6_m7_m8_df = dlt.read("stg_m1_m2_m3_m4_m5_m6_m7_m8")
+    m1_m2_m3_m4_m5_m6_m7_m8_df = dp.read("stg_m1_m2_m3_m4_m5_m6_m7_m8")
 
     # read in all tables
-    case_surety = dlt.read("bronze_case_surety_query")
+    case_surety = dp.read("bronze_case_surety_query")
 
     case_surety = case_surety.withColumn(
                                     "Solicitor_new",
@@ -3374,8 +3285,6 @@ def stg_m1_m2_m3_m4_m5_m6_m7_m8_cs_df():
     )
 
     return m1_m2_m3_m4_m5_m6_m7_m8_cs_df
-
-
 
 # COMMAND ----------
 
@@ -3444,14 +3353,14 @@ respondent_mapping = {
 
 # COMMAND ----------
 
-@dlt.table(name="final_staging_bails")
+@dp.table(name="final_staging_bails")
 def final_staging_bails():
 
 
-    m1_m2_m3_m4_m5_m6_m7_m8_cs_df = dlt.read("stg_m1_m2_m3_m4_m5_m6_m7_m8_cs")
+    m1_m2_m3_m4_m5_m6_m7_m8_cs_df = dp.read("stg_m1_m2_m3_m4_m5_m6_m7_m8_cs")
 
     # read in all tables
-    linked_cases = dlt.read("linked_cases_cost_award")
+    linked_cases = dp.read("linked_cases_cost_award")
 
     linked_cases_df = linked_cases.groupBy(col("CaseNo")).agg(
         collect_list(
@@ -3492,28 +3401,6 @@ def final_staging_bails():
 
 # MAGIC %md
 # MAGIC ![functions.jpg](./functions.jpg "functions.jpg"))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### code checking duplicates
-
-# COMMAND ----------
-
-# tables = spark.catalog.listTables("hive_metastore.aria_bails")
-# for table in tables:
-#     # if table.name.startswith("bronze_") or table.name.startswith("silver_"):
-#     if table.name.startswith("silver_"):
-#         table_name = f"hive_metastore.aria_bails.{table.name}"
-#         df = spark.read.table(table_name)
-#         if "CaseNo" in df.columns:
-#             duplicate_cases = df.groupBy("CaseNo").count().filter("count > 1")
-#             if duplicate_cases.count() > 0:
-#                 print(f"Table {table_name} has duplicate CaseNo")
-#             else:
-#                 print(f"Table {table_name} has unique CaseNo")
-#         table_name = f"hive_metastore.aria_bails.{table.name}"
-#         print(table_name)
 
 # COMMAND ----------
 
@@ -3953,13 +3840,12 @@ create_html_udf = udf(create_html_column, StringType())
 # COMMAND ----------
 
 
-@dlt.table(
+@dp.table(
     name="create_bails_html_content",
-    comment="create the HTML content for bails and add a fail name",
-    path=f"{silver_base_path}/bail_html_content")
-# 
+    comment="create the HTML content for bails and add a fail name")
+
 def create_bails_html_content():
-    df = dlt.read("final_staging_bails")
+    df = dp.read("final_staging_bails")
 
     results_df = df.withColumn("HTMLContent", create_html_udf(struct(*df.columns))).withColumn("HTML_File_path", concat(lit(f"{gold_html_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".html")))
 
@@ -3973,28 +3859,6 @@ def create_bails_html_content():
 
 
     return df
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Setting up 'Write' Funciton
-
-# COMMAND ----------
-
-# secret = secret = dbutils.secrets.get(keyvault_name, "curatedsbox-connection-string-sbox")
- 
- 
-# from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-# import os
- 
-# # Set up the BlobServiceClient with your connection string
-# connection_string = f"BlobEndpoint=https://ingest00curatedsbox.blob.core.windows.net/;QueueEndpoint=https://ingest00curatedsbox.queue.core.windows.net/;FileEndpoint=https://ingest00curatedsbox.file.core.windows.net/;TableEndpoint=https://ingest00curatedsbox.table.core.windows.net/;SharedAccessSignature={secret}"
- 
-# blob_service_client = BlobServiceClient.from_connection_string(connection_string)
- 
-# # Specify the container name
-# container_name = "gold"
-# container_client = blob_service_client.get_container_client(container_name)
 
 # COMMAND ----------
 
@@ -4031,14 +3895,12 @@ upload_to_blob_udf = udf(upload_to_blob, StringType())
 from pyspark.sql.functions import to_json,struct
 
 
-@dlt.table(
+@dp.table(
     name="create_bails_json_content",
-    comment="create the JSON content for bails and add a fail name",
-    path=f"{silver_base_path}/bail_json_content",
-)
+    comment="create the JSON content for bails and add a fail name")
 def create_bails_json_content():
     try:
-        m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df = dlt.read("final_staging_bails")
+        m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df = dp.read("final_staging_bails")
 
         df_with_json = m1_m2_m3_m4_m5_m6_m7_m8_cs_lc_df.withColumn("JSONContent", to_json(struct("*"))).withColumn("JSON_File_path", concat(lit(f"{gold_json_outputs}bails_"), regexp_replace(trim(col("CaseNo")), "/", "_"), lit(f".json")))
 
@@ -4121,15 +3983,11 @@ def generate_a360(row):
  
 # Register UDF
 generate_a360_udf = udf(generate_a360, StringType())
- 
-
-
 
 # COMMAND ----------
 
-@dlt.table(name="create_bails_a360_content", 
-           comment="A360 content for bails",
-           path=f"{gold_base_path}/Data/create_bails_a360_content")
+@dp.table(name="create_bails_a360_content", 
+           comment="A360 content for bails")
 
 def gold_bails_with_a360():
     """
@@ -4137,7 +3995,7 @@ def gold_bails_with_a360():
     """
     ## Load in the metadata table adding in the file names and construct an a360 content string for each unique id
     metadata_df = (
-        dlt.read("silver_bail_meta_data").withColumn(
+        dp.read("silver_bail_meta_data").withColumn(
             "JSONFileName",
             concat(
                 lit("bails_"),
@@ -4177,16 +4035,16 @@ def gold_bails_with_a360():
 # COMMAND ----------
 
 
-@dlt.table(name="gold_bails_HTML_JSON_a360", comment="A360 content for bails", path=f"{gold_base_path}/Data/gold_bails_HTML_JSON_a360")
-@dlt.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE '%failure%')")
-@dlt.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE '%failure%')")
-@dlt.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE '%failure%')")
+@dp.table(name="gold_bails_HTML_JSON_a360", comment="A360 content for bails")
+@dp.expect_or_drop("No errors in HTML content", "NOT (lower(HTMLContent) LIKE '%failure%')")
+@dp.expect_or_drop("No errors in JSON content", "NOT (lower(JSONContent) LIKE '%failure%')")
+@dp.expect_or_drop("No errors in A360 content", "NOT (lower(A360Content) LIKE '%failure%')")
 
 
 def gold_bails_HTML_JSON_with_a360():
-    a360_df = dlt.read("create_bails_a360_content").alias("a360").withColumnRenamed("Status","HTML_Status")
-    html_df = dlt.read("create_bails_html_content").alias("html").withColumnRenamed("Status","JSON_Status")
-    json_df = dlt.read("create_bails_json_content").alias("json").withColumnRenamed("Status","A360_Status")
+    a360_df = dp.read("create_bails_a360_content").alias("a360").withColumnRenamed("Status","HTML_Status")
+    html_df = dp.read("create_bails_html_content").alias("html").withColumnRenamed("Status","JSON_Status")
+    json_df = dp.read("create_bails_json_content").alias("json").withColumnRenamed("Status","A360_Status")
 
     # Rename CaseNo to match client_identifier for correct joins
     json_df = json_df.withColumnRenamed("CaseNo", "client_identifier")
@@ -4218,13 +4076,11 @@ def gold_bails_HTML_JSON_with_a360():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="save_html_to_blob",
-    comment="upload HTML content to blob storage",
-    path=f"{silver_base_path}/save_html_to_blob",
-)
+    comment="upload HTML content to blob storage")
 def save_html_to_blob():
-    results_df = dlt.read("gold_bails_HTML_JSON_a360")
+    results_df = dp.read("gold_bails_HTML_JSON_a360")
 
     repartioned_df = results_df.repartition(64)
 
@@ -4247,13 +4103,11 @@ def save_html_to_blob():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
   name="save_json_to_blob",
-  comment="upload JSON content to blob storage",
-  path=f"{silver_base_path}/save_json_to_blob",
-)
+  comment="upload JSON content to blob storage")
 def save_json_to_blob():
-  df_with_json = dlt.read("gold_bails_HTML_JSON_a360")
+  df_with_json = dp.read("gold_bails_HTML_JSON_a360")
   json_repartioned_df = df_with_json.repartition(64)
 
   df_json_with_status = json_repartioned_df.withColumn("Status", upload_to_blob_udf(col("JSON_File_path"), col("JSONContent")))
@@ -4270,16 +4124,15 @@ def save_json_to_blob():
 
 # COMMAND ----------
 
-@dlt.table(name="gold_bails_a360", 
-           comment="A360 content for bails",
-           path=f"{gold_base_path}/Data/batched_A360_save_status")
+@dp.table(name="gold_bails_a360", 
+           comment="A360 content for bails")
 
 def gold_bails_with_a360():
     """
     This function generates A360 content in batches of 250 unique_ids and uploads to blob storage
     """
 
-    metadata_df = dlt.read("gold_bails_HTML_JSON_a360")
+    metadata_df = dp.read("gold_bails_HTML_JSON_a360")
 
     ## Group by batchid and concat all the A360 content into a single string
     batched_a360_df = metadata_df.groupBy("batchid2").agg(concat_ws("\n", collect_list(col("A360Content"))).alias("A360Content")).withColumn("File_name", concat(lit(f"{gold_a360_outputs}bails_"), col("batchid2"), lit(".a360")))
@@ -4292,7 +4145,3 @@ def gold_bails_with_a360():
 
 
     return a360_result_df
-
-# COMMAND ----------
-
-

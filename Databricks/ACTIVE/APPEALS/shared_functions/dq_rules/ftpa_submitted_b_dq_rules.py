@@ -14,7 +14,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
             """
             (
                 (
-                    dq_cs39_status = 39 AND 
+                    dq_cs39_status <=> 39 AND
                     (allocatedJudge <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
                 )
                 OR
@@ -29,7 +29,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
             """
             (
                 (
-                    dq_cs39_status = 39 AND 
+                    dq_cs39_status <=> 39 AND
                     (allocatedJudgeEdit <=> concat(Adj_Title, ' ', Adj_Forenames, ' ', Adj_Surname))
                 )
                 OR
@@ -40,6 +40,6 @@ class ftpaSubmittedBDQRules(DQRulesBase):
                 """
         )
 
-        checks["valid_judgeAllocationExists"] = ("(judgeAllocationExists = 'Yes')")
+        checks["valid_judgeAllocationExists"] = ("(judgeAllocationExists <=> 'Yes')")
 
         return checks

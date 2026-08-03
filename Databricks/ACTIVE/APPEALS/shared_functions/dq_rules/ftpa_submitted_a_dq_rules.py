@@ -14,56 +14,56 @@ class ftpaSubmittedADQRules(DQRulesBase):
     def get_checks_document(self, checks={}):
         checks["valid_ftpaAppellantDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantDocuments), 0) = 0
                 ELSE ftpaAppellantDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentDocuments), 0) = 0
                 ELSE ftpaRespondentDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaAppellantGroundsDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantGroundsDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantGroundsDocuments), 0) = 0
                 ELSE ftpaAppellantGroundsDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentGroundsDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentGroundsDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentGroundsDocuments), 0) = 0
                 ELSE ftpaRespondentGroundsDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaAppellantEvidenceDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantEvidenceDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantEvidenceDocuments), 0) = 0
                 ELSE ftpaAppellantEvidenceDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentEvidenceDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentEvidenceDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentEvidenceDocuments), 0) = 0
                 ELSE ftpaRespondentEvidenceDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaAppellantOutOfTimeDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN size(ftpaAppellantOutOfTimeDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN COALESCE(size(ftpaAppellantOutOfTimeDocuments), 0) = 0
                 ELSE ftpaAppellantOutOfTimeDocuments IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentOutOfTimeDocuments"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN size(ftpaRespondentOutOfTimeDocuments) = 0
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN COALESCE(size(ftpaRespondentOutOfTimeDocuments), 0) = 0
                 ELSE ftpaRespondentOutOfTimeDocuments IS NULL
             END
         )"""
@@ -72,7 +72,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_isFtpaListVisible"] = ("(isFtpaListVisible = 'Yes')")
+        checks["valid_isFtpaListVisible"] = ("(isFtpaListVisible <=> 'Yes')")
 
         return checks
 
@@ -81,77 +81,77 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ##### Appellant ######
         checks["valid_ftpaAppellantSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantSubmitted <=> 'Yes'
                 ELSE ftpaAppellantSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantOotDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantOotDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantOotDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantOotDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantGroundsDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantGroundsDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantEvidenceDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantEvidenceDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantGroundsDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantGroundsDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantGroundsDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantEvidenceDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN isFtpaAppellantEvidenceDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantEvidenceDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantOotExplanationVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInDecided <=> 'No'
                 ELSE isFtpaAppellantOotExplanationVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaAppellantOotExplanationVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN isFtpaAppellantOotExplanationVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaAppellantOotExplanationVisibleInSubmitted IS NULL
             END
         )"""
@@ -159,77 +159,77 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ##### Respondent ######
         checks["valid_ftpaRespondentSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentSubmitted <=> 'Yes'
                 ELSE ftpaRespondentSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentOotDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentOotDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentOotDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentOotDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentGroundsDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentGroundsDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentEvidenceDocsVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentEvidenceDocsVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentGroundsDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentGroundsDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentGroundsDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentEvidenceDocsVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN isFtpaRespondentEvidenceDocsVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentEvidenceDocsVisibleInSubmitted IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentOotExplanationVisibleInDecided"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInDecided = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInDecided <=> 'No'
                 ELSE isFtpaRespondentOotExplanationVisibleInDecided IS NULL
             END
         )"""
 
         checks["valid_isFtpaRespondentOotExplanationVisibleInSubmitted"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInSubmitted = 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN isFtpaRespondentOotExplanationVisibleInSubmitted <=> 'Yes'
                 ELSE isFtpaRespondentOotExplanationVisibleInSubmitted IS NULL
             END
         )"""
@@ -243,24 +243,25 @@ class ftpaSubmittedADQRules(DQRulesBase):
         WHEN dq_cs39_status = 39 AND Party = 1 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'appellant'
+        AND element_at(ftpaList, 1).id <=> '1'
+        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) <=> 'appellant'
         AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaAppellantApplicationDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaGroundsDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments), 0) = 0
         AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaAppellantOutOfTimeExplanation
 
         WHEN dq_cs39_status = 39 AND Party = 2 THEN
             ftpaList IS NOT NULL
         AND size(ftpaList) = 1
-        AND element_at(ftpaList, 1).id = '1'
-        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) = 'respondent'
+        AND element_at(ftpaList, 1).id <=> '1'
+        AND lower(element_at(ftpaList, 1).value.ftpaApplicant) <=> 'respondent'
         AND element_at(ftpaList, 1).value.ftpaApplicationDate <=> ftpaRespondentApplicationDate
-        AND size(element_at(ftpaList, 1).value.ftpaGroundsDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments) = 0
-        AND size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaGroundsDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaEvidenceDocuments), 0) = 0
+        AND COALESCE(size(element_at(ftpaList, 1).value.ftpaOutOfTimeDocuments), 0) = 0
         AND element_at(ftpaList, 1).value.ftpaOutOfTimeExplanation <=> ftpaRespondentOutOfTimeExplanation
+        ELSE FALSE
         END
         )
         OR
@@ -270,22 +271,22 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ####### Appellant #######
         checks["valid_ftpaAppellantApplicationDate"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 THEN ftpaAppellantApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 1 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaAppellantApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaAppellantApplicationDate IS NULL
             END
         )"""
 
         checks["valid_ftpaAppellantSubmissionOutOfTime"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime = 'Yes'
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantSubmissionOutOfTime <=> 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime != 1 THEN ftpaAppellantSubmissionOutOfTime <=> 'No'
                 ELSE ftpaAppellantSubmissionOutOfTime IS NULL
             END
         )"""
 
         checks["valid_ftpaAppellantOutOfTimeExplanation"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
+                WHEN dq_cs39_status = 39 AND Party = 1 AND OutOfTime = 1 THEN ftpaAppellantOutOfTimeExplanation <=> 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaAppellantOutOfTimeExplanation IS NULL
             END
         )"""
@@ -293,22 +294,22 @@ class ftpaSubmittedADQRules(DQRulesBase):
         ####### Respondent #######
         checks["valid_ftpaRespondentApplicationDate"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 THEN ftpaRespondentApplicationDate = date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
+                WHEN dq_cs39_status = 39 AND Party = 2 THEN date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd') IS NOT NULL AND ftpaRespondentApplicationDate <=> date_format(to_timestamp(DateReceived, 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'),'yyyy-MM-dd')
                 ELSE ftpaRespondentApplicationDate IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentSubmissionOutOfTime"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentSubmissionOutOfTime = 'Yes'
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime != 1 THEN ftpaRespondentSubmissionOutOfTime = 'No'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentSubmissionOutOfTime <=> 'Yes'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime != 1 THEN ftpaRespondentSubmissionOutOfTime <=> 'No'
                 ELSE ftpaRespondentSubmissionOutOfTime IS NULL
             END
         )"""
 
         checks["valid_ftpaRespondentOutOfTimeExplanation"] = """(
             CASE
-                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation = 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
+                WHEN dq_cs39_status = 39 AND Party = 2 AND OutOfTime = 1 THEN ftpaRespondentOutOfTimeExplanation <=> 'This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness.'
                 ELSE ftpaRespondentOutOfTimeExplanation IS NULL
             END
         )"""

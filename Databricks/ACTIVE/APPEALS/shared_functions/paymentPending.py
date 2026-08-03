@@ -1932,6 +1932,7 @@ def appellantDetails(silver_m1, silver_m2, silver_c, bronze_countryFromAddress, 
 def cleanReferenceNumber(ref):
     import re
     """
+    Note GWF prefixed references will populate the gwfReferenceNumber field instead. This must be 9 digits but keep the GWF prefix.
     1. Handling Short Reference Numbers e.g., "12345" -> "000012345"
     2. Handling SHEF references e.g., "SHEF1/1234567" -> "001234567"
     3. Handling UKPLa/UKVS reference formats e.g., "UKPLA/123456" -> "000123456"
@@ -1948,11 +1949,11 @@ def cleanReferenceNumber(ref):
     if ref is None or ref == '' or ref.strip().upper() == 'NULL':
         return None
 
-    stripped_ref = ref.strip()
-    if stripped_ref.upper().startswith("GWF"):
-        remainder = stripped_ref[3:]
-        cleaned_remainder = re.sub(r"\D", "", remainder)
-        return "GWF" + cleaned_remainder
+    prefix = ""
+    ref = ref.strip()
+    if ref.upper().startswith("GWF"):
+        prefix = "GWF"
+        ref = ref[3:]
 
     if len(ref) > 9 and len(ref) < 16:
         no_letters = re.sub(r"[a-zA-Z]", "", ref)
@@ -1960,51 +1961,31 @@ def cleanReferenceNumber(ref):
 
         if len(parts) == 2:
             left, right = parts
-            right = right.lstrip("0")
-            combined = left + right
-            return combined.rjust(9, '0')
+            combined = left + right.lstrip("0")
         else:
             combined = "".join(parts)
-            return combined.rjust(9, '0')
 
-        digits_only = re.sub(r"\D", "", combined)
-        return digits_only.rjust(9, '0')
+        return prefix + combined.rjust(9, '0')
 
     if len(ref) < 9:
         digits_only = re.sub(r"\D", "", ref)
-        return digits_only.rjust(9, '0')
-    
+        return prefix + digits_only.rjust(9, '0')
+
     if ref.startswith("SHEF") and "/" in ref:
-        return ref.split("/", 1)[1].rjust(9, '0')
-    
+        return prefix + ref.split("/", 1)[1].rjust(9, '0')
+
     if ref.startswith(('UKPLA' or 'UKVS')) and "/" in ref:
-        return ref.split("/", 1)[1].rjust(9, '0')
-    
+        return prefix + ref.split("/", 1)[1].rjust(9, '0')
+
     match = re.match(r"^.*/(\d+)$", ref)
     if match:
-        return match.group(1).rjust(9, '0')
-    
+        return prefix + match.group(1).rjust(9, '0')
+
     no_special_characters = re.sub(r"\D", "", ref)
     if no_special_characters:
-        return no_special_characters.rjust(9, '0')
+        return prefix + no_special_characters.rjust(9, '0')
 
-    if len(ref) > 9 and len(ref) < 16:
-        no_letters = re.sub(r"[a-zA-Z]", "", ref)
-        parts = no_letters.rsplit("/", 1)
-
-        if len(parts) == 2:
-            left, right = parts
-            right = right.lstrip("0")
-            combined = left + right
-            return combined.rjust(9, '0')
-        else:
-            combined = "".join(parts)
-            return combined.rjust(9, '0')
-
-        digits_only = re.sub(r"\D", "", combined)
-        return digits_only.rjust(9, '0')
-    
-    return ref
+    return prefix + ref
 
 # Register the cleaning function as a Spark UDF
 cleanReferenceNumberUDF = udf(cleanReferenceNumber, StringType())

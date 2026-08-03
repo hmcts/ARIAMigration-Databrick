@@ -13,6 +13,6 @@ class awaitingEvidenceRespondentADQRules(DQRulesBase):
 
         checks["valid_directions"] = "(directions IS NOT NULL)"
 
-        checks["valid_uploadHomeOfficeBundleAvailable"] = "(uploadHomeOfficeBundleAvailable IN ('Yes','No'))"
+        checks["valid_uploadHomeOfficeBundleAvailable"] = "(uploadHomeOfficeBundleAvailable IS NOT NULL AND uploadHomeOfficeBundleAvailable IN ('Yes','No'))"
 
         return checks

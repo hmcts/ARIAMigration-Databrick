@@ -29,7 +29,7 @@ class paymentPendingDQRules(DQRulesBase):
             (
                 caseManagementCategory.value.code IS NULL OR
                 ARRAY_CONTAINS(
-                    TRANSFORM(caseManagementCategory.list_items, x -> x.code),
+                    COALESCE(TRANSFORM(caseManagementCategory.list_items, x -> x.code), ARRAY()),
                     caseManagementCategory.value.code
                 )
             )
@@ -39,7 +39,7 @@ class paymentPendingDQRules(DQRulesBase):
             (
                 caseManagementCategory.value.label IS NULL OR
                 ARRAY_CONTAINS(
-                    TRANSFORM(caseManagementCategory.list_items, x -> x.label),
+                    COALESCE(TRANSFORM(caseManagementCategory.list_items, x -> x.label), ARRAY()),
                     caseManagementCategory.value.label
                 )
             )
@@ -69,47 +69,47 @@ class paymentPendingDQRules(DQRulesBase):
             (
                 (
                     recordedOutOfTimeDecision IS NULL
-                    AND (OutOfTimeIssue IS NULL OR OutOfTimeIssue = False)
+                    AND (OutOfTimeIssue IS NULL OR OutOfTimeIssue <=> False)
                 )
                 OR
                 (
-                    recordedOutOfTimeDecision = 'Yes'
-                    AND OutOfTimeIssue = True
+                    recordedOutOfTimeDecision <=> 'Yes'
+                    AND OutOfTimeIssue <=> True
                     AND (
                         (
-                            ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                            ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
                             AND Outcome IS NOT NULL
-                            AND Outcome != 0
+                            AND NOT (Outcome <=> 0)
                         )
                         OR
                         (
-                            ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
+                            ariaDesiredState IS NULL OR ariaDesiredState NOT IN ('paymentPending', 'appealSubmitted')
                         )
                     )
                 )
                 OR
                 (
-                    recordedOutOfTimeDecision = 'No'
-                    AND OutOfTimeIssue = True
-                    AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
-                    AND (Outcome IS NULL OR Outcome = 0)
+                    recordedOutOfTimeDecision <=> 'No'
+                    AND OutOfTimeIssue <=> True
+                    AND ariaDesiredState IS NOT NULL AND ariaDesiredState IN ('paymentPending', 'appealSubmitted')
+                    AND (Outcome IS NULL OR Outcome <=> 0)
                 )
             )
         """)
- 
+
 
         checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
         )
 
         checks["valid_outOfTimeDecisionType"] = (
-            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND outOfTimeDecisionType = 'approved') 
-                OR (outOfTimeDecisionType IS NULL)     
+            """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionType <=> 'approved')
+                OR (outOfTimeDecisionType IS NULL)
             """
         )
 
         checks["valid_outOfTimeDecisionMaker"] = (
-            """    (OutOfTimeIssue = True AND Outcome_no_filter != 0 AND outOfTimeDecisionMaker = 'Tribunal Caseworker') 
+            """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionMaker <=> 'Tribunal Caseworker')
                 OR (outOfTimeDecisionMaker IS NULL)
             """
         )
@@ -119,11 +119,11 @@ class paymentPendingDQRules(DQRulesBase):
         # # Null Values as accepted values as where Representation = AIP
         # ##############################
 
-        checks["valid_legalRepGivenName_not_null"] = "((dv_representation = 'LR' AND legalRepGivenName IS NOT NULL) OR (dv_representation != 'LR' AND legalRepGivenName IS NULL))"
+        checks["valid_legalRepGivenName_not_null"] = "((dv_representation <=> 'LR' AND legalRepGivenName IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepGivenName IS NULL))"
 
-        checks["valid_legalRepFamilyNamePaperJ_not_null"] = "((dv_representation = 'LR' AND legalRepFamilyNamePaperJ IS NOT NULL) OR (dv_representation != 'LR' AND legalRepFamilyNamePaperJ IS NULL))"
+        checks["valid_legalRepFamilyNamePaperJ_not_null"] = "((dv_representation <=> 'LR' AND legalRepFamilyNamePaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepFamilyNamePaperJ IS NULL))"
 
-        checks["valid_legalRepCompanyPaperJ_not_null"] = "((dv_representation = 'LR' AND legalRepCompanyPaperJ IS NOT NULL) OR (dv_representation != 'LR' AND legalRepCompanyPaperJ IS NULL))"
+        checks["valid_legalRepCompanyPaperJ_not_null"] = "((dv_representation <=> 'LR' AND legalRepCompanyPaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepCompanyPaperJ IS NULL))"
 
 
         # ##############################
@@ -143,7 +143,7 @@ class paymentPendingDQRules(DQRulesBase):
         # # ARIADM-771 (AppealType - legalRepDetails)
         # ##############################
 
-        checks["valid_legalrepEmail_not_null"] = "((dv_representation = 'LR' AND legalRepEmail IS NOT NULL AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (dv_representation != 'LR' AND legalRepEmail IS NULL))"
+        checks["valid_legalrepEmail_not_null"] = "((dv_representation <=> 'LR' AND legalRepEmail IS NOT NULL AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (NOT(dv_representation <=> 'LR') AND legalRepEmail IS NULL))"
 
         # ##############################
         # # ARIADM-758 (appellantDetails)
@@ -167,7 +167,7 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
 
         checks["valid_legalRepHasAddress_yes_no"] = (
-            "((dv_representation = 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (dv_representation != 'LR' AND legalRepHasAddress IS NULL))"
+            "((dv_representation <=> 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (NOT(dv_representation <=> 'LR') AND legalRepHasAddress IS NULL))"
         )
 
         checks["valid_legalRepAddressUK"] = (
@@ -175,19 +175,19 @@ class paymentPendingDQRules(DQRulesBase):
                 (
                     dv_representation <=> 'LR'
                     AND legalRepHasAddress <=> 'Yes'
-                    AND RepresentativeId >= 0
+                    AND RepresentativeId IS NOT NULL AND RepresentativeId >= 0
                     AND legalRepAddressUK IS NOT NULL
                     AND legalRepAddressUK.AddressLine1 IS NOT NULL
                     AND legalRepAddressUK.PostTown IS NOT NULL
                 )
                 OR (
-                    dv_representation = 'LR'
+                    dv_representation <=> 'LR'
                     AND legalRepHasAddress <=> 'No'
-                    AND RepresentativeId >= 0
+                    AND RepresentativeId IS NOT NULL AND RepresentativeId >= 0
                     AND legalRepAddressUK IS NULL
                 )
                 OR (
-                    dv_representation != 'LR'
+                    NOT(dv_representation <=> 'LR')
                     AND legalRepAddressUK IS NULL
                 )
             )"""
@@ -195,47 +195,47 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_oocAddressLine1"] = (
             """(
-                (dv_representation = 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No')
+                (dv_representation <=> 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No')
                 OR
-                (dv_representation = 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes')
+                (dv_representation <=> 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes')
                 OR
-                (dv_representation != 'LR' AND oocAddressLine1 IS NULL)
+                (NOT(dv_representation <=> 'LR') AND oocAddressLine1 IS NULL)
             )"""
         )
         checks["valid_oocAddressLine2"] = (
             """(
-                (dv_representation = 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No')
+                (dv_representation <=> 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No')
                 OR
-                (dv_representation = 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes')
+                (dv_representation <=> 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes')
                 OR
-                (dv_representation != 'LR' AND oocAddressLine2 IS NULL)
+                (NOT(dv_representation <=> 'LR') AND oocAddressLine2 IS NULL)
             )"""
         )
         checks["valid_oocAddressLine3"] = (
             """(
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No')
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No')
                 OR
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes')
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes')
                 OR
-                (dv_representation != 'LR' AND oocAddressLine3 IS NULL)
+                (NOT(dv_representation <=> 'LR') AND oocAddressLine3 IS NULL)
             )"""
         )
         checks["valid_oocAddressLine4"] = (
             """(
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No')
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No')
                 OR
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes')
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes')
                 OR
-                (dv_representation != 'LR' AND oocAddressLine4 IS NULL)
+                (NOT(dv_representation <=> 'LR') AND oocAddressLine4 IS NULL)
             )"""
         )
         checks["valid_oocrCountryGovUkAdminJ"] = (
             """(
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL)
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL)
                 OR
-                (dv_representation = 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL)
+                (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL)
                 OR
-                (dv_representation != 'LR' AND CaseRep_Address5 IS NULL)
+                (NOT(dv_representation <=> 'LR') AND CaseRep_Address5 IS NULL)
             )"""
         )
 
@@ -248,7 +248,7 @@ class paymentPendingDQRules(DQRulesBase):
             """(
                 (appellantNationalities IS NOT NULL)
                 AND
-                EXISTS(appellantNationalities, x -> x.value.code IN ('AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR', 'BC', 'VG', 'IO', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'HK', 'MO', 'CX', 'CC', 'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM', 'VA', 'HN', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM', 'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KP', 'KR', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MK', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS', 'SS', 'ES', 'LK', 'ZZ', 'SD', 'SR', 'SJ', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VI', 'WF', 'EH', 'YE', 'ZM', 'ZW'))
+                EXISTS(appellantNationalities, x -> x.value.code IS NOT NULL AND x.value.code IN ('AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR', 'BC', 'VG', 'IO', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'HK', 'MO', 'CX', 'CC', 'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM', 'VA', 'HN', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM', 'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KP', 'KR', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MK', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS', 'SS', 'ES', 'LK', 'ZZ', 'SD', 'SR', 'SJ', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VI', 'WF', 'EH', 'YE', 'ZM', 'ZW'))
             )"""
         )
 
@@ -260,7 +260,7 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
-        checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((CasePrefix = 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (CasePrefix != 'DA' AND isAriaMigratedFeeExemption <=> 'No'))"
+        checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((CasePrefix <=> 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (NOT(CasePrefix <=> 'DA') AND isAriaMigratedFeeExemption <=> 'No'))"
 
         # ##############################
         # # ARIADM-712 (flagsLabel)- caseFlags
@@ -268,7 +268,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_name_in_list"] = """(
             (
                 (
-                    EXISTS(valid_categoryIdList, x -> x IN (7, 25))
+                    EXISTS(COALESCE(valid_categoryIdList, ARRAY()), x -> x IN (7, 25))
                 )
                 AND
                 EXISTS(caseFlags.details, x -> x.value.flagComment IS NULL)
@@ -278,7 +278,7 @@ class paymentPendingDQRules(DQRulesBase):
             OR
             (
                 (
-                    NOT EXISTS(valid_categoryIdList, x -> x IN (7, 25))
+                    NOT EXISTS(COALESCE(valid_categoryIdList, ARRAY()), x -> x IN (7, 25))
                 )
                 AND
                 ARRAY_CONTAINS(TRANSFORM(caseFlags.details, x -> x.value.name), caseFlags.details[0].value.name)
@@ -287,7 +287,7 @@ class paymentPendingDQRules(DQRulesBase):
 
         # checks["valid_caseFlags_name_in_list"] = """
         # (
-        #   (array_contains(valid_categoryIdList, (7, 25)) OR caseFlags.details IS NULL OR
+        #   (array_contains(COALESCE(valid_categoryIdList, ARRAY()), (7, 25)) OR caseFlags.details IS NULL OR
         #   ARRAY_CONTAINS(
         #     TRANSFORM(caseFlags.details, x -> x.value.name),
         #     caseFlags.details[0].value.name
@@ -297,6 +297,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_pathId_in_list"] = """
         (
             caseFlags.details IS NULL OR
+            caseFlags.details[0].value.path[0].id IS NULL OR
             ARRAY_CONTAINS(
                 TRANSFORM(caseFlags.details, x -> x.value.path[0].id),
                 caseFlags.details[0].value.path[0].id
@@ -306,6 +307,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_flagCode_in_list"] = """
         (
             caseFlags.details IS NULL OR
+            caseFlags.details[0].value.flagCode IS NULL OR
             ARRAY_CONTAINS(
                 TRANSFORM(caseFlags.details, x -> x.value.flagCode),
                 caseFlags.details[0].value.flagCode
@@ -325,13 +327,13 @@ class paymentPendingDQRules(DQRulesBase):
                     OR
                     (
                         NOT (
-                            array_contains(valid_categoryIdList, 7) OR
-                            array_contains(valid_categoryIdList, 8) OR
-                            array_contains(valid_categoryIdList, 24) OR
-                            array_contains(valid_categoryIdList, 25) OR
-                            array_contains(valid_categoryIdList, 31) OR
-                            array_contains(valid_categoryIdList, 32) OR
-                            array_contains(valid_categoryIdList, 41)
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 7) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 8) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 24) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 25) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 31) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 32) OR
+                            array_contains(COALESCE(valid_categoryIdList, ARRAY()), 41)
                         )
                     )
                 )
@@ -341,13 +343,13 @@ class paymentPendingDQRules(DQRulesBase):
             (
                 (
                     (
-                        array_contains(valid_categoryIdList, 7) OR
-                        array_contains(valid_categoryIdList, 8) OR
-                        array_contains(valid_categoryIdList, 24) OR
-                        array_contains(valid_categoryIdList, 25) OR
-                        array_contains(valid_categoryIdList, 31) OR
-                        array_contains(valid_categoryIdList, 32) OR
-                        array_contains(valid_categoryIdList, 41)
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 7) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 8) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 24) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 25) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 31) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 32) OR
+                        array_contains(COALESCE(valid_categoryIdList, ARRAY()), 41)
                     )
                     OR
                     (HOANRef IS NOT NULL)
@@ -356,7 +358,7 @@ class paymentPendingDQRules(DQRulesBase):
                 AND
                 (
                     (
-                        (array_contains(valid_categoryIdList, 7) OR array_contains(valid_categoryIdList, 25))
+                        (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 7) OR array_contains(COALESCE(valid_categoryIdList, ARRAY()), 25))
                         AND EXISTS(
                             TRANSFORM(caseFlags.details, x -> x.value.flagComment),
                             x -> x IS NULL
@@ -364,7 +366,7 @@ class paymentPendingDQRules(DQRulesBase):
                     )
                     OR
                     (
-                        (array_contains(valid_categoryIdList, 8) OR array_contains(valid_categoryIdList, 24) OR array_contains(valid_categoryIdList, 31) OR array_contains(valid_categoryIdList, 32) OR array_contains(valid_categoryIdList, 41))
+                        (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 8) OR array_contains(COALESCE(valid_categoryIdList, ARRAY()), 24) OR array_contains(COALESCE(valid_categoryIdList, ARRAY()), 31) OR array_contains(COALESCE(valid_categoryIdList, ARRAY()), 32) OR array_contains(COALESCE(valid_categoryIdList, ARRAY()), 41))
                         AND NOT EXISTS(
                             TRANSFORM(caseFlags.details, x -> x.value.flagComment),
                             x -> x IS NULL
@@ -384,6 +386,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_caseFlags_hearingRelevant_in_list"] = """
         (
             caseFlags.details IS NULL OR
+            caseFlags.details[0].value.hearingRelevant IS NULL OR
             ARRAY_CONTAINS(
                 TRANSFORM(caseFlags.details, x -> x.value.hearingRelevant),
                 caseFlags.details[0].value.hearingRelevant
@@ -692,13 +695,13 @@ class paymentPendingDQRules(DQRulesBase):
         # ARIADM-788 and ARIADM-792 (homeOffice)
         #########################################
         checks["valid_homeOfficeDecisionDate_format"] = (
-            "((dv_appellantIsInUk AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
+            "((dv_appellantIsInUk <=> true AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
         )
 
         checks["valid_decisionLetterReceivedDate_format"] = (
             """(
                 (
-                    NOT dv_appellantIsInUk
+                    dv_appellantIsInUk <=> false
                     AND decisionLetterReceivedDate IS NOT NULL
                     AND decisionLetterReceivedDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
@@ -710,7 +713,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_dateEntryClearanceDecision_format"] = (
             """(
                 (
-                    NOT dv_appellantIsInUk
+                    dv_appellantIsInUk <=> false
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND dateEntryClearanceDecision IS NOT NULL
                     AND dateEntryClearanceDecision RLIKE r'^\\d{4}-\\d{2}-\\d{2}$'
@@ -724,13 +727,13 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_homeOfficeReferenceNumber_not_null"] = (
             """(
                 (
-                    (dv_appellantIsInUk
+                    (dv_appellantIsInUk <=> true
                      OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
                     AND homeOfficeReferenceNumber IS NOT NULL
                 )
                 OR
                 (
-                    NOT dv_appellantIsInUk
+                    dv_appellantIsInUk <=> false
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND (
                         (gwfReferenceNumber IS NOT NULL AND homeOfficeReferenceNumber IS NULL)
@@ -744,14 +747,15 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_gwfReferenceNumber_not_null"] = (
             """(
                 (
-                    NOT dv_appellantIsInUk
+                    dv_appellantIsInUk <=> false
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
                     AND COALESCE(lu_HORef, HORef, FCONumber) IS NOT NULL
                     AND gwfReferenceNumber IS NOT NULL
+                    AND gwfReferenceNumber LIKE 'GWF%'
                 )
                 OR
                 (
-                    dv_appellantIsInUk
+                    dv_appellantIsInUk <=> true
                     OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%'
                     OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
                 )

@@ -48,31 +48,31 @@ class decisionDQRules(DQRulesBase):
     def get_checks_document(self, checks={}):
         
         checks["valid_caseBundles"] = (
-            "(size(caseBundles) = 0) "
+            "(COALESCE(size(caseBundles), 0) = 0) "
         )
         return checks
 
     def get_checks_substantive_decision(self, checks={}):
 
-        checks["valid_scheduleOfIssuesAgreement"] = ("(scheduleOfIssuesAgreement = 'No')")
+        checks["valid_scheduleOfIssuesAgreement"] = ("(scheduleOfIssuesAgreement <=> 'No')")
 
-        checks["valid_scheduleOfIssuesDisagreementDescription"] = ("(scheduleOfIssuesDisagreementDescription = 'This is a migrated ARIA case. Please see the documents for information on the schedule of issues.')")
+        checks["valid_scheduleOfIssuesDisagreementDescription"] = ("(scheduleOfIssuesDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the schedule of issues.')")
 
-        checks["valid_immigrationHistoryAgreement"] = ("(immigrationHistoryAgreement = 'No')")
+        checks["valid_immigrationHistoryAgreement"] = ("(immigrationHistoryAgreement <=> 'No')")
 
-        checks["valid_immigrationHistoryDisagreementDescription"] = ("(immigrationHistoryDisagreementDescription = 'This is a migrated ARIA case. Please see the documents for information on the immigration history.')")
+        checks["valid_immigrationHistoryDisagreementDescription"] = ("(immigrationHistoryDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the immigration history.')")
 
         return checks
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_hmcts"] = ("(hmcts = '[userImage:hmcts.png]')")
+        checks["valid_hmcts"] = ("(hmcts <=> '[userImage:hmcts.png]')")
 
-        checks["valid_stitchingStatus"] = ("(stitchingStatus = 'DONE')")
+        checks["valid_stitchingStatus"] = ("(stitchingStatus <=> 'DONE')")
 
-        checks["valid_bundleConfiguration"] = ("(bundleConfiguration = 'iac-hearing-bundle-config.yaml')")
+        checks["valid_bundleConfiguration"] = ("(bundleConfiguration <=> 'iac-hearing-bundle-config.yaml')")
 
-        checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable = 'No')")
+        checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable <=> 'No')")
 
         return checks
 
@@ -81,7 +81,7 @@ class decisionDQRules(DQRulesBase):
         checks["valid_bundleFileNamePrefix"] = (
             """
             (
-                bundleFileNamePrefix = replace(CaseNo, '/', ' ') || '-' || Appellant_Name AND bundleFileNamePrefix IS NOT NULL AND bundleFileNamePrefix != ""
+                bundleFileNamePrefix <=> replace(CaseNo, '/', ' ') || '-' || Appellant_Name AND bundleFileNamePrefix IS NOT NULL AND bundleFileNamePrefix != ""
             )
             """
         )

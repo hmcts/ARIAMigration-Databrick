@@ -63,7 +63,7 @@ class TestAppealSubmittedRemissionType:
 
     def test_remissionDecision(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
+            PP.remissionTypes.return_value = self.payment_pending_df(spark, 14)
 
             m1_data = [
                 ("1", "EA", "AIP", 1, "protection", None, None, None, None, None),  # EA, granted=1 → approved
@@ -77,6 +77,9 @@ class TestAppealSubmittedRemissionType:
                 ("9", "EA", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, has type5 txn → approved
                 ("10", "EU", "LR", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected
                 ("11", "HU", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, no type5 txn → rejected
+                ("12", "PA", "LR", 0, "protection", None, None, None, None, None),  # PA, granted=0, no type5 txn → None
+                ("13", "PA", "LR", None, "protection", None, None, None, None, None),  # PA, granted=NULL, no type5 txn → None
+                ("14", "PA", "LR", 2, "protection", None, None, None, None, None),  # PA, granted=2 → rejected (unchanged)
             ]
 
             m4_data = [
@@ -101,10 +104,13 @@ class TestAppealSubmittedRemissionType:
             assert resultList[8][0] == "approved"  # case 9 (granted=NULL, has type5)
             assert resultList[9][0] == "rejected"  # case 10 (granted=0, no type5)
             assert resultList[10][0] == "rejected"  # case 11 (granted=NULL, no type5)
+            assert resultList[11][0] is None  # case 12 (PA, granted=0, no type5)
+            assert resultList[12][0] is None  # case 13 (PA, granted=NULL, no type5)
+            assert resultList[13][0] == "rejected"  # case 14 (PA, granted=2)
 
     def test_remissionDecisionReason(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:
-            PP.remissionTypes.return_value = self.payment_pending_df(spark, 11)
+            PP.remissionTypes.return_value = self.payment_pending_df(spark, 14)
 
             m1_data = [
                 ("1", "EA", "AIP", 1, "protection", None, None, None, None, None),  # EA, granted=1 → granted string
@@ -118,6 +124,9 @@ class TestAppealSubmittedRemissionType:
                 ("9", "EA", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, has type5 txn → granted string
                 ("10", "EU", "LR", 0, "protection", None, None, None, None, None),  # granted=0, no type5 txn → rejected string
                 ("11", "HU", "AIP", None, "protection", None, None, None, None, None),  # granted=NULL, no type5 txn → rejected string
+                ("12", "PA", "LR", 0, "protection", None, None, None, None, None),  # PA, granted=0, no type5 txn → None
+                ("13", "PA", "LR", None, "protection", None, None, None, None, None),  # PA, granted=NULL, no type5 txn → None
+                ("14", "PA", "LR", 2, "protection", None, None, None, None, None),  # PA, granted=2 → rejected string (unchanged)
             ]
 
             m4_data = [
@@ -145,6 +154,9 @@ class TestAppealSubmittedRemissionType:
             assert resultList[8][0] == expected_approved_string  # case 9 (granted=NULL, has type5)
             assert resultList[9][0] == expected_rejected_string  # case 10 (granted=0, no type5)
             assert resultList[10][0] == expected_rejected_string  # case 11 (granted=NULL, no type5)
+            assert resultList[11][0] is None  # case 12 (PA, granted=0, no type5)
+            assert resultList[12][0] is None  # case 13 (PA, granted=NULL, no type5)
+            assert resultList[13][0] == expected_rejected_string  # case 14 (PA, granted=2)
 
     def test_amountRemitted(self, spark):
         with patch('Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted.PP') as PP:

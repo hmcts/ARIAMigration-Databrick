@@ -377,7 +377,11 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             ).when(
                 conditions_all & (
                     (col("PaymentRemissionGranted") == 2)
-                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                    | (
+                        (col("dv_CCDAppealType") != "PA")
+                        & ((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull())
+                        & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False))
+                    )
                 ),
                 lit("rejected"),
             ),
@@ -393,7 +397,11 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             ).when(
                 conditions_all & (
                     (col("PaymentRemissionGranted") == 2)
-                    | (((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull()) & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False)))
+                    | (
+                        (col("dv_CCDAppealType") != "PA")
+                        & ((col("PaymentRemissionGranted") == 0) | col("PaymentRemissionGranted").isNull())
+                        & (col("has_type5_txn").isNull() | (col("has_type5_txn") == False))
+                    )
                 ),
                 lit("This is a migrated case. The remission was rejected."),
             ),

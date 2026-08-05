@@ -267,11 +267,19 @@ class appealSubmittedDQRules(DQRulesBase):
                             (
                                 PaymentRemissionGranted <=> 2
                                 OR (
-                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    NOT (dv_CCDAppealType <=> 'PA')
+                                    AND (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
                                 )
                             )
                             AND remissionDecision <=> 'rejected'
+                        )
+                        OR
+                        (
+                            dv_CCDAppealType <=> 'PA'
+                            AND (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                            AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
+                            AND remissionDecision IS NULL
                         )
                     )
                 )
@@ -304,11 +312,19 @@ class appealSubmittedDQRules(DQRulesBase):
                             (
                                 PaymentRemissionGranted <=> 2
                                 OR (
-                                    (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                                    NOT (dv_CCDAppealType <=> 'PA')
+                                    AND (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
                                     AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
                                 )
                             )
                             AND remissionDecisionReason <=> 'This is a migrated case. The remission was rejected.'
+                        )
+                        OR
+                        (
+                            dv_CCDAppealType <=> 'PA'
+                            AND (PaymentRemissionGranted IS NULL OR PaymentRemissionGranted = 0)
+                            AND COALESCE(SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 5)), 0) = 0
+                            AND remissionDecisionReason IS NULL
                         )
                     )
                 )

@@ -2406,352 +2406,405 @@ def stg_appealcasestatus_filtered():
     decision_type = dlt.read("raw_decisiontype")
     file_location = dlt.read("raw_filelocation")
 
-    segmentation_date = current_date() if env_name == 'prod' else lit("2026-06-05")  
+    segmentation_date = current_date() if env_name == "prod" else lit("2026-06-05").cast("date")
 
-    # Subqueries to handle aggregations
     max_status = (
-    status
-    .filter(
-        (col("outcome").isNull() | ~col("outcome").cast("int").isin(38, 111)) &
-        (col("casestatus").isNull() | ~col("casestatus").cast("int").isin(17))
-    )
-    .groupBy("CaseNo")
-    .agg(max("StatusId").alias("max_ID"))
+        status
+        .filter(
+            (col("outcome").isNull() | ~col("outcome").cast("int").isin(38, 111))
+            & (col("casestatus").isNull() | ~col("casestatus").cast("int").isin(17))
+        )
+        .groupBy("CaseNo")
+        .agg(max("StatusId").alias("max_ID"))
     )
 
     prev_status = (
-            status
-            .filter((col("casestatus").isNull() | ~col("casestatus").cast("int").isin(52, 36)))
-            .groupBy("CaseNo")
-            .agg(max("StatusID").alias("Prev_ID"))
+        status
+        .filter(
+            col("casestatus").isNull()
+            | ~col("casestatus").cast("int").isin(52, 36)
         )
+        .groupBy("CaseNo")
+        .agg(max("StatusID").alias("Prev_ID"))
+    )
 
     ut_status = (
         status
         .filter(
             col("CaseStatus").isin(
-                ['40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33']
+                "40", "41", "42", "43", "44", "45",
+                "53", "27", "28", "29", "34", "32", "33"
             )
         )
         .groupBy("CaseNo")
         .agg(max("StatusID").alias("UT_ID"))
     )
 
-    # Joins to construct the main DataFrame
-    result_df = (
-        appeal_case.alias("ac")
-        .join(max_status.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left_outer")
-        .join(status.alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left_outer")
-        .join(case_status.alias("cst"), col("t.CaseStatus") == col("cst.CaseStatusId"), "left_outer")
-        .join(decision_type.alias("dt"),col("t.Outcome") == col("dt.DecisionTypeId"), "left_outer")
-        .join(file_location.alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
-        .join(prev_status.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left_outer")
-        .join(status.alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
-        .join(ut_status.alias("UT"), col("ac.CaseNo") == col("UT.CaseNo"), "left_outer")
-        .join(status.alias("us"), (col("us.CaseNo") == col("UT.CaseNo")) & (col("us.StatusId") == col("UT.UT_ID")), "left_outer")
+    max_46_status = (
+        status
+        .filter(col("CaseStatus") == "46")
+        .groupBy("CaseNo")
+        .agg(max("StatusID").alias("Max46_ID"))
     )
 
-    # Filtering based on the WHERE clause
-    # Filtering based on the WHERE clause
+    sa_prev = (
+        status.alias("s")
+        .join(
+            max_46_status.alias("max46"),
+            col("s.CaseNo") == col("max46.CaseNo"),
+            "inner"
+        )
+        .filter(
+            (col("s.StatusId") < col("max46.Max46_ID"))
+            & (
+                col("s.CaseStatus").isNull()
+                | (col("s.CaseStatus") != "46")
+            )
+        )
+        .groupBy(col("s.CaseNo"))
+        .agg(max(col("s.StatusId")).alias("Prev_ID"))
+    )
+
+    result_df = (
+        appeal_case.alias("ac")
+
+        .join(
+            max_status.alias("s"),
+            col("ac.CaseNo") == col("s.CaseNo"),
+            "left"
+        ).join(
+            status.alias("t"),
+            (col("t.CaseNo") == col("s.CaseNo"))
+            & (col("t.StatusId") == col("s.max_ID")),
+            "left"
+        ).join(
+            case_status.alias("cst"),
+            col("t.CaseStatus") == col("cst.CaseStatusId"),
+            "left"
+        ).join(
+            decision_type.alias("dt"),
+            col("t.Outcome") == col("dt.DecisionTypeId"),
+            "left"
+        ).join(
+            file_location.alias("fl"),
+            col("ac.CaseNo") == col("fl.CaseNo"),
+            "left"
+        ).join(
+            prev_status.alias("prev"),
+            col("ac.CaseNo") == col("prev.CaseNo"),
+            "left"
+        ).join(
+            status.alias("st"),
+            (col("st.CaseNo") == col("prev.CaseNo"))
+            & (col("st.StatusId") == col("prev.Prev_ID")),
+            "left"
+        ).join(
+            ut_status.alias("UT"),
+            col("ac.CaseNo") == col("UT.CaseNo"),
+            "left"
+        ).join(
+            status.alias("us"),
+            (col("us.CaseNo") == col("UT.CaseNo"))
+            & (col("us.StatusId") == col("UT.UT_ID")),
+            "left"
+        ).join(
+            sa_prev.alias("saPrev"),
+            col("ac.CaseNo") == col("saPrev.CaseNo"),
+            "left"
+        ).join(
+            status.alias("sa"),
+            (col("sa.CaseNo") == col("saPrev.CaseNo"))
+            & (col("sa.StatusId") == col("saPrev.Prev_ID")),
+            "left"
+        )
+    )
+
+    ut_statuses = ["40", "41", "42", "43", "44", "45","53", "27", "28", "29", "34", "32", "33"]
+    ft_prefixes = ["DA", "DC", "EA", "HU", "PA", "RP"]
+    ho_prefixes = ["LP", "LR", "LD", "LH", "LE", "IA"]
+    overdue_prefixes = ["VA", "AA", "AS", "CC", "HR", "HX", "IM", "NS", "OA", "OC", "RD", "TH", "XX"]
+
+    active_status_condition = (
+        col("t.CaseStatus").isNull()
+        |
+        (
+            (col("t.CaseStatus") == "10")
+            & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39")
+        )
+        |
+        (
+            (col("t.CaseStatus") == "46")
+            & col("t.Outcome").isin("1", "86")
+        )
+        |
+        (
+            (col("t.CaseStatus") == "26")
+            & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89")
+        )
+        |
+        (
+            col("t.CaseStatus").isin("37", "38")
+            & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52")
+        )
+        |
+        (
+            (col("t.CaseStatus") == "39")
+            & col("t.Outcome").isin("0", "86")
+        )
+        |
+        (
+            (col("t.CaseStatus") == "50")
+            & (col("t.Outcome") == 0)
+        )
+        |
+        (
+            col("t.CaseStatus").isin("52", "36")
+            & (col("t.Outcome") == 0)
+            & col("st.DecisionDate").isNull()
+        )
+    )
+
+    retained_status_condition = (
+        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & col("sa.CaseStatus").isin("37", "38"))
+        |
+        ( (col("t.CaseStatus") == "26") & col("t.Outcome").isin(1, 2))
+        |
+        ( col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(1, 2))
+        |
+        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(25, 80))
+        |
+        ( (col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
+        |
+        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(30, 31, 14))
+        |
+        ((col("t.CaseStatus") == "10") & col("t.Outcome").isin(80, 122, 25, 120, 2, 105, 13, 119))
+        |
+        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31)& col("sa.CaseStatus").isin("10", "51", "52"))
+        |
+        ((col("t.CaseStatus") == "26") & col("t.Outcome").isin(80, 13, 25))
+        |
+        (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(80, 13, 25, 72, 125))
+        |
+        ((col("t.CaseStatus") == "51") & col("t.Outcome").isin(94, 93))
+        |
+        ((col("t.CaseStatus") == "52") & col("t.Outcome").isin(91, 95))
+        |
+        ((col("t.CaseStatus") == "36") & col("t.Outcome").isin(1, 2, 25))
+    )
+
+    second_retained_status_condition = (
+        (col("t.CaseStatus").isin("50", "52", "36")&  (col("t.Outcome") == 0))
+        |
+        ((col("t.CaseStatus") == "52") & col("t.Outcome").isin(91, 95))
+        |
+        ((col("t.CaseStatus") == "36") & col("t.Outcome").isin(1, 2, 25))
+    )
+
+    previous_status_condition = (
+        (col("st.CaseStatus").isin("37", "38") & col("st.Outcome").isin(1, 2))
+        |
+        (col("st.CaseStatus") == "17")
+        |
+        ((col("st.CaseStatus") == "26") & col("st.Outcome").isin(1, 2))
+        |
+        ((col("st.CaseStatus") == "39") & col("st.Outcome").isin(25, 80))
+        |
+        ((col("st.CaseStatus") == "46") & (col("st.Outcome") == 31) & col("sa.CaseStatus").isin("37", "38"))
+        |
+        ((col("st.CaseStatus") == "39") & col("st.Outcome").isin(31, 30, 14))
+        |
+        ((col("st.CaseStatus") == "46") & (col("st.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
+        |
+        ((col("st.CaseStatus") == "10") & col("st.Outcome").isin(    80, 122, 25, 120, 2, 105, 13, 119))
+        |
+        (col("st.CaseStatus") == "51")
+        |
+        (col("st.CaseStatus").isin("37", "38") & col("st.Outcome").isin(80, 13, 25, 72, 125))
+        |
+        ((col("st.CaseStatus") == "26") & col("st.Outcome").isin(80, 13, 25))
+        |
+        ((col("st.CaseStatus") == "46") & (col("st.Outcome") == 31) & col("sa.CaseStatus").isin("10", "51", "52"))
+    )
+
+    ft_retained_prefix_condition = (
+        col("ac.CasePrefix").isin(*ft_prefixes)
+        |
+        (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
+        |
+        (
+            col("ac.CasePrefix").isin(*ho_prefixes)
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNotNull()
+            & (
+                add_months(col("us.DecisionDate"), 60)
+                < add_months(col("t.DecisionDate"), 24)
+            )
+        )
+    )
+
+    ft_arm_prefix_condition = (
+        (col("ac.CasePrefix").isin(*ft_prefixes) & col("us.CaseStatus").isNull())
+        |
+        (
+            col("ac.CasePrefix").isin(*ft_prefixes)
+            & col("us.CaseStatus").isNotNull()
+            & (
+                add_months(col("us.DecisionDate"), 60)
+                < add_months(col("t.DecisionDate"), 24)
+            )
+        )
+        |
+        (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
+        |
+        (
+            col("ac.CasePrefix").isin(*ho_prefixes)
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNotNull()
+            & (
+                add_months(col("us.DecisionDate"), 60)
+                < add_months(col("t.DecisionDate"), 24)
+            )
+        )
+    )
+
     filtered_df = (
         result_df
-        .filter((col("ac.CaseType") == 1) & ~col("fl.DeptId").isin(519, 520))
-        .withColumn("CaseStatusCategory", 
+        .filter(
+            (col("ac.CaseType") == 1)
+            & ~col("fl.DeptId").isin(519, 520)
+        )
+        .withColumn(
+            "CaseStatusCategory",
             when(
-                (col("t.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33')) & 
-                (col("t.Outcome") == 86), "UT Remitted"
+                col("t.CaseStatus").isin(*ut_statuses)
+                & (col("t.Outcome") == 86),
+                "UT Remitted"
             ).when(
-                (col("t.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33')) & 
-                (col("t.Outcome") == 0), "UT Active"
+                col("t.CaseStatus").isin(*ut_statuses)
+                & (col("t.Outcome") == 0),
+                "UT Active"
             ).when(
-                (col("ac.CasePrefix").isin('VA', 'AA', 'AS', 'CC', 'HR', 'HX', 'IM', 'NS', 'OA', 'OC', 'RD', 'TH', 'XX')) & 
-                (col("t.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33')), "UT Overdue"
+                col("ac.CasePrefix").isin(*overdue_prefixes)
+                & col("t.CaseStatus").isin(*ut_statuses),
+                "UT Overdue"
             ).when(
-                col("ac.CasePrefix").isin('VA', 'AA', 'AS', 'CC', 'HR', 'HX', 'IM', 'NS', 'OA', 'OC', 'RD', 'TH', 'XX'), "FT Overdue"
+                col("ac.CasePrefix").isin(*overdue_prefixes),
+                "FTA"
             ).when(
-                (col("us.CaseStatus").isNotNull()) & (
-                    col("t.CaseStatus").isNull() | (
-                        (col("t.CaseStatus") == 10) & 
-                        (col("t.Outcome").isin('0', '109', '104', '82', '99', '121', '27', '39'))
-                    ) | (
-                        (col("t.CaseStatus") == 46) & 
-                        (col("t.Outcome").isin('1', '86'))
-                    ) | (
-                        (col("t.CaseStatus") == 26) & 
-                        (col("t.Outcome").isin('0', '27', '39', '50', '40', '52', '89'))
-                    ) | (
-                        col("t.CaseStatus").isin('37', '38') & 
-                        col("t.Outcome").isin('39', '40', '37', '50', '27', '0', '5', '52')
-                    ) | (
-                        (col("t.CaseStatus") == 39) & 
-                        (col("t.Outcome").isin('0', '86'))
-                    ) | (
-                        (col("t.CaseStatus") == 50) & 
-                        (col("t.Outcome") == 0)
-                    ) | (
-                        (col("t.CaseStatus").isin('52', '36')) & 
-                        (col("t.Outcome") == 0) & 
-                        (col("st.DecisionDate").isNull())
-                    )
-                ), "FT Active Case"
+                col("us.CaseStatus").isNotNull()
+                & active_status_condition,
+                "FT Active Case"
             ).when(
-                (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP', 'LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                (col("ac.HOANRef").isNull()) & (
-                    col("t.CaseStatus").isNull() | (
-                        (col("t.CaseStatus") == 10) & 
-                        (col("t.Outcome").isin('0', '109', '104', '82', '99', '121', '27', '39'))
-                    ) | (
-                        (col("t.CaseStatus") == 46) & 
-                        (col("t.Outcome").isin('1', '86'))
-                    ) | (
-                        (col("t.CaseStatus") == 26) & 
-                        (col("t.Outcome").isin('0', '27', '39', '50', '40', '52', '89'))
-                    ) | (
-                        col("t.CaseStatus").isin('37', '38') & 
-                        col("t.Outcome").isin('39', '40', '37', '50', '27', '0', '5', '52')
-                    ) | (
-                        (col("t.CaseStatus") == 39) & 
-                        (col("t.Outcome").isin('0', '86'))
-                    ) | (
-                        (col("t.CaseStatus") == 50) & 
-                        (col("t.Outcome") == 0)
-                    ) | (
-                        (col("t.CaseStatus").isin('52', '36')) & 
-                        (col("t.Outcome") == 0) & 
-                        (col("st.DecisionDate").isNull())
-                    )
-                ), "FT Active Case"
-            ).when(
-                # FT Retained - CCD (6 months) - First condition
                 (
+                    col("ac.CasePrefix").isin(*ft_prefixes)
+                    |
                     (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) |
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA') & col("ac.HOANRef").isNull()) |
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA') & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
-                    ) & 
-                    (
-                        ((col("t.CaseStatus") == 10) & col("t.Outcome").isin('13', '80', '122', '25', '120', '2', '105', '119')) | 
-                        ((col("t.CaseStatus") == 46) & col("t.Outcome").isin('31', '2', '50')) | 
-                        ((col("t.CaseStatus") == 26) & col("t.Outcome").isin('80', '13', '25', '1', '2')) | 
-                        (col("t.CaseStatus").isin('37', '38') & col("t.Outcome").isin('1', '2', '80', '13', '25', '72', '14', '125')) | 
-                        ((col("t.CaseStatus") == 39) & col("t.Outcome").isin('30', '31', '25', '14', '80')) | 
-                        ((col("t.CaseStatus") == 51) & col("t.Outcome").isin('94', '93')) | 
-                        ((col("t.CaseStatus") == 52) & col("t.Outcome").isin('91', '95') & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('37', '38', '39', '17', '40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))) | 
-                        ((col("t.CaseStatus") == 36) & (col("t.Outcome") == 25) & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33')))
-                    ) & 
-                    (add_months(col("t.DecisionDate"), 6) >= segmentation_date)
-                ), "FT Retained - CCD"
-            ).when(
-                # FT Retained - CCD (6 months) - Second condition
-                (
-                    (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP') & col("us.CaseStatus").isNull()) | 
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA') & col("ac.HOANRef").isNull()) | 
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA') & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
-                    ) & 
-                    (
-                        ((col("t.CaseStatus").isin(52, 36)) & (col("t.Outcome") == 0) & (col("st.DecisionDate").isNotNull())) | 
-                        ((col("t.CaseStatus") == 36) & col("t.Outcome").isin('1', '2', '50', '108')) | 
-                        ((col("t.CaseStatus") == 52) & col("t.Outcome").isin('91', '95') & col("st.CaseStatus").isin('37', '38', '39', '17'))
-                    ) & 
-                    (add_months(col("st.DecisionDate"), 6) >= segmentation_date)
-                ), "FT Retained - CCD"
-            ).when(
-                # FT Retained - ARM (24 months) - First condition
-                (
-                    (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNotNull()) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+                        col("ac.CasePrefix").isin(*ho_prefixes)
+                        & col("ac.HOANRef").isNull()
                     )
-                ) & 
-                (
-                    (
-                        (col("t.CaseStatus") == 10) & 
-                        (col("t.Outcome").isin('13', '80', '122', '25', '120', '2', '105', '119'))
-                    ) | (
-                        (col("t.CaseStatus") == 46) & 
-                        (col("t.Outcome").isin('31', '2', '50'))
-                    ) | (
-                        (col("t.CaseStatus") == 26) & 
-                        (col("t.Outcome").isin('80', '13', '25', '1', '2'))
-                    ) | (
-                        (col("t.CaseStatus").isin('37', '38')) & 
-                        (col("t.Outcome").isin('1', '2', '80', '13', '25', '72', '14', '125'))
-                    ) | (
-                        (col("t.CaseStatus") == 39) & 
-                        (col("t.Outcome").isin('30', '31', '25', '14', '80'))
-                    ) | (
-                        (col("t.CaseStatus") == 51) & 
-                        (col("t.Outcome").isin('94', '93'))
-                    ) | (
-                        (col("t.CaseStatus") == 52) & 
-                        (col("t.Outcome").isin('91', '95')) & 
-                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('37', '38', '39', '17', '40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
-                    ) | (
-                        (col("t.CaseStatus") == 36) & 
-                        (col("t.Outcome") == 25) & 
-                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
-                    )
-                ) & 
-                (add_months(col("t.DecisionDate"), 24) >= segmentation_date), 
-                "FT Retained - ARM"
+                )
+                & active_status_condition,
+                "FT Active Case"
             ).when(
-                # FT Retained - ARM (24 months) - Second condition
-                (
-                    (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNotNull()) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    )
-                ) & 
-                (
-                    (
-                        (col("t.CaseStatus").isin(52, 36)) & 
-                        (col("t.Outcome") == 0) & 
-                        (col("st.DecisionDate").isNotNull())
-                    ) | (
-                        (col("t.CaseStatus") == 36) & 
-                        (col("t.Outcome").isin('1', '2', '50', '108'))
-                    ) | (
-                        (col("t.CaseStatus") == 52) & 
-                        (col("t.Outcome").isin('91', '95')) & 
-                        (col("st.CaseStatus").isin('37', '38', '39', '17'))
-                    )
-                ) & 
-                (add_months(col("st.DecisionDate"), 24) >= segmentation_date), 
-                "FT Retained - ARM"
+                ft_retained_prefix_condition
+                & retained_status_condition
+                & (
+                    add_months(col("t.DecisionDate"), 6)
+                    >= segmentation_date
+                ),
+                "FTA"
             ).when(
-                # FT Overdue - First condition
-                (
-                    (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNotNull()) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    )
-                ) & 
-                (
-                    (
-                        (col("t.CaseStatus") == 10) & 
-                        (col("t.Outcome").isin('13', '80', '122', '25', '120', '2', '105', '119'))
-                    ) | (
-                        (col("t.CaseStatus") == 46) & 
-                        (col("t.Outcome").isin('31', '2', '50'))
-                    ) | (
-                        (col("t.CaseStatus") == 26) & 
-                        (col("t.Outcome").isin('80', '13', '25', '1', '2'))
-                    ) | (
-                        (col("t.CaseStatus").isin('37', '38')) & 
-                        (col("t.Outcome").isin('1', '2', '80', '13', '25', '72', '14', '125'))
-                    ) | (
-                        (col("t.CaseStatus") == 39) & 
-                        (col("t.Outcome").isin('30', '31', '25', '14', '80'))
-                    ) | (
-                        (col("t.CaseStatus") == 51) & 
-                        (col("t.Outcome").isin('94', '93'))
-                    ) | (
-                        (col("t.CaseStatus") == 52) & 
-                        (col("t.Outcome").isin('91', '95')) & 
-                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('37', '38', '39', '17', '40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
-                    ) | (
-                        (col("t.CaseStatus") == 36) & 
-                        (col("t.Outcome") == 25) & 
-                        (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin('40', '41', '42', '43', '44', '45', '53', '27', '28', '29', '34', '32', '33'))
-                    )
-                ) & 
-                (add_months(col("t.DecisionDate"), 24) < segmentation_date), 
-                "FT Overdue"
+                ft_retained_prefix_condition
+                & second_retained_status_condition
+                & previous_status_condition
+                & (
+                    add_months(col("st.DecisionDate"), 6)
+                    >= segmentation_date
+                ),
+                "FTA"
             ).when(
-                # FT Overdue - Second condition
-                (
-                    (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('DA', 'DC', 'EA', 'HU', 'PA', 'RP')) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNull())
-                    ) | (
-                        (col("ac.CasePrefix").isin('LP', 'LR', 'LD', 'LH', 'LE', 'IA')) & 
-                        (col("ac.HOANRef").isNotNull()) & 
-                        (col("us.CaseStatus").isNotNull()) & 
-                        (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
-                    )
-                ) & 
-                (
-                    (
-                        (col("t.CaseStatus").isin(52, 36)) & 
-                        (col("t.Outcome") == 0) & 
-                        (col("st.DecisionDate").isNotNull())
-                    ) | (
-                        (col("t.CaseStatus") == 36) & 
-                        (col("t.Outcome").isin('1', '2', '50', '108'))
-                    ) | (
-                        (col("t.CaseStatus") == 52) & 
-                        (col("t.Outcome").isin('91', '95')) & 
-                        (col("st.CaseStatus").isin('37', '38', '39', '17'))
-                    )
-                ) & 
-                (add_months(col("st.DecisionDate"), 24) < segmentation_date), 
-                "FT Overdue"
+                ft_arm_prefix_condition
+                & retained_status_condition
+                & (
+                    add_months(col("t.DecisionDate"), 24)
+                    >= segmentation_date
+                ),
+                "FTA"
             ).when(
-                (col("ac.CasePrefix") == 'IA') & 
-                (col("t.CaseStatus").isin(30, 31)), "FT Overdue"
+                ft_arm_prefix_condition
+                & second_retained_status_condition
+                & previous_status_condition
+                & (
+                    add_months(col("st.DecisionDate"), 24)
+                    >= segmentation_date
+                ),
+                "FTA"
             ).when(
-                (col("us.CaseStatus").isNotNull()) & 
-                (~col("t.CaseStatus").isin('36', '52')) & 
-                (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) >= segmentation_date), "UT Retained"
+                ft_arm_prefix_condition
+                & retained_status_condition
+                & (
+                    add_months(col("t.DecisionDate"), 24)
+                    < segmentation_date
+                ),
+                "FTA"
             ).when(
-                (col("us.CaseStatus").isNotNull()) & 
-                (col("t.CaseStatus").isin('36', '52')) & 
-                (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) >= segmentation_date), "UT Retained"
+                ft_arm_prefix_condition
+                & second_retained_status_condition
+                & previous_status_condition
+                & (
+                    add_months(col("st.DecisionDate"), 24)
+                    < segmentation_date
+                ),
+                "FTA"
             ).when(
-                (col("us.CaseStatus").isNotNull()) & 
-                (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & 
-                (add_months(col("us.DecisionDate"), 60) < segmentation_date), "UT Overdue"
+                (col("ac.CasePrefix") == "IA")
+                & col("t.CaseStatus").isin(30, 31),
+                "FTA"
             ).when(
-                (col("ac.CasePrefix").isin('IA', 'LD', 'LE', 'LH', 'LP', 'LR')) & 
-                (col("ac.HOANRef").isNotNull()) & 
-                (col("us.CaseStatus").isNull()), "Skeleton Case"
-            ).otherwise("Not sure?")
+                col("us.CaseStatus").isNotNull()
+                & ~col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("t.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= segmentation_date
+                ),
+                "UT Retained"
+            ).when(
+                col("us.CaseStatus").isNotNull()
+                & col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("st.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= segmentation_date
+                ),
+                "UT Retained"
+            ).when(
+                col("us.CaseStatus").isNotNull()
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("t.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    < segmentation_date
+                ),
+                "UT Overdue"
+            ).when(
+                col("ac.CasePrefix").isin(
+                    "IA", "LD", "LE", "LH", "LP", "LR"
+                )
+                & col("ac.HOANRef").isNotNull()
+                & col("us.CaseStatus").isNull(),
+                "FTA"
+            )
+
+            .otherwise("Not sure?")
         )
     )
 

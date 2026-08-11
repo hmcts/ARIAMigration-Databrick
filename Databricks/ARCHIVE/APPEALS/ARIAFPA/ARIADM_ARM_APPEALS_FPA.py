@@ -2527,55 +2527,33 @@ def stg_appealcasestatus_filtered():
     active_status_condition = (
         col("t.CaseStatus").isNull()
         |
-        (
-            (col("t.CaseStatus") == "10")
-            & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39")
-        )
+        ((col("t.CaseStatus") == "10") & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))
         |
-        (
-            (col("t.CaseStatus") == "46")
-            & col("t.Outcome").isin("1", "86")
-        )
+        ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("1", "86"))
         |
-        (
-            (col("t.CaseStatus") == "26")
-            & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89")
-        )
+        ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))
         |
-        (
-            col("t.CaseStatus").isin("37", "38")
-            & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52")
-        )
+        (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52"))
         |
-        (
-            (col("t.CaseStatus") == "39")
-            & col("t.Outcome").isin("0", "86")
-        )
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
         |
-        (
-            (col("t.CaseStatus") == "50")
-            & (col("t.Outcome") == 0)
-        )
+        ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 0))
         |
-        (
-            col("t.CaseStatus").isin("52", "36")
-            & (col("t.Outcome") == 0)
-            & col("st.DecisionDate").isNull()
-        )
+        (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
     )
 
     retained_status_condition = (
         ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & col("sa.CaseStatus").isin("37", "38"))
         |
-        ( (col("t.CaseStatus") == "26") & col("t.Outcome").isin(1, 2))
+        ((col("t.CaseStatus") == "26") & col("t.Outcome").isin(1, 2))
         |
-        ( col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(1, 2))
+        (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(1, 2))
         |
-        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(25, 80))
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin(25, 80))
         |
-        ( (col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
+        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
         |
-        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(30, 31, 14))
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin(30, 31, 14))
         |
         ((col("t.CaseStatus") == "10") & col("t.Outcome").isin(80, 122, 25, 120, 2, 105, 13, 119))
         |
@@ -2833,9 +2811,9 @@ def add_years(date_col, years):
 def stg_firsttier_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
-    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
+    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FTA').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
 
-    return FTRetained_cases.orderBy("ac.CaseNo")
+    return FTRetained_cases.orderBy("ac.CaseNo") #FT Retained - ARM
 
 
 # COMMAND ----------
@@ -3064,7 +3042,7 @@ def stg_appeals_filtered():
     ).filter(col("Segment") == AppealCategory)
 
     # Selecting all columns from the combined cases
-    return combined_cases
+    return combined_cases.distinct()
 
 
 # COMMAND ----------
@@ -4669,8 +4647,8 @@ def silver_case_adjudicator():
 )
 def silver_archive_metadata():
     metadata_df = dlt.read("silver_appealcase_detail").alias("ac")\
-            .join(dlt.read("silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
-            .join(dlt.read("stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
+            .join(dlt.read("silver_applicant_detail").alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "left")\
+            .join(dlt.read("stg_appeals_filtered").alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "left")\
             .filter(col("ca.CaseAppellantRelationship").isNull())\
     .select(
         col('ac.CaseNo').alias('client_identifier'),

@@ -1,5 +1,5 @@
 # Databricks notebook source
-pip install pyspark azure-storage-blob
+depip install pyspark azure-storage-blob
 
 # COMMAND ----------
 
@@ -2832,9 +2832,9 @@ def add_years(date_col, years):
 def stg_firsttier_filtered():
     # Reading base tables
     appeal_cases =  dlt.read("stg_appealcasestatus_filtered")
-    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FT Retained - ARM').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
+    FTRetained_cases = appeal_cases.alias("ac").filter(col('CaseStatusCategory') == 'FTA').select("ac.CaseNo",lit('ARIAFTA').alias('Segment'))
 
-    return FTRetained_cases.orderBy("ac.CaseNo")
+    return FTRetained_cases.orderBy("ac.CaseNo") #FT Retained - ARM
 
 
 # COMMAND ----------
@@ -3063,7 +3063,7 @@ def stg_appeals_filtered():
     ).filter(col("Segment") == AppealCategory)
 
     # Selecting all columns from the combined cases
-    return combined_cases
+    return combined_cases.distinct()
 
 
 # COMMAND ----------
@@ -4706,9 +4706,9 @@ def silver_archive_metadata():
     )
 
     metadata_df = m1_df.alias("ac")\
-            .join(m2_df.alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "inner")\
-            .join(stg_df.alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "inner")\
-                .join(m7_pivoted.alias('m7'), col("ac.CaseNo") == col("m7.CaseNo"), "inner")\
+            .join(m2_df.alias('ca'), col("ac.CaseNo") == col("ca.CaseNo"), "left")\
+            .join(stg_df.alias('flt'), col("ac.CaseNo") == col("flt.CaseNo"), "left")\
+                .join(m7_pivoted.alias('m7'), col("ac.CaseNo") == col("m7.CaseNo"), "left")\
             .filter(col("ca.CaseAppellantRelationship").isNull())\
     .select(
         col('ac.CaseNo').alias('client_identifier'),

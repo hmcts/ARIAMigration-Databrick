@@ -59,31 +59,37 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
     #         all_test_results.append(as_tests.test_paymentDescription_test2(test_df))
     #         all_test_results.append(as_tests.test_paymentDescription_test3(test_df))
 
-    # # -- Remission --
-    # test_data_setup = None
-    # test_df, test_data_setup =  as_tests.test_remission_init(json_data, M1_bronze, M4_bronze)
-    # if test_data_setup != True:
-    #      all_test_results.append(test_data_setup)
+    # -- Remission --
+    test_data_setup = None
+    test_df, test_data_setup =  as_tests.test_remission_init(json_data, M1_bronze, M4_bronze)
+    if test_data_setup != True:
+         all_test_results.append(test_data_setup)
 
-    # if test_df != None:
-    #     if "remissionDecision" not in fields_to_exclude:
-    #         all_test_results.append(as_tests.test_remissionDecision_test1(test_df))
-    #         all_test_results.append(as_tests.test_remissionDecision_test2(test_df))
-    #         all_test_results.append(as_tests.test_remissionDecision_test3(test_df))
+    if test_df != None:
+        if "remissionDecision" not in fields_to_exclude:
+            all_test_results.append(as_tests.test_remissionDecision_test1(test_df))
+            all_test_results.append(as_tests.test_remissionDecision_test2(test_df))
+            all_test_results.append(as_tests.test_remissionDecision_test3(test_df))
+            all_test_results.append(as_tests.test_remissionDecision_test4(test_df))
+            all_test_results.append(as_tests.test_remissionDecision_test5(test_df))
+            all_test_results.append(as_tests.test_remissionDecision_test6(test_df))
 
-    #     if "remissionDecisionReason" not in fields_to_exclude:
-    #         all_test_results.append(as_tests.test_remissionDecisionReason_test1(test_df))
-    #         all_test_results.append(as_tests.test_remissionDecisionReason_test2(test_df))
-    #         all_test_results.append(as_tests.test_remissionDecisionReason_test3(test_df))
+        if "remissionDecisionReason" not in fields_to_exclude:
+            all_test_results.append(as_tests.test_remissionDecisionReason_test1(test_df))
+            all_test_results.append(as_tests.test_remissionDecisionReason_test2(test_df))
+            all_test_results.append(as_tests.test_remissionDecisionReason_test3(test_df))
+            all_test_results.append(as_tests.test_remissionDecisionReason_test4(test_df))
+            all_test_results.append(as_tests.test_remissionDecisionReason_test5(test_df))
+            all_test_results.append(as_tests.test_remissionDecisionReason_test6(test_df))
 
-    #     if "amountLeftToPay" not in fields_to_exclude:
-    #         all_test_results.append(as_tests.test_amountLeftToPay_test1(test_df))
-    #         all_test_results.append(as_tests.test_amountLeftToPay_test2(test_df))
-    #         all_test_results.append(as_tests.test_amountLeftToPay_test3(test_df))
+        if "amountLeftToPay" not in fields_to_exclude:
+            all_test_results.append(as_tests.test_amountLeftToPay_test1(test_df))
+            all_test_results.append(as_tests.test_amountLeftToPay_test2(test_df))
+            all_test_results.append(as_tests.test_amountLeftToPay_test3(test_df))
 
-    #     if "amountRemitted" not in fields_to_exclude:
-    #         all_test_results.append(as_tests.test_amountRemitted_test1(test_df))
-    #         all_test_results.append(as_tests.test_amountRemitted_test2(test_df))
-    #         all_test_results.append(as_tests.test_amountRemitted_test3(test_df))
+        if "amountRemitted" not in fields_to_exclude:
+            all_test_results.append(as_tests.test_amountRemitted_test1(test_df))
+            all_test_results.append(as_tests.test_amountRemitted_test2(test_df))
+            all_test_results.append(as_tests.test_amountRemitted_test3(test_df))
 
     return classify_all(all_test_results)

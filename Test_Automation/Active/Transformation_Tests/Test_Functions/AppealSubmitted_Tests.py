@@ -16,6 +16,9 @@ from models.test_result import TestResult
 
 test_from_state = "appealSubmitted"
 
+REMISSION_APPEAL_TYPES = ["refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection"]
+REMISSION_APPEAL_TYPES_NON_PA = ["refusalOfEu", "euSettlementScheme", "refusalOfHumanRights"]
+
 ############################################################################################
 #######################
 #default mapping Init code
@@ -705,6 +708,13 @@ def test_remission_init(json, M1_bronze, M4_bronze):
             "PaymentRemissionGranted"
         )
 
+        has_type5 = (
+            M4_bronze.filter(col("TransactionTypeId") == 5)
+            .select("CaseNo").distinct()
+            .withColumnRenamed("CaseNo", "_ht_caseno")
+            .withColumn("has_type5", lit(True))
+        )
+
         M4_bronze = M4_bronze.select(
             "CaseNo",
             "Amount",
@@ -722,174 +732,253 @@ def test_remission_init(json, M1_bronze, M4_bronze):
         ).join(
             M4_bronze,
             json["appealReferenceNumber"] == M4_bronze["CaseNo"],
-            "inner" 
+            "left"
         ).drop(M1_bronze["CaseNo"])
-        
+
+        test_df = test_df.join(
+            has_type5,
+            test_df["appealReferenceNumber"] == has_type5["_ht_caseno"],
+            "left"
+        ).drop("_ht_caseno").withColumn("has_type5", coalesce(col("has_type5"), lit(False)))
+
         return test_df, True
     except Exception as e:
         error_message = str(e)        
         return None,TestResult("remission", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-# remissionDecision - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and remissionDecision = “approved”
+# remissionDecision test1 - EA/EU/HU/PA + PaymentRemissionGranted == 1 -> "approved"
 #######################
 def test_remissionDecision_test1(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 1)
-            ).count() == 0:
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & (col("PaymentRemissionGranted") == 1)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 1)
-        ) &
-            (col("remissionDecision") != "approved")
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision") != "approved"))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and remissionDecision != “approved”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted == 1 and remissionDecision != 'approved'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have remissionDecision = “approved”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted == 1 -> remissionDecision = 'approved'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
+
 #######################
-# remissionDecision - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 and remissionDecision = rejected
+# remissionDecision test2 - EA/EU/HU/PA + PaymentRemissionGranted 0/null + has_type5 -> "approved"
 #######################
 def test_remissionDecision_test2(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 2)
-            ).count() == 0:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & granted_0_or_null & (col("has_type5") == True)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 2)
-        ) &
-            (col("remissionDecision") != "rejected")
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision") != "approved"))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 and remissionDecision != rejected", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted 0/null + has a type-5 transaction and remissionDecision != 'approved'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 have remissionDecision = rejected", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted 0/null + type-5 txn -> remissionDecision = 'approved'", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-# remissionDecision - Where Appeal Type != EA,EU,HU,PA and remissionDecision is not null
+# remissionDecision test3 - EA/EU/HU/PA + PaymentRemissionGranted == 2 -> "rejected"
 #######################
 def test_remissionDecision_test3(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")))
-            ).count() == 0:
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & (col("PaymentRemissionGranted") == 2)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")))
-        ) &
-            col("remissionDecision").isNotNull()
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision") != "rejected"))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type != EA,EU,HU,PA and remissionDecision is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted == 2 and remissionDecision != 'rejected'", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: all rows where Appeal Type != EA,EU,HU,PA, remissionDecision is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted == 2 -> remissionDecision = 'rejected'", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecision test4 - EA/EU/HU (NOT PA) + PaymentRemissionGranted 0/null + NO type-5 -> "rejected"
+#######################
+def test_remissionDecision_test4(test_df):
+    try:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES_NON_PA)) & granted_0_or_null & (col("has_type5") == False)
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision") != "rejected"))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU (not PA) + PaymentRemissionGranted 0/null + no type-5 transaction and remissionDecision != 'rejected'", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: EA,EU,HU (not PA) + PaymentRemissionGranted 0/null + no type-5 txn -> remissionDecision = 'rejected'", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecision test5 - ARIADM-2352: PA (protection) + PaymentRemissionGranted 0/null + NO type-5 -> remissionDecision OMITTED (null)
+#######################
+def test_remissionDecision_test5(test_df):
+    try:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType") == "protection") & granted_0_or_null & (col("has_type5") == False)
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision").isNotNull()))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed (ARIADM-2352): found {acceptance_critera.count()} where AppealType = PA + PaymentRemissionGranted 0/null + no type-5 transaction but remissionDecision is NOT null (should be omitted)", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass (ARIADM-2352): PA + PaymentRemissionGranted 0/null + no type-5 txn -> remissionDecision omitted (null)", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecision test6 - Where Appeal Type != EA,EU,HU,PA -> remissionDecision omitted (null)
+#######################
+def test_remissionDecision_test6(test_df):
+    try:
+        precondition = ~(col("AppealType").isin(REMISSION_APPEAL_TYPES))
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecision").isNotNull()))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecision","FAIL", f"remissionDecision acceptance criteria failed: found {acceptance_critera.count()} where AppealType != EA,EU,HU,PA and remissionDecision is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecision","PASS", "remissionDecision acceptance criteria pass: AppealType != EA,EU,HU,PA -> remissionDecision null", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecision", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
     
+GRANTED_REASON = "This is a migrated case. The remission was granted."
+REJECTED_REASON = "This is a migrated case. The remission was rejected."
+
 #######################
-# remissionDecisionReason - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and remissionDecisionReason = “This is a migrated case. The remission was granted.”
+# remissionDecisionReason test1 - EA/EU/HU/PA + PaymentRemissionGranted == 1 -> granted reason
 #######################
 def test_remissionDecisionReason_test1(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 1)
-            ).count() == 0:
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & (col("PaymentRemissionGranted") == 1)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 1)
-        ) &
-            (col("remissionDecisionReason") != "This is a migrated case. The remission was granted.")
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason") != GRANTED_REASON))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 and remissionDecisionReason != “This is a migrated case. The remission was granted.”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted == 1 and remissionDecisionReason != granted reason", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 1 have remissionDecisionReason = “This is a migrated case. The remission was granted.”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted == 1 -> granted reason", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
+
 #######################
-# remissionDecisionReason - Where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 and remissionDecision = “This is a migrated case. The remission was rejected.”
+# remissionDecisionReason test2 - EA/EU/HU/PA + PaymentRemissionGranted 0/null + has_type5 -> granted reason
 #######################
 def test_remissionDecisionReason_test2(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 2)
-            ).count() == 0:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & granted_0_or_null & (col("has_type5") == True)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")) &
-            (col("PaymentRemissionGranted") == 2)
-        ) &
-            (col("remissionDecisionReason") != "This is a migrated case. The remission was rejected.")
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason") != GRANTED_REASON))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 and remissionDecision != “This is a migrated case. The remission was rejected.”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted 0/null + type-5 txn and remissionDecisionReason != granted reason", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type = EA,EU,HU,PA + M1.PaymentRemissionGranted == 2 have remissionDecision = “This is a migrated case. The remission was rejected.”", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted 0/null + type-5 txn -> granted reason", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
-# remissionDecisionReason - Where Appeal Type != EA,EU,HU,PA and remissionDecision is not null
+# remissionDecisionReason test3 - EA/EU/HU/PA + PaymentRemissionGranted == 2 -> rejected reason
 #######################
 def test_remissionDecisionReason_test3(test_df):
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")))
-            ).count() == 0:
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES)) & (col("PaymentRemissionGranted") == 2)
+        if test_df.filter(precondition).count() == 0:
             return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        acceptance_critera = test_df.filter(
-        (
-            (~(col("AppealType").isin("refusalOfEu", "euSettlementScheme", "refusalOfHumanRights", "protection")))
-        ) &
-            col("remissionDecisionReason").isNotNull()
-        )
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason") != REJECTED_REASON))
 
         if acceptance_critera.count() != 0:
-            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where Appeal Type != EA,EU,HU,PA and remissionDecisionReason is not null", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU,PA + PaymentRemissionGranted == 2 and remissionDecisionReason != rejected reason", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: all rows where Appeal Type != EA,EU,HU,PA, remissionDecisionReason is null", test_from_state, inspect.stack()[0].function)
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: EA,EU,HU,PA + PaymentRemissionGranted == 2 -> rejected reason", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecisionReason test4 - EA/EU/HU (NOT PA) + PaymentRemissionGranted 0/null + NO type-5 -> rejected reason
+#######################
+def test_remissionDecisionReason_test4(test_df):
+    try:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType").isin(REMISSION_APPEAL_TYPES_NON_PA)) & granted_0_or_null & (col("has_type5") == False)
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason") != REJECTED_REASON))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where AppealType = EA,EU,HU (not PA) + PaymentRemissionGranted 0/null + no type-5 txn and remissionDecisionReason != rejected reason", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: EA,EU,HU (not PA) + PaymentRemissionGranted 0/null + no type-5 txn -> rejected reason", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecisionReason test5 - ARIADM-2352: PA + PaymentRemissionGranted 0/null + NO type-5 -> remissionDecisionReason omitted (null)
+#######################
+def test_remissionDecisionReason_test5(test_df):
+    try:
+        granted_0_or_null = (col("PaymentRemissionGranted") == 0) | (col("PaymentRemissionGranted").isNull())
+        precondition = (col("AppealType") == "protection") & granted_0_or_null & (col("has_type5") == False)
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason").isNotNull()))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed (ARIADM-2352): found {acceptance_critera.count()} where AppealType = PA + PaymentRemissionGranted 0/null + no type-5 txn but remissionDecisionReason is NOT null (should be omitted)", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass (ARIADM-2352): PA + PaymentRemissionGranted 0/null + no type-5 txn -> remissionDecisionReason omitted (null)", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+#######################
+# remissionDecisionReason test6 - Where Appeal Type != EA,EU,HU,PA -> remissionDecisionReason omitted (null)
+#######################
+def test_remissionDecisionReason_test6(test_df):
+    try:
+        precondition = ~(col("AppealType").isin(REMISSION_APPEAL_TYPES))
+        if test_df.filter(precondition).count() == 0:
+            return TestResult("remissionDecisionReason", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = test_df.filter(precondition & (col("remissionDecisionReason").isNotNull()))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("remissionDecisionReason","FAIL", f"remissionDecisionReason acceptance criteria failed: found {acceptance_critera.count()} where AppealType != EA,EU,HU,PA and remissionDecisionReason is not null", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("remissionDecisionReason","PASS", "remissionDecisionReason acceptance criteria pass: AppealType != EA,EU,HU,PA -> remissionDecisionReason null", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("remissionDecisionReason", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
@@ -1035,6 +1124,8 @@ def test_amountRemitted_test1(test_df):
             (col("TransactionTypeId") == 5) &
             (col("Status") != 3)
         )
+
+        case_window = Window.partitionBy("CaseNo")
 
         acceptance_critera = test_df.withColumn("Total_Amount", F.sum("Amount").over(case_window)) \
         .filter(

@@ -4,7 +4,7 @@ from . import listing as L
 
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    row_number, nullif, coalesce, concat_ws, concat, trim, map_from_arrays, to_date, date_format
+    row_number, nullif, coalesce, concat_ws, concat, trim, map_from_arrays, to_date, date_format, substring
 )
 
 
@@ -85,7 +85,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                     ).withColumn("Notes",
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
-                                concat(
+                                substring(concat(
                                     lit("Listed details from ARIA: "),
                                     lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
                                     lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
@@ -100,7 +100,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                     lit("\nRequired/Incompatible Judicial Officers: "),
                                     coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
                                     lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
-                            )
+                            ), 1, 2000)
                     )
     
     content_df = final_df.select(col("CaseNo"), col("additionalInstructionsTribunalResponse"), col("isAppealSuitableToFloat"), col("ListTypeId"))

@@ -1,6 +1,6 @@
 from pyspark.sql.functions import (
     col, when, lit, array, struct, collect_list,
-    coalesce, concat_ws, concat, trim, nullif, desc, to_date, date_format
+    coalesce, concat_ws, concat, trim, nullif, desc, to_date, date_format, substring
 )
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -78,7 +78,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                 when(col("Notes").isNull(), "N/A").otherwise(col("Notes"))
                     ).withColumn("additionalInstructionsTribunalResponse",
                                 when(col("CaseStatus").eqNullSafe(26),
-                                    concat(
+                                    substring(concat(
                                         lit("Listed details from ARIA: "),
                                         lit("\nHearing Centre: "), coalesce(col("Hearing Centre"), lit("N/A")),
                                         lit("\nHearing Date: "), coalesce(col("Hearing Date"), lit("N/A")),
@@ -93,7 +93,7 @@ def hearingResponse(silver_m1, silver_m3, silver_m6):
                                         lit("\nRequired/Incompatible Judicial Officers: "),
                                         coalesce(col("Required/Incompatible Judicial Officers"), lit("")),
                                         lit("\nNotes: "), coalesce(col("Notes"), lit("N/A"))
-                                    )
+                                    ), 1, 2000)
                                 )
                     )
     additionalInstructionsTribunalResponse_schema_dict = {

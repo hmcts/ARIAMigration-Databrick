@@ -212,7 +212,7 @@ class TestCaseUnderReviewHearingResponse:
             JudgeLastName3 JudgeFirstName3 ( Judge3 ) : Not Required
             Notes: Notes\
         """).strip()
-        untruncated_response_9 = (
+        untruncated_response = (
             "Listed details from ARIA: \n"
             "Hearing Centre: HearingCentre\n"
             "Hearing Date: 2000-01-01\n"
@@ -227,7 +227,7 @@ class TestCaseUnderReviewHearingResponse:
             "Required/Incompatible Judicial Officers: \n"
             "Notes: " + "N" * 2500
         )
-        assert len(untruncated_response_9) > 2000
-        assert resultList[6][0] == untruncated_response_9[:2000]  # CaseNo 9 - response truncated to 2000 chars
+        assert len(untruncated_response) > 2000
+        assert resultList[6][0] == untruncated_response[:2000]  # CaseNo 9 - response truncated to 2000 chars
         assert len(resultList[6][0]) == 2000
         assert len(resultList) == 7  # 2 excluded (case 5: Outcome != 0; case 8: AIP representation); 7 remain, 2 with NULL response (CaseNo 2, 3: CaseStatus 37/38)

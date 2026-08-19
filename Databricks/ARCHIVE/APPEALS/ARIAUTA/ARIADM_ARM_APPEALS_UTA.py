@@ -2466,7 +2466,6 @@ def stg_appealcasestatus_filtered():
 
     result_df = (
         appeal_case.alias("ac")
-
         .join(
             max_status.alias("s"),
             col("ac.CaseNo") == col("s.CaseNo"),
@@ -2526,55 +2525,33 @@ def stg_appealcasestatus_filtered():
     active_status_condition = (
         col("t.CaseStatus").isNull()
         |
-        (
-            (col("t.CaseStatus") == "10")
-            & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39")
-        )
+        ((col("t.CaseStatus") == "10") & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))
         |
-        (
-            (col("t.CaseStatus") == "46")
-            & col("t.Outcome").isin("1", "86")
-        )
+        ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("1", "86"))
         |
-        (
-            (col("t.CaseStatus") == "26")
-            & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89")
-        )
+        ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))
         |
-        (
-            col("t.CaseStatus").isin("37", "38")
-            & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52")
-        )
+        (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52"))
         |
-        (
-            (col("t.CaseStatus") == "39")
-            & col("t.Outcome").isin("0", "86")
-        )
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
         |
-        (
-            (col("t.CaseStatus") == "50")
-            & (col("t.Outcome") == 0)
-        )
+        ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 0))
         |
-        (
-            col("t.CaseStatus").isin("52", "36")
-            & (col("t.Outcome") == 0)
-            & col("st.DecisionDate").isNull()
-        )
+        (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
     )
 
     retained_status_condition = (
         ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & col("sa.CaseStatus").isin("37", "38"))
         |
-        ( (col("t.CaseStatus") == "26") & col("t.Outcome").isin(1, 2))
+        ((col("t.CaseStatus") == "26") & col("t.Outcome").isin(1, 2))
         |
-        ( col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(1, 2))
+        (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin(1, 2))
         |
-        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(25, 80))
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin(25, 80))
         |
-        ( (col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
+        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == 31) & (col("sa.CaseStatus") == "39"))
         |
-        ( (col("t.CaseStatus") == "39") & col("t.Outcome").isin(30, 31, 14))
+        ((col("t.CaseStatus") == "39") & col("t.Outcome").isin(30, 31, 14))
         |
         ((col("t.CaseStatus") == "10") & col("t.Outcome").isin(80, 122, 25, 120, 2, 105, 13, 119))
         |
@@ -2691,16 +2668,61 @@ def stg_appealcasestatus_filtered():
                 "FTA"
             ).when(
                 col("us.CaseStatus").isNotNull()
+                & ~col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("t.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= segmentation_date
+                ),
+                "UT Retained"
+            ).when(
+                col("us.CaseStatus").isNotNull()
+                & col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("st.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= segmentation_date
+                ),
+                "UT Retained"
+            ).when(
+                col("us.CaseStatus").isNotNull()
+                & ~col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("t.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    < segmentation_date
+                ),
+                "UT Overdue"
+            ).when(
+                col("us.CaseStatus").isNotNull()
+                & col("t.CaseStatus").isin("36", "52")
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    >= add_months(col("st.DecisionDate"), 24)
+                )
+                & (
+                    add_months(col("us.DecisionDate"), 60)
+                    < segmentation_date
+                ),
+                "UT Overdue"
+            ).when(
+                col("us.CaseStatus").isNotNull()
                 & active_status_condition,
                 "FT Active Case"
             ).when(
                 (
                     col("ac.CasePrefix").isin(*ft_prefixes)
                     |
-                    (
-                        col("ac.CasePrefix").isin(*ho_prefixes)
-                        & col("ac.HOANRef").isNull()
-                    )
+                    (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
                 )
                 & active_status_condition,
                 "FT Active Case"
@@ -2757,43 +2779,8 @@ def stg_appealcasestatus_filtered():
                 "FTA"
             ).when(
                 (col("ac.CasePrefix") == "IA")
-                & col("t.CaseStatus").isin(30, 31),
+                & col("t.CaseStatus").isin("30", "31"),
                 "FTA"
-            ).when(
-                col("us.CaseStatus").isNotNull()
-                & ~col("t.CaseStatus").isin("36", "52")
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    >= add_months(col("t.DecisionDate"), 24)
-                )
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    >= segmentation_date
-                ),
-                "UT Retained"
-            ).when(
-                col("us.CaseStatus").isNotNull()
-                & col("t.CaseStatus").isin("36", "52")
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    >= add_months(col("st.DecisionDate"), 24)
-                )
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    >= segmentation_date
-                ),
-                "UT Retained"
-            ).when(
-                col("us.CaseStatus").isNotNull()
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    >= add_months(col("t.DecisionDate"), 24)
-                )
-                & (
-                    add_months(col("us.DecisionDate"), 60)
-                    < segmentation_date
-                ),
-                "UT Overdue"
             ).when(
                 col("ac.CasePrefix").isin(
                     "IA", "LD", "LE", "LH", "LP", "LR"
@@ -2802,13 +2789,14 @@ def stg_appealcasestatus_filtered():
                 & col("us.CaseStatus").isNull(),
                 "FTA"
             )
-
             .otherwise("Not sure?")
         )
     )
 
-    # Select the CaseNo column as output
-    appeal_casesstatus = filtered_df.select("ac.CaseNo", "CaseStatusCategory")
+    appeal_casesstatus = filtered_df.select(
+        "ac.CaseNo",
+        "CaseStatusCategory"
+    )
 
     return appeal_casesstatus
 

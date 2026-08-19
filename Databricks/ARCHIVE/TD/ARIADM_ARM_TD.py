@@ -682,6 +682,7 @@ def bronze_iris_extract():
 
 # COMMAND ----------
 
+# DBTITLE 1,Segmentation Table
 @dlt.table(
     name="stg_td_filtered",
     comment="Delta Live Table for appeal cases requiring tribunal decisions.",
@@ -689,31 +690,24 @@ def bronze_iris_extract():
 )
 def bronze_appeal_case_tribunal_decision():
 
-    UT_STATUSES = ["40","41","42","43","44","45","53","27","28","29","34","32","33"]
-    OBSOLETE_PREFIXES = ["VA","AA","AS","CC","HR","HX","IM","NS","OA","OC","RD","TH","XX"]
-    LP_GROUP = ["LP","LR","LD","LH","LE","IA"]
-    DA_GROUP = ["DA","DC","EA","HU","PA","RP"]
-    SKELETON_GROUP = ["IA","LD","LE","LH","LP","LR"]
+    UT_STATUSES = ["40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33"]
+    OBSOLETE_PREFIXES = ["VA", "AA", "AS", "CC", "HR", "HX", "IM", "NS", "OA", "OC", "RD", "TH", "XX"]
+    SKELETON_GROUP = ["IA", "LD", "LE", "LH", "LP", "LR"]
+    DA_GROUP = ["DA", "DC", "EA", "HU", "PA", "RP"]
+    LP_GROUP = ["LP", "LR", "LD", "LH", "LE", "IA"]
 
-    segmentation_date = current_date() if env_name == 'prod' else lit("2026-06-05") 
+    segmentation_date = current_date() if env_name == "prod" else lit("2026-06-05").cast("date")
 
-    # ISNULL(outcome,-1) NOT IN (38,111) AND ISNULL(casestatus,-1) != 17
     status_subquery = (
         dlt.read("raw_status")
-        .filter(
-            (col("outcome").isNull() | (~col("outcome").isin(38, 111)))
-            & (col("casestatus").isNull() | (col("casestatus") != 17))
-        )
+        .filter((col("outcome").isNull() | ~col("outcome").cast("int").isin(38, 111)) & (col("casestatus").isNull() | (col("casestatus").cast("int") != 17)))
         .groupBy("CaseNo")
         .agg(F.max("StatusId").alias("max_ID"))
     )
 
-    # ISNULL(casestatus,-1) NOT IN (50,52,36)
     prev_subquery = (
         dlt.read("raw_status")
-        .filter(
-            col("casestatus").isNull() | (~col("casestatus").isin(50, 52, 36))
-        )
+        .filter(col("casestatus").isNull() | ~col("casestatus").cast("int").isin(52, 36))
         .groupBy("CaseNo")
         .agg(F.max("StatusId").alias("Prev_ID"))
     )
@@ -725,10 +719,28 @@ def bronze_appeal_case_tribunal_decision():
         .agg(F.max("StatusId").alias("UT_ID"))
     )
 
+    max_46_subquery = (
+        dlt.read("raw_status")
+        .filter(col("CaseStatus") == "46")
+        .groupBy("CaseNo")
+        .agg(F.max("StatusId").alias("Max46_ID"))
+    )
+
+    status_for_sa_prev = dlt.read("raw_status").alias("s")
+
+    sa_prev_subquery = (
+        status_for_sa_prev
+        .join(max_46_subquery.alias("max46"), col("s.CaseNo") == col("max46.CaseNo"), "inner")
+        .filter((col("s.StatusId") < col("max46.Max46_ID")) & (col("s.CaseStatus").isNull() | (col("s.CaseStatus") != "46")))
+        .groupBy(col("s.CaseNo"))
+        .agg(F.max(col("s.StatusId")).alias("Prev_ID"))
+    )
+
     ac = dlt.read("raw_appealcase").alias("ac")
-    t  = dlt.read("raw_status").alias("t")
+    t = dlt.read("raw_status").alias("t")
     st = dlt.read("raw_status").alias("st")
     us = dlt.read("raw_status").alias("us")
+    sa = dlt.read("raw_status").alias("sa")
     fl = dlt.read("raw_filelocation").alias("fl")
 
     df = (
@@ -739,96 +751,131 @@ def bronze_appeal_case_tribunal_decision():
         .join(st, (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left_outer")
         .join(ut_subquery.alias("ut"), col("ac.CaseNo") == col("ut.CaseNo"), "left_outer")
         .join(us, (col("us.CaseNo") == col("ut.CaseNo")) & (col("us.StatusId") == col("ut.UT_ID")), "left_outer")
+        .join(sa_prev_subquery.alias("saPrev"), col("ac.CaseNo") == col("saPrev.CaseNo"), "left_outer")
+        .join(sa, (col("sa.CaseNo") == col("saPrev.CaseNo")) & (col("sa.StatusId") == col("saPrev.Prev_ID")), "left_outer")
         .join(fl, col("ac.CaseNo") == col("fl.CaseNo"), "left_outer")
     )
 
-    # Shared "CCD - FT Active" condition
     ccd_active_cond = (
         col("t.CaseStatus").isNull()
-        | ((col("t.CaseStatus") == 10) & col("t.Outcome").isin(0,109,104,82,99,121,27,39))
-        | ((col("t.CaseStatus") == 46) & col("t.Outcome").isin(1,86))
-        | ((col("t.CaseStatus") == 26) & col("t.Outcome").isin(0,27,39,50,40,52,89))
-        | (col("t.CaseStatus").isin(37,38) & col("t.Outcome").isin(39,40,37,50,27,0,5,52))
-        | ((col("t.CaseStatus") == 39) & col("t.Outcome").isin(0,86))
-        | ((col("t.CaseStatus") == 50) & (col("t.Outcome") == 0))
-        | (col("t.CaseStatus").isin(52,36) & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
+        | ((col("t.CaseStatus") == "10") & col("t.Outcome").isin("0", "109", "104", "82", "99", "121", "27", "39"))
+        | ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("1", "86"))
+        | ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("0", "27", "39", "50", "40", "52", "89"))
+        | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52"))
+        | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
+        | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == "0"))
+        | (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == "0") & col("st.DecisionDate").isNull())
     )
 
-    # Shared "FT Retained CCD" condition (set 1, from outcome list with 125)
     retain_cond_1 = (
-        ((col("t.CaseStatus") == 10) & col("t.Outcome").isin(13,80,122,25,120,2,105,119))
-        | ((col("t.CaseStatus") == 46) & col("t.Outcome").isin(31,2,50))
-        | ((col("t.CaseStatus") == 26) & col("t.Outcome").isin(80,13,25,1,2))
-        | (col("t.CaseStatus").isin(37,38) & col("t.Outcome").isin(1,2,80,13,25,72,14,125))
-        | ((col("t.CaseStatus") == 39) & col("t.Outcome").isin(30,31,25,14,80))
-        | ((col("t.CaseStatus") == 51) & col("t.Outcome").isin(94,93))
-        | ((col("t.CaseStatus") == 52) & col("t.Outcome").isin(91,95)
-           & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin(*UT_STATUSES, 37,38,39,17)))
-        | ((col("t.CaseStatus") == 36) & (col("t.Outcome") == 25)
-           & (col("st.CaseStatus").isNull() | ~col("st.CaseStatus").isin(*UT_STATUSES)))
+        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & col("sa.CaseStatus").isin("37", "38"))
+        | ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("1", "2"))
+        | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("1", "2"))
+        | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("25", "80"))
+        | ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & (col("sa.CaseStatus") == "39"))
+        | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("30", "31", "14"))
+        | ((col("t.CaseStatus") == "10") & col("t.Outcome").isin("80", "122", "25", "120", "2", "105", "13", "119"))
+        | ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & col("sa.CaseStatus").isin("10", "51", "52"))
+        | ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("80", "13", "25"))
+        | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("80", "13", "25", "72", "125"))
+        | ((col("t.CaseStatus") == "51") & col("t.Outcome").isin("94", "93"))
+        | ((col("t.CaseStatus") == "52") & col("t.Outcome").isin("91", "95"))
+        | ((col("t.CaseStatus") == "36") & col("t.Outcome").isin("1", "2", "25"))
     )
 
-    # Shared "FT Retained CCD" condition (set 2)
     retain_cond_2 = (
-        (col("t.CaseStatus").isin(52,36) & (col("t.Outcome") == 0) & col("st.DecisionDate").isNotNull())
-        | ((col("t.CaseStatus") == 36) & col("t.Outcome").isin(1,2,50,108))
-        | ((col("t.CaseStatus") == 52) & col("t.Outcome").isin(91,95) & col("st.CaseStatus").isin(37,38,39,17))
+        (col("t.CaseStatus").isin("50", "52", "36") & (col("t.Outcome") == "0"))
+        | ((col("t.CaseStatus") == "52") & col("t.Outcome").isin("91", "95"))
+        | ((col("t.CaseStatus") == "36") & col("t.Outcome").isin("1", "2", "25"))
     )
 
-    # Helper: HOANRef-not-null LP-group condition with the 5/2-year window check
-    lp_hoanref_recent = (
-        col("ac.CasePrefix").isin(*LP_GROUP)
-        & col("ac.HOANRef").isNotNull()
-        & col("us.CaseStatus").isNotNull()
-        & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+    previous_status_cond = (
+        (col("st.CaseStatus").isin("37", "38") & col("st.Outcome").isin("1", "2"))
+        | (col("st.CaseStatus") == "17")
+        | ((col("st.CaseStatus") == "26") & col("st.Outcome").isin("1", "2"))
+        | ((col("st.CaseStatus") == "39") & col("st.Outcome").isin("25", "80"))
+        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & col("sa.CaseStatus").isin("37", "38"))
+        | ((col("st.CaseStatus") == "39") & col("st.Outcome").isin("31", "30", "14"))
+        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & (col("sa.CaseStatus") == "39"))
+        | ((col("st.CaseStatus") == "10") & col("st.Outcome").isin("80", "122", "25", "120", "2", "105", "13", "119"))
+        | (col("st.CaseStatus") == "51")
+        | (col("st.CaseStatus").isin("37", "38") & col("st.Outcome").isin("80", "13", "25", "72", "125"))
+        | ((col("st.CaseStatus") == "26") & col("st.Outcome").isin("80", "13", "25"))
+        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & col("sa.CaseStatus").isin("10", "51", "52"))
+    )
+
+    ft_retained_prefix_cond = (
+        col("ac.CasePrefix").isin(*DA_GROUP)
+        | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+        | (
+            col("ac.CasePrefix").isin(*LP_GROUP)
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNotNull()
+            & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+        )
+    )
+
+    ft_retained_previous_prefix_cond = (
+        (col("ac.CasePrefix").isin(*DA_GROUP) & col("us.CaseStatus").isNull())
+        | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+        | (
+            col("ac.CasePrefix").isin(*LP_GROUP)
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNotNull()
+            & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+        )
     )
 
     derived_status = (
-        when(
-            col("t.CaseStatus").isin(*UT_STATUSES) & col("t.Outcome").isin(0,86),
-            "UT Active/Remitted Case"
-        )
-        .when(col("fl.DeptId").isin(519,520), "Tribunal Decision")
+        when(col("t.CaseStatus").isin(*UT_STATUSES) & col("t.Outcome").isin("0", "86"), "UT Active/Remitted Case")
+        .when(col("fl.DeptId").isin(519, 520), "Tribunal Decision")
         .when(col("ac.CasePrefix").isin(*OBSOLETE_PREFIXES), "Tribunal Decision")
-        .when(col("us.CaseStatus").isNotNull() & ccd_active_cond, "CCD")
+        .when(col("us.CaseStatus").isNotNull() & ccd_active_cond, "FT Active Case")
         .when(
             (
                 col("ac.CasePrefix").isin(*DA_GROUP)
                 | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
-            ) & ccd_active_cond,
-            "CCD"
+            )
+            & ccd_active_cond,
+            "FT Active Case"
         )
         .when(
-            (
-                col("ac.CasePrefix").isin(*DA_GROUP)
-                | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
-                | lp_hoanref_recent
-            )
+            ft_retained_prefix_cond
             & retain_cond_1
             & (F.add_months(col("t.DecisionDate"), 6) >= segmentation_date),
-            "CCD"
+            "FT RETAINED - CCD"
         )
         .when(
-            (
-                (col("ac.CasePrefix").isin(*DA_GROUP) & col("us.CaseStatus").isNull())
-                | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
-                | lp_hoanref_recent
-            )
+            ft_retained_previous_prefix_cond
             & retain_cond_2
-            & (F.add_months(col("t.DecisionDate"), 6) >= segmentation_date),
-            "CCD"
+            & previous_status_cond
+            & (F.add_months(col("st.DecisionDate"), 6) >= segmentation_date),
+            "FT RETAINED - CCD"
         )
-        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNull(), "Tribunal Decision")
-        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("us.CaseStatus").isNotNull(), "Tribunal Decision")
-        .when(col("ac.CasePrefix").isin(*SKELETON_GROUP) & col("ac.HOANRef").isNotNull(), "Skeleton Case")
+        .when(
+            col("ac.CasePrefix").isin(*SKELETON_GROUP)
+            & col("ac.HOANRef").isNull(),
+            "Tribunal Decision"
+        )
+        .when(
+            col("ac.CasePrefix").isin(*SKELETON_GROUP)
+            & col("us.CaseStatus").isNotNull(),
+            "Tribunal Decision"
+        )
+        .when(
+            col("ac.CasePrefix").isin(*SKELETON_GROUP)
+            & col("ac.HOANRef").isNotNull(),
+            "Skeleton Case"
+        )
         .otherwise("Tribunal Decision")
     )
 
     result_df = (
         df
-        .filter((col("ac.CaseType") == 1) & (derived_status == "Tribunal Decision"))
-        .select("ac.CaseNo")
-        .orderBy("ac.CaseNo")
+        .filter(col("ac.CaseType") == 1)
+        .filter(derived_status == "Tribunal Decision")
+        .select(col("ac.CaseNo"))
+        .orderBy(col("ac.CaseNo"))
     )
 
     return result_df

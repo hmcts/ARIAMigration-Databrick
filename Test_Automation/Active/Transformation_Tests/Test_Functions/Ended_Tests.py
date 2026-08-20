@@ -1907,70 +1907,67 @@ def test_isDecisionAllowed_test2(test_df):
 # Expected format: "Title Forenames Surname"
 #######################
 def test_attendingJudge_test1(test_df):
+    test_from_state = "ended"
+    field_name = "attendingJudge"
     try:
-        # Filter for EndedGroup 4 records
+        # Filter for target scenario: Group 4 records
         target_records = test_df.filter(F.col("EndedGroup") == 4)
         
-        # Explicitly set status to "NO DATA" if no records exist
+    
         if target_records.count() == 0:
             return TestResult(
-                "attendingJudge", 
-                "NO DATA",  # Custom status for missing test data
-                "No EndedGroup 4 records found in the current test dataset.", 
-                "ended", 
+                field_name, 
+                "NO_DATA", 
+                "NO RECORDS TO TEST: No records found for Group 4.", 
+                test_from_state, 
                 inspect.stack()[0].function
             )
 
-        # Clean concatenation logic (concat_ws automatically handles NULLs)
+        # Plain concatenation: If ANY part is NULL, result evaluates to NULL
         expected_df = target_records.withColumn(
             "expected_judge", 
-            F.trim(
-                F.concat_ws(
-                    " ", 
-                    F.col("Adj_Determination_Title").cast("string"),
-                    F.col("Adj_Determination_Forenames").cast("string"),
-                    F.col("Adj_Determination_Surname").cast("string")
-                )
+            F.concat(
+                F.col("Adj_Determination_Title").cast("string"),
+                F.lit(" "),
+                F.col("Adj_Determination_Forenames").cast("string"),
+                F.lit(" "),
+                F.col("Adj_Determination_Surname").cast("string")
             )
         )
 
-        # Compare Actual vs Expected
+        # Null-safe equality check
         failures = expected_df.filter(
-            (F.col("attendingJudge") != F.col("expected_judge")) |
-            (F.col("attendingJudge").isNull() & F.col("expected_judge").isNotNull())
+            ~F.col(field_name).eqNullSafe(F.col("expected_judge"))
         )
 
-        if failures.count() != 0:
-            sample = failures.select("appealReferenceNumber", "attendingJudge", "expected_judge").limit(1).collect()
+        failure_count = failures.count()
+
+        if failure_count > 0:
+            sample_refs = [row[0] for row in failures.select("appealReferenceNumber").limit(5).collect()]
             return TestResult(
-                "attendingJudge", 
+                field_name, 
                 "FAIL", 
-                f"Found {failures.count()} rows with mismatch. Case {sample[0][0]} Actual: '{sample[0][1]}' vs Expected: '{sample[0][2]}'", 
-                "ended", 
+                f"Inclusion failures: {failure_count} rows with mismatch. Sample Refs: {sample_refs}", 
+                test_from_state, 
                 inspect.stack()[0].function
             )
         
         return TestResult(
-            "attendingJudge", 
+            field_name, 
             "PASS", 
-            "attendingJudge correctly concatenated from Title, Forenames, and Surname for EndedGroup 4", 
-            "ended", 
+            f"attendingJudge correctly concatenated Title, Forenames, and Surname for {target_records.count()} records", 
+            test_from_state, 
             inspect.stack()[0].function
         )
 
     except Exception as e:
         return TestResult(
-            "attendingJudge", 
+            field_name, 
             "FAIL", 
             f"EXCEPTION: {str(e)[:300]}", 
-            "ended", 
+            test_from_state, 
             inspect.stack()[0].function
         )
-
-from pyspark.sql import Window
-import pyspark.sql.functions as F
-from pyspark.sql.functions import col, row_number
-
 ############################################################################################
 # actualCaseHearingLength
 # Logic: Convert M3.HearingDuration (Total Minutes) to { hours, minutes } struct
@@ -6386,27 +6383,22 @@ def test_timeToLiveEnded_detained(json, M1_bronze, M3_bronze):
 
 def test_timeToLiveEnded_ac1(test_df):
     try:
-        # 1. Filter out null dates and grab the latest status record per case
-        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
-        ranked_df = (
-            test_df
-            .filter(col("DecisionDate").isNotNull() & col("TTL.SystemTTL").isNotNull())
-            .withColumn("row_rank", row_number().over(window_spec))
-        )
-        winning_records = ranked_df.filter(col("row_rank") == 1)
-
-        # 2. Define expected 2-year TTL (DecisionDate + 730 days)
-        df_with_expected = winning_records.withColumn(
-            "expected_2yr_ttl", F.date_add(col("DecisionDate").cast("date"), 730)
-        ).withColumn(
-            "expected_100yr_ttl", F.add_months(col("DecisionDate").cast("date"), 1200)
+        # Filter out records where DecisionDate or TTL is missing
+        valid_records = test_df.filter(
+            F.col("DecisionDate").isNotNull() & 
+            F.col("TTL.SystemTTL").isNotNull()
         )
 
-        # 3. Identify failures:
-        # A case fails IF it does NOT match the 2-year TTL AND does NOT match the 100-year retention TTL
-        ttl_fails = df_with_expected.filter(
-            (col("TTL.SystemTTL").cast("date") != col("expected_2yr_ttl")) &
-            (col("TTL.SystemTTL").cast("date") != col("expected_100yr_ttl"))
+        window_spec = Window.partitionBy("appealReferenceNumber").orderBy(F.col("StatusId").desc())
+        ranked_df = valid_records.withColumn("row_rank", F.row_number().over(window_spec))
+        winning_records = ranked_df.filter(F.col("row_rank") == 1)
+
+        if winning_records.count() == 0:
+            return TestResult("timeToLiveEnded", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        # Strictly check for DecisionDate + 730 days
+        ttl_fails = winning_records.filter(
+            F.col("TTL.SystemTTL").cast("date") != F.date_add(F.col("DecisionDate").cast("date"), 730)
         )
 
         fail_count = ttl_fails.count()
@@ -6415,7 +6407,7 @@ def test_timeToLiveEnded_ac1(test_df):
             return TestResult(
                 "timeToLiveEnded", 
                 "FAIL", 
-                f"timeToLiveEnded AC failed: {fail_count} cases do not match DecisionDate + 730 days OR the 100-year retention rule.", 
+                f"timeToLiveEnded acceptance criteria failed: found {fail_count} cases where TTL.SystemTTL does not equal DecisionDate + 730 days with latest StatusId", 
                 test_from_state, 
                 inspect.stack()[0].function
             )
@@ -6423,7 +6415,7 @@ def test_timeToLiveEnded_ac1(test_df):
             return TestResult(
                 "timeToLiveEnded", 
                 "PASS", 
-                "timeToLiveEnded AC passed: All ended cases correctly adhere to either the 2-year TTL or the 100-year permanent retention rule.", 
+                "timeToLiveEnded acceptance criteria passed: all cases have TTL.SystemTTL equal to DecisionDate + 730 days with latest StatusId", 
                 test_from_state, 
                 inspect.stack()[0].function
             )

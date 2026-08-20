@@ -76,26 +76,26 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, C, M6_bronze, M1_silver, M2_bronze)
 
     # if test_data_setup is True and test_df is not None:
-        if "isAppealSuitableToFloat" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
-            all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test2(test_df))
-            all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test3(test_df))
-        if "listingLength" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listingLength_test1(test_df))
-            all_test_results.append(ended_tests.test_listingLength_test2(test_df))
-        if "hearingChannel" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_hearingChannel_test1(test_df))
-            all_test_results.append(ended_tests.test_hearingChannel_test2(test_df))
-        if "listingLocation" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listingLocation_test1(test_df))
-        if "listCaseHearingLength" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listCaseHearingLength_test1(test_df))
-        if "listCaseHearingDate" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listCaseHearingDate_test1(test_df))
-        if "listCaseHearingCentre" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listCaseHearingCentre_test1(test_df))
-        if "listCaseHearingCentreAddress" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))
+    if "isAppealSuitableToFloat" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
+        all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test2(test_df))
+        all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test3(test_df))
+    if "listingLength" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listingLength_test1(test_df))
+        all_test_results.append(ended_tests.test_listingLength_test2(test_df))
+    if "hearingChannel" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_hearingChannel_test1(test_df))
+        all_test_results.append(ended_tests.test_hearingChannel_test2(test_df))
+    if "listingLocation" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listingLocation_test1(test_df))
+    if "listCaseHearingLength" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listCaseHearingLength_test1(test_df))
+    if "listCaseHearingDate" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listCaseHearingDate_test1(test_df))
+    if "listCaseHearingCentre" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listCaseHearingCentre_test1(test_df))
+    if "listCaseHearingCentreAddress" not in fields_to_exclude:
+        all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))
 
     # # --- Self-Contained hearingResponse Tests ---
     if "isInCameraCourtAllowed" not in fields_to_exclude:
@@ -138,8 +138,8 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     if test_data_setup is True and test_df is not None:
         if "attendingJudge" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_attendingJudge_test1(test_df))   
-    #     if "actualCaseHearingLength" not in fields_to_exclude:
-    #         all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
+        if "actualCaseHearingLength" not in fields_to_exclude:
+            all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
         
     # # ---------------------------------------------------------
     # # 7. ftpa Tests (Appellant)

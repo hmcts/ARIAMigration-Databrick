@@ -463,4 +463,24 @@ class appealSubmittedDQRules(DQRulesBase):
             )"""
         )
 
+        # Only enforced while processing the appealSubmitted state itself; ariaDesiredState
+        # (from PP.caseState) is the state carried through into the DQRules output.
+        checks["valid_completeCaseReviewDate"] = (
+            """(
+                NOT (ariaDesiredState <=> 'appealSubmitted')
+                OR
+                (
+                    (
+                        dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('PA', 'RP')
+                        AND completeCaseReviewDate <=> DateLodged
+                    )
+                    OR
+                    (
+                        (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('PA', 'RP'))
+                        AND completeCaseReviewDate IS NULL
+                    )
+                )
+            )"""
+        )
+
         return checks

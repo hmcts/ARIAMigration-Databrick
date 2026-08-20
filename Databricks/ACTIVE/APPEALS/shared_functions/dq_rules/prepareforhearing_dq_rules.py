@@ -108,19 +108,24 @@ class prepareForHearingDQRules(DQRulesBase):
             additionalInstructionsTribunalResponse IS NULL OR
             (
                 LENGTH(additionalInstructionsTribunalResponse) <= 2000 AND
-                additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
-                additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+                (
+                    LENGTH(additionalInstructionsTribunalResponse) = 2000 OR
+                    (
+                        additionalInstructionsTribunalResponse LIKE 'Listed details from ARIA: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Centre: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Date: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nHearing Type: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nCourt: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nList Type: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nList Start Time: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nJudge First Tier: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nCourt Clerk / Usher: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nStart Time: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nEstimated Duration: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nRequired/Incompatible Judicial Officers: %' AND
+                        additionalInstructionsTribunalResponse LIKE '%\\nNotes: %'
+                    )
+                )
             )
         """)
 

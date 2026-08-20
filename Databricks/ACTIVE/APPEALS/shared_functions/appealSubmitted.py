@@ -648,7 +648,7 @@ def appealSubmittedOnly(silver_m1):
 
     df_final = (
         silver_m1
-        .withColumn("completeCaseReviewDate", when(condition, col("DateLodged")))
+        .withColumn("completeCaseReviewDate", when(condition, date_format(col("DateLodged"), "yyyy-MM-dd")))
         .select(
             "CaseNo",
             "completeCaseReviewDate"

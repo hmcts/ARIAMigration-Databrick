@@ -472,7 +472,7 @@ class appealSubmittedDQRules(DQRulesBase):
                 (
                     (
                         dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('PA', 'RP')
-                        AND completeCaseReviewDate <=> DateLodged
+                        AND completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
                     )
                     OR
                     (

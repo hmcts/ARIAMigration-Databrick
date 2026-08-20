@@ -665,6 +665,7 @@ def appealSubmittedOnly(silver_m1):
         df_final.alias("content")
         .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
         .select(
+            col("CaseNo"),
             array(struct(*common_inputFields)).alias("completeCaseReviewDate_inputFields"),
             array(struct(*common_inputValues)).alias("completeCaseReviewDate_inputValues"),
             col("content.completeCaseReviewDate"),

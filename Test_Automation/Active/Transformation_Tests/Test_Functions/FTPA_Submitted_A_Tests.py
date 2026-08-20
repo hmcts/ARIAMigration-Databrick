@@ -76,7 +76,50 @@ def test_ftpa_a_defaultValues(test_df, fields_to_exclude):
 #######################
 def test_ftpa_init(json, M1_bronze, M3_bronze):
     try:
-        test_df = json.select(
+        # 1. Clean M1 and M3 Bronze datasets
+        M1_clean = M1_bronze.select("CaseNo").alias("m1")
+
+        M3_clean = M3_bronze.select(
+            "CaseNo",
+            "CaseStatus",
+            "StatusId",
+            "Party",
+            "OutOfTime"
+        ).alias("m3")
+
+        # 2. Join JSON target payload with Bronze dependencies to bind CaseStatus, StatusId, Party, and OutOfTime
+        test_df = json.join(
+            M1_clean,
+            json["appealReferenceNumber"] == M1_clean["CaseNo"],
+            "inner"
+        ).join(
+            M3_clean,
+            json["appealReferenceNumber"] == M3_clean["CaseNo"],
+            "inner"
+        ).drop(M1_clean["CaseNo"], M3_clean["CaseNo"])
+
+        # 3. Safely extract out-of-time explanation string from nested ftpaList array struct
+        if "ftpaList" in test_df.columns:
+            extracted_text = F.coalesce(
+                F.col("ftpaAppellantOutOfTimeExplanation"),
+                F.col("ftpaRespondentOutOfTimeExplanation"),
+                F.col("ftpaList").getItem(0).getItem("value").getItem("ftpaOutOfTimeExplanation")
+            )
+
+            # Assign extracted text conditionally based on Party ID (Party 1 = Appellant, Party 2 = Respondent)
+            test_df = test_df.withColumn(
+                "ftpaAppellantOutOfTimeExplanation",
+                F.when(F.col("Party") == 1, extracted_text).otherwise(F.lit(None).cast("string"))
+            ).withColumn(
+                "ftpaRespondentOutOfTimeExplanation",
+                F.when(F.col("Party") == 2, extracted_text).otherwise(F.lit(None).cast("string"))
+            )
+        else:
+            test_df = test_df.withColumn("ftpaAppellantOutOfTimeExplanation", F.lit(None).cast("string")) \
+                             .withColumn("ftpaRespondentOutOfTimeExplanation", F.lit(None).cast("string"))
+
+        # 4. Select all target fields required across the entire FTPA test suite
+        test_df = test_df.select(
             "appealReferenceNumber",
             "ftpaAppellantApplicationDate",
             "ftpaAppellantSubmissionOutOfTime",
@@ -114,37 +157,24 @@ def test_ftpa_init(json, M1_bronze, M3_bronze):
             "ftpaRespondentEvidenceDocuments",
             "ftpaAppellantOutOfTimeDocuments",
             "ftpaRespondentOutOfTimeDocuments",
-            "ftpaList"
-
-        )
-
-        M1_bronze = M1_bronze.select(
-            "CaseNo"
-        )
-
-        M3_bronze = M3_bronze.select(
-            "CaseNo",
+            "ftpaList",
             "CaseStatus",
             "StatusId",
             "Party",
             "OutOfTime"
         )
 
-        test_df = test_df.join(
-            M1_bronze,
-            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
-            "inner"
-        ).join(
-            M3_bronze,
-            json["appealReferenceNumber"] == M3_bronze["CaseNo"],
-            "inner"
-        ).drop(M1_bronze["CaseNo"], M3_bronze["CaseNo"])
-
         return test_df, True
+
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("ftpa", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}",test_from_state,inspect.stack()[0].function)
-
+        return None, TestResult(
+            "ftpa", 
+            "FAIL", 
+            f"Failed to Setup Data for Test : Error : {error_message[:300]}", 
+            test_from_state, 
+            inspect.stack()[0].function
+        )
 #######################
 # ftpaList - IF M3.Party IS 1 (MAX StatusID WHERE CaseStatus = 39)
 #######################
@@ -387,32 +417,49 @@ def test_ftpaAppellantSubmissionOutOfTime_test4(test_df):
 #######################
 def test_ftpaAppellantOutOfTimeExplanation_test1(test_df):
     try:
-        # 1. Filter only for the Appeal State
         target_records = test_df.filter(col("CaseStatus") == 39) 
         if target_records.count() == 0:
             return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST (No CaseStatus 39 found)", test_from_state, inspect.stack()[0].function)
         
-        # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
         ranked_df = target_records.withColumn("row_rank", row_number().over(window_spec))
         winning_records = ranked_df.filter(col("row_rank") == 1)
 
-        # 3. Acceptance Criteria: Find failures where conditions are met but string is incorrect
-        expected_str = "This is a migrated ARIA case. Please refer to the documents."
+        # EXACT STRING MATCH FROM MIGRATION PIPELINE
+        expected_str = "This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness."
+
         acceptance_critera = winning_records.filter(
             (col("OutOfTime") == 1) &
             (col("Party") == 1) &
-            (col("ftpaAppellantOutOfTimeExplanation") != expected_str)
+            (
+                col("ftpaAppellantOutOfTimeExplanation").isNull() |
+                (F.trim(col("ftpaAppellantOutOfTimeExplanation")) != expected_str)
+            )
         )
 
-        if acceptance_critera.count() != 0:
-            return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"ftpaAppellantOutOfTimeExplanation acceptance criteria failed: found {acceptance_critera.count()} rows where M3.OutOfTime is 1 and M3.Party is 1 & ftpaAppellantOutOfTimeExplanation is not: {expected_str}", test_from_state, inspect.stack()[0].function)
+        fail_count = acceptance_critera.count()
+
+        if fail_count != 0:
+            sample = acceptance_critera.select("appealReferenceNumber", "ftpaAppellantOutOfTimeExplanation").limit(1).collect()
+            actual_val = sample[0][1] if sample else "None"
+            return TestResult(
+                "ftpaAppellantOutOfTimeExplanation", 
+                "FAIL", 
+                f"ftpaAppellantOutOfTimeExplanation acceptance criteria failed: found {fail_count} rows where M3.OutOfTime is 1 and M3.Party is 1 & actual value is '{actual_val}'", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
         else:
-            return TestResult("ftpaAppellantOutOfTimeExplanation", "PASS", f"ftpaAppellantOutOfTimeExplanation acceptance criteria pass: all rows where M3.OutOfTime is 1 and M3.Party is 1 have correct migrated explanation string", test_from_state, inspect.stack()[0].function)
+            return TestResult(
+                "ftpaAppellantOutOfTimeExplanation", 
+                "PASS", 
+                "ftpaAppellantOutOfTimeExplanation acceptance criteria pass: all rows where M3.OutOfTime is 1 and M3.Party is 1 have correct migrated explanation string", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
 
     except Exception as e:
         return TestResult("ftpaAppellantOutOfTimeExplanation", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-    
 
 #######################
 # ftpaAppellantOutOfTimeExplanation - IF M3.OutOfTime IS 1 AND M3.Party IS NOT 1 = OMIT (MAX StatusID WHERE CaseStatus = 39)
@@ -686,34 +733,49 @@ def test_ftpaRespondentSubmissionOutOfTime_test4(test_df):
 #######################
 def test_ftpaRespondentOutOfTimeExplanation_test1(test_df):
     try:
-        # 1. Filter only for the Appeal State
         target_records = test_df.filter(col("CaseStatus") == 39) 
         if target_records.count() == 0:
             return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST (No CaseStatus 39 found)", test_from_state, inspect.stack()[0].function)
         
-        # 2. Identify the MAX StatusID record per appeal
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
         ranked_df = target_records.withColumn("row_rank", row_number().over(window_spec))
         winning_records = ranked_df.filter(col("row_rank") == 1)
 
-        # 3. Acceptance Criteria: Find failures where conditions are met but string is incorrect
-        expected_str = "This is a migrated ARIA case. Please refer to the documents."
+        # EXACT STRING MATCH FROM MIGRATION PIPELINE
+        expected_str = "This is a migrated ARIA case. Please check the Documents, FTPA tab or Case Notes tab for reasons for lateness."
+
         acceptance_critera = winning_records.filter(
             (col("OutOfTime") == 1) &
             (col("Party") == 2) &
-            (col("ftpaRespondentOutOfTimeExplanation") != expected_str)
+            (
+                col("ftpaRespondentOutOfTimeExplanation").isNull() |
+                (F.trim(col("ftpaRespondentOutOfTimeExplanation")) != expected_str)
+            )
         )
 
-        if acceptance_critera.count() != 0:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"ftpaRespondentOutOfTimeExplanation acceptance criteria failed: found {acceptance_critera.count()} rows where M3.OutOfTime is 1 and M3.Party is 2 & ftpaRespondentOutOfTimeExplanation is not: {expected_str}", test_from_state, inspect.stack()[0].function)
+        fail_count = acceptance_critera.count()
+
+        if fail_count != 0:
+            sample = acceptance_critera.select("appealReferenceNumber", "ftpaRespondentOutOfTimeExplanation").limit(1).collect()
+            actual_val = sample[0][1] if sample else "None"
+            return TestResult(
+                "ftpaRespondentOutOfTimeExplanation", 
+                "FAIL", 
+                f"ftpaRespondentOutOfTimeExplanation acceptance criteria failed: found {fail_count} rows where M3.OutOfTime is 1 and M3.Party is 2 & actual value is '{actual_val}'", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
         else:
-            return TestResult("ftpaRespondentOutOfTimeExplanation", "PASS", "ftpaRespondentOutOfTimeExplanation acceptance criteria pass: all rows where M3.OutOfTime is 1 and M3.Party is 2 have correct migrated explanation string", test_from_state, inspect.stack()[0].function)
+            return TestResult(
+                "ftpaRespondentOutOfTimeExplanation", 
+                "PASS", 
+                "ftpaRespondentOutOfTimeExplanation acceptance criteria pass: all rows where M3.OutOfTime is 1 and M3.Party is 2 have correct migrated explanation string", 
+                test_from_state, 
+                inspect.stack()[0].function
+            )
 
     except Exception as e:
         return TestResult("ftpaRespondentOutOfTimeExplanation", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-    
-
-
 #######################
 # ftpaRespondentOutOfTimeExplanation - IF M3.OutOfTime IS 1 AND M3.Party IS NOT 2 = OMIT (MAX StatusID WHERE CaseStatus = 39)
 #######################

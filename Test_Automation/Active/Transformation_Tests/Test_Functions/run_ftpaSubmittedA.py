@@ -44,7 +44,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
               all_test_results.append(ftpa_a_tests.test_ftpaRespondentOutOfTimeExplanation_test4(test_df))
     # display(all_test_results)
 
-    # -- general Tests --
+#     # -- general Tests --
 
     test_data_setup = None
     test_df, test_data_setup =  ftpa_a_tests.test_ftpa_init(json_data, M1_bronze, M3_bronze)
@@ -134,9 +134,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
               all_test_results.append(ftpa_a_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(test_df))
               all_test_results.append(ftpa_a_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(test_df))
               all_test_results.append(ftpa_a_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test4(test_df))
-    # display(all_test_results)
+#     # display(all_test_results)
 
-    # -- document Tests --
+#     # -- document Tests --
 
     test_data_setup = None
     test_df, test_data_setup =  ftpa_a_tests.test_ftpa_init(json_data, M1_bronze, M3_bronze)
@@ -168,7 +168,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "ftpaRespondentOutOfTimeDocuments" not in fields_to_exclude:
               all_test_results.append(ftpa_a_tests.test_ftpaRespondentOutOfTimeDocuments_test1(test_df))
               all_test_results.append(ftpa_a_tests.test_ftpaRespondentOutOfTimeDocuments_test2(test_df))
-    # display(all_test_results)
+#     # display(all_test_results)
 
     # -- Default Mappings --
     test_data_setup = None
@@ -178,6 +178,6 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
 
     if test_df != None:
         all_test_results.extend(ftpa_a_tests.test_ftpa_a_defaultValues(test_df, fields_to_exclude))
-    # display(all_test_results)
+#     # display(all_test_results)
 
     return classify_all(all_test_results)

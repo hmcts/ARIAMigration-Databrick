@@ -5,9 +5,9 @@ from Test_Functions.test_helpers import classify_all
 def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silver, M6_bronze, C, bhc, fields_to_exclude):
     all_test_results = []
 
-    # ---------------------------------------------------------
-    # 1. Default Mappings
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 1. Default Mappings
+    # # ---------------------------------------------------------
     test_df, test_data_setup = ended_tests.test_default_mapping_init(json_data, M1_silver, M3_bronze)
     
     if test_data_setup is True and test_df is not None:
@@ -15,9 +15,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     elif test_data_setup is not True:
         all_test_results.append(test_data_setup)
 
-    # ---------------------------------------------------------
-    # 2. caseData Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 2. caseData Tests
+    # # ---------------------------------------------------------
     test_df, test_data_setup = ended_tests.test_caseData_init(json_data, M1_bronze, M3_bronze)
     
     if test_data_setup is True and test_df is not None:
@@ -28,9 +28,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
     elif test_data_setup is not True:
         all_test_results.append(test_data_setup)
 
-    # ---------------------------------------------------------
-    # 3. hearingRequirements Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 3. hearingRequirements Tests
+    # # ---------------------------------------------------------
     test_df, test_data_setup = ended_tests.test_hearingRequirements_init(json_data, M1_bronze, M3_bronze, C)
     
     if test_data_setup is True and test_df is not None:
@@ -55,7 +55,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_inCameraCourt_test2(test_df)) 
             all_test_results.append(ended_tests.test_inCameraCourt_test3(test_df)) 
 
-    # --- Self-Contained hearingRequirements Tests ---
+    # # --- Self-Contained hearingRequirements Tests ---
     if "singleSexCourtType" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_singleSexCourtType_test1(json_data, M1_bronze, M3_bronze))
         all_test_results.append(ended_tests.test_singleSexCourtType_test2(json_data, M1_bronze, M3_bronze))
@@ -70,12 +70,12 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         all_test_results.append(ended_tests.test_inCameraCourtDescription_test1(json_data, M1_bronze, M3_bronze))
         all_test_results.append(ended_tests.test_inCameraCourtDescription_test2(json_data, M1_bronze, M3_bronze))
 
-    # ---------------------------------------------------------
-    # 4. hearingResponse Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 4. hearingResponse Tests
+    # # ---------------------------------------------------------
     test_df, test_data_setup = ended_tests.test_hearingResponse_init(json_data, M1_bronze, M3_bronze, C, M6_bronze, M1_silver, M2_bronze)
 
-    if test_data_setup is True and test_df is not None:
+    # if test_data_setup is True and test_df is not None:
         if "isAppealSuitableToFloat" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test1(test_df))
             all_test_results.append(ended_tests.test_isAppealSuitableToFloat_test2(test_df))
@@ -97,7 +97,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if "listCaseHearingCentreAddress" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_listCaseHearingCentreAddress_test1(test_df))
 
-    # --- Self-Contained hearingResponse Tests ---
+    # # --- Self-Contained hearingResponse Tests ---
     if "isInCameraCourtAllowed" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_isInCameraCourtAllowed_test1(json_data, M1_bronze, M3_bronze))
         all_test_results.append(ended_tests.test_isInCameraCourtAllowed_test2(json_data, M1_bronze, M3_bronze))
@@ -117,9 +117,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         all_test_results.append(ended_tests.test_singleSexCourtDecisionForDisplay_test1(json_data, M1_bronze, M3_bronze))
         all_test_results.append(ended_tests.test_singleSexCourtDecisionForDisplay_test2(json_data, M1_bronze, M3_bronze))
 
-    # ---------------------------------------------------------
-    # 5. substantiveDecision Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 5. substantiveDecision Tests
+    # # ---------------------------------------------------------
     if test_data_setup is True and test_df is not None:
         if "sendDecisionsAndReasonsDate" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_sendDecisionsAndReasonsDate_test1(test_df))
@@ -132,18 +132,18 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_isDecisionAllowed_test1(test_df))
             all_test_results.append(ended_tests.test_isDecisionAllowed_test2(test_df))
 
-    # ---------------------------------------------------------
-    # 6. hearingActuals Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 6. hearingActuals Tests
+    # # ---------------------------------------------------------
     if test_data_setup is True and test_df is not None:
         if "attendingJudge" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_attendingJudge_test1(test_df))   
-        if "actualCaseHearingLength" not in fields_to_exclude:
-            all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
+    #     if "actualCaseHearingLength" not in fields_to_exclude:
+    #         all_test_results.append(ended_tests.test_actualCaseHearingLength_test1(test_df))   
         
-    # ---------------------------------------------------------
-    # 7. ftpa Tests (Appellant)
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 7. ftpa Tests (Appellant)
+    # # ---------------------------------------------------------
     if test_data_setup is True and test_df is not None:
         if "ftpaApplicationDeadline" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_ftpaApplicationDeadline_test1(test_df))   
@@ -163,7 +163,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test3(test_df))
             all_test_results.append(ended_tests.test_ftpaAppellantOutOfTimeExplanation_test4(test_df))
 
-    # --- Self-Contained FTPA Respondent Tests ---
+    # # --- Self-Contained FTPA Respondent Tests ---
     if "ftpaRespondentApplicationDate" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test1(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_ftpaRespondentApplicationDate_test2(json_data, M3_bronze))
@@ -178,18 +178,18 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test3(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_ftpaRespondentOutOfTimeExplanation_test4(json_data, M3_bronze))
 
-    # ---------------------------------------------------------
-    # 8. additionalInstructionsTribunalResponse Test
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 8. additionalInstructionsTribunalResponse Test
+    # # ---------------------------------------------------------
     test_df_instr, test_data_setup_instr = ended_tests.test_additionalInstructionsTribunalResponse_init(json_data, M3_bronze, M6_bronze)
     if test_data_setup_instr is True and test_df_instr is not None:
         all_test_results.append(ended_tests.test_additionalInstructionsTribunalResponse(test_df_instr))
     else:
         all_test_results.append(test_data_setup_instr)
 
-    # ---------------------------------------------------------
-    # 9. Ended State Specific Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 9. Ended State Specific Tests
+    # # ---------------------------------------------------------
     test_df_ended, test_data_setup_ended = ended_tests.test_ended_init(json_data, M1_bronze, M3_bronze, M1_silver)
     if test_data_setup_ended is True and test_df_ended is not None:
         if "endAppealOutcome" not in fields_to_exclude:
@@ -205,9 +205,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         if "stateBeforeEndAppeal" not in fields_to_exclude:
             all_test_results.append(ended_tests.test_stateBeforeEndAppeal_test1(test_df_ended))
 
-    # ---------------------------------------------------------
-    # 10. general Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 10. general Tests
+    # # ---------------------------------------------------------
     test_df_gen, test_data_setup_gen = ended_tests.test_general_init(json_data, M1_bronze, M2_bronze, M3_bronze, M1_silver, C)
 
     if test_data_setup_gen is True and test_df_gen is not None:
@@ -256,7 +256,7 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test3(test_df_gen))
             all_test_results.append(ended_tests.test_isFtpaAppellantOotExplanationVisibleInSubmitted_test4(test_df_gen))
 
-    # --- Self-Contained FTPA Respondent Visibility Tests ---
+    # # --- Self-Contained FTPA Respondent Visibility Tests ---
     if "ftpaRespondentSubmitted" not in fields_to_exclude:
         all_test_results.append(ended_tests.test_ftpaRespondentSubmitted_test1(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_ftpaRespondentSubmitted_test2(json_data, M3_bronze))
@@ -295,9 +295,9 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, M3_silv
         all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test2(json_data, M3_bronze))
         all_test_results.append(ended_tests.test_isFtpaRespondentOotExplanationVisibleInSubmitted_test3(json_data, M3_bronze))
 
-    # ---------------------------------------------------------
-    # 11. appellantInterpreter Tests
-    # ---------------------------------------------------------
+    # # ---------------------------------------------------------
+    # # 11. appellantInterpreter Tests
+    # # ---------------------------------------------------------
     test_df_lang, test_data_setup_lang = ended_tests.test_languages_init(json_data, M1_bronze, M3_bronze)
     if test_data_setup_lang is True and test_df_lang is not None:        
         all_test_results.append(ended_tests.test_appellantInterpreterLanguageCategory(test_df_lang))

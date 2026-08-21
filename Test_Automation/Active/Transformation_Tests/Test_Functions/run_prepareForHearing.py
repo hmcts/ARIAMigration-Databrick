@@ -55,6 +55,8 @@ def run_all_tests(json_data, M1_bronze, M1_silver, M2_bronze, M3_bronze, C, bhc,
          if "hearingChannel" not in fields_to_exclude:
               all_test_results.append(pfh_tests.test_hearingChannel_test1(test_df))
               all_test_results.append(pfh_tests.test_hearingChannel_test2(test_df))
+              all_test_results.append(pfh_tests.test_hearingChannel_test3(test_df))
+              all_test_results.append(pfh_tests.test_hearingChannel_test4(test_df))
 
          if "listingLocation" not in fields_to_exclude:
               all_test_results.append(pfh_tests.test_listingLocation_mapping(test_df))

@@ -663,8 +663,8 @@ def test_hearingChannel_test1(test_df):
             col("VisitVisaType") == 1
         ) &
         (
-            (col("hearingChannel.code") != "ONPPRS") |
-            (col("hearingChannel.label") != "On The Papers")   
+            (F.upper(col("hearingChannel.value.code")) != "ONPPRS") |
+            (F.lower(col("hearingChannel.value.label")) != "on the papers")
         ))
 
         if acceptance_critera.count() != 0:
@@ -692,18 +692,64 @@ def test_hearingChannel_test2(test_df):
             col("VisitVisaType") == 2
         ) &
         (
-            (col("hearingChannel.code") != "INTER") |
-            (col("hearingChannel.label") != "In Person")   
+            (F.upper(col("hearingChannel.value.code")) != "INTER") |
+            (F.lower(col("hearingChannel.value.label")) != "in person")
         ))
 
         if acceptance_critera.count() != 0:
-            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where VisitVisaType is 1 and channelCode != INTER, channelLabel != In Person", test_from_state, inspect.stack()[0].function)
+            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where VisitVisaType is 2 and channelCode != INTER, channelLabel != In Person", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("hearingChannel","PASS", "hearingChannel acceptance criteria pass: all rows VisitVisaType is 1 have channelCode = INTER, channelLabel = In Person", test_from_state, inspect.stack()[0].function)
+            return TestResult("hearingChannel","PASS", "hearingChannel acceptance criteria pass: all rows VisitVisaType is 2 have channelCode = INTER, channelLabel = In Person", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)
         return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
-    
+
+
+#######################
+# hearingChannel - If VisitVisaType is not 1 or 2 then channelCode and channelLabel are omitted
+#######################
+def test_hearingChannel_test3(test_df):
+    try:
+        target_records = test_df.filter((~col("VisitVisaType").isin(1, 2)) | col("VisitVisaType").isNull())
+        if target_records.count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        acceptance_critera = target_records.filter(
+            col("hearingChannel.value.code").isNotNull() |
+            col("hearingChannel.value.label").isNotNull()
+        )
+
+        if acceptance_critera.count() != 0:
+            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where VisitVisaType is not 1 or 2 and channelCode/channelLabel are not omitted", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hearingChannel","PASS", "hearingChannel acceptance criteria pass: all rows where VisitVisaType is not 1 or 2 have channelCode and channelLabel omitted", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+
+#######################
+# hearingChannel - list_items holds the fixed DynamicRadioList options INTER, NA, ONPPRS, TEL, VID
+#######################
+def test_hearingChannel_test4(test_df):
+    try:
+        if test_df.count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+
+        expected_codes = ["INTER", "NA", "ONPPRS", "TEL", "VID"]
+        df = test_df.withColumn("li_codes", F.array_sort(F.transform(col("hearingChannel.list_items"), lambda x: x["code"])))
+
+        acceptance_critera = df.filter(col("li_codes") != F.array([F.lit(c) for c in expected_codes]))
+
+        if acceptance_critera.count() != 0:
+            return TestResult("hearingChannel","FAIL", f"hearingChannel acceptance criteria failed: found {acceptance_critera.count()} rows where list_items codes != {expected_codes}", test_from_state, inspect.stack()[0].function)
+        else:
+            return TestResult("hearingChannel","PASS", f"hearingChannel acceptance criteria pass: all rows have list_items codes = {expected_codes}", test_from_state, inspect.stack()[0].function)
+    except Exception as e:
+        error_message = str(e)
+        return TestResult("hearingChannel", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+
+
 #Migrated from decsion due to change
 #######################
 #hearingDetails Init code

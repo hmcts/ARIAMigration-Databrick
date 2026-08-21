@@ -1320,24 +1320,22 @@ def test_hearingChannel_test1(test_df):
         if target_df.count() == 0:
             return TestResult("hearingChannel", "FAIL", "No records found where VisitVisaType is 1.", "ended", "test_hearingChannel_test1")
 
-        # VALIDATION: Matching "On The Papers" exactly as seen in your data
-        # Using upper() for the code and a case-insensitive match for the label is safest
         failures = target_df.filter(
-            (F.upper(F.col("hearingChannel.code")) != "ONPPRS") | 
-            (F.lower(F.col("hearingChannel.label")) != "on the papers")
+            (F.upper(F.col("hearingChannel.value.code")) != "ONPPRS") | 
+            (F.lower(F.col("hearingChannel.value.label")) != "on the papers")
         )
 
         if failures.count() > 0:
-            mismatch = failures.select("hearingChannel.code", "hearingChannel.label").first()
+            mismatch = failures.select("hearingChannel.value.code", "hearingChannel.value.label").first()
             return TestResult(
                 "hearingChannel", 
                 "FAIL", 
-                f"Mismatch found. Actual: '{mismatch[0]}' / '{mismatch[1]}'. Expected: 'ONPPRS' / 'On The Papers'", 
+                f"Mismatch found. Actual: '{mismatch[0]}' / '{mismatch[1]}'. Expected: 'ONPPRS' / 'On the Papers'", 
                 "ended", 
                 "test_hearingChannel_test1"
             )
         
-        return TestResult("hearingChannel", "PASS", "VisitVisaType 1 correctly mapped to 'On The Papers'.", "ended", "test_hearingChannel_test1")
+        return TestResult("hearingChannel", "PASS", "VisitVisaType 1 correctly mapped to 'On the Papers'.", "ended", "test_hearingChannel_test1")
     except Exception as e:
         return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test1")
     
@@ -1351,10 +1349,9 @@ def test_hearingChannel_test2(test_df):
         if target_df.count() == 0:
             return TestResult("hearingChannel", "FAIL", "No records found where VisitVisaType is 2.", "ended", "test_hearingChannel_test2")
 
-        # VALIDATION: Only check fields that exist in the struct (code, label)
         failures = target_df.filter(
-            (F.col("hearingChannel.code") != "INTER") | 
-            (F.col("hearingChannel.label") != "In Person")
+            (F.upper(F.col("hearingChannel.value.code")) != "INTER") | 
+            (F.lower(F.col("hearingChannel.value.label")) != "in person")
         )
 
         if failures.count() > 0:
@@ -1364,6 +1361,50 @@ def test_hearingChannel_test2(test_df):
         return TestResult("hearingChannel", "PASS", "VisitVisaType 2 correctly mapped to 'In Person'.", "ended", "test_hearingChannel_test2")
     except Exception as e:
         return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test2")
+    
+
+
+def test_hearingChannel_test3(test_df):
+    try:
+        # Group 4 and VisitVisaType not 1 or 2 -> channelCode and channelLabel omitted
+        target_df = test_df.filter((F.col("EndedGroup") == 4) & ((~F.col("VisitVisaType").isin(1, 2)) | F.col("VisitVisaType").isNull()))
+        
+        if target_df.count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", "ended", "test_hearingChannel_test3")
+
+        failures = target_df.filter(
+            F.col("hearingChannel.value.code").isNotNull() | 
+            F.col("hearingChannel.value.label").isNotNull()
+        )
+
+        if failures.count() > 0:
+            return TestResult("hearingChannel", "FAIL", f"Found {failures.count()} rows where VisitVisaType is not 1 or 2 and channelCode/channelLabel are not omitted", "ended", "test_hearingChannel_test3")
+        
+        return TestResult("hearingChannel", "PASS", "VisitVisaType not 1 or 2 correctly has channelCode and channelLabel omitted.", "ended", "test_hearingChannel_test3")
+    except Exception as e:
+        return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test3")
+    
+
+
+def test_hearingChannel_test4(test_df):
+    try:
+        # Group 4 - list_items holds the fixed DynamicRadioList options INTER, NA, ONPPRS, TEL, VID
+        target_df = test_df.filter(F.col("EndedGroup") == 4)
+        
+        if target_df.count() == 0:
+            return TestResult("hearingChannel", "FAIL", "NO RECORDS TO TEST", "ended", "test_hearingChannel_test4")
+
+        expected_codes = ["INTER", "NA", "ONPPRS", "TEL", "VID"]
+        df = target_df.withColumn("li_codes", F.array_sort(F.transform(F.col("hearingChannel.list_items"), lambda x: x["code"])))
+
+        failures = df.filter(F.col("li_codes") != F.array([F.lit(c) for c in expected_codes]))
+
+        if failures.count() > 0:
+            return TestResult("hearingChannel", "FAIL", f"Found {failures.count()} rows where list_items codes != {expected_codes}", "ended", "test_hearingChannel_test4")
+        
+        return TestResult("hearingChannel", "PASS", f"All rows have list_items codes = {expected_codes}", "ended", "test_hearingChannel_test4")
+    except Exception as e:
+        return TestResult("hearingChannel", "FAIL", f"EXCEPTION: {str(e)}", "ended", "test_hearingChannel_test4")
     
 
 from pyspark.sql import Window

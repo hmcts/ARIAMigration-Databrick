@@ -707,7 +707,7 @@ def bronze_appeal_case_tribunal_decision():
 
     prev_subquery = (
         dlt.read("raw_status")
-        .filter(col("casestatus").isNull() | ~col("casestatus").cast("int").isin(52, 36))
+        .filter(col("casestatus").isNull() | ~col("casestatus").cast("int").isin(52, 36, 50))
         .groupBy("CaseNo")
         .agg(F.max("StatusId").alias("Prev_ID"))
     )
@@ -768,25 +768,27 @@ def bronze_appeal_case_tribunal_decision():
     )
 
     retain_cond_1 = (
-        ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & col("sa.CaseStatus").isin("37", "38"))
+        ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("31", "50") & col("sa.CaseStatus").isin("37", "38"))
         | ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("1", "2"))
         | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("1", "2"))
         | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("25", "80"))
-        | ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & (col("sa.CaseStatus") == "39"))
+        | ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("31", "50") & (col("sa.CaseStatus") == "39"))
         | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("30", "31", "14"))
         | ((col("t.CaseStatus") == "10") & col("t.Outcome").isin("80", "122", "25", "120", "2", "105", "13", "119"))
-        | ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "31") & col("sa.CaseStatus").isin("10", "51", "52"))
+        | ((col("t.CaseStatus") == "46") & col("t.Outcome").isin("31", "50") & col("sa.CaseStatus").isin("10", "51", "52"))
         | ((col("t.CaseStatus") == "26") & col("t.Outcome").isin("80", "13", "25"))
-        | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("80", "13", "25", "72", "125"))
+        | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("80", "13", "25", "72", "125", "14"))
         | ((col("t.CaseStatus") == "51") & col("t.Outcome").isin("94", "93"))
         | ((col("t.CaseStatus") == "52") & col("t.Outcome").isin("91", "95"))
         | ((col("t.CaseStatus") == "36") & col("t.Outcome").isin("1", "2", "25"))
+        | ((col("t.CaseStatus") == "46") & (col("t.Outcome") == "25"))
     )
 
     retain_cond_2 = (
         (col("t.CaseStatus").isin("50", "52", "36") & (col("t.Outcome") == "0"))
         | ((col("t.CaseStatus") == "52") & col("t.Outcome").isin("91", "95"))
-        | ((col("t.CaseStatus") == "36") & col("t.Outcome").isin("1", "2", "25"))
+        | ((col("t.CaseStatus") == "36") & col("t.Outcome").isin("1", "2", "25", "50"))
+        | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == "91"))
     )
 
     previous_status_cond = (
@@ -794,14 +796,15 @@ def bronze_appeal_case_tribunal_decision():
         | (col("st.CaseStatus") == "17")
         | ((col("st.CaseStatus") == "26") & col("st.Outcome").isin("1", "2"))
         | ((col("st.CaseStatus") == "39") & col("st.Outcome").isin("25", "80"))
-        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & col("sa.CaseStatus").isin("37", "38"))
+        | ((col("st.CaseStatus") == "46") & col("st.Outcome").isin("31", "50") & col("sa.CaseStatus").isin("37", "38"))
         | ((col("st.CaseStatus") == "39") & col("st.Outcome").isin("31", "30", "14"))
-        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & (col("sa.CaseStatus") == "39"))
+        | ((col("st.CaseStatus") == "46") & col("st.Outcome").isin("31", "50") & (col("sa.CaseStatus") == "39"))
         | ((col("st.CaseStatus") == "10") & col("st.Outcome").isin("80", "122", "25", "120", "2", "105", "13", "119"))
         | (col("st.CaseStatus") == "51")
         | (col("st.CaseStatus").isin("37", "38") & col("st.Outcome").isin("80", "13", "25", "72", "125"))
         | ((col("st.CaseStatus") == "26") & col("st.Outcome").isin("80", "13", "25"))
-        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "31") & col("sa.CaseStatus").isin("10", "51", "52"))
+        | ((col("st.CaseStatus") == "46") & col("st.Outcome").isin("31", "50") & col("sa.CaseStatus").isin("10", "51", "52"))
+        | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == "25"))
     )
 
     ft_retained_prefix_cond = (
@@ -817,6 +820,27 @@ def bronze_appeal_case_tribunal_decision():
 
     ft_retained_previous_prefix_cond = (
         (col("ac.CasePrefix").isin(*DA_GROUP) & col("us.CaseStatus").isNull())
+        | (
+            col("ac.CasePrefix").isin(*DA_GROUP)
+            & col("us.CaseStatus").isNotNull()
+            & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+        )
+        | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
+        | (
+            col("ac.CasePrefix").isin(*LP_GROUP)
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNotNull()
+            & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+        )
+    )
+
+    ft_fta_prefix_cond = (
+        (col("ac.CasePrefix").isin(*DA_GROUP) & col("us.CaseStatus").isNull())
+        | (
+            col("ac.CasePrefix").isin(*DA_GROUP)
+            & col("us.CaseStatus").isNotNull()
+            & (F.add_months(col("us.DecisionDate"), 60) < F.add_months(col("t.DecisionDate"), 24))
+        )
         | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
         | (
             col("ac.CasePrefix").isin(*LP_GROUP)
@@ -827,47 +851,110 @@ def bronze_appeal_case_tribunal_decision():
     )
 
     derived_status = (
-        when(col("t.CaseStatus").isin(*UT_STATUSES) & col("t.Outcome").isin("0", "86"), "UT Active/Remitted Case")
-        .when(col("fl.DeptId").isin(519, 520), "Tribunal Decision")
-        .when(col("ac.CasePrefix").isin(*OBSOLETE_PREFIXES), "Tribunal Decision")
-        .when(col("us.CaseStatus").isNotNull() & ccd_active_cond, "FT Active Case")
+        when(col("fl.DeptId").isin(519, 520), "Tribunal Decision")
         .when(
+            col("t.CaseStatus").isin(*UT_STATUSES) & (col("t.Outcome") == "86"),
+            "CCD"
+        ).when(
+            col("t.CaseStatus").isin(*UT_STATUSES) & (col("t.Outcome") == "0"),
+            "N/A"
+        ).when(
+            col("ac.CasePrefix").isin(*OBSOLETE_PREFIXES),
+            "Tribunal Decision"
+        ).when(
+            col("us.CaseStatus").isNotNull() & ccd_active_cond,
+            "CCD"
+        ).when(
             (
                 col("ac.CasePrefix").isin(*DA_GROUP)
                 | (col("ac.CasePrefix").isin(*LP_GROUP) & col("ac.HOANRef").isNull())
             )
             & ccd_active_cond,
-            "FT Active Case"
-        )
-        .when(
+            "CCD"
+        ).when(
+            (
+                col("us.CaseStatus").isNotNull()
+                & ~col("t.CaseStatus").isin("36", "52")
+                & (F.add_months(col("us.DecisionDate"), 60) >= F.add_months(col("t.DecisionDate"), 24))
+                & (F.add_months(col("us.DecisionDate"), 60) >= segmentation_date)
+            ),
+            "Tribunal Decision"
+        ).when(
+            (
+                col("us.CaseStatus").isNotNull()
+                & col("t.CaseStatus").isin("36", "52")
+                & (F.add_months(col("us.DecisionDate"), 60) >= F.add_months(col("st.DecisionDate"), 24))
+                & (F.add_months(col("us.DecisionDate"), 60) >= segmentation_date)
+            ),
+            "Tribunal Decision"
+        ).when(
+            (
+                col("us.CaseStatus").isNotNull()
+                & ~col("t.CaseStatus").isin("36", "52")
+                & (F.add_months(col("us.DecisionDate"), 60) >= F.add_months(col("t.DecisionDate"), 24))
+                & (F.add_months(col("us.DecisionDate"), 60) < segmentation_date)
+            ),
+            "Tribunal Decision"
+        ).when(
+            (
+                col("us.CaseStatus").isNotNull()
+                & col("t.CaseStatus").isin("36", "52")
+                & (F.add_months(col("us.DecisionDate"), 60) >= F.add_months(col("st.DecisionDate"), 24))
+                & (F.add_months(col("us.DecisionDate"), 60) < segmentation_date)
+            ),
+            "Tribunal Decision"
+        ).when(
             ft_retained_prefix_cond
             & retain_cond_1
             & (F.add_months(col("t.DecisionDate"), 6) >= segmentation_date),
             "FT RETAINED - CCD"
-        )
-        .when(
+        ).when(
             ft_retained_previous_prefix_cond
             & retain_cond_2
             & previous_status_cond
             & (F.add_months(col("st.DecisionDate"), 6) >= segmentation_date),
             "FT RETAINED - CCD"
-        )
-        .when(
+        ).when(
+            ft_fta_prefix_cond
+            & retain_cond_1
+            & (F.add_months(col("t.DecisionDate"), 24) >= segmentation_date),
+            "Tribunal Decision"
+        ).when(
+            ft_fta_prefix_cond
+            & retain_cond_2
+            & previous_status_cond
+            & (F.add_months(col("st.DecisionDate"), 24) >= segmentation_date),
+            "Tribunal Decision"
+        ).when(
+            ft_fta_prefix_cond
+            & retain_cond_1
+            & (F.add_months(col("t.DecisionDate"), 24) < segmentation_date),
+            "Tribunal Decision"
+        ).when(
+            ft_fta_prefix_cond
+            & retain_cond_2
+            & previous_status_cond
+            & (F.add_months(col("st.DecisionDate"), 24) < segmentation_date),
+            "Tribunal Decision"
+        ).when(
+            (col("ac.CasePrefix") == "IA")
+            & col("t.CaseStatus").isin("30", "31"),
+            "Tribunal Decision"
+        ).when(
             col("ac.CasePrefix").isin(*SKELETON_GROUP)
             & col("ac.HOANRef").isNull(),
             "Tribunal Decision"
-        )
-        .when(
+        ).when(
             col("ac.CasePrefix").isin(*SKELETON_GROUP)
             & col("us.CaseStatus").isNotNull(),
             "Tribunal Decision"
-        )
-        .when(
+        ).when(
             col("ac.CasePrefix").isin(*SKELETON_GROUP)
-            & col("ac.HOANRef").isNotNull(),
-            "Skeleton Case"
-        )
-        .otherwise("Tribunal Decision")
+            & col("ac.HOANRef").isNotNull()
+            & col("us.CaseStatus").isNull(),
+            "Skeleton Case")
+
+        .otherwise("Not sure")
     )
 
     result_df = (

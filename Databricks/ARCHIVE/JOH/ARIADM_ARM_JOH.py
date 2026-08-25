@@ -69,10 +69,8 @@
 
 import dlt
 import json
-from pyspark.sql.functions import when, col,coalesce, current_timestamp, lit, date_format
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pyspark.sql.window import Window
 
@@ -376,6 +374,15 @@ def Raw_Users():
     return read_latest_parquet("Users", "tv_Users", "ARIA_ARM_JOH_ARA")
 
 
+@dlt.table(
+    name="raw_status",
+    comment="Delta Live Table ARIA Status.",
+    path=f"{raw_mnt}/Raw_Status"
+)
+def Raw_Status():
+    return read_latest_parquet("Status", "tv_Status", "ARIA_ARM_JOH_ARA")
+
+
 # COMMAND ----------
 
 # MAGIC
@@ -659,35 +666,149 @@ def bronze_adjudicator_role():
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### Transformation bronze_status
+
+# COMMAND ----------
+
+@dlt.table(
+    name="bronze_status",
+    comment="Delta Live Table for Status data used to determine the latest decision date associated with an Adjudicator.",
+    path=f"{bronze_mnt}/bronze_status"
+)
+def bronze_status():
+    df = (
+        dlt.read("raw_status").alias("st")
+        .select(
+            col("st.AdjudicatorId"),
+            col("st.DeterminationBy"),
+            col("st.Chairman"),
+            col("st.LayMember1"),
+            col("st.LayMember2"),
+            col("st.DecisionDate")
+        )
+    )
+
+    return df
+
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Segmentation DLT Tables Creation - stg_joh_filtered
-# MAGIC Segmentation query (to be applied in silver): ???
-# MAGIC  
+# MAGIC Segmentation query (to be applied in silver):
+# MAGIC
 # MAGIC ```sql
-# MAGIC SELECT a.[AdjudicatorId] 
-# MAGIC FROM [ARIAREPORTS].[dbo].[Adjudicator] a 
-# MAGIC     LEFT JOIN [ARIAREPORTS].[dbo].[AdjudicatorRole] jr 
-# MAGIC         ON jr.AdjudicatorId = a.AdjudicatorId 
-# MAGIC WHERE jr.Role NOT IN ( 7, 8 ) 
-# MAGIC GROUP BY a.[AdjudicatorId]
+# MAGIC SELECT
+# MAGIC     a.[AdjudicatorId]
+# MAGIC FROM [Adjudicator] a
+# MAGIC     LEFT JOIN [AdjudicatorRole] jr
+# MAGIC         ON jr.AdjudicatorId = a.AdjudicatorId
+# MAGIC     LEFT JOIN (
+# MAGIC         SELECT
+# MAGIC             AdjId,
+# MAGIC             MAX(DecisionDate) AS MaxDecisionDate
+# MAGIC         FROM (
+# MAGIC             SELECT [AdjudicatorId] AS AdjId, DecisionDate FROM [Status] WHERE [AdjudicatorId] IS NOT NULL
+# MAGIC             UNION ALL
+# MAGIC             SELECT DeterminationBy, DecisionDate FROM [Status] WHERE DeterminationBy IS NOT NULL
+# MAGIC             UNION ALL
+# MAGIC             SELECT Chairman, DecisionDate FROM [Status] WHERE Chairman IS NOT NULL
+# MAGIC             UNION ALL
+# MAGIC             SELECT laymember1, DecisionDate FROM [Status] WHERE laymember1 IS NOT NULL
+# MAGIC             UNION ALL
+# MAGIC             SELECT laymember2, DecisionDate FROM [Status] WHERE laymember2 IS NOT NULL
+# MAGIC         ) AS AllStatuses
+# MAGIC         GROUP BY AdjId
+# MAGIC     ) s ON s.AdjId = a.[AdjudicatorId]
+# MAGIC WHERE (jr.Role NOT IN ( 7, 8 ) OR jr.Role IS NULL)
+# MAGIC   -- The 7-year filter with allowance for fully NULL records
+# MAGIC   AND (
+# MAGIC         COALESCE(
+# MAGIC             CASE
+# MAGIC                 WHEN a.ContractEndDate >= ISNULL(a.DateOfRetirement, '1900-01-01')
+# MAGIC                     THEN a.ContractEndDate
+# MAGIC                 ELSE a.DateOfRetirement
+# MAGIC             END,
+# MAGIC             s.MaxDecisionDate
+# MAGIC         ) >= DATEADD(year, -7, GETDATE())
+# MAGIC         -- this line INCLUDEs records where all 3 dates are NULL
+# MAGIC         OR
+# MAGIC         COALESCE(
+# MAGIC             CASE
+# MAGIC                 WHEN a.ContractEndDate >= ISNULL(a.DateOfRetirement, '1900-01-01')
+# MAGIC                     THEN a.ContractEndDate
+# MAGIC                 ELSE a.DateOfRetirement
+# MAGIC             END,
+# MAGIC             s.MaxDecisionDate
+# MAGIC         ) IS NULL
+# MAGIC   )
+# MAGIC -- Grouping is only needed now to deduplicate Adjudicators with multiple Roles
+# MAGIC GROUP BY
+# MAGIC     a.[AdjudicatorId]
 # MAGIC ```
-# MAGIC The below staging table is joined with other silver table to esure the Role NOT IN ( 7, 8 ) 
+# MAGIC The below staging table is joined with other silver table to esure the Role NOT IN ( 7, 8 ) and the 7-year retention window is respected.
 
 # COMMAND ----------
 
 @dlt.table(
     name="stg_joh_filtered",
-    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur.",
+    comment="Delta Live silver Table segmentation with judges only using bronze_adjudicator_et_hc_dnur, filtered by role and 7-year retention window.",
     path=f"{silver_mnt}/stg_joh_filtered"
 )
 def stg_joh_filtered():
+    status = dlt.read("bronze_status")
+
+    all_statuses = (
+        status.filter(col("AdjudicatorId").isNotNull())
+            .select(col("AdjudicatorId").alias("AdjId"), col("DecisionDate"))
+        .unionAll(
+            status.filter(col("DeterminationBy").isNotNull())
+                .select(col("DeterminationBy").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("Chairman").isNotNull())
+                .select(col("Chairman").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("LayMember1").isNotNull())
+                .select(col("LayMember1").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("LayMember2").isNotNull())
+                .select(col("LayMember2").alias("AdjId"), col("DecisionDate"))
+        )
+    )
+
+    max_decision_date = (
+        all_statuses
+        .groupBy(col("AdjId"))
+        .agg(max(col("DecisionDate")).alias("MaxDecisionDate"))
+    )
+
+    retention_date_expr = coalesce(
+        when(
+            col("a.ContractEndDate") >= coalesce(col("a.DateOfRetirement"), lit("1900-01-01").cast("date")),
+            col("a.ContractEndDate")
+        ).otherwise(col("a.DateOfRetirement")),
+        col("s.MaxDecisionDate")
+    )
+
+    seven_years_ago = add_months(current_date(), -84)
+
     df = (
         dlt.read("bronze_adjudicator_et_hc_dnur").alias("a")
         .join(
             dlt.read("bronze_adjudicator_role").alias("jr"),
-            col("a.AdjudicatorId") == col("jr.AdjudicatorId"), 
+            col("a.AdjudicatorId") == col("jr.AdjudicatorId"),
+            "left"
+        )
+        .join(
+            max_decision_date.alias("s"),
+            col("a.AdjudicatorId") == col("s.AdjId"),
             "left"
         )
         .filter((~col("jr.Role").isin(7, 8)) | (col("jr.Role").isNull()))
+        .filter((retention_date_expr >= seven_years_ago) | retention_date_expr.isNull())
         .groupBy(col("a.AdjudicatorId"))
         .count()
         .select(col("a.AdjudicatorId"))

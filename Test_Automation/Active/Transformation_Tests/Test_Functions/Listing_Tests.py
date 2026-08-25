@@ -20,7 +20,7 @@ test_from_state = "listing"
 #default mapping Init code
 #######################
 
-def test_default_mapping_init(json, M1_silver, bac, b):
+def test_default_mapping_init(json, M1_silver, bac, M1_Bronze):
     try:
         test_df = json.select(
             "appealReferenceNumber",
@@ -66,8 +66,8 @@ def test_default_mapping_init(json, M1_silver, bac, b):
 
         # Join Sponsor Name
         test_df = test_df.join(
-            b.select("CaseNo", "Sponsor_Name"),
-            test_df["appealReferenceNumber"] == b["CaseNo"],
+            M1_Bronze.select("CaseNo", "Sponsor_Name"),
+            test_df["appealReferenceNumber"] == M1_Bronze["CaseNo"],
             "left"
         )
 
@@ -92,7 +92,7 @@ def test_Listing_defaultValues(test_df):
     try:
         results_list = []
         
-        # Expected 
+        # Expected Strings
         aria_notice_text = "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."
         aria_reqs_text = "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
 
@@ -117,57 +117,77 @@ def test_Listing_defaultValues(test_df):
             "additionalRequestsDescription"
         ]
 
-        # Validate "Yes" Group
+        # 1. Validate "Yes" Group
         for field in yes_fields:
             fail_count = test_df.filter((col(field) != "Yes") | col(field).isNull()).count()
-            results_list.append(TestResult(field, "PASS" if fail_count == 0 else "FAIL", f"Expected 'Yes', found {fail_count} errors", test_from_state, inspect.stack()[0].function))
+            results_list.append(TestResult(
+                field, 
+                "PASS" if fail_count == 0 else "FAIL", 
+                f"Expected 'Yes', found {fail_count} errors", 
+                test_from_state, 
+                inspect.stack()[0].function
+            ))
 
-        # Validate "No" Group 
+        # 2. Validate "No" Group 
         for field in no_fields:
             fail_count = test_df.filter((col(field) != "No") | col(field).isNull()).count()
-            results_list.append(TestResult(field, "PASS" if fail_count == 0 else "FAIL", f"Expected 'No', found {fail_count} errors", test_from_state, inspect.stack()[0].function))
+            results_list.append(TestResult(
+                field, 
+                "PASS" if fail_count == 0 else "FAIL", 
+                f"Expected 'No', found {fail_count} errors", 
+                test_from_state, 
+                inspect.stack()[0].function
+            ))
 
-        # Validate ARIA Descriptions
+        # 3. Validate ARIA Descriptions (FIXED FAIL STATUS)
         for field in aria_desc_fields:
             fail_count = test_df.filter((col(field) != aria_reqs_text) | col(field).isNull()).count()
-            results_list.append(TestResult(field, "PASS" if fail_count == 0 else "FAIL", "ARIA migration text mismatch", test_from_state, inspect.stack()[0].function))
+            results_list.append(TestResult(
+                field, 
+                "PASS" if fail_count == 0 else "FAIL", 
+                f"ARIA migration text mismatch ({fail_count} errors)" if fail_count > 0 else "Check Passed", 
+                test_from_state, 
+                inspect.stack()[0].function
+            ))
 
-        
-        # caseArgumentAvailable: LR = 'Yes' | AIP = NULL
+        # 4. caseArgumentAvailable
         lr_arg_fail = test_df.filter((col("dv_representation") == "LR") & (col("caseArgumentAvailable") != "Yes")).count()
         aip_arg_fail = test_df.filter((col("dv_representation") == "AIP") & (col("caseArgumentAvailable").isNotNull())).count()
         results_list.append(TestResult("caseArgumentAvailable_LR", "PASS" if lr_arg_fail == 0 else "FAIL", f"LR Error: {lr_arg_fail} records", test_from_state, inspect.stack()[0].function))
         results_list.append(TestResult("caseArgumentAvailable_AIP", "PASS" if aip_arg_fail == 0 else "FAIL", f"AIP Error: {aip_arg_fail} records (should be Null)", test_from_state, inspect.stack()[0].function))
         
-        # reasonsForAppealDecision: AIP = Notice Text | LR = NULL
+        # 5. reasonsForAppealDecision
         aip_reason_fail = test_df.filter((col("dv_representation") == "AIP") & (col("reasonsForAppealDecision") != aria_notice_text)).count()
         lr_reason_fail = test_df.filter((col("dv_representation") == "LR") & (col("reasonsForAppealDecision").isNotNull())).count()
-        results_list.append(TestResult("reasonsForAppealDecision_AIP", "PASS" if aip_reason_fail == 0 else "FAIL", f"AIP Text Error", test_from_state, inspect.stack()[0].function))
+        results_list.append(TestResult("reasonsForAppealDecision_AIP", "PASS" if aip_reason_fail == 0 else "FAIL", f"AIP Text Error ({aip_reason_fail} errors)" if aip_reason_fail > 0 else "Check Passed", test_from_state, inspect.stack()[0].function))
         results_list.append(TestResult("reasonsForAppealDecision_LR", "PASS" if lr_reason_fail == 0 else "FAIL", f"LR Reason Error: {lr_reason_fail} records (should be Null)", test_from_state, inspect.stack()[0].function))
 
-
-        # OOC: IF appealOutOfCountry is 'Yes' + Sponsor exists = 'Yes'
+        # 6. OOC & InCountry Checks
         ooc_fail = test_df.filter((col("appealOutOfCountry") == "Yes") & (col("Sponsor_Name").isNotNull()) & (col("Sponsor_Name") != "") & (col("isEvidenceFromOutsideUkOoc") != "Yes")).count()
         results_list.append(TestResult("isEvidenceFromOutsideUkOoc", "PASS" if ooc_fail == 0 else "FAIL", "Check Passed" if ooc_fail == 0 else f"Conditional OOC Check failed ({ooc_fail} records)", test_from_state, inspect.stack()[0].function))
 
-        # InCountry: IF appealOutOfCountry is 'No' + Sponsor exists = 'Yes'
         ic_fail = test_df.filter((col("appealOutOfCountry") == "No") & (col("Sponsor_Name").isNotNull()) & (col("Sponsor_Name") != "") & (col("isEvidenceFromOutsideUkInCountry") != "Yes")).count()
         results_list.append(TestResult("isEvidenceFromOutsideUkInCountry", "PASS" if ic_fail == 0 else "FAIL", "Check Passed" if ic_fail == 0 else f"Conditional InCountry Check failed ({ic_fail} records)", test_from_state, inspect.stack()[0].function))
 
-        # Outcome & Empty Array Checks
+        # 7. Outcome Mismatch (FIXED FAIL STATUS)
         outcome_fail = test_df.filter(col("appealReviewOutcome") != "decisionMaintained").count()
-        results_list.append(TestResult("appealReviewOutcome", "PASS" if outcome_fail == 0 else "FAIL", "Outcome mismatch", test_from_state, inspect.stack()[0].function))
+        results_list.append(TestResult(
+            "appealReviewOutcome", 
+            "PASS" if outcome_fail == 0 else "FAIL", 
+            f"Outcome mismatch ({outcome_fail} records)" if outcome_fail > 0 else "Check Passed", 
+            test_from_state, 
+            inspect.stack()[0].function
+        ))
 
-        # Check for empty array []
+        # 8. Hearing Requirements Array
         hr_fail = test_df.filter(size(col("hearingRequirements")) != 0).count()
-        results_list.append(TestResult("hearingRequirements", "PASS" if hr_fail == 0 else "FAIL", "Array should be empty", test_from_state, inspect.stack()[0].function))
+        results_list.append(TestResult("hearingRequirements", "PASS" if hr_fail == 0 else "FAIL", f"Array should be empty ({hr_fail} records)" if hr_fail > 0 else "Array is empty", test_from_state, inspect.stack()[0].function))
 
         return results_list
 
     except Exception as e:
         error_message = str(e)        
         return [TestResult("Listing_Mapping", "FAIL", f"Logic Error: {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
-
 ############################################################################################
 #######################
 #hearing reqs Init code

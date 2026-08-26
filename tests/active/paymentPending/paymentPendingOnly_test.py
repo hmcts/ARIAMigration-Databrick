@@ -1,4 +1,4 @@
-from Databricks.ACTIVE.APPEALS.shared_functions.appealSubmitted import appealSubmittedOnly
+from Databricks.ACTIVE.APPEALS.shared_functions.paymentPending import paymentPendingOnly
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
@@ -18,45 +18,38 @@ SILVER_M1_SCHEMA = StructType([
 def spark():
     """Create a Spark session for testing."""
     return SparkSession.builder \
-        .appName("appealSubmitted_appealSubmittedOnly") \
+        .appName("paymentPending_paymentPendingOnly") \
         .getOrCreate()
 
 
-class TestAppealSubmittedOnly:
+class TestPaymentPendingOnly:
 
     def silver_m1(self, spark, rows):
         return spark.createDataFrame(rows, SILVER_M1_SCHEMA)
 
     def test_completeCaseReviewDate_pa(self, spark):
-        df, df_audit = appealSubmittedOnly(
+        df, df_audit = paymentPendingOnly(
             self.silver_m1(spark, [("1", "PA", "LR", "2024-01-15")])
         )
 
         assert df.select("completeCaseReviewDate").collect()[0][0] == "2024-01-15"
 
-    def test_completeCaseReviewDate_rp(self, spark):
-        df, df_audit = appealSubmittedOnly(
-            self.silver_m1(spark, [("1", "RP", "AIP", "2024-02-20")])
-        )
-
-        assert df.select("completeCaseReviewDate").collect()[0][0] == "2024-02-20"
-
     def test_completeCaseReviewDate_other_appeal_type(self, spark):
-        df, df_audit = appealSubmittedOnly(
+        df, df_audit = paymentPendingOnly(
             self.silver_m1(spark, [("1", "EA", "LR", "2024-01-15")])
         )
 
         assert df.select("completeCaseReviewDate").collect()[0][0] == "2024-01-15"
 
-    def test_completeCaseReviewDate_null_appeal_type(self, spark):
-        df, df_audit = appealSubmittedOnly(
-            self.silver_m1(spark, [("1", None, "LR", "2024-01-15")])
+    def test_completeCaseReviewDate_null_date(self, spark):
+        df, df_audit = paymentPendingOnly(
+            self.silver_m1(spark, [("1", "PA", "LR", None)])
         )
 
-        assert df.select("completeCaseReviewDate").collect()[0][0] == "2024-01-15"
+        assert df.select("completeCaseReviewDate").collect()[0][0] is None
 
     def test_completeCaseReviewDate_multiple_cases(self, spark):
-        df, df_audit = appealSubmittedOnly(
+        df, df_audit = paymentPendingOnly(
             self.silver_m1(spark, [
                 ("1", "PA", "LR", "2024-01-15"),
                 ("2", "RP", "AIP", "2024-02-20"),
@@ -71,7 +64,7 @@ class TestAppealSubmittedOnly:
         assert resultList[2][0] == "2024-03-25"
 
     def test_audit_inputFields_and_values(self, spark):
-        df, df_audit = appealSubmittedOnly(
+        df, df_audit = paymentPendingOnly(
             self.silver_m1(spark, [("1", "PA", "LR", "2024-01-15")])
         )
 
@@ -93,7 +86,7 @@ class TestAppealSubmittedOnly:
 
     def test_audit_transformed_flag_always_yes(self, spark):
         """The audit flag reflects that the field was evaluated, not that a value was produced."""
-        df, df_audit = appealSubmittedOnly(
+        df, df_audit = paymentPendingOnly(
             self.silver_m1(spark, [("1", "EA", "LR", None)])
         )
 

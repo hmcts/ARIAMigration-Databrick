@@ -3101,5 +3101,40 @@ def detainedState(silver_m1):
 
     return df, df_audit
 
+
+###############################################################
+#########        paymentPending only fields         ###########
+###############################################################
+def paymentPendingOnly(silver_m1):
+    df_final = (
+        silver_m1
+        .withColumn("completeCaseReviewDate", date_format(col("DateLodged"), "yyyy-MM-dd"))
+        .select(
+            "CaseNo",
+            "completeCaseReviewDate"
+        )
+    )
+
+    common_inputFields = [lit("dv_CCDAppealType"), lit("dv_representation")]
+    common_inputValues = [
+        col("m1_audit.dv_CCDAppealType"),
+        col("m1_audit.dv_representation")
+    ]
+
+    df_audit = (
+        df_final.alias("content")
+        .join(silver_m1.alias("m1_audit"), ["CaseNo"], "left")
+        .select(
+            col("CaseNo"),
+            array(struct(*common_inputFields)).alias("completeCaseReviewDate_inputFields"),
+            array(struct(*common_inputValues)).alias("completeCaseReviewDate_inputValues"),
+            col("content.completeCaseReviewDate"),
+            lit("yes").alias("completeCaseReviewDates_Transformed")
+        )
+    )
+
+    return df_final, df_audit
+
+
 if __name__ == "__main__":
     pass

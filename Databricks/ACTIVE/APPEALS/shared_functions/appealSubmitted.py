@@ -644,11 +644,9 @@ def homeOfficeDetails(silver_m1, silver_m2, silver_c, bronze_HORef_cleansing):
 #########        appealSubmitted only fields        ###########
 ###############################################################
 def appealSubmittedOnly(silver_m1):
-    condition = col("dv_CCDAppealType").isin(["PA", "RP"])
-
     df_final = (
         silver_m1
-        .withColumn("completeCaseReviewDate", when(condition, date_format(col("DateLodged"), "yyyy-MM-dd")))
+        .withColumn("completeCaseReviewDate", date_format(col("DateLodged"), "yyyy-MM-dd"))
         .select(
             "CaseNo",
             "completeCaseReviewDate"

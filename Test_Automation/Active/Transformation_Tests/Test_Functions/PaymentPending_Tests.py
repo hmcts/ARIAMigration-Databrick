@@ -1307,148 +1307,208 @@ def test_appealReferenceNumber_ac1(test_df):
 #######################
 #flagLabels Init Code
 #######################
-def test_flags_init(json, M1_bronze, C):
+def test_flags_init(json_data, M1_bronze, C):
+    test_from_state = "paymentPending"
     try:
-        json_flags = json.select(
+        json_flags = json_data.select(
             "AppealReferenceNumber",
             "caseFlags",
             "appellantLevelFlags",
             "isAriaMigratedFeeExemption"
         )
 
-        C = C.select(
-            "CaseNo",
+        C_clean = C.select(
+            col("CaseNo").alias("c_CaseNo"),
             "CategoryId"
         )
 
         M1_flags = M1_bronze.select(
-            "CaseNo",
+            col("CaseNo").alias("m1_CaseNo"),
             "CasePrefix",
-            "HORef"
+            col("HOANRef").alias("HORef")   # <-- corrected source column
         )
 
-        json_flags = json_flags.join(
-            C,
-            json_flags.AppealReferenceNumber == C.CaseNo,
-            "inner"
-        )
-
-
-        json_flags = json_flags.join(
+        joined_df = json_flags.join(
+            C_clean,
+            json_flags.AppealReferenceNumber == C_clean.c_CaseNo,
+            "left"
+        ).join(
             M1_flags,
-            json_flags.AppealReferenceNumber == M1_flags.CaseNo,
-            "inner"
+            json_flags.AppealReferenceNumber == M1_flags.m1_CaseNo,
+            "left"
         )
 
         test_df = (
-            json_flags
+            joined_df
             .groupBy("AppealReferenceNumber")
             .agg(
-                collect_list("CategoryId").alias("CategoryIds"),
-                first("caseFlags").alias("caseFlags"),
-                first("appellantLevelFlags").alias("appellantLevelFlags"),
-                first("isAriaMigratedFeeExemption").alias("isAriaMigratedFeeExemption"),
-                first("CasePrefix").alias("CasePrefix"),
-                first("HORef").alias("HORef")
+                F.collect_list("CategoryId").alias("CategoryIds"),
+                F.first("caseFlags").alias("caseFlags"),
+                F.first("appellantLevelFlags").alias("appellantLevelFlags"),
+                F.first("isAriaMigratedFeeExemption").alias("isAriaMigratedFeeExemption"),
+                F.first("CasePrefix").alias("CasePrefix"),
+                F.first("HORef").alias("HORef")
             )
         )
 
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("flagLabels", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return None, TestResult("flagLabels", "FAIL", f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+    
     
 #######################
 # caseFlags Test
 #######################
-def test_caseFlags(test_df):
+
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType
+from pyspark.sql import Row
+
+# Schema for a single flag's comparable attributes
+flag_struct_schema = StructType([
+    StructField("name", StringType(), True),
+    StructField("code", StringType(), True),
+    StructField("comment", StringType(), True),
+    StructField("hearing", StringType(), True),
+])
+
+# Lookup dictionary matching mapping spec
+case_flag_lookup = {
+    7:  {"name": "Urgent case", "code": "CF0007", "comment": None, "hearing": "No"},
+    41: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
+    31: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
+    32: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
+    8:  {"name": "Other", "code": "OT0001", "comment": "Reclassified RFT", "hearing": "Yes"},
+    24: {"name": "Other", "code": "OT0001", "comment": "EEA Family Permit", "hearing": "Yes"},
+    25: {"name": "RRO (Restricted Reporting Order / Anonymisation)", "code": "CF0012", "comment": None, "hearing": "Yes"}
+}
+
+def _build_expected_flags(category_ids, horef):
+    """
+    Given a case's list of CategoryIds and its HORef, return the deduped
+    set of flags that SHOULD be present on the case, per the mapping doc.
+    """
+    seen = set()
+    expected = []
+
+    if category_ids:
+        for cid in category_ids:
+            exp = case_flag_lookup.get(cid)
+            if exp is None:
+                continue
+            key = (exp["name"], exp["code"], exp["comment"], exp["hearing"])
+            if key not in seen:
+                seen.add(key)
+                expected.append(Row(
+                    name=exp["name"],
+                    code=exp["code"],
+                    comment=exp["comment"],
+                    hearing=exp["hearing"]
+                ))
+
+    if horef is not None and horef.strip() != "":
+        key = ("Other", "OT0001", "Dropped Case", "Yes")
+        if key not in seen:
+            seen.add(key)
+            expected.append(Row(name="Other", code="OT0001", comment="Dropped Case", hearing="Yes"))
+
+    return expected
+
+build_expected_flags_udf = F.udf(_build_expected_flags, ArrayType(flag_struct_schema))
+
+
+def test_caseFlags(test_df, return_diagnostics=False):
+    test_from_state = "paymentPending"
+    field_name = "caseFlags"
     try:
-        #Check we have Records To test
-        if test_df.filter(
-            (col("caseFlags").isNotNull())
-            ).count() == 0:
-            return TestResult("caseFlags", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        # 1. Filter eligible records where caseFlags exists
+        eligible_records = test_df.filter(
+            F.col("caseFlags").isNotNull() & F.col("caseFlags.details").isNotNull()
+        )
 
-        # caseFlag setup
-        case_flag_lookup = {
-            7:  {"name": "Urgent case", "code": "CF0007", "comment": None, "hearing": "No"},
-            41: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
-            31: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
-            32: {"name": "Other", "code": "OT0001", "comment": "Expedite", "hearing": "Yes"},
-            8:  {"name": "Other", "code": "OT0001", "comment": "Reclassified RFT", "hearing": "Yes"},
-            24: {"name": "Other", "code": "OT0001", "comment": "EEA Family Permit", "hearing": "Yes"},
-            25: {"name": "RRO (Restricted Reporting Order / Anonymisation)", "code": "CF0012", "comment": None, "hearing": "Yes"}
-        }
+        if eligible_records.count() == 0:
+            return TestResult(field_name, "NO_DATA", "NO RECORDS TO TEST: No caseFlags found.", test_from_state, inspect.stack()[0].function)
 
-        case_flag_mismatch_dfs = []
-
-        exploded_caseflags = (
-        test_df.select(
+        # 2. Explode caseFlags.details to pull out each actual flag on the case.
+        #    Normalize empty-string comment to NULL so it matches the lookup's
+        #    None for flags like "Urgent case" / RRO, which don't get a comment.
+        exploded_caseflags = eligible_records.select(
             "AppealReferenceNumber",
             "CategoryIds",
             "HORef",
-            col("caseFlags.details")[0].alias("caseflag_detail_0")
+            F.explode("caseFlags.details").alias("flag_item")
         ).select(
             "AppealReferenceNumber",
             "CategoryIds",
             "HORef",
-            col("caseflag_detail_0.value.name").alias("caseflag_name"),
-            col("caseflag_detail_0.value.flagCode").alias("caseflag_code"),
-            col("caseflag_detail_0.value.flagComment").alias("caseflag_comment"),
-            col("caseflag_detail_0.value.hearingRelevant").alias("caseflag_hearing")
-        ))
-
-        # Test logic
-        for categoryid, expected in case_flag_lookup.items():
-            mismatch_df = exploded_caseflags.filter(
-                col("HORef").isNull() &
-                array_contains(col("CategoryIds"), lit(categoryid)) &
-                (
-                    (col("caseflag_name") != lit(expected["name"])) |
-                    (col("caseflag_code") != lit(expected["code"])) |
-                    (col("caseflag_comment").cast("string") != lit(expected["comment"]).cast("string")) | 
-                    (col("caseflag_hearing") != lit(expected["hearing"]))  
-                )
-            )
-            
-            if mismatch_df.count() > 0:
-                mismatch_df = mismatch_df.withColumn("triggering_condition", lit(f"CategoryID: {categoryid}")) \
-                                         .withColumn("expected_name", lit(expected["name"])) \
-                                         .withColumn("expected_code", lit(expected["code"])) \
-                                         .withColumn("expected_comment", lit(expected["comment"])) \
-                                         .withColumn("expected_hearing", lit(expected["hearing"]))
-                case_flag_mismatch_dfs.append(mismatch_df)
-
-        # dropped case 
-        dropped_case_mismatch = exploded_caseflags.filter(
-            col("HORef").isNotNull() & 
-            (
-                (col("caseflag_name") != lit("Other")) |
-                (col("caseflag_code") != lit("OT0001")) |
-                (col("caseflag_comment") != lit("Dropped Case")) |
-                (col("caseflag_hearing") != lit("Yes"))
-            )
+            F.struct(
+                F.col("flag_item.value.name").alias("name"),
+                F.col("flag_item.value.flagCode").alias("code"),
+                F.when(
+                    F.trim(F.col("flag_item.value.flagComment")) == "", None
+                ).otherwise(F.col("flag_item.value.flagComment")).alias("comment"),
+                F.col("flag_item.value.hearingRelevant").alias("hearing")
+            ).alias("actual_flag")
         )
 
-        if dropped_case_mismatch.count() > 0:
-            dropped_case_mismatch = dropped_case_mismatch.withColumn("triggering_condition", lit("HORef is not null")) \
-                                                         .withColumn("expected_name", lit("Other")) \
-                                                         .withColumn("expected_code", lit("OT0001")) \
-                                                         .withColumn("expected_comment", lit("Dropped Case")) \
-                                                         .withColumn("expected_hearing", lit("Yes"))
-            case_flag_mismatch_dfs.append(dropped_case_mismatch)
+        # 3. Collapse back to one row per case: the actual SET of flags present
+        actual_flags_per_case = exploded_caseflags.groupBy(
+            "AppealReferenceNumber", "CategoryIds", "HORef"
+        ).agg(
+            F.collect_set("actual_flag").alias("actual_flags")
+        )
 
-        # Output
-        if len(case_flag_mismatch_dfs) > 0:
-            ac_case_flag = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), case_flag_mismatch_dfs)
-            return TestResult("caseFlags","FAIL", f"caseFlags acceptance criteria failed: {str(ac_case_flag.count())} cases have been found where the caseFlag details seem to be mapped incorrectly.", test_from_state, inspect.stack()[0].function)
+        # 4. Compute the expected SET of flags per case from CategoryIds + HORef,
+        #    with dedup applied ("only ever 1 of each flag on a case")
+        compared = actual_flags_per_case.withColumn(
+            "expected_flags",
+            build_expected_flags_udf(F.col("CategoryIds"), F.col("HORef"))
+        )
+
+        # 5. Diff expected vs actual in both directions
+        compared = compared.withColumn(
+            "missing_flags", F.array_except(F.col("expected_flags"), F.col("actual_flags"))
+        ).withColumn(
+            "unexpected_flags", F.array_except(F.col("actual_flags"), F.col("expected_flags"))
+        )
+
+        mismatches = compared.filter(
+            (F.size("missing_flags") > 0) | (F.size("unexpected_flags") > 0)
+        )
+
+        # Optional: return the full diagnostic dataframe instead of a TestResult,
+        # so you can inspect exactly what's missing/unexpected per case.
+        if return_diagnostics:
+            return mismatches.select(
+                "AppealReferenceNumber", "CategoryIds", "HORef",
+                "actual_flags", "expected_flags", "missing_flags", "unexpected_flags"
+            )
+
+        # 6. Return aggregated result
+        fail_count = mismatches.select("AppealReferenceNumber").distinct().count()
+        if fail_count > 0:
+            sample_rows = mismatches.select(
+                "AppealReferenceNumber", "missing_flags", "unexpected_flags"
+            ).limit(5).collect()
+            sample_refs = [row["AppealReferenceNumber"] for row in sample_rows]
+            return TestResult(
+                field_name,
+                "FAIL",
+                f"caseFlags acceptance criteria failed: {fail_count} cases found where flag details map incorrectly. Sample Refs: {sample_refs}",
+                test_from_state,
+                inspect.stack()[0].function
+            )
         else:
-            return TestResult("caseFlags","PASS", "caseFlags acceptance criteria passed, all the caseFlag details are mapped correctly.", test_from_state, inspect.stack()[0].function)
+            return TestResult(
+                field_name,
+                "PASS",
+                "caseFlags acceptance criteria passed: All caseFlags details are mapped correctly according to CAT mapping rules.",
+                test_from_state,
+                inspect.stack()[0].function
+            )
 
     except Exception as e:
-        return TestResult("caseFlags", "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
-
-
+        return TestResult(field_name, "FAIL", f"EXCEPTION: {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 #######################
 # appellantFlags Test
 #######################

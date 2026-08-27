@@ -1151,7 +1151,35 @@ def silver_appointment_detail():
     path=f"{silver_mnt}/silver_archive_metadata"
 )
 def silver_archive_metadata():
-    # Read and join
+    status = dlt.read("bronze_status")
+
+    all_statuses = (
+        status.filter(col("AdjudicatorId").isNotNull())
+            .select(col("AdjudicatorId").alias("AdjId"), col("DecisionDate"))
+        .unionAll(
+            status.filter(col("DeterminationBy").isNotNull())
+                .select(col("DeterminationBy").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("Chairman").isNotNull())
+                .select(col("Chairman").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("LayMember1").isNotNull())
+                .select(col("LayMember1").alias("AdjId"), col("DecisionDate"))
+        )
+        .unionAll(
+            status.filter(col("LayMember2").isNotNull())
+                .select(col("LayMember2").alias("AdjId"), col("DecisionDate"))
+        )
+    )
+
+    max_decision_date = (
+        all_statuses
+        .groupBy(col("AdjId"))
+        .agg(max(col("DecisionDate")).alias("MaxDecisionDate"))
+    )
+
     # Read and join
     df_base = (
         dlt.read("silver_adjudicator_detail").alias("adj")
@@ -1160,24 +1188,35 @@ def silver_archive_metadata():
             col("adj.AdjudicatorId") == col("flt.AdjudicatorId"),
             "inner"
         )
+        .join(
+            max_decision_date.alias("s"),
+            col("adj.AdjudicatorId") == col("s.AdjId"),
+            "left"
+        )
     )
 
     # Add environment as a literal column
     # env = workspace_env["env"]
     df_with_env = df_base.withColumn("env", lit(env_name))
 
+    selected_date_expr = coalesce(
+        when(
+            col("adj.ContractEndDate") >= coalesce(col("adj.DateOfRetirement"), lit("1900-01-01").cast("date")),
+            col("adj.ContractEndDate")
+        ).otherwise(col("adj.DateOfRetirement")),
+        col("s.MaxDecisionDate")
+    )
 
+    event_date_expr = when(
+        selected_date_expr.isNull() | (selected_date_expr > current_date()),
+        current_date()
+    ).otherwise(selected_date_expr)
 
     # Now use Spark-native `when()` with column condition
     df_final = (
         df_with_env.select(
             col("adj.AdjudicatorId").alias("client_identifier"),
-            # date_format(
-            #     coalesce(col("adj.DateOfRetirement"), col("adj.ContractEndDate"), col("adj.AdtclmnFirstCreatedDatetime")),
-            #     "yyyy-MM-dd'T'HH:mm:ss'Z'"
-            # ).alias("event_date"),
-            # date_format(col("adj.AdtclmnFirstCreatedDatetime"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
-            date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
+            date_format(event_date_expr, "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("event_date"),
             date_format(current_date(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("recordDate"),
             lit("GBR").alias("region"),
             lit("ARIA").alias("publisher"),

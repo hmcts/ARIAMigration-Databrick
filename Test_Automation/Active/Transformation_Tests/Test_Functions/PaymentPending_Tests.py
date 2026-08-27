@@ -4664,85 +4664,138 @@ def test_gwfReferenceNumber_ac3(test_df):
 ############################################################################################
 
 #######################
-#remission Init code
+# Remission Init code
 #######################
-def test_remission_init(json, M1_bronze):
+from pyspark.sql import functions as F
+from pyspark.sql.functions import col, lit
+import inspect
+
+def test_remission_init(json_data, M1_bronze):
+    test_from_state = "paymentPending"
     try:
-        json = json.select(
-            "appealReferenceNumber",
-            "remissionType",
-            "remissionClaim",
-            "feeRemissionType"
-            # "exceptionalCircumstances",
-            # "legalAidAccountNumber",
-            # "asylumSupportReference",
-            # "helpWithFeesReferenceNumber",
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
+
+        # 1. Select JSON fields safely
+        json_clean = json_data.select(
+            safe_col(json_data, "appealReferenceNumber"),
+            safe_col(json_data, "remissionType"),
+            safe_col(json_data, "remissionClaim"),
+            safe_col(json_data, "feeRemissionType"),
+            safe_col(json_data, "exceptionalCircumstances"),
+            safe_col(json_data, "legalAidAccountNumber"),
+            safe_col(json_data, "asylumSupportReference"),
+            safe_col(json_data, "helpWithFeesReferenceNumber"),
+            safe_col(json_data, "remissionDecision"),
+            safe_col(json_data, "remissionDecisionReason")
         )
 
-        M1_bronze = M1_bronze.select(
-            "CaseNo",
-            "PaymentRemissionRequested",
-            "PaymentRemissionReason",
-            # "ReasonDescription"
-            "ASFReferenceNo",          
-            "LSCReference",              
-            "PaymentRemissionReasonNote"
+        # 2. Select M1_bronze source fields safely
+        m1_clean = M1_bronze.select(
+            col("CaseNo").alias("m1_CaseNo"),
+            safe_col(M1_bronze, "PaymentRemissionRequested"),
+            safe_col(M1_bronze, "PaymentRemissionReason"),
+            safe_col(M1_bronze, "PaymentRemissionGranted"),
+            safe_col(M1_bronze, "ASFReferenceNo"),
+            safe_col(M1_bronze, "LSCReference"),
+            safe_col(M1_bronze, "PaymentRemissionReasonNote")
         )
 
-        test_df = json.join(
-            M1_bronze,
-            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+        # 3. Join on Case Number
+        test_df = json_clean.join(
+            m1_clean,
+            json_clean["appealReferenceNumber"] == m1_clean["m1_CaseNo"],
             "inner"
         )
 
         return test_df, True
-    except Exception as e:
-        error_message = str(e)        
-        return None,TestResult("remission", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
+    except Exception as e:
+        error_message = str(e)
+        return None, TestResult(
+            "remission",
+            "FAIL",
+            f"Failed to Setup Data for Test : Error : {error_message[:300]}",
+            test_from_state,
+            inspect.stack()[0].function
+        )
+
+
+#######################
+# Remission Mapping code
+#######################
 def test_remission_mapping(
     test_df,
-    PaymentRemissionRequested,
-    PaymentRemissionReason,
-    expected_remissionType,
-    expected_remissionClaim,
-    expected_feeRemissionType,
-    # expected_exceptionalCircumstances,
-    # expected_legalAidAccountNumber,
-    # expected_asylumSupportReference,
-    # expected_helpWithFeesReferenceNumber
+    PaymentRemissionRequested=None,
+    PaymentRemissionReason=None,
+    expected_remissionType=None,
+    expected_remissionClaim=None,
+    expected_feeRemissionType=None,
+    expected_exceptionalCircumstances=None,
+    expected_legalAidAccountNumber=None,
+    expected_asylumSupportReference=None,
+    expected_helpWithFeesReferenceNumber=None,
+    use_source_for=None,
+    **kwargs
 ):
-    
-    output_lines = []
-    test_passed = True
+    test_from_state = "paymentPending"
+    use_source_for = set(use_source_for or [])
 
-    # Filter rows that match the "Given" conditions
-    filtered_data = test_df.where(
-        (col("PaymentRemissionRequested").eqNullSafe(PaymentRemissionRequested)) &
-        (col("PaymentRemissionReason").eqNullSafe(PaymentRemissionReason))
-    )
+    try:
+        # Handle "NO MAPPING REQUIRED" (AC7 & AC12)
+        if expected_remissionType == "NO MAPPING REQUIRED":
+            return True, f"Skipped: Reason {PaymentRemissionReason} requires no mapping per spec.", 0
 
-    if filtered_data.count() == 0:
-        return False, f"*No matching test data* for PaymentRemissionRequested={PaymentRemissionRequested}, PaymentRemissionReason={PaymentRemissionReason}", 0
+        # 1. Filter rows matching given source condition
+        filtered_data = test_df.filter(
+            F.col("PaymentRemissionRequested").eqNullSafe(PaymentRemissionRequested) &
+            F.col("PaymentRemissionReason").eqNullSafe(PaymentRemissionReason)
+        )
 
-    # Check each row's actual values
-    mismatches = filtered_data.where(
-        (~col("remissionType").eqNullSafe(expected_remissionType)) |
-        (~col("remissionClaim").eqNullSafe(expected_remissionClaim)) |
-        (~col("feeRemissionType").eqNullSafe(expected_feeRemissionType)) 
-        # (~col("exceptionalCircumstances") != expected_exceptionalCircumstances) |
-        # (~col("legalAidAccountNumber") != expected_legalAidAccountNumber) |
-        # (~col("asylumSupportReference") != expected_asylumSupportReference) |
-        # (~col("helpWithFeesReferenceNumber") != expected_helpWithFeesReferenceNumber)
-    )
+        row_count = filtered_data.count()
+        
+        # 2. Return None to indicate NO_DATA instead of a false PASS
+        if row_count == 0:
+            return None, f"NO DATA: 0 records found for PaymentRemissionRequested={PaymentRemissionRequested}, PaymentRemissionReason={PaymentRemissionReason}.", 0
 
-    if mismatches.count() > 0:
-        test_passed = False
-        output_lines.append(f"*Mismatch present in one of the remission fields: remissionType, remissionClaim, feeRemissionType, exceptionalCircumstances, legalAidAccountNumber, asylumSupportReference, helpWithFeesReferenceNumber. {mismatches.count()} mismatches found.*")
-    else:
-        output_lines.append("All of the remission fields match defined requirements as expected: remissionType, remissionClaim, feeRemissionType, exceptionalCircumstances, legalAidAccountNumber, asylumSupportReference, helpWithFeesReferenceNumber.")
+        # 3. Dynamic reference building for reference fields
+        if "asylumSupportReference" in use_source_for:
+            asf_exp = F.coalesce(F.col("ASFReferenceNo"), F.lit("Unknown"))
+        else:
+            asf_exp = F.lit(expected_asylumSupportReference)
 
-    return test_passed, "\n".join(output_lines), mismatches
+        if "legalAidAccountNumber" in use_source_for:
+            la_exp = F.coalesce(F.col("LSCReference"), F.lit("Unknown"))
+        else:
+            la_exp = F.lit(expected_legalAidAccountNumber)
+
+        if "helpWithFeesReferenceNumber" in use_source_for:
+            hwf_exp = F.coalesce(F.col("PaymentRemissionReasonNote"), F.lit("Unknown"))
+        else:
+            hwf_exp = F.lit(expected_helpWithFeesReferenceNumber)
+
+        # 4. Filter mismatches across target CCD fields
+        mismatches_df = filtered_data.filter(
+            (~F.col("remissionType").eqNullSafe(expected_remissionType)) |
+            (~F.col("remissionClaim").eqNullSafe(expected_remissionClaim)) |
+            (~F.col("feeRemissionType").eqNullSafe(expected_feeRemissionType)) |
+            (~F.col("exceptionalCircumstances").eqNullSafe(expected_exceptionalCircumstances)) |
+            (~F.col("legalAidAccountNumber").eqNullSafe(la_exp)) |
+            (~F.col("asylumSupportReference").eqNullSafe(asf_exp)) |
+            (~F.col("helpWithFeesReferenceNumber").eqNullSafe(hwf_exp))
+        )
+
+        mismatch_count = mismatches_df.count()
+
+        if mismatch_count > 0:
+            output_msg = f"Failed! Found {mismatch_count} out of {row_count} records mapping incorrectly for Requested={PaymentRemissionRequested}, Reason={PaymentRemissionReason}."
+            return False, output_msg, mismatch_count
+        else:
+            output_msg = f"Passed! All {row_count} records mapped correctly."
+            return True, output_msg, 0
+
+    except Exception as e:
+        return False, f"Exception occurred during mapping test: {str(e)[:200]}", -1
 
 #######################
 # Remissions AC1 - Requested 0, Reason 0
@@ -4751,22 +4804,16 @@ def test_remission_ac1(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 0,
-            PaymentRemissionReason = 0,
-            expected_remissionType = "noRemission",
-            expected_remissionClaim = None,
-            expected_feeRemissionType = None,
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=0,
+            PaymentRemissionReason=0,
+            expected_remissionType="noRemission",
+            expected_remissionClaim=None,
+            expected_feeRemissionType=None
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for remissionType is noRemission (AC1): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC2 - Requested 2, Reason 0
@@ -4775,22 +4822,16 @@ def test_remission_ac2(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 2,
-            PaymentRemissionReason = 0,
-            expected_remissionType = "noRemission",
-            expected_remissionClaim = None,
-            expected_feeRemissionType = None,
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=2,
+            PaymentRemissionReason=0,
+            expected_remissionType="noRemission",
+            expected_remissionClaim=None,
+            expected_feeRemissionType=None
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for remissionType is noRemission (AC2): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC3 - Asylum Support
@@ -4799,22 +4840,17 @@ def test_remission_ac3(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 1,
-            expected_remissionType = "hoWaiverRemission",
-            expected_remissionClaim = "asylumSupport",
-            expected_feeRemissionType = "Asylum Support",
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = test_df["ASFReferenceNo"], 
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=1,
+            expected_remissionType="hoWaiverRemission",
+            expected_remissionClaim="asylumSupport",
+            expected_feeRemissionType="Asylum Support",
+            use_source_for=["asylumSupportReference"]
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for hoWaiverRemission (AC3): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC4 - Oral Hearing Direction
@@ -4823,22 +4859,17 @@ def test_remission_ac4(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 2,
-            expected_remissionType = "exceptionalCircumstancesRemission",
-            expected_remissionClaim = None,
-            expected_feeRemissionType = None,
-            # expected_exceptionalCircumstances = "This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.",
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=2,
+            expected_remissionType="exceptionalCircumstancesRemission",
+            expected_remissionClaim=None,
+            expected_feeRemissionType="Exceptional circumstances",
+            expected_exceptionalCircumstances="This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information."
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for exceptionalCircumstances (AC4): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC5 - LAA Funded
@@ -4847,22 +4878,17 @@ def test_remission_ac5(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 3,
-            expected_remissionType = "hoWaiverRemission",
-            expected_remissionClaim = "legalAid",
-            expected_feeRemissionType = "Legal Aid",
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = test_df["LSCReference"],
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=3,
+            expected_remissionType="hoWaiverRemission",
+            expected_remissionClaim="legalAid",
+            expected_feeRemissionType="Legal Aid",
+            use_source_for=["legalAidAccountNumber"]
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for hoWaiverRemission (AC5): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC6 - S17 Childrens Act
@@ -4871,22 +4897,16 @@ def test_remission_ac6(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 4,
-            expected_remissionType = "hoWaiverRemission",
-            expected_remissionClaim = "section17",
-            expected_feeRemissionType = "Section 17",
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=4,
+            expected_remissionType="hoWaiverRemission",
+            expected_remissionClaim="section17",
+            expected_feeRemissionType="Section 17"
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for hoWaiverRemission (AC6): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC7 - Convention Case
@@ -4895,22 +4915,16 @@ def test_remission_ac7(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 5,
-            expected_remissionType = "NO MAPPING REQUIRED",
-            expected_remissionClaim = "NO MAPPING REQUIRED",
-            expected_feeRemissionType = "NO MAPPING REQUIRED",
-            # expected_exceptionalCircumstances = "NO MAPPING REQUIRED",
-            # expected_legalAidAccountNumber = "NO MAPPING REQUIRED",
-            # expected_asylumSupportReference = "NO MAPPING REQUIRED",
-            # expected_helpWithFeesReferenceNumber = "NO MAPPING REQUIRED"
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=5,
+            expected_remissionType="NO MAPPING REQUIRED",
+            expected_remissionClaim="NO MAPPING REQUIRED",
+            expected_feeRemissionType="NO MAPPING REQUIRED"
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for NO MAPPING REQUIRED (AC7): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC8 - Other
@@ -4919,22 +4933,17 @@ def test_remission_ac8(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 6,
-            expected_remissionType = "exceptionalCircumstancesRemission",
-            expected_remissionClaim = None,
-            expected_feeRemissionType = None,
-            # expected_exceptionalCircumstances = "This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.",
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=6,
+            expected_remissionType="exceptionalCircumstancesRemission",
+            expected_remissionClaim=None,
+            expected_feeRemissionType="Exceptional circumstances",
+            expected_exceptionalCircumstances="This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information."
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for Other (AC8): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC9 - S20 Childrens Act
@@ -4943,22 +4952,16 @@ def test_remission_ac9(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 7,
-            expected_remissionType = "hoWaiverRemission",
-            expected_remissionClaim = "section20",
-            expected_feeRemissionType = "Section 20",
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=7,
+            expected_remissionType="hoWaiverRemission",
+            expected_remissionClaim="section20",
+            expected_feeRemissionType="Section 20"
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for hoWaiverRemission (AC9): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC10 - Home Office Waiver
@@ -4967,22 +4970,16 @@ def test_remission_ac10(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 8,
-            expected_remissionType = "hoWaiverRemission",
-            expected_remissionClaim = "homeOfficeWaiver",
-            expected_feeRemissionType = "Home Office fee waiver",
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = None
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=8,
+            expected_remissionType="hoWaiverRemission",
+            expected_remissionClaim="homeOfficeWavier",
+            expected_feeRemissionType="Home Office fee waiver"
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for hoWaiverRemission (AC10): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC11 - Help with Fees
@@ -4991,22 +4988,17 @@ def test_remission_ac11(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 9,
-            expected_remissionType = "helpWithFees",
-            expected_remissionClaim = None,
-            expected_feeRemissionType = None,
-            # expected_exceptionalCircumstances = None,
-            # expected_legalAidAccountNumber = None,
-            # expected_asylumSupportReference = None,
-            # expected_helpWithFeesReferenceNumber = test_df["PaymentRemissionReasonNote"]
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=9,
+            expected_remissionType="helpWithFees",
+            expected_remissionClaim=None,
+            expected_feeRemissionType="Help with Fees",
+            use_source_for=["helpWithFeesReferenceNumber"]
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for helpWithFees (AC11): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 #######################
 # Remissions AC12 - Paid on CCD
@@ -5015,22 +5007,16 @@ def test_remission_ac12(test_df):
     try:
         test_passed, output_lines, mismatches = test_remission_mapping(
             test_df,
-            PaymentRemissionRequested = 1,
-            PaymentRemissionReason = 10,
-            expected_remissionType = "NO MAPPING REQUIRED",
-            expected_remissionClaim = "NO MAPPING REQUIRED",
-            expected_feeRemissionType = "NO MAPPING REQUIRED",
-            # expected_exceptionalCircumstances = "NO MAPPING REQUIRED",
-            # expected_legalAidAccountNumber = "NO MAPPING REQUIRED",
-            # expected_asylumSupportReference = "NO MAPPING REQUIRED",
-            # expected_helpWithFeesReferenceNumber = "NO MAPPING REQUIRED"
+            PaymentRemissionRequested=1,
+            PaymentRemissionReason=10,
+            expected_remissionType="NO MAPPING REQUIRED",
+            expected_remissionClaim="NO MAPPING REQUIRED",
+            expected_feeRemissionType="NO MAPPING REQUIRED"
         )
-        
-        status = "PASS" if test_passed else "FAIL"
+        status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for NO MAPPING REQUIRED (AC12): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
-        error_message = str(e)        
-        return TestResult("remissionType", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+        return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
 
 ############################################################################################
 

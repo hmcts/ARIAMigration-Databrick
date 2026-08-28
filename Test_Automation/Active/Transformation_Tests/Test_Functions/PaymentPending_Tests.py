@@ -5019,11 +5019,10 @@ def test_remission_ac12(test_df):
         return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
     
 #######################
-# Remissions AC13 - All PaymentRemissionRequested = 2 Scenarios (v1.17 Spec) ARIADM-2335
+# Remissions AC13 - All PaymentRemissionRequested = 2 Scenarios ARIADM-2335
 #######################
 def test_remission_ac13(test_df):
     try:
-        # Tuple format: (Reason, expected_remissionType, expected_remissionClaim, expected_feeRemissionType, expected_exceptionalCircumstances, use_source_for)
         scenarios = [
             (1, "hoWaiverRemission", None, "asylumSupport", None, ["asylumSupportReference"]),
             (2, "exceptionalCircumstancesRemission", None, None, "This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.", []),
@@ -5047,7 +5046,6 @@ def test_remission_ac13(test_df):
                 use_source_for=use_source
             )
             
-            # Fail immediately if any specific reason fails mapping verification
             if test_passed is False:
                 return TestResult(
                     "remissionType, remissionClaim, feeRemissionType", 
@@ -5057,7 +5055,6 @@ def test_remission_ac13(test_df):
                     inspect.stack()[0].function
                 )
 
-        # Return PASS if all scenarios succeed
         return TestResult(
             "remissionType, remissionClaim, feeRemissionType", 
             "PASS", 
@@ -5074,8 +5071,6 @@ def test_remission_ac13(test_df):
             test_from_state, 
             inspect.stack()[0].function
         )
-
-
 
 ############################################################################################
 

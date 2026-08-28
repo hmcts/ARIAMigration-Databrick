@@ -765,6 +765,7 @@ def bronze_appeal_case_tribunal_decision():
         | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
         | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == "0"))
         | (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == "0") & col("st.DecisionDate").isNull())
+        | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == "91") & col("st.CaseStatus").isNull())
     )
 
     retain_cond_1 = (
@@ -942,18 +943,10 @@ def bronze_appeal_case_tribunal_decision():
             "Tribunal Decision"
         ).when(
             col("ac.CasePrefix").isin(*SKELETON_GROUP)
-            & col("ac.HOANRef").isNull(),
-            "Tribunal Decision"
-        ).when(
-            col("ac.CasePrefix").isin(*SKELETON_GROUP)
-            & col("us.CaseStatus").isNotNull(),
-            "Tribunal Decision"
-        ).when(
-            col("ac.CasePrefix").isin(*SKELETON_GROUP)
             & col("ac.HOANRef").isNotNull()
             & col("us.CaseStatus").isNull(),
-            "Skeleton Case")
-
+            "Skeleton Case"
+        )
         .otherwise("Not sure")
     )
 

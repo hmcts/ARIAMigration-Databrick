@@ -2398,7 +2398,7 @@ def bronze_case_adjudicator():
     path=f"{bronze_mnt}/stg_appealcasestatus_filtered"
 )
 def stg_appealcasestatus_filtered():
-    # Reading base tables
+
     appeal_case = dlt.read("raw_appealcase")
     status = dlt.read("raw_status")
     case_status = dlt.read("raw_casestatus")
@@ -2409,41 +2409,88 @@ def stg_appealcasestatus_filtered():
 
     max_status = (
         status
-        .filter((col("outcome").isNull() | ~col("outcome").cast("int").isin(38, 111)) & (col("casestatus").isNull() | ~col("casestatus").cast("int").isin(17)))
-        .groupBy("CaseNo").agg(max("StatusId").alias("max_ID"))
+        .filter(
+            (col("outcome").isNull() | ~col("outcome").cast("int").isin(38, 111)) &
+            (col("casestatus").isNull() | ~col("casestatus").cast("int").isin(17))
+        )
+        .groupBy("CaseNo")
+        .agg(max("StatusId").alias("max_ID"))
     )
+
+    # SQL excludes 52, 36 AND 50
     prev_status = (
-        status.filter(col("casestatus").isNull() | ~col("casestatus").cast("int").isin(52, 36, 50))
-        .groupBy("CaseNo").agg(max("StatusID").alias("Prev_ID"))
+        status
+        .filter(col("CaseStatus").isNull() | ~col("CaseStatus").cast("int").isin(52, 36, 50))
+        .groupBy("CaseNo")
+        .agg(max("StatusID").alias("Prev_ID"))
     )
+
+    ut_statuses = ["40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33"]
+
     ut_status = (
-        status.filter(col("CaseStatus").isin("40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33"))
-        .groupBy("CaseNo").agg(max("StatusID").alias("UT_ID"))
+        status
+        .filter(col("CaseStatus").isin(*ut_statuses))
+        .groupBy("CaseNo")
+        .agg(max("StatusID").alias("UT_ID"))
     )
-    max_46_status = status.filter(col("CaseStatus") == "46").groupBy("CaseNo").agg(max("StatusID").alias("Max46_ID"))
+
+    max_46_status = (
+        status
+        .filter(col("CaseStatus") == "46")
+        .groupBy("CaseNo")
+        .agg(max("StatusID").alias("Max46_ID"))
+    )
+
     sa_prev = (
         status.alias("s")
-        .join(max_46_status.alias("max46"), col("s.CaseNo") == col("max46.CaseNo"), "inner")
-        .filter((col("s.StatusId") < col("max46.Max46_ID")) & (col("s.CaseStatus").isNull() | (col("s.CaseStatus") != "46")))
-        .groupBy(col("s.CaseNo")).agg(max(col("s.StatusId")).alias("Prev_ID"))
+        .join(
+            max_46_status.alias("max46"),
+            col("s.CaseNo") == col("max46.CaseNo"),
+            "inner"
+        )
+        .filter(
+            (col("s.StatusId") < col("max46.Max46_ID")) &
+            (col("s.CaseStatus").isNull() | (col("s.CaseStatus") != "46"))
+        )
+        .groupBy(col("s.CaseNo"))
+        .agg(max(col("s.StatusId")).alias("Prev_ID"))
     )
 
     result_df = (
         appeal_case.alias("ac")
         .join(max_status.alias("s"), col("ac.CaseNo") == col("s.CaseNo"), "left")
-        .join(status.alias("t"), (col("t.CaseNo") == col("s.CaseNo")) & (col("t.StatusId") == col("s.max_ID")), "left")
+        .join(
+            status.alias("t"),
+            (col("t.CaseNo") == col("s.CaseNo")) &
+            (col("t.StatusId") == col("s.max_ID")),
+            "left"
+        )
         .join(case_status.alias("cst"), col("t.CaseStatus") == col("cst.CaseStatusId"), "left")
         .join(decision_type.alias("dt"), col("t.Outcome") == col("dt.DecisionTypeId"), "left")
         .join(file_location.alias("fl"), col("ac.CaseNo") == col("fl.CaseNo"), "left")
         .join(prev_status.alias("prev"), col("ac.CaseNo") == col("prev.CaseNo"), "left")
-        .join(status.alias("st"), (col("st.CaseNo") == col("prev.CaseNo")) & (col("st.StatusId") == col("prev.Prev_ID")), "left")
+        .join(
+            status.alias("st"),
+            (col("st.CaseNo") == col("prev.CaseNo")) &
+            (col("st.StatusId") == col("prev.Prev_ID")),
+            "left"
+        )
         .join(ut_status.alias("UT"), col("ac.CaseNo") == col("UT.CaseNo"), "left")
-        .join(status.alias("us"), (col("us.CaseNo") == col("UT.CaseNo")) & (col("us.StatusId") == col("ut.UT_ID")), "left")
+        .join(
+            status.alias("us"),
+            (col("us.CaseNo") == col("UT.CaseNo")) &
+            (col("us.StatusId") == col("UT.UT_ID")),
+            "left"
+        )
         .join(sa_prev.alias("saPrev"), col("ac.CaseNo") == col("saPrev.CaseNo"), "left")
-        .join(status.alias("sa"), (col("sa.CaseNo") == col("saPrev.CaseNo")) & (col("sa.StatusId") == col("saPrev.Prev_ID")), "left")
+        .join(
+            status.alias("sa"),
+            (col("sa.CaseNo") == col("saPrev.CaseNo")) &
+            (col("sa.StatusId") == col("saPrev.Prev_ID")),
+            "left"
+        )
     )
 
-    ut_statuses = ["40", "41", "42", "43", "44", "45", "53", "27", "28", "29", "34", "32", "33"]
     ft_prefixes = ["DA", "DC", "EA", "HU", "PA", "RP"]
     ho_prefixes = ["LP", "LR", "LD", "LH", "LE", "IA"]
     overdue_prefixes = ["VA", "AA", "AS", "CC", "HR", "HX", "IM", "NS", "OA", "OC", "RD", "TH", "XX"]
@@ -2456,6 +2503,7 @@ def stg_appealcasestatus_filtered():
         | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52"))
         | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
         | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 0))
+        | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 91) & col("st.CaseStatus").isNull())
         | (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
     )
 
@@ -2499,57 +2547,134 @@ def stg_appealcasestatus_filtered():
         | ((col("st.CaseStatus") == "46") & (col("st.Outcome") == 25))
     )
 
-    # Prefix condition A: used only for the CCD block keyed on t.DecisionDate (SQL section 5, block 1).
-    # ft_prefixes alone (no us.CaseStatus check) + ho_prefixes branches.
     ft_retained_prefix_condition = (
         col("ac.CasePrefix").isin(*ft_prefixes)
         | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
-        | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
+        | (
+            col("ac.CasePrefix").isin(*ho_prefixes) &
+            col("ac.HOANRef").isNotNull() &
+            col("us.CaseStatus").isNotNull() &
+            (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+        )
     )
 
-    # Prefix condition B: ft_prefixes requires us.CaseStatus IS NULL (no "us retained but overdue" branch).
-    # Used for the CCD block keyed on st.DecisionDate (section 5, block 2) and both FTA "overdue" blocks
-    # keyed on t/st.DecisionDate < segmentation_date (section 6, blocks 3 & 4). The SQL drops the
-    # ft_prefixes-with-us-retained-but-overdue branch in these blocks — condition C below keeps it.
-    ft_retained_prefix_condition_no_us = (
-        (col("ac.CasePrefix").isin(*ft_prefixes) & col("us.CaseStatus").isNull())
-        | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
-        | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
-    )
-
-    # Prefix condition C: full FTA-arm condition, ft_prefixes with both the "us null" and
-    # "us retained but overdue" branches. Used only for the two FTA blocks keyed on
-    # t/st.DecisionDate >= segmentation_date (section 6, blocks 1 & 2).
     ft_arm_prefix_condition = (
-        (col("ac.CasePrefix").isin(*ft_prefixes) & col("us.CaseStatus").isNull())
-        | (col("ac.CasePrefix").isin(*ft_prefixes) & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
-        | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
-        | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNotNull() & (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24)))
+        (
+            col("ac.CasePrefix").isin(*ft_prefixes) &
+            col("us.CaseStatus").isNull()
+        )
+        | (
+            col("ac.CasePrefix").isin(*ft_prefixes) &
+            col("us.CaseStatus").isNotNull() &
+            (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+        )
+        | (
+            col("ac.CasePrefix").isin(*ho_prefixes) &
+            col("ac.HOANRef").isNull()
+        )
+        | (
+            col("ac.CasePrefix").isin(*ho_prefixes) &
+            col("ac.HOANRef").isNotNull() &
+            col("us.CaseStatus").isNotNull() &
+            (add_months(col("us.DecisionDate"), 60) < add_months(col("t.DecisionDate"), 24))
+        )
     )
 
     filtered_df = (
         result_df
-        .filter((col("ac.CaseType") == 1) & ~col("fl.DeptId").isin(519, 520))
+        .filter((col("ac.CaseType") == 1) & (col("fl.DeptId").isNull() | ~col("fl.DeptId").isin(519, 520)))
         .withColumn(
             "CaseStatusCategory",
-            when(col("t.CaseStatus").isin(*ut_statuses) & (col("t.Outcome") == 86), "CCD")
-            .when(col("t.CaseStatus").isin(*ut_statuses) & (col("t.Outcome") == 0), "N/A")
-            .when(col("ac.CasePrefix").isin(*overdue_prefixes) & col("t.CaseStatus").isin(*ut_statuses), "UTA")
-            .when(col("ac.CasePrefix").isin(*overdue_prefixes), "FTA")
-            .when(col("us.CaseStatus").isNotNull() & active_status_condition, "CCD")
-            .when((col("ac.CasePrefix").isin(*ft_prefixes) | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())) & active_status_condition, "CCD")
-            .when(col("us.CaseStatus").isNotNull() & ~col("t.CaseStatus").isin("36", "52") & (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & (add_months(col("us.DecisionDate"), 60) >= segmentation_date), "UTA")
-            .when(col("us.CaseStatus").isNotNull() & col("t.CaseStatus").isin("36", "52") & (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) & (add_months(col("us.DecisionDate"), 60) >= segmentation_date), "UTA")
-            .when(col("us.CaseStatus").isNotNull() & ~col("t.CaseStatus").isin("36", "52") & (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) & (add_months(col("us.DecisionDate"), 60) < segmentation_date), "UTA")
-            .when(col("us.CaseStatus").isNotNull() & col("t.CaseStatus").isin("36", "52") & (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) & (add_months(col("us.DecisionDate"), 60) < segmentation_date), "UTA")
-            .when(ft_retained_prefix_condition & retained_status_condition & (add_months(col("t.DecisionDate"), 6) >= segmentation_date), "CCD")
-            .when(ft_retained_prefix_condition_no_us & second_retained_status_condition & previous_status_condition & (add_months(col("st.DecisionDate"), 6) >= segmentation_date), "CCD")
-            .when(ft_arm_prefix_condition & retained_status_condition & (add_months(col("t.DecisionDate"), 24) >= segmentation_date), "FTA")
-            .when(ft_arm_prefix_condition & second_retained_status_condition & previous_status_condition & (add_months(col("st.DecisionDate"), 24) >= segmentation_date), "FTA")
-            .when(ft_retained_prefix_condition_no_us & retained_status_condition & (add_months(col("t.DecisionDate"), 24) < segmentation_date), "FTA")
-            .when(ft_retained_prefix_condition_no_us & second_retained_status_condition & previous_status_condition & (add_months(col("st.DecisionDate"), 24) < segmentation_date), "FTA")
-            .when((col("ac.CasePrefix") == "IA") & col("t.CaseStatus").isin("30", "31"), "FTA")
-            .when(col("ac.CasePrefix").isin("IA", "LD", "LE", "LH", "LP", "LR") & col("ac.HOANRef").isNotNull() & col("us.CaseStatus").isNull(), "FTA")
+            when(
+                col("t.CaseStatus").isin(*ut_statuses) & (col("t.Outcome") == 86),
+                "CCD"
+            ).when(
+                col("t.CaseStatus").isin(*ut_statuses) & (col("t.Outcome") == 0),
+                "N/A"
+            ).when(
+                col("ac.CasePrefix").isin(*overdue_prefixes) &
+                col("t.CaseStatus").isin(*ut_statuses),
+                "UTA"
+            ).when(
+                col("ac.CasePrefix").isin(*overdue_prefixes),
+                "FTA"
+            ).when(
+                col("us.CaseStatus").isNotNull() & active_status_condition,
+                "CCD"
+            ).when(
+                (
+                    col("ac.CasePrefix").isin(*ft_prefixes)
+                    | (col("ac.CasePrefix").isin(*ho_prefixes) & col("ac.HOANRef").isNull())
+                ) &
+                active_status_condition,
+                "CCD"
+            ).when(
+                col("us.CaseStatus").isNotNull() &
+                ~col("t.CaseStatus").isin("36", "52") &
+                (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) &
+                (add_months(col("us.DecisionDate"), 60) >= segmentation_date),
+                "UTA"
+            ).when(
+                col("us.CaseStatus").isNotNull() &
+                col("t.CaseStatus").isin("36", "52") &
+                (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) &
+                (add_months(col("us.DecisionDate"), 60) >= segmentation_date),
+                "UTA"
+            ).when(
+                col("us.CaseStatus").isNotNull() &
+                ~col("t.CaseStatus").isin("36", "52") &
+                (add_months(col("us.DecisionDate"), 60) >= add_months(col("t.DecisionDate"), 24)) &
+                (add_months(col("us.DecisionDate"), 60) < segmentation_date),
+                "UTA"
+            ).when(
+                col("us.CaseStatus").isNotNull() &
+                col("t.CaseStatus").isin("36", "52") &
+                (add_months(col("us.DecisionDate"), 60) >= add_months(col("st.DecisionDate"), 24)) &
+                (add_months(col("us.DecisionDate"), 60) < segmentation_date),
+                "UTA"
+            ).when(
+                ft_retained_prefix_condition &
+                retained_status_condition &
+                (add_months(col("t.DecisionDate"), 6) >= segmentation_date),
+                "CCD"
+            ).when(
+                ft_retained_prefix_condition &
+                second_retained_status_condition &
+                previous_status_condition &
+                (add_months(col("st.DecisionDate"), 6) >= segmentation_date),
+                "CCD"
+            ).when(
+                ft_arm_prefix_condition &
+                retained_status_condition &
+                (add_months(col("t.DecisionDate"), 24) >= segmentation_date),
+                "FTA"
+            ).when(
+                ft_arm_prefix_condition &
+                second_retained_status_condition &
+                previous_status_condition &
+                (add_months(col("st.DecisionDate"), 24) >= segmentation_date),
+                "FTA"
+            ).when(
+                ft_arm_prefix_condition &
+                retained_status_condition &
+                (add_months(col("t.DecisionDate"), 24) < segmentation_date),
+                "FTA"
+            ).when(
+                ft_arm_prefix_condition &
+                second_retained_status_condition &
+                previous_status_condition &
+                (add_months(col("st.DecisionDate"), 24) < segmentation_date),
+                "FTA"
+            ).when(
+                (col("ac.CasePrefix") == "IA") &
+                col("t.CaseStatus").isin(30, 31),
+                "FTA"
+            ).when(
+                col("ac.CasePrefix").isin("IA", "LD", "LE", "LH", "LP", "LR") &
+                col("ac.HOANRef").isNotNull() &
+                col("us.CaseStatus").isNull(),
+                "FTA"
+            )
             .otherwise("Not sure?")
         )
     )

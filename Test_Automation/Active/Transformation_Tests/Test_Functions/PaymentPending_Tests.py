@@ -5017,6 +5017,65 @@ def test_remission_ac12(test_df):
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for NO MAPPING REQUIRED (AC12): " + output_lines, test_from_state, inspect.stack()[0].function)
     except Exception as e:
         return TestResult("remissionType", "FAIL", f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", test_from_state, inspect.stack()[0].function)
+    
+#######################
+# Remissions AC13 - All PaymentRemissionRequested = 2 Scenarios (v1.17 Spec) ARIADM-2335
+#######################
+def test_remission_ac13(test_df):
+    try:
+        # Tuple format: (Reason, expected_remissionType, expected_remissionClaim, expected_feeRemissionType, expected_exceptionalCircumstances, use_source_for)
+        scenarios = [
+            (1, "hoWaiverRemission", None, "asylumSupport", None, ["asylumSupportReference"]),
+            (2, "exceptionalCircumstancesRemission", None, None, "This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information.", []),
+            (3, "hoWaiverRemission", None, "legalAid", None, ["legalAidAccountNumber"]),
+            (4, "hoWaiverRemission", None, "section17", None, []),
+            (6, "exceptionalCircumstancesRemission", None, None, "This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.", []),
+            (7, "hoWaiverRemission", None, "section20", None, []),
+            (8, "hoWaiverRemission", None, "homeOfficeWavier", None, []),
+            (9, "helpWithFees", None, None, None, ["helpWithFeesReferenceNumber"])
+        ]
+
+        for reason, rem_type, rem_claim, fee_type, exp_circumstances, use_source in scenarios:
+            test_passed, output_lines, mismatches = test_remission_mapping(
+                test_df,
+                PaymentRemissionRequested=2,
+                PaymentRemissionReason=reason,
+                expected_remissionType=rem_type,
+                expected_remissionClaim=rem_claim,
+                expected_feeRemissionType=fee_type,
+                expected_exceptionalCircumstances=exp_circumstances,
+                use_source_for=use_source
+            )
+            
+            # Fail immediately if any specific reason fails mapping verification
+            if test_passed is False:
+                return TestResult(
+                    "remissionType, remissionClaim, feeRemissionType", 
+                    "FAIL", 
+                    f"Failed on PaymentRemissionRequested=2 with Reason={reason}: {output_lines}", 
+                    test_from_state, 
+                    inspect.stack()[0].function
+                )
+
+        # Return PASS if all scenarios succeed
+        return TestResult(
+            "remissionType, remissionClaim, feeRemissionType", 
+            "PASS", 
+            "All PaymentRemissionRequested = 2 scenarios (v1.17) mapped successfully.", 
+            test_from_state, 
+            inspect.stack()[0].function
+        )
+
+    except Exception as e:
+        return TestResult(
+            "remissionType", 
+            "FAIL", 
+            f"TEST FAILED WITH EXCEPTION : Error : {str(e)[:300]}", 
+            test_from_state, 
+            inspect.stack()[0].function
+        )
+
+
 
 ############################################################################################
 

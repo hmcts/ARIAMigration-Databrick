@@ -125,8 +125,15 @@ class TestCaseUnderReviewHearingResponse:
                 "8", 1, 26, 0, "HearingCentre", "2000-01-01", "Type", "Court",
                 "List", "10:00", "10", "Notes", None, None, None, None, None,
                 None, None, None, None, None, None, None
+            ),
+            (  # CaseStatus 26 and Outcome == 0 - valid - Notes long enough to push response over 2000 chars
+                "9", 1, 26, 0, "HearingCentre", "2000-01-01", "Type", "Court",
+                "List", "10:00", "10", "N" * 2500, None, None, None, None, None,
+                None, None, None, None, None, None, None
             )
         ], self.SILVER_M3_SCHEMA)
+
+        silver_m1 = silver_m1.union(spark.createDataFrame([("9", "LR", "appeal")], self.SILVER_M1_SCHEMA))
 
         silver_m6 = spark.createDataFrame([
             ("6", "1", "JudgeLastName", "JudgeFirstName", "Judge"),
@@ -205,4 +212,22 @@ class TestCaseUnderReviewHearingResponse:
             JudgeLastName3 JudgeFirstName3 ( Judge3 ) : Not Required
             Notes: Notes\
         """).strip()
-        assert len(resultList) == 6  # 2 excluded (case 5: Outcome != 0; case 8: AIP representation); 6 remain, 2 with NULL response (CaseNo 2, 3: CaseStatus 37/38)
+        untruncated_response = (
+            "Listed details from ARIA: \n"
+            "Hearing Centre: HearingCentre\n"
+            "Hearing Date: 2000-01-01\n"
+            "Hearing Type: Type\n"
+            "Court: Court\n"
+            "List Type: List\n"
+            "List Start Time: 10:00:00\n"
+            "Judge First Tier: \n"
+            "Court Clerk / Usher: N/A\n"
+            "Start Time: 10:00:00\n"
+            "Estimated Duration: 10\n"
+            "Required/Incompatible Judicial Officers: \n"
+            "Notes: " + "N" * 2500
+        )
+        assert len(untruncated_response) > 2000
+        assert resultList[6][0] == untruncated_response[:2000]  # CaseNo 9 - response truncated to 2000 chars
+        assert len(resultList[6][0]) == 2000
+        assert len(resultList) == 7  # 2 excluded (case 5: Outcome != 0; case 8: AIP representation); 7 remain, 2 with NULL response (CaseNo 2, 3: CaseStatus 37/38)

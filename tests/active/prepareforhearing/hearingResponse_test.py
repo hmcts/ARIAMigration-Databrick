@@ -42,7 +42,8 @@ def hearingResponse_outputs(spark):
         ("CASE008", "AIP", "FT", None, 0, 0, False, None),    # For m3 conditional tests - Additional Language Spoken + Sign Manual
         ("CASE009", "AIP", "FT", None, 0, 0, None, 2),    # For m3 conditional tests - Additional Language Sign + Sign
         ("CASE010", "AIP", "FT", None, 0, 0, None, 2),   # For m3 conditional tests - Additional Language Sign + Spoken Manual
-        ("CASE011", "AIP", "FT", None, 0, 0, True, 61)    # For m3 conditional tests - Additional Language Sign + Sign Manual
+        ("CASE011", "AIP", "FT", None, 0, 0, True, 61),    # For m3 conditional tests - Additional Language Sign + Sign Manual
+        ("CASE012", "AIP", "FTPA", None, 0, 1, True, 1)    # For additionalInstructionsTribunalResponse truncation test
         ]
 
     m3_schema = T.StructType([
@@ -73,15 +74,18 @@ def hearingResponse_outputs(spark):
     ])
 
 
+    long_notes = "N" * 2500  # long enough to push additionalInstructionsTribunalResponse past the 2000 char limit
+
     m3_data = [
-        ("CASE001", 1, 37, 180, "LOC001","CC_Sur", "CC_Fore", "CC_T",5,"Standard",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","xxxx"),  
+        ("CASE001", 1, 37, 180, "LOC001","CC_Sur", "CC_Fore", "CC_T",5,"Standard",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","xxxx"),
         ("CASE002", 2, 37, 60, "LOC002", None, "CC_Fore", "CC_T",5,"Urgent",date(2023,10,1),None,"CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Noxxxxtes"),  
         ("CASE003", 1, 38, 240, "LOC003", "CC_Sur", None, "CC_T",5,"Special",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),  
         ("CASE004", 1, 38, 360, "LOC004", "CC_Sur", "CC_Fore", None,5,"Standard",date(2023,10,1),None,"CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name",None,"Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),   
         ("CASE005", 1, 37, None, "LOC005", None, None, "CC_T",5,"Urgent",date(2023,10,1),"HearingType",None,datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T",None),   
         ("CASE006", 1, 37, 30, "LOC006",None, None, None,None,"Special",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),   
         ("CASE007", 1, 38, None, "LOC007", "CC_Sur", "CC_Fore", "CC_T",2,"Standard",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),
-        ("CASE008", 1, 38, 45, "LOC008", "CC_Sur", "CC_Fore", "CC_T",1,"Urgent",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes")
+        ("CASE008", 1, 38, 45, "LOC008", "CC_Sur", "CC_Fore", "CC_T",1,"Urgent",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T","Notes"),
+        ("CASE012", 1, 37, 180, "LOC001","CC_Sur", "CC_Fore", "CC_T",5,"Standard",date(2023,10,1),"HearingType","CourtName",datetime(2023,10,1,10,0,0),"Jud_S1_Name","Jud_F1_Name","Judge1_T","Jud_S2_Name","Jud_F2_Name","Judge2_T","Jud_S3_Name","Jud_F3_Name","Judge3_T",long_notes)
     ]
  
 
@@ -115,8 +119,9 @@ def hearingResponse_outputs(spark):
         ("CASE005", 0, None,None,"Judge_T"),   # Additional Sign Manual Language (to Spoken + Sign Manual)
         ("CASE006", 0, None,None,None),   # Additional Sign Language (to Sign + Sign Manual)
         ("CASE007", None,  "Jud_S_Name","Jud_F_Name","Judge_T"),  # Additional Manual Language Entry (to Sign + Spoken Manual)
-        ("CASE008", None, "Jud_S_Name","Jud_F_Name","Judge_T")   # Additional Sign Manual Language (to Sign + Sign Manual)
-        ] 
+        ("CASE008", None, "Jud_S_Name","Jud_F_Name","Judge_T"),   # Additional Sign Manual Language (to Sign + Sign Manual)
+        ("CASE012", 1,  "Jud_S_Name","Jud_F_Name","Judge_T")   # For additionalInstructionsTribunalResponse truncation test
+        ]
     
 
     df_m1 =  spark.createDataFrame(m1_data, m1_schema)
@@ -317,5 +322,16 @@ def test_additionalInstructionsTribunalResponse(spark,hearingResponse_outputs):
     assert results["CASE006"]["additionalInstructionsTribunalResponse"] == 'Listed details from ARIA: \nHearing Centre: LOC006\nHearing Date: 2023-10-01\nHearing Type: HearingType\nCourt: CourtName\nList Type: Special\nList Start Time: 10:00:00\nJudge First Tier: Jud_S1_Name Jud_F1_Name (Judge1_T) Jud_S2_Name Jud_F2_Name (Judge2_T) Jud_S3_Name Jud_F3_Name (Judge3_T)\nCourt Clerk / Usher: N/A\nStart Time: 10:00:00\nEstimated Duration: 30\nRequired/Incompatible Judicial Officers: \n: Not Required\nNotes: Notes'
     assert results["CASE007"]["additionalInstructionsTribunalResponse"] == 'Listed details from ARIA: \nHearing Centre: LOC007\nHearing Date: 2023-10-01\nHearing Type: HearingType\nCourt: CourtName\nList Type: Standard\nList Start Time: 10:00:00\nJudge First Tier: Jud_S1_Name Jud_F1_Name (Judge1_T) Jud_S2_Name Jud_F2_Name (Judge2_T) Jud_S3_Name Jud_F3_Name (Judge3_T)\nCourt Clerk / Usher: CC_Sur CC_Fore (CC_T)\nStart Time: 10:00:00\nEstimated Duration: N/A\nRequired/Incompatible Judicial Officers: \nJud_S_Name Jud_F_Name ( Judge_T )\nNotes: Notes'
     assert results["CASE008"]["additionalInstructionsTribunalResponse"] == 'Listed details from ARIA: \nHearing Centre: LOC008\nHearing Date: 2023-10-01\nHearing Type: HearingType\nCourt: CourtName\nList Type: Urgent\nList Start Time: 10:00:00\nJudge First Tier: Jud_S1_Name Jud_F1_Name (Judge1_T) Jud_S2_Name Jud_F2_Name (Judge2_T) Jud_S3_Name Jud_F3_Name (Judge3_T)\nCourt Clerk / Usher: CC_Sur CC_Fore (CC_T)\nStart Time: 10:00:00\nEstimated Duration: 45\nRequired/Incompatible Judicial Officers: \nJud_S_Name Jud_F_Name ( Judge_T )\nNotes: Notes'
+
+def test_additionalInstructionsTribunalResponse_truncated_over_2000_chars(spark,hearingResponse_outputs):
+
+    results = hearingResponse_outputs
+
+    long_notes = "N" * 2500
+    untruncated = 'Listed details from ARIA: \nHearing Centre: LOC001\nHearing Date: 2023-10-01\nHearing Type: HearingType\nCourt: CourtName\nList Type: Standard\nList Start Time: 10:00:00\nJudge First Tier: Jud_S1_Name Jud_F1_Name (Judge1_T) Jud_S2_Name Jud_F2_Name (Judge2_T) Jud_S3_Name Jud_F3_Name (Judge3_T)\nCourt Clerk / Usher: CC_Sur CC_Fore (CC_T)\nStart Time: 10:00:00\nEstimated Duration: 180\nRequired/Incompatible Judicial Officers: \nJud_S_Name Jud_F_Name ( Judge_T ) : Required\nNotes: ' + long_notes
+
+    assert len(untruncated) > 2000
+    assert results["CASE012"]["additionalInstructionsTribunalResponse"] == untruncated[:2000]
+    assert len(results["CASE012"]["additionalInstructionsTribunalResponse"]) == 2000
 
 

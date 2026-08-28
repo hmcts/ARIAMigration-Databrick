@@ -6,6 +6,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
+from pyspark.sql.types import StructType, StructField, StringType
 import inspect
 
 #Import Test Results class
@@ -971,11 +972,11 @@ def test_listingLocation_mapping(test_df):
 
         collapsed_df = winning_records.groupBy("appealReferenceNumber").agg(
             F.max("listingLocation").alias("listingLocation"),
-            F.max("listingLocation.code").alias("actual_code"),
-            F.max("listingLocation.label").alias("actual_label"),
+            F.max("listingLocation.value.code").alias("actual_code"),
+            F.max("listingLocation.value.label").alias("actual_label"),
             F.max("locationCode").alias("expected_code"),
             F.max("locationLabel").alias("expected_label"),
-            F.max("ListedCentre").alias("ListedCentre") # To ensure we have a ListedCentre
+            F.max("ListedCentre").alias("ListedCentre")
         )
 
         acceptance_critera = collapsed_df.filter(

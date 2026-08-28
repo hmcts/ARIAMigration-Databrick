@@ -782,4 +782,12 @@ class paymentPendingDQRules(DQRulesBase):
             "(legalRepresentativeDocuments IS NOT NULL)"
         )
 
+        checks["valid_completeCaseReviewDate"] = (
+            """(
+                NOT (ariaDesiredState <=> 'paymentPending')
+                OR
+                completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
+            )"""
+        )
+
         return checks

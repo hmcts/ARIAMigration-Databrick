@@ -463,4 +463,12 @@ class appealSubmittedDQRules(DQRulesBase):
             )"""
         )
 
+        checks["valid_completeCaseReviewDate"] = (
+            """(
+                NOT (ariaDesiredState <=> 'appealSubmitted' OR ariaDesiredState <=> 'paymentPending')
+                OR
+                completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
+            )"""
+        )
+
         return checks

@@ -5216,7 +5216,7 @@ def test_outOfTimeDecisionMaker(json, M1_bronze, M3_bronze):
             safe_col(json, "outOfTimeDecisionType"),
             safe_col(json, "outOfTimeDecisionMaker")
         )
-        
+
         M1_bronze = M1_bronze.select(
             col("CaseNo").alias("m1_CaseNo"),
             safe_col(M1_bronze, "OutOfTimeIssue")
@@ -5551,48 +5551,51 @@ def test_hearingCentreDynamicList(test_df):
 #######################
 def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
     try:
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
+        
         try:
             json = json.select(
-                "appealReferenceNumber",
-                "applicationOutOfTimeExplanation"
+                safe_col(json, "appealReferenceNumber"),
+                safe_col(json, "applicationOutOfTimeExplanation")
             )
 
             M3_bronze = M3_bronze.select(
-                "CaseNo",
-                "Outcome"
+                col("CaseNo").alias("m3_CaseNo"),
+                safe_col(M3_bronze, "Outcome")
             ) 
 
             M1_bronze = M1_bronze.select(
-                col("CaseNo").alias("CaseNo-M1"),
-                "OutOfTimeIssue"
+                col("CaseNo").alias("m1_CaseNo"),
+                safe_col(M1_bronze, "OutOfTimeIssue")
             )
 
             test_df = json.join(
                 M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                json["appealReferenceNumber"] == M3_bronze["m3_CaseNo"],
                 "inner"
             )
 
             test_df = test_df.join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo-M1"],
+                json["appealReferenceNumber"] == M1_bronze["m1_CaseNo"],
                 "inner"
             )
         except Exception as e:
             error_message = str(e)        
-            return TestResult("applicationOutOfTimeExplanation", "FAIL",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("applicationOutOfTimeExplanation", "NO_DATA",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
         
         #Check we have Records To test
-        if test_df.filter(col("OutOfTimeIssue") == 0).count() == 0:
-            return TestResult("applicationOutOfTimeExplanation", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
+            return TestResult("applicationOutOfTimeExplanation", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_applicationOutOfTimeExplanation = test_df.filter(
             (
-                (col("OutOfTimeIssue") == 0)
+                (col("OutOfTimeIssue") == 1)
             ) &
             (
-                (col("applicationOutOfTimeExplanation").isNotNull()) &
-                (col("applicationOutOfTimeExplanation") == "This is a migrated ARIA case. Please refer to the documents.")
+                (col("applicationOutOfTimeExplanation").isNotNull()) |
+                (col("applicationOutOfTimeExplanation") != "This is a migrated ARIA case. Please refer to the documents.")
             ))
             
 

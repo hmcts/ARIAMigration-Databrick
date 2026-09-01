@@ -108,6 +108,10 @@ def build_dq_rules_dependencies(df_final, silver_m1, silver_m2, silver_m3, silve
                                 bronze_interpreter_languages, bronze_listing_location, bronze_ended_states,
                                 bronze_hearing_centres, bronze_derive_hearing_centres, bronze_detention_centres):
 
+    # Enforce existence of state specific columns in DQ check if not added as part of the main function.
+    if "completeCaseReviewDate" not in df_final.columns:
+        df_final = df_final.withColumn("completeCaseReviewDate", lit(None).cast("string"))
+
     # Base inputs
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 

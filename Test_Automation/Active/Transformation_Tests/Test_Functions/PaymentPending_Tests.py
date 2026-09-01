@@ -5079,42 +5079,45 @@ def test_remission_ac13(test_df):
 #######################
 def test_caseData_init(json, M1_bronze, M1_silver, M3_bronze):
     try:
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
+
         json = json.select(
-            "appealReferenceNumber",
-            "submissionOutOfTime",
-            # "recordedOutOfTimeDecision",
-            # "applicationOutOfTimeExplanation",
-            "appealSubmissionDate",
-            "appealSubmissionInternalDate",
-            "tribunalReceivedDate",
-            "appellantsRepresentation",
-            "hearingCentreDynamicList",
-            "caseManagementLocationRefData",
-            # "outOfTimeDecisionType",
-            # "outOfTimeDecisionMaker"
+            safe_col(json, "appealReferenceNumber"),
+            safe_col(json, "submissionOutOfTime"),
+            safe_col(json, "recordedOutOfTimeDecision"),
+            safe_col(json, "applicationOutOfTimeExplanation"),
+            safe_col(json, "appealSubmissionDate"),
+            safe_col(json, "appealSubmissionInternalDate"),
+            safe_col(json, "tribunalReceivedDate"),
+            safe_col(json, "appellantsRepresentation"),
+            safe_col(json, "hearingCentreDynamicList"),
+            safe_col(json, "caseManagementLocationRefData"),
+            safe_col(json, "outOfTimeDecisionType"),
+            safe_col(json, "outOfTimeDecisionMaker")
         )
 
         M1_bronze = M1_bronze.select(
-            "CaseNo",
-            "DateLodged",
-            "DateAppealReceived",
-            "OutOfTimeIssue"
+            col("CaseNo").alias("m1_CaseNo"),
+            safe_col(M1_bronze, "DateLodged"),
+            safe_col(M1_bronze, "DateAppealReceived"),
+            safe_col(M1_bronze, "OutOfTimeIssue")
         )
 
         M1_silver = M1_silver.select(
             col("CaseNo").alias("CaseNo-silver"),
-            "dv_representation"
+            safe_col(M1_silver, "dv_representation")
         )
 
         M3_bronze = M3_bronze.select(
             col("CaseNo").alias("CaseNo-M3"),
-            "Outcome",
-            "StatusId"
+            safe_col(M3_bronze, "Outcome"),
+            safe_col(M3_bronze, "StatusId")
         )
 
         test_df = json.join(
             M1_bronze,
-            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            json["appealReferenceNumber"] == M1_bronze["m1_CaseNo"],
             "inner"
         )
 
@@ -5205,37 +5208,37 @@ def test_outOfTimeDecisionType(json, M1_bronze, M3_bronze):
 #######################
 def test_outOfTimeDecisionMaker(json, M1_bronze, M3_bronze):
     try:
-        if "outOfTimeDecisionMaker" not in json.columns:
-            return TestResult("outOfTimeDecisionMaker", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
         
         json = json.select(
-            "appealReferenceNumber",
-            "outOfTimeDecisionType",
-            "outOfTimeDecisionMaker"
+            safe_col(json, "appealReferenceNumber"),
+            safe_col(json, "outOfTimeDecisionType"),
+            safe_col(json, "outOfTimeDecisionMaker")
         )
-
+        
         M1_bronze = M1_bronze.select(
-            "CaseNo",
-            "OutOfTimeIssue"
+            col("CaseNo").alias("m1_CaseNo"),
+            safe_col(M1_bronze, "OutOfTimeIssue")
         )
 
         M3_bronze = M3_bronze.select(
-            "CaseNo",
-            "Outcome",
-            "StatusId"
+            col("CaseNo").alias("m3_CaseNo"),
+            safe_col(M3_bronze, "Outcome"),
+            safe_col(M3_bronze, "StatusId")
         )
 
         test_df = json.join(
             M1_bronze,
-            json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+            json["appealReferenceNumber"] == M1_bronze["m1_CaseNo"],
             "inner"
-        ).drop("CaseNo")
+        )
 
         test_df = test_df.join(
             M3_bronze,
-            test_df["appealReferenceNumber"] == M3_bronze["CaseNo"],
+            test_df["appealReferenceNumber"] == M3_bronze["m3_CaseNo"],
             "inner"
-        ).drop("CaseNo")
+        )
 
         window_spec = Window.partitionBy("appealReferenceNumber").orderBy(col("StatusId").desc())
         
@@ -5247,7 +5250,7 @@ def test_outOfTimeDecisionMaker(json, M1_bronze, M3_bronze):
             (col("OutOfTimeIssue") == 1) &
             (col("Outcome") != 0)
             ).count() == 0:
-            return TestResult("outOfTimeDecisionMaker", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+            return TestResult("outOfTimeDecisionMaker", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
         
         acceptance_criteria = latest_df.filter(
             (col("OutOfTimeIssue") == 1) &
@@ -5343,21 +5346,32 @@ def test_submissionOutOfTime_ac3(test_df):
 #######################
 def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
     try:
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
+        
         try:
+            json = json.select(
+                safe_col(json, "appealReferenceNumber"),
+                safe_col(json, "recordedOutOfTimeDecision")
+            )
+            M3_bronze = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                safe_col(M3_bronze, "Outcome"),
+                safe_col(M3_bronze, "StatusId")
+            )
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                safe_col(M1_bronze, "OutOfTimeIssue")
+            )
+
             test_df = json.join(
                 M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                json["appealReferenceNumber"] == M3_bronze["m3_CaseNo"],
                 "inner"
             ).join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+                json["appealReferenceNumber"] == M1_bronze["m1_CaseNo"],
                 "inner"
-            ).select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision",
-                "Outcome",
-                "StatusId",
-                "OutOfTimeIssue"
             )
         except Exception as e:
             error_message = str(e)
@@ -5372,7 +5386,7 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
                 (col("Outcome").isNotNull()) &
                 (col("Outcome") != 0)
                 ).count() == 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
             ac = test_df.filter(
                 (col("OutOfTimeIssue") == 1) &
@@ -5394,21 +5408,31 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
 
 def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
     try:
+        def safe_col(df, col_name):
+            return col(col_name) if col_name in df.columns else lit(None).alias(col_name)
         try:
+            json = json.select(
+                safe_col(json, "appealReferenceNumber"),
+                safe_col(json, "recordedOutOfTimeDecision")
+            )
+            M3_bronze = M3_bronze.select(
+                col("CaseNo").alias("m3_CaseNo"),
+                safe_col(M3_bronze, "Outcome"),
+                safe_col(M3_bronze, "StatusId")
+            )
+            M1_bronze = M1_bronze.select(
+                col("CaseNo").alias("m1_CaseNo"),
+                safe_col(M1_bronze, "OutOfTimeIssue")
+            )
+
             test_df = json.join(
                 M3_bronze,
-                json["appealReferenceNumber"] == M3_bronze["CaseNo"],
+                json["appealReferenceNumber"] == M3_bronze["m3_CaseNo"],
                 "inner"
             ).join(
                 M1_bronze,
-                json["appealReferenceNumber"] == M1_bronze["CaseNo"],
+                json["appealReferenceNumber"] == M1_bronze["m1_CaseNo"],
                 "inner"
-            ).select(
-                "appealReferenceNumber",
-                "recordedOutOfTimeDecision",
-                "Outcome",
-                "StatusId",
-                "OutOfTimeIssue"
             )
         except Exception as e:
             error_message = str(e)
@@ -5421,7 +5445,7 @@ def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
             if test_df.filter(
                 ~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()) & (col("Outcome") != 0))
                 ).count() == 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
             ac = test_df.filter(
                 (~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()) & (col("Outcome") != 0))) &

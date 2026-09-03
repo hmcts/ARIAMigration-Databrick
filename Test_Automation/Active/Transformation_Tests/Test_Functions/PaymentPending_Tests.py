@@ -5099,20 +5099,20 @@ def test_caseData_init(json, M1_bronze, M1_silver, M3_bronze):
 
         M1_bronze = M1_bronze.select(
             col("CaseNo").alias("m1_CaseNo"),
-            safe_col(M1_bronze, "DateLodged"),
-            safe_col(M1_bronze, "DateAppealReceived"),
-            safe_col(M1_bronze, "OutOfTimeIssue")
+            "DateLodged",
+            "DateAppealReceived",
+            "OutOfTimeIssue"
         )
 
         M1_silver = M1_silver.select(
             col("CaseNo").alias("CaseNo-silver"),
-            safe_col(M1_silver, "dv_representation")
+            "dv_representation"
         )
 
         M3_bronze = M3_bronze.select(
             col("CaseNo").alias("CaseNo-M3"),
-            safe_col(M3_bronze, "Outcome"),
-            safe_col(M3_bronze, "StatusId")
+            "Outcome",
+            "StatusId"
         )
 
         test_df = json.join(
@@ -5219,13 +5219,13 @@ def test_outOfTimeDecisionMaker(json, M1_bronze, M3_bronze):
 
         M1_bronze = M1_bronze.select(
             col("CaseNo").alias("m1_CaseNo"),
-            safe_col(M1_bronze, "OutOfTimeIssue")
+            "OutOfTimeIssue"
         )
 
         M3_bronze = M3_bronze.select(
             col("CaseNo").alias("m3_CaseNo"),
-            safe_col(M3_bronze, "Outcome"),
-            safe_col(M3_bronze, "StatusId")
+            "Outcome",
+            "StatusId"
         )
 
         test_df = json.join(
@@ -5341,8 +5341,8 @@ def test_submissionOutOfTime_ac3(test_df):
 
 #######################
 # recordedOutOfTimeDecision (paymentPending / appealSubmitted only)
-# Rule: IF M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value (NOT NULL AND != 0) for MAX(StatusId) -> "Yes" ELSE omitted
-# In ARIA M3.Outcome = 0 is the sentinel for "no outcome recorded" and is treated the same as NULL.
+# AC1: IF M1.OutOfTimeIssue == 1  -> "Yes" or "No"
+# AC2: IF M1.OutOfTimeIssue == 0 or NULL -> Omitted (NULL)
 #######################
 def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
     try:
@@ -5356,12 +5356,12 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
             )
             M3_bronze = M3_bronze.select(
                 col("CaseNo").alias("m3_CaseNo"),
-                safe_col(M3_bronze, "Outcome"),
-                safe_col(M3_bronze, "StatusId")
+                "Outcome",
+                "StatusId"
             )
             M1_bronze = M1_bronze.select(
                 col("CaseNo").alias("m1_CaseNo"),
-                safe_col(M1_bronze, "OutOfTimeIssue")
+                "OutOfTimeIssue"
             )
 
             test_df = json.join(
@@ -5381,24 +5381,21 @@ def test_recordedOutOfTimeDecision_ac1(json, M3_bronze, M1_bronze):
             status_window = Window.partitionBy("appealReferenceNumber").orderBy(F.desc("StatusId"))
             test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
 
-            if test_df.filter(
-                (col("OutOfTimeIssue") == 1) &
-                (col("Outcome").isNotNull()) &
-                (col("Outcome") != 0)
-                ).count() == 0:
+            if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
             ac = test_df.filter(
                 (col("OutOfTimeIssue") == 1) &
-                (col("Outcome").isNotNull()) &
-                (col("Outcome") != 0) &
-                ((col("recordedOutOfTimeDecision") != "Yes") | (col("recordedOutOfTimeDecision").isNull()))
+                (
+                    col("recordedOutOfTimeDecision").isNull() |
+                    (~col("recordedOutOfTimeDecision").isin(["Yes", "No"]))
+                )
             )
 
             if ac.count() != 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value but recordedOutOfTimeDecision != 'Yes'", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue == 1 but recordedOutOfTimeDecision is missing or not 'Yes' or 'No'", test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value have recordedOutOfTimeDecision = 'Yes'", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value have recordedOutOfTimeDecision as 'Yes' or 'No'", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -5417,12 +5414,12 @@ def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
             )
             M3_bronze = M3_bronze.select(
                 col("CaseNo").alias("m3_CaseNo"),
-                safe_col(M3_bronze, "Outcome"),
-                safe_col(M3_bronze, "StatusId")
+                "Outcome",
+                "StatusId"
             )
             M1_bronze = M1_bronze.select(
                 col("CaseNo").alias("m1_CaseNo"),
-                safe_col(M1_bronze, "OutOfTimeIssue")
+                "OutOfTimeIssue"
             )
 
             test_df = json.join(
@@ -5443,19 +5440,18 @@ def test_recordedOutOfTimeDecision_ac2(json, M3_bronze, M1_bronze):
             test_df = test_df.withColumn("rank", F.row_number().over(status_window)).filter(F.col("rank") == 1)
 
             if test_df.filter(
-                ~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()) & (col("Outcome") != 0))
-                ).count() == 0:
+                (col("OutOfTimeIssue") == 0) | col("OutOfTimeIssue").isNull()).count() == 0:
                 return TestResult("recordedOutOfTimeDecision", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
             ac = test_df.filter(
-                (~((col("OutOfTimeIssue") == 1) & (col("Outcome").isNotNull()) & (col("Outcome") != 0))) &
-                (col("recordedOutOfTimeDecision").isNotNull())
+                ((col("OutOfTimeIssue") == 0) | col("OutOfTimeIssue").isNull()) &
+                col("recordedOutOfTimeDecision").isNotNull()
             )
 
             if ac.count() != 0:
-                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where NOT(M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value) but recordedOutOfTimeDecision is not omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "FAIL", f"recordedOutOfTimeDecision acceptance criteria failed: {str(ac.count())} cases have been found where M1.OutOfTimeIssue is 0/NULL but recordedOutOfTimeDecision is not omitted", test_from_state, inspect.stack()[0].function)
             else:
-                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where NOT(M1.OutOfTimeIssue == 1 AND M3.Outcome has a real value) have recordedOutOfTimeDecision omitted", test_from_state, inspect.stack()[0].function)
+                return TestResult("recordedOutOfTimeDecision", "PASS", f"recordedOutOfTimeDecision acceptance criteria passed, all cases where M1.OutOfTimeIssue is 0/NULL have recordedOutOfTimeDecision omitted", test_from_state, inspect.stack()[0].function)
         else:
             return TestResult("recordedOutOfTimeDecision", "FAIL",f"Failed to Setup Data for Test - recordedOutOfTimeDecision does not exist in the payload", test_from_state, inspect.stack()[0].function)
     except Exception as e:
@@ -5562,12 +5558,12 @@ def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
 
             M3_bronze = M3_bronze.select(
                 col("CaseNo").alias("m3_CaseNo"),
-                safe_col(M3_bronze, "Outcome")
+                "Outcome"
             ) 
 
             M1_bronze = M1_bronze.select(
                 col("CaseNo").alias("m1_CaseNo"),
-                safe_col(M1_bronze, "OutOfTimeIssue")
+                "OutOfTimeIssue"
             )
 
             test_df = json.join(
@@ -5583,26 +5579,30 @@ def test_applicationOutOfTimeExplanation(json, M1_bronze, M3_bronze):
             )
         except Exception as e:
             error_message = str(e)        
-            return TestResult("applicationOutOfTimeExplanation", "NO_DATA",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
+            return TestResult("applicationOutOfTimeExplanation", "FAIL",f"Failed to setup test data, no data exists for 'applicationOutOfTimeExplanation'. Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
         
         #Check we have Records To test
-        if test_df.filter(col("OutOfTimeIssue") == 1).count() == 0:
+        if test_df.count() == 0:
             return TestResult("applicationOutOfTimeExplanation", "NO_DATA", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
         ac1_applicationOutOfTimeExplanation = test_df.filter(
             (
-                (col("OutOfTimeIssue") == 1)
-            ) &
+                (col("OutOfTimeIssue") == 1) &
+                (
+                    col("applicationOutOfTimeExplanation").isNull() |
+                    (col("applicationOutOfTimeExplanation") != "This is a migrated ARIA case. Please refer to the documents.")
+                )
+            ) | 
             (
-                (col("applicationOutOfTimeExplanation").isNotNull()) |
-                (col("applicationOutOfTimeExplanation") != "This is a migrated ARIA case. Please refer to the documents.")
-            ))
-            
+                ((col("OutOfTimeIssue") == 0) | col("OutOfTimeIssue").isNull()) & 
+                col("applicationOutOfTimeExplanation").isNotNull()
+            )
+        )
 
         if ac1_applicationOutOfTimeExplanation.count() != 0:
-            return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation.count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation has not been omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("applicationOutOfTimeExplanation", "FAIL", f"applicationOutOfTimeExplanation acceptance criteria - failed: {str(ac1_applicationOutOfTimeExplanation.count())} cases have been found where OutOfTimeIssue = 1, but applicationOutOfTimeExplanation is missing or incorrect OR where OutOfTimeIssue is 0 or NULL but applicationOutOfTimeExplanation is populated.", test_from_state, inspect.stack()[0].function)
         else:
-            return TestResult("applicationOutOfTimeExplanation", "PASS", f"applicationOutOfTimeExplanation acceptance criteria passed, all cases where OutOfTimeIssue = 1 have applicationOutOfTimeExplanation omitted.", test_from_state, inspect.stack()[0].function)
+            return TestResult("applicationOutOfTimeExplanation", "PASS", f"applicationOutOfTimeExplanation acceptance criteria passed, all cases where OutOfTimeIssue = 1 have applicationOutOfTimeExplanation populated correctly and omitted when OutOfTimeIssue = 0 or NULL.", test_from_state, inspect.stack()[0].function)
     except Exception as e:
         error_message = str(e)        
         return TestResult("applicationOutOfTimeExplanation", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)

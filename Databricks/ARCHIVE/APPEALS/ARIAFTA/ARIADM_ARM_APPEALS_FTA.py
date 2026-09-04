@@ -2503,6 +2503,7 @@ def stg_appealcasestatus_filtered():
         | (col("t.CaseStatus").isin("37", "38") & col("t.Outcome").isin("39", "40", "37", "50", "27", "0", "5", "52"))
         | ((col("t.CaseStatus") == "39") & col("t.Outcome").isin("0", "86"))
         | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 0))
+        | ((col("t.CaseStatus") == "50") & (col("t.Outcome") == 91) & col("st.CaseStatus").isNull())
         | (col("t.CaseStatus").isin("52", "36") & (col("t.Outcome") == 0) & col("st.DecisionDate").isNull())
     )
 
@@ -2581,7 +2582,7 @@ def stg_appealcasestatus_filtered():
 
     filtered_df = (
         result_df
-        .filter((col("ac.CaseType") == 1) & ~col("fl.DeptId").isin(519, 520))
+        .filter((col("ac.CaseType") == 1) & (col("fl.DeptId").isNull() | ~col("fl.DeptId").isin(519, 520)))
         .withColumn(
             "CaseStatusCategory",
             when(

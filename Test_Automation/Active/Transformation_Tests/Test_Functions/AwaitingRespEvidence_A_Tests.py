@@ -119,7 +119,12 @@ def test_ARE_homeOfficeExclusion(json_data):
                     inspect.stack()[0].function
                 ))
             else:
-                leaked_records = json_data.filter(col(field).isNotNull() & (col(field) != ""))
+                # scalar strings: leak = present & non-empty; complex types (struct/array) can't compare to "" -> leak = present
+                from pyspark.sql.types import StringType
+                if isinstance(json_data.schema[field].dataType, StringType):
+                    leaked_records = json_data.filter(col(field).isNotNull() & (col(field) != ""))
+                else:
+                    leaked_records = json_data.filter(col(field).isNotNull())
                 if leaked_records.count() > 0:
                     results_list.append(TestResult(
                         field,

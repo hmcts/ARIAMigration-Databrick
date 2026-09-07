@@ -520,17 +520,17 @@ def test_sponsorAddress_ac4(test_df_sd):
         if test_df_sd.filter(col("sponsorAddress").isNotNull()).count() == 0:
             return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
+        # sponsorAddress is an AddressUK struct (APPENDIX-Address) - compare each field to its ARIA source
         ac4_sponsorAddress = test_df_sd.filter(
-        ((col("sponsorAddress").isNotNull() & (col("hasSponsor") == "Yes") & (array_contains(col("CategoryIds"), 38))) &
-            (col("sponsorAddress") != concat_ws(
-                ", ",
-                col("Sponsor_Address1"), 
-                col("Sponsor_Address2"), 
-                col("Sponsor_Address3"), 
-                col("Sponsor_Address4"), 
-                col("Sponsor_Address5"), 
-                col("Sponsor_Postcode"))
-            ))
+            (col("sponsorAddress").isNotNull() & (col("hasSponsor") == "Yes") & array_contains(col("CategoryIds"), 38)) &
+            (
+                (~col("sponsorAddress.AddressLine1").eqNullSafe(col("Sponsor_Address1"))) |
+                (~col("sponsorAddress.AddressLine2").eqNullSafe(col("Sponsor_Address2"))) |
+                (~col("sponsorAddress.PostTown").eqNullSafe(col("Sponsor_Address3"))) |
+                (~col("sponsorAddress.County").eqNullSafe(col("Sponsor_Address4"))) |
+                (~col("sponsorAddress.Country").eqNullSafe(col("Sponsor_Address5"))) |
+                (~col("sponsorAddress.PostCode").eqNullSafe(col("Sponsor_Postcode")))
+            )
         )
 
         if ac4_sponsorAddress.count() != 0:
@@ -2146,6 +2146,8 @@ def test_internalAppellantMobileNumber_ac2(json, M2_bronze):
 #######################
 def test_mobileNumber_ac1(json, M2_bronze):
     try:
+        if "mobileNumber" not in json.columns:
+            return TestResult("mobileNumber", "NO_DATA", "mobileNumber not present in this state's payload", test_from_state, inspect.stack()[0].function)
         json_df = json.select(
             "AppealReferenceNumber", "mobileNumber"
         )
@@ -2182,6 +2184,8 @@ def test_mobileNumber_ac1(json, M2_bronze):
     
 def test_mobileNumber_ac2(json, M2_bronze):
     try:
+        if "mobileNumber" not in json.columns:
+            return TestResult("mobileNumber", "NO_DATA", "mobileNumber not present in this state's payload", test_from_state, inspect.stack()[0].function)
         json_df = json.select(
             "AppealReferenceNumber", "mobileNumber"
         )
@@ -3387,6 +3391,10 @@ def test_deportationOrderOptions_ac4(test_df):
 #######################
 def test_partyIds_init(json, M1_silver):
     try:
+        _required = ["appellantPartyId", "legalRepIndividualPartyId", "legalRepOrganisationPartyId", "sponsorPartyId"]
+        _missing = [c for c in _required if c not in json.columns]
+        if _missing:
+            return None, TestResult("partyIds", "NO_DATA", f"partyIds not present in this state's payload (missing: {_missing})", test_from_state, inspect.stack()[0].function)
         test_df = json.select(
             "AppealReferenceNumber",
             "appellantPartyId",

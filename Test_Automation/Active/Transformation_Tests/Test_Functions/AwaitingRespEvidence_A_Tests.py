@@ -97,58 +97,68 @@ def test_AREA_defaultValues(test_df, fields_to_exclude):
 # #######################
 
 def test_ARE_homeOfficeExclusion(json_data):
+    # Post-ARIADM-2357: for PA/RP appeals the 5 homeOffice search/match fields are DEFAULTED
+    # (inherited from appealSubmitted); for every other appeal type they are omitted (null).
+    # (Was a 2205 negative "must be excluded" test; 2357 + mapping v1.17 supersede it.)
     try:
-
         results_list = []
-        
-        forbidden_fields = [
-            "homeOfficeSearchStatus", 
-            "homeOfficeSearchNoMatch", 
-            "matchingAppellantDetailsFound", 
-            "homeOfficeAppellantsList", 
-            "homeOfficeCaseStatusData"
-        ]
-        
-        for field in forbidden_fields:
+
+        if "appealType" not in json_data.columns:
+            return [TestResult("homeOfficeExclusion", "NO_DATA", "appealType not in payload - cannot evaluate HO defaulting", test_from_state, inspect.stack()[0].function)]
+
+        is_pa_rp = col("appealType").isin("protection", "revocationOfProtection")
+
+        # Scalar fields: PA/RP -> fixed default; all other appeal types -> null
+        scalar_defaults = {
+            "homeOfficeSearchStatus": "SUCCESS",
+            "homeOfficeSearchNoMatch": "NO_MATCH",
+            "matchingAppellantDetailsFound": "No",
+        }
+        for field, expected in scalar_defaults.items():
             if field not in json_data.columns:
-                results_list.append(TestResult(
-                    field,
-                    "PASS",
-                    f"Negative Test Passed: {field} is completely excluded from this state's schema.", 
-                    test_from_state, 
-                    inspect.stack()[0].function
-                ))
+                results_list.append(TestResult(field, "NO_DATA", f"{field} not present in this state's payload", test_from_state, inspect.stack()[0].function))
+                continue
+            bad = json_data.filter(
+                (is_pa_rp & ~col(field).eqNullSafe(expected)) |
+                (~is_pa_rp & col(field).isNotNull())
+            )
+            n = bad.count()
+            if n > 0:
+                results_list.append(TestResult(field, "FAIL", f"{field}: {n} cases not matching 2357 default (PA/RP must be '{expected}', all others null).", test_from_state, inspect.stack()[0].function))
             else:
-                # scalar strings: leak = present & non-empty; complex types (struct/array) can't compare to "" -> leak = present
-                from pyspark.sql.types import StringType
-                if isinstance(json_data.schema[field].dataType, StringType):
-                    leaked_records = json_data.filter(col(field).isNotNull() & (col(field) != ""))
-                else:
-                    leaked_records = json_data.filter(col(field).isNotNull())
-                if leaked_records.count() > 0:
-                    results_list.append(TestResult(
-                        field,
-                        "FAIL", 
-                        f"Leak detected: {field} should be excluded, but found {leaked_records.count()} records with data.", 
-                        test_from_state, 
-                        inspect.stack()[0].function
-                    ))
-                else:
-                    results_list.append(TestResult(
-                        field, 
-                        "PASS", 
-                        f"Negative Test Passed: {field} exists in schema but is correctly null/empty.", 
-                        test_from_state, 
-                        inspect.stack()[0].function
-                    ))
-                    
+                results_list.append(TestResult(field, "PASS", f"{field} correct: '{expected}' for PA/RP, null otherwise.", test_from_state, inspect.stack()[0].function))
+
+        # Struct fields: PA/RP -> present (appellantsList value.code = 'NoMatch'); all other appeal types -> null
+        for field, subcol, subval in [
+            ("homeOfficeAppellantsList", "homeOfficeAppellantsList.value.code", "NoMatch"),
+            ("homeOfficeCaseStatusData", None, None),
+        ]:
+            if field not in json_data.columns:
+                results_list.append(TestResult(field, "NO_DATA", f"{field} not present in this state's payload", test_from_state, inspect.stack()[0].function))
+                continue
+            if subcol:
+                bad = json_data.filter(
+                    (is_pa_rp & ~col(subcol).eqNullSafe(subval)) |
+                    (~is_pa_rp & col(field).isNotNull())
+                )
+                detail = f"PA/RP must have {subcol}='{subval}', all others null"
+            else:
+                bad = json_data.filter(
+                    (is_pa_rp & col(field).isNull()) |
+                    (~is_pa_rp & col(field).isNotNull())
+                )
+                detail = "PA/RP must be populated, all others null"
+            n = bad.count()
+            if n > 0:
+                results_list.append(TestResult(field, "FAIL", f"{field}: {n} cases not matching 2357 default ({detail}).", test_from_state, inspect.stack()[0].function))
+            else:
+                results_list.append(TestResult(field, "PASS", f"{field} correct ({detail}).", test_from_state, inspect.stack()[0].function))
 
         return results_list
 
     except Exception as e:
         error_message = str(e)
-        return [TestResult("homeOfficeExclusion", "FAIL", f"Negative test exception: {error_message[:100]}", test_from_state, inspect.stack()[0].function)]
-        
+        return [TestResult("homeOfficeExclusion", "FAIL", f"homeOffice test exception: {error_message[:100]}", test_from_state, inspect.stack()[0].function)]
 
 
 ############################################################################################

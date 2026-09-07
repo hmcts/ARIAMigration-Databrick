@@ -4872,7 +4872,7 @@ def test_remission_ac4(test_df):
             expected_remissionType="exceptionalCircumstancesRemission",
             expected_remissionClaim=None,
             expected_feeRemissionType="Exceptional circumstances",
-            expected_exceptionalCircumstances="This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information."
+            expected_exceptionalCircumstances='"This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information."'
         )
         status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for exceptionalCircumstances (AC4): " + output_lines, test_from_state, inspect.stack()[0].function)
@@ -4946,7 +4946,7 @@ def test_remission_ac8(test_df):
             expected_remissionType="exceptionalCircumstancesRemission",
             expected_remissionClaim=None,
             expected_feeRemissionType="Exceptional circumstances",
-            expected_exceptionalCircumstances="This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information."
+            expected_exceptionalCircumstances='"This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information."'
         )
         status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
         return TestResult("remissionType, remissionClaim, feeRemissionType", status, "Test for Other (AC8): " + output_lines, test_from_state, inspect.stack()[0].function)
@@ -4981,7 +4981,7 @@ def test_remission_ac10(test_df):
             PaymentRemissionRequested=1,
             PaymentRemissionReason=8,
             expected_remissionType="hoWaiverRemission",
-            expected_remissionClaim="homeOfficeWavier",
+            expected_remissionClaim="homeOfficeWaiver",
             expected_feeRemissionType="Home Office fee waiver"
         )
         status = "NO_DATA" if test_passed is None else ("PASS" if test_passed else "FAIL")
@@ -5038,7 +5038,7 @@ def test_remission_ac13(test_df):
             (4, "hoWaiverRemission", None, "section17", None, []),
             (6, "exceptionalCircumstancesRemission", None, None, "This is a migrated ARIA case. The remission reason was Other. Please see the documents for further information.", []),
             (7, "hoWaiverRemission", None, "section20", None, []),
-            (8, "hoWaiverRemission", None, "homeOfficeWavier", None, []),
+            (8, "hoWaiverRemission", None, "homeOfficeWaiver", None, []),
             (9, "helpWithFees", None, None, None, ["helpWithFeesReferenceNumber"])
         ]
 

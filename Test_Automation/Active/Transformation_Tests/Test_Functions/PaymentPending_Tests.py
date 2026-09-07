@@ -520,16 +520,20 @@ def test_sponsorAddress_ac4(test_df_sd):
         if test_df_sd.filter(col("sponsorAddress").isNotNull()).count() == 0:
             return TestResult("sponsorAddress", "FAIL", "NO RECORDS TO TEST", test_from_state, inspect.stack()[0].function)
 
-        # sponsorAddress is an AddressUK struct (APPENDIX-Address) - compare each field to its ARIA source
+        # sponsorAddress is an AddressUK struct (APPENDIX-Address) - compare each field to its ARIA source.
+        # clean_col (trim + empty->null), matching test_sponsorAddress_ac1, so whitespace/empty diffs don't false-fail.
+        def clean_col(c):
+            return F.when(F.trim(F.col(c)) == "", None).otherwise(F.trim(F.col(c)))
+
         ac4_sponsorAddress = test_df_sd.filter(
             (col("sponsorAddress").isNotNull() & (col("hasSponsor") == "Yes") & array_contains(col("CategoryIds"), 38)) &
             (
-                (~col("sponsorAddress.AddressLine1").eqNullSafe(col("Sponsor_Address1"))) |
-                (~col("sponsorAddress.AddressLine2").eqNullSafe(col("Sponsor_Address2"))) |
-                (~col("sponsorAddress.PostTown").eqNullSafe(col("Sponsor_Address3"))) |
-                (~col("sponsorAddress.County").eqNullSafe(col("Sponsor_Address4"))) |
-                (~col("sponsorAddress.Country").eqNullSafe(col("Sponsor_Address5"))) |
-                (~col("sponsorAddress.PostCode").eqNullSafe(col("Sponsor_Postcode")))
+                (~clean_col("sponsorAddress.AddressLine1").eqNullSafe(clean_col("Sponsor_Address1"))) |
+                (~clean_col("sponsorAddress.AddressLine2").eqNullSafe(clean_col("Sponsor_Address2"))) |
+                (~clean_col("sponsorAddress.PostTown").eqNullSafe(clean_col("Sponsor_Address3"))) |
+                (~clean_col("sponsorAddress.County").eqNullSafe(clean_col("Sponsor_Address4"))) |
+                (~clean_col("sponsorAddress.Country").eqNullSafe(clean_col("Sponsor_Address5"))) |
+                (~clean_col("sponsorAddress.PostCode").eqNullSafe(clean_col("Sponsor_Postcode")))
             )
         )
 

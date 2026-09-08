@@ -1,15 +1,20 @@
 import json
-import requests
-from azure.storage.blob import BlobServiceClient
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+import requests
+from azure.storage.blob import BlobServiceClient
+
 
 def _compact(value) -> str:
-    if isinstance(value, (dict, list)):
-        return json.dumps(value)
-    text = str(value)
-    return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+    try:
+        if isinstance(value, (dict, list)):
+            return json.dumps(value)
+        text = str(value)
+        return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+    except Exception as e:
+        print(f"Unable to compact the log. {e}")
+        return str(value)
 
 
 def _get_res_body_as_text(response) -> str:
@@ -68,7 +73,7 @@ def upload_document(cdam_base_url, jid, ctid, cid, file_name, doc_binary, conten
 
     except Exception as e:
         print(f"❌ Network error while calling {upload_document_url}: {e}")
-        return e
+        raise
 
 
 def process_event(env, caseNo, runId, file_name, file_url, file_content_type, storage_credential):
@@ -164,7 +169,22 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
 
     # submit case
     print("Starting CDAM upload")
-    upload_document_response = upload_document(cdam_base_url, jid, ctid, caseNo, file_name, file_binary_in_bytes, file_content_type, idam_token, s2s_token)
+    try:
+        upload_document_response = upload_document(cdam_base_url, jid, ctid, caseNo, file_name, file_binary_in_bytes, file_content_type, idam_token, s2s_token)
+    except Exception as e:
+        print(f"❌ Document upload failed with exception: {e}")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "StartDateTime": startDateTime,
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "Status": "ERROR",
+            "StatusCode": "N/A",
+            "ErrorType": type(e).__name__,
+            "Error": f"Document upload failed: {e}",
+            "CDAMResponse": ""
+        }
+        return result
 
     try:
         print(f"CDAM upload for case {caseNo}: {_compact(upload_document_response.json())}")
@@ -174,13 +194,9 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
         except Exception:
             print(f"Unable to parse upload_document_response for case {caseNo}")
 
-    if upload_document_response is None or isinstance(upload_document_response, Exception) or upload_document_response.status_code not in {201, 200}:
+    if upload_document_response is None or upload_document_response.status_code not in {201, 200}:
         error_type = None
-        if isinstance(upload_document_response, Exception):
-            status_code = "N/A"
-            error_type = type(upload_document_response).__name__
-            text = str(upload_document_response)
-        elif upload_document_response is not None:
+        if upload_document_response is not None:
             status_code = upload_document_response.status_code
             text = _get_res_body_as_text(upload_document_response)
         else:
@@ -195,14 +211,13 @@ def process_event(env, caseNo, runId, file_name, file_url, file_content_type, st
             "StartDateTime": startDateTime,
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
             "Status": "ERROR",
-            "StatusCode": upload_document_response.status_code if upload_document_response is not None and not isinstance(upload_document_response, Exception) else None,
+            "StatusCode": upload_document_response.status_code if upload_document_response is not None else None,
             "ErrorType": error_type,
             "Error": f"Document upload failed: {status_code} - {text}",
             "CDAMResponse": ""
         }
 
         return result
-
     else:
         try:
             cdam_response = upload_document_response.json()

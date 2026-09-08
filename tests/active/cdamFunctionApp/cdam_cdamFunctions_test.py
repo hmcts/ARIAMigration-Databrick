@@ -123,10 +123,9 @@ def test_upload_document_uses_provided_content_type(mock_post):
 
 
 @patch("requests.post", side_effect=Exception("Connection refused"))
-def test_upload_document_returns_exception_on_network_error(mock_post):
-    response = upload_document(**UPLOAD_COMMON)
-
-    assert isinstance(response, Exception)
+def test_upload_document_raises_exception_on_network_error(mock_post):
+    with pytest.raises(Exception, match="Connection refused"):
+        upload_document(**UPLOAD_COMMON)
 
 
 @patch("requests.post")
@@ -267,12 +266,12 @@ def test_process_event_upload_returns_none_returns_error(mock_upload, mock_blob_
 def test_process_event_upload_network_exception_records_error_type(mock_upload, mock_blob_client):
     import requests
 
-    mock_upload.return_value = requests.exceptions.ConnectionError("refused")
+    mock_upload.side_effect = requests.exceptions.ConnectionError("refused")
 
     result = process_event(**PROCESS_DEFAULTS)
 
     assert result["Status"] == "ERROR"
-    assert result["StatusCode"] is None
+    assert result["StatusCode"] == "N/A"
     assert result["ErrorType"] == "ConnectionError"
 
 

@@ -1,7 +1,8 @@
 import json
 import logging
-import requests
 from datetime import datetime, timezone
+
+import requests
 
 # tokenManager lives in the same package. When this module is imported by the
 # Functions host the package root will be `AzureFunctions.ACTIVE.active_ccd`.
@@ -35,6 +36,7 @@ def _compact(value) -> str:
         return text.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
     except Exception as e:
         print(f"Unable to compact the log. {e}")
+        return str(value)
 
 
 # Instantiate only one IDAMTokenManager instance per ccdFunctions import.
@@ -60,7 +62,7 @@ def start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_toke
         return response
     except Exception as e:
         print(f"❌ Network error while calling {start_case_creation_url}: {e}")
-        return e
+        raise
 
 
 def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
@@ -100,7 +102,7 @@ def validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token,
 
     except Exception as e:
         print(f"❌ Network error while calling {validate_case_url}: {e}")
-        return e
+        raise
 
 
 def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token):
@@ -142,7 +144,7 @@ def submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, u
 
     except Exception as e:
         print(f"❌ Network error while calling {submit_case_url}: {e}")
-        return e
+        raise
 
 
 def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
@@ -208,21 +210,27 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
     # start case creation
 
     print("Starting case creation")
-    start_response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
+    try:
+        start_response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
+    except Exception as e:
+        print(f"❌ Case creation failed with exception: {e}")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "State": state,
+            "Status": "ERROR",
+            "StatusCode": "N/A",
+            "ErrorType": type(e).__name__,
+            "Error": f"Case creation failed: {e}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
+        }
+        return result
+
     print(f"Started case creation = {_compact(start_response)}")
 
-    if start_response is None or isinstance(start_response, Exception) or start_response.status_code != 200:
-        error_type = None
-        if isinstance(start_response, Exception):
-            status_code = "N/A"
-            error_type = type(start_response).__name__
-            text = str(start_response)
-        elif start_response is not None:
-            status_code = start_response.status_code
-            text = _get_res_body_as_text(start_response)
-        else:
-            status_code = "N/A"
-            text = "No response from API"
+    if start_response is None or start_response.status_code != 200:
+        status_code = start_response.status_code if start_response is not None else "N/A"
+        text = _get_res_body_as_text(start_response) if start_response is not None else "No response from API"
 
         print(f"Case creation failed: {status_code} - {text}")
 
@@ -231,21 +239,34 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": start_response.status_code if start_response is not None and not isinstance(start_response, Exception) else None,
-            "ErrorType": error_type,
+            "StatusCode": start_response.status_code if start_response is not None else None,
+            "ErrorType": None,
             "Error": f"Case creation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat()
         }
         return result
 
-    else:
-        event_token = start_response.json()["token"]
-        start_response_data = json.dumps(start_response.json() or {})
-        print(f"Case creation started for case {caseNo} with event token {event_token}")
+    event_token = start_response.json()["token"]
+    start_response_data = json.dumps(start_response.json() or {})
+    print(f"Case creation started for case {caseNo} with event token {event_token}")
 
     # validate case
     print("Starting validate case")
-    validate_case_response = validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    try:
+        validate_case_response = validate_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    except Exception as e:
+        print(f"❌ Case validation failed with exception: {e}")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "State": state,
+            "Status": "ERROR",
+            "StatusCode": "N/A",
+            "ErrorType": type(e).__name__,
+            "Error": f"Case validation failed: {e}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat()
+        }
+        return result
 
     try:
         print(f"Validation response for case {caseNo}: {_compact(validate_case_response.json())}")
@@ -255,13 +276,9 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         except Exception:
             print(f"Unable to parse validate_case_response for case {caseNo}")
 
-    if validate_case_response is None or isinstance(validate_case_response, Exception) or validate_case_response.status_code not in {201, 200}:
+    if validate_case_response is None or validate_case_response.status_code not in {201, 200}:
         error_type = None
-        if isinstance(validate_case_response, Exception):
-            status_code = "N/A"
-            error_type = type(validate_case_response).__name__
-            text = str(validate_case_response)
-        elif validate_case_response is not None:
+        if validate_case_response is not None:
             status_code = validate_case_response.status_code
             text = _get_res_body_as_text(validate_case_response)
         else:
@@ -275,7 +292,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": validate_case_response.status_code if validate_case_response is not None and not isinstance(validate_case_response, Exception) else None,
+            "StatusCode": validate_case_response.status_code if validate_case_response is not None else None,
             "ErrorType": error_type,
             "Error": f"Case validation failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
@@ -288,7 +305,23 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
 
     # submit case
     print("Starting submit case")
-    submit_case_response = submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    try:
+        submit_case_response = submit_case(ccd_base_url, event_token, payloadData, jid, ctid, idam_token, uid, s2s_token)
+    except Exception as e:
+        print(f"❌ Case submission failed with exception: {e}")
+        result = {
+            "RunID": runId,
+            "CaseNo": caseNo,
+            "State": state,
+            "Status": "ERROR",
+            "StatusCode": "N/A",
+            "ErrorType": type(e).__name__,
+            "Error": f"Case submission failed: {e}",
+            "EndDateTime": datetime.now(timezone.utc).isoformat(),
+            "StartResponse": start_response_data
+        }
+        print(f"Case {caseNo} submission failed.")
+        return result
 
     try:
         print(f"Submit response for case {caseNo}: {_compact(submit_case_response.json())}")
@@ -298,13 +331,9 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         except Exception:
             print(f"Unable to parse submit_case_response for case {caseNo}")
 
-    if submit_case_response is None or isinstance(submit_case_response, Exception) or submit_case_response.status_code not in {201, 200}:
+    if submit_case_response is None or submit_case_response.status_code not in {201, 200}:
         error_type = None
-        if isinstance(submit_case_response, Exception):
-            status_code = "N/A"
-            error_type = type(submit_case_response).__name__
-            text = str(submit_case_response)
-        elif submit_case_response is not None:
+        if submit_case_response is not None:
             status_code = submit_case_response.status_code
             text = _get_res_body_as_text(submit_case_response)
         else:
@@ -318,7 +347,7 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
             "CaseNo": caseNo,
             "State": state,
             "Status": "ERROR",
-            "StatusCode": submit_case_response.status_code if submit_case_response is not None and not isinstance(submit_case_response, Exception) else None,
+            "StatusCode": submit_case_response.status_code if submit_case_response is not None else None,
             "ErrorType": error_type,
             "Error": f"Case submission failed: {status_code} - {text}",
             "EndDateTime": datetime.now(timezone.utc).isoformat(),
@@ -326,7 +355,6 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         }
         print(f"Case {caseNo} submission failed.")
         return result
-
     else:
         try:
             submit_json = submit_case_response.json()
@@ -350,162 +378,3 @@ def process_case(env, caseNo, payloadData, runId, state, PR_REFERENCE):
         }
         print(f"✅ Case {caseNo} submitted successfully with CCD Case ID: {result.get('CCDCaseID', 'N/A')}")
         return result
-
-
-if __name__ == "__main__":
-    payloadData = """
-        {
-            "email": "example@test.com",
-            "isEjp": "No",
-            "feeCode": "FEE0238",
-            "isAdmin": "Yes",
-            "paidDate": "2024-08-05",
-            "appealType": "refusalOfHumanRights",
-            "feeVersion": "2",
-            "paidAmount": "14000",
-            "s94bStatus": "No",
-            "paymentDate": "5 Aug 2024",
-            "feeAmountGbp": "14000",
-            "isIntegrated": "No",
-            "appellantInUk": "Yes",
-            "hearingCentre": "taylorHouse",
-            "isNabaEnabled": "No",
-            "paymentStatus": "Paid",
-            "staffLocation": "Taylor House",
-            "SearchCriteria": {
-                "SearchParties": [
-                {
-                    "id": "ec889f66-0475-4633-8d69-b31b80d76e5a",
-                    "value": {
-                    "Name": "GivenName Migration 3 FamilyName appealSubmitted",
-                    "PostCode": "SE10 0XX",
-                    "DateOfBirth": "2000-01-01",
-                    "AddressLine1": "Flat 101",
-                    "EmailAddress": "example@test.com"
-                    }
-                }
-                ],
-                "OtherCaseReferences": [
-                {
-                    "id": "65e7cf55-21c9-4d5b-af62-afd13222a8eb",
-                    "value": "HU/50009/2024"
-                }
-                ]
-            },
-            "feeDescription": "Appeal determined with a hearing",
-            "feeWithHearing": "140",
-            "searchPostcode": "SE10 0XX",
-            "hasOtherAppeals": "No",
-            "adminDeclaration1": [
-                "hasDeclared"
-            ],
-            "appellantAddress": {
-                "County": "",
-                "Country": "United Kingdom",
-                "PostCode": "SE10 0XX",
-                "PostTown": "London",
-                "AddressLine1": "Flat 101",
-                "AddressLine2": "10 Cutter Lane",
-                "AddressLine3": ""
-            },
-            "appellantPartyId": "45889c92-2cf4-4dae-ae9a-f64aa051d525",
-            "ariaDesiredState": "appealSubmitted",
-            "isAppellantMinor": "No",
-            "isNabaAdaEnabled": "No",
-            "isNabaEnabledOoc": "No",
-            "hearingTypeResult": "No",
-            "hmctsCaseCategory": "Human rights",
-            "notificationsSent": [],
-            "tribunalDocuments": [],
-            "appealOutOfCountry": "No",
-            "appellantStateless": "hasNationality",
-            "legalRepFamilyName": "",
-            "paymentDescription": "Appeal determined with a hearing",
-            "appellantFamilyName": "FamilyName appealSubmitted",
-            "appellantGivenNames": "GivenName Migration 3",
-            "isFeePaymentEnabled": "Yes",
-            "isRemissionsEnabled": "Yes",
-            "submissionOutOfTime": "No",
-            "appealSubmissionDate": "2024-08-07",
-            "appellantDateOfBirth": "2000-01-01",
-            "feePaymentAppealType": "Yes",
-            "letterSentOrReceived": "Sent",
-            "localAuthorityPolicy": {
-                "Organisation": {},
-                "OrgPolicyCaseAssignedRole": "[LEGALREPRESENTATIVE]"
-            },
-            "tribunalReceivedDate": "2024-08-05",
-            "additionalPaymentInfo": "Additional paid information",
-            "appealReferenceNumber": "HU/50009/2024",
-            "caseNameHmctsInternal": "GivenName Migration 3 FamilyName appealSubmitted",
-            "hmctsCaseNameInternal": "GivenName Migration 3 FamilyName appealSubmitted",
-            "isOutOfCountryEnabled": "Yes",
-            "appellantNationalities": [
-                {
-                "id": "520cd556-39b3-4729-9093-a07513f4b03e",
-                "value": {
-                    "code": "GB"
-                }
-                }
-            ],
-            "caseManagementCategory": {
-                "value": {
-                "code": "refusalOfHumanRights",
-                "label": "Refusal of a human rights claim"
-                },
-                "list_items": [
-                {
-                    "code": "refusalOfHumanRights",
-                    "label": "Refusal of a human rights claim"
-                }
-                ]
-            },
-            "caseManagementLocation": {
-                "region": "1",
-                "baseLocation": "765324"
-            },
-            "homeOfficeDecisionDate": "2024-08-05",
-            "internalAppellantEmail": "example@test.com",
-            "appealGroundsForDisplay": [],
-            "appellantsRepresentation": "Yes",
-            "appellantNameForDisplay": "GivenName Migration 3 FamilyName appealSubmitted",
-            "deportationOrderOptions": "No",
-            "uploadTheAppealFormDocs": [],
-            "appellantHasFixedAddress": "Yes",
-            "decisionHearingFeeOption": "decisionWithHearing",
-            "hasServiceRequestAlready": "No",
-            "homeOfficeReferenceNumber": "012345678",
-            "isDlrmFeeRemissionEnabled": "Yes",
-            "legalRepIndividualPartyId": "f7159136-7bff-40fb-921a-c8a53633afc8",
-            "legalRepOrganisationPartyId": "71c50709-b802-42c7-ac56-2ef03e6e14e7",
-            "appealSubmissionInternalDate": "2024-08-07",
-            "ccdReferenceNumberForDisplay": "1723 0197 9804 1350",
-            "legalRepresentativeDocuments": [],
-            "sendDirectionActionAvailable": "Yes",
-            "uploadTheNoticeOfDecisionDocs": [],
-            "automaticEndAppealTimedEventId": "fd614594-6b6b-4116-8568-f0d80298486e",
-            "currentCaseStateVisibleToJudge": "appealSubmitted",
-            "currentCaseStateVisibleToCaseOfficer": "appealSubmitted",
-            "changeDirectionDueDateActionAvailable": "No",
-            "currentCaseStateVisibleToAdminOfficer": "appealSubmitted",
-            "markEvidenceAsReviewedActionAvailable": "No",
-            "uploadAddendumEvidenceActionAvailable": "No",
-            "currentCaseStateVisibleToHomeOfficeAll": "appealSubmitted",
-            "currentCaseStateVisibleToHomeOfficeApc": "appealSubmitted",
-            "currentCaseStateVisibleToHomeOfficePou": "appealSubmitted",
-            "currentCaseStateVisibleToHomeOfficeLart": "appealSubmitted",
-            "uploadAdditionalEvidenceActionAvailable": "No",
-            "applicationChangeDesignatedHearingCentre": "taylorHouse",
-            "currentCaseStateVisibleToHomeOfficeGeneric": "appealSubmitted",
-            "haveHearingAttendeesAndDurationBeenRecorded": "No",
-            "currentCaseStateVisibleToLegalRepresentative": "appealSubmitted",
-            "markAddendumEvidenceAsReviewedActionAvailable": "No",
-            "uploadAddendumEvidenceLegalRepActionAvailable": "No",
-            "isServiceRequestTabVisibleConsideringRemissions": "Yes",
-            "uploadAddendumEvidenceHomeOfficeActionAvailable": "No",
-            "uploadAddendumEvidenceAdminOfficerActionAvailable": "No",
-            "uploadAdditionalEvidenceHomeOfficeActionAvailable": "No",
-            "remissionType": "hoWaiverRemission",
-            "ariaMigrationTaskDueDays": "2"
-        }
-    """

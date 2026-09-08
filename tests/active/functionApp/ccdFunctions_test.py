@@ -397,7 +397,7 @@ class TestProcessCaseTransientNetworkErrors:
             patch(PATCH_IDAM),
             patch(PATCH_S2S),
             patch(PATCH_S2S_MGR) as mock_s2s,
-            patch(PATCH_START, return_value=requests.exceptions.ConnectTimeout("timed out")),
+            patch(PATCH_START, side_effect=requests.exceptions.ConnectTimeout("timed out")),
             patch(PATCH_VALIDATE) as mock_validate,
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
@@ -417,7 +417,7 @@ class TestProcessCaseTransientNetworkErrors:
             )
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ConnectTimeout"
         assert "Case creation failed" in result["Error"]
         mock_validate.assert_not_called()
@@ -431,7 +431,7 @@ class TestProcessCaseTransientNetworkErrors:
             patch(PATCH_S2S),
             patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_START, return_value=START_RESPONSE),
-            patch(PATCH_VALIDATE, return_value=requests.exceptions.ReadTimeout("read timed out")),
+            patch(PATCH_VALIDATE, side_effect=requests.exceptions.ReadTimeout("read timed out")),
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
@@ -450,7 +450,7 @@ class TestProcessCaseTransientNetworkErrors:
             )
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ReadTimeout"
         assert "Case validation failed" in result["Error"]
         mock_submit.assert_not_called()
@@ -464,7 +464,7 @@ class TestProcessCaseTransientNetworkErrors:
             patch(PATCH_S2S_MGR) as mock_s2s,
             patch(PATCH_START, return_value=START_RESPONSE),
             patch(PATCH_VALIDATE, return_value=VALIDATE_RESPONSE),
-            patch(PATCH_SUBMIT, return_value=requests.exceptions.ChunkedEncodingError("truncated")),
+            patch(PATCH_SUBMIT, side_effect=requests.exceptions.ChunkedEncodingError("truncated")),
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
         ):
             mock_idam_mgr.get_token.return_value = ("idam-token", "uid-123")
@@ -482,7 +482,7 @@ class TestProcessCaseTransientNetworkErrors:
             )
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ChunkedEncodingError"
         assert "Case submission failed" in result["Error"]
 
@@ -493,7 +493,7 @@ class TestProcessCaseTransientNetworkErrors:
             patch(PATCH_IDAM),
             patch(PATCH_S2S),
             patch(PATCH_S2S_MGR) as mock_s2s,
-            patch(PATCH_START, return_value=ValueError("unexpected shape")),
+            patch(PATCH_START, side_effect=ValueError("unexpected shape")),
             patch(PATCH_VALIDATE) as mock_validate,
             patch(PATCH_SUBMIT) as mock_submit,
             patch(PATCH_IDAM_MGR) as mock_idam_mgr,
@@ -513,8 +513,9 @@ class TestProcessCaseTransientNetworkErrors:
             )
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ValueError"
+        assert "unexpected shape" in result["Error"]
         mock_validate.assert_not_called()
         mock_submit.assert_not_called()
 

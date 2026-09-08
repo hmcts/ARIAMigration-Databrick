@@ -1,21 +1,23 @@
 import asyncio
-import azure.functions as func
-import logging
 import json
+import logging
 import os
-
 from contextlib import AsyncExitStack
+from datetime import datetime, timezone
 
-from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
-
+import azure.functions as func
 from azure.core.exceptions import ResourceExistsError
-from azure.storage.blob.aio import BlobServiceClient
-from azure.eventhub.aio import EventHubProducerClient
 from azure.eventhub import EventData
+from azure.eventhub.aio import EventHubProducerClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-from datetime import datetime, timezone
-from typing import List
+from azure.storage.blob.aio import BlobServiceClient
+from tenacity import (
+    AsyncRetrying,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 try:
     from .cl_ccdFunctions import process_event
@@ -86,7 +88,7 @@ def _is_retryable(result):
     cardinality='many',
     data_type='binary'
 )
-async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
+async def eventhub_trigger_active(azeventhub: list[func.EventHubEvent]):
     # Metadata is common to the whole batch under cardinality=many, so it can be read from any single event
     metadata = azeventhub[0].metadata or {} if azeventhub else {}
     partition_id = metadata.get("PartitionContext", {}).get("PartitionId")
@@ -108,7 +110,8 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             logger.info(f"Connected to KeyVault: {kv_url}")
 
             results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
-            result_eh_secret_key = results_eh_key.value
+            if (results_eh_key.value is None):
+                raise ValueError("Azure secrets are missing.")
             logger.info("Acquired KV secret for Results Event Hub")
 
             idempotency_blob_service = await stack.enter_async_context(
@@ -117,21 +120,22 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
             res_eh_producer = await stack.enter_async_context(
-                EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
+                EventHubProducerClient.from_connection_string(conn_str=results_eh_key.value)
             )
             try:
                 for event in azeventhub:
                     try:
                         logger.info(f"Event received with partition key: {event.partition_key}")
-
-                        # Parse the payload
                         ccdReference = event.partition_key
+                        # Parse the payload
                         payload_str = event.get_body().decode('utf-8')
                         payload = json.loads(payload_str)
                         run_id = payload.get("RunID", None)
                         data = payload.get("CaseLinkPayload", None)
                         overwrite = payload.get("Overwrite", None)
 
+                        if ccdReference is None:
+                            raise ValueError("Partition Key can not be None.")
                         idempotency_blob_path = f"active/caselink/idempotency/{ccdReference}.flag"
                         idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
@@ -151,7 +155,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                                 stop=stop_after_attempt(3),
                                 wait=wait_exponential(multiplier=30, min=30, max=60),
                                 before_sleep=_log_retry,
-                                retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+                                retry_error_callback=lambda retry_state: None if retry_state.outcome is None else retry_state.outcome.result(),
                             )(_process_case_link, ENV, ccdReference, run_id, data, PR_REFERENCE, overwrite)
                         except Exception as processing_error:
                             logger.error(f"Unhandled exception while processing case {ccdReference}: {processing_error}")
@@ -195,11 +199,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.info(f"Sent result for case {ccdReference} to Results Event Hub")
 
                     except Exception as e:
-                        logger.error(f"Error processing event for caseNo {ccdReference}: {e}")
+                        logger.error(f"Error processing event for caseNo {event.partition_key}: {e}")
 
             except Exception as e:
                 logger.error(f"Error in event hub processing batch: {e}")
-                raise e
+                raise
     except Exception as e:
         logger.error(f"An error has occurred before processing the batch. {e}")
-        raise e
+        raise

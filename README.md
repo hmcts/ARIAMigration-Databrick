@@ -7,23 +7,27 @@ This Project contains code for Both the ARIA Archive and active cases
 
 Use naming conventions as a guide. This list is for a general overview only.
 
-- ARIA_DABS - *Databricks Jobs and Pipelines configuration.*
-  - resources
-    - pipelines - *Databricks pipelines to perform an action, e.g. process the GOLD layer of a specific state.*
-    - workflows - *Orchestration of pipelines or tasks to run in a specified order.*
-- AzureFunctions - *Function App source code to be deployed to the Azure Functions instance.*
-- ci_cd_templates - *Templates for CI/CD runs to be used by Azure Pipelines.*
-- Databricks - *Source code for Notebooks and Python Functions to be deployed to Databricks.*
-  - ACTIVE
-    - APPEALS - *Source code for bronze, silver and gold layers data transformation.*
-      - shared_functions - *Python code, including for each state, with capability for notebooks to pull functions from other states, hence shared.*
-        - dq_rules - *Data Quality SQL checks for each state to be used by the notebooks.*
-    - MVP - *Source code for publishing and consuming events for external actions relating to document store or CCD.*
-    - tests - *Local tests for manually checking Databricks functionality.*
-  - ARCHIVE
-- HTML_Templates - *HTML Templates to be stored here.*
-- ReferenceData - *Reference Data (static) such as CSVs of lookup tables etc. to be stored here.*
-- tests - *Unit tests to be run as part of the CI/CD process.*
+
+| Folder Structure                 | Description                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **ARIA_DABS**                    | *Databricks Jobs and Pipelines configuration.*                                                                            |
+| ├─ **resources**                 |                                                                                                                           |
+| │├─ **pipelines**                | *Databricks pipelines to perform an action, e.g. process the GOLD layer of a specific state.*                             |
+| │├─ **workflows**                | *Orchestration of pipelines or tasks to run in a specified order.*                                                        |
+| **AzureFunctions**               | *Function App source code to be deployed to the Azure Functions instance.*                                                |
+| **ci_cd_templates**              | *Templates for CI/CD runs to be used by Azure Pipelines.*                                                                 |
+| **Databricks**                   | *Source code for Notebooks and Python Functions to be deployed to Databricks.*                                            |
+| ├─ **ACTIVE**                    |                                                                                                                           |
+| │├─ **APPEALS**                  | *Source code for bronze, silver and gold layers data transformation.*                                                     |
+| ││├─ **shared_functions**        | *Python code, including for each state, with capability for notebooks to pull functions from other states, hence shared.* |
+| │││├─ **dq_rules**               | *Data Quality SQL checks for each state to be used by the notebooks.*                                                     |
+| │├─ **MVP**                      | *Source code for publishing and consuming events for external actions relating to document store or CCD.*                 |
+| │├─ **tests**                    | *Local tests for manually checking Databricks functionality.*                                                             |
+| ├─ **ARCHIVE**                   |                                                                                                                           |
+| **HTML_Templates**               | *HTML Templates to be stored here.*                                                                                       |
+| **ReferenceData**                | *Reference Data (static) such as CSVs of lookup tables etc. to be stored here.*                                           |
+| **tests**                        | *Unit tests to be run as part of the CI/CD process.*                                                                      |
+
 
 
 ## Environments

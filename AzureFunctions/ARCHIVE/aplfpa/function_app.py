@@ -1,18 +1,22 @@
-import azure.functions as func
-import logging
-import json
-from azure.storage.blob.aio import BlobServiceClient, ContainerClient, BlobClient
-from azure.eventhub.aio import EventHubProducerClient
-from azure.eventhub import EventData
-from typing import List
 import asyncio
+import datetime
+import json
+import logging
+import os
+
+import azure.functions as func
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.eventhub import EventData
+from azure.eventhub.aio import EventHubProducerClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-import datetime
-import os
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-
+from azure.storage.blob.aio import BlobClient, BlobServiceClient, ContainerClient
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # Retrieve environment variables
 env: str = os.environ["ENVIRONMENT"]
@@ -48,7 +52,7 @@ app = func.FunctionApp()
     cardinality='many',
     data_type='binary'
 )
-async def eventhub_trigger_fpa(azeventhub: List[func.EventHubEvent]):
+async def eventhub_trigger_fpa(azeventhub: list[func.EventHubEvent]):
     producer_lock = asyncio.Lock()
     semaphore = asyncio.Semaphore(6)
 

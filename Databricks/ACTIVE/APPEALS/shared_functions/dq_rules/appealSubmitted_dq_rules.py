@@ -182,7 +182,7 @@ class appealSubmittedDQRules(DQRulesBase):
                             END
                         ),
                         CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-                        ) AS INT)) AS STRING)
+                        ) AS INT)) * 100 AS STRING)
                     ))
                 )
                 OR
@@ -393,7 +393,7 @@ class appealSubmittedDQRules(DQRulesBase):
                             END
                         ),
                         CAST(0 AS DECIMAL(19, 4)), (acc, x) -> CAST(acc + x AS DECIMAL(19, 4))
-                        ) AS INT) AS STRING)
+                        ) AS INT) *100 AS STRING)
                     ))
                 )
                 OR

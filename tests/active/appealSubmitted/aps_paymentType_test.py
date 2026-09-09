@@ -262,7 +262,7 @@ class TestAppealSubmittedPaymentType:
                 ("9", 1, 1, 100.0, False, True, 3),    # valid condition for same case
                 ("9", 2, 2, 150.0, False, True, 3),    # valid condition for same case
                 ("9", 1, 3, 250.0, False, True, 3),    # valid condition for same case
-                ("10", 1, 10, 250.0, False, True, 3)   # TransactionTypeId != 3
+                ("10", 1, 10, 250.0, False, True, 3)   # TransactionTypeId != 3 
             ]
 
             silver_m1 = spark.createDataFrame(m1_data, self.SILVER_M1_SCHEMA)
@@ -272,15 +272,15 @@ class TestAppealSubmittedPaymentType:
 
             resultList = df.orderBy(col("CaseNo").cast("int")).select("paidAmount").collect()
 
-            assert resultList[0][0] == "100"
-            assert resultList[1][0] == "100"
-            assert resultList[2][0] == "100"
-            assert resultList[3][0] == "100"
+            assert resultList[0][0] == "10000"
+            assert resultList[1][0] == "10000"
+            assert resultList[2][0] == "10000"
+            assert resultList[3][0] == "10000"
             assert resultList[4][0] is None
             assert resultList[5][0] == "0"
             assert resultList[6][0] is None
             assert resultList[7][0] is None
-            assert resultList[8][0] == "500"
+            assert resultList[8][0] == "50000"
             assert resultList[9][0] is None
 
     def test_additionalPaymentInfo(self, spark):

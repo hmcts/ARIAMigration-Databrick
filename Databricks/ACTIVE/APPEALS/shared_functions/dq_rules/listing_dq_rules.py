@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class listingDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_flags()
         checks = checks | self.get_checks_hearing_requirements()
@@ -88,7 +87,6 @@ class listingDQRules(DQRulesBase):
         )
         """
 
-
         checks["valid_isAppellantAttendingTheHearing"] = (
             "(isAppellantAttendingTheHearing <=> 'Yes')"
         )
@@ -97,9 +95,7 @@ class listingDQRules(DQRulesBase):
             "(isAppellantGivingOralEvidence <=> 'Yes')"
         )
 
-        checks["valid_isWitnessesAttending"] = (
-            "(isWitnessesAttending <=> 'No')"
-        )
+        checks["valid_isWitnessesAttending"] = "(isWitnessesAttending <=> 'No')"
 
         # checks["valid_isEvidenceFromOutsideUkOoc"] = (
         #     """(
@@ -121,18 +117,15 @@ class listingDQRules(DQRulesBase):
         #     )"""
         # )
 
-        checks["valid_isInterpreterServicesNeeded"] = (
-            """(
+        checks["valid_isInterpreterServicesNeeded"] = """(
                 (Interpreter <=> 1 AND isInterpreterServicesNeeded <=> 'Yes')
                 OR
                 (Interpreter <=> 2 AND isInterpreterServicesNeeded <=> 'No')
                 OR
                 ((Interpreter IS NULL OR Interpreter NOT IN (1, 2)) AND isInterpreterServicesNeeded <=> 'No')
             )"""
-        )
 
-        checks["valid_appellantInterpreterLanguageCategory"] = (
-            """(
+        checks["valid_appellantInterpreterLanguageCategory"] = """(
                 CASE
                     WHEN (
                         (NOT(Interpreter <=> 1))
@@ -159,10 +152,8 @@ class listingDQRules(DQRulesBase):
                     )
                 END
             )"""
-        )
 
-        checks["valid_appellantInterpreterSpokenLanguage"] = (
-            """(
+        checks["valid_appellantInterpreterSpokenLanguage"] = """(
                 CASE
                     WHEN (
                         (NOT(Interpreter <=> 1))
@@ -249,10 +240,8 @@ class listingDQRules(DQRulesBase):
                     )
                 END
             )"""
-        )
 
-        checks["valid_appellantInterpreterSignLanguage"] = (
-            """(
+        checks["valid_appellantInterpreterSignLanguage"] = """(
                 CASE
                     WHEN (
                         (NOT(Interpreter <=> 1))
@@ -338,19 +327,12 @@ class listingDQRules(DQRulesBase):
                     )
                 END
             )"""
-        )
 
-        checks["valid_isHearingRoomNeeded"] = (
-            "(isHearingRoomNeeded <=> 'Yes')"
-        )
+        checks["valid_isHearingRoomNeeded"] = "(isHearingRoomNeeded <=> 'Yes')"
 
-        checks["valid_isHearingLoopNeeded"] = (
-            "(isHearingLoopNeeded <=> 'Yes')"
-        )
+        checks["valid_isHearingLoopNeeded"] = "(isHearingLoopNeeded <=> 'Yes')"
 
-        checks["valid_remoteVideoCall"] = (
-            "(remoteVideoCall <=> 'Yes')"
-        )
+        checks["valid_remoteVideoCall"] = "(remoteVideoCall <=> 'Yes')"
 
         checks["valid_remoteVideoCallDescription"] = (
             "(remoteVideoCallDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
@@ -364,52 +346,41 @@ class listingDQRules(DQRulesBase):
             "(physicalOrMentalHealthIssuesDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
         )
 
-        checks["valid_pastExperiences"] = (
-            "(pastExperiences <=> 'Yes')"
-        )
+        checks["valid_pastExperiences"] = "(pastExperiences <=> 'Yes')"
 
         checks["valid_pastExperiencesDescription"] = (
             "(pastExperiencesDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
         )
 
-        checks["valid_multimediaEvidence"] = (
-            "(multimediaEvidence <=> 'Yes')"
-        )
+        checks["valid_multimediaEvidence"] = "(multimediaEvidence <=> 'Yes')"
 
         checks["valid_multimediaEvidenceDescription"] = (
             "(multimediaEvidenceDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
         )
 
-        checks["valid_singleSexCourt"] = (
-            """(
+        checks["valid_singleSexCourt"] = """(
                 (CourtPreference <=> 0 AND singleSexCourt <=> 'No')
                 OR
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourt <=> 'Yes')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (0, 1, 2)) AND singleSexCourt <=> 'No')
             )"""
-        )
 
-        checks["valid_singleSexCourtType"] = (
-            """(
+        checks["valid_singleSexCourtType"] = """(
                 (CourtPreference <=> 1 AND singleSexCourtType <=> 'All male')
                 OR
                 (CourtPreference <=> 2 AND singleSexCourtType <=> 'All female')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtType IS NULL)
             )"""
-        )
 
-        checks["valid_singleSexCourtTypeDescription"] = (
-            """(
+        checks["valid_singleSexCourtTypeDescription"] = """(
                 ((CourtPreference <=> 1 OR CourtPreference <=> 2) AND singleSexCourtTypeDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court.')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtTypeDescription IS NULL)
             )"""
-        )
 
-        checks["valid_inCameraCourt"] = (
-            """(
+        checks["valid_inCameraCourt"] = """(
                 (InCamera IS NULL AND inCameraCourt <=> 'No')
                 OR
                 (InCamera <=> 1 AND inCameraCourt <=> 'Yes')
@@ -418,48 +389,37 @@ class listingDQRules(DQRulesBase):
                 OR
                 (INT(InCamera) NOT IN (0, 1) AND inCameraCourt <=> 'No')
             )"""
-        )
 
-        checks["valid_inCameraCourtDescription"] = (
-            """(
+        checks["valid_inCameraCourtDescription"] = """(
                 (InCamera IS NULL AND inCameraCourtDescription IS NULL)
                 OR
                 (InCamera <=> 1 AND inCameraCourtDescription <=> 'This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court.')
                 OR
                 (NOT(InCamera <=> 1) AND inCameraCourtDescription IS NULL)
             )"""
-        )
 
-        checks["valid_additionalRequests"] = (
-            "(additionalRequests <=> 'Yes')"
-        )
+        checks["valid_additionalRequests"] = "(additionalRequests <=> 'Yes')"
 
         checks["valid_additionalRequestsDescription"] = (
             "(additionalRequestsDescription <=> 'This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form.')"
         )
 
-        checks["valid_datesToAvoidYesNo"] = (
-            "(datesToAvoidYesNo <=> 'No')"
-        )
+        checks["valid_datesToAvoidYesNo"] = "(datesToAvoidYesNo <=> 'No')"
 
         return checks
 
     def get_checks_general(self, checks={}):
-        checks["valid_caseArgumentAvailable"] = (
-            """(
+        checks["valid_caseArgumentAvailable"] = """(
                 (dv_representation <=> 'LR' AND caseArgumentAvailable <=> 'Yes')
                 OR
                 (NOT(dv_representation <=> 'LR') AND caseArgumentAvailable IS NULL)
             )"""
-        )
 
-        checks["valid_reasonsForAppealDecision"] = (
-            """(
+        checks["valid_reasonsForAppealDecision"] = """(
                 (dv_representation <=> 'AIP' AND reasonsForAppealDecision <=> 'This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.')
                 OR
                 (NOT(dv_representation <=> 'AIP') AND reasonsForAppealDecision IS NULL)
             )"""
-        )
 
         return checks
 
@@ -468,13 +428,11 @@ class listingDQRules(DQRulesBase):
             "(appealReviewOutcome <=> 'decisionMaintained')"
         )
 
-        checks["valid_appealResponseAvailable"] = (
-            "(appealResponseAvailable <=> 'Yes')"
-        )
+        checks["valid_appealResponseAvailable"] = "(appealResponseAvailable <=> 'Yes')"
 
-        checks["valid_reviewedHearingRequirements"] = ("""
+        checks["valid_reviewedHearingRequirements"] = """
             (reviewedHearingRequirements IS NOT NULL AND reviewedHearingRequirements IN ('Yes','No'))
-        """)
+        """
 
         checks["valid_amendResponseActionAvailable"] = (
             "(amendResponseActionAvailable <=> 'Yes')"
@@ -519,8 +477,6 @@ class listingDQRules(DQRulesBase):
         return checks
 
     def get_checks_document(self, checks={}):
-        checks["valid_hearingRequirements"] = (
-            "(ARRAY_SIZE(hearingRequirements) <=> 0)"
-        )
+        checks["valid_hearingRequirements"] = "(ARRAY_SIZE(hearingRequirements) <=> 0)"
 
         return checks

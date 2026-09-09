@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class decidedBDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general()
@@ -34,20 +33,20 @@ class decidedBDQRules(DQRulesBase):
             END
         )"""
 
-
         return checks
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_isDlrmSetAsideEnabled"] = ("(isDlrmSetAsideEnabled <=> 'Yes')")
-        checks["valid_isReheardAppealEnabled"] = ("(isReheardAppealEnabled <=> 'Yes')")
-        checks["valid_secondFtpaDecisionExists"] = ("(secondFtpaDecisionExists <=> 'No')")
-        checks["valid_caseFlagSetAsideReheardExists"] = ("(caseFlagSetAsideReheardExists <=> 'Yes')")
+        checks["valid_isDlrmSetAsideEnabled"] = "(isDlrmSetAsideEnabled <=> 'Yes')"
+        checks["valid_isReheardAppealEnabled"] = "(isReheardAppealEnabled <=> 'Yes')"
+        checks["valid_secondFtpaDecisionExists"] = "(secondFtpaDecisionExists <=> 'No')"
+        checks["valid_caseFlagSetAsideReheardExists"] = (
+            "(caseFlagSetAsideReheardExists <=> 'Yes')"
+        )
 
         return checks
 
     def get_checks_general(self, checks={}):
-
 
         checks["valid_isFtpaAppellantDecided"] = """(
             CASE
@@ -69,7 +68,6 @@ class decidedBDQRules(DQRulesBase):
 
     def get_checks_ftpa(self, checks={}):
 
-        
         checks["valid_ftpaList"] = """
             (CASE
         WHEN Party = 1 AND CaseStatus_decb = 39 THEN
@@ -164,7 +162,6 @@ class decidedBDQRules(DQRulesBase):
         )"""
 
         return checks
-    
 
     def get_checks_set_aside(self, checks={}):
 
@@ -199,14 +196,13 @@ class decidedBDQRules(DQRulesBase):
 
         )"""
 
-
         checks["valid_judgesNamesToExclude"] = """(
             CASE
                 WHEN Required = 0 THEN
                         judgesNamesToExclude <=> Judges
                 ELSE judgesNamesToExclude IS NULL
             END
-            
+
         )"""
 
         checks["valid_ftpaAppellantDecisionRemadeRule32Text"] = """(
@@ -224,8 +220,5 @@ class decidedBDQRules(DQRulesBase):
                 ELSE FALSE
             END
         )"""
-
-
-        
 
         return checks

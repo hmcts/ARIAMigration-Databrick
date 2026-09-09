@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class paymentPendingDetainedDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 
@@ -12,10 +11,9 @@ class paymentPendingDetainedDQRules(DQRulesBase):
 
         #########################################
         # (detained)
-        ######################################### 
+        #########################################
 
-        checks["valid_appellantInDetention"] = (
-            """
+        checks["valid_appellantInDetention"] = """
             (
                 Detained IS NOT NULL AND Detained IN (1,2,4)
                 AND appellantInDetention <=> 'Yes'
@@ -26,10 +24,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND appellantInDetention <=> 'No'
             )
             """
-        )
 
-        checks["valid_detentionFacility"] = (
-            """
+        checks["valid_detentionFacility"] = """
             (
                 Detained <=> 1
                 AND detentionFacility <=> 'prison'
@@ -50,16 +46,15 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND detentionFacility IS NULL
             )
             """
-        )
 
-        checks["valid_prisonName"] = (
-            """ ( NOT(Detained <=> 1) AND  prisonName IS NULL) OR
+        checks[
+            "valid_prisonName"
+        ] = """ ( NOT(Detained <=> 1) AND  prisonName IS NULL) OR
                 ( prisonName <=> prisonName_det )
 
-            """)
-
-        checks["valid_prisonNOMSNumber"] = (
             """
+
+        checks["valid_prisonNOMSNumber"] = """
             (
                 (NOT(Detained <=> 1) OR PrisonRef IS NULL)
                 AND prisonNOMSNumber IS NULL
@@ -71,10 +66,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND prisonNOMSNumber.prison <=> PrisonRef
             )
             """
-        )
 
-        checks["valid_otherDetentionFacilityName"] = (
-            """
+        checks["valid_otherDetentionFacilityName"] = """
             (
                 NOT(Detained <=> 4)
                 AND otherDetentionFacilityName IS NULL
@@ -85,10 +78,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND otherDetentionFacilityName.other <=> coalesce(DetentionCentre_det, Appellant_Address1)
             )
             """
-        )
 
-        checks["valid_ircName"] = (
-            """
+        checks["valid_ircName"] = """
             (
                 NOT(Detained <=> 2)
                 AND ircName IS NULL
@@ -99,10 +90,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND ircName <=> ircName_det
             )
             """
-        )
 
-        checks["valid_releaseDateProvided"] = (
-            """
+        checks["valid_releaseDateProvided"] = """
             (
                 (Detained IS NULL OR Detained NOT IN (1,4))
                 AND releaseDateProvided IS NULL
@@ -113,10 +102,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND releaseDateProvided <=> 'Yes'
             )
             """
-        )
 
-        checks["valid_hasPendingBailApplications"] = (
-            """
+        checks["valid_hasPendingBailApplications"] = """
             (
                 NOT(Detained <=> 2)
                 AND hasPendingBailApplications IS NULL
@@ -127,10 +114,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND hasPendingBailApplications <=> 'NotSure'
             )
             """
-        )
 
-        checks["valid_removalOrderOptions"] = (
-            """
+        checks["valid_removalOrderOptions"] = """
             (
                 RemovalDate IS NOT NULL
                 AND removalOrderOptions <=> 'Yes'
@@ -141,10 +126,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND removalOrderOptions <=> 'No'
             )
             """
-        )
 
-        checks["valid_removalOrderDate"] = (
-            """
+        checks["valid_removalOrderDate"] = """
             (
                 RemovalDate IS NULL
                 AND removalOrderDate IS NULL
@@ -155,10 +138,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND removalOrderDate <=> date_format(RemovalDate, "yyyy-MM-dd'T'HH:mm:ss.SSS")
             )
             """
-        )
 
-        checks["valid_detentionBuilding"] = (
-            """
+        checks["valid_detentionBuilding"] = """
             (
                 (Detained IS NULL OR Detained NOT IN (1,2))
                 AND detentionBuilding IS NULL
@@ -169,10 +150,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND detentionBuilding <=> detentionBuilding_det
             )
             """
-        )
 
-        checks["valid_detentionAddressLines"] = (
-            """
+        checks["valid_detentionAddressLines"] = """
             (
                 (Detained IS NULL OR Detained NOT IN (1,2))
                 AND detentionAddressLines IS NULL
@@ -183,10 +162,8 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND detentionAddressLines <=> detentionAddressLines_det
             )
             """
-        )
 
-        checks["valid_detentionPostcode"] = (
-            """
+        checks["valid_detentionPostcode"] = """
             (
                 (Detained IS NULL OR Detained NOT IN (1,2))
                 AND detentionPostcode IS NULL
@@ -197,7 +174,6 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 AND detentionPostcode <=> detentionPostcode_det
             )
             """
-        )
 
         ##############################
         # ARIADM-773 (SponsorDetails)
@@ -327,8 +303,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         # ARIADM-778 (General)
         ##############################
 
-        checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = (
-            """(
+        checks["valid_applicationChangeDesignatedHearingCentre_fixed_list"] = """(
                 CASE
                     WHEN Detained IN (1,2) THEN applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse','hattonCross','birmingham','glasgow','manchester',
                     'newcastle','bradford','newport','yarlsWood')
@@ -336,15 +311,14 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                     applicationChangeDesignatedHearingCentre IS NOT NULL AND applicationChangeDesignatedHearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross' ,'glasgow' ,'bradford' ,'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth', 'yarlsWood', 'remoteHearing', 'decisionWithoutHearing')
                 END
             )"""
-        )
 
         # ##############################
         # # ARIADM-708 (CaseData)
         # ##############################
-        checks["valid_hearingCentre"] = ("""
+        checks["valid_hearingCentre"] = """
         (
             (hearingCentre IS NOT NULL)
-            AND CASE 
+            AND CASE
                 WHEN Detained IN (1,2) THEN hearingCentre IN ('taylorHouse','hattonCross','birmingham','glasgow','manchester','newcastle','bradford','newport','yarlsWood')
                 ELSE (hearingCentre IN ('taylorHouse', 'newport', 'newcastle', 'manchester', 'hattonCross',
                                     'glasgow', 'bradford', 'birmingham', 'arnhemHouse', 'crownHouse', 'harmondsworth',
@@ -352,24 +326,23 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                                     )
                 END
         )
-        """)
+        """
 
-        checks["valid_staffLocation"] = ("""
-                                         
+        checks["valid_staffLocation"] = """
+
                 (staffLocation IS NOT NULL)
-                AND 
-                CASE 
-                    WHEN Detained IN (1,2)  
+                AND
+                CASE
+                    WHEN Detained IN (1,2)
                     THEN staffLocation IN ('Taylor House','Hatton Cross','Birmingham','Glasgow','Manchester','Newcastle','Bradford','Newport','Yarls Wood')
                     ELSE staffLocation IN ('Bradford','Birmingham','Glasgow','Hatton Cross','Manchester','Newcastle','Newport','Taylor House')
                 END
 
-        """)
+        """
 
-
-        checks["valid_caseManagementLocation_region_and_baseLocation"] = ("""
+        checks["valid_caseManagementLocation_region_and_baseLocation"] = """
         (
-            CASE 
+            CASE
                     WHEN Detained IN (1,2)
                         THEN    caseManagementLocation.region <=> '1'
                                 AND
@@ -384,11 +357,11 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                                     '999971', '420587', '28837')
             END
         )
-        """)
-        
-        checks["valid_hearingCentreDynamicList_code_in_list_items"] = ("""
+        """
+
+        checks["valid_hearingCentreDynamicList_code_in_list_items"] = """
         (
-            CASE 
+            CASE
                     WHEN Detained IN (1,2)
                         THEN hearingCentreDynamicList.value.code IS NOT NULL AND hearingCentreDynamicList.value.code IN ('765324','386417','231596','366559','512401','366796','698118','227101','649000')
 
@@ -398,26 +371,26 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                                     '512401', '649000', '698118', '765324', '227101')
             END
             )
-        """)
+        """
 
-        checks["valid_hearingCentreDynamicList_label_in_list_items"] = ("""
+        checks["valid_hearingCentreDynamicList_label_in_list_items"] = """
         (
-            CASE 
+            CASE
                     WHEN Detained IN (1,2)
                         THEN hearingCentreDynamicList.value.label IS NOT NULL AND hearingCentreDynamicList.value.label IN ('Taylor House Tribunal Hearing Centre','Hatton Cross Tribunal Hearing Centre','Birmingham Civil And Family Justice Centre','Atlantic Quay - Glasgow','Manchester Tribunal Hearing Centre - Piccadilly Exchange','Newcastle Civil And Family Courts And Tribunals Centre','Bradford Tribunal Hearing Centre','Newport Tribunal Centre - Columbus House','Yarls Wood Immigration And Asylum Hearing Centre')
 
                     ELSE hearingCentreDynamicList.value.label IS NOT NULL AND
                                 hearingCentreDynamicList.value.label  IN (
-                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre', 
+                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre',
                                     'Atlantic Quay - Glasgow', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Hatton Cross Tribunal Hearing Centre',
                                     'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Bradford Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'Newport Tribunal Centre - Columbus House')
             END
             )
-        """)
+        """
 
-        checks["valid_caseManagementLocationRefData_code_in_list_items"] = ("""
+        checks["valid_caseManagementLocationRefData_code_in_list_items"] = """
         (
-            CASE 
+            CASE
                     WHEN Detained IN (1,2)
                         THEN caseManagementLocationRefData.baseLocation.value.code IS NOT NULL AND caseManagementLocationRefData.baseLocation.value.code IN ('765324','386417','231596','366559','512401','366796','698118','227101','649000')
 
@@ -427,27 +400,27 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                                     '512401', '649000', '698118', '765324', '227101')
             END
             )
-        """)
+        """
 
-        checks["valid_caseManagementLocationRefData_label_in_list_items"] = ("""
+        checks["valid_caseManagementLocationRefData_label_in_list_items"] = """
         (
-            
-            CASE 
+
+            CASE
                     WHEN Detained IN (1,2)
                         THEN caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND caseManagementLocationRefData.baseLocation.value.label IN ('Taylor House Tribunal Hearing Centre','Hatton Cross Tribunal Hearing Centre','Birmingham Civil And Family Justice Centre','Atlantic Quay - Glasgow','Manchester Tribunal Hearing Centre - Piccadilly Exchange','Newcastle Civil And Family Courts And Tribunals Centre','Bradford Tribunal Hearing Centre','Newport Tribunal Centre - Columbus House','Yarls Wood Immigration And Asylum Hearing Centre')
 
                     ELSE caseManagementLocationRefData.baseLocation.value.label IS NOT NULL AND
                                 caseManagementLocationRefData.baseLocation.value.label IN (
-                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre', 
+                                    'Birmingham Civil And Family Justice Centre', 'Harmondsworth Tribunal Hearing Centre',
                                     'Atlantic Quay - Glasgow', 'Newcastle Civil And Family Courts And Tribunals Centre', 'Hatton Cross Tribunal Hearing Centre',
                                     'Manchester Tribunal Hearing Centre - Piccadilly Exchange', 'Yarls Wood Immigration And Asylum Hearing Centre', 'Bradford Tribunal Hearing Centre', 'Taylor House Tribunal Hearing Centre', 'Newport Tribunal Centre - Columbus House')
             END
 
         )
-        """)
+        """
 
-        checks["valid_selectedHearingCentreRefData_not_null"] = ("""
-                                                                 
+        checks["valid_selectedHearingCentreRefData_not_null"] = """
+
                         CASE
                             WHEN Detained IN (1,2) THEN
                             selectedHearingCentreRefData IS NOT NULL AND selectedHearingCentreRefData IN ('Atlantic Quay - Glasgow','Birmingham Civil And Family Justice Centre',
@@ -461,101 +434,101 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                             'Newcastle Civil And Family Courts And Tribunals Centre','Newport Tribunal Centre - Columbus House','Taylor House Tribunal Hearing Centre',
                             'Yarls Wood Immigration And Asylum Hearing Centre')
                         END
- 
-                """)
+
+                """
 
         # ##############################
         # # ARIADM-758 (appellantDetails)
         # ##############################
 
-        checks["valid_appellantInUk"] = ("""
+        checks["valid_appellantInUk"] = """
             CASE    WHEN Detained IN (1,2,4) THEN appellantInUk <=> 'Yes'
                     WHEN array_contains(valid_categoryIdList, 37) THEN appellantInUk <=> 'Yes'
                     WHEN array_contains(valid_categoryIdList, 38) THEN appellantInUk <=> 'No'
                     WHEN dv_addressInUk THEN appellantInUk <=> 'Yes'
                     ELSE appellantInUk <=> 'No'
             END
-        """)
+        """
 
-        checks["valid_appealOutOfCountry"] = ("""
+        checks["valid_appealOutOfCountry"] = """
             CASE    WHEN appellantInUk = 'Yes' THEN appealOutOfCountry <=> 'No'
                     WHEN appellantInUk = 'No' THEN appealOutOfCountry <=> 'Yes'
                     ELSE appealOutOfCountry IS NULL
             END
-        """)
+        """
 
         ##############################
         # ARIADM-760 (appellantDetails) - appellantHasFixedAddress and appellantAddress
         ##############################
 
         # Only include if CategoryIdList contains 37; check for 'Yes'
-        checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = ("""
-                                                                    
+        checks["valid_appellantHasFixedAddress_yes_no_if_cat37"] = """
+
             CASE    WHEN Detained IN (1,2) THEN appellantHasFixedAddress IS NULL
                     WHEN array_contains(valid_categoryIdList, 37) THEN appellantHasFixedAddress <=> 'Yes'
                     ELSE appellantHasFixedAddress IS NULL
             END
-        """)
+        """
 
         # Only include if array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37)
-        checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = ("""
-            CASE 
+        checks["valid_appellantAddress_AddressLine1_mandatory_and_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
                 ELSE
-                (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL) 
+                (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND appellantAddress.AddressLine1 IS NOT NULL AND LENGTH(appellantAddress.AddressLine1) <= 150) OR (appellantAddress.AddressLine1 IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_AddressLine2_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_AddressLine2_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE                                                 
+                ELSE
                  (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.AddressLine2 IS NULL OR LENGTH(appellantAddress.AddressLine2) <= 50)) OR ( appellantAddress.AddressLine2 IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_AddressLine3_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_AddressLine3_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE 
+                ELSE
                     (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.AddressLine3 IS NULL OR LENGTH(appellantAddress.AddressLine3) <= 50)) OR (appellantAddress.AddressLine3 IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_PostTown_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_PostTown_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE 
+                ELSE
                     (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.PostTown IS NULL OR LENGTH(appellantAddress.PostTown) <= 50)) OR (appellantAddress.PostTown IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_County_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_County_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE 
+                ELSE
                     (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.County IS NULL OR LENGTH(appellantAddress.County) <= 50)) OR (appellantAddress.County IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_PostCode_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_PostCode_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE                                                
+                ELSE
                     (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.PostCode IS NULL OR LENGTH(appellantAddress.PostCode) <= 14)) OR (appellantAddress.PostCode IS NULL)
             END
-        """)
-        checks["valid_appellantAddress_Country_length"] = ("""
-            CASE 
+        """
+        checks["valid_appellantAddress_Country_length"] = """
+            CASE
                 WHEN Detained IN (1,2) THEN appellantAddress IS NULL
-                ELSE 
+                ELSE
                     (array_contains(COALESCE(valid_categoryIdList, ARRAY()), 37) AND (appellantAddress.Country IS NULL OR LENGTH(appellantAddress.Country) <= 50)) OR (appellantAddress.Country IS NULL)
             END
-        """)
+        """
 
-        checks["valid_TTL"] = ("""
+        checks["valid_TTL"] = """
             (
                 TTL.Suspended <=> 'No'
                 AND
                 date_format(date_add(DateLodged, 36524),'yyyy-MM-dd') IS NOT NULL
                 AND TTL.SystemTTL <=> date_format(date_add(DateLodged, 36524),'yyyy-MM-dd')
             )
-        """)
+        """
 
         checks["valid_oocAppealAdminJ_values"] = """
         (
@@ -574,7 +547,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         )
         """
 
-        checks["valid_appellantHasFixedAddressAdminJ_values"] = ("""
+        checks["valid_appellantHasFixedAddressAdminJ_values"] = """
         (    CASE
                 WHEN Detained IN (1,2,4)
                     THEN appellantHasFixedAddressAdminJ IS NULL
@@ -588,7 +561,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 ELSE appellantHasFixedAddressAdminJ IS NULL
             END
         )
-        """)
+        """
 
         checks["valid_addressLine1AdminJ_values"] = """
         (
@@ -645,7 +618,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 WHEN lu_appealType IS NULL
                     THEN addressLine2AdminJ IS NULL
 
-                WHEN dv_appellantIsInUk = false 
+                WHEN dv_appellantIsInUk = false
                 THEN
                     (
                         (
@@ -735,8 +708,7 @@ class paymentPendingDetainedDQRules(DQRulesBase):
         )
         """
 
-        checks["valid_countryGovUkOocAdminJ"] = (
-            """(
+        checks["valid_countryGovUkOocAdminJ"] = """(
                     CASE
                         WHEN Detained IN (1,2,4)
                             THEN countryGovUkOocAdminJ IS NULL
@@ -755,15 +727,13 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                         ELSE countryGovUkOocAdminJ IS NULL
                     END
             )"""
-        )
 
         #########################################
         # ARIADM-2023 (homeOfficeDetails - Detained)
         #########################################
 
         # homeOfficeDecisionDate: populated when detained (1,2,4) OR in-UK; otherwise null.
-        checks["valid_homeOfficeDecisionDate_format"] = (
-            """(
+        checks["valid_homeOfficeDecisionDate_format"] = """(
                 (
                     ((Detained IS NOT NULL AND Detained IN (1,2,4)) OR dv_appellantIsInUk <=> true)
                     AND homeOfficeDecisionDate IS NOT NULL
@@ -771,11 +741,9 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 )
                 OR (homeOfficeDecisionDate IS NULL)
             )"""
-        )
 
         # decisionLetterReceivedDate: only for OOC (not detained, not in-UK) AND not GWF; otherwise null.
-        checks["valid_decisionLetterReceivedDate_format"] = (
-            """(
+        checks["valid_decisionLetterReceivedDate_format"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND (Detained IS NULL OR Detained NOT IN (1,2,4))
@@ -785,11 +753,9 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 )
                 OR (decisionLetterReceivedDate IS NULL)
             )"""
-        )
 
         # dateEntryClearanceDecision: only for OOC (not detained, not in-UK) AND GWF; otherwise null.
-        checks["valid_dateEntryClearanceDecision_format"] = (
-            """(
+        checks["valid_dateEntryClearanceDecision_format"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND (Detained IS NULL OR Detained NOT IN (1,2,4))
@@ -799,12 +765,10 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                 )
                 OR (dateEntryClearanceDecision IS NULL)
             )"""
-        )
 
         # homeOfficeReferenceNumber: populated for detained/in-UK/non-GWF; for OOC+GWF it is
         # null when a GWF reference was extracted, else '999999999' fallback (both refs null).
-        checks["valid_homeOfficeReferenceNumber_not_null"] = (
-            """(
+        checks["valid_homeOfficeReferenceNumber_not_null"] = """(
                 (
                     ((Detained IS NOT NULL AND Detained IN (1,2,4)) OR dv_appellantIsInUk <=> true
                      OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
@@ -822,11 +786,9 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                     )
                 )
             )"""
-        )
 
         # gwfReferenceNumber: only for OOC (not detained, not in-UK) AND GWF; otherwise null.
-        checks["valid_gwfReferenceNumber_not_null"] = (
-            """(
+        checks["valid_gwfReferenceNumber_not_null"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND (Detained IS NULL OR Detained NOT IN (1,2,4))
@@ -843,6 +805,5 @@ class paymentPendingDetainedDQRules(DQRulesBase):
                     OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
                 )
             )"""
-        )
 
         return checks

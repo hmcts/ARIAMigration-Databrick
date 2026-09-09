@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class decidedADQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_hearing_actuals()
         checks = checks | self.get_checks_document()
@@ -14,7 +13,7 @@ class decidedADQRules(DQRulesBase):
 
     def get_checks_hearing_actuals(self, checks={}):
 
-        checks["valid_actualCaseHearingLength"] = ("""
+        checks["valid_actualCaseHearingLength"] = """
                 (
                     (
                         CaseStatus_SD IS NOT NULL AND CaseStatus_SD IN (37,38,26)
@@ -31,16 +30,14 @@ class decidedADQRules(DQRulesBase):
                         AND element_at(actualCaseHearingLength, 'minutes') IS NULL
                     )
                 )
-                """)
+                """
 
-        checks["valid_attendingJudge"] = (
-            """
+        checks["valid_attendingJudge"] = """
             (   (attendingJudge IS NULL AND Adj_Determination_Title IS NULL AND Adj_Determination_Forenames IS NULL AND Adj_Determination_Surname IS NULL)
                 OR
                 (attendingJudge IS NOT NULL AND attendingJudge <=> concat(Adj_Determination_Title, ' ', Adj_Determination_Forenames, ' ', Adj_Determination_Surname))
             )
             """
-        )
 
         return checks
 
@@ -84,7 +81,7 @@ class decidedADQRules(DQRulesBase):
         )
         """
 
-        checks["valid_anonymityOrder"] = ("(anonymityOrder <=> 'No')")
+        checks["valid_anonymityOrder"] = "(anonymityOrder <=> 'No')"
 
         checks["valid_appealDecision"] = """
         (
@@ -129,19 +126,19 @@ class decidedADQRules(DQRulesBase):
 
     def get_checks_document(self, checks={}):
         checks["valid_finalDecisionAndReasonsDocuments"] = (
-            "(size(finalDecisionAndReasonsDocuments) = 0 AND finalDecisionAndReasonsDocuments IS NOT NULL)" 
+            "(size(finalDecisionAndReasonsDocuments) = 0 AND finalDecisionAndReasonsDocuments IS NOT NULL)"
         )
         return checks
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_appealDecisionAvailable"] = ("(appealDecisionAvailable <=> 'Yes')")
+        checks["valid_appealDecisionAvailable"] = "(appealDecisionAvailable <=> 'Yes')"
 
         return checks
 
     def get_checks_ftpa(self, checks={}):
 
-        checks["valid_ftpaApplicationDeadline"] = ("""
+        checks["valid_ftpaApplicationDeadline"] = """
         (
             CASE
                 WHEN DecisionDate_ftpa_decideda IS NULL
@@ -158,7 +155,6 @@ class decidedADQRules(DQRulesBase):
                 ELSE ftpaApplicationDeadline IS NULL
             END
         )
-        """)
+        """
 
         return checks
-

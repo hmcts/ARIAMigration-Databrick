@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class reasonsForAppealSubmittedDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 
@@ -10,8 +9,7 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
 
     def get_base_checks(self, checks={}):
 
-        checks["valid_additionalInstructionsTribunalResponse"] = (
-            """
+        checks["valid_additionalInstructionsTribunalResponse"] = """
                 (
                     (
                         (hr_CaseStatus <=> 26)
@@ -34,6 +32,5 @@ class reasonsForAppealSubmittedDQRules(DQRulesBase):
                     )
                 )
             """
-        )
 
         return checks

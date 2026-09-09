@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class awaitingEvidenceRespondentADQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 
@@ -13,6 +12,8 @@ class awaitingEvidenceRespondentADQRules(DQRulesBase):
 
         checks["valid_directions"] = "(directions IS NOT NULL)"
 
-        checks["valid_uploadHomeOfficeBundleAvailable"] = "(uploadHomeOfficeBundleAvailable IS NOT NULL AND uploadHomeOfficeBundleAvailable IN ('Yes','No'))"
+        checks["valid_uploadHomeOfficeBundleAvailable"] = (
+            "(uploadHomeOfficeBundleAvailable IS NOT NULL AND uploadHomeOfficeBundleAvailable IN ('Yes','No'))"
+        )
 
         return checks

@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class appealSubmittedDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 
@@ -10,8 +9,7 @@ class appealSubmittedDQRules(DQRulesBase):
 
     def get_base_checks(self, checks={}):
 
-        checks["valid_paymentStatus"] = (
-            """(
+        checks["valid_paymentStatus"] = """(
                 (
                     dv_CCDAppealType IS NOT NULL
                     AND dv_CCDAppealType IN ('EA','EU','HU','PA')
@@ -86,11 +84,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 AND paymentStatus IS NULL
             )
             """
-        )
 
-
-        checks["valid_paAppealTypePaymentOption"] = (
-            """(
+        checks["valid_paAppealTypePaymentOption"] = """(
                 (
                     dv_representation <=> 'LR' AND dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('PA')
                     AND paAppealTypePaymentOption IS NOT NULL AND paAppealTypePaymentOption IN ('payLater')
@@ -105,10 +100,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 AND (paAppealTypePaymentOption IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_paAppealTypeAipPaymentOption"] = (
-            """(
+        checks["valid_paAppealTypeAipPaymentOption"] = """(
                 (
                     dv_representation = 'AIP' AND dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('PA')
                     AND paAppealTypeAipPaymentOption IS NOT NULL AND paAppealTypeAipPaymentOption IN ('payLater')
@@ -123,10 +116,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 AND (paAppealTypeAipPaymentOption IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_rpDcAppealHearingOption"] = (
-            """(
+        checks["valid_rpDcAppealHearingOption"] = """(
                 (
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('DC','RP'))
                 AND
@@ -147,10 +138,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 (rpDcAppealHearingOption IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_paidDate"] = (
-            """(
+        checks["valid_paidDate"] = """(
                 (
                     dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
                     AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
@@ -164,10 +153,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND paidDate IS NULL
                 )
             )"""
-        )
 
-        checks["valid_paidAmount"] = (
-            """(
+        checks["valid_paidAmount"] = """(
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
                     AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
@@ -199,10 +186,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     (paidAmount IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_additionalPaymentInfo"] = (
-            """(
+        checks["valid_additionalPaymentInfo"] = """(
                 (
                     dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
                     AND SIZE(FILTER(valid_transactionList, x -> x.TransactionTypeId = 3 AND NOT ARRAY_CONTAINS(lu_ref_txn, x.TransactionId))) > 0
@@ -220,10 +205,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND additionalPaymentInfo IS NULL
                 )
             )"""
-        )
 
-        checks["valid_paymentDescription"] = (
-            """(
+        checks["valid_paymentDescription"] = """(
                 (
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
                 AND
@@ -244,10 +227,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 (paymentDescription IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_remissionDecision"] = (
-            """(
+        checks["valid_remissionDecision"] = """(
                 (
                     dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
                     AND
@@ -289,10 +270,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND remissionDecision IS NULL
                 )
             )"""
-        )
 
-        checks["valid_remissionDecisionReason"] = (
-            """(
+        checks["valid_remissionDecisionReason"] = """(
                 (
                     dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
                     AND
@@ -334,10 +313,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND remissionDecisionReason IS NULL
                 )
             )"""
-        )
 
-        checks["valid_amountRemitted"] = (
-            """(
+        checks["valid_amountRemitted"] = """(
                         (
                 dv_CCDAppealType IS NOT NULL
                 AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA')
@@ -376,10 +353,8 @@ class appealSubmittedDQRules(DQRulesBase):
                 AND amountRemitted IS NULL
             )
             )"""
-        )
 
-        checks["valid_amountLeftToPay"] = (
-            """(
+        checks["valid_amountLeftToPay"] = """(
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND PaymentRemissionGranted <=> 1)
                     AND
@@ -415,15 +390,11 @@ class appealSubmittedDQRules(DQRulesBase):
                     (amountLeftToPay IS NULL)
                 )
             )"""
-        )
 
-        checks["valid_caseNotes"] = (
-            "(caseNotes IS NOT NULL)"
-        )
+        checks["valid_caseNotes"] = "(caseNotes IS NOT NULL)"
 
         # ARIADM-1920 (remissionTypes extended join)
-        checks["valid_remissionType_in_list"] = (
-            """(
+        checks["valid_remissionType_in_list"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
                 OR
                 (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
@@ -433,10 +404,8 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND remissionType IS NULL
                 )
             )"""
-        )
 
-        checks["valid_remissionClaim_in_list"] = (
-            """(
+        checks["valid_remissionClaim_in_list"] = """(
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
                     AND
@@ -453,22 +422,17 @@ class appealSubmittedDQRules(DQRulesBase):
                     AND remissionClaim IS NULL
                 )
             )"""
-        )
 
-        checks["valid_feeRemissionType_not_null"] = (
-            """(
+        checks["valid_feeRemissionType_not_null"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
                 OR
                 ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType_remAPS <=> 'OMIT') AND feeRemissionType IS NULL)
             )"""
-        )
 
-        checks["valid_completeCaseReviewDate"] = (
-            """(
+        checks["valid_completeCaseReviewDate"] = """(
                 NOT (ariaDesiredState <=> 'appealSubmitted' OR ariaDesiredState <=> 'paymentPending')
                 OR
                 completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
             )"""
-        )
 
         return checks

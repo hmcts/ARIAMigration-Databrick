@@ -73,9 +73,8 @@ def test_get_case_details_success(mock_get):
 def test_get_case_details_network_error(mock_get):
     mock_get.side_effect = Exception("Connection refused")
 
-    response = get_case_details(**CASE_DETAILS_COMMON)
-
-    assert isinstance(response, Exception)
+    with pytest.raises(Exception, match="Connection refused"):
+        get_case_details(**CASE_DETAILS_COMMON)
 
 
 # ---------------------------------------------------------------------------
@@ -110,9 +109,8 @@ def test_start_case_event_non_200(mock_get):
 def test_start_case_event_network_error(mock_get):
     mock_get.side_effect = Exception("Connection refused")
 
-    response = start_case_event(**COMMON)
-
-    assert isinstance(response, Exception)
+    with pytest.raises(Exception, match="Connection refused"):
+        start_case_event(**COMMON)
 
 
 # ---------------------------------------------------------------------------
@@ -186,9 +184,8 @@ def test_validate_case_str_payload_is_parsed(mock_post):
 def test_validate_case_network_error(mock_post):
     mock_post.side_effect = Exception("Network error")
 
-    response = validate_case(**VALIDATE_COMMON)
-
-    assert isinstance(response, Exception)
+    with pytest.raises(Exception, match="Network error"):
+        validate_case(**VALIDATE_COMMON)
 
 
 # ---------------------------------------------------------------------------
@@ -254,9 +251,8 @@ def test_submit_case_event_str_payload_is_parsed(mock_post):
 def test_submit_case_event_network_error(mock_post):
     mock_post.side_effect = Exception("Timeout")
 
-    response = submit_case_event(**SUBMIT_COMMON)
-
-    assert isinstance(response, Exception)
+    with pytest.raises(Exception, match="Timeout"):
+        submit_case_event(**SUBMIT_COMMON)
 
 
 # ---------------------------------------------------------------------------
@@ -470,12 +466,13 @@ class TestProcessEventTransientNetworkErrors:
     def test_start_case_event_network_exception_records_error_type(self, mock_start):
         import requests
 
-        mock_start.return_value = requests.exceptions.ConnectTimeout("timed out")
+        # Simulate start_case_event raising an exception instead of returning one
+        mock_start.side_effect = requests.exceptions.ConnectTimeout("timed out")
 
         result = process_event(**PROCESS_DEFAULTS)
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ConnectTimeout"
         assert result["CaseLinkCount"] == 0
 
@@ -486,12 +483,13 @@ class TestProcessEventTransientNetworkErrors:
         import requests
 
         mock_start.return_value = mock_response(200, {"token": "tok123"})
-        mock_validate.return_value = requests.exceptions.ReadTimeout("read timed out")
+        # Simulate validate_case raising an exception instead of returning one
+        mock_validate.side_effect = requests.exceptions.ReadTimeout("read timed out")
 
         result = process_event(**PROCESS_DEFAULTS)
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ReadTimeout"
 
     @pytest.mark.usefixtures("mock_token_managers_cl")
@@ -503,12 +501,13 @@ class TestProcessEventTransientNetworkErrors:
 
         mock_start.return_value = mock_response(200, {"token": "tok123"})
         mock_validate.return_value = mock_response(200)
-        mock_submit.return_value = requests.exceptions.ChunkedEncodingError("truncated")
+        # Simulate submit_case_event raising an exception instead of returning one
+        mock_submit.side_effect = requests.exceptions.ChunkedEncodingError("truncated")
 
         result = process_event(**PROCESS_DEFAULTS)
 
         assert result["Status"] == "ERROR"
-        assert result["StatusCode"] is None
+        assert result["StatusCode"] == "N/A"
         assert result["ErrorType"] == "ChunkedEncodingError"
 
 

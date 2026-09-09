@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class ftpaSubmittedBDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_ftpa()
 
@@ -10,8 +9,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
 
     def get_checks_ftpa(self, checks={}):
 
-        checks["valid_allocatedJudge"] = (
-            """
+        checks["valid_allocatedJudge"] = """
             (
                 (
                     dq_cs39_status <=> 39 AND
@@ -23,10 +21,8 @@ class ftpaSubmittedBDQRules(DQRulesBase):
                 )
             )
             """
-        )
 
-        checks["valid_allocatedJudgeEdit"] = (
-            """
+        checks["valid_allocatedJudgeEdit"] = """
             (
                 (
                     dq_cs39_status <=> 39 AND
@@ -38,8 +34,7 @@ class ftpaSubmittedBDQRules(DQRulesBase):
                 )
             )
                 """
-        )
 
-        checks["valid_judgeAllocationExists"] = ("(judgeAllocationExists <=> 'Yes')")
+        checks["valid_judgeAllocationExists"] = "(judgeAllocationExists <=> 'Yes')"
 
         return checks

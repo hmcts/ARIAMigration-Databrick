@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import pytest
 from unittest.mock import patch, MagicMock, ANY, AsyncMock
 
 # ccdFunctions instantiates IDAMTokenManager at module level, which calls Azure
@@ -65,12 +66,11 @@ def test_start_case_network_failure(mock_get):
     idam_token = "idam123"
     s2s_token = "s2s123"
 
-    # simulate a network error
     mock_get.side_effect = Exception("Connection error")
 
-    response = start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
+    with pytest.raises(Exception, match="Connection error"):
+        start_case_creation(ccd_base_url, uid, jid, ctid, etid, idam_token, s2s_token)
 
-    # Asserts
     expected_url = f"{ccd_base_url}/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/event-triggers/{etid}/token"
     mock_get.assert_called_once_with(
         expected_url,
@@ -81,10 +81,6 @@ def test_start_case_network_failure(mock_get):
             "Content-Type": "application/json"
         }
     )
-
-    # The function should return the exception on network failure so the
-    # caller can inspect its type for transient-retry decisions.
-    assert isinstance(response, Exception)
 
 
 @patch("requests.post")
@@ -138,10 +134,11 @@ def test_validate_case_failure(mock_post):
 
     mock_post.side_effect = Exception("Connection error")
 
-    validate_case_response = validate_case(ccd_base_url, event_token, payload_data, jid, ctid, idam_token, uid, s2s_token)
-
     expected_url = f"{ccd_base_url}/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/validate"
-    # assertions
+    
+    with pytest.raises(Exception, match="Connection error"):
+        validate_case(ccd_base_url, event_token, payload_data, jid, ctid, idam_token, uid, s2s_token)
+    
     mock_post.assert_called_once_with(
         expected_url,
         headers={
@@ -152,7 +149,6 @@ def test_validate_case_failure(mock_post):
         },
         json=ANY
     )
-    assert isinstance(validate_case_response, Exception)
 
 
 @patch("requests.post")
@@ -211,10 +207,11 @@ def test_submit_case_failure(mock_post):
 
     payload_data = {"data": "test_payload"}
 
-    submit_response = submit_case(ccd_base_url, event_token, payload_data, jid, ctid, idam_token, uid, s2s_token)
-
     expected_url = f"{ccd_base_url}/caseworkers/{uid}/jurisdictions/{jid}/case-types/{ctid}/cases"
-    # assertions
+    
+    with pytest.raises(Exception, match="Failed to make submit API call"):
+        submit_case(ccd_base_url, event_token, payload_data, jid, ctid, idam_token, uid, s2s_token)
+    
     mock_post.assert_called_once_with(
         expected_url,
         headers={
@@ -225,8 +222,6 @@ def test_submit_case_failure(mock_post):
         },
         json=ANY
     )
-
-    assert isinstance(submit_response, Exception)
 
 
 def mock_response(status_code, json_data=None, text=""):

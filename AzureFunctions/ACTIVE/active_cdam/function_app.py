@@ -1,22 +1,24 @@
 import asyncio
-import azure.functions as func
-import logging
 import json
+import logging
 import os
-
 from contextlib import AsyncExitStack
-
-from tenacity import AsyncRetrying, retry_if_result, stop_after_attempt, wait_exponential
-
-from azure.core.exceptions import ResourceExistsError
-from azure.storage.blob.aio import BlobServiceClient
-from azure.eventhub.aio import EventHubProducerClient
-from azure.eventhub import EventData
-from azure.identity.aio import DefaultAzureCredential
-from azure.identity import ClientSecretCredential
-from azure.keyvault.secrets.aio import SecretClient
 from datetime import datetime, timezone
-from typing import List
+
+import azure.functions as func
+from azure.core.exceptions import ResourceExistsError
+from azure.eventhub import EventData
+from azure.eventhub.aio import EventHubProducerClient
+from azure.identity import ClientSecretCredential
+from azure.identity.aio import DefaultAzureCredential
+from azure.keyvault.secrets.aio import SecretClient
+from azure.storage.blob.aio import BlobServiceClient
+from tenacity import (
+    AsyncRetrying,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 try:
     from .cdamFunctions import process_event
@@ -90,7 +92,7 @@ def _is_retryable(result):
     cardinality='many',
     data_type='binary'
 )
-async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
+async def eventhub_trigger_active(azeventhub: list[func.EventHubEvent]):
     # Metadata is common to the whole batch under cardinality=many, so it can be read from any single event
     metadata = azeventhub[0].metadata or {} if azeventhub else {}
     partition_id = metadata.get("PartitionContext", {}).get("PartitionId")
@@ -112,12 +114,17 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             logger.info(f"Connected to KeyVault: {kv_url}")
 
             results_eh_key = await kv_client.get_secret(f"{results_eh_name}-key")
-            result_eh_secret_key = results_eh_key.value
-            logger.info("Acquired KV secret for Results Event Hub")
-
             storage_sp_tenant_id = await kv_client.get_secret("SERVICE-PRINCIPLE-TENANT-ID")
             storage_sp_client_id = await kv_client.get_secret("SERVICE-PRINCIPLE-CLIENT-ID")
             storage_sp_client_secret = await kv_client.get_secret("SERVICE-PRINCIPLE-CLIENT-SECRET")
+
+            # Ensure all secret values are not None before using them
+            if (results_eh_key.value is None
+                or storage_sp_tenant_id.value is None
+                or storage_sp_client_id.value is None
+                or storage_sp_client_secret.value is None):
+                raise ValueError("One or more Azure secrets are missing.")
+
             storage_credential = ClientSecretCredential(
                 tenant_id=storage_sp_tenant_id.value,
                 client_id=storage_sp_client_id.value,
@@ -131,15 +138,14 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
             idempotency_container = idempotency_blob_service.get_container_client(idempotency_container_name)
 
             res_eh_producer = await stack.enter_async_context(
-                EventHubProducerClient.from_connection_string(conn_str=result_eh_secret_key)
+                EventHubProducerClient.from_connection_string(conn_str=results_eh_key.value)
             )
             try:
                 for event in azeventhub:
                     try:
                         logger.info(f"Event received with partition key: {event.partition_key}")
-
-                        # Parse the payload
                         caseNo = event.partition_key
+                        # Parse the payload
                         payload_str = event.get_body().decode('utf-8')
                         payload = json.loads(payload_str)
                         run_id = payload.get("RunID", None)
@@ -147,6 +153,8 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         file_url = payload.get("FileURL")
                         file_content_type = payload.get("FileContentType", "text/html")  # Default to HTML content type.
 
+                        if caseNo is None:
+                            raise ValueError("Partition Key can not be None.")
                         idempotency_blob_path = f"active/cdam/idempotency/{caseNo.replace('/', '_')}.flag"
                         idempotency_blob = idempotency_container.get_blob_client(idempotency_blob_path)
 
@@ -166,7 +174,7 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                                 stop=stop_after_attempt(3),
                                 wait=wait_exponential(multiplier=30, min=30, max=60),
                                 before_sleep=_log_retry,
-                                retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+                                retry_error_callback=lambda retry_state: None if retry_state.outcome is None else retry_state.outcome.result(),
                             )(_process_document, ENV, caseNo, run_id, file_name, file_url, file_content_type, storage_credential)
                         except Exception as processing_error:
                             logger.error(f"Unhandled exception while processing case {caseNo}: {processing_error}")
@@ -204,11 +212,11 @@ async def eventhub_trigger_active(azeventhub: List[func.EventHubEvent]):
                         logger.info(f"Sent result for case {caseNo} to Results Event Hub")
 
                     except Exception as e:
-                        logger.error(f"Error processing event for caseNo {caseNo}: {e}")
+                        logger.error(f"Error processing event for caseNo {event.partition_key}: {e}")
 
             except Exception as e:
                 logger.error(f"Error in event hub processing batch: {e}")
-                raise e
+                raise
     except Exception as e:
         logger.error(f"An error has occurred before processing the batch. {e}")
-        raise e
+        raise

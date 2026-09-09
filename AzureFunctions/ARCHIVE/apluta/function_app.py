@@ -1,18 +1,24 @@
-import azure.functions as func
-import logging
-import json
-from azure.storage.blob.aio import BlobServiceClient, ContainerClient, BlobClient
-from azure.eventhub.aio import EventHubProducerClient
-from azure.eventhub import EventData
-from typing import List
 import asyncio
+import datetime
+import json
+import logging
+import os
+
+import azure.functions as func
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.eventhub import EventData
+from azure.eventhub.aio import EventHubProducerClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.keyvault.secrets.aio import SecretClient
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-import datetime
-import os
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from azure.storage.blob.aio import BlobClient, BlobServiceClient, ContainerClient
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
+logger = logging.getLogger(__name__)
 
 # Retrieve environment variables
 env: str = os.environ["ENVIRONMENT"]
@@ -48,7 +54,7 @@ app = func.FunctionApp()
     cardinality='many',
     data_type='binary'
 )
-async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
+async def eventhub_trigger_uta(azeventhub: list[func.EventHubEvent]):
     producer_lock = asyncio.Lock()
     semaphore = asyncio.Semaphore(6)
 
@@ -57,7 +63,7 @@ async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
     sequence_numbers = [event.sequence_number for event in azeventhub] if azeventhub else []
     min_sequence = min(sequence_numbers) if sequence_numbers else None
     max_sequence = max(sequence_numbers) if sequence_numbers else None
-    logging.info(
+    logger.info(
         f"Processing a batch of {len(azeventhub)} events - "
         f"Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
     )
@@ -77,9 +83,9 @@ async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
 
     try:
         container_service_client = ContainerClient.from_container_url(container_url)
-        logging.info(f"Connected to ARM Container Client on url {container_url} with sub directory {sub_dir}")
+        logger.info(f"Connected to ARM Container Client on url {container_url} with sub directory {sub_dir}")
     except Exception as e:
-        logging.error(f"Failed to connect to ARM Container Client {e}")
+        logger.error(f"Failed to connect to ARM Container Client {e}")
         raise e
 
     try:
@@ -107,18 +113,18 @@ async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
                     except TimeoutError:
                         key = event.partition_key
                         msg = f"Task timed out after 6 minutes for key '{key}'."
-                        logging.error(msg)
+                        logger.error(msg)
                         raise
 
-            logging.info(
+            logger.info(
                 f"Processing messages - Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
             )
             await asyncio.gather(*[bounded_process(event) for event in azeventhub])
-            logging.info(
+            logger.info(
                 f"Finished processing messages - Partition: {partition_id}, Sequence numbers: {min_sequence}-{max_sequence}"
             )
     except Exception as e:
-        logging.error(f"Exception occurred when processing messages {e}")
+        logger.error(f"Exception occurred when processing messages {e}")
         raise e
     finally:
         await container_service_client.close()
@@ -129,7 +135,7 @@ async def eventhub_trigger_uta(azeventhub: List[func.EventHubEvent]):
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(Exception),
     reraise=True,
-    before_sleep=lambda r: logging.warning(
+    before_sleep=lambda r: logger.warning(
         f"Retrying upload attempt {r.attempt_number} due to: {r.outcome.exception()}"
     ),
 )
@@ -143,7 +149,7 @@ async def upload_blob_with_retry(blob_client, message, capture_response):
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(Exception),
     reraise=True,
-    before_sleep=lambda r: logging.warning(
+    before_sleep=lambda r: logger.warning(
         f"Retrying download attempt {r.attempt_number} due to: {r.outcome.exception()}"
     ),
 )
@@ -174,10 +180,10 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # Decode incoming event
         message = event.get_body().decode('utf-8').strip()
         key = event.partition_key
-        logging.info(f"Processing message for {key} file")
+        logger.info(f"Processing message for {key} file")
 
         if not key:
-            logging.error('Key was empty')
+            logger.error('Key was empty')
             await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
             return
 
@@ -188,16 +194,16 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             payload = json.loads(message)
             blob_url = payload.get("blob_url")
             file_name = payload.get("file_name") or key
-            logging.info(f"Parsed JSON message for file {file_name}")
+            logger.info(f"Parsed JSON message for file {file_name}")
         except json.JSONDecodeError:
             # Handle plain URL message
             blob_url = message
-            logging.info(f"Message was plain blob URL for file {file_name}")
+            logger.info(f"Message was plain blob URL for file {file_name}")
 
         results["filename"] = file_name
 
         if not blob_url:
-            logging.error("Missing blob_url in the event message")
+            logger.error("Missing blob_url in the event message")
             await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
             return
 
@@ -208,18 +214,18 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                 # Create flag immediately (first writer wins)
                 try:
                     await idempotency_blob.upload_blob(b"processed", overwrite=False)
-                    logging.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
+                    logger.info(f"[IDEMPOTENCY] Flag created for file: {file_name}")
                 except ResourceExistsError:
                     props = await idempotency_blob.get_blob_properties()
 
                     if (props.metadata or {}).get("is_complete") == "True":
-                        logging.warning(f"[IDEMPOTENCY] File already processed, skipping: {file_name}")
+                        logger.warning(f"[IDEMPOTENCY] File already processed, skipping: {file_name}")
                         return
 
                     # Giving 180s grace for checking if an original run has been lost, for the duplicate message to be reprocessed.
                     remaining = 180 - (datetime.datetime.now(datetime.timezone.utc) - props.last_modified).total_seconds()
                     if remaining > 0:
-                        logging.warning(f"[IDEMPOTENCY] File in-progress for {file_name}")
+                        logger.warning(f"[IDEMPOTENCY] File in-progress for {file_name}")
                         semaphore.release()  # don't block waiting for in-progress event
                         try:
                             await asyncio.sleep(remaining)
@@ -227,14 +233,14 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
                             await semaphore.acquire()
                         props = await idempotency_blob.get_blob_properties()
                         if (props.metadata or {}).get("is_complete") == "True":
-                            logging.info(f"[IDEMPOTENCY] In-progress file has now completed processing, skipping: {file_name}")
+                            logger.info(f"[IDEMPOTENCY] In-progress file has now completed processing, skipping: {file_name}")
                             return
 
-                    logging.info(f"[IDEMPOTENCY] Flag is not complete and is past expiry for: {file_name}. Refreshing idempotency lock")
+                    logger.info(f"[IDEMPOTENCY] Flag is not complete and is past expiry for: {file_name}. Refreshing idempotency lock")
                     await idempotency_blob.upload_blob(b"processed", overwrite=True)
 
             except Exception as e:
-                logging.warning(f"[IDEMPOTENCY] Check failed, proceeding anyway: {e}", exc_info=True)
+                logger.warning(f"[IDEMPOTENCY] Check failed, proceeding anyway: {e}", exc_info=True)
 
             # Append SAS token if missing
             if "?" in blob_url:
@@ -242,7 +248,7 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             else:
                 source_blob_url_with_sas = f"{blob_url}?{source_container_secret}"
 
-            logging.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
+            logger.info(f"Final download URL (with SAS if added): {source_blob_url_with_sas}")
 
             # Download file from source
             file_content = await download_blob_with_retry(source_blob_url_with_sas)
@@ -250,26 +256,26 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
             # Upload to target
             full_blob_name = f"{subdirectory}/{file_name}"
             blob_client = container_service_client.get_blob_client(blob=full_blob_name)
-            logging.info(f'Uploading to target blob: {full_blob_name}')
+            logger.info(f'Uploading to target blob: {full_blob_name}')
 
             await upload_blob_with_retry(blob_client, file_content, capture_response)
 
             # In case raw_response_hook did not trigger correctly.
             if results["http_response"] is None:
-                logging.warning(f"No response captured for {file_name}, verifying blob uploaded.")
+                logger.warning(f"No response captured for {file_name}, verifying blob uploaded.")
                 await blob_client.get_blob_properties()
                 results["http_response"] = 201
                 results["http_message"] = "Created with missed response hook"
-                logging.info(f"Blob exists for {file_name}. Responses set.")
+                logger.info(f"Blob exists for {file_name}. Responses set.")
 
-            logging.info(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
+            logger.info(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
             results["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            logging.info("Uploaded blob successfully: %s", key)
+            logger.info("Uploaded blob successfully: %s", key)
 
             await send_to_eventhub(ack_producer_client, json.dumps(results), key, producer_lock)
         except BaseException:
-            logging.warning(f"[IDEMPOTENCY] Deleting flag for file: {file_name} after processing failure")
+            logger.warning(f"[IDEMPOTENCY] Deleting flag for file: {file_name} after processing failure")
             try:
                 await idempotency_blob.delete_blob()
             except ResourceNotFoundError:
@@ -279,14 +285,14 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
         # Ack sent successfully
         try:
             await idempotency_blob.set_blob_metadata({"is_complete": "True"})
-            logging.info(f"[IDEMPOTENCY] Marked complete for file: {file_name}")
+            logger.info(f"[IDEMPOTENCY] Marked complete for file: {file_name}")
         except Exception as e:
-            logging.error(f"[IDEMPOTENCY] Ack sent but failed to mark flag complete for {file_name}: {e}.")
+            logger.error(f"[IDEMPOTENCY] Ack sent but failed to mark flag complete for {file_name}: {e}.")
 
     except BaseException as e:
-        logging.error(f"Failed to process event with key '{key}': {e}", exc_info=True)
+        logger.error(f"Failed to process event with key '{key}': {e}", exc_info=True)
         results["http_message"] = str(e)
-        logging.error(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
+        logger.error(f"CaseNo = {results['filename']}, http_response = {results['http_response']}, http_message = {results['http_message']}")
 
         await send_to_dead_letter(dl_producer_client, message, key, producer_lock)
         # Raise exception, whole batch will be re-tried but successful runs will be skipped by idempotency.
@@ -298,27 +304,27 @@ async def process_messages(event, container_service_client, subdirectory, dl_pro
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(Exception),
     reraise=True,
-    before_sleep=lambda r: logging.warning(
+    before_sleep=lambda r: logger.warning(
         f"Retrying EventHub send attempt {r.attempt_number} due to: {r.outcome.exception()}"
     ),
 )
 async def send_to_eventhub(producer_client: EventHubProducerClient, message: str, partition_key: str | None, producer_lock: asyncio.Lock):
-    logging.info(f"Creating ack batch for {partition_key}.")
+    logger.info(f"Creating ack batch for {partition_key}.")
     async with producer_lock:
         async with asyncio.timeout(60):
             event_data_batch = await producer_client.create_batch(partition_key=partition_key)
             event_data_batch.add(EventData(message))
-            logging.info(f"Sending ack for {partition_key}.")
+            logger.info(f"Sending ack for {partition_key}.")
             await producer_client.send_batch(event_data_batch, timeout=60)
-    logging.info(f"Message added to Event Hub with partition key: {partition_key}")
+    logger.info(f"Message added to Event Hub with partition key: {partition_key}")
 
 
 async def send_to_dead_letter(dl_producer_client, message, key, producer_lock):
     if message is not None:
         try:
             await send_to_eventhub(dl_producer_client, message, key, producer_lock)
-            logging.info(f"{key}: Sent to dead letter queue")
+            logger.info(f"{key}: Sent to dead letter queue")
         except Exception as e:
-            logging.error(f"Failed to send {key} to dead-letter EventHub: {e}")
+            logger.error(f"Failed to send {key} to dead-letter EventHub: {e}")
     else:
-        logging.error("Cannot send to dead-letter queue because message is None.")
+        logger.error("Cannot send to dead-letter queue because message is None.")

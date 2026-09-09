@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class decisionDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         # checks = checks | self.get_checks_hearing_details()
         checks = checks | self.get_checks_document()
@@ -16,7 +15,7 @@ class decisionDQRules(DQRulesBase):
 
     #     checks["valid_listCaseHearingLength"] = ("""
     #     (
-    #         CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING) 
+    #         CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
     #         AND CaseStatus_dec IN (37,38)
     #         AND CAST(roundedTimeEstimate AS INT) IN (30, 60, 90, 120, 150, 180,210, 240, 270, 300, 330, 360)
     #     )
@@ -36,7 +35,7 @@ class decisionDQRules(DQRulesBase):
     #         """)
 
     #     checks["valid_listCaseHearingCentre"] = (
-    #         "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )" 
+    #         "(listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IN (37,38) )"
     #     )
 
     #     checks["valid_listCaseHearingCentreAddress"] = (
@@ -46,44 +45,52 @@ class decisionDQRules(DQRulesBase):
     #     return checks
 
     def get_checks_document(self, checks={}):
-        
-        checks["valid_caseBundles"] = (
-            "(COALESCE(size(caseBundles), 0) = 0) "
-        )
+
+        checks["valid_caseBundles"] = "(COALESCE(size(caseBundles), 0) = 0) "
         return checks
 
     def get_checks_substantive_decision(self, checks={}):
 
-        checks["valid_scheduleOfIssuesAgreement"] = ("(scheduleOfIssuesAgreement <=> 'No')")
+        checks["valid_scheduleOfIssuesAgreement"] = (
+            "(scheduleOfIssuesAgreement <=> 'No')"
+        )
 
-        checks["valid_scheduleOfIssuesDisagreementDescription"] = ("(scheduleOfIssuesDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the schedule of issues.')")
+        checks["valid_scheduleOfIssuesDisagreementDescription"] = (
+            "(scheduleOfIssuesDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the schedule of issues.')"
+        )
 
-        checks["valid_immigrationHistoryAgreement"] = ("(immigrationHistoryAgreement <=> 'No')")
+        checks["valid_immigrationHistoryAgreement"] = (
+            "(immigrationHistoryAgreement <=> 'No')"
+        )
 
-        checks["valid_immigrationHistoryDisagreementDescription"] = ("(immigrationHistoryDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the immigration history.')")
+        checks["valid_immigrationHistoryDisagreementDescription"] = (
+            "(immigrationHistoryDisagreementDescription <=> 'This is a migrated ARIA case. Please see the documents for information on the immigration history.')"
+        )
 
         return checks
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_hmcts"] = ("(hmcts <=> '[userImage:hmcts.png]')")
+        checks["valid_hmcts"] = "(hmcts <=> '[userImage:hmcts.png]')"
 
-        checks["valid_stitchingStatus"] = ("(stitchingStatus <=> 'DONE')")
+        checks["valid_stitchingStatus"] = "(stitchingStatus <=> 'DONE')"
 
-        checks["valid_bundleConfiguration"] = ("(bundleConfiguration <=> 'iac-hearing-bundle-config.yaml')")
+        checks["valid_bundleConfiguration"] = (
+            "(bundleConfiguration <=> 'iac-hearing-bundle-config.yaml')"
+        )
 
-        checks["valid_decisionAndReasonsAvailable"] = ("(decisionAndReasonsAvailable <=> 'No')")
+        checks["valid_decisionAndReasonsAvailable"] = (
+            "(decisionAndReasonsAvailable <=> 'No')"
+        )
 
         return checks
 
     def get_checks_general(self, checks={}):
 
-        checks["valid_bundleFileNamePrefix"] = (
-            """
+        checks["valid_bundleFileNamePrefix"] = """
             (
                 bundleFileNamePrefix <=> replace(CaseNo, '/', ' ') || '-' || Appellant_Name AND bundleFileNamePrefix IS NOT NULL AND bundleFileNamePrefix != ""
             )
             """
-        )
 
         return checks

@@ -1,9 +1,10 @@
+import threading
+from datetime import datetime, timedelta, timezone
+
 import pyotp
 import requests
-import threading
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-from datetime import datetime, timezone, timedelta
 
 
 class TokenError(RuntimeError):
@@ -130,7 +131,7 @@ class IDAMTokenManager:
             self._uid = None
 
 
-class S2S_Manager():
+class S2S_Manager:
     def __init__(self, env: str, skew: int = 900):
         self.env = env
         self._s2s_token = None
@@ -172,7 +173,7 @@ class S2S_Manager():
         self.s2s_microservice = "iac"
 
     def _fetch_s2s_token(self):
-        otp = pyotp.TOTP(self._s2s_secret).now()
+        otp = pyotp.TOTP("" if self._s2s_secret is None else self._s2s_secret).now()
         # create payload
         s2s_payload = {
             "microservice": self.s2s_microservice,

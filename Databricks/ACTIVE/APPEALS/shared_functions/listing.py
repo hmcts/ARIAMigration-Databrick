@@ -1,210 +1,513 @@
 from pyspark.sql.functions import (
-    array, array_compact, array_contains, array_distinct, array_size, col, collect_list, concat, concat_ws,
-    current_timestamp, date_format, expr, lit, row_number, struct, transform, when
+    array,
+    array_compact,
+    array_contains,
+    array_distinct,
+    array_size,
+    col,
+    collect_list,
+    concat,
+    concat_ws,
+    current_timestamp,
+    date_format,
+    expr,
+    lit,
+    row_number,
+    struct,
+    transform,
+    when,
 )
 from pyspark.sql.window import Window
 
+from . import AwaitingEvidenceRespondant_b as AERb
 from . import paymentPending as PP
 from . import paymentPendingDetained as PPD
-from . import AwaitingEvidenceRespondant_b as AERb
 
 
-def _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages):
+def _build_interpreter_languages_lookup(
+    silver_m1, silver_m3, bronze_interpreter_languages
+):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered = silver_m3.filter(
-        (
+    silver_m3_filtered = (
+        silver_m3.filter(
             (
-                (col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
-            ) | (
-                (col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))
+                (col("CaseStatus").isin(37, 38))
+                & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
             )
+            | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52)))
         )
-    ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
+        .withColumn("row_num", row_number().over(window_spec))
+        .filter(col("row_num").eqNullSafe(1))
+    )
 
     spokenLanguageCategory = "spokenLanguageInterpreter"
     signLanguageCategory = "signLanguageInterpreter"
 
-    spoken_languages_list = bronze_interpreter_languages.filter(
-        (col("appellantInterpreterLanguageCategory") == lit(spokenLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
-    ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
+    spoken_languages_list = (
+        bronze_interpreter_languages.filter(
+            (col("appellantInterpreterLanguageCategory") == lit(spokenLanguageCategory))
+            & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
+        )
+        .select(col("languageCode").alias("code"), col("languageLabel").alias("label"))
+        .collect()
+    )
 
-    spoken_languages_list_literal = array([
-        struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
-        for row in spoken_languages_list
-    ])
+    spoken_languages_list_literal = array(
+        [
+            struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
+            for row in spoken_languages_list
+        ]
+    )
 
     spoken_language_ref_data_condition = (
         (
-            (~(col("il.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)))
-            | (~(col("ail.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)))
-        ) & (
-            ~((col("il.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)) & (col("il.manualEntry").eqNullSafe("Yes")))
-            & ~((col("ail.appellantInterpreterLanguageCategory").eqNullSafe(spokenLanguageCategory)) & (col("ail.manualEntry").eqNullSafe("Yes")))
+            ~(
+                col("il.appellantInterpreterLanguageCategory").eqNullSafe(
+                    spokenLanguageCategory
+                )
+            )
+        )
+        | (
+            ~(
+                col("ail.appellantInterpreterLanguageCategory").eqNullSafe(
+                    spokenLanguageCategory
+                )
+            )
+        )
+    ) & (
+        ~(
+            (
+                col("il.appellantInterpreterLanguageCategory").eqNullSafe(
+                    spokenLanguageCategory
+                )
+            )
+            & (col("il.manualEntry").eqNullSafe("Yes"))
+        )
+        & ~(
+            (
+                col("ail.appellantInterpreterLanguageCategory").eqNullSafe(
+                    spokenLanguageCategory
+                )
+            )
+            & (col("ail.manualEntry").eqNullSafe("Yes"))
         )
     )
 
-    sign_languages_list = bronze_interpreter_languages.filter(
-        (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory)) & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
-    ).select(col("languageCode").alias("code"), col("languageLabel").alias("label")).collect()
+    sign_languages_list = (
+        bronze_interpreter_languages.filter(
+            (col("appellantInterpreterLanguageCategory") == lit(signLanguageCategory))
+            & (~(col("manualEntry").eqNullSafe(lit("Yes"))))
+        )
+        .select(col("languageCode").alias("code"), col("languageLabel").alias("label"))
+        .collect()
+    )
 
-    sign_languages_list_literal = array([
-        struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
-        for row in sign_languages_list
-    ])
+    sign_languages_list_literal = array(
+        [
+            struct(lit(row.code).alias("code"), lit(row.label).alias("label"))
+            for row in sign_languages_list
+        ]
+    )
 
     sign_language_ref_data_condition = (
         (
-            (~(col("il.appellantInterpreterLanguageCategory").eqNullSafe(signLanguageCategory)))
-            | (~(col("ail.appellantInterpreterLanguageCategory").eqNullSafe(signLanguageCategory)))
-        ) & (
-            ~((col("il.appellantInterpreterLanguageCategory").eqNullSafe(signLanguageCategory)) & (col("il.manualEntry").eqNullSafe("Yes")))
-            & ~((col("ail.appellantInterpreterLanguageCategory").eqNullSafe(signLanguageCategory)) & (col("ail.manualEntry").eqNullSafe("Yes")))
+            ~(
+                col("il.appellantInterpreterLanguageCategory").eqNullSafe(
+                    signLanguageCategory
+                )
+            )
+        )
+        | (
+            ~(
+                col("ail.appellantInterpreterLanguageCategory").eqNullSafe(
+                    signLanguageCategory
+                )
+            )
+        )
+    ) & (
+        ~(
+            (
+                col("il.appellantInterpreterLanguageCategory").eqNullSafe(
+                    signLanguageCategory
+                )
+            )
+            & (col("il.manualEntry").eqNullSafe("Yes"))
+        )
+        & ~(
+            (
+                col("ail.appellantInterpreterLanguageCategory").eqNullSafe(
+                    signLanguageCategory
+                )
+            )
+            & (col("ail.manualEntry").eqNullSafe("Yes"))
         )
     )
 
     return (
         silver_m1.alias("m1")
-            .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
-            .join(bronze_interpreter_languages.alias("il"), on=(col("m1.LanguageId") == col("il.LanguageId")), how="left")
-            .join(bronze_interpreter_languages.alias("ail"), on=((col("m3.AdditionalLanguageId") == col("ail.LanguageId")) & (~(col("m1.LanguageId").eqNullSafe(col("m3.AdditionalLanguageId"))))), how="left")
-            .withColumn("lu_appellantInterpreterLanguageCategory", array_distinct(array_compact(array(
-                col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory")
-            ))))
-            .withColumn("lu_appellantInterpreterSpokenLanguageRefData",
-                struct(
-                    when((col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory),
-                        struct(col("il.languageCode").alias("code"), col("il.languageLabel").alias("label"))
-                    ).when((col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory),
-                        struct(col("ail.languageCode").alias("code"), col("ail.languageLabel").alias("label"))
-                    ).alias("value"),
-                    spoken_languages_list_literal.alias("list_items")
-                )
-            )
-            .withColumn("lu_appellantInterpreterSignLanguageRefData",
-                struct(
-                    when((col("il.appellantInterpreterLanguageCategory") == signLanguageCategory),
-                        struct(col("il.languageCode").alias("code"), col("il.languageLabel").alias("label"))
-                    ).when((col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory),
-                        struct(col("ail.languageCode").alias("code"), col("ail.languageLabel").alias("label"))
-                    ).alias("value"),
-                    sign_languages_list_literal.alias("list_items")
-                )
-            )
-            .withColumn("lu_spokenManualEntry",
-                array_distinct(array_compact(array(
-                    when(((col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("il.manualEntry") == "Yes")),
-                        col("il.manualEntry")
-                    ),
-                    when(((col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("ail.manualEntry") == "Yes")),
-                        col("ail.manualEntry")
-                    ),
-                    when(((col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory)),
-                        lit("Yes")
-                    )
-                )))
-            )
-            .withColumn("lu_signManualEntry",
-                array_distinct(array_compact(array(
-                    when(((col("il.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("il.manualEntry") == "Yes")),
-                        col("il.manualEntry")
-                    ),
-                    when(((col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("ail.manualEntry") == "Yes")),
-                        col("ail.manualEntry")
-                    ),
-                    when(((col("il.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory)),
-                        lit("Yes")
-                    )
-                )))
-            )
-            .withColumn("lu_spokenManualEntryDescription",
-                concat_ws(", ",
-                    when(((col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("il.manualEntry") == "Yes")),
-                        col("il.manualEntryDescription")
-                    ).when(((col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory)),
-                        col("il.languageLabel")
-                    ),
-                    when(((col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("ail.manualEntry") == "Yes")),
-                        col("ail.manualEntryDescription")
-                    ).when(((col("ail.appellantInterpreterLanguageCategory") == spokenLanguageCategory) & (col("il.appellantInterpreterLanguageCategory") == spokenLanguageCategory)),
-                        col("ail.languageLabel")
+        .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
+        .join(
+            bronze_interpreter_languages.alias("il"),
+            on=(col("m1.LanguageId") == col("il.LanguageId")),
+            how="left",
+        )
+        .join(
+            bronze_interpreter_languages.alias("ail"),
+            on=(
+                (col("m3.AdditionalLanguageId") == col("ail.LanguageId"))
+                & (~(col("m1.LanguageId").eqNullSafe(col("m3.AdditionalLanguageId"))))
+            ),
+            how="left",
+        )
+        .withColumn(
+            "lu_appellantInterpreterLanguageCategory",
+            array_distinct(
+                array_compact(
+                    array(
+                        col("il.appellantInterpreterLanguageCategory"),
+                        col("ail.appellantInterpreterLanguageCategory"),
                     )
                 )
-            )
-            .withColumn("lu_signManualEntryDescription",
-                concat_ws(", ",
-                    when(((col("il.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("il.manualEntry") == "Yes")),
-                        col("il.manualEntryDescription")
-                    ).when(((col("il.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory)),
-                        col("il.languageLabel")
+            ),
+        )
+        .withColumn(
+            "lu_appellantInterpreterSpokenLanguageRefData",
+            struct(
+                when(
+                    (
+                        col("il.appellantInterpreterLanguageCategory")
+                        == spokenLanguageCategory
                     ),
-                    when(((col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("ail.manualEntry") == "Yes")),
-                        col("ail.manualEntryDescription")
-                    ).when(((col("ail.appellantInterpreterLanguageCategory") == signLanguageCategory) & (col("il.appellantInterpreterLanguageCategory") == signLanguageCategory)),
-                        col("ail.languageLabel")
-                    )
-                )
-            )
-            .withColumn("lu_appellantInterpreterSpokenLanguage",
-                when((array_contains(col("lu_appellantInterpreterLanguageCategory"), spokenLanguageCategory)),
                     struct(
-                        when(spoken_language_ref_data_condition,
-                            col("lu_appellantInterpreterSpokenLanguageRefData")
-                        ).alias("languageRefData"),
-                        col("lu_spokenManualEntry").alias("languageManualEntry"),
-                        when((array_size(col("lu_spokenManualEntry")) > 0),
-                            col("lu_spokenManualEntryDescription")
-                        ).alias("languageManualEntryDescription")
-                    )
+                        col("il.languageCode").alias("code"),
+                        col("il.languageLabel").alias("label"),
+                    ),
                 )
-            )
-            .withColumn("lu_appellantInterpreterSignLanguage",
-                when((array_contains(col("lu_appellantInterpreterLanguageCategory"), signLanguageCategory)),
+                .when(
+                    (
+                        col("ail.appellantInterpreterLanguageCategory")
+                        == spokenLanguageCategory
+                    ),
                     struct(
-                        when(sign_language_ref_data_condition,
-                            col("lu_appellantInterpreterSignLanguageRefData")
-                        ).alias("languageRefData"),
-                        col("lu_signManualEntry").alias("languageManualEntry"),
-                        when((array_size(col("lu_signManualEntry")) > 0),
-                            col("lu_signManualEntryDescription")
-                        ).alias("languageManualEntryDescription")
+                        col("ail.languageCode").alias("code"),
+                        col("ail.languageLabel").alias("label"),
+                    ),
+                )
+                .alias("value"),
+                spoken_languages_list_literal.alias("list_items"),
+            ),
+        )
+        .withColumn(
+            "lu_appellantInterpreterSignLanguageRefData",
+            struct(
+                when(
+                    (
+                        col("il.appellantInterpreterLanguageCategory")
+                        == signLanguageCategory
+                    ),
+                    struct(
+                        col("il.languageCode").alias("code"),
+                        col("il.languageLabel").alias("label"),
+                    ),
+                )
+                .when(
+                    (
+                        col("ail.appellantInterpreterLanguageCategory")
+                        == signLanguageCategory
+                    ),
+                    struct(
+                        col("ail.languageCode").alias("code"),
+                        col("ail.languageLabel").alias("label"),
+                    ),
+                )
+                .alias("value"),
+                sign_languages_list_literal.alias("list_items"),
+            ),
+        )
+        .withColumn(
+            "lu_spokenManualEntry",
+            array_distinct(
+                array_compact(
+                    array(
+                        when(
+                            (
+                                (
+                                    col("il.appellantInterpreterLanguageCategory")
+                                    == spokenLanguageCategory
+                                )
+                                & (col("il.manualEntry") == "Yes")
+                            ),
+                            col("il.manualEntry"),
+                        ),
+                        when(
+                            (
+                                (
+                                    col("ail.appellantInterpreterLanguageCategory")
+                                    == spokenLanguageCategory
+                                )
+                                & (col("ail.manualEntry") == "Yes")
+                            ),
+                            col("ail.manualEntry"),
+                        ),
+                        when(
+                            (
+                                (
+                                    col("il.appellantInterpreterLanguageCategory")
+                                    == spokenLanguageCategory
+                                )
+                                & (
+                                    col("ail.appellantInterpreterLanguageCategory")
+                                    == spokenLanguageCategory
+                                )
+                            ),
+                            lit("Yes"),
+                        ),
                     )
                 )
-            )
-            .select(
-                "CaseNo",
-                "lu_appellantInterpreterLanguageCategory",
-                "lu_appellantInterpreterSpokenLanguage",
-                "lu_appellantInterpreterSignLanguage"
-            )
+            ),
+        )
+        .withColumn(
+            "lu_signManualEntry",
+            array_distinct(
+                array_compact(
+                    array(
+                        when(
+                            (
+                                (
+                                    col("il.appellantInterpreterLanguageCategory")
+                                    == signLanguageCategory
+                                )
+                                & (col("il.manualEntry") == "Yes")
+                            ),
+                            col("il.manualEntry"),
+                        ),
+                        when(
+                            (
+                                (
+                                    col("ail.appellantInterpreterLanguageCategory")
+                                    == signLanguageCategory
+                                )
+                                & (col("ail.manualEntry") == "Yes")
+                            ),
+                            col("ail.manualEntry"),
+                        ),
+                        when(
+                            (
+                                (
+                                    col("il.appellantInterpreterLanguageCategory")
+                                    == signLanguageCategory
+                                )
+                                & (
+                                    col("ail.appellantInterpreterLanguageCategory")
+                                    == signLanguageCategory
+                                )
+                            ),
+                            lit("Yes"),
+                        ),
+                    )
+                )
+            ),
+        )
+        .withColumn(
+            "lu_spokenManualEntryDescription",
+            concat_ws(
+                ", ",
+                when(
+                    (
+                        (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                        & (col("il.manualEntry") == "Yes")
+                    ),
+                    col("il.manualEntryDescription"),
+                ).when(
+                    (
+                        (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                        & (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                    ),
+                    col("il.languageLabel"),
+                ),
+                when(
+                    (
+                        (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                        & (col("ail.manualEntry") == "Yes")
+                    ),
+                    col("ail.manualEntryDescription"),
+                ).when(
+                    (
+                        (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                        & (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == spokenLanguageCategory
+                        )
+                    ),
+                    col("ail.languageLabel"),
+                ),
+            ),
+        )
+        .withColumn(
+            "lu_signManualEntryDescription",
+            concat_ws(
+                ", ",
+                when(
+                    (
+                        (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                        & (col("il.manualEntry") == "Yes")
+                    ),
+                    col("il.manualEntryDescription"),
+                ).when(
+                    (
+                        (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                        & (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                    ),
+                    col("il.languageLabel"),
+                ),
+                when(
+                    (
+                        (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                        & (col("ail.manualEntry") == "Yes")
+                    ),
+                    col("ail.manualEntryDescription"),
+                ).when(
+                    (
+                        (
+                            col("ail.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                        & (
+                            col("il.appellantInterpreterLanguageCategory")
+                            == signLanguageCategory
+                        )
+                    ),
+                    col("ail.languageLabel"),
+                ),
+            ),
+        )
+        .withColumn(
+            "lu_appellantInterpreterSpokenLanguage",
+            when(
+                (
+                    array_contains(
+                        col("lu_appellantInterpreterLanguageCategory"),
+                        spokenLanguageCategory,
+                    )
+                ),
+                struct(
+                    when(
+                        spoken_language_ref_data_condition,
+                        col("lu_appellantInterpreterSpokenLanguageRefData"),
+                    ).alias("languageRefData"),
+                    col("lu_spokenManualEntry").alias("languageManualEntry"),
+                    when(
+                        (array_size(col("lu_spokenManualEntry")) > 0),
+                        col("lu_spokenManualEntryDescription"),
+                    ).alias("languageManualEntryDescription"),
+                ),
+            ),
+        )
+        .withColumn(
+            "lu_appellantInterpreterSignLanguage",
+            when(
+                (
+                    array_contains(
+                        col("lu_appellantInterpreterLanguageCategory"),
+                        signLanguageCategory,
+                    )
+                ),
+                struct(
+                    when(
+                        sign_language_ref_data_condition,
+                        col("lu_appellantInterpreterSignLanguageRefData"),
+                    ).alias("languageRefData"),
+                    col("lu_signManualEntry").alias("languageManualEntry"),
+                    when(
+                        (array_size(col("lu_signManualEntry")) > 0),
+                        col("lu_signManualEntryDescription"),
+                    ).alias("languageManualEntryDescription"),
+                ),
+            ),
+        )
+        .select(
+            "CaseNo",
+            "lu_appellantInterpreterLanguageCategory",
+            "lu_appellantInterpreterSpokenLanguage",
+            "lu_appellantInterpreterSignLanguage",
+        )
     )
 
 
-def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_languages):
+def flagsLabels(
+    silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_languages
+):
     df, df_audit = PP.flagsLabels(silver_m1, silver_m2, silver_c)
 
-    interpreter_languages_lookup = _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages)
+    interpreter_languages_lookup = _build_interpreter_languages_lookup(
+        silver_m1, silver_m3, bronze_interpreter_languages
+    )
 
-    def make_appellant_flag_struct(name, code, comment, sub_type_key, sub_type_value, hearing):
+    def make_appellant_flag_struct(
+        name, code, comment, sub_type_key, sub_type_value, hearing
+    ):
         return struct(
             lit(expr("uuid()")).alias("id"),
             struct(
                 lit(name).alias("name"),
-                array(struct(expr("uuid()").alias("id"), lit("Party").alias("value"))).alias("path"),
+                array(
+                    struct(expr("uuid()").alias("id"), lit("Party").alias("value"))
+                ).alias("path"),
                 lit("Active").alias("status"),
                 lit(code).alias("flagCode"),
                 lit(comment).cast("string").alias("flagComment"),
                 lit(sub_type_key).cast("string").alias("subTypeKey"),
                 lit(sub_type_value).cast("string").alias("subTypeValue"),
-                date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("dateTimeCreated"),
-                lit(hearing).alias("hearingRelevant")
-            ).alias("value")
+                date_format(current_timestamp(), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias(
+                    "dateTimeCreated"
+                ),
+                lit(hearing).alias("hearingRelevant"),
+            ).alias("value"),
         )
 
     flags_array = array(
-        make_appellant_flag_struct("Step free / wheelchair access", "RA0019", None, None, None, "Yes"),
-        make_appellant_flag_struct("Hearing loop (hearing enhancement system)", "RA0043", None, None, None, "Yes"),
-        make_appellant_flag_struct("Audio / Video Evidence", "PF0014", None, None, None, "Yes")
+        make_appellant_flag_struct(
+            "Step free / wheelchair access", "RA0019", None, None, None, "Yes"
+        ),
+        make_appellant_flag_struct(
+            "Hearing loop (hearing enhancement system)",
+            "RA0043",
+            None,
+            None,
+            None,
+            "Yes",
+        ),
+        make_appellant_flag_struct(
+            "Audio / Video Evidence", "PF0014", None, None, None, "Yes"
+        ),
     )
 
     spoken_lang_flag = when(
@@ -214,15 +517,27 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
             "PF0015",
             None,
             when(
-                array_size(col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")) == 0,
-                col("lu_appellantInterpreterSpokenLanguage.languageRefData.value.code")
+                array_size(
+                    col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")
+                )
+                == 0,
+                col("lu_appellantInterpreterSpokenLanguage.languageRefData.value.code"),
             ),
             when(
-                array_size(col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")) == 0,
-                col("lu_appellantInterpreterSpokenLanguage.languageRefData.value.label")
-            ).otherwise(col("lu_appellantInterpreterSpokenLanguage.languageManualEntryDescription")),
-            "Yes"
-        )
+                array_size(
+                    col("lu_appellantInterpreterSpokenLanguage.languageManualEntry")
+                )
+                == 0,
+                col(
+                    "lu_appellantInterpreterSpokenLanguage.languageRefData.value.label"
+                ),
+            ).otherwise(
+                col(
+                    "lu_appellantInterpreterSpokenLanguage.languageManualEntryDescription"
+                )
+            ),
+            "Yes",
+        ),
     )
 
     sign_lang_flag = when(
@@ -232,15 +547,25 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
             "RA0042",
             None,
             when(
-                array_size(col("lu_appellantInterpreterSignLanguage.languageManualEntry")) == 0,
-                col("lu_appellantInterpreterSignLanguage.languageRefData.value.code")
+                array_size(
+                    col("lu_appellantInterpreterSignLanguage.languageManualEntry")
+                )
+                == 0,
+                col("lu_appellantInterpreterSignLanguage.languageRefData.value.code"),
             ),
             when(
-                array_size(col("lu_appellantInterpreterSignLanguage.languageManualEntry")) == 0,
-                col("lu_appellantInterpreterSignLanguage.languageRefData.value.label")
-            ).otherwise(col("lu_appellantInterpreterSignLanguage.languageManualEntryDescription")),
-            "Yes"
-        )
+                array_size(
+                    col("lu_appellantInterpreterSignLanguage.languageManualEntry")
+                )
+                == 0,
+                col("lu_appellantInterpreterSignLanguage.languageRefData.value.label"),
+            ).otherwise(
+                col(
+                    "lu_appellantInterpreterSignLanguage.languageManualEntryDescription"
+                )
+            ),
+            "Yes",
+        ),
     )
 
     interpreter_flags_array = array_compact(array(spoken_lang_flag, sign_lang_flag))
@@ -251,232 +576,347 @@ def flagsLabels(silver_m1, silver_m2, silver_c, silver_m3, bronze_interpreter_la
             .select(
                 "CaseNo",
                 col("Appellant_Forenames").alias("m1_AppellantForenames"),
-                col("Appellant_Name").alias("m1_AppellantName")
+                col("Appellant_Name").alias("m1_AppellantName"),
             )
             .dropDuplicates(["CaseNo"]),
             on="CaseNo",
-            how="left"
+            how="left",
         )
-        .join(
-            interpreter_languages_lookup,
-            on="CaseNo",
-            how="left"
-        )
+        .join(interpreter_languages_lookup, on="CaseNo", how="left")
         .withColumn(
             "appellantLevelFlags",
             when(
                 col("appellantLevelFlags").isNotNull(),
-                col("appellantLevelFlags").withField("details", concat(
-                    transform(  # Align existing flags struct with new struct.
-                        col("appellantLevelFlags.details"),
-                        lambda x: struct(
-                            x["id"].alias("id"),
-                            struct(
-                                x["value"]["name"].alias("name"),
-                                x["value"]["path"].alias("path"),
-                                x["value"]["status"].alias("status"),
-                                x["value"]["flagCode"].alias("flagCode"),
-                                x["value"]["flagComment"].alias("flagComment"),
-                                lit(None).cast("string").alias("subTypeKey"),
-                                lit(None).cast("string").alias("subTypeValue"),
-                                x["value"]["dateTimeCreated"].alias("dateTimeCreated"),
-                                x["value"]["hearingRelevant"].alias("hearingRelevant")
-                            ).alias("value")
-                        )
+                col("appellantLevelFlags").withField(
+                    "details",
+                    concat(
+                        transform(  # Align existing flags struct with new struct.
+                            col("appellantLevelFlags.details"),
+                            lambda x: struct(
+                                x["id"].alias("id"),
+                                struct(
+                                    x["value"]["name"].alias("name"),
+                                    x["value"]["path"].alias("path"),
+                                    x["value"]["status"].alias("status"),
+                                    x["value"]["flagCode"].alias("flagCode"),
+                                    x["value"]["flagComment"].alias("flagComment"),
+                                    lit(None).cast("string").alias("subTypeKey"),
+                                    lit(None).cast("string").alias("subTypeValue"),
+                                    x["value"]["dateTimeCreated"].alias(
+                                        "dateTimeCreated"
+                                    ),
+                                    x["value"]["hearingRelevant"].alias(
+                                        "hearingRelevant"
+                                    ),
+                                ).alias("value"),
+                            ),
+                        ),
+                        flags_array,
+                        interpreter_flags_array,
                     ),
-                    flags_array,
-                    interpreter_flags_array
-                ))
+                ),
             ).otherwise(
                 struct(
                     concat(flags_array, interpreter_flags_array).alias("details"),
-                    concat_ws(' ', col("m1_AppellantForenames"), col("m1_AppellantName")).alias("partyName"),
-                    lit("Appellant").alias("roleOnCase")
+                    concat_ws(
+                        " ", col("m1_AppellantForenames"), col("m1_AppellantName")
+                    ).alias("partyName"),
+                    lit("Appellant").alias("roleOnCase"),
                 )
-            )
+            ),
         )
         .select(*df.columns)
     )
 
     df_audit = (
         df_audit.alias("audit")
-            .join(df.alias("content"), on="CaseNo", how="left")
-            .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
-            .join(
-                silver_m2.filter(col("Relationship").isNull())
-                .select(
-                    "CaseNo",
-                    col("Appellant_Forenames").alias("m2_AppellantForenames"),
-                    col("Appellant_Name").alias("m2_AppellantName")
-                )
-                .dropDuplicates(["CaseNo"])
-                .alias("m2_audit"),
-                on="CaseNo",
-                how="left"
-            )
+        .join(df.alias("content"), on="CaseNo", how="left")
+        .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
+        .join(
+            silver_m2.filter(col("Relationship").isNull())
             .select(
-                "audit.*",
-                array(struct(
+                "CaseNo",
+                col("Appellant_Forenames").alias("m2_AppellantForenames"),
+                col("Appellant_Name").alias("m2_AppellantName"),
+            )
+            .dropDuplicates(["CaseNo"])
+            .alias("m2_audit"),
+            on="CaseNo",
+            how="left",
+        )
+        .select(
+            "audit.*",
+            array(
+                struct(
                     lit("lu_appellantInterpreterSpokenLanguage"),
                     lit("lu_appellantInterpreterSignLanguage"),
                     lit("Appellant_Forenames"),
-                    lit("Appellant_Name")
-                )).alias("appellantLevelFlags_listing_inputFields"),
-                array(struct(
+                    lit("Appellant_Name"),
+                )
+            ).alias("appellantLevelFlags_listing_inputFields"),
+            array(
+                struct(
                     col("ilu.lu_appellantInterpreterSpokenLanguage"),
                     col("ilu.lu_appellantInterpreterSignLanguage"),
                     col("m2_audit.m2_AppellantForenames"),
-                    col("m2_audit.m2_AppellantName")
-                )).alias("appellantLevelFlags_listing_inputValues"),
-                col("content.appellantLevelFlags").alias("appellantLevelFlags_listing_value"),
-                lit("Yes").alias("appellantLevelFlags_listing_Transformed")
-            )
-            .withColumn("appellantLevelFlags_inputFields", col("appellantLevelFlags_listing_inputFields"))
-            .withColumn("appellantLevelFlags_inputValues", col("appellantLevelFlags_listing_inputValues"))
-            .withColumn("appellantLevelFlags", col("appellantLevelFlags_listing_value"))
-            .withColumn("appellantLevelFlags_Transformation", col("appellantLevelFlags_listing_Transformed"))
-            .drop("appellantLevelFlags_listing_inputFields", "appellantLevelFlags_listing_inputValues", "appellantLevelFlags_listing_value", "appellantLevelFlags_listing_Transformed")
+                    col("m2_audit.m2_AppellantName"),
+                )
+            ).alias("appellantLevelFlags_listing_inputValues"),
+            col("content.appellantLevelFlags").alias(
+                "appellantLevelFlags_listing_value"
+            ),
+            lit("Yes").alias("appellantLevelFlags_listing_Transformed"),
+        )
+        .withColumn(
+            "appellantLevelFlags_inputFields",
+            col("appellantLevelFlags_listing_inputFields"),
+        )
+        .withColumn(
+            "appellantLevelFlags_inputValues",
+            col("appellantLevelFlags_listing_inputValues"),
+        )
+        .withColumn("appellantLevelFlags", col("appellantLevelFlags_listing_value"))
+        .withColumn(
+            "appellantLevelFlags_Transformation",
+            col("appellantLevelFlags_listing_Transformed"),
+        )
+        .drop(
+            "appellantLevelFlags_listing_inputFields",
+            "appellantLevelFlags_listing_inputValues",
+            "appellantLevelFlags_listing_value",
+            "appellantLevelFlags_listing_Transformed",
+        )
     )
 
     return df, df_audit
 
 
-def hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages):
+def hearingRequirements(
+    silver_m1, silver_m2, silver_m3, silver_c, bronze_interpreter_languages
+):
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
-    silver_m3_filtered = silver_m3.filter(
-        (
+    silver_m3_filtered = (
+        silver_m3.filter(
             (
-                (col("CaseStatus").isin(37, 38)) & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
-            ) | (
-                (col("CaseStatus") == 26) & (col("Outcome").isin(40, 52))
+                (col("CaseStatus").isin(37, 38))
+                & (col("Outcome").isin(0, 27, 37, 39, 40, 50))
             )
+            | ((col("CaseStatus") == 26) & (col("Outcome").isin(40, 52)))
         )
-    ).withColumn("row_num", row_number().over(window_spec)).filter(col("row_num").eqNullSafe(1))
+        .withColumn("row_num", row_number().over(window_spec))
+        .filter(col("row_num").eqNullSafe(1))
+    )
 
-    silver_c_grouped = silver_c.groupBy("CaseNo").agg(collect_list(col("CategoryId")).alias("CategoryIdList"))
+    silver_c_grouped = silver_c.groupBy("CaseNo").agg(
+        collect_list(col("CategoryId")).alias("CategoryIdList")
+    )
 
-    interpreter_languages_lookup = _build_interpreter_languages_lookup(silver_m1, silver_m3, bronze_interpreter_languages)
+    interpreter_languages_lookup = _build_interpreter_languages_lookup(
+        silver_m1, silver_m3, bronze_interpreter_languages
+    )
 
     silver_m2_derived_grouped = (
         PP.derive_country_silver_m2(silver_m2)
         .join(silver_c_grouped, on="CaseNo", how="left")
-        .withColumn("dv_appellantIsInUk",
+        .withColumn(
+            "dv_appellantIsInUk",
             when(expr("array_contains(CategoryIdList, 37)"), lit(True))
             .when(expr("array_contains(CategoryIdList, 38)"), lit(False))
-            .otherwise(col("dv_addressInUk"))
+            .otherwise(col("dv_addressInUk")),
         )
     )
 
-    hearingReqs = (silver_m2_derived_grouped.alias("m2").join(silver_m1.alias("m1"), on="CaseNo", how="left"))
+    hearingReqs = silver_m2_derived_grouped.alias("m2").join(
+        silver_m1.alias("m1"), on="CaseNo", how="left"
+    )
 
-    is_detained_or_in_uk = col("m1_m2_c.Detained").isin(1, 2, 4) | col("m1_m2_c.dv_appellantIsInUk")
+    is_detained_or_in_uk = col("m1_m2_c.Detained").isin(1, 2, 4) | col(
+        "m1_m2_c.dv_appellantIsInUk"
+    )
     name_condition = col("Sponsor_Name").isNotNull()
-
 
     df_hearingRequirements = (
         hearingReqs.alias("m1_m2_c")
-            .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
-            .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
-            .withColumn("isAppellantAttendingTheHearing", lit("Yes"))
-            .withColumn("isAppellantGivingOralEvidence", lit("Yes"))
-            .withColumn("isWitnessesAttending", lit("No"))
-            .withColumn("isEvidenceFromOutsideUkOoc", when(~is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"))
-            .withColumn("isEvidenceFromOutsideUkInCountry", when(is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"))
-            .withColumn("isInterpreterServicesNeeded", (
+        .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
+        .join(interpreter_languages_lookup.alias("ilu"), on="CaseNo", how="left")
+        .withColumn("isAppellantAttendingTheHearing", lit("Yes"))
+        .withColumn("isAppellantGivingOralEvidence", lit("Yes"))
+        .withColumn("isWitnessesAttending", lit("No"))
+        .withColumn(
+            "isEvidenceFromOutsideUkOoc",
+            when(~is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"),
+        )
+        .withColumn(
+            "isEvidenceFromOutsideUkInCountry",
+            when(is_detained_or_in_uk & name_condition, lit("Yes")).otherwise("No"),
+        )
+        .withColumn(
+            "isInterpreterServicesNeeded",
+            (
                 when((col("m1_m2_c.Interpreter") == 1), lit("Yes"))
                 .when((col("m1_m2_c.Interpreter") == 2), lit("No"))
                 .otherwise(lit("No"))
-            ))
-            .withColumn("appellantInterpreterLanguageCategory", (
-                when((col("m1_m2_c.Interpreter") == 1),
-                    col("ilu.lu_appellantInterpreterLanguageCategory")
+            ),
+        )
+        .withColumn(
+            "appellantInterpreterLanguageCategory",
+            (
+                when(
+                    (col("m1_m2_c.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterLanguageCategory"),
                 )
-            ))
-            .withColumn("appellantInterpreterSpokenLanguage", (
-                when((col("m1_m2_c.Interpreter") == 1),
-                    col("ilu.lu_appellantInterpreterSpokenLanguage")
+            ),
+        )
+        .withColumn(
+            "appellantInterpreterSpokenLanguage",
+            (
+                when(
+                    (col("m1_m2_c.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterSpokenLanguage"),
                 )
-            ))
-            .withColumn("appellantInterpreterSignLanguage", (
-                when((col("m1_m2_c.Interpreter") == 1),
-                    col("ilu.lu_appellantInterpreterSignLanguage")
+            ),
+        )
+        .withColumn(
+            "appellantInterpreterSignLanguage",
+            (
+                when(
+                    (col("m1_m2_c.Interpreter") == 1),
+                    col("ilu.lu_appellantInterpreterSignLanguage"),
                 )
-            ))
-            .withColumn("isHearingRoomNeeded", lit("Yes"))
-            .withColumn("isHearingLoopNeeded", lit("Yes"))
-            .withColumn("remoteVideoCall", lit("Yes"))
-            .withColumn("remoteVideoCallDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
-            .withColumn("physicalOrMentalHealthIssues", lit("Yes"))
-            .withColumn("physicalOrMentalHealthIssuesDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
-            .withColumn("pastExperiences", lit("Yes"))
-            .withColumn("pastExperiencesDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
-            .withColumn("multimediaEvidence", lit("Yes"))
-            .withColumn("multimediaEvidenceDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
-            .withColumn("singleSexCourt", (
+            ),
+        )
+        .withColumn("isHearingRoomNeeded", lit("Yes"))
+        .withColumn("isHearingLoopNeeded", lit("Yes"))
+        .withColumn("remoteVideoCall", lit("Yes"))
+        .withColumn(
+            "remoteVideoCallDescription",
+            lit(
+                "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
+            ),
+        )
+        .withColumn("physicalOrMentalHealthIssues", lit("Yes"))
+        .withColumn(
+            "physicalOrMentalHealthIssuesDescription",
+            lit(
+                "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
+            ),
+        )
+        .withColumn("pastExperiences", lit("Yes"))
+        .withColumn(
+            "pastExperiencesDescription",
+            lit(
+                "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
+            ),
+        )
+        .withColumn("multimediaEvidence", lit("Yes"))
+        .withColumn(
+            "multimediaEvidenceDescription",
+            lit(
+                "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
+            ),
+        )
+        .withColumn(
+            "singleSexCourt",
+            (
                 when((col("m1_m2_c.CourtPreference") == 0), lit("No"))
-                .when(((col("m1_m2_c.courtPreference") == 1) | (col("m1_m2_c.courtPreference") == 2)), lit("Yes"))
+                .when(
+                    (
+                        (col("m1_m2_c.courtPreference") == 1)
+                        | (col("m1_m2_c.courtPreference") == 2)
+                    ),
+                    lit("Yes"),
+                )
                 .otherwise(lit("No"))
-            ))
-            .withColumn("singleSexCourtType", (
+            ),
+        )
+        .withColumn(
+            "singleSexCourtType",
+            (
                 when((col("m1_m2_c.CourtPreference") == 1), lit("All male"))
                 .when((col("m1_m2_c.courtPreference") == 2), lit("All female"))
                 .otherwise(lit(None))
-            ))
-            .withColumn("singleSexCourtTypeDescription", (
-                when(((col("m1_m2_c.courtPreference") == 1) | (col("m1_m2_c.courtPreference") == 2)), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."))
-                .otherwise(lit(None))
-            ))
-            .withColumn("inCameraCourt", (
+            ),
+        )
+        .withColumn(
+            "singleSexCourtTypeDescription",
+            (
+                when(
+                    (
+                        (col("m1_m2_c.courtPreference") == 1)
+                        | (col("m1_m2_c.courtPreference") == 2)
+                    ),
+                    lit(
+                        "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the single sex court."
+                    ),
+                ).otherwise(lit(None))
+            ),
+        )
+        .withColumn(
+            "inCameraCourt",
+            (
                 when((col("m1_m2_c.InCamera") == True), lit("Yes"))
                 .when((col("m1_m2_c.InCamera") == False), lit("No"))
                 .otherwise(lit("No"))
-            ))
-            .withColumn("inCameraCourtDescription", (
-                when((col("m1_m2_c.InCamera") == True), lit("This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."))
-                .otherwise(lit(None))
-            ))
-            .withColumn("additionalRequests", lit("Yes"))
-            .withColumn("additionalRequestsDescription", lit("This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."))
-            .withColumn("datesToAvoidYesNo", lit("No"))
-            .select(
-                "CaseNo",
-                "isAppellantAttendingTheHearing",
-                "isAppellantGivingOralEvidence",
-                "isWitnessesAttending",
-                # col("m1_m2_c.Detained"),
-                # col("m1_m2_c.CategoryIdList"),
-                # col("m1_m2_c.dv_appellantIsInUk"),
-                # col("m1_m2_c.Sponsor_Name"),
-                # col("AppellantCountryId"),
-                # col("lu_countryGovUkOocAdminJ"),
-                # col("ukPostcodeAppellant"),
-                # col("appellantFullAddress"),
-                "isEvidenceFromOutsideUkOoc",
-                "isEvidenceFromOutsideUkInCountry",
-                "isInterpreterServicesNeeded",
-                "appellantInterpreterLanguageCategory",
-                "appellantInterpreterSpokenLanguage",
-                "appellantInterpreterSignLanguage",
-                "isHearingRoomNeeded",
-                "isHearingLoopNeeded",
-                "remoteVideoCall",
-                "remoteVideoCallDescription",
-                "physicalOrMentalHealthIssues",
-                "physicalOrMentalHealthIssuesDescription",
-                "pastExperiences",
-                "pastExperiencesDescription",
-                "multimediaEvidence",
-                "multimediaEvidenceDescription",
-                "singleSexCourt",
-                "singleSexCourtType",
-                "singleSexCourtTypeDescription",
-                "inCameraCourt",
-                "inCameraCourtDescription",
-                "additionalRequests",
-                "additionalRequestsDescription",
-                "datesToAvoidYesNo"
-            )
+            ),
+        )
+        .withColumn(
+            "inCameraCourtDescription",
+            (
+                when(
+                    (col("m1_m2_c.InCamera") == True),
+                    lit(
+                        "This is an ARIA migrated case. Please refer to the hearing requirements in the appeal form for further details on the appellants need for an in camera court."
+                    ),
+                ).otherwise(lit(None))
+            ),
+        )
+        .withColumn("additionalRequests", lit("Yes"))
+        .withColumn(
+            "additionalRequestsDescription",
+            lit(
+                "This is an ARIA Migrated Case. Please refer to the hearing requirements in the appeal form."
+            ),
+        )
+        .withColumn("datesToAvoidYesNo", lit("No"))
+        .select(
+            "CaseNo",
+            "isAppellantAttendingTheHearing",
+            "isAppellantGivingOralEvidence",
+            "isWitnessesAttending",
+            # col("m1_m2_c.Detained"),
+            # col("m1_m2_c.CategoryIdList"),
+            # col("m1_m2_c.dv_appellantIsInUk"),
+            # col("m1_m2_c.Sponsor_Name"),
+            # col("AppellantCountryId"),
+            # col("lu_countryGovUkOocAdminJ"),
+            # col("ukPostcodeAppellant"),
+            # col("appellantFullAddress"),
+            "isEvidenceFromOutsideUkOoc",
+            "isEvidenceFromOutsideUkInCountry",
+            "isInterpreterServicesNeeded",
+            "appellantInterpreterLanguageCategory",
+            "appellantInterpreterSpokenLanguage",
+            "appellantInterpreterSignLanguage",
+            "isHearingRoomNeeded",
+            "isHearingLoopNeeded",
+            "remoteVideoCall",
+            "remoteVideoCallDescription",
+            "physicalOrMentalHealthIssues",
+            "physicalOrMentalHealthIssuesDescription",
+            "pastExperiences",
+            "pastExperiencesDescription",
+            "multimediaEvidence",
+            "multimediaEvidenceDescription",
+            "singleSexCourt",
+            "singleSexCourtType",
+            "singleSexCourtTypeDescription",
+            "inCameraCourt",
+            "inCameraCourtDescription",
+            "additionalRequests",
+            "additionalRequestsDescription",
+            "datesToAvoidYesNo",
+        )
     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
@@ -484,194 +924,445 @@ def hearingRequirements(silver_m1, silver_m2, silver_m3, silver_c, bronze_interp
 
     df_audit_hearingRequirements = (
         df_hearingRequirements.alias("hr")
-            .join(silver_m1.alias("m1"), on="CaseNo", how="left")
-            .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
-            .join(silver_c_grouped.alias("c"), on="CaseNo", how="left")
-            .join(bronze_interpreter_languages.alias("il"), on=(col("m1.LanguageId") == col("il.LanguageId")), how="left")
-            .join(bronze_interpreter_languages.alias("ail"), on=(col("m3.AdditionalLanguageId") == col("ail.LanguageId")), how="left")
-            .select(
-                "hr.CaseNo",
-                # isAppellantAttendingTheHearing
-                array(struct(*common_inputFields)).alias("isAppellantAttendingTheHearing_inputFields"),
-                array(struct(*common_inputValues)).alias("isAppellantAttendingTheHearing_inputValues"),
-                col("hr.isAppellantAttendingTheHearing").alias("isAppellantAttendingTheHearing_value"),
-                lit("Yes").alias("isAppellantAttendingTheHearing_Transformed"),
-                # isAppellantGivingOralEvidence
-                array(struct(*common_inputFields)).alias("isAppellantGivingOralEvidence_inputFields"),
-                array(struct(*common_inputValues)).alias("isAppellantGivingOralEvidence_inputValues"),
-                col("hr.isAppellantGivingOralEvidence").alias("isAppellantGivingOralEvidence_value"),
-                lit("Yes").alias("isAppellantGivingOralEvidence_Transformed"),
-                # isWitnessesAttending
-                array(struct(*common_inputFields)).alias("isWitnessesAttending_inputFields"),
-                array(struct(*common_inputValues)).alias("isWitnessesAttending_inputValues"),
-                col("hr.isWitnessesAttending").alias("isWitnessesAttending_value"),
-                lit("Yes").alias("isWitnessesAttending_Transformed"),
-                # isEvidenceFromOutsideUkOoc
-                array(struct(*common_inputFields, lit("Sponsor_Name"), lit("CategoryIdList"))).alias("isEvidenceFromOutsideUkOoc_inputFields"),
-                array(struct(*common_inputValues, col("m1.Sponsor_Name"), col("CategoryIdList"))).alias("isEvidenceFromOutsideUkOoc_inputValues"),
-                col("hr.isEvidenceFromOutsideUkOoc").alias("isEvidenceFromOutsideUkOoc_value"),
-                lit("Yes").alias("isEvidenceFromOutsideUkOoc_Transformed"),
-                # isEvidenceFromOutsideUkInCountry
-                array(struct(*common_inputFields, lit("Sponsor_Name"), lit("CategoryIdList"))).alias("isEvidenceFromOutsideUkInCountry_inputFields"),
-                array(struct(*common_inputValues, col("m1.Sponsor_Name"), col("CategoryIdList"))).alias("isEvidenceFromOutsideUkInCountry_inputValues"),
-                col("hr.isEvidenceFromOutsideUkInCountry").alias("isEvidenceFromOutsideUkInCountry_value"),
-                lit("Yes").alias("isEvidenceFromOutsideUkInCountry_Transformed"),
-                # isInterpreterServicesNeeded
-                array(struct(*common_inputFields, lit("Interpreter"))).alias("isInterpreterServicesNeeded_inputFields"),
-                array(struct(*common_inputValues, col("m1.Interpreter"))).alias("isInterpreterServicesNeeded_inputValues"),
-                col("hr.isInterpreterServicesNeeded").alias("isInterpreterServicesNeeded_value"),
-                lit("Yes").alias("isInterpreterServicesNeeded_Transformed"),
-                # appellantInterpreterLanguageCategory
-                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputFields"),
-                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"))).alias("appellantInterpreterLanguageCategory_inputValues"),
-                col("hr.appellantInterpreterLanguageCategory").alias("appellantInterpreterLanguageCategory_value"),
-                lit("Yes").alias("appellantInterpreterLanguageCategory_Transformed"),
-                # appellantInterpreterSpokenLanguage
-                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputFields"),
-                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSpokenLanguage_inputValues"),
-                col("hr.appellantInterpreterSpokenLanguage").alias("appellantInterpreterSpokenLanguage_value"),
-                lit("Yes").alias("appellantInterpreterSpokenLanguage_Transformed"),
-                # appellantInterpreterSignLanguage
-                array(struct(*common_inputFields, lit("Interpreter"), lit("LanguageId"), lit("AdditionalLanguageId"), lit("LanguageCategory"), lit("AdditionalLanguageCategory"), lit("LanguageCode"), lit("AdditionalLanguageCode"), lit("LanguageLabel"), lit("AdditionalLanguageLabel"), lit("ManualEntry"), lit("AdditionalManualEntry"), lit("ManualEntryDescription"), lit("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputFields"),
-                array(struct(*common_inputValues, col("m1.Interpreter"), col("m1.LanguageId"), col("m3.AdditionalLanguageId"), col("il.appellantInterpreterLanguageCategory"), col("ail.appellantInterpreterLanguageCategory").alias("additionalAppellantInterpreterLanguageCategory"), col("il.languageCode"), col("ail.languageCode").alias("AdditionalLanguageCode"), col("il.languageLabel"), col("ail.languageLabel").alias("AdditionalLanguageLabel"), col("il.manualEntry"), col("ail.manualEntry").alias("AdditionalManualEntry"), col("il.manualEntryDescription"), col("ail.manualEntryDescription").alias("AdditionalManualEntryDescription"))).alias("appellantInterpreterSignLanguage_inputValues"),
-                col("hr.appellantInterpreterSignLanguage").alias("appellantInterpreterSignLanguage_value"),
-                lit("Yes").alias("appellantInterpreterSignLanguage_Transformed"),
-                # isHearingRoomNeeded
-                array(struct(*common_inputFields)).alias("isHearingRoomNeeded_inputFields"),
-                array(struct(*common_inputValues)).alias("isHearingRoomNeeded_inputValues"),
-                col("hr.isHearingRoomNeeded").alias("isHearingRoomNeeded_value"),
-                lit("Yes").alias("isHearingRoomNeeded_Transformed"),
-                # isHearingLoopNeeded
-                array(struct(*common_inputFields)).alias("isHearingLoopNeeded_inputFields"),
-                array(struct(*common_inputValues)).alias("isHearingLoopNeeded_inputValues"),
-                col("hr.isHearingLoopNeeded").alias("isHearingLoopNeeded_value"),
-                lit("Yes").alias("isHearingLoopNeeded_Transformed"),
-                # remoteVideoCall
-                array(struct(*common_inputFields)).alias("remoteVideoCall_inputFields"),
-                array(struct(*common_inputValues)).alias("remoteVideoCall_inputValues"),
-                col("hr.remoteVideoCall").alias("remoteVideoCall_value"),
-                lit("Yes").alias("remoteVideoCall_Transformed"),
-                # remoteVideoCallDescription
-                array(struct(*common_inputFields)).alias("remoteVideoCallDescription_inputFields"),
-                array(struct(*common_inputValues)).alias("remoteVideoCallDescription_inputValues"),
-                col("hr.remoteVideoCallDescription").alias("remoteVideoCallDescription_value"),
-                lit("Yes").alias("remoteVideoCallDescription_Transformed"),
-                # physicalOrMentalHealthIssues
-                array(struct(*common_inputFields)).alias("physicalOrMentalHealthIssues_inputFields"),
-                array(struct(*common_inputValues)).alias("physicalOrMentalHealthIssues_inputValues"),
-                col("hr.physicalOrMentalHealthIssues").alias("physicalOrMentalHealthIssues_value"),
-                lit("Yes").alias("physicalOrMentalHealthIssues_Transformed"),
-                # physicalOrMentalHealthIssuesDescription
-                array(struct(*common_inputFields)).alias("physicalOrMentalHealthIssuesDescription_inputFields"),
-                array(struct(*common_inputValues)).alias("physicalOrMentalHealthIssuesDescription_inputValues"),
-                col("hr.physicalOrMentalHealthIssuesDescription").alias("physicalOrMentalHealthIssuesDescription_value"),
-                lit("Yes").alias("physicalOrMentalHealthIssuesDescription_Transformed"),
-                # pastExperiences
-                array(struct(*common_inputFields)).alias("pastExperiences_inputFields"),
-                array(struct(*common_inputValues)).alias("pastExperiences_inputValues"),
-                col("hr.pastExperiences").alias("pastExperiences_value"),
-                lit("Yes").alias("pastExperiences_Transformed"),
-                # pastExperiencesDescription
-                array(struct(*common_inputFields)).alias("pastExperiencesDescription_inputFields"),
-                array(struct(*common_inputValues)).alias("pastExperiencesDescription_inputValues"),
-                col("hr.pastExperiencesDescription").alias("pastExperiencesDescription_value"),
-                lit("Yes").alias("pastExperiencesDescription_Transformed"),
-                # multimediaEvidence
-                array(struct(*common_inputFields)).alias("multimediaEvidence_inputFields"),
-                array(struct(*common_inputValues)).alias("multimediaEvidence_inputValues"),
-                col("hr.multimediaEvidence").alias("multimediaEvidence_value"),
-                lit("Yes").alias("multimediaEvidence_Transformed"),
-                # multimediaEvidenceDescription
-                array(struct(*common_inputFields)).alias("multimediaEvidenceDescription_inputFields"),
-                array(struct(*common_inputValues)).alias("multimediaEvidenceDescription_inputValues"),
-                col("hr.multimediaEvidenceDescription").alias("multimediaEvidenceDescription_value"),
-                lit("Yes").alias("multimediaEvidenceDescription_Transformed"),
-                # singleSexCourt
-                array(struct(*common_inputFields, lit("CourtPreference"))).alias("singleSexCourt_inputFields"),
-                array(struct(*common_inputValues, col("CourtPreference"))).alias("singleSexCourt_inputValues"),
-                col("hr.singleSexCourt").alias("singleSexCourt_value"),
-                lit("Yes").alias("singleSexCourt_Transformed"),
-                # singleSexCourtType
-                array(struct(*common_inputFields, lit("CourtPreference"))).alias("singleSexCourtType_inputFields"),
-                array(struct(*common_inputValues, col("CourtPreference"))).alias("singleSexCourtType_inputValues"),
-                col("hr.singleSexCourtType").alias("singleSexCourtType_value"),
-                lit("Yes").alias("singleSexCourtType_Transformed"),
-                # singleSexCourtTypeDescription
-                array(struct(*common_inputFields, lit("CourtPreference"))).alias("singleSexCourtTypeDescription_inputFields"),
-                array(struct(*common_inputValues, col("CourtPreference"))).alias("singleSexCourtTypeDescription_inputValues"),
-                col("hr.singleSexCourtTypeDescription").alias("singleSexCourtTypeDescription_value"),
-                lit("Yes").alias("singleSexCourtTypeDescription_Transformed"),
-                # inCameraCourt
-                array(struct(*common_inputFields, lit("InCamera"))).alias("inCameraCourt_inputFields"),
-                array(struct(*common_inputValues, col("InCamera"))).alias("inCameraCourt_inputValues"),
-                col("hr.inCameraCourt").alias("inCameraCourt_value"),
-                lit("Yes").alias("inCameraCourt_Transformed"),
-                # inCameraCourtDescription
-                array(struct(*common_inputFields, lit("InCamera"))).alias("inCameraCourtDescription_inputFields"),
-                array(struct(*common_inputValues, col("InCamera"))).alias("inCameraCourtDescription_inputValues"),
-                col("hr.inCameraCourtDescription").alias("inCameraCourtDescription_value"),
-                lit("Yes").alias("inCameraCourtDescription_Transformed"),
-                # additionalRequests
-                array(struct(*common_inputFields)).alias("additionalRequests_inputFields"),
-                array(struct(*common_inputValues)).alias("additionalRequests_inputValues"),
-                col("hr.additionalRequests").alias("additionalRequests_value"),
-                lit("Yes").alias("additionalRequests_Transformed"),
-                # additionalRequestsDescription
-                array(struct(*common_inputFields)).alias("additionalRequestsDescription_inputFields"),
-                array(struct(*common_inputValues)).alias("additionalRequestsDescription_inputValues"),
-                col("hr.additionalRequestsDescription").alias("additionalRequestsDescription_value"),
-                lit("Yes").alias("additionalRequestsDescription_Transformed"),
-                # datesToAvoidYesNo
-                array(struct(*common_inputFields)).alias("datesToAvoidYesNo_inputFields"),
-                array(struct(*common_inputValues)).alias("datesToAvoidYesNo_inputValues"),
-                col("hr.datesToAvoidYesNo").alias("datesToAvoidYesNo_value"),
-                lit("Yes").alias("datesToAvoidYesNo_Transformed")
-            )
+        .join(silver_m1.alias("m1"), on="CaseNo", how="left")
+        .join(silver_m3_filtered.alias("m3"), on="CaseNo", how="left")
+        .join(silver_c_grouped.alias("c"), on="CaseNo", how="left")
+        .join(
+            bronze_interpreter_languages.alias("il"),
+            on=(col("m1.LanguageId") == col("il.LanguageId")),
+            how="left",
+        )
+        .join(
+            bronze_interpreter_languages.alias("ail"),
+            on=(col("m3.AdditionalLanguageId") == col("ail.LanguageId")),
+            how="left",
+        )
+        .select(
+            "hr.CaseNo",
+            # isAppellantAttendingTheHearing
+            array(struct(*common_inputFields)).alias(
+                "isAppellantAttendingTheHearing_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "isAppellantAttendingTheHearing_inputValues"
+            ),
+            col("hr.isAppellantAttendingTheHearing").alias(
+                "isAppellantAttendingTheHearing_value"
+            ),
+            lit("Yes").alias("isAppellantAttendingTheHearing_Transformed"),
+            # isAppellantGivingOralEvidence
+            array(struct(*common_inputFields)).alias(
+                "isAppellantGivingOralEvidence_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "isAppellantGivingOralEvidence_inputValues"
+            ),
+            col("hr.isAppellantGivingOralEvidence").alias(
+                "isAppellantGivingOralEvidence_value"
+            ),
+            lit("Yes").alias("isAppellantGivingOralEvidence_Transformed"),
+            # isWitnessesAttending
+            array(struct(*common_inputFields)).alias(
+                "isWitnessesAttending_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "isWitnessesAttending_inputValues"
+            ),
+            col("hr.isWitnessesAttending").alias("isWitnessesAttending_value"),
+            lit("Yes").alias("isWitnessesAttending_Transformed"),
+            # isEvidenceFromOutsideUkOoc
+            array(
+                struct(*common_inputFields, lit("Sponsor_Name"), lit("CategoryIdList"))
+            ).alias("isEvidenceFromOutsideUkOoc_inputFields"),
+            array(
+                struct(
+                    *common_inputValues, col("m1.Sponsor_Name"), col("CategoryIdList")
+                )
+            ).alias("isEvidenceFromOutsideUkOoc_inputValues"),
+            col("hr.isEvidenceFromOutsideUkOoc").alias(
+                "isEvidenceFromOutsideUkOoc_value"
+            ),
+            lit("Yes").alias("isEvidenceFromOutsideUkOoc_Transformed"),
+            # isEvidenceFromOutsideUkInCountry
+            array(
+                struct(*common_inputFields, lit("Sponsor_Name"), lit("CategoryIdList"))
+            ).alias("isEvidenceFromOutsideUkInCountry_inputFields"),
+            array(
+                struct(
+                    *common_inputValues, col("m1.Sponsor_Name"), col("CategoryIdList")
+                )
+            ).alias("isEvidenceFromOutsideUkInCountry_inputValues"),
+            col("hr.isEvidenceFromOutsideUkInCountry").alias(
+                "isEvidenceFromOutsideUkInCountry_value"
+            ),
+            lit("Yes").alias("isEvidenceFromOutsideUkInCountry_Transformed"),
+            # isInterpreterServicesNeeded
+            array(struct(*common_inputFields, lit("Interpreter"))).alias(
+                "isInterpreterServicesNeeded_inputFields"
+            ),
+            array(struct(*common_inputValues, col("m1.Interpreter"))).alias(
+                "isInterpreterServicesNeeded_inputValues"
+            ),
+            col("hr.isInterpreterServicesNeeded").alias(
+                "isInterpreterServicesNeeded_value"
+            ),
+            lit("Yes").alias("isInterpreterServicesNeeded_Transformed"),
+            # appellantInterpreterLanguageCategory
+            array(
+                struct(
+                    *common_inputFields,
+                    lit("Interpreter"),
+                    lit("LanguageId"),
+                    lit("AdditionalLanguageId"),
+                    lit("LanguageCategory"),
+                    lit("AdditionalLanguageCategory"),
+                )
+            ).alias("appellantInterpreterLanguageCategory_inputFields"),
+            array(
+                struct(
+                    *common_inputValues,
+                    col("m1.Interpreter"),
+                    col("m1.LanguageId"),
+                    col("m3.AdditionalLanguageId"),
+                    col("il.appellantInterpreterLanguageCategory"),
+                    col("ail.appellantInterpreterLanguageCategory").alias(
+                        "additionalAppellantInterpreterLanguageCategory"
+                    ),
+                )
+            ).alias("appellantInterpreterLanguageCategory_inputValues"),
+            col("hr.appellantInterpreterLanguageCategory").alias(
+                "appellantInterpreterLanguageCategory_value"
+            ),
+            lit("Yes").alias("appellantInterpreterLanguageCategory_Transformed"),
+            # appellantInterpreterSpokenLanguage
+            array(
+                struct(
+                    *common_inputFields,
+                    lit("Interpreter"),
+                    lit("LanguageId"),
+                    lit("AdditionalLanguageId"),
+                    lit("LanguageCategory"),
+                    lit("AdditionalLanguageCategory"),
+                    lit("LanguageCode"),
+                    lit("AdditionalLanguageCode"),
+                    lit("LanguageLabel"),
+                    lit("AdditionalLanguageLabel"),
+                    lit("ManualEntry"),
+                    lit("AdditionalManualEntry"),
+                    lit("ManualEntryDescription"),
+                    lit("AdditionalManualEntryDescription"),
+                )
+            ).alias("appellantInterpreterSpokenLanguage_inputFields"),
+            array(
+                struct(
+                    *common_inputValues,
+                    col("m1.Interpreter"),
+                    col("m1.LanguageId"),
+                    col("m3.AdditionalLanguageId"),
+                    col("il.appellantInterpreterLanguageCategory"),
+                    col("ail.appellantInterpreterLanguageCategory").alias(
+                        "additionalAppellantInterpreterLanguageCategory"
+                    ),
+                    col("il.languageCode"),
+                    col("ail.languageCode").alias("AdditionalLanguageCode"),
+                    col("il.languageLabel"),
+                    col("ail.languageLabel").alias("AdditionalLanguageLabel"),
+                    col("il.manualEntry"),
+                    col("ail.manualEntry").alias("AdditionalManualEntry"),
+                    col("il.manualEntryDescription"),
+                    col("ail.manualEntryDescription").alias(
+                        "AdditionalManualEntryDescription"
+                    ),
+                )
+            ).alias("appellantInterpreterSpokenLanguage_inputValues"),
+            col("hr.appellantInterpreterSpokenLanguage").alias(
+                "appellantInterpreterSpokenLanguage_value"
+            ),
+            lit("Yes").alias("appellantInterpreterSpokenLanguage_Transformed"),
+            # appellantInterpreterSignLanguage
+            array(
+                struct(
+                    *common_inputFields,
+                    lit("Interpreter"),
+                    lit("LanguageId"),
+                    lit("AdditionalLanguageId"),
+                    lit("LanguageCategory"),
+                    lit("AdditionalLanguageCategory"),
+                    lit("LanguageCode"),
+                    lit("AdditionalLanguageCode"),
+                    lit("LanguageLabel"),
+                    lit("AdditionalLanguageLabel"),
+                    lit("ManualEntry"),
+                    lit("AdditionalManualEntry"),
+                    lit("ManualEntryDescription"),
+                    lit("AdditionalManualEntryDescription"),
+                )
+            ).alias("appellantInterpreterSignLanguage_inputFields"),
+            array(
+                struct(
+                    *common_inputValues,
+                    col("m1.Interpreter"),
+                    col("m1.LanguageId"),
+                    col("m3.AdditionalLanguageId"),
+                    col("il.appellantInterpreterLanguageCategory"),
+                    col("ail.appellantInterpreterLanguageCategory").alias(
+                        "additionalAppellantInterpreterLanguageCategory"
+                    ),
+                    col("il.languageCode"),
+                    col("ail.languageCode").alias("AdditionalLanguageCode"),
+                    col("il.languageLabel"),
+                    col("ail.languageLabel").alias("AdditionalLanguageLabel"),
+                    col("il.manualEntry"),
+                    col("ail.manualEntry").alias("AdditionalManualEntry"),
+                    col("il.manualEntryDescription"),
+                    col("ail.manualEntryDescription").alias(
+                        "AdditionalManualEntryDescription"
+                    ),
+                )
+            ).alias("appellantInterpreterSignLanguage_inputValues"),
+            col("hr.appellantInterpreterSignLanguage").alias(
+                "appellantInterpreterSignLanguage_value"
+            ),
+            lit("Yes").alias("appellantInterpreterSignLanguage_Transformed"),
+            # isHearingRoomNeeded
+            array(struct(*common_inputFields)).alias("isHearingRoomNeeded_inputFields"),
+            array(struct(*common_inputValues)).alias("isHearingRoomNeeded_inputValues"),
+            col("hr.isHearingRoomNeeded").alias("isHearingRoomNeeded_value"),
+            lit("Yes").alias("isHearingRoomNeeded_Transformed"),
+            # isHearingLoopNeeded
+            array(struct(*common_inputFields)).alias("isHearingLoopNeeded_inputFields"),
+            array(struct(*common_inputValues)).alias("isHearingLoopNeeded_inputValues"),
+            col("hr.isHearingLoopNeeded").alias("isHearingLoopNeeded_value"),
+            lit("Yes").alias("isHearingLoopNeeded_Transformed"),
+            # remoteVideoCall
+            array(struct(*common_inputFields)).alias("remoteVideoCall_inputFields"),
+            array(struct(*common_inputValues)).alias("remoteVideoCall_inputValues"),
+            col("hr.remoteVideoCall").alias("remoteVideoCall_value"),
+            lit("Yes").alias("remoteVideoCall_Transformed"),
+            # remoteVideoCallDescription
+            array(struct(*common_inputFields)).alias(
+                "remoteVideoCallDescription_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "remoteVideoCallDescription_inputValues"
+            ),
+            col("hr.remoteVideoCallDescription").alias(
+                "remoteVideoCallDescription_value"
+            ),
+            lit("Yes").alias("remoteVideoCallDescription_Transformed"),
+            # physicalOrMentalHealthIssues
+            array(struct(*common_inputFields)).alias(
+                "physicalOrMentalHealthIssues_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "physicalOrMentalHealthIssues_inputValues"
+            ),
+            col("hr.physicalOrMentalHealthIssues").alias(
+                "physicalOrMentalHealthIssues_value"
+            ),
+            lit("Yes").alias("physicalOrMentalHealthIssues_Transformed"),
+            # physicalOrMentalHealthIssuesDescription
+            array(struct(*common_inputFields)).alias(
+                "physicalOrMentalHealthIssuesDescription_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "physicalOrMentalHealthIssuesDescription_inputValues"
+            ),
+            col("hr.physicalOrMentalHealthIssuesDescription").alias(
+                "physicalOrMentalHealthIssuesDescription_value"
+            ),
+            lit("Yes").alias("physicalOrMentalHealthIssuesDescription_Transformed"),
+            # pastExperiences
+            array(struct(*common_inputFields)).alias("pastExperiences_inputFields"),
+            array(struct(*common_inputValues)).alias("pastExperiences_inputValues"),
+            col("hr.pastExperiences").alias("pastExperiences_value"),
+            lit("Yes").alias("pastExperiences_Transformed"),
+            # pastExperiencesDescription
+            array(struct(*common_inputFields)).alias(
+                "pastExperiencesDescription_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "pastExperiencesDescription_inputValues"
+            ),
+            col("hr.pastExperiencesDescription").alias(
+                "pastExperiencesDescription_value"
+            ),
+            lit("Yes").alias("pastExperiencesDescription_Transformed"),
+            # multimediaEvidence
+            array(struct(*common_inputFields)).alias("multimediaEvidence_inputFields"),
+            array(struct(*common_inputValues)).alias("multimediaEvidence_inputValues"),
+            col("hr.multimediaEvidence").alias("multimediaEvidence_value"),
+            lit("Yes").alias("multimediaEvidence_Transformed"),
+            # multimediaEvidenceDescription
+            array(struct(*common_inputFields)).alias(
+                "multimediaEvidenceDescription_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "multimediaEvidenceDescription_inputValues"
+            ),
+            col("hr.multimediaEvidenceDescription").alias(
+                "multimediaEvidenceDescription_value"
+            ),
+            lit("Yes").alias("multimediaEvidenceDescription_Transformed"),
+            # singleSexCourt
+            array(struct(*common_inputFields, lit("CourtPreference"))).alias(
+                "singleSexCourt_inputFields"
+            ),
+            array(struct(*common_inputValues, col("CourtPreference"))).alias(
+                "singleSexCourt_inputValues"
+            ),
+            col("hr.singleSexCourt").alias("singleSexCourt_value"),
+            lit("Yes").alias("singleSexCourt_Transformed"),
+            # singleSexCourtType
+            array(struct(*common_inputFields, lit("CourtPreference"))).alias(
+                "singleSexCourtType_inputFields"
+            ),
+            array(struct(*common_inputValues, col("CourtPreference"))).alias(
+                "singleSexCourtType_inputValues"
+            ),
+            col("hr.singleSexCourtType").alias("singleSexCourtType_value"),
+            lit("Yes").alias("singleSexCourtType_Transformed"),
+            # singleSexCourtTypeDescription
+            array(struct(*common_inputFields, lit("CourtPreference"))).alias(
+                "singleSexCourtTypeDescription_inputFields"
+            ),
+            array(struct(*common_inputValues, col("CourtPreference"))).alias(
+                "singleSexCourtTypeDescription_inputValues"
+            ),
+            col("hr.singleSexCourtTypeDescription").alias(
+                "singleSexCourtTypeDescription_value"
+            ),
+            lit("Yes").alias("singleSexCourtTypeDescription_Transformed"),
+            # inCameraCourt
+            array(struct(*common_inputFields, lit("InCamera"))).alias(
+                "inCameraCourt_inputFields"
+            ),
+            array(struct(*common_inputValues, col("InCamera"))).alias(
+                "inCameraCourt_inputValues"
+            ),
+            col("hr.inCameraCourt").alias("inCameraCourt_value"),
+            lit("Yes").alias("inCameraCourt_Transformed"),
+            # inCameraCourtDescription
+            array(struct(*common_inputFields, lit("InCamera"))).alias(
+                "inCameraCourtDescription_inputFields"
+            ),
+            array(struct(*common_inputValues, col("InCamera"))).alias(
+                "inCameraCourtDescription_inputValues"
+            ),
+            col("hr.inCameraCourtDescription").alias("inCameraCourtDescription_value"),
+            lit("Yes").alias("inCameraCourtDescription_Transformed"),
+            # additionalRequests
+            array(struct(*common_inputFields)).alias("additionalRequests_inputFields"),
+            array(struct(*common_inputValues)).alias("additionalRequests_inputValues"),
+            col("hr.additionalRequests").alias("additionalRequests_value"),
+            lit("Yes").alias("additionalRequests_Transformed"),
+            # additionalRequestsDescription
+            array(struct(*common_inputFields)).alias(
+                "additionalRequestsDescription_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "additionalRequestsDescription_inputValues"
+            ),
+            col("hr.additionalRequestsDescription").alias(
+                "additionalRequestsDescription_value"
+            ),
+            lit("Yes").alias("additionalRequestsDescription_Transformed"),
+            # datesToAvoidYesNo
+            array(struct(*common_inputFields)).alias("datesToAvoidYesNo_inputFields"),
+            array(struct(*common_inputValues)).alias("datesToAvoidYesNo_inputValues"),
+            col("hr.datesToAvoidYesNo").alias("datesToAvoidYesNo_value"),
+            lit("Yes").alias("datesToAvoidYesNo_Transformed"),
+        )
     )
 
     return df_hearingRequirements, df_audit_hearingRequirements
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
-    df, df_audit = PPD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+
+def general(
+    silver_m1,
+    silver_m2,
+    silver_m3,
+    silver_h,
+    bronze_hearing_centres,
+    bronze_derive_hearing_centres,
+    bronze_detention_centres,
+):
+    df, df_audit = PPD.general(
+        silver_m1,
+        silver_m2,
+        silver_m3,
+        silver_h,
+        bronze_hearing_centres,
+        bronze_derive_hearing_centres,
+        bronze_detention_centres,
+    )
     df_representation = silver_m1.select("CaseNo", "dv_representation", "lu_appealType")
 
     df = (
-        silver_m1.alias("m1").join(df.alias("content"),on="CaseNo",how="left")
-        .select("m1.CaseNo",
-                *[c for c in df.columns if c != "CaseNo"],
-                )
+        silver_m1.alias("m1")
+        .join(df.alias("content"), on="CaseNo", how="left")
+        .select(
+            "m1.CaseNo",
+            *[c for c in df.columns if c != "CaseNo"],
         )
+    )
 
     df = df.join(df_representation, on="CaseNo", how="left")
 
-    aip_conditions_generalDefault = (col("dv_representation") == "AIP") & (col("lu_appealType").isNotNull())
-    lr_conditions_generalDefault = (col("dv_representation") == "LR") & (col("lu_appealType").isNotNull())
+    aip_conditions_generalDefault = (col("dv_representation") == "AIP") & (
+        col("lu_appealType").isNotNull()
+    )
+    lr_conditions_generalDefault = (col("dv_representation") == "LR") & (
+        col("lu_appealType").isNotNull()
+    )
 
-    df = (
-        df
-            .withColumn("caseArgumentAvailable", (when(lr_conditions_generalDefault, lit("Yes")).otherwise(lit(None))))
-            .withColumn("reasonsForAppealDecision", (when(aip_conditions_generalDefault, lit("This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal.")).otherwise(lit(None))))
+    df = df.withColumn(
+        "caseArgumentAvailable",
+        (when(lr_conditions_generalDefault, lit("Yes")).otherwise(lit(None))),
+    ).withColumn(
+        "reasonsForAppealDecision",
+        (
+            when(
+                aip_conditions_generalDefault,
+                lit(
+                    "This is a migrated ARIA case. Please see the documents provided as part of the notice of appeal."
+                ),
+            ).otherwise(lit(None))
+        ),
     )
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
-    common_inputValues = [col("general.dv_representation"), col("general.lu_appealType")]
+    common_inputValues = [
+        col("general.dv_representation"),
+        col("general.lu_appealType"),
+    ]
 
     df_audit = (
         df_audit.alias("audit")
-            .join(df.alias("general"), on="CaseNo", how="left")
-            .select(
-                "audit.*",
-                # caseArgumentAvailable
-                array(struct(*common_inputFields)).alias("caseArgumentAvailable_inputFields"),
-                array(struct(*common_inputValues)).alias("caseArgumentAvailable_inputValues"),
-                col("general.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
-                lit("Yes").alias("caseArgumentAvailable_Transformed"),
-                # reasonForAppealDecision
-                array(struct(*common_inputFields)).alias("reasonsForAppealDecision_inputFields"),
-                array(struct(*common_inputValues)).alias("reasonsForAppealDecision_inputValues"),
-                col("general.reasonsForAppealDecision").alias("reasonsForAppealDecision_value"),
-                lit("Yes").alias("reasonsForAppealDecision_Transformed")
-            )
+        .join(df.alias("general"), on="CaseNo", how="left")
+        .select(
+            "audit.*",
+            # caseArgumentAvailable
+            array(struct(*common_inputFields)).alias(
+                "caseArgumentAvailable_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "caseArgumentAvailable_inputValues"
+            ),
+            col("general.caseArgumentAvailable").alias("caseArgumentAvailable_value"),
+            lit("Yes").alias("caseArgumentAvailable_Transformed"),
+            # reasonForAppealDecision
+            array(struct(*common_inputFields)).alias(
+                "reasonsForAppealDecision_inputFields"
+            ),
+            array(struct(*common_inputValues)).alias(
+                "reasonsForAppealDecision_inputValues"
+            ),
+            col("general.reasonsForAppealDecision").alias(
+                "reasonsForAppealDecision_value"
+            ),
+            lit("Yes").alias("reasonsForAppealDecision_Transformed"),
+        )
     )
 
     df = df.drop("dv_representation", "lu_appealType")
@@ -681,86 +1372,85 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
 def generalDefault(silver_m1):
     df_generalDefault = (
-        silver_m1
-            .withColumn("notificationsSent", lit([]).cast("array<string>"))
-            .withColumn("submitNotificationStatus", lit(""))
-            .withColumn("isFeePaymentEnabled", lit("Yes"))
-            .withColumn("isRemissionsEnabled", lit("Yes"))
-            .withColumn("isOutOfCountryEnabled", lit("Yes"))
-            .withColumn("isIntegrated", lit("Yes"))
-            .withColumn("isNabaEnabled", lit("No"))
-            .withColumn("isNabaAdaEnabled", lit("Yes"))
-            .withColumn("isNabaEnabledOoc", lit("No"))
-            .withColumn("isCaseUsingLocationRefData", lit("Yes"))
-            .withColumn("hasAddedLegalRepDetails", lit("Yes"))
-            .withColumn("autoHearingRequestEnabled", lit("No"))
-            .withColumn("isDlrmFeeRemissionEnabled", lit("Yes"))
-            .withColumn("isDlrmFeeRefundEnabled", lit("Yes"))
-            .withColumn("sendDirectionActionAvailable", lit("Yes"))
-            .withColumn("changeDirectionDueDateActionAvailable", lit("Yes"))
-            .withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes"))
-            .withColumn("uploadAddendumEvidenceActionAvailable", lit("No"))
-            .withColumn("uploadAdditionalEvidenceActionAvailable", lit("Yes"))
-            .withColumn("displayMarkAsPaidEventForPartialRemission", lit("No"))
-            .withColumn("haveHearingAttendeesAndDurationBeenRecorded", lit("No"))
-            .withColumn("markAddendumEvidenceAsReviewedActionAvailable", lit("No"))
-            .withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("No"))
-            .withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("No"))
-            .withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("No"))
-            .withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("Yes"))
-            .withColumn("directions", lit([]).cast("array<string>"))
-            .withColumn("uploadHomeOfficeBundleAvailable", lit("No"))
-            .withColumn("uploadHomeOfficeBundleActionAvailable", lit("No"))
-            .withColumn("appealReviewOutcome", lit("decisionMaintained"))
-            .withColumn("appealResponseAvailable", lit("Yes"))
-            .withColumn("reviewedHearingRequirements", lit("No"))
-            .withColumn("amendResponseActionAvailable", lit("Yes"))
-            .withColumn("currentHearingDetailsVisible", lit("Yes"))
-            .withColumn("reviewResponseActionAvailable", lit("No"))
-            .withColumn("reviewHomeOfficeResponseByLegalRep", lit("Yes"))
-            .withColumn("submitHearingRequirementsAvailable", lit("Yes"))
-            .withColumn("uploadHomeOfficeAppealResponseActionAvailable", lit("No"))
-            .select(
-                "CaseNo",
-                "notificationsSent",
-                "submitNotificationStatus",
-                "isFeePaymentEnabled",
-                "isRemissionsEnabled",
-                "isOutOfCountryEnabled",
-                "isIntegrated",
-                "isNabaEnabled",
-                "isNabaAdaEnabled",
-                "isNabaEnabledOoc",
-                "isCaseUsingLocationRefData",
-                "haveHearingAttendeesAndDurationBeenRecorded",
-                "hasAddedLegalRepDetails",
-                "autoHearingRequestEnabled",
-                "isDlrmFeeRemissionEnabled",
-                "isDlrmFeeRefundEnabled",
-                "sendDirectionActionAvailable",
-                "changeDirectionDueDateActionAvailable",
-                "markEvidenceAsReviewedActionAvailable",
-                "uploadAddendumEvidenceActionAvailable",
-                "uploadAdditionalEvidenceActionAvailable",
-                "displayMarkAsPaidEventForPartialRemission",
-                "markAddendumEvidenceAsReviewedActionAvailable",
-                "uploadAddendumEvidenceLegalRepActionAvailable",
-                "uploadAddendumEvidenceHomeOfficeActionAvailable",
-                "uploadAddendumEvidenceAdminOfficerActionAvailable",
-                "uploadAdditionalEvidenceHomeOfficeActionAvailable",
-                "directions",
-                "uploadHomeOfficeBundleAvailable",
-                "uploadHomeOfficeBundleActionAvailable",
-                "appealReviewOutcome",
-                "appealResponseAvailable",
-                "reviewedHearingRequirements",
-                "amendResponseActionAvailable",
-                "currentHearingDetailsVisible",
-                "reviewResponseActionAvailable",
-                "reviewHomeOfficeResponseByLegalRep",
-                "submitHearingRequirementsAvailable",
-                "uploadHomeOfficeAppealResponseActionAvailable"
-            )
+        silver_m1.withColumn("notificationsSent", lit([]).cast("array<string>"))
+        .withColumn("submitNotificationStatus", lit(""))
+        .withColumn("isFeePaymentEnabled", lit("Yes"))
+        .withColumn("isRemissionsEnabled", lit("Yes"))
+        .withColumn("isOutOfCountryEnabled", lit("Yes"))
+        .withColumn("isIntegrated", lit("Yes"))
+        .withColumn("isNabaEnabled", lit("No"))
+        .withColumn("isNabaAdaEnabled", lit("Yes"))
+        .withColumn("isNabaEnabledOoc", lit("No"))
+        .withColumn("isCaseUsingLocationRefData", lit("Yes"))
+        .withColumn("hasAddedLegalRepDetails", lit("Yes"))
+        .withColumn("autoHearingRequestEnabled", lit("No"))
+        .withColumn("isDlrmFeeRemissionEnabled", lit("Yes"))
+        .withColumn("isDlrmFeeRefundEnabled", lit("Yes"))
+        .withColumn("sendDirectionActionAvailable", lit("Yes"))
+        .withColumn("changeDirectionDueDateActionAvailable", lit("Yes"))
+        .withColumn("markEvidenceAsReviewedActionAvailable", lit("Yes"))
+        .withColumn("uploadAddendumEvidenceActionAvailable", lit("No"))
+        .withColumn("uploadAdditionalEvidenceActionAvailable", lit("Yes"))
+        .withColumn("displayMarkAsPaidEventForPartialRemission", lit("No"))
+        .withColumn("haveHearingAttendeesAndDurationBeenRecorded", lit("No"))
+        .withColumn("markAddendumEvidenceAsReviewedActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceLegalRepActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceHomeOfficeActionAvailable", lit("No"))
+        .withColumn("uploadAddendumEvidenceAdminOfficerActionAvailable", lit("No"))
+        .withColumn("uploadAdditionalEvidenceHomeOfficeActionAvailable", lit("Yes"))
+        .withColumn("directions", lit([]).cast("array<string>"))
+        .withColumn("uploadHomeOfficeBundleAvailable", lit("No"))
+        .withColumn("uploadHomeOfficeBundleActionAvailable", lit("No"))
+        .withColumn("appealReviewOutcome", lit("decisionMaintained"))
+        .withColumn("appealResponseAvailable", lit("Yes"))
+        .withColumn("reviewedHearingRequirements", lit("No"))
+        .withColumn("amendResponseActionAvailable", lit("Yes"))
+        .withColumn("currentHearingDetailsVisible", lit("Yes"))
+        .withColumn("reviewResponseActionAvailable", lit("No"))
+        .withColumn("reviewHomeOfficeResponseByLegalRep", lit("Yes"))
+        .withColumn("submitHearingRequirementsAvailable", lit("Yes"))
+        .withColumn("uploadHomeOfficeAppealResponseActionAvailable", lit("No"))
+        .select(
+            "CaseNo",
+            "notificationsSent",
+            "submitNotificationStatus",
+            "isFeePaymentEnabled",
+            "isRemissionsEnabled",
+            "isOutOfCountryEnabled",
+            "isIntegrated",
+            "isNabaEnabled",
+            "isNabaAdaEnabled",
+            "isNabaEnabledOoc",
+            "isCaseUsingLocationRefData",
+            "haveHearingAttendeesAndDurationBeenRecorded",
+            "hasAddedLegalRepDetails",
+            "autoHearingRequestEnabled",
+            "isDlrmFeeRemissionEnabled",
+            "isDlrmFeeRefundEnabled",
+            "sendDirectionActionAvailable",
+            "changeDirectionDueDateActionAvailable",
+            "markEvidenceAsReviewedActionAvailable",
+            "uploadAddendumEvidenceActionAvailable",
+            "uploadAdditionalEvidenceActionAvailable",
+            "displayMarkAsPaidEventForPartialRemission",
+            "markAddendumEvidenceAsReviewedActionAvailable",
+            "uploadAddendumEvidenceLegalRepActionAvailable",
+            "uploadAddendumEvidenceHomeOfficeActionAvailable",
+            "uploadAddendumEvidenceAdminOfficerActionAvailable",
+            "uploadAdditionalEvidenceHomeOfficeActionAvailable",
+            "directions",
+            "uploadHomeOfficeBundleAvailable",
+            "uploadHomeOfficeBundleActionAvailable",
+            "appealReviewOutcome",
+            "appealResponseAvailable",
+            "reviewedHearingRequirements",
+            "amendResponseActionAvailable",
+            "currentHearingDetailsVisible",
+            "reviewResponseActionAvailable",
+            "reviewHomeOfficeResponseByLegalRep",
+            "submitHearingRequirementsAvailable",
+            "uploadHomeOfficeAppealResponseActionAvailable",
+        )
     )
 
     return df_generalDefault
@@ -771,34 +1461,29 @@ def documents(silver_m1):
 
     df_documents = (
         silver_m1.alias("m1")
-        .join(
-            df_documents.alias("content"),
-            on="CaseNo",
-            how="left"
-        )
+        .join(df_documents.alias("content"), on="CaseNo", how="left")
         .select(
             "m1.CaseNo",
             *[c for c in df_documents.columns if c != "CaseNo"],
-            array().cast("array<string>").alias("hearingRequirements")
+            array().cast("array<string>").alias("hearingRequirements"),
         )
     )
-
 
     common_inputFields = [lit("dv_representation"), lit("lu_appealType")]
     common_inputValues = [col("m1.dv_representation"), col("m1.lu_appealType")]
 
     df_audit_documents = (
         df_audit_documents.alias("audit")
-            .join(df_documents.alias("documents"), on="CaseNo", how="left")
-            .join(silver_m1.alias("m1"), on="CaseNo", how="left")
-            .select(
-                "audit.*",
-                # hearingRequirements
-                array(struct(*common_inputFields)).alias("hearingRequirements_inputFields"),
-                array(struct(*common_inputValues)).alias("hearingRequirements_inputValues"),
-                col("documents.hearingRequirements").alias("hearingRequirements_value"),
-                lit("Yes").alias("hearingRequirements_Transformed")
-            )
+        .join(df_documents.alias("documents"), on="CaseNo", how="left")
+        .join(silver_m1.alias("m1"), on="CaseNo", how="left")
+        .select(
+            "audit.*",
+            # hearingRequirements
+            array(struct(*common_inputFields)).alias("hearingRequirements_inputFields"),
+            array(struct(*common_inputValues)).alias("hearingRequirements_inputValues"),
+            col("documents.hearingRequirements").alias("hearingRequirements_value"),
+            lit("Yes").alias("hearingRequirements_Transformed"),
+        )
     )
 
     return df_documents, df_audit_documents

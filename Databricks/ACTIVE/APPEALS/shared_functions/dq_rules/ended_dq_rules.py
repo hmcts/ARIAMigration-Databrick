@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class endedDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_ended()
         checks = checks | self.get_checks_document()
@@ -16,9 +15,7 @@ class endedDQRules(DQRulesBase):
         checks = checks | self.get_checks_TTL()
         checks = checks | self.get_checks_casedata()
 
-
         return checks
-
 
     def get_checks_ended(self, checks={}):
 
@@ -202,7 +199,6 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-
     def get_checks_document(self, checks={}):
 
         checks["valid_respondentDocuments"] = """
@@ -223,7 +219,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_hearingRequirements"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -238,7 +234,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_hearingDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -251,7 +247,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_letterBundleDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -264,7 +260,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_caseBundles"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -277,7 +273,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_finalDecisionAndReasonsDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -290,7 +286,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -308,7 +304,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -326,7 +322,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantGroundsDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -344,7 +340,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentGroundsDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -362,7 +358,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantEvidenceDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -380,7 +376,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentEvidenceDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -398,7 +394,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantOutOfTimeDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -416,7 +412,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentOutOfTimeDocuments"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -438,7 +434,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_listingLength"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -451,7 +447,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_hearingChannel"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -488,7 +484,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witnessDetails"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -514,7 +510,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness1InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -527,7 +523,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness2InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -540,7 +536,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness3InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -553,7 +549,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness4InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -566,7 +562,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness5InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -579,7 +575,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness6InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -592,7 +588,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness7InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -605,7 +601,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness8InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -618,7 +614,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness9InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -631,7 +627,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness10InterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -644,7 +640,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness1InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -657,7 +653,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness2InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -670,7 +666,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness3InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -683,7 +679,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness4InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -696,7 +692,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness5InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -709,7 +705,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness6InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -722,7 +718,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness7InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -735,7 +731,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness8InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -748,7 +744,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness9InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -761,7 +757,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_witness10InterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -774,10 +770,10 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_listCaseHearingLength"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
-                ) THEN             
+                ) THEN
                     listCaseHearingLength <=> listCaseHearingLength_ended
                 ELSE
                     listCaseHearingLength IS NULL
@@ -785,10 +781,9 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-
         checks["valid_listCaseHearingDate"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -799,10 +794,9 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-
         checks["valid_listCaseHearingCentre"] = """
         (
-            CASE 
+            CASE
                 WHEN (CaseStatus_ended = 39 AND Outcome_ended = 25) THEN
                     listCaseHearingCentre <=> listCaseHearingCentre_ended
                 ELSE
@@ -811,11 +805,9 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-
-
         checks["valid_listCaseHearingCentreAddress"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -828,12 +820,11 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-
     def get_checks_ftpa(self, checks={}):
 
         checks["valid_ftpaApplicationDeadline"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -846,7 +837,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaList"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -857,10 +848,9 @@ class endedDQRules(DQRulesBase):
         )
         """
 
-
         checks["valid_ftpaAppellantApplicationDate"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -878,7 +868,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantSubmissionOutOfTime"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -897,7 +887,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantOutOfTimeExplanation"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -915,7 +905,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentApplicationDate"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -933,7 +923,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentSubmissionOutOfTime"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -952,7 +942,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentOutOfTimeExplanation"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -974,7 +964,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_attendingJudge"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -987,7 +977,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_actualCaseHearingLength"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1004,7 +994,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_scheduleOfIssuesAgreement"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1017,7 +1007,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_scheduleOfIssuesDisagreementDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1030,7 +1020,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_immigrationHistoryAgreement"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1043,7 +1033,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_immigrationHistoryDisagreementDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1056,7 +1046,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_sendDecisionsAndReasonsDate"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1069,7 +1059,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appealDate"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1082,7 +1072,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appealDecision"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1102,7 +1092,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isDecisionAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1123,7 +1113,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_anonymityOrder"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1136,13 +1126,11 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-        
-
     def get_checks_hearingResponse(self, checks={}):
 
         checks["valid_isRemoteHearing"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1155,7 +1143,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isAppealSuitableToFloat"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1172,7 +1160,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isMultimediaAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1185,7 +1173,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_multimediaTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1198,7 +1186,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_multimediaDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1211,7 +1199,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isInCameraCourtAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1228,7 +1216,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_inCameraCourtTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1245,7 +1233,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_inCameraCourtDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1262,7 +1250,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isSingleSexCourtAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1279,7 +1267,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_singleSexCourtTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1296,7 +1284,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_singleSexCourtDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1313,7 +1301,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isVulnerabilitiesAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1326,7 +1314,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_vulnerabilitiesTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1339,7 +1327,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_vulnerabilitiesDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1352,7 +1340,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isRemoteHearingAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1365,7 +1353,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_remoteVideoCallTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1378,7 +1366,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_remoteHearingDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1391,7 +1379,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isAdditionalAdjustmentsAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1404,7 +1392,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_additionalTribunalResponse"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1417,7 +1405,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_otherDecisionForDisplay"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1430,7 +1418,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isAdditionalInstructionAllowed"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -1479,16 +1467,11 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-
-        
-
-        
-
     def get_checks_hearingRequirements(self, checks={}):
 
         checks["valid_isAppellantAttendingTheHearing"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1503,7 +1486,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isAppellantGivingOralEvidence"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1518,7 +1501,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isWitnessesAttending"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1533,7 +1516,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isEvidenceFromOutsideUkOoc"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1548,7 +1531,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isEvidenceFromOutsideUkInCountry"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1563,7 +1546,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isInterpreterServicesNeeded"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1584,7 +1567,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appellantInterpreterLanguageCategory"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1599,7 +1582,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appellantInterpreterSpokenLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1614,7 +1597,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appellantInterpreterSignLanguage"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1629,7 +1612,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isHearingRoomNeeded"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1644,7 +1627,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isHearingLoopNeeded"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1659,7 +1642,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_remoteVideoCall"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1674,7 +1657,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_remoteVideoCallDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1689,7 +1672,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_physicalOrMentalHealthIssues"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1704,7 +1687,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_physicalOrMentalHealthIssuesDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1719,7 +1702,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_pastExperiences"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1734,7 +1717,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_pastExperiencesDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1749,7 +1732,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_multimediaEvidence"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1764,7 +1747,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_multimediaEvidenceDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1779,7 +1762,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_singleSexCourt"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1800,7 +1783,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_singleSexCourtType"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1821,7 +1804,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_singleSexCourtTypeDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1840,7 +1823,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_inCameraCourt"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1863,7 +1846,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_inCameraCourtDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1884,7 +1867,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_additionalRequests"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1899,7 +1882,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_additionalRequestsDescription"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -1976,9 +1959,6 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-        
-
-
     def get_checks_general(self, checks={}):
 
         checks["valid_directions"] = """
@@ -1999,7 +1979,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_uploadHomeOfficeBundleAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -2015,7 +1995,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_uploadHomeOfficeBundleActionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -2031,7 +2011,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_caseArgumentAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -2047,7 +2027,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_reasonsForAppealDecision"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 26 AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
@@ -2063,7 +2043,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appealReviewOutcome"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2078,7 +2058,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appealResponseAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2093,7 +2073,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_reviewedHearingRequirements"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2123,7 +2103,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_currentHearingDetailsVisible"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2138,7 +2118,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_reviewResponseActionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2153,7 +2133,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_reviewHomeOfficeResponseByLegalRep"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2168,7 +2148,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_submitHearingRequirementsAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2183,7 +2163,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_uploadHomeOfficeAppealResponseActionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended IN (37, 38) AND Outcome_ended IN (80, 25, 13)) OR
                     (CaseStatus_ended = 38 AND Outcome_ended = 72) OR
@@ -2198,7 +2178,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_hmcts"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2211,7 +2191,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_stitchingStatus"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2224,7 +2204,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_bundleConfiguration"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2237,7 +2217,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_bundleFileNamePrefix"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2250,7 +2230,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_appealDecisionAvailable"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2263,7 +2243,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaListVisible"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2276,7 +2256,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaAppellantSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2294,7 +2274,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2312,7 +2292,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2330,7 +2310,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantOotDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2348,7 +2328,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantOotDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2366,7 +2346,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantGroundsDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2384,7 +2364,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantEvidenceDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2402,7 +2382,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantGroundsDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2420,7 +2400,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantEvidenceDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2438,7 +2418,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantOotExplanationVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2456,7 +2436,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaAppellantOotExplanationVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2474,7 +2454,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_ftpaRespondentSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2492,7 +2472,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2510,7 +2490,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2528,7 +2508,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentOotDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2546,7 +2526,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentOotDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2564,7 +2544,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentGroundsDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2582,7 +2562,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentEvidenceDocsVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2600,7 +2580,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentGroundsDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2618,7 +2598,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentEvidenceDocsVisibleInSubmitted"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2636,7 +2616,7 @@ class endedDQRules(DQRulesBase):
 
         checks["valid_isFtpaRespondentOotExplanationVisibleInDecided"] = """
         (
-            CASE 
+            CASE
                 WHEN (
                     (CaseStatus_ended = 39 AND Outcome_ended = 25)
                 ) THEN
@@ -2672,7 +2652,6 @@ class endedDQRules(DQRulesBase):
 
         return checks
 
-
     def get_checks_TTL(self, checks={}):
 
         checks["valid_TTL"] = """(
@@ -2683,7 +2662,6 @@ class endedDQRules(DQRulesBase):
         )"""
 
         return checks
-
 
     def get_checks_casedata(self, checks={}):
 

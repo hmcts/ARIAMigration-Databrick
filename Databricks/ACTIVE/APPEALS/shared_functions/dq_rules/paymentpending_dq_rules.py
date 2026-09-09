@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class paymentPendingDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 
@@ -12,7 +11,9 @@ class paymentPendingDQRules(DQRulesBase):
         # ##############################
         # # ARIADM-669 (appealType)
         # ##############################
-        checks["valid_appealReferenceNumber_not_null"] = "(appealReferenceNumber IS NOT NULL)"
+        checks["valid_appealReferenceNumber_not_null"] = (
+            "(appealReferenceNumber IS NOT NULL)"
+        )
 
         # ##############################
         # # ARIADM-671 (appealType)
@@ -23,7 +24,9 @@ class paymentPendingDQRules(DQRulesBase):
 
         checks["valid_hmctsCaseCategory_not_null"] = "(hmctsCaseCategory IS NOT NULL)"
 
-        checks["valid_appealTypeDescription_not_null"] = "(appealTypeDescription IS NOT NULL)"
+        checks["valid_appealTypeDescription_not_null"] = (
+            "(appealTypeDescription IS NOT NULL)"
+        )
         # Null Values as accepted values as where Representation = AIP
         checks["valid_caseManagementCategory_code_in_list_items"] = """
             (
@@ -64,8 +67,7 @@ class paymentPendingDQRules(DQRulesBase):
         checks["valid_submissionOutOfTime_yes_no"] = (
             "(submissionOutOfTime IS NOT NULL AND submissionOutOfTime IN ('Yes', 'No'))"
         )
-        checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = (
-        """
+        checks["valid_recordedOutOfTimeDecision_yes_no_or_null"] = """
             (
                 (
                     recordedOutOfTimeDecision IS NULL
@@ -95,55 +97,71 @@ class paymentPendingDQRules(DQRulesBase):
                     AND (Outcome IS NULL OR Outcome <=> 0)
                 )
             )
-        """)
-
+        """
 
         checks["valid_applicationOutOfTimeExplanation_valid_or_null"] = (
             "(applicationOutOfTimeExplanation IS NULL OR applicationOutOfTimeExplanation = 'This is a migrated ARIA case. Please refer to the documents.')"
         )
 
-        checks["valid_outOfTimeDecisionType"] = (
-            """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionType <=> 'approved')
+        checks[
+            "valid_outOfTimeDecisionType"
+        ] = """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionType <=> 'approved')
                 OR (outOfTimeDecisionType IS NULL)
             """
-        )
 
-        checks["valid_outOfTimeDecisionMaker"] = (
-            """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionMaker <=> 'Tribunal Caseworker')
+        checks[
+            "valid_outOfTimeDecisionMaker"
+        ] = """    (OutOfTimeIssue <=> True AND NOT (Outcome_no_filter <=> 0) AND outOfTimeDecisionMaker <=> 'Tribunal Caseworker')
                 OR (outOfTimeDecisionMaker IS NULL)
             """
-        )
 
         # ##############################
         # # ARIADM-768 (legalRepDetails)
         # # Null Values as accepted values as where Representation = AIP
         # ##############################
 
-        checks["valid_legalRepGivenName_not_null"] = "((dv_representation <=> 'LR' AND legalRepGivenName IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepGivenName IS NULL))"
+        checks["valid_legalRepGivenName_not_null"] = (
+            "((dv_representation <=> 'LR' AND legalRepGivenName IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepGivenName IS NULL))"
+        )
 
-        checks["valid_legalRepFamilyNamePaperJ_not_null"] = "((dv_representation <=> 'LR' AND legalRepFamilyNamePaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepFamilyNamePaperJ IS NULL))"
+        checks["valid_legalRepFamilyNamePaperJ_not_null"] = (
+            "((dv_representation <=> 'LR' AND legalRepFamilyNamePaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepFamilyNamePaperJ IS NULL))"
+        )
 
-        checks["valid_legalRepCompanyPaperJ_not_null"] = "((dv_representation <=> 'LR' AND legalRepCompanyPaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepCompanyPaperJ IS NULL))"
-
+        checks["valid_legalRepCompanyPaperJ_not_null"] = (
+            "((dv_representation <=> 'LR' AND legalRepCompanyPaperJ IS NOT NULL) OR (NOT(dv_representation <=> 'LR') AND legalRepCompanyPaperJ IS NULL))"
+        )
 
         # ##############################
         # # ARIADM-756 (appellantDetails)
         # ##############################
-        checks["valid_appellantFamilyName_not_null"] = "(appellantFamilyName IS NOT NULL)"
-        checks["valid_appellantGivenNames_not_null"] = "(appellantGivenNames IS NOT NULL)"
-        checks["valid_appellantNameForDisplay_not_null"] = "(appellantNameForDisplay IS NOT NULL)"
+        checks["valid_appellantFamilyName_not_null"] = (
+            "(appellantFamilyName IS NOT NULL)"
+        )
+        checks["valid_appellantGivenNames_not_null"] = (
+            "(appellantGivenNames IS NOT NULL)"
+        )
+        checks["valid_appellantNameForDisplay_not_null"] = (
+            "(appellantNameForDisplay IS NOT NULL)"
+        )
 
         checks["valid_appellantDateOfBirth_format"] = (
             "(appellantDateOfBirth IS NOT NULL AND appellantDateOfBirth RLIKE r'^\\d{4}-\\d{2}-\\d{2}$')"
         )
-        checks["valid_caseNameHmctsInternal_not_null"] = "(caseNameHmctsInternal IS NOT NULL)"
-        checks["valid_hmctsCaseNameInternal_not_null"] = "(hmctsCaseNameInternal IS NOT NULL)"
+        checks["valid_caseNameHmctsInternal_not_null"] = (
+            "(caseNameHmctsInternal IS NOT NULL)"
+        )
+        checks["valid_hmctsCaseNameInternal_not_null"] = (
+            "(hmctsCaseNameInternal IS NOT NULL)"
+        )
 
         # ##############################
         # # ARIADM-771 (AppealType - legalRepDetails)
         # ##############################
 
-        checks["valid_legalrepEmail_not_null"] = "((dv_representation <=> 'LR' AND legalRepEmail IS NOT NULL AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (NOT(dv_representation <=> 'LR') AND legalRepEmail IS NULL))"
+        checks["valid_legalrepEmail_not_null"] = (
+            "((dv_representation <=> 'LR' AND legalRepEmail IS NOT NULL AND legalRepEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$') OR (NOT(dv_representation <=> 'LR') AND legalRepEmail IS NULL))"
+        )
 
         # ##############################
         # # ARIADM-758 (appellantDetails)
@@ -170,8 +188,7 @@ class paymentPendingDQRules(DQRulesBase):
             "((dv_representation <=> 'LR' AND legalRepHasAddress IS NOT NULL AND legalRepHasAddress IN ('Yes', 'No')) OR (NOT(dv_representation <=> 'LR') AND legalRepHasAddress IS NULL))"
         )
 
-        checks["valid_legalRepAddressUK"] = (
-            """(
+        checks["valid_legalRepAddressUK"] = """(
                 (
                     dv_representation <=> 'LR'
                     AND legalRepHasAddress <=> 'Yes'
@@ -191,76 +208,65 @@ class paymentPendingDQRules(DQRulesBase):
                     AND legalRepAddressUK IS NULL
                 )
             )"""
-        )
 
-        checks["valid_oocAddressLine1"] = (
-            """(
+        checks["valid_oocAddressLine1"] = """(
                 (dv_representation <=> 'LR' AND oocAddressLine1 IS NOT NULL AND legalRepHasAddress <=> 'No')
                 OR
                 (dv_representation <=> 'LR' AND oocAddressLine1 IS NULL AND legalRepHasAddress <=> 'Yes')
                 OR
                 (NOT(dv_representation <=> 'LR') AND oocAddressLine1 IS NULL)
             )"""
-        )
-        checks["valid_oocAddressLine2"] = (
-            """(
+        checks["valid_oocAddressLine2"] = """(
                 (dv_representation <=> 'LR' AND oocAddressLine2 IS NOT NULL AND legalRepHasAddress <=> 'No')
                 OR
                 (dv_representation <=> 'LR' AND oocAddressLine2 IS NULL AND legalRepHasAddress <=> 'Yes')
                 OR
                 (NOT(dv_representation <=> 'LR') AND oocAddressLine2 IS NULL)
             )"""
-        )
-        checks["valid_oocAddressLine3"] = (
-            """(
+        checks["valid_oocAddressLine3"] = """(
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No')
                 OR
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes')
                 OR
                 (NOT(dv_representation <=> 'LR') AND oocAddressLine3 IS NULL)
             )"""
-        )
-        checks["valid_oocAddressLine4"] = (
-            """(
+        checks["valid_oocAddressLine4"] = """(
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No')
                 OR
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes')
                 OR
                 (NOT(dv_representation <=> 'LR') AND oocAddressLine4 IS NULL)
             )"""
-        )
-        checks["valid_oocrCountryGovUkAdminJ"] = (
-            """(
+        checks["valid_oocrCountryGovUkAdminJ"] = """(
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'No' AND oocLrCountryGovUkAdminJ IS NOT NULL)
                 OR
                 (dv_representation <=> 'LR' AND legalRepHasAddress <=> 'Yes' AND oocLrCountryGovUkAdminJ IS NULL)
                 OR
                 (NOT(dv_representation <=> 'LR') AND CaseRep_Address5 IS NULL)
             )"""
-        )
 
         # ##############################
         # # ARIADM-766 (appellantStateless)
         # ##############################
-        checks["valid_appellantStateless_values"] = ("(appellantStateless IS NOT NULL AND appellantStateless IN ('isStateless', 'hasNationality'))")
+        checks["valid_appellantStateless_values"] = (
+            "(appellantStateless IS NOT NULL AND appellantStateless IN ('isStateless', 'hasNationality'))"
+        )
 
-        checks["valid_appellantNationalities_not_null"] = (
-            """(
+        checks["valid_appellantNationalities_not_null"] = """(
                 (appellantNationalities IS NOT NULL)
                 AND
                 EXISTS(appellantNationalities, x -> x.value.code IS NOT NULL AND x.value.code IN ('AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR', 'BC', 'VG', 'IO', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'HK', 'MO', 'CX', 'CC', 'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM', 'VA', 'HN', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM', 'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KP', 'KR', 'KO', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MK', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC', 'NZ', 'NI', 'NE', 'NG', 'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS', 'SS', 'ES', 'LK', 'ZZ', 'SD', 'SR', 'SJ', 'SZ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VI', 'WF', 'EH', 'YE', 'ZM', 'ZW'))
             )"""
-        )
 
-        checks["valid_appellantNationalitiesDescription_not_null"] = (
-            """(
+        checks["valid_appellantNationalitiesDescription_not_null"] = """(
                 (appellantNationalitiesDescription IS NOT NULL)
                 AND
                 (appellantNationalitiesDescription IN ('Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla', 'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bonaire, Sint Eustatius and Saba', 'Bosnia and Herzegovina', 'Botswana', 'Bouvet Island', 'Brazil', 'British Overseas Citizen', 'British Virgin Islands', 'British Indian Ocean Territory', 'Brunei Darussalam', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Hong Kong, Special Administrative Region of China', 'Macao, Special Administrative Region of China', 'Christmas Island', 'Cocos (Keeling) Islands', 'Colombia', 'Comoros', 'Congo (Brazzaville)', 'Congo, Democratic Republic of the', 'Cook Islands', 'Costa Rica', 'Côte d\\'Ivoire', 'Croatia', 'Cuba', 'Curaçao', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Ethiopia', 'Falkland Islands (Malvinas)', 'Faroe Islands', 'Fiji', 'Finland', 'France', 'French Guiana', 'French Polynesia', 'French Southern Territories', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe', 'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Heard Island and Mcdonald Islands', 'Holy See (Vatican City State)', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran, Islamic Republic of', 'Iraq', 'Ireland', 'Isle of Man', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Korea, Democratic People\\'s Republic of', 'Korea, Republic of', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Lao PDR', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macedonia, Republic of', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique', 'Mauritania', 'Mauritius', 'Mayotte', 'Mexico', 'Micronesia, Federated States of', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'Netherlands Antilles', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'Norfolk Island', 'Northern Mariana Islands', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestinian Territory, Occupied', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Pitcairn', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Réunion', 'Romania', 'Russian Federation', 'Rwanda', 'Saint-Barthélemy', 'Saint Helena', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint-Martin (French part)', 'Saint Pierre and Miquelon', 'Saint Vincent and Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten (Dutch part)', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Georgia and the South Sandwich Islands', 'South Sudan', 'Spain', 'Sri Lanka', 'Stateless', 'Sudan', 'Suriname *', 'Svalbard and Jan Mayen Islands', 'Swaziland', 'Sweden', 'Switzerland', 'Syrian Arab Republic (Syria)', 'Taiwan', 'Tajikistan', 'Tanzania *, United Republic of', 'Thailand', 'Timor-Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States of America', 'United States Minor Outlying Islands', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela (Bolivarian Republic of)', 'Viet Nam', 'Virgin Islands, US', 'Wallis and Futuna Islands', 'Western Sahara', 'Yemen', 'Zambia', 'Zimbabwe'))
             )"""
-        )
 
-        checks["valid_isAriaMigratedFeeExemption_yes_no"] = "((CasePrefix <=> 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (NOT(CasePrefix <=> 'DA') AND isAriaMigratedFeeExemption <=> 'No'))"
+        checks["valid_isAriaMigratedFeeExemption_yes_no"] = (
+            "((CasePrefix <=> 'DA' AND isAriaMigratedFeeExemption <=> 'Yes') OR (NOT(CasePrefix <=> 'DA') AND isAriaMigratedFeeExemption <=> 'No'))"
+        )
 
         # ##############################
         # # ARIADM-712 (flagsLabel)- caseFlags
@@ -452,13 +458,15 @@ class paymentPendingDQRules(DQRulesBase):
         # # ARIADM-780 (PartyID)
         # ##############################
 
-        checks["valid_appellantPartyId_not_null"] = (
-            "(appellantPartyId IS NOT NULL)"
-        )
-        checks["valid_legalRepIndividualPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
+        checks["valid_appellantPartyId_not_null"] = "(appellantPartyId IS NOT NULL)"
+        checks[
+            "valid_legalRepIndividualPartyId_not_null"
+        ] = (  # If appellantsRep = no then appellantsRep = LR
             "((legalRepIndividualPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepIndividualPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
-        checks["validlegalRepOrganisationPartyId_not_null"] = ( #If appellantsRep = no then appellantsRep = LR
+        checks[
+            "validlegalRepOrganisationPartyId_not_null"
+        ] = (  # If appellantsRep = no then appellantsRep = LR
             "((legalRepOrganisationPartyId IS NOT NULL AND appellantsRepresentation <=> 'No') OR (legalRepOrganisationPartyId IS NULL AND appellantsRepresentation <=> 'Yes'))"
         )
 
@@ -489,13 +497,11 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
-        checks["valid_feeDescription"] = (
-            """(
+        checks["valid_feeDescription"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND feeDescription <=> 'Notice of Appeal - appellant consents without hearing A')
                 OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND feeDescription <=> 'Appeal determined with a hearing')
                 OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND feeDescription IS NULL)
             )"""
-        )
 
         checks["valid_feeWithHearing"] = (  # feeWithHearing is not null and is an int
             """(
@@ -513,7 +519,9 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
-        checks["valid_feeWithoutHearing"] = (# feeWithoutHearing is not null and is an int
+        checks[
+            "valid_feeWithoutHearing"
+        ] = (  # feeWithoutHearing is not null and is an int
             """(
             (
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1)
@@ -529,46 +537,35 @@ class paymentPendingDQRules(DQRulesBase):
             )"""
         )
 
-        checks["valid_paymentDescription"] = (
-            """(
+        checks["valid_paymentDescription"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND paymentDescription <=> 'Appeal determined without a hearing')
                 OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND paymentDescription <=> 'Appeal determined with a hearing')
                 OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND paymentDescription IS NULL)
             )"""
-        )
 
-        checks["valid_paymentStatus"] = (
-            """(
+        checks["valid_paymentStatus"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (paymentStatus <=> 'Payment pending')) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (paymentStatus IS NULL))
             )"""
-        )
 
-        checks["valid_feeVersion"] = (
-            """(
+        checks["valid_feeVersion"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feeVersion IS NOT NULL)) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feeVersion IS NULL))
             )"""
-        )
 
-        checks["valid_feePaymentAppealType"] = (
-            """(
+        checks["valid_feePaymentAppealType"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NOT NULL)) OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND (feePaymentAppealType IS NULL))
             )"""
-        )
 
-        checks["valid_decisionHearingFeeOption"] = (
-            """(
+        checks["valid_decisionHearingFeeOption"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 1 AND decisionHearingFeeOption <=> 'decisionWithoutHearing')
                 OR (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA','EU','HU','PA') AND VisitVisaType <=> 2 AND decisionHearingFeeOption <=> 'decisionWithHearing')
                 OR (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA','EU','HU','PA') AND decisionHearingFeeOption IS NULL)
             )"""
-        )
 
         # ##############################
         # # ARIADM-785 (remissionTypes)
-        # ############################## 
+        # ##############################
 
-        checks["valid_remissionType_in_list"] = (
-            """(
+        checks["valid_remissionType_in_list"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NOT NULL AND remissionType IN ('noRemission', 'hoWaiverRemission', 'helpWithFees', 'exceptionalCircumstancesRemission'))
                 OR
                 (dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') AND remissionType IS NULL)
@@ -579,10 +576,8 @@ class paymentPendingDQRules(DQRulesBase):
                     AND remissionType IS NULL
                 )
             )"""
-        )
 
-        checks["valid_remissionClaim_in_list"] = (
-            """(
+        checks["valid_remissionClaim_in_list"] = """(
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA'))
                     AND
@@ -600,22 +595,18 @@ class paymentPendingDQRules(DQRulesBase):
                     AND remissionClaim IS NULL
                 )
             )"""
-        )
 
-        checks["valid_feeRemissionType_not_null"] = (
-            """(
+        checks["valid_feeRemissionType_not_null"] = """(
                 (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND feeRemissionType IS NOT NULL)
                 OR
                 ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA') OR lu_feeRemissionType <=> 'OMIT') AND feeRemissionType IS NULL)
             )"""
-        )
 
         # ##############################
         # # ARIADM-786 (remissionTypes)
         # ##############################
 
-        checks["valid_exceptionalCircumstances_not_null"] = (
-            """
+        checks["valid_exceptionalCircumstances_not_null"] = """
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND ReasonDescription <=> 'Oral Hearing Direction' AND remissionType <=> 'exceptionalCircumstancesRemission' AND exceptionalCircumstances <=> '"This is a migrated ARIA case. The remission reason was Oral Hearing Direction. Please see the documents for further information."')
                     OR
@@ -626,10 +617,8 @@ class paymentPendingDQRules(DQRulesBase):
                     ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND exceptionalCircumstances IS NULL)
                 )
             """
-        )
 
-        checks["valid_helpWithFeesReferenceNumber_not_null"] = (
-            """
+        checks["valid_helpWithFeesReferenceNumber_not_null"] = """
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'helpWithFees' AND helpWithFeesReferenceNumber IS NOT NULL)
                     OR
@@ -638,10 +627,8 @@ class paymentPendingDQRules(DQRulesBase):
                     ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND helpWithFeesReferenceNumber IS NULL)
                 )
             """
-        )
 
-        checks["valid_legalAidAccountNumber_not_null"] = (
-            """
+        checks["valid_legalAidAccountNumber_not_null"] = """
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'legalAid' AND feeRemissionType <=> 'Legal Aid' AND legalAidAccountNumber IS NOT NULL AND length(legalAidAccountNumber) BETWEEN 6 AND 20)
                     OR
@@ -650,10 +637,8 @@ class paymentPendingDQRules(DQRulesBase):
                     ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND legalAidAccountNumber IS NULL)
                 )
             """
-        )
 
-        checks["valid_asylumSupportReference_not_null"] = (
-            """
+        checks["valid_asylumSupportReference_not_null"] = """
                 (
                     (dv_CCDAppealType IS NOT NULL AND dv_CCDAppealType IN ('EA', 'EU', 'HU', 'PA') AND remissionType <=> 'hoWaiverRemission' AND remissionClaim <=> 'asylumSupport' AND feeRemissionType <=> 'Asylum Support' AND asylumSupportReference IS NOT NULL)
                     OR
@@ -662,12 +647,11 @@ class paymentPendingDQRules(DQRulesBase):
                     ((dv_CCDAppealType IS NULL OR dv_CCDAppealType NOT IN ('EA', 'EU', 'HU', 'PA')) AND remissionType IS NULL AND asylumSupportReference IS NULL)
                 )
             """
-        )
-        
+
         ##############################
         # AARIADM-764 (appellantDetails)
         ##############################
-        # ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ 
+        # ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$
         checks["valid_internalAppellantEmail_format"] = (
             "(internalAppellantEmail IS NOT NULL AND internalAppellantEmail RLIKE r'^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$' OR internalAppellantEmail IS NULL)"
         )
@@ -698,8 +682,7 @@ class paymentPendingDQRules(DQRulesBase):
             "((dv_appellantIsInUk <=> true AND homeOfficeDecisionDate IS NOT NULL AND homeOfficeDecisionDate RLIKE r'^\\d{4}-\\d{2}-\\d{2}$') OR (homeOfficeDecisionDate IS NULL))"
         )
 
-        checks["valid_decisionLetterReceivedDate_format"] = (
-            """(
+        checks["valid_decisionLetterReceivedDate_format"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND decisionLetterReceivedDate IS NOT NULL
@@ -708,10 +691,8 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 OR (decisionLetterReceivedDate IS NULL)
             )"""
-        )
 
-        checks["valid_dateEntryClearanceDecision_format"] = (
-            """(
+        checks["valid_dateEntryClearanceDecision_format"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
@@ -720,12 +701,10 @@ class paymentPendingDQRules(DQRulesBase):
                 )
                 OR (dateEntryClearanceDecision IS NULL)
             )"""
-        )
 
         # homeOfficeReferenceNumber: populated for in-UK/non-GWF; for OOC+GWF it is
         # null when a GWF reference was extracted, else '999999999' fallback (both refs null).
-        checks["valid_homeOfficeReferenceNumber_not_null"] = (
-            """(
+        checks["valid_homeOfficeReferenceNumber_not_null"] = """(
                 (
                     (dv_appellantIsInUk <=> true
                      OR COALESCE(lu_HORef, HORef, FCONumber, '') NOT LIKE '%GWF%')
@@ -742,10 +721,8 @@ class paymentPendingDQRules(DQRulesBase):
                     )
                 )
             )"""
-        )
 
-        checks["valid_gwfReferenceNumber_not_null"] = (
-            """(
+        checks["valid_gwfReferenceNumber_not_null"] = """(
                 (
                     dv_appellantIsInUk <=> false
                     AND COALESCE(lu_HORef, HORef, FCONumber, '') LIKE '%GWF%'
@@ -760,7 +737,6 @@ class paymentPendingDQRules(DQRulesBase):
                     OR COALESCE(lu_HORef, HORef, FCONumber) IS NULL
                 )
             )"""
-        )
 
         #########################################
         # ARIADM-799 (Documents)
@@ -770,24 +746,18 @@ class paymentPendingDQRules(DQRulesBase):
             "(uploadTheAppealFormDocs IS NOT NULL)"
         )
 
-        checks["valid_caseNotes"] = (
-            "(caseNotes IS NOT NULL)"
-        )
+        checks["valid_caseNotes"] = "(caseNotes IS NOT NULL)"
 
-        checks["valid_tribunalDocuments"] = (
-            "(tribunalDocuments IS NOT NULL)"
-        )
+        checks["valid_tribunalDocuments"] = "(tribunalDocuments IS NOT NULL)"
 
         checks["valid_legalRepresentativeDocuments"] = (
             "(legalRepresentativeDocuments IS NOT NULL)"
         )
 
-        checks["valid_completeCaseReviewDate"] = (
-            """(
+        checks["valid_completeCaseReviewDate"] = """(
                 NOT (ariaDesiredState <=> 'paymentPending')
                 OR
                 completeCaseReviewDate <=> date_format(DateLodged, 'yyyy-MM-dd')
             )"""
-        )
 
         return checks

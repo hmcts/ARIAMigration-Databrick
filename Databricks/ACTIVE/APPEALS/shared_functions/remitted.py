@@ -1,30 +1,15 @@
-from datetime import datetime
-import re
-import string
-import pycountry
-import pandas as pd
-import json
-
-from datetime import datetime
-from pyspark.sql import functions as F
+from pyspark.sql.functions import array, col, date_format, lit, row_number, struct
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
-from . import ftpa_submitted_a as FSA
-from . import ftpa_decided as FD
 
-from pyspark.sql.functions import (
-    col, when, lit, array, struct, collect_list, 
-    max as spark_max, date_format, date_add, row_number, expr, regexp_replace,
-    size, udf, coalesce, concat_ws, concat, trim, year, split, datediff,
-    collect_set, current_timestamp,transform, first, array_contains,rank,create_map, map_from_entries, map_from_arrays
-)
+from . import ftpa_decided as FD
+from . import ftpa_submitted_a as FSA
 
 ################################################################
 ##########              remittal                     ###########
 ################################################################
 
 
-def remittal(silver_m1,silver_m3):
+def remittal(silver_m1, silver_m3):
     # Window: highest StatusId per CaseNo
     window_spec = Window.partitionBy("CaseNo").orderBy(col("StatusId").desc())
 
@@ -39,15 +24,22 @@ def remittal(silver_m1,silver_m3):
     silver_m3_ranked = silver_m3_filtered_casestatus.withColumn(
         "row_number", row_number().over(window_spec)
     )
-    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop("row_number")
+    silver_m3_max_statusid = silver_m3_ranked.filter(col("row_number") == 1).drop(
+        "row_number"
+    )
 
     # Build remittal content
     remittal_df = (
-        silver_m1.join(silver_m3_max_statusid,on="CaseNo",how="left")
+        silver_m1.join(silver_m3_max_statusid, on="CaseNo", how="left")
         .withColumn("rehearingReason", lit("Remitted"))
         .withColumn("sourceOfRemittal", lit("Upper Tribunal"))
-        .withColumn("appealRemittedDate", date_format(col("DecisionDate"), "yyyy-MM-dd")) 
-        .withColumn("courtReferenceNumber", lit("This is a migrated ARIA case. Please refer to the documents."))
+        .withColumn(
+            "appealRemittedDate", date_format(col("DecisionDate"), "yyyy-MM-dd")
+        )
+        .withColumn(
+            "courtReferenceNumber",
+            lit("This is a migrated ARIA case. Please refer to the documents."),
+        )
         .select(
             col("CaseNo"),
             col("rehearingReason"),
@@ -63,27 +55,31 @@ def remittal(silver_m1,silver_m3):
         .join(remittal_df.alias("content"), on=["CaseNo"], how="left")
         .select(
             col("CaseNo"),
-
             # ---- rehearingReason ----
             array(struct(lit("rehearingReason"))).alias("rehearingReason_inputFields"),
             array(struct(lit("null"))).alias("rehearingReason_inputValues"),
             col("rehearingReason").alias("rehearingReason_value"),
             lit("Yes").alias("rehearingReason_Transformation"),
-
             # ---- sourceOfRemittal ----
-            array(struct(lit("sourceOfRemittal"))).alias("sourceOfRemittal_inputFields"),
+            array(struct(lit("sourceOfRemittal"))).alias(
+                "sourceOfRemittal_inputFields"
+            ),
             array(struct(lit("null"))).alias("sourceOfRemittal_inputValues"),
             col("sourceOfRemittal").alias("sourceOfRemittal_value"),
             lit("Yes").alias("sourceOfRemittal_Transformation"),
-
             # ---- appealRemittedDate ----
-            array(struct(lit("DecisionDate"),lit("CaseStatus"),lit("Outcome"))).alias("appealRemittedDate_inputFields"),
-            array(struct(col("m3.DecisionDate"),col("CaseStatus"),col("Outcome"))).alias("appealRemittedDate_inputValues"),
+            array(struct(lit("DecisionDate"), lit("CaseStatus"), lit("Outcome"))).alias(
+                "appealRemittedDate_inputFields"
+            ),
+            array(
+                struct(col("m3.DecisionDate"), col("CaseStatus"), col("Outcome"))
+            ).alias("appealRemittedDate_inputValues"),
             col("appealRemittedDate").alias("appealRemittedDate_value"),
             lit("Yes").alias("appealRemittedDate_Transformation"),
-
             # ---- courtReferenceNumber ----
-            array(struct(lit("courtReferenceNumber"))).alias("courtReferenceNumber_inputFields"),
+            array(struct(lit("courtReferenceNumber"))).alias(
+                "courtReferenceNumber_inputFields"
+            ),
             array(struct(lit("null"))).alias("courtReferenceNumber_inputValues"),
             col("courtReferenceNumber").alias("courtReferenceNumber_value"),
             lit("Yes").alias("courtReferenceNumber_Transformation"),
@@ -93,21 +89,17 @@ def remittal(silver_m1,silver_m3):
     return remittal_df, remittal_audit
 
 
-
 ################################################################
 ##########              documents          ###########
 ################################################################
 
-def documents(silver_m1, silver_m3): 
+
+def documents(silver_m1, silver_m3):
     documents_df, documents_audit = FD.documents(silver_m1, silver_m3)
 
     documents_df = (
         silver_m1.alias("m1")
-        .join(
-            documents_df.alias("content"),
-            on="CaseNo",
-            how="left"
-        )
+        .join(documents_df.alias("content"), on="CaseNo", how="left")
         .select(
             "m1.CaseNo",
             *[c for c in documents_df.columns if c != "CaseNo"],
@@ -116,31 +108,52 @@ def documents(silver_m1, silver_m3):
         )
     )
 
-
     documents_audit = (
         documents_audit.alias("audit")
-            .join(documents_df.alias("documents"), on="CaseNo", how="left")
-            .select(
-                "audit.*",
-                array(struct( lit("remittalDocuments"))).alias("remittalDocuments_inputFields"),
-                array(struct(lit("null"))).alias("remittalDocuments_inputValues"),
-                col("remittalDocuments").alias("remittalDocuments_value"),
-                lit("Yes").alias("remittalDocuments_Transformed"),
-
-                array(struct( lit("uploadOtherRemittalDocs"))).alias("uploadOtherRemittalDocs_inputFields"),
-                array(struct(lit("null"))).alias("uploadOtherRemittalDocs_inputValues"),
-                col("uploadOtherRemittalDocs").alias("uploadOtherRemittalDocs_value"),
-                lit("Yes").alias("uploadOtherRemittalDocs_Transformed")
-            )
+        .join(documents_df.alias("documents"), on="CaseNo", how="left")
+        .select(
+            "audit.*",
+            array(struct(lit("remittalDocuments"))).alias(
+                "remittalDocuments_inputFields"
+            ),
+            array(struct(lit("null"))).alias("remittalDocuments_inputValues"),
+            col("remittalDocuments").alias("remittalDocuments_value"),
+            lit("Yes").alias("remittalDocuments_Transformed"),
+            array(struct(lit("uploadOtherRemittalDocs"))).alias(
+                "uploadOtherRemittalDocs_inputFields"
+            ),
+            array(struct(lit("null"))).alias("uploadOtherRemittalDocs_inputValues"),
+            col("uploadOtherRemittalDocs").alias("uploadOtherRemittalDocs_value"),
+            lit("Yes").alias("uploadOtherRemittalDocs_Transformed"),
+        )
     )
     return documents_df, documents_audit
+
+
 ################################################################
 ##########              general                      ###########
 ################################################################
 
-def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres):
 
-    general_df,general_audit = FD.general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, bronze_derive_hearing_centres,bronze_detention_centres)
+def general(
+    silver_m1,
+    silver_m2,
+    silver_m3,
+    silver_h,
+    bronze_hearing_centres,
+    bronze_derive_hearing_centres,
+    bronze_detention_centres,
+):
+
+    general_df, general_audit = FD.general(
+        silver_m1,
+        silver_m2,
+        silver_m3,
+        silver_h,
+        bronze_hearing_centres,
+        bronze_derive_hearing_centres,
+        bronze_detention_centres,
+    )
 
     # general_df = general_df.drop("TTL")
 
@@ -152,7 +165,6 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
     #         "TTL",
     #     )
     # )
-
 
     # general_audit = general_audit.drop("TTL_inputFields","TTL_inputValues","TTL_value","TTL_Transformation")
 
@@ -171,23 +183,24 @@ def general(silver_m1, silver_m2, silver_m3, silver_h, bronze_hearing_centres, b
 
     return general_df, general_audit
 
+
 ################################################################
 ##########              generalDefault          ###########
 ################################################################
+
 
 def generalDefault(silver_m1):
 
     general_df = FSA.generalDefault(silver_m1)
 
-    general_df = (
-        general_df
-        .withColumn("caseFlagSetAsideReheardExists", lit("Yes"))
-    )
+    general_df = general_df.withColumn("caseFlagSetAsideReheardExists", lit("Yes"))
 
     return general_df
+
+
 ################################################################
 
-################################################################   
+################################################################
 
 if __name__ == "__main__":
     pass

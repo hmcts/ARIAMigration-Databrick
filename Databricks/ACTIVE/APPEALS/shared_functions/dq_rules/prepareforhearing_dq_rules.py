@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class prepareForHearingDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_hearing_response()
         checks = checks | self.get_checks_hearing_details()
@@ -11,10 +10,9 @@ class prepareForHearingDQRules(DQRulesBase):
         return checks
 
     def get_checks_hearing_response(self, checks={}):
-        checks["valid_isRemoteHearing"] = ("(isRemoteHearing <=> 'No')")
+        checks["valid_isRemoteHearing"] = "(isRemoteHearing <=> 'No')"
 
-        checks["valid_isAppealSuitableToFloat"] = (
-            """(
+        checks["valid_isAppealSuitableToFloat"] = """(
                 CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
                 AND
                 (
@@ -28,83 +26,94 @@ class prepareForHearingDQRules(DQRulesBase):
                 (CaseStatus_dec IS NULL OR CaseStatus_dec NOT IN (37,38))
                 AND isAppealSuitableToFloat IS NULL
             )"""
+
+        checks["valid_isMultimediaAllowed"] = "(isMultimediaAllowed <=> 'Granted')"
+
+        checks["valid_multimediaTribunalResponse"] = (
+            "(multimediaTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')"
         )
 
-        checks["valid_isMultimediaAllowed"] = ("(isMultimediaAllowed <=> 'Granted')")
+        checks["valid_multimediaDecisionForDisplay"] = (
+            "(multimediaDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_multimediaTribunalResponse"] = ("(multimediaTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')")
-
-        checks["valid_multimediaDecisionForDisplay"] = ("(multimediaDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
-
-        checks["valid_isInCameraCourtAllowed"] = (
-            """(
+        checks["valid_isInCameraCourtAllowed"] = """(
                 (InCamera <=> 1 AND isInCameraCourtAllowed <=> 'Granted')
                 OR
                 (NOT(InCamera <=> 1) AND isInCameraCourtAllowed IS NULL)
             )"""
-        )
 
-        checks["valid_inCameraCourtTribunalResponse"] = (
-            """(
+        checks["valid_inCameraCourtTribunalResponse"] = """(
                 (InCamera <=> 1 AND inCameraCourtTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')
                 OR
                 (NOT(InCamera <=> 1) AND inCameraCourtTribunalResponse IS NULL)
             )"""
-        )
 
-        checks["valid_inCameraCourtDecisionForDisplay"] = (
-            """(
+        checks["valid_inCameraCourtDecisionForDisplay"] = """(
                 (InCamera <=> 1 AND inCameraCourtDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')
                 OR
                 (NOT(InCamera <=> 1) AND inCameraCourtDecisionForDisplay IS NULL)
             )"""
-        )
 
-        checks["valid_isSingleSexCourtAllowed"] = (
-            """(
+        checks["valid_isSingleSexCourtAllowed"] = """(
                 (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND isSingleSexCourtAllowed <=> 'Granted')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND isSingleSexCourtAllowed IS NULL)
             )"""
-        )
 
-        checks["valid_singleSexCourtTribunalResponse"] = (
-            """(
+        checks["valid_singleSexCourtTribunalResponse"] = """(
                 (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND singleSexCourtTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtTribunalResponse IS NULL)
             )"""
-        )
 
-        checks["valid_singleSexCourtDecisionForDisplay"] = (
-            """(
+        checks["valid_singleSexCourtDecisionForDisplay"] = """(
                 (CourtPreference IS NOT NULL AND CourtPreference IN (1, 2) AND singleSexCourtDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')
                 OR
                 ((CourtPreference IS NULL OR CourtPreference NOT IN (1, 2)) AND singleSexCourtDecisionForDisplay IS NULL)
             )"""
+
+        checks["valid_isVulnerabilitiesAllowed"] = (
+            "(isVulnerabilitiesAllowed <=> 'Granted')"
         )
 
-        checks["valid_isVulnerabilitiesAllowed"] = ("(isVulnerabilitiesAllowed <=> 'Granted')")
+        checks["valid_vulnerabilitiesTribunalResponse"] = (
+            "(vulnerabilitiesTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_vulnerabilitiesTribunalResponse"] = ("(vulnerabilitiesTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_vulnerabilitiesDecisionForDisplay"] = (
+            "(vulnerabilitiesDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_vulnerabilitiesDecisionForDisplay"] = ("(vulnerabilitiesDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_isRemoteHearingAllowed"] = (
+            "(isRemoteHearingAllowed <=> 'Granted')"
+        )
 
-        checks["valid_isRemoteHearingAllowed"] = ("(isRemoteHearingAllowed <=> 'Granted')")
+        checks["valid_remoteVideoCallTribunalResponse"] = (
+            "(remoteVideoCallTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_remoteVideoCallTribunalResponse"] = ("(remoteVideoCallTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_remoteHearingDecisionForDisplay"] = (
+            "(remoteHearingDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_remoteHearingDecisionForDisplay"] = ("(remoteHearingDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_isAdditionalAdjustmentsAllowed"] = (
+            "(isAdditionalAdjustmentsAllowed <=> 'Granted')"
+        )
 
-        checks["valid_isAdditionalAdjustmentsAllowed"] = ("(isAdditionalAdjustmentsAllowed <=> 'Granted')")
+        checks["valid_additionalTribunalResponse"] = (
+            "(additionalTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_additionalTribunalResponse"] = ("(additionalTribunalResponse <=> 'This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_otherDecisionForDisplay"] = (
+            "(otherDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')"
+        )
 
-        checks["valid_otherDecisionForDisplay"] = ("(otherDecisionForDisplay <=> 'Granted - This is a migrated ARIA case. Please refer to the documents.')")
+        checks["valid_isAdditionalInstructionAllowed"] = (
+            "(isAdditionalInstructionAllowed <=> 'Yes')"
+        )
 
-        checks["valid_isAdditionalInstructionAllowed"] = ("(isAdditionalInstructionAllowed <=> 'Yes')")
-
-        checks["valid_additionalInstructionsTribunalResponse"] = ("""
+        checks["valid_additionalInstructionsTribunalResponse"] = """
             additionalInstructionsTribunalResponse IS NULL OR
             (
                 LENGTH(additionalInstructionsTribunalResponse) <= 2000 AND
@@ -127,7 +136,7 @@ class prepareForHearingDQRules(DQRulesBase):
                     )
                 )
             )
-        """)
+        """
 
         return checks
 
@@ -167,7 +176,7 @@ class prepareForHearingDQRules(DQRulesBase):
         )
         """
 
-        checks["valid_hearingChannel"] = ("""
+        checks["valid_hearingChannel"] = """
         (
         -- Case: VisitVisaType = 1
         (
@@ -194,13 +203,11 @@ class prepareForHearingDQRules(DQRulesBase):
             hearingChannel.value.label IS NULL
         )
         )
-        """)
+        """
 
-        checks["valid_witnessDetails"] = (
-            "(COALESCE(size(witnessDetails), 0) = 0)"
-        )
+        checks["valid_witnessDetails"] = "(COALESCE(size(witnessDetails), 0) = 0)"
 
-        checks["valid_listingLocation"] = ("""
+        checks["valid_listingLocation"] = """
         (
             (
                 ListedCentre IS NULL
@@ -219,7 +226,7 @@ class prepareForHearingDQRules(DQRulesBase):
                 )
             )
         )
-        """)
+        """
 
         checks["valid_witness1InterpreterSignLanguage"] = (
             "(COALESCE(size(witness1InterpreterSignLanguage), 0) = 0)"
@@ -282,7 +289,7 @@ class prepareForHearingDQRules(DQRulesBase):
             "(COALESCE(size(witness10InterpreterSpokenLanguage), 0) = 0)"
         )
 
-        checks["valid_listCaseHearingLength"] = ("""
+        checks["valid_listCaseHearingLength"] = """
         (
             (
                 CAST(roundedTimeEstimate AS STRING) <=> CAST(listCaseHearingLength AS STRING)
@@ -294,10 +301,9 @@ class prepareForHearingDQRules(DQRulesBase):
                 (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND roundedTimeEstimate IS NULL
             )
         )
-        """)
+        """
 
-        checks["valid_listCaseHearingDate"] = (
-            """
+        checks["valid_listCaseHearingDate"] = """
             (
                 (
                     listCaseHearingDate IS NOT NULL
@@ -310,10 +316,9 @@ class prepareForHearingDQRules(DQRulesBase):
                         AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
                 )
             )
-            """)
-
-        checks["valid_listCaseHearingCentre"] = (
             """
+
+        checks["valid_listCaseHearingCentre"] = """
             (
                 (
                     listCaseHearingCentre <=> bronze_listCaseHearingCentre AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
@@ -323,10 +328,9 @@ class prepareForHearingDQRules(DQRulesBase):
                     (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentre IS NULL
                 )
             )
-        """)
+        """
 
-        checks["valid_listCaseHearingCentreAddress"] = (
-            """
+        checks["valid_listCaseHearingCentreAddress"] = """
             (
                 (
                     listCaseHearingCentreAddress <=> bronze_listCaseHearingCentreAddress AND CaseStatus_dec IS NOT NULL AND CaseStatus_dec IN (37,38)
@@ -336,14 +340,12 @@ class prepareForHearingDQRules(DQRulesBase):
                     (CaseStatus_dec NOT IN (37,38) OR CaseStatus_dec IS NULL) AND listCaseHearingCentreAddress IS NULL
                 )
             )
-            """)
+            """
 
         return checks
 
     def get_checks_document(self, checks={}):
-        checks["valid_hearingDocuments"] = (
-            "(COALESCE(size(hearingDocuments), 0) = 0) "
-        )
+        checks["valid_hearingDocuments"] = "(COALESCE(size(hearingDocuments), 0) = 0) "
 
         checks["valid_letterBundleDocuments"] = (
             "(COALESCE(size(letterBundleDocuments), 0) = 0) "

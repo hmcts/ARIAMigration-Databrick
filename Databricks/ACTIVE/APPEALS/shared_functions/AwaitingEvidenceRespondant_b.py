@@ -1,32 +1,33 @@
 from pyspark.sql.functions import lit
-from . import paymentPending as PP
+
 from . import AwaitingEvidenceRespondant_a as AERa
+from . import paymentPending as PP
 
 
-def generalDefault(silver_m1): 
+def generalDefault(silver_m1):
     df_generalDefault = AERa.generalDefault(silver_m1)
 
     df_generalDefault = df_generalDefault.drop("uploadHomeOfficeBundleAvailable")
 
-    df_generalDefault = (
-        df_generalDefault
-        .select("*",
-                lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
-                lit("No").alias("uploadHomeOfficeBundleAvailable"))
+    df_generalDefault = df_generalDefault.select(
+        "*",
+        lit("No").alias("uploadHomeOfficeBundleActionAvailable"),
+        lit("No").alias("uploadHomeOfficeBundleAvailable"),
     )
 
     return df_generalDefault
 
 
-def documents(silver_m1): 
+def documents(silver_m1):
     documents_df, documents_audit = PP.documents(silver_m1)
-    documents_df = (silver_m1.alias("m1").select("CaseNo").join(documents_df,on="CaseNo",how="left")
+    documents_df = (
+        silver_m1.alias("m1")
+        .select("CaseNo")
+        .join(documents_df, on="CaseNo", how="left")
     )
 
-    documents_df = (
-        documents_df
-        .select("*",
-                lit([]).cast("array<string>").alias("respondentDocuments"))
+    documents_df = documents_df.select(
+        "*", lit([]).cast("array<string>").alias("respondentDocuments")
     )
     return documents_df, documents_audit
 

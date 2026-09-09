@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class ftpaSubmittedADQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_document()
         checks = checks | self.get_checks_general()
@@ -72,7 +71,7 @@ class ftpaSubmittedADQRules(DQRulesBase):
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_isFtpaListVisible"] = ("(isFtpaListVisible <=> 'Yes')")
+        checks["valid_isFtpaListVisible"] = "(isFtpaListVisible <=> 'Yes')"
 
         return checks
 

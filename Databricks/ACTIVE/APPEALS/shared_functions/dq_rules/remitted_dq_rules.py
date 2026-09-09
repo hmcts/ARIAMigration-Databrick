@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class remittedDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_remitted()
         checks = checks | self.get_checks_document()
@@ -12,14 +11,13 @@ class remittedDQRules(DQRulesBase):
 
     def get_checks_remitted(self, checks={}):
 
-        checks["valid_rehearingReason"] = ("""
+        checks["valid_rehearingReason"] = """
         (
             rehearingReason = "Remitted" AND rehearingReason IS NOT NULL AND rehearingReason != ""
         )
-        """)
+        """
 
-        checks["valid_allocatedJudge"] = (
-            """
+        checks["valid_allocatedJudge"] = """
             (
                 (
                     CaseStatus_decb <=> 39 AND
@@ -31,10 +29,8 @@ class remittedDQRules(DQRulesBase):
                 )
             )
             """
-        )
 
-        checks["valid_allocatedJudgeEdit"] = (
-            """
+        checks["valid_allocatedJudgeEdit"] = """
             (
                 (
                     CaseStatus_decb <=> 39 AND
@@ -46,22 +42,20 @@ class remittedDQRules(DQRulesBase):
                 )
             )
                 """
-        )
 
-        checks["valid_sourceOfRemittal"] = ("""
+        checks["valid_sourceOfRemittal"] = """
         (
             sourceOfRemittal = "Upper Tribunal" AND sourceOfRemittal IS NOT NULL AND sourceOfRemittal != ""
         )
-        """)
+        """
 
-        checks["valid_courtReferenceNumber"] = ("""
+        checks["valid_courtReferenceNumber"] = """
         (
             courtReferenceNumber <=> "This is a migrated ARIA case. Please refer to the documents."
         )
-        """)
+        """
 
-        checks["valid_appealRemittedDate"] = (
-            """
+        checks["valid_appealRemittedDate"] = """
             (
                 (
                     CaseStatus_rem IS NOT NULL AND CaseStatus_rem IN (42, 43, 44) AND Outcome_rem <=> 86
@@ -73,26 +67,26 @@ class remittedDQRules(DQRulesBase):
                     AND appealRemittedDate IS NULL
                 )
             )
-            """)
-
+            """
 
         return checks
 
     def get_checks_document(self, checks={}):
-        
-        checks["valid_remittalDocuments"] = ("(COALESCE(size(remittalDocuments), 0) = 0) ")
-        checks["valid_uploadOtherRemittalDocs"] = ("(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) ")
-        return checks
 
+        checks["valid_remittalDocuments"] = (
+            "(COALESCE(size(remittalDocuments), 0) = 0) "
+        )
+        checks["valid_uploadOtherRemittalDocs"] = (
+            "(COALESCE(size(uploadOtherRemittalDocs), 0) = 0) "
+        )
+        return checks
 
     def get_checks_general_default(self, checks={}):
 
-        checks["valid_caseFlagSetAsideReheardExists"] = (
-            """
-                (caseFlagSetAsideReheardExists = 'Yes') 
+        checks["valid_caseFlagSetAsideReheardExists"] = """
+                (caseFlagSetAsideReheardExists = 'Yes')
                 AND caseFlagSetAsideReheardExists IS NOT NULL
                 AND caseFlagSetAsideReheardExists != ""
-            """)
+            """
 
         return checks
-

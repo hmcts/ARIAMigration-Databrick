@@ -1,7 +1,7 @@
 from .dq_rules import DQRulesBase
 
-class ftpaDecidedDQRules(DQRulesBase):
 
+class ftpaDecidedDQRules(DQRulesBase):
     def get_checks(self, checks={}):
         checks = checks | self.get_checks_ftpaDecided()
         checks = checks | self.get_checks_ftpaGeneral()
@@ -11,8 +11,7 @@ class ftpaDecidedDQRules(DQRulesBase):
 
     def get_checks_ftpaDecided(self, checks={}):
 
-        checks["valid_ftpaApplicantType"] = (
-        """
+        checks["valid_ftpaApplicantType"] = """
         (
             (
                 (cs_39_outcome_14_30_31 <=> 39 AND outcome_14_30_31_cs_39 IS NOT NULL AND outcome_14_30_31_cs_39 IN (30,31,14))
@@ -38,10 +37,8 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
-        checks["valid_ftpaFirstDecision"] = (
-        """
+        checks["valid_ftpaFirstDecision"] = """
         (
             (
                 (cs_39_outcome_14_30_31 <=> 39 AND outcome_14_30_31_cs_39 IS NOT NULL AND outcome_14_30_31_cs_39 IN (30,31,14))
@@ -69,10 +66,8 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
-        checks["valid_ftpaFinalDecisionForDisplay"] = (
-            """
+        checks["valid_ftpaFinalDecisionForDisplay"] = """
             (
                 (
                     (
@@ -104,10 +99,8 @@ class ftpaDecidedDQRules(DQRulesBase):
                 )
             )
             """
-        )
 
-        checks["valid_ftpaAppellantDecisionDate"] = (
-        """
+        checks["valid_ftpaAppellantDecisionDate"] = """
         (
             (
                 (cs_39_outcome_14_30_31 <=> 39 AND outcome_14_30_31_cs_39 IS NOT NULL AND outcome_14_30_31_cs_39 IN (30,31,14))
@@ -131,10 +124,8 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
-        checks["valid_ftpaRespondentDecisionDate"] = (
-        """
+        checks["valid_ftpaRespondentDecisionDate"] = """
         (
             (
                 (cs_39_outcome_14_30_31 <=> 39 AND outcome_14_30_31_cs_39 IS NOT NULL AND outcome_14_30_31_cs_39 IN (30,31,14))
@@ -158,10 +149,8 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
-        checks["valid_ftpaAppellantRjDecisionOutcomeType"] = (
-            """
+        checks["valid_ftpaAppellantRjDecisionOutcomeType"] = """
             (
                 (
                     (
@@ -189,10 +178,8 @@ class ftpaDecidedDQRules(DQRulesBase):
                 )
             )
             """
-        )
 
-        checks["valid_ftpaRespondentRjDecisionOutcomeType"] = (
-            """
+        checks["valid_ftpaRespondentRjDecisionOutcomeType"] = """
             (
                 (
                     (
@@ -220,10 +207,8 @@ class ftpaDecidedDQRules(DQRulesBase):
                 )
             )
             """
-        )
 
-        checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = (
-        """
+        checks["valid_isFtpaAppellantNoticeOfDecisionSetAside"] = """
         (
             (
                 (dq_cs39_status <=> 39)
@@ -247,10 +232,8 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
-        checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = (
-        """
+        checks["valid_isFtpaRespondentNoticeOfDecisionSetAside"] = """
         (
             (
                 (dq_cs39_status <=> 39)
@@ -274,86 +257,85 @@ class ftpaDecidedDQRules(DQRulesBase):
             )
         )
         """
-        )
 
         return checks
-    
+
     def get_checks_ftpaGeneral(self, checks={}):
 
-        checks["valid_isAppellantFtpaDecisionvisibletoAll"] = ("""(
+        checks["valid_isAppellantFtpaDecisionvisibletoAll"] = """(
             (dq_cs39_status <=> 39 AND Party IS NOT NULL AND Party IN (0,1) AND isAppellantFtpaDecisionvisibletoAll <=> "Yes")
             OR
             (isAppellantFtpaDecisionvisibletoAll IS NULL)
-        )""")
+        )"""
 
-        checks["valid_isRespondentFtpaDecisionvisibletoAll"] = ("""(
+        checks["valid_isRespondentFtpaDecisionvisibletoAll"] = """(
             (dq_cs39_status <=> 39 AND Party <=> 2 AND isRespondentFtpaDecisionvisibletoAll <=> "Yes")
             OR
             (isRespondentFtpaDecisionvisibletoAll IS NULL)
-        )""")
+        )"""
 
-        checks["valid_isDlrmSetAsideEnabled"] = ("""(
+        checks["valid_isDlrmSetAsideEnabled"] = """(
             isDlrmSetAsideEnabled <=> "Yes"
-        )""")
+        )"""
 
-        checks["valid_isFtpaAppellantDecided"] = ("""(
-                   
+        checks["valid_isFtpaAppellantDecided"] = """(
+
                 (dq_cs39_status <=> 39 AND isFtpaAppellantDecided <=> "Yes")
                 OR
                 ((dq_cs39_status != 39 OR dq_cs39_status IS NULL) AND isFtpaAppellantDecided IS NULL)
 
                )
-               """)
+               """
 
-        checks["valid_isFtpaRespondentDecided"] = ("""
+        checks["valid_isFtpaRespondentDecided"] = """
             (
-                   
+
                 (dq_cs39_status <=> 39 AND isFtpaRespondentDecided <=> "Yes")
                 OR
                 ((dq_cs39_status != 39 OR dq_cs39_status IS NULL) AND isFtpaRespondentDecided IS NULL)
 
                )
-        """)
+        """
 
-        checks["valid_isReheardAppealEnabled"] = ("""(
+        checks["valid_isReheardAppealEnabled"] = """(
             isReheardAppealEnabled <=> "Yes"
-        )""")
+        )"""
 
-        checks["valid_secondFtpaDecisionExists"] = ("""(
+        checks["valid_secondFtpaDecisionExists"] = """(
             secondFtpaDecisionExists <=>
             CASE
                 WHEN cs46_o31 = 46 AND o31_cs46 = 31 THEN 'Yes'
                 ELSE 'No'
             END
             )
-            """)
+            """
 
         return checks
 
     def get_checks_ftpaDocuments(self, checks={}):
 
-        checks["valid_allFtpaAppellantDecisionDocs"] = ("""(
+        checks["valid_allFtpaAppellantDecisionDocs"] = """(
             (dq_cs39_status <=> 39 AND Party <=> 1 AND COALESCE(size(allFtpaAppellantDecisionDocs), 0) = 0)
             OR
             (allFtpaAppellantDecisionDocs IS NULL)
-        )""")
+        )"""
 
-        checks["valid_allFtpaRespondentDecisionDocs"] = ("""(
+        checks["valid_allFtpaRespondentDecisionDocs"] = """(
             (dq_cs39_status <=> 39 AND Party <=> 2 AND COALESCE(size(allFtpaRespondentDecisionDocs), 0) = 0)
             OR
             (allFtpaRespondentDecisionDocs IS NULL)
-        )""")
+        )"""
 
-        checks["valid_ftpaAppellantNoticeDocument"] = ("""(
+        checks["valid_ftpaAppellantNoticeDocument"] = """(
             (dq_cs39_status <=> 39 AND Party <=> 1 AND COALESCE(size(ftpaAppellantNoticeDocument), 0) = 0)
             OR
             (ftpaAppellantNoticeDocument IS NULL)
-        )""")
+        )"""
 
-        checks["valid_ftpaRespondentNoticeDocument"] = ("""(
+        checks["valid_ftpaRespondentNoticeDocument"] = """(
             (dq_cs39_status <=> 39 AND Party <=> 2 AND COALESCE(size(ftpaRespondentNoticeDocument), 0) = 0)
             OR
             (ftpaRespondentNoticeDocument IS NULL)
-        )""")
+        )"""
 
         return checks

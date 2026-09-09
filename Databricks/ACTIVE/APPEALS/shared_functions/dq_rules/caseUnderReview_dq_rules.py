@@ -2,7 +2,6 @@ from .dq_rules import DQRulesBase
 
 
 class caseUnderReviewDQRules(DQRulesBase):
-
     def get_checks(self, checks={}):
         checks = checks | self.get_base_checks()
 

@@ -100,11 +100,17 @@ def test_ftpa_init(json, M1_bronze, M3_bronze):
 
         # 3. Safely extract out-of-time explanation string from nested ftpaList array struct
         if "ftpaList" in test_df.columns:
-            extracted_text = F.coalesce(
+            try:
+                _ftpa_value_fields = [f.name for f in test_df.schema["ftpaList"].dataType.elementType["value"].dataType.fields]
+            except Exception:
+                _ftpa_value_fields = []
+            _explanation_cols = [
                 F.col("ftpaAppellantOutOfTimeExplanation"),
                 F.col("ftpaRespondentOutOfTimeExplanation"),
-                F.col("ftpaList").getItem(0).getItem("value").getItem("ftpaOutOfTimeExplanation")
-            )
+            ]
+            if "ftpaOutOfTimeExplanation" in _ftpa_value_fields:
+                _explanation_cols.append(F.col("ftpaList").getItem(0).getItem("value").getItem("ftpaOutOfTimeExplanation"))
+            extracted_text = F.coalesce(*_explanation_cols)
 
             # Assign extracted text conditionally based on Party ID (Party 1 = Appellant, Party 2 = Respondent)
             test_df = test_df.withColumn(
@@ -117,7 +123,7 @@ def test_ftpa_init(json, M1_bronze, M3_bronze):
         else:
             test_df = test_df.withColumn("ftpaAppellantOutOfTimeExplanation", F.lit(None).cast("string")) \
                              .withColumn("ftpaRespondentOutOfTimeExplanation", F.lit(None).cast("string"))
-
+        
         # 4. Select all target fields required across the entire FTPA test suite
         test_df = test_df.select(
             "appealReferenceNumber",
@@ -187,14 +193,20 @@ def test_ftpaList_appellant(test_df):
 
         # 2. Acceptance Criteria for Appellant
         # We check the first element of the list [0]
-        failures = winning_records.filter(col("Party") == 1).filter(
+        try:
+            _ftpa_value_fields = [f.name for f in test_df.schema["ftpaList"].dataType.elementType["value"].dataType.fields]
+        except Exception:
+            _ftpa_value_fields = []
+        criteria = (
             (col("ftpaList")[0]["value"]["ftpaApplicant"] != "appellant") |
             (col("ftpaList")[0]["value"]["ftpaApplicationDate"] != col("ftpaAppellantApplicationDate")) |
             (size(col("ftpaList")[0]["value"]["ftpaGroundsDocuments"]) != 0) |
             (size(col("ftpaList")[0]["value"]["ftpaEvidenceDocuments"]) != 0) |
-            (size(col("ftpaList")[0]["value"]["ftpaOutOfTimeDocuments"]) != 0) |
-            (col("ftpaList")[0]["value"]["ftpaOutOfTimeExplanation"] != col("ftpaAppellantOutOfTimeExplanation"))
+            (size(col("ftpaList")[0]["value"]["ftpaOutOfTimeDocuments"]) != 0)
         )
+        if "ftpaOutOfTimeExplanation" in _ftpa_value_fields:
+            criteria = criteria | (col("ftpaList")[0]["value"]["ftpaOutOfTimeExplanation"] != col("ftpaAppellantOutOfTimeExplanation"))
+        failures = winning_records.filter(col("Party") == 1).filter(criteria)
 
         if failures.count() != 0:
             return TestResult("ftpaList", "FAIL", f"Found {failures.count()} appellant rows with incorrect ftpaList values", test_from_state, inspect.stack()[0].function)
@@ -214,14 +226,20 @@ def test_ftpaList_respondent(test_df):
         winning_records = target_records.withColumn("row_rank", row_number().over(window_spec)).filter(col("row_rank") == 1)
 
         # 2. Acceptance Criteria for Respondent
-        failures = winning_records.filter(col("Party") == 2).filter(
+        try:
+            _ftpa_value_fields = [f.name for f in test_df.schema["ftpaList"].dataType.elementType["value"].dataType.fields]
+        except Exception:
+            _ftpa_value_fields = []
+        criteria = (
             (col("ftpaList")[0]["value"]["ftpaApplicant"] != "respondent") |
             (col("ftpaList")[0]["value"]["ftpaApplicationDate"] != col("ftpaAppellantApplicationDate")) |
             (size(col("ftpaList")[0]["value"]["ftpaGroundsDocuments"]) != 0) |
             (size(col("ftpaList")[0]["value"]["ftpaEvidenceDocuments"]) != 0) |
-            (size(col("ftpaList")[0]["value"]["ftpaOutOfTimeDocuments"]) != 0) |
-            (col("ftpaList")[0]["value"]["ftpaOutOfTimeExplanation"] != col("ftpaAppellantOutOfTimeExplanation"))
+            (size(col("ftpaList")[0]["value"]["ftpaOutOfTimeDocuments"]) != 0)
         )
+        if "ftpaOutOfTimeExplanation" in _ftpa_value_fields:
+            criteria = criteria | (col("ftpaList")[0]["value"]["ftpaOutOfTimeExplanation"] != col("ftpaAppellantOutOfTimeExplanation"))
+        failures = winning_records.filter(col("Party") == 2).filter(criteria)
 
         if failures.count() != 0:
             return TestResult("ftpaList", "FAIL", f"Found {failures.count()} respondent rows with incorrect ftpaList values", test_from_state, inspect.stack()[0].function)

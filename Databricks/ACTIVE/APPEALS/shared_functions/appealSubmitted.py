@@ -268,11 +268,11 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"),
             "left_anti",
         )
-        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance")
+        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumTotalFee")
     )
 
     amount_left_to_pay = (
-        filtered_df.filter(col("SumBalance") == True)
+        filtered_df.filter(col("SumTotalFee") == True)
         .groupBy("CaseNo")
         .agg(
             (sum_(col("Amount")) * 100).alias("amountLeftToPay"),

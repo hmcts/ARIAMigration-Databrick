@@ -97,26 +97,6 @@ class listingDQRules(DQRulesBase):
 
         checks["valid_isWitnessesAttending"] = "(isWitnessesAttending <=> 'No')"
 
-        # checks["valid_isEvidenceFromOutsideUkOoc"] = (
-        #     """(
-        #         (NOT(ARRAY_CONTAINS(valid_categoryIdList, 38)) AND isEvidenceFromOutsideUkOoc IS NULL)
-        #         OR
-        #         (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkOoc <=> 'Yes')
-        #         OR
-        #         (ARRAY_CONTAINS(valid_categoryIdList, 38) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkOoc <=> 'No')
-        #     )"""
-        # )
-
-        # checks["valid_isEvidenceFromOutsideUkInCountry"] = (
-        #     """(
-        #         (NOT(ARRAY_CONTAINS(valid_categoryIdList, 37)) AND isEvidenceFromOutsideUkInCountry IS NULL)
-        #         OR
-        #         (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NOT NULL AND isEvidenceFromOutsideUkInCountry <=> 'Yes')
-        #         OR
-        #         (ARRAY_CONTAINS(valid_categoryIdList, 37) AND Sponsor_Name IS NULL AND isEvidenceFromOutsideUkInCountry <=> 'No')
-        #     )"""
-        # )
-
         checks["valid_isInterpreterServicesNeeded"] = """(
                 (Interpreter <=> 1 AND isInterpreterServicesNeeded <=> 'Yes')
                 OR

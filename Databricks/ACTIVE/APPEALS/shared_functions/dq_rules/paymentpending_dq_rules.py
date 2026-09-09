@@ -291,15 +291,7 @@ class paymentPendingDQRules(DQRulesBase):
             )
         )"""
 
-        # checks["valid_caseFlags_name_in_list"] = """
-        # (
-        #   (array_contains(COALESCE(valid_categoryIdList, ARRAY()), (7, 25)) OR caseFlags.details IS NULL OR
-        #   ARRAY_CONTAINS(
-        #     TRANSFORM(caseFlags.details, x -> x.value.name),
-        #     caseFlags.details[0].value.name
-        #   )
-        # )
-        # """
+
         checks["valid_caseFlags_pathId_in_list"] = """
         (
             caseFlags.details IS NULL OR

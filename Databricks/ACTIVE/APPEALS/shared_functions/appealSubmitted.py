@@ -94,7 +94,7 @@ def paymentType(silver_m1, silver_m4):
         final_filtered_df.filter(col("SumTotalPay") == True)
         .groupBy("CaseNo")
         .agg(
-            abs(sum_(col("Amount"))).alias("paidAmount"),
+            (abs(sum_(col("Amount"))) * 100).alias("paidAmount"),
             collect_list(col("Amount")).alias("amountList"),
         )
     )
@@ -268,14 +268,14 @@ def remissionTypes(silver_m1, bronze_remission_lookup_df, silver_m4):
             col("m4.TransactionId") == col("ref_txn.ReferringTransactionId"),
             "left_anti",
         )
-        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumTotalFee")
+        .select("CaseNo", "TransactionId", "TransactionTypeId", "Amount", "SumBalance")
     )
 
     amount_left_to_pay = (
-        filtered_df.filter(col("SumTotalFee") == True)
+        filtered_df.filter(col("SumBalance") == True)
         .groupBy("CaseNo")
         .agg(
-            sum_(col("Amount")).alias("amountLeftToPay"),
+            (sum_(col("Amount")) * 100).alias("amountLeftToPay"),
             collect_list(col("Amount")).alias("amountLeftToPayList"),
         )
     )

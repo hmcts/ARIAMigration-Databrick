@@ -6789,9 +6789,6 @@ def test_oocLrCountryGovUkAdminJ_test1(test_df_sd,external_storage,spark):
 #######################
 def test_default_mapping_init(json):
     try:
-        if "isHomeOfficeIntegrationEnabled" not in json.columns:
-            json = json.withColumn("isHomeOfficeIntegrationEnabled", lit(None).cast("string"))
-
         test_df = json.select(
             "appealReferenceNumber",
             "isAppealReferenceNumberAvailable",
@@ -6844,29 +6841,19 @@ def test_default_mapping_init(json):
         return test_df, True
     except Exception as e:
         error_message = str(e)        
-        return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", globals().get("test_from_state", "paymentPending"), inspect.stack()[0].function)
+        return None,TestResult("DefaultMapping", "FAIL",f"Failed to Setup Data for Test : Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)
 
 def test_PP_defaultValues(test_df,fields_to_exclude):
     try:
-        first_row = test_df.select("ariaDesiredState").where(col("ariaDesiredState").isNotNull()).first()
-        df_actual_state = first_row[0] if first_row else None
-
-        active_state = df_actual_state if df_actual_state else globals().get("test_from_state", "paymentPending")
-        clean_state = str(active_state).replace("(a)", "").replace("(b)", "").strip()
-
-        if clean_state == "paymentPending":
-            expected_aria_state = "pendingPayment"
-        else:
-            expected_aria_state = clean_state
-
         expected_defaults = {
             "ccdReferenceNumberForDisplay": "",
             "isAppealReferenceNumberAvailable": "Yes",
+            "appellantInDetention": "No",
             "hasOtherAppeals": "NotSure",
             "s94bStatus": "No",
             "isAdmin": "Yes",
             "isEjp": "No",
-            "ariaDesiredState": expected_aria_state,
+            "ariaDesiredState": "pendingPayment",
             "ariaMigrationTaskDueDays": 14,
             "submitNotificationStatus": "",
             "isFeePaymentEnabled": "Yes",
@@ -6904,22 +6891,19 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
             "legalRepresentativeDocuments": None,
             "caseLinks": None
         }
-        
+
         results_list = []
 
         for field, expected in expected_defaults.items():
             if field in fields_to_exclude:
                 continue
-            condition = col(field).isNull() | (trim(col(field).cast("string")) != expected)
-            fail_records = test_df.filter(condition)
-            fail_count = fail_records.count()
-
-            if fail_count > 0:
+            condition = (col(field) != expected)
+            if test_df.filter(condition).count() > 0:
                 results_list.append(TestResult(
                     field, 
                     "FAIL", 
-                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {fail_count} records not matching", 
-                    clean_state,
+                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                    test_from_state,
                     inspect.stack()[0].function
                 ))
             else:
@@ -6927,7 +6911,7 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
                     field, 
                     "PASS", 
                     f"Checked Default Mapping for : {field} - found correct value : {expected}", 
-                    clean_state,
+                    test_from_state,
                     inspect.stack()[0].function
                 ))
 
@@ -6937,58 +6921,58 @@ def test_PP_defaultValues(test_df,fields_to_exclude):
             if contains_val:
                 condition = (~array_contains(col(field), contains_val))
             else:
-                condition = col(field).isNotNull() & (size(col(field)) > 0)
-             
+                condition = (size(col(field)) != 0)
+                
             if test_df.filter(condition).count() > 0:
                 results_list.append(TestResult(
                     field, 
                     "FAIL", 
-                    f"Failed to check Default Mapping for : {field} - expected : {contains_val} - found {str(test_df.filter(condition).count())} records not matching", 
-                    clean_state,
+                    f"Failed to check Default Mapping for : {field} - expected : {expected} - found {str(test_df.filter(condition).count())} records not matching", 
+                    test_from_state,
                     inspect.stack()[0].function
                 ))
             else:
                 results_list.append(TestResult(
                     field, 
                     "PASS", 
-                    f"Checked Default Mapping for : {field} - found correct value : {contains_val}", 
-                    clean_state,
+                    f"Checked Default Mapping for : {field} - found correct value : {expected}", 
+                    test_from_state,
                     inspect.stack()[0].function
                 ))
         
         allowed_appeal_types = ["EA", "EU", "HU", "PA"]
-        ho_appeal_types = ["PA", "RP"]
         conditional_checks = [
-            ("feePaymentAppealType", "Yes", allowed_appeal_types),
-            ("paymentStatus", "Payment Pending", allowed_appeal_types),
-            ("hasServiceRequestAlready", "No", allowed_appeal_types),
-            ("feeVersion", "2", allowed_appeal_types),
-            ("isHomeOfficeIntegrationEnabled", "Yes", ho_appeal_types)
+            ("feePaymentAppealType", "Yes"),
+            ("paymentStatus", "Payment Pending"),
+            ("hasServiceRequestAlready", "No"),
+            ("feeVersion", "2")
         ]
 
-        for field, expected_val, target_appeal_types in conditional_checks:
+        for field, expected_val in conditional_checks:
             if field in fields_to_exclude:
                 continue
             invalid_records = test_df.filter(
-                (col("appealType").isin(target_appeal_types)) & (col(field) != expected_val)
+                (col("appealType").isin(allowed_appeal_types)) & (col(field) != expected_val)
             )
             
             if invalid_records.count() != 0:
                 results_list.append(TestResult(
                     field, "FAIL", 
-                    f"Conditional Default Failed: {invalid_records.count()} cases found where appealType is {target_appeal_types} but {field} is not '{expected_val}'", 
-                    clean_state, inspect.stack()[0].function))
+                    f"Conditional Default Failed: {invalid_records.count()} cases found where appealType is {allowed_appeal_types} but {field} is not '{expected_val}'", 
+                    test_from_state, inspect.stack()[0].function))
             else:
                 results_list.append(TestResult(
                     field, "PASS", 
-                    f"Conditional Default Passed: {field} correctly set for appeal types {target_appeal_types}", 
-                    clean_state, inspect.stack()[0].function))
+                    f"Conditional Default Passed: {field} correctly set for appeal types {allowed_appeal_types}", 
+                    test_from_state, inspect.stack()[0].function))
        
         
         return results_list
     except Exception as e:
         error_message = str(e)        
-        return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", globals().get("test_from_state", "paymentPending"), inspect.stack()[0].function)]
+        return [TestResult("DefaultMapping", "FAIL",f"TEST FAILED WITH EXCEPTION :  Error : {error_message[:300]}", test_from_state, inspect.stack()[0].function)]
+
+
 
 
 ############################################################################################

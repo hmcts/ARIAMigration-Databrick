@@ -231,9 +231,9 @@ def build_and_display(
                 total_e = int(pair_rows["error_n"].sum())
                 total_nd = int(pair_rows["nodata_n"].sum())
                 latest_vals = list(latest_map.values())
-                if "PASS" in latest_vals: v = "PASSED"
-                elif "FAIL" in latest_vals: v = "FAILED"
+                if "FAIL" in latest_vals: v = "FAILED"
                 elif "ERROR" in latest_vals: v = "ERROR"
+                elif "PASS" in latest_vals: v = "PASSED"
                 else: v = "NEEDS DATA"
                 pair_stats[pair] = {
                     "verdict": v,

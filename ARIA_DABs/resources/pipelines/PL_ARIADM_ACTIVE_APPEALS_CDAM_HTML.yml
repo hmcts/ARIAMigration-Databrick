@@ -12,5 +12,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/cdam/ARIADM_ACTIVE_APPEALS_CDAM_HTML"
+      catalog: aria_${bundle.target}
       target: ariadm_active_appeals_cdam_html
       development: true

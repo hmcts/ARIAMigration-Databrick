@@ -14,6 +14,6 @@ resources:
       libraries:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_FTPA_DECIDED_JSON"
-
+      catalog: aria_${bundle.target}
       target: ftpadecided_gold
       development: true

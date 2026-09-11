@@ -1,0 +1,4 @@
+# Force Python files to use LF line endings across Databricks and Git
+*.py text eol=lf
+*.ipynb text eol=lf
+* text=auto

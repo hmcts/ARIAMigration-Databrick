@@ -14,5 +14,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ARCHIVE/TD/ARIADM_ARM_TD"
       catalog: aria_${bundle.target}
-      target: ariadm_arm_td
+      schema: ariadm_arm_td
       development: true

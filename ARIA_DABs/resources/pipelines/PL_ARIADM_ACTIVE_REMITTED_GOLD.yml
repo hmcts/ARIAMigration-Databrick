@@ -15,5 +15,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_REMITTED_JSON"
       catalog: aria_${bundle.target}
-      target: remitted_gold
+      schema: remitted_gold
       development: true

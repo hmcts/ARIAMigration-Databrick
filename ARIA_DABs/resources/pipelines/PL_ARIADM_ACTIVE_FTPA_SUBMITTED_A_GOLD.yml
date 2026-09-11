@@ -15,5 +15,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_FTPA_SUBMITTED_A_JSON"
       catalog: aria_${bundle.target}
-      target: ftpaSubmittedA_gold
+      schema: ftpaSubmittedA_gold
       development: true

@@ -14,5 +14,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ARCHIVE/JOH/ARIADM_ARM_JOH"
       catalog: aria_${bundle.target}
-      target: ARIADM_ARM_JOH
+      schema: ARIADM_ARM_JOH
       development: true

@@ -13,5 +13,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/SILVER_ACTIVE_APPEALS"
       catalog: aria_${bundle.target}
-      target: ariadm_active_appeals
+      schema: ariadm_active_appeals
       development: true

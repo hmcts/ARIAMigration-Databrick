@@ -15,5 +15,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_ENDED_JSON"
       catalog: aria_${bundle.target}
-      target: ended_gold
+      schema: ended_gold
       development: true

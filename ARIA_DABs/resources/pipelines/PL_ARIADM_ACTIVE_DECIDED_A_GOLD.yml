@@ -15,5 +15,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_DECIDED_A_JSON"
       catalog: aria_${bundle.target}
-      target: decidedA_gold
+      schema: decidedA_gold
       development: true

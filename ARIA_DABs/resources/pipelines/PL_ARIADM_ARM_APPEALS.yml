@@ -14,5 +14,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ARCHIVE/APPEALS/ARIADM_ARM_APPEALS"
       catalog: aria_${bundle.target}
-      target: ariadm_arm_appeals
+      schema: ariadm_arm_appeals
       development: true

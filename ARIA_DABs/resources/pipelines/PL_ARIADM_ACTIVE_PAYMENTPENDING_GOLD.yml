@@ -15,5 +15,5 @@ resources:
         - notebook:
             path: "/Workspace/live/ACTIVE/APPEALS/GOLD_PAYMENT_PENDING_JSON"
       catalog: aria_${bundle.target}
-      target: paymentPending_gold
+      schema: paymentPending_gold
       development: true

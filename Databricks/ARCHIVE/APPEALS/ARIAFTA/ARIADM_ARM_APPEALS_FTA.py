@@ -2492,7 +2492,6 @@ def stg_appealcasestatus_filtered():
 
 
 @dp.table(
->>>>>>> 454f4650 (Update pipeline code to use UC and @dp)
     name="stg_firsttier_filtered",
     comment="Delta Live Table for filtering AppealCase records to archive or delete based on complex conditions.")
 def stg_firsttier_filtered():
